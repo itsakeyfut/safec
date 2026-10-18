@@ -2983,7 +2983,7 @@ impl Lowering<'_> {
     ///
     /// **What C17 6.5 p2 asks about, and no more.** A local is accessed where
     /// its value is read or where it is assigned, incremented or decremented
-    /// by name. Taking its address reads nothing (6.5.3.2 p3), so `&q` is no
+    /// by name. Taking its address reads nothing (6.3.2.1 p2), so `&q` is no
     /// access, and neither is a write through a pointer, into a member or into
     /// an element: nothing here says which object those land in. A compound
     /// assignment reads as well as writes, and the write is what is kept. See

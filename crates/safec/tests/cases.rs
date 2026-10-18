@@ -274,7 +274,7 @@ cases! {
         // ADR-0052.
         a_write_that_never_runs_is_still_a_conflict: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What is not a conflict. `&q` takes the address and reads nothing
-        // (C17 6.5.3.2 p3), and a write and a read inside one argument are
+        // (C17 6.3.2.1 p2), and a write and a read inside one argument are
         // ordered by the comma between them. Mutation: count `&q` as a read,
         // or compare an argument with itself; each reports `SC0409`. And what
         // is not asked about: `k(i, i++)` is undefined by the same paragraph,

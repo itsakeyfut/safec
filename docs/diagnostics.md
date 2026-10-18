@@ -97,7 +97,7 @@ promise it broke: the `_Nonnull`, or the function's name where level 5 made it.
 is the decision.
 
 **`SC0409` is about no value, and is always a proof.** `g(q, q = &x)` is
-undefined whatever `q` holds, because C17 6.5 p2 makes a call undefined where
+undefined whatever `q` holds, on every execution that evaluates both, because C17 6.5 p2 makes a call undefined where
 one argument modifies a scalar another reads and 6.5.2.2 p10 orders the
 arguments only against the call. So the report is the conflict rather than a
 null or a freed pointer one order would read: the caret is on the read, or on

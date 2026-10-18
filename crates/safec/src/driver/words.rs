@@ -607,8 +607,8 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
         diagnostic = diagnostic
             .with_label(Label::secondary(written, "written here"))
             .with_note(
-                "C17 6.5 p2 makes this call undefined: 6.5.2.2 p10 orders a call's arguments \
-                 before the call and not against each other",
+                "C17 6.5 p2 makes this call undefined wherever both are evaluated: 6.5.2.2 p10 \
+                 orders a call's arguments before the call and not against each other",
             );
     }
 

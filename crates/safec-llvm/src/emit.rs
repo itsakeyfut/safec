@@ -586,8 +586,8 @@ impl Emitter<'_> {
             // on an order and neither asks for anything to be emitted.
             Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => Ok(()),
             // Nothing is written either. The conflict is reported by the memory
-            // check, and a call it is about is undefined, so no order emitted
-            // for it is wrong. See ADR-0052.
+            // check, and a call it is about is undefined wherever both accesses
+            // run, so no order emitted for it is wrong there. See ADR-0052.
             Element::UnsequencedArguments {
                 local: _,
                 written: _,
