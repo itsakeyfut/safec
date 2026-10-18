@@ -51,6 +51,7 @@ Function a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:
       Copy "_2"
   Block "bb1"
     Sequenced a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:12:5 generated
+    ArgumentsEvaluated a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:13:9 generated
     Call a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:13:9 "malloc" "bb2"
       Destination "_8"
       Constant 4

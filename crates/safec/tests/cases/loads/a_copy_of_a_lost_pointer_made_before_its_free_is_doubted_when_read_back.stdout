@@ -90,6 +90,7 @@ Function a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back
       Use
         Copy "_4"
     Sequenced a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:10:9 generated
+    ArgumentsEvaluated a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:11:13 generated
     Call a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:11:13 "malloc" "bb8"
       Destination "_9"
       Constant 4

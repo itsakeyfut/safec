@@ -28,6 +28,7 @@ Function a_pointer_saved_across_a_loop_that_allocates_again.c:3:5 "f"
       Copy "_1"
   Block "bb2"
     Sequenced a_pointer_saved_across_a_loop_that_allocates_again.c:6:12 generated
+    ArgumentsEvaluated a_pointer_saved_across_a_loop_that_allocates_again.c:7:13 generated
     Call a_pointer_saved_across_a_loop_that_allocates_again.c:7:13 "malloc" "bb4"
       Destination "_4"
       Constant 8

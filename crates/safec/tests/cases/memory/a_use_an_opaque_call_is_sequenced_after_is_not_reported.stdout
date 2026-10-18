@@ -71,6 +71,7 @@ Function a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:4:5 "f"
       Use
         Copy "_6"
     Sequenced a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:10:13 generated
+    ArgumentsEvaluated a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:11:13 generated
     Call a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:11:13 "h" "bb6"
       Destination "_8"
       Copy "_1"

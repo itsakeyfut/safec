@@ -41,6 +41,7 @@ Function a_local_that_kept_one_allocation_and_lost_another.c:3:5 "f"
       Copy "_1"
   Block "bb3"
     Sequenced a_local_that_kept_one_allocation_and_lost_another.c:7:12 generated
+    ArgumentsEvaluated a_local_that_kept_one_allocation_and_lost_another.c:8:13 generated
     Call a_local_that_kept_one_allocation_and_lost_another.c:8:13 "malloc" "bb5"
       Destination "_6"
       Constant 8

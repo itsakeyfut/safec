@@ -27,6 +27,7 @@ Function a_branch_that_allocates_either_way.c:3:5 "f"
       Copy "_1"
   Block "bb2"
     Sequenced a_branch_that_allocates_either_way.c:5:9 generated
+    ArgumentsEvaluated a_branch_that_allocates_either_way.c:5:18 generated
     Call a_branch_that_allocates_either_way.c:5:18 "malloc" "bb5"
       Destination "_4"
       Constant 8

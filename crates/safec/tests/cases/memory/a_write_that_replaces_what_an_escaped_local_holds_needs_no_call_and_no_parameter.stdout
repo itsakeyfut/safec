@@ -58,6 +58,7 @@ Function a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_
         Copy "_6"
           Deref
     Sequenced a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:8:16 generated
+    ArgumentsEvaluated a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:9:11 generated
     Call a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:9:11 "malloc" "bb2"
       Destination "_9"
       Constant 8

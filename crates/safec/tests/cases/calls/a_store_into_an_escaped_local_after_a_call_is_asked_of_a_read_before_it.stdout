@@ -49,6 +49,7 @@ Function a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it
       Copy "_6"
   Block "bb1"
     Sequenced a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:11:5 generated
+    ArgumentsEvaluated a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:12:9 generated
     Call a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:12:9 "malloc" "bb2"
       Destination "_7"
       Constant 4

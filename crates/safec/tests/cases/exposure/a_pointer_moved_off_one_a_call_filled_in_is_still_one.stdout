@@ -28,6 +28,7 @@ Function a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:5:5 "f"
   Local "_17" "int"
   Local "_18" "int *"
   Block "bb0" entry
+    ArgumentsEvaluated a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:10:9 generated
     Call a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:10:9 "malloc" "bb1"
       Destination "_6"
       Constant 8
@@ -60,6 +61,7 @@ Function a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:5:5 "f"
     Sequenced a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:11:9 generated
     Goto "bb4"
   Block "bb4"
+    ArgumentsEvaluated a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:14:9 generated
     Call a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:14:9 "malloc" "bb5"
       Destination "_9"
       Constant 4

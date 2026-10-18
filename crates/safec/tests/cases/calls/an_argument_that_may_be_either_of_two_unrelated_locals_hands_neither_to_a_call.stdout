@@ -124,6 +124,7 @@ Function an_argument_that_may_be_either_of_two_unrelated_locals_hands_neither_to
       Destination "_12"
       Address
         Place "_2"
+    ArgumentsEvaluated an_argument_that_may_be_either_of_two_unrelated_locals_hands_neither_to_a_call.c:19:12 generated
     Call an_argument_that_may_be_either_of_two_unrelated_locals_hands_neither_to_a_call.c:19:12 "use2" "bb13"
       Destination "_13"
       Copy "_12"

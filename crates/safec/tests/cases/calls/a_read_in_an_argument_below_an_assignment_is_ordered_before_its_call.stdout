@@ -66,6 +66,7 @@ Function a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:
         Copy "_1"
         Copy "_1"
           Deref
+    ArgumentsEvaluated a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:9 generated
     Call a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:9 "h" "bb5"
       Destination "_7"
       Copy "_6"

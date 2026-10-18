@@ -77,6 +77,7 @@ Function a_fresh_allocation_returned_after_a_lost_value_was_handed_away_is_doubt
       Use
         Copy "_2"
     Sequenced a_fresh_allocation_returned_after_a_lost_value_was_handed_away_is_doubted_after_its_free.c:10:9 generated
+    ArgumentsEvaluated a_fresh_allocation_returned_after_a_lost_value_was_handed_away_is_doubted_after_its_free.c:11:13 generated
     Call a_fresh_allocation_returned_after_a_lost_value_was_handed_away_is_doubted_after_its_free.c:11:13 "malloc" "bb4"
       Destination "_7"
       Constant 4

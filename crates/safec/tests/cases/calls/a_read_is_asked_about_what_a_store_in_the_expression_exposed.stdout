@@ -41,6 +41,7 @@ Function a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:4:5 "f"
     Sequenced a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:8:9 generated
     Goto "bb3"
   Block "bb3"
+    ArgumentsEvaluated a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:11:9 generated
     Call a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:11:9 "malloc" "bb4"
       Destination "_6"
       Constant 4

@@ -70,6 +70,7 @@ Function a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_d
       Copy "_1"
   Block "bb5"
     Sequenced a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:9:9 generated
+    ArgumentsEvaluated a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:9:16 generated
     Call a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:9:16 "realloc" "bb8"
       Destination "_7"
       Copy "_2"

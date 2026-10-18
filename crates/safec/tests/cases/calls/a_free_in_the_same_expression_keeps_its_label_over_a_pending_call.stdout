@@ -57,6 +57,7 @@ Function a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:8:5
       Copy "_6"
   Block "bb1"
     Sequenced a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:14:5 generated
+    ArgumentsEvaluated a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:15:9 generated
     Call a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:15:9 "malloc" "bb2"
       Destination "_7"
       Constant 4

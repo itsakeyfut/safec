@@ -108,6 +108,7 @@ Function a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:7
       Use
         Copy "_4"
     Sequenced a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:14:9 generated
+    ArgumentsEvaluated a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:15:13 generated
     Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:15:13 "malloc" "bb8"
       Destination "_9"
       Constant 4

@@ -97,6 +97,7 @@ Function a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:5:5 "f"
       Use
         Copy "_4"
     Sequenced a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:12:9 generated
+    ArgumentsEvaluated a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:13:13 generated
     Call a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:13:13 "malloc" "bb8"
       Destination "_9"
       Constant 4

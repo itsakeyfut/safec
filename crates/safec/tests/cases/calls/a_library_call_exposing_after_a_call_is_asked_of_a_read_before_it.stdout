@@ -50,6 +50,7 @@ Function a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:5:5
       Copy "_6"
   Block "bb1"
     Sequenced a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:11:5 generated
+    ArgumentsEvaluated a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:12:9 generated
     Call a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:12:9 "malloc" "bb2"
       Destination "_7"
       Constant 4

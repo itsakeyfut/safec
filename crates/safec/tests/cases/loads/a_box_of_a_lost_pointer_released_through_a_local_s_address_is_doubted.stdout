@@ -142,6 +142,7 @@ Function a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c
       Use
         Copy "_8"
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:17:9 generated
+    ArgumentsEvaluated a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:18:13 generated
     Call a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:18:13 "malloc" "bb12"
       Destination "_13"
       Constant 4

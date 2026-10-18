@@ -29,6 +29,7 @@ Function a_local_given_something_fresh_forgets_what_it_lost.c:3:5 "f"
       Copy "_1"
   Block "bb2"
     Sequenced a_local_given_something_fresh_forgets_what_it_lost.c:6:12 generated
+    ArgumentsEvaluated a_local_given_something_fresh_forgets_what_it_lost.c:7:13 generated
     Call a_local_given_something_fresh_forgets_what_it_lost.c:7:13 "malloc" "bb4"
       Destination "_4"
       Constant 8

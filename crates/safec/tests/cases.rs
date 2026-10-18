@@ -232,9 +232,26 @@ cases! {
         // suite green: the comma's was held, and `&&`, `||`, `?:` and a call's
         // arguments were not. Each mutation makes the compiler **certain**
         // about an order C has not chosen, which is the direction that matters.
+        // Each has a sibling that reads through a pointer, `*p` or `*w`,
+        // because one that cannot act leaves the marker in (#178). Mutation:
+        // answer that at most one operand acts everywhere, or count a
+        // dereference as inert; these gain a proof.
         a_comma_inside_a_call_argument_orders_nothing_outside_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_logical_and_inside_an_unsequenced_operand_orders_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_conditional_inside_an_unsequenced_operand_orders_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same operators below a node whose other operands cannot act,
+        // which C17 6.5.16 p3, 6.5.17 p2 and 6.5.13 p4 order as at the root:
+        // an assignment to a local, a negation, and a call whose other
+        // argument is a constant. Each is the proof `int x = (free(p), *p);`
+        // is (#178). Mutation: drop the root at every node that does not
+        // sequence, as before; all four are doubts again. And a call beside
+        // one acts, so it keeps its doubt. Mutation: count a call as inert;
+        // it is proved.
+        an_assignment_of_a_comma_that_frees_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_assignment_of_a_logical_and_that_frees_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_negation_of_a_comma_that_frees_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_logical_and_in_an_argument_beside_a_constant_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_call_beside_a_comma_that_frees_keeps_it_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // One argument writes a pointer another reads, which C17 6.5 p2 makes
         // undefined whatever it holds, so the conflict is the report, `SC0409`,
         // and a proof: through a `_Nonnull` parameter, a dereference, a
@@ -2792,11 +2809,12 @@ cases! {
         // 6.5.16 p3. Mutation: give the notice for a write into an escaped
         // target no span; this reports.
         a_call_in_a_write_s_own_operands_is_not_asked_about_the_write: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // C sequences `p[0]` before `g`, and this is still refused: under `=`
-        // the `?:` gets no sequence point, which is #178, so the read is
-        // pending at `g`. This holds today's answer so that closing #178 moves
-        // a named case. See ADR-0042.
-        a_read_sequenced_before_an_opaque_call_under_an_assignment_is_still_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C sequences `p[0]` before `g`, and the `?:` under `=` says so: the
+        // place `x` cannot act, so the operator keeps its marker and the read
+        // is not pending at `g` (#178). Mutation: drop the root at every node
+        // that does not sequence, as before; this is refused again. See
+        // ADR-0022 and ADR-0042.
+        a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The argument crosses a join before the free. Mutation: answer
         // `Read::Dereference` in the `or_insert` of `Allocations`'s `join`;
         // this becomes `SC0402`.
@@ -2841,8 +2859,8 @@ cases! {
         an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What a call's own arguments read is behind it, C17 6.5.2.2 p10's
         // first sentence, wherever the call sits; ADR-0026's element says so
-        // only for a call no unsequenced operator encloses, and these are the
-        // calls below one. The first has no free in it at all. Mutation: drop
+        // only for a call the root reaches, and these are calls below a node
+        // whose other operand acts. The first has no free in it at all. Mutation: drop
         // the `inside` test in `used_before`; all four are refused again, the
         // last with the `SC0402` its own note used to contradict, and the case
         // after them gains reports. See ADR-0043.

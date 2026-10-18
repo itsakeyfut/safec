@@ -50,6 +50,7 @@ Function a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_
     Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:10:9 generated
     Goto "bb3"
   Block "bb3"
+    ArgumentsEvaluated a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:13:9 generated
     Call a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:13:9 "malloc" "bb4"
       Destination "_9"
       Constant 8
@@ -82,6 +83,7 @@ Function a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_
     Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:14:9 generated
     Goto "bb7"
   Block "bb7"
+    ArgumentsEvaluated a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:17:9 generated
     Call a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:17:9 "malloc" "bb8"
       Destination "_12"
       Constant 4

@@ -87,6 +87,7 @@ Function what_the_other_library_copies_return_is_what_they_were_handed.c:8:5 "ma
         Copy "_1"
           Deref
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:13:5 generated
+    ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:14:23 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:14:23 "malloc" "bb5"
       Destination "_6"
       Constant 4
@@ -103,6 +104,7 @@ Function what_the_other_library_copies_return_is_what_they_were_handed.c:8:5 "ma
       Use
         Copy "_7"
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:14:15 generated
+    ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:15:23 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:15:23 "malloc" "bb7"
       Destination "_9"
       Constant 4
@@ -119,6 +121,7 @@ Function what_the_other_library_copies_return_is_what_they_were_handed.c:8:5 "ma
       Use
         Copy "_10"
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:15:15 generated
+    ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:16:22 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:16:22 "malloc" "bb9"
       Destination "_12"
       Constant 4
@@ -134,6 +137,7 @@ Function what_the_other_library_copies_return_is_what_they_were_handed.c:8:5 "ma
       Use
         Copy "_13"
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:16:15 generated
+    ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:17:23 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:17:23 "malloc" "bb11"
       Destination "_15"
       Constant 4

@@ -51,6 +51,7 @@ Function a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:5
       Copy "_2"
   Block "bb1"
     Sequenced a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:12:5 generated
+    ArgumentsEvaluated a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:13:9 generated
     Call a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:13:9 "malloc" "bb2"
       Destination "_8"
       Constant 4

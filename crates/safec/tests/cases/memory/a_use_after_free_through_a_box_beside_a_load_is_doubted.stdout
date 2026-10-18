@@ -121,6 +121,7 @@ Function a_use_after_free_through_a_box_beside_a_load_is_doubted.c:3:5 "f"
       Use
         Copy "_8"
     Sequenced a_use_after_free_through_a_box_beside_a_load_is_doubted.c:12:9 generated
+    ArgumentsEvaluated a_use_after_free_through_a_box_beside_a_load_is_doubted.c:13:13 generated
     Call a_use_after_free_through_a_box_beside_a_load_is_doubted.c:13:13 "malloc" "bb11"
       Destination "_13"
       Constant 4

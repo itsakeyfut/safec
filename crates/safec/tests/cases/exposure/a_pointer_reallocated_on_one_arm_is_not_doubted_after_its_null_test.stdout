@@ -64,6 +64,7 @@ Function a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:4
       Copy "_1"
   Block "bb5"
     Sequenced a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:8:9 generated
+    ArgumentsEvaluated a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:8:16 generated
     Call a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:8:16 "realloc" "bb8"
       Destination "_6"
       Copy "_2"

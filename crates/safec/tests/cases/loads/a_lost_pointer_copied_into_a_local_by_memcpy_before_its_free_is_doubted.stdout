@@ -96,6 +96,7 @@ Function a_lost_pointer_copied_into_a_local_by_memcpy_before_its_free_is_doubted
       Use
         Copy "_4"
     Sequenced a_lost_pointer_copied_into_a_local_by_memcpy_before_its_free_is_doubted.c:11:9 generated
+    ArgumentsEvaluated a_lost_pointer_copied_into_a_local_by_memcpy_before_its_free_is_doubted.c:12:13 generated
     Call a_lost_pointer_copied_into_a_local_by_memcpy_before_its_free_is_doubted.c:12:13 "malloc" "bb8"
       Destination "_9"
       Constant 4

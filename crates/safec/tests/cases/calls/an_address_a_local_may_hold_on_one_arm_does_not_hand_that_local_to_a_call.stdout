@@ -130,6 +130,7 @@ Function an_address_a_local_may_hold_on_one_arm_does_not_hand_that_local_to_a_ca
       Destination "_13"
       Address
         Place "_2"
+    ArgumentsEvaluated an_address_a_local_may_hold_on_one_arm_does_not_hand_that_local_to_a_call.c:20:12 generated
     Call an_address_a_local_may_hold_on_one_arm_does_not_hand_that_local_to_a_call.c:20:12 "use2" "bb13"
       Destination "_14"
       Copy "_13"
