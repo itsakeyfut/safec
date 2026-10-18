@@ -29,7 +29,9 @@ C17 6.5 p2 makes each of those calls undefined, whatever `q` holds: one argument
 
 Chosen option: **report the conflict**, found by the lowering and carried by `Element::UnsequencedArguments`, which the memory check concludes `Unsafe` as `SC0409`.
 
-The lowering has the tree, and the conflict is a fact about the tree: which pointer locals each argument writes by name, and which it reads. It is found where the call is lowered, for every argument against every other, and an element is written before the call's terminator for each local in conflict. The memory check reads nothing else about it: wherever its walk reaches the element, it is a finding, proved, because 6.5 p2 makes the call undefined on every execution that reaches it.
+The lowering has the tree, and the conflict is a fact about the tree: which pointer locals each argument writes by name, and which it reads. It is found where the call is lowered, for every argument against every other, and an element is written before the call's terminator for each local in conflict. The memory check reads nothing else about it: wherever its walk reaches the element, it is a finding, proved, because 6.5 p2 makes the call undefined on every execution that evaluates both accesses, and `Unsafe` says that some execution is undefined (`docs/safety-model.md`).
+
+**A write that may not run is still a proof.** Where one of the two accesses is behind `&&`, `||` or `?:`, the walk counts it all the same: `g(q, c && (q = &x))` is undefined on every execution where `c` holds, which is what `Unsafe` means for a parameter. The cost is a condition no execution satisfies, `g(q, 0 && (q = &x))`, which C defines and this refuses; `a_write_that_never_runs_is_still_a_conflict` pins it, and nothing about it can be silent.
 
 **Only pointer locals, and only a call's arguments.** `k(i, i++)` and `i + i++` are undefined by the same paragraph and stay silent: neither is something a memory check is believed about, and a check for every unsequenced operand pair is a frontend feature larger than this issue. They are a cost this record names rather than a gap it hides.
 

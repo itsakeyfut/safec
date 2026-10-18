@@ -388,7 +388,8 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 }
                 // Wherever the walk reaches it, and asking nothing of `known`:
                 // the call it stands before is undefined on every execution
-                // that reaches it. See ADR-0052.
+                // that evaluates both accesses, and one behind `&&`, `||` or
+                // `?:` is counted all the same. See ADR-0052.
                 if let Element::UnsequencedArguments {
                     local,
                     written,

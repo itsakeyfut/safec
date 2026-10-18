@@ -267,6 +267,12 @@ cases! {
         // reported beside the conflict. Mutation: emit the element where the
         // call finishes; an `SC0401` appears. Found by review.
         a_conflict_leaves_a_null_argument_exempt_from_the_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What counting a write behind `&&`, `||` or `?:` costs: one under a
+        // condition no execution satisfies is refused, though C defines the
+        // program. Where the condition can hold, the call is undefined on that
+        // execution, which is what `Unsafe` says. Found by review; see
+        // ADR-0052.
+        a_write_that_never_runs_is_still_a_conflict: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What is not a conflict. `&q` takes the address and reads nothing
         // (C17 6.5.3.2 p3), and a write and a read inside one argument are
         // ordered by the comma between them. Mutation: count `&q` as a read,
