@@ -396,15 +396,16 @@ cases! {
         // p = 0; }` (#495). Mutation: have the early return in
         // `Known::held_sites` ask `loaded` again; this reports.
         a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
-        // What that return still costs for a pointer a call wrote and for a
-        // lost local, which it keeps: the same idiom beside `get(&u)`, and a
-        // free in a loop beside a local lost to that loop's rebirth, are
-        // doubted though neither local can name `p`. The second also reports
-        // `*l`, which is a real use of last turn's freed allocation.
-        // Mutation: leave `foreign`, or `lost`, out of the return; the first,
-        // or the second, loses its report at the free.
+        // What that return still costs for a pointer a call wrote, which it
+        // keeps: the same idiom beside `get(&u)` is doubted though `u` cannot
+        // name `p`. Mutation: leave `foreign` out of the return; it loses its
+        // report at the free. And what it no longer costs for a lost local:
+        // a free in a loop beside a local lost to that loop's rebirth is not
+        // doubted, and `*l`, a real use of last turn's freed allocation, is
+        // still reported (#517). Mutation: ask `lost` in the return again;
+        // the second reports at the free.
         a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
-        a_free_in_a_loop_is_doubted_beside_a_local_lost_to_its_rebirth: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_free_in_a_loop_is_not_doubted_beside_a_local_lost_to_its_rebirth: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And what that same rule holds in the safety direction: `u` written
         // by a call this check cannot read may be `p`, freed before the call,
         // and `r` is `u` on the arm that freed and nulled `q`, so `free(r)`
@@ -424,9 +425,8 @@ cases! {
         // #503 by the free of the lost value, and keep a report with lost and
         // loaded locals out of the return, in the words "this check stopped
         // following" (#495). And the box read back after a call this check
-        // cannot read released the lost value it was handed, which nothing
-        // but that return doubts until #505. Mutation: leave `lost` out of
-        // the return; the fourth goes quiet. And an alias of `p` this check
+        // cannot read released the lost value it was handed, doubted since
+        // #505 by the call itself. And an alias of `p` this check
         // lost to a call, freed on one arm. Found by review of #495.
         a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_use_after_free_through_a_box_beside_a_load_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
