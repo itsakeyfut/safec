@@ -1,0 +1,14 @@
+Target "x86_64-pc-windows-msvc"
+Function an_untyped_part_of_a_length_in_a_struct_member_s_prototype_is_refused.c:2:5 "main"
+  Local "_0" "int" return
+  Block "bb0" entry
+    Operation an_untyped_part_of_a_length_in_a_struct_member_s_prototype_is_refused.c:2:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation an_untyped_part_of_a_length_in_a_struct_member_s_prototype_is_refused.c:2:18 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_untyped_part_of_a_length_in_a_struct_member_s_prototype_is_refused.c:2:25 generated
+    Return

@@ -28,7 +28,8 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
-    Ast, BinOp as AstBinOp, Expr, ExprId, ForStart, Item, Parameters, Stmt, StmtId, Type,
+    Ast, BinOp as AstBinOp, Declaration, Expr, ExprId, ForStart, Item, Parameters, Stmt, StmtId,
+    Type,
 };
 use crate::ast::{Nullability, Specifier, TypeId, UnOp as AstUnOp, spell_type};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
@@ -630,7 +631,24 @@ impl Lowering<'_> {
                         (function.name, function.ty, function.return_nullability);
                     self.declare_one(name, ty, written, true, diagnostics);
                 }
-                Item::Declaration { declarators, .. } => {
+                Item::Declaration {
+                    declarators,
+                    specified,
+                    ..
+                } => {
+                    // **A declaration that declares nothing still defines**:
+                    // `struct S { int (*fp)(...); };` writes a prototype that
+                    // no declarator's type carries, and a later `struct S s;`
+                    // names the tag without its members. So its specifiers are
+                    // walked where there is no declarator to walk them through
+                    // (#448). Found by review.
+                    // One set per declaration, because every declarator of
+                    // `struct S { ... } s1, s2;` shares the struct's node, and
+                    // walking it once per declarator reported one fault twice.
+                    let mut walked = HashSet::new();
+                    if declarators.is_empty() {
+                        let _ = self.prototypes_lose_nothing(*specified, &mut walked, diagnostics);
+                    }
                     for declarator in declarators {
                         // A declaration of an object rather than a function is
                         // not in the IR at all: every place is rooted at a
@@ -649,6 +667,19 @@ impl Lowering<'_> {
                         if let Some(name) = declaration.name {
                             let (ty, written) = (declaration.ty, declaration.nullability);
                             self.declare_one(name, ty, written, false, diagnostics);
+                        }
+                        // **Asked here because nothing else asks it.** An
+                        // object's type is lowered only where the object is
+                        // used, and an unused one is never, so a prototype it
+                        // holds went past the check a function's own prototype
+                        // gets (#448). A function's own prototype is
+                        // `signature`'s, so a function type is not walked.
+                        if !matches!(self.ast.ty(declaration.ty), Type::Function { .. }) {
+                            let _ = self.prototypes_lose_nothing(
+                                declaration.ty,
+                                &mut walked,
+                                diagnostics,
+                            );
                         }
                     }
                 }
@@ -901,36 +932,7 @@ impl Lowering<'_> {
                     return None;
                 }
                 if !self.adjusted_without_loss(parameter.written) {
-                    // The note claims nothing about the program, because a
-                    // length nobody typed can hide a fault: `int a[*(p -
-                    // q)]` is not C, and the type check could not ask,
-                    // since `p - q` has no type.
-                    let mut refusal =
-                        Diagnostic::error("cannot compile a parameter declared as this array yet")
-                            .with_code(LOWERING)
-                            .with_label(Label::primary(at, "declared here"));
-                    // Which part of the length has no type, where that is
-                    // the reason, so the reader is not left to find it.
-                    if let Type::Array {
-                        length: Some(length),
-                        ..
-                    } = self.ast.ty(parameter.written)
-                    {
-                        if self.types.value(*length).is_none() {
-                            if let Some(untyped) = self.first_untyped(*length) {
-                                refusal = refusal.with_label(Label::secondary(
-                                    self.ast.expr(untyped).span(),
-                                    "nothing worked out what type this has",
-                                ));
-                            }
-                        }
-                    }
-                    diagnostics.report(
-                        refusal
-                            .with_note(
-                                "this is a gap in this compiler: whether this parameter is valid C is not checked",
-                            ),
-                    );
+                    self.refuse_parameter(parameter, diagnostics);
                     return None;
                 }
                 lowered.push(Parameter {
@@ -954,6 +956,140 @@ impl Lowering<'_> {
         Some((returns, lowered))
     }
 
+    /// Refuse a parameter declared as an array this stage cannot take,
+    /// naming the part of its length nothing typed where that is the reason.
+    ///
+    /// One refusal for both doors, each asking its own question first: a
+    /// function's own prototype, through [`Self::signature`], which lowers
+    /// the parameter and so asks [`Self::adjusted_without_loss`]; and a
+    /// prototype inside the type of a file-scope object, through
+    /// [`Self::prototypes_lose_nothing`], which lowers nothing and so asks
+    /// only [`Self::lengths_typed_throughout`] (#448).
+    fn refuse_parameter(&self, parameter: &Declaration, diagnostics: &mut DiagnosticSink) {
+        let at = parameter.name.unwrap_or(parameter.span);
+        // The note claims nothing about the program, because a length nobody
+        // typed can hide a fault: `int a[*(p - q)]` is not C, and the type
+        // check could not ask, since `p - q` has no type.
+        let mut refusal =
+            Diagnostic::error("cannot compile a parameter declared as this array yet")
+                .with_code(LOWERING)
+                .with_label(Label::primary(at, "declared here"));
+        // Which part of the length has no type, where that is the reason, so
+        // the reader is not left to find it.
+        if let Type::Array {
+            length: Some(length),
+            ..
+        } = self.ast.ty(parameter.written)
+        {
+            if self.types.value(*length).is_none() {
+                if let Some(untyped) = self.first_untyped(*length) {
+                    refusal = refusal.with_label(Label::secondary(
+                        self.ast.expr(untyped).span(),
+                        "nothing worked out what type this has",
+                    ));
+                }
+            }
+        }
+        diagnostics.report(refusal.with_note(
+            "this is a gap in this compiler: whether this parameter is valid C is not checked",
+        ));
+    }
+
+    /// Whether every length in a parameter's written array type that is not
+    /// a constant was typed all the way down.
+    ///
+    /// The one question a prototype inside a file-scope object's type is
+    /// asked. Not [`Self::adjusted_without_loss`]'s whole answer, whose rule
+    /// against an inner variable length is about what the IR can hold, and
+    /// nothing lowers an object's type: `int (*fp)(int n, int a[][n]);` is C
+    /// (C17 6.7.6.2 p2 and p5) and builds. What is left is #446's reason, a
+    /// part nobody typed can hide a fault nothing will check, which holds at
+    /// any depth since 6.7.6.2 p5 runs none of them. Found by review.
+    ///
+    /// **Through pointers as well as arrays**, since `int (*a)[*(p - q)]` is
+    /// the same length behind a pointer and 6.7.6.2 p5 runs it no more than
+    /// the other: asking only the array chain at the top left it to build.
+    /// Found by review. It stops at a function type, which
+    /// [`Self::prototypes_lose_nothing`] walks as a prototype of its own.
+    fn lengths_typed_throughout(&self, written: TypeId) -> bool {
+        let mut current = written;
+        loop {
+            match self.ast.ty(current) {
+                Type::Array {
+                    element, length, ..
+                } => {
+                    if let Some(length) = *length {
+                        if self.types.value(length).is_none() && !self.typed_throughout(length) {
+                            return false;
+                        }
+                    }
+                    current = *element;
+                }
+                Type::Pointer(pointee) => current = *pointee,
+                Type::Int
+                | Type::Char
+                | Type::Void
+                | Type::Function { .. }
+                | Type::Struct { .. } => {
+                    return true;
+                }
+            }
+        }
+    }
+
+    /// Every prototype a type holds, each parameter asked
+    /// [`Self::lengths_typed_throughout`], and `None` at the first refusal.
+    ///
+    /// For the type of a file-scope object, which nothing else lowers while
+    /// nothing uses it, so `int (*fp)(int *p, int *q, int n, int a[(*(p - q)
+    /// = 0, n)]);` built with the fault a function's own prototype is refused
+    /// for (#448). Through pointers, array elements, struct members, return
+    /// types and each parameter's written type, so a prototype nested
+    /// anywhere in it is asked too. A worklist, as the other walks of a type
+    /// here are.
+    ///
+    /// `walked` is every type this declaration has walked already, so a node
+    /// two declarators share is asked once.
+    fn prototypes_lose_nothing(
+        &self,
+        ty: TypeId,
+        walked: &mut HashSet<TypeId>,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<()> {
+        let mut work = vec![ty];
+        while let Some(ty) = work.pop() {
+            if !walked.insert(ty) {
+                continue;
+            }
+            match self.ast.ty(ty) {
+                Type::Pointer(pointee) => work.push(*pointee),
+                Type::Array { element, .. } => work.push(*element),
+                Type::Struct { members, .. } => {
+                    work.extend(members.iter().flatten().map(|member| member.written));
+                }
+                Type::Function {
+                    returns,
+                    parameters,
+                } => {
+                    if let Parameters::Prototype(parameters) = parameters {
+                        for parameter in parameters {
+                            if !self.lengths_typed_throughout(parameter.written) {
+                                self.refuse_parameter(parameter, diagnostics);
+                                return None;
+                            }
+                            work.push(parameter.written);
+                        }
+                    }
+                    work.push(*returns);
+                }
+                // Written out rather than `_`, so a type added later is
+                // asked whether it can hold a prototype.
+                Type::Int | Type::Char | Type::Void => {}
+            }
+        }
+        Some(())
+    }
+
     /// Whether a parameter written as `written` loses nothing by being the
     /// pointer C17 6.7.6.3 p7 adjusts it to.
     ///
@@ -974,7 +1110,8 @@ impl Lowering<'_> {
     /// Every inner length stays in the adjusted pointer's type, which this
     /// IR cannot hold unless it is a positive number. The element and a
     /// constant length are `types.rs`'s to refuse first, under C17 6.7.6.2
-    /// p1, and this is a defence for them.
+    /// p1, and this is a defence for them. A prototype inside a file-scope
+    /// object's type is asked too, through [`Self::prototypes_lose_nothing`].
     fn adjusted_without_loss(&self, written: TypeId) -> bool {
         let mut current = written;
         let mut array = false;

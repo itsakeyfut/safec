@@ -1,0 +1,8 @@
+error[SC0304]: cannot compile a parameter declared as this array yet
+   ╭─[ an_untyped_part_of_a_length_behind_a_pointer_in_a_prototype_is_refused.c:1:40 ]
+   │
+ 1 │ int (*fp)(int *p, int *q, int n, int (*a)[(*(p - q) = 0, n)]);
+   │                                        ┬  
+   │                                        ╰── declared here
+───╯
+  = note: this is a gap in this compiler: whether this parameter is valid C is not checked

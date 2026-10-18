@@ -4288,6 +4288,41 @@ cases! {
         // Mutation: look only at the length's own operands; the last builds.
         // Mutation: drop the label on the untyped part; every block changes.
         an_untyped_part_of_a_prototype_s_length_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same length inside the type of a file-scope object, which
+        // nothing lowers while nothing uses it, is asked too (#448): a
+        // function pointer, a prototype nested in one of its parameters, and
+        // an array of them. Mutation: have `declare_one` not walk an object's
+        // type; the first builds. Mutation: have the walk not enter a
+        // function's parameters, or an array's element; the third, or the
+        // fourth, builds. And a length typed throughout still builds there.
+        // Mutation: refuse every length the walk meets; the second is
+        // refused.
+        an_untyped_part_of_a_file_scope_function_pointer_s_length_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_file_scope_function_pointer_s_length_typed_throughout_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_untyped_part_of_a_length_in_a_prototype_nested_in_a_function_pointer_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_untyped_part_of_a_length_in_an_array_of_function_pointers_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What the walk asks is only whether a length was typed, at any
+        // depth, since nothing lowers an object's type: an inner variable
+        // length is C (C17 6.7.6.2 p2, p5) and builds, and an inner one with
+        // an untyped part is refused like an outer one. Mutation: ask
+        // `adjusted_without_loss` instead; the first is refused. Mutation:
+        // ask only the outermost length; the second builds. And a
+        // declaration that declares nothing but defines a struct is walked
+        // through its specifiers. Mutation: walk only declarators; the third
+        // builds. Found by review.
+        an_inner_variable_length_in_a_file_scope_function_pointer_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_untyped_part_of_an_inner_length_in_a_file_scope_function_pointer_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_untyped_part_of_a_length_in_a_struct_member_s_prototype_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A length behind a pointer in a parameter, a prototype only the
+        // return type reaches, and one fault in a struct two declarators
+        // share, which is reported once. Mutation: have the length check stop
+        // at a pointer; the first builds. Mutation: have the walk not enter a
+        // function's return type; the second builds. Mutation: walk without
+        // the set of types already walked; the third reports twice. Found by
+        // review.
+        an_untyped_part_of_a_length_behind_a_pointer_in_a_prototype_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_untyped_part_of_a_length_in_a_prototype_a_return_type_holds_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_untyped_part_of_a_length_in_a_struct_two_declarators_share_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         edges_of_a_branch_and_a_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         every_shape_the_artifact_spells: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `i` and `j`, declared by the `for`, begin their storage once before
