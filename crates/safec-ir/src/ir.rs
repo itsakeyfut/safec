@@ -604,31 +604,52 @@ pub enum Element {
         /// The call whose arguments these were, named by its own span.
         origin: Origin,
     },
-    /// One argument of the call that follows writes this local, and another
-    /// argument of the same call reads or writes it.
+    /// One operand of the node this stands before writes this local, and
+    /// another operand of the same node reads or writes it: two arguments of
+    /// a call, or two operands of an operator that does not sequence.
     ///
-    /// C17 6.5 p2 makes that call undefined whatever the local holds: 6.5.2.2
-    /// p10 orders the arguments before the call and not against each other,
-    /// and 6.5 p3 leaves them unsequenced. The IR reads a place argument where
-    /// the terminator is, after every argument, which is an order C did not
-    /// choose, so the conflict is said here rather than left to whatever that
-    /// order reads. A frontend that finds it owes this element; one that does
-    /// not leaves `g(q, q = &x)` asked about the `q` the second argument
-    /// wrote. See [ADR-0052].
+    /// C17 6.5 p2 makes that undefined whatever the local holds: 6.5 p3 leaves
+    /// an operator's operands unsequenced against each other, and 6.5.2.2 p10
+    /// orders a call's arguments before the call and not against each other.
+    /// The IR lowers the operands in one order and reads a place where the
+    /// node is built, which is an order C did not choose, so the conflict is
+    /// said here rather than left to whatever that order reads. A frontend
+    /// that finds it owes this element; one that does not leaves `g(q, q =
+    /// &x)` and `*q = (free(q), q = r, 0)` asked about the `q` the other
+    /// operand wrote. See [ADR-0052].
     ///
     /// [ADR-0052]: https://github.com/itsakeyfut/safec/blob/main/docs/adr/0052-an-argument-that-writes-a-pointer-another-argument-reads-is-reported-where-it-is-lowered.md
-    UnsequencedArguments {
-        /// The local both arguments name.
+    UnsequencedAccess {
+        /// The local both operands name.
         local: LocalId,
-        /// Where one argument writes it.
+        /// Where one operand writes it.
         written: Span,
-        /// Where another argument reads it, or writes it too.
+        /// Where another operand reads it, or writes it too.
         accessed: Span,
         /// Whether that other access is a write.
         both_write: bool,
-        /// The call whose arguments these are, named by its own span.
+        /// Whether the two are a call's arguments or an operator's operands,
+        /// which is what a report names them as.
+        between: Between,
+        /// The node whose operands these are, named by its own span.
         origin: Origin,
     },
+}
+
+/// What the two accesses an [`Element::UnsequencedAccess`] names are
+/// operands of.
+///
+/// Its own type rather than a `bool`, because a reader is choosing words by
+/// it, and `true` says nothing about which words.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Between {
+    /// Two arguments of one call, which C17 6.5.2.2 p10 orders only against
+    /// the call.
+    Arguments,
+    /// Two operands of an operator that does not sequence: an assignment's
+    /// place and value, a binary operator's two sides, a subscript's base and
+    /// index, which C17 6.5 p3 leaves unsequenced.
+    Operands,
 }
 
 impl Element {
@@ -645,7 +666,7 @@ impl Element {
             Self::StorageDead { .. } => "StorageDead",
             Self::Sequenced { .. } => "Sequenced",
             Self::ArgumentsEvaluated { .. } => "ArgumentsEvaluated",
-            Self::UnsequencedArguments { .. } => "UnsequencedArguments",
+            Self::UnsequencedAccess { .. } => "UnsequencedAccess",
         }
     }
 }

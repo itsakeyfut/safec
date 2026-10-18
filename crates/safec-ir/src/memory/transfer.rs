@@ -1083,11 +1083,12 @@ impl Analysis for Allocations<'_> {
             // Reported where the walk reaches it, and nothing a pointer holds
             // changes: the element says what the arguments do, and their own
             // elements and the call are what do it. See ADR-0052.
-            Element::UnsequencedArguments {
+            Element::UnsequencedAccess {
                 local: _,
                 written: _,
                 accessed: _,
                 both_write: _,
+                between: _,
                 origin: _,
             } => {}
             Element::Assign(operation) => {
@@ -2531,11 +2532,12 @@ pub(super) fn live_in(function: &Function) -> Vec<Vec<bool>> {
                 }
                 | Element::Sequenced { origin: _ }
                 | Element::ArgumentsEvaluated { origin: _ }
-                | Element::UnsequencedArguments {
+                | Element::UnsequencedAccess {
                     local: _,
                     written: _,
                     accessed: _,
                     both_write: _,
+                    between: _,
                     origin: _,
                 } => {}
             }

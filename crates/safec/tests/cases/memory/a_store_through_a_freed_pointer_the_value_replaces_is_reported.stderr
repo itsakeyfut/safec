@@ -1,0 +1,12 @@
+error[SC0409]: this reads `q`, which another operand of the same expression writes
+   ╭─[ a_store_through_a_freed_pointer_the_value_replaces_is_reported.c:9:6 ]
+   │
+ 9 │     *q = (q = r, 0);
+   │      ┬    ──┬──  
+   │      ╰─────────── read here
+   │             │    
+   │             ╰──── written here
+───╯
+  = note: C17 6.5 p2 makes this undefined wherever both are evaluated: nothing orders an operator's operands against each other (6.5 p3)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before this expression

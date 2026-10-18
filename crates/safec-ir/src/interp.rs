@@ -305,11 +305,12 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                 // A conflict between two arguments is a fact about every order,
                 // and this runs one of them, reading the argument where the
                 // call is. What reports it is the memory check. See ADR-0052.
-                Element::UnsequencedArguments {
+                Element::UnsequencedAccess {
                     local: _,
                     written: _,
                     accessed: _,
                     both_write: _,
+                    between: _,
                     origin: _,
                 } => {}
                 // Storage, and nothing in it. Entering the block again is what

@@ -67,7 +67,7 @@ a pointer that may be null passed to a parameter declared `_Nonnull`,
 `SC0406` is a pointer to an allocation that may have been freed, handed back by
 a `return`, `SC0407` is the same pointer handed to a call, `SC0408` is a
 pointer that may be null handed back by a function that promised it is not, and
-`SC0409` is a pointer one argument of a call writes and another reads or writes. They are
+`SC0409` is a pointer one operand writes and another reads or writes, whether they are two arguments of a call or two operands of an operator. They are
 the first codes in this compiler that say something about what a program does
 rather than about how it is written.
 
@@ -104,6 +104,10 @@ null or a freed pointer one order would read: the caret is on the read, or on
 the second write, and a second label is on the write. The fix is to make the
 write a statement of its own. Only a pointer local written by name is asked
 about; `k(i, i++)` is undefined by the same paragraph and is not reported.
+The same holds between the operands of an operator that does not sequence,
+`*q = (free(q), q = r, 0)` and `x = *q + (q = r, 0)`, which C17 6.5 p3 leaves
+unsequenced; the words then name an operand of the same expression rather than
+an argument of the same call.
 [ADR-0052](adr/0052-an-argument-that-writes-a-pointer-another-argument-reads-is-reported-where-it-is-lowered.md)
 is the decision.
 

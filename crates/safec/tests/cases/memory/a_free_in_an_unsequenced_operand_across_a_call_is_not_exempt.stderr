@@ -8,3 +8,15 @@ error[SC0401]: this frees `p`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check knows of no allocation this pointer holds here
+error[SC0409]: this reads `p`, which another operand of the same expression writes
+   ╭─[ a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:7:40 ]
+   │
+ 7 │     int x = (p = 0, 1) + (g(0) + (free(p), 0));
+   │              ──┬──                     ┬  
+   │                ╰────────────────────────── written here
+   │                                        │  
+   │                                        ╰── read here
+───╯
+  = note: C17 6.5 p2 makes this undefined wherever both are evaluated: nothing orders an operator's operands against each other (6.5 p3)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before this expression

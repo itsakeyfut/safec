@@ -36,7 +36,7 @@ Function a_write_inside_a_comma_is_unsequenced_against_another_argument.c:2:5 "m
       Destination "_4"
       Use
         Copy "_2"
-    UnsequencedArguments a_write_inside_a_comma_is_unsequenced_against_another_argument.c:5:5 written "_2"
+    UnsequencedAccess a_write_inside_a_comma_is_unsequenced_against_another_argument.c:5:5 written "_2" Arguments
       Written a_write_inside_a_comma_is_unsequenced_against_another_argument.c:5:12
       Read a_write_inside_a_comma_is_unsequenced_against_another_argument.c:5:8
     ArgumentsEvaluated a_write_inside_a_comma_is_unsequenced_against_another_argument.c:5:5 generated

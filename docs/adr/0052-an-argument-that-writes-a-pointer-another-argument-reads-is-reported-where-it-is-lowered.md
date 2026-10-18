@@ -27,13 +27,15 @@ C17 6.5 p2 makes each of those calls undefined, whatever `q` holds: one argument
 
 ## Decision Outcome
 
-Chosen option: **report the conflict**, found by the lowering and carried by `Element::UnsequencedArguments`, which the memory check concludes `Unsafe` as `SC0409`.
+Chosen option: **report the conflict**, found by the lowering and carried by `Element::UnsequencedAccess` (named `UnsequencedArguments` until #525), which the memory check concludes `Unsafe` as `SC0409`.
 
 The lowering has the tree, and the conflict is a fact about the tree: which pointer locals each argument writes by name, and which it reads. It is found where the call is lowered, for every argument against every other, and an element is written before the call's terminator for each local in conflict. The memory check reads nothing else about it: wherever its walk reaches the element, it is a finding, proved, because 6.5 p2 makes the call undefined on every execution that evaluates both accesses, and `Unsafe` says that some execution is undefined (`docs/safety-model.md`).
 
 **A write that may not run is still a proof.** Where one of the two accesses is behind `&&`, `||` or `?:`, the walk counts it all the same: `g(q, c && (q = &x))` is undefined on every execution where `c` holds, which is what `Unsafe` means for a parameter. The cost is a condition no execution satisfies, `g(q, 0 && (q = &x))`, which C defines and this refuses; `a_write_that_never_runs_is_still_a_conflict` pins it, and nothing about it can be silent.
 
-**Only pointer locals, and only a call's arguments.** `k(i, i++)` and `i + i++` are undefined by the same paragraph and stay silent: neither is something a memory check is believed about, and a check for every unsequenced operand pair is a frontend feature larger than this issue. They are a cost this record names rather than a gap it hides.
+**Only pointer locals.** `k(i, i++)` and `i + i++` are undefined by the same paragraph and stay silent: neither is something a memory check is believed about. They are a cost this record names rather than a gap it hides.
+
+**And an operator's operands, since [#525](https://github.com/itsakeyfut/safec/issues/525).** This record first asked only a call's arguments, calling every unsequenced operand pair a larger feature. Then `*q = (free(q), q = r, 0)` and `x = *q + (q = r, 0)` turned out to be the same silence, and the same walk answers them. So the search runs at an assignment, a binary operator that does not sequence, and a subscript, as well as at a call. The element's `Between` field says which, and the words follow it. An assignment's place is walked as a place: the local it names is the store's, sequenced after the value computations of both operands (C17 6.5.16 p3), so `q = (q = r, q)` is no conflict, while what computing the place reads is. A conflict is found once, at the lowest node whose operands it lies across.
 
 **Only what is named.** A write through a pointer, `*pp = 0`, is not found, and neither is one into a member or an element of an array. Missing one is the silence that is already there, not a new one.
 
@@ -50,6 +52,9 @@ Mutations, each failing named cases:
 * Comparing an argument with itself fails `a_write_and_a_read_in_one_argument_are_not_reported`.
 * Counting only a read as the other access fails `two_arguments_writing_one_pointer_are_reported`.
 * Not asking whether the local holds a pointer fails `an_integer_another_argument_writes_is_not_reported`.
+* An assignment, a binary operator or a subscript pushing no conflict task fails `a_store_through_a_pointer_the_value_writes_is_reported` and the two beside it, `a_sum_reading_a_pointer_its_other_operand_writes_is_reported`, or `a_subscript_whose_index_writes_its_base_is_reported`, which go silent.
+* Walking an assignment's place as a value fails `a_store_into_a_pointer_its_value_replaced_first_is_not_reported`, which reports a program C defines.
+* Wording `Between::Operands` as a call's arguments fails those five on their `.stderr`.
 
 `a_local_proved_null_passed_to_a_nonnull_parameter_is_proved` is the control: the same null, not overwritten, keeps its `SC0405`.
 

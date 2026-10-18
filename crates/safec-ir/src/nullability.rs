@@ -450,11 +450,12 @@ pub(crate) fn tested_against_null(
             }
             | Element::Sequenced { origin: _ }
             | Element::ArgumentsEvaluated { origin: _ }
-            | Element::UnsequencedArguments {
+            | Element::UnsequencedAccess {
                 local: _,
                 written: _,
                 accessed: _,
                 both_write: _,
+                between: _,
                 origin: _,
             } => continue,
             // Storage ending takes the object the comparison read away and
@@ -568,11 +569,12 @@ fn copied_from(function: &Function, block: BlockId, local: LocalId) -> Vec<Local
             }
             | Element::Sequenced { origin: _ }
             | Element::ArgumentsEvaluated { origin: _ }
-            | Element::UnsequencedArguments {
+            | Element::UnsequencedAccess {
                 local: _,
                 written: _,
                 accessed: _,
                 both_write: _,
+                between: _,
                 origin: _,
             } => continue,
             // Storage beginning or ending is a write like any other, and for
@@ -800,11 +802,12 @@ impl Analysis for Nullability<'_> {
             Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => {}
             // Nor does a conflict between two arguments, which the memory
             // check reports. See ADR-0052.
-            Element::UnsequencedArguments {
+            Element::UnsequencedAccess {
                 local: _,
                 written: _,
                 accessed: _,
                 both_write: _,
+                between: _,
                 origin: _,
             } => {}
             // Storage beginning or ending leaves a local holding nothing this

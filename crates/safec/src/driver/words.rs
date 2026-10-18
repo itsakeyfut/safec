@@ -8,7 +8,7 @@
 use crate::diagnostics::{Code, Diagnostic, Label, Remedy};
 use crate::safety::SafetyLevel;
 use safec_ir::analysis::Conclusion;
-use safec_ir::ir::Promise;
+use safec_ir::ir::{Between, Promise};
 use safec_ir::memory::{self, Kind, LostReason, Unproven};
 use safec_ir::nullability::{self, Asked};
 use safec_ir::source::Span;
@@ -80,13 +80,13 @@ const RETURN_AFTER_FREE: Code = Code::new("SC0406");
 /// believes its parameter is live and cannot see why it is not. See ADR-0042.
 const ARGUMENT_AFTER_FREE: Code = Code::new("SC0407");
 
-/// A pointer local one argument of a call writes and another reads or writes.
+/// A pointer local one operand writes and another reads or writes: two
+/// arguments of a call, or two operands of an operator that does not sequence.
 ///
 /// Not about what the pointer holds, so not any of the codes above: C17 6.5
-/// p2 makes the call undefined whatever that is, and the fix is to put the
-/// write in a statement of its own rather than to change the pointer. See
-/// ADR-0052.
-const UNSEQUENCED_ARGUMENTS: Code = Code::new("SC0409");
+/// p2 makes it undefined whatever that is, and the fix is to put the write in
+/// a statement of its own rather than to change the pointer. See ADR-0052.
+const UNSEQUENCED_ACCESS: Code = Code::new("SC0409");
 
 /// What to change where this check stopped following a pointer and cannot
 /// say why: `LostReason::Other`.
@@ -516,41 +516,55 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
             "this offset may not be zero",
             "free the pointer the allocation was made with if this offset can be non-zero",
         ),
-        (Kind::UnsequencedArguments { both_write, .. }, Conclusion::Unsafe, _) => (
-            UNSEQUENCED_ARGUMENTS,
-            if both_write {
-                said(
-                    name,
-                    "this writes a pointer another argument of the same call writes too",
-                    |name| {
-                        format!(
-                            "this writes `{name}`, which another argument of the same call writes too"
-                        )
-                    },
-                )
-            } else {
-                said(
-                    name,
-                    "this reads a pointer another argument of the same call writes",
-                    |name| {
-                        format!(
-                            "this reads `{name}`, which another argument of the same call writes"
-                        )
-                    },
-                )
+        (
+            Kind::UnsequencedAccess {
+                written: _,
+                both_write,
+                between,
             },
-            if both_write {
-                "written here as well"
-            } else {
-                "read here"
-            },
-            "assign it in a statement of its own before the call",
-        ),
+            Conclusion::Unsafe,
+            _,
+        ) => {
+            // What the two accesses are operands of is the only difference in
+            // the words, so it is chosen once. See ADR-0052.
+            let (other, remedy) = match between {
+                Between::Arguments => (
+                    "another argument of the same call",
+                    "assign it in a statement of its own before the call",
+                ),
+                Between::Operands => (
+                    "another operand of the same expression",
+                    "assign it in a statement of its own before this expression",
+                ),
+            };
+            (
+                UNSEQUENCED_ACCESS,
+                if both_write {
+                    said(
+                        name,
+                        &format!("this writes a pointer {other} writes too"),
+                        |name| format!("this writes `{name}`, which {other} writes too"),
+                    )
+                } else {
+                    said(
+                        name,
+                        &format!("this reads a pointer {other} writes"),
+                        |name| format!("this reads `{name}`, which {other} writes"),
+                    )
+                },
+                if both_write {
+                    "written here as well"
+                } else {
+                    "read here"
+                },
+                remedy,
+            )
+        }
         // Never built: the memory check concludes this one `Unsafe` from its
         // element and asks no lattice. Written out rather than `_`, for the
         // reason the double-free rows give.
-        (Kind::UnsequencedArguments { .. }, Conclusion::Unknown, _) => (
-            UNSEQUENCED_ARGUMENTS,
+        (Kind::UnsequencedAccess { .. }, Conclusion::Unknown, _) => (
+            UNSEQUENCED_ACCESS,
             "nothing".to_owned(),
             "nothing",
             "nothing",
@@ -604,13 +618,25 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
     // **What C says is wrong, because the caret alone does not.** The read
     // and the write are both in plain sight and look ordered left to right,
     // which C17 does not make them. See ADR-0052.
-    if let Kind::UnsequencedArguments { written, .. } = finding.kind {
+    if let Kind::UnsequencedAccess {
+        written,
+        both_write: _,
+        between,
+    } = finding.kind
+    {
+        let note = match between {
+            Between::Arguments => {
+                "C17 6.5 p2 makes this call undefined wherever both are evaluated: 6.5.2.2 p10 \
+                 orders a call's arguments before the call and not against each other"
+            }
+            Between::Operands => {
+                "C17 6.5 p2 makes this undefined wherever both are evaluated: nothing orders an \
+                 operator's operands against each other (6.5 p3)"
+            }
+        };
         diagnostic = diagnostic
             .with_label(Label::secondary(written, "written here"))
-            .with_note(
-                "C17 6.5 p2 makes this call undefined wherever both are evaluated: 6.5.2.2 p10 \
-                 orders a call's arguments before the call and not against each other",
-            );
+            .with_note(note);
     }
 
     Some(diagnostic)

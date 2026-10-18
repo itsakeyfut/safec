@@ -31,7 +31,7 @@ Function a_dereference_in_an_argument_another_argument_writes_is_reported.c:2:5 
       Destination "_4"
       Use
         Copy "_2"
-    UnsequencedArguments a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:5 written "_2"
+    UnsequencedAccess a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:5 written "_2" Arguments
       Written a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:11
       Read a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:8
     ArgumentsEvaluated a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:5 generated

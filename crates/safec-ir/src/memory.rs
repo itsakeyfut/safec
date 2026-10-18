@@ -55,7 +55,7 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
-    Element, FuncId, LocalId, Operand, Place, Rvalue, Terminator, TranslationUnit, Ty,
+    Between, Element, FuncId, LocalId, Operand, Place, Rvalue, Terminator, TranslationUnit, Ty,
 };
 use crate::nullability::{self};
 use crate::source::{SourceMap, Span};
@@ -106,18 +106,20 @@ pub enum Kind {
     /// may read and use. Never a proof, since it may only write there. See
     /// ADR-0042.
     FreedBehindArgument,
-    /// `g(q, q = &x)`
+    /// `g(q, q = &x)`, `*q = (free(q), q = r, 0)`
     ///
     /// Not about what `q` holds, which is why it is always a proof: C17 6.5
-    /// p2 makes the call undefined whatever that is, because one argument
-    /// writes `q` and another reads it with nothing ordering them. The
-    /// lowering finds it and [`Element::UnsequencedArguments`] carries it, so
-    /// this check concludes it without asking its lattice. See ADR-0052.
-    UnsequencedArguments {
-        /// Where one argument writes the local, which a label points at.
+    /// p2 makes it undefined whatever that is, because one operand writes `q`
+    /// and another reads it with nothing ordering them. The lowering finds it
+    /// and [`Element::UnsequencedAccess`] carries it, so this check concludes
+    /// it without asking its lattice. See ADR-0052.
+    UnsequencedAccess {
+        /// Where one operand writes the local, which a label points at.
         written: Span,
         /// Whether the access at the caret is a write too.
         both_write: bool,
+        /// Whether the two are a call's arguments or an operator's operands.
+        between: Between,
     },
 }
 
@@ -390,19 +392,21 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 // the call it stands before is undefined on every execution
                 // that evaluates both accesses, and one behind `&&`, `||` or
                 // `?:` is counted all the same. See ADR-0052.
-                if let Element::UnsequencedArguments {
+                if let Element::UnsequencedAccess {
                     local,
                     written,
                     accessed,
                     both_write,
+                    between,
                     origin: _,
                 } = *element
                 {
                     findings.push(Finding {
                         function: func,
-                        kind: Kind::UnsequencedArguments {
+                        kind: Kind::UnsequencedAccess {
                             written,
                             both_write,
+                            between,
                         },
                         conclusion: Conclusion::Unsafe,
                         at: accessed,
@@ -497,11 +501,12 @@ pub(crate) fn dereferenced_in_element(element: &Element) -> Option<(Span, Vec<&P
         Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => None,
         // Nor does a conflict between two arguments: it names a local the
         // arguments' own elements and the call read.
-        Element::UnsequencedArguments {
+        Element::UnsequencedAccess {
             local: _,
             written: _,
             accessed: _,
             both_write: _,
+            between: _,
             origin: _,
         } => None,
         Element::StorageLive {
