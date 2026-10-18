@@ -72,7 +72,7 @@ Function a_write_through_the_address_of_a_pointer_is_a_write_by_name.c:4:5 "main
       Destination "_6"
       Use
         Copy "_2"
-    UnsequencedArguments a_write_through_the_address_of_a_pointer_is_a_write_by_name.c:9:5 written "_2"
+    UnsequencedAccess a_write_through_the_address_of_a_pointer_is_a_write_by_name.c:9:5 written "_2" Arguments
       Written a_write_through_the_address_of_a_pointer_is_a_write_by_name.c:9:11
       Read a_write_through_the_address_of_a_pointer_is_a_write_by_name.c:9:8
     ArgumentsEvaluated a_write_through_the_address_of_a_pointer_is_a_write_by_name.c:9:5 generated

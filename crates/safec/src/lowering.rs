@@ -35,7 +35,7 @@ use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
 use crate::types::Types;
 use safec_ir::ir::{
-    BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin,
+    Between, BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin,
     Parameter, Place, Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::source::{SourceMap, Span};
@@ -559,15 +559,17 @@ enum Task {
     ///
     /// [`Lowering::begin_value`]: Lowering::begin_value
     Arguments(Span),
-    /// Every argument of this call has been lowered; say which of them
-    /// conflict over a local, before anything says they were evaluated.
+    /// Every operand of this node has been lowered; say which of them
+    /// conflict over a local, before the node is built.
     ///
-    /// Before [`Self::Arguments`] rather than where the call finishes,
-    /// because `nullability::null_at_terminators` reads a block whose last
-    /// element is [`Element::ArgumentsEvaluated`] as one whose arguments are
-    /// ordered, and an element after it turned that answer off for the whole
-    /// block. Pushed whatever encloses the call, which is the difference
-    /// from that task. See ADR-0052.
+    /// Pushed by a call and by every operator that does not sequence: an
+    /// assignment, a binary operator, a subscript. For a call, before
+    /// [`Self::Arguments`] rather than where the call finishes, because
+    /// `nullability::null_at_terminators` reads a block whose last element is
+    /// [`Element::ArgumentsEvaluated`] as one whose arguments are ordered,
+    /// and an element after it turned that answer off for the whole block.
+    /// Pushed whatever encloses the node, which is the difference from that
+    /// task. See ADR-0052.
     Conflicts(ExprId),
     /// Put [`Lowering::top_level`] back to what it was before this node.
     ///
@@ -1971,9 +1973,8 @@ impl Lowering<'_> {
     /// **That last argument has a limit**: the operand that does act may be
     /// the write. `*q = (free(q), q = r, 0)` reads `q` for the place and writes
     /// it in the value with nothing ordering the two, which C17 6.5 p2 makes
-    /// undefined, and nothing here reports it outside a call's arguments
-    /// (ADR-0052). The markers do not decide that silence, which `main` has
-    /// too, but this argument does not answer it either.
+    /// undefined. This argument does not answer that; [`Self::unsequenced`]
+    /// does, by reporting the conflict as `SC0409` (#525, ADR-0052).
     fn inert(&self, id: ExprId) -> bool {
         match self.ast.expr(id) {
             Expr::Number { .. } | Expr::Identifier { .. } => true,
@@ -2012,8 +2013,8 @@ impl Lowering<'_> {
     /// sequenced after the value computations of both operands (C17 6.5.16
     /// p3), so it follows the right operand's markers in C as in the block.
     /// Where the right operand writes a local the place reads, the place may
-    /// be computed from either value, which [`Self::inert`] says is not
-    /// answered here.
+    /// be computed from either value, which is not answered here and is
+    /// reported as a conflict instead ([`Self::unsequenced`]).
     fn inert_place(&self, id: ExprId) -> bool {
         match self.ast.expr(id) {
             Expr::Identifier { .. } => true,
@@ -2111,12 +2112,14 @@ impl Lowering<'_> {
                     tasks.push(Task::Value(*lhs));
                 } else {
                     tasks.push(Task::Finish(id));
+                    tasks.push(Task::Conflicts(id));
                     tasks.push(Task::Value(*rhs));
                     tasks.push(Task::Value(*lhs));
                 }
             }
             Expr::Assign { place, value, .. } => {
                 tasks.push(Task::Finish(id));
+                tasks.push(Task::Conflicts(id));
                 tasks.push(Task::Value(*value));
                 tasks.push(Task::Place(*place));
             }
@@ -2236,6 +2239,7 @@ impl Lowering<'_> {
             }
             Expr::Subscript { base, index, .. } => {
                 tasks.push(Task::FinishPlace(id));
+                tasks.push(Task::Conflicts(id));
                 tasks.push(Task::Value(*index));
                 tasks.push(Task::Value(*base));
             }
@@ -3109,13 +3113,19 @@ impl Lowering<'_> {
     /// assignment reads as well as writes, and the write is what is kept. See
     /// ADR-0052.
     ///
+    /// `as_place` starts the walk as a place, which is how a simple
+    /// assignment's left operand is read: the local it names is the store's,
+    /// which [`Self::unsequenced`] compares against the value's writes on its
+    /// own, while what computing the place reads, `*q` or `q[i]`, is an
+    /// access here.
+    ///
     /// A worklist rather than recursion, as every walk of an expression here
-    /// is, because an argument is as deep as its source.
-    fn accesses(&self, argument: ExprId) -> Vec<(LocalId, Span, bool)> {
+    /// is, because an operand is as deep as its source.
+    fn accesses(&self, operand: ExprId, as_place: bool) -> Vec<(LocalId, Span, bool)> {
         let mut found = Vec::new();
         // The expression, and whether it is read as a place rather than for
         // its value. Pushed in reverse, so they come off in source order.
-        let mut work = vec![(argument, false)];
+        let mut work = vec![(operand, as_place)];
         while let Some((id, place)) = work.pop() {
             // **`*&E` is `E`**, because the lowering reads it so: `*&q = &x`
             // is a write of `q` by name in the IR, and walking it as a write
@@ -3194,31 +3204,76 @@ impl Lowering<'_> {
         found
     }
 
-    /// One [`Element::UnsequencedArguments`] for each pointer local one of
-    /// these arguments writes and another reads or writes: the first write,
-    /// and the first access in another argument.
+    /// One [`Element::UnsequencedAccess`] for each pointer local one of this
+    /// node's operands writes and another reads or writes: the first write,
+    /// and the first access in another operand.
+    ///
+    /// The operands are a call's arguments, an assignment's place and value,
+    /// a binary operator's two sides, or a subscript's base and index. A
+    /// pair of accesses is found at the lowest node whose operands it lies
+    /// across, since below that both are in one operand; an outer node can
+    /// still report the same local over another pair, which is a second
+    /// report rather than a missed one. A node that sequences never asks, and
+    /// neither does one with a single operand.
     ///
     /// Only a pointer, because that is what the memory check is believed
     /// about; `k(i, i++)` is undefined by the same paragraph and is not
     /// reported, which `an_integer_another_argument_writes_is_not_reported`
     /// pins. See ADR-0052.
     ///
-    /// On the tree, because the conflict is between the arguments as written
+    /// On the tree, because the conflict is between the operands as written
     /// and not in the order they were lowered.
-    fn unsequenced(&self, function: &Function, call: ExprId) -> Vec<Element> {
-        let Expr::Call {
-            arguments, span, ..
-        } = self.ast.expr(call)
-        else {
-            // Only the call arm pushes the task, and it pushes it for a call;
-            // nothing, rather than a panic, as `discard` answers.
-            return Vec::new();
+    fn unsequenced(&self, function: &Function, node: ExprId) -> Vec<Element> {
+        let (each, between, at): (Vec<_>, Between, Span) = match self.ast.expr(node) {
+            Expr::Call {
+                arguments, span, ..
+            } => (
+                arguments
+                    .iter()
+                    .map(|&argument| self.accesses(argument, false))
+                    .collect(),
+                Between::Arguments,
+                *span,
+            ),
+            // A compound assignment reads its place's value as well, `E1 =
+            // E1 op (E2)` by C17 6.5.16.2 p3, so its place is walked as a
+            // value and the local it names is a read. Found by review.
+            Expr::Assign {
+                op,
+                place,
+                value,
+                span,
+            } => (
+                vec![
+                    self.accesses(*place, op.is_none()),
+                    self.accesses(*value, false),
+                ],
+                Between::Operands,
+                *span,
+            ),
+            Expr::Binary { lhs, rhs, span, .. } => (
+                vec![self.accesses(*lhs, false), self.accesses(*rhs, false)],
+                Between::Operands,
+                *span,
+            ),
+            Expr::Subscript {
+                base, index, span, ..
+            } => (
+                vec![self.accesses(*base, false), self.accesses(*index, false)],
+                Between::Operands,
+                *span,
+            ),
+            // Only those four push the task; nothing, rather than a panic, as
+            // `discard` answers. Written out rather than `_`, so a kind added
+            // later is asked whether its operands are unsequenced.
+            Expr::Number { .. }
+            | Expr::Identifier { .. }
+            | Expr::Unary { .. }
+            | Expr::Conditional { .. }
+            | Expr::Member { .. }
+            | Expr::Comma { .. }
+            | Expr::Error { .. } => return Vec::new(),
         };
-        let at = *span;
-        let each: Vec<_> = arguments
-            .iter()
-            .map(|&argument| self.accesses(argument))
-            .collect();
         let mut said: Vec<LocalId> = Vec::new();
         let mut elements = Vec::new();
         for (i, accesses) in each.iter().enumerate() {
@@ -3240,17 +3295,136 @@ impl Lowering<'_> {
                     .find(|&&(other, _, _)| other == local);
                 if let Some(&(_, accessed, both_write)) = other {
                     said.push(local);
-                    elements.push(Element::UnsequencedArguments {
+                    elements.push(Element::UnsequencedAccess {
                         local,
                         written,
                         accessed,
                         both_write,
+                        between,
                         origin: Origin::Written(at),
                     });
                 }
             }
         }
+        // **The store is a write too.** C17 6.5.16 p3 sequences it after the
+        // value computations of both operands and nothing more, so a write
+        // to the same local in the value is unsequenced against it unless a
+        // sequence point inside the value puts that write first: `q = q++`
+        // and `q = (q = s)` are undefined by 6.5 p2, `q = (q = r, q)` and `q
+        // = g(q++)` are not. Found by review; see ADR-0052.
+        let store = match self.ast.expr(node) {
+            Expr::Assign {
+                op: _,
+                place,
+                value,
+                ..
+            } => self
+                .named_by_itself(*place)
+                .map(|local| (local, *place, *value)),
+            _ => None,
+        };
+        if let Some((local, place, value)) = store {
+            let pointer = match self.unit.ty(function.local(local)) {
+                Ty::Pointer(_) => true,
+                Ty::Int | Ty::Char | Ty::Void => false,
+            };
+            let unordered = self
+                .unordered_writes(value)
+                .into_iter()
+                .find(|&(other, _)| other == local);
+            if let (true, false, Some((_, written))) = (pointer, said.contains(&local), unordered) {
+                elements.push(Element::UnsequencedAccess {
+                    local,
+                    written,
+                    accessed: self.ast.expr(place).span(),
+                    both_write: true,
+                    between,
+                    origin: Origin::Written(at),
+                });
+            }
+        }
         elements
+    }
+
+    /// Every write by name in an assignment's value that no sequence point
+    /// inside the value puts before the value is computed.
+    ///
+    /// A write is ordered first where it sits in the left operand of `,`,
+    /// `&&` or `||`, in the condition of `?:`, or in a call's arguments or
+    /// callee, each of which C17 sequences before what follows (6.5.17 p2,
+    /// 6.5.13 p4, 6.5.14 p4, 6.5.15 p4, 6.5.2.2 p10). Anywhere else it is
+    /// unsequenced against the store. **Wrong in the direction of too few** is
+    /// a silence, so anything not listed counts as unordered. See ADR-0052.
+    fn unordered_writes(&self, value: ExprId) -> Vec<(LocalId, Span)> {
+        let mut found = Vec::new();
+        // The expression, and whether a sequence point inside the value
+        // already puts it before the value's computation.
+        let mut work = vec![(value, false)];
+        while let Some((id, ordered)) = work.pop() {
+            if let Some(inner) = self.seen_through(id) {
+                work.push((inner, ordered));
+                continue;
+            }
+            match self.ast.expr(id) {
+                Expr::Assign {
+                    place, value, span, ..
+                } => {
+                    if let (false, Some(local)) = (ordered, self.named_by_itself(*place)) {
+                        found.push((local, *span));
+                    }
+                    work.push((*value, ordered));
+                    work.push((*place, ordered));
+                }
+                Expr::Unary {
+                    op, operand, span, ..
+                } => {
+                    let writes = matches!(
+                        op,
+                        AstUnOp::PreInc | AstUnOp::PreDec | AstUnOp::PostInc | AstUnOp::PostDec
+                    );
+                    if let (true, false, Some(local)) =
+                        (writes, ordered, self.named_by_itself(*operand))
+                    {
+                        found.push((local, *span));
+                    }
+                    work.push((*operand, ordered));
+                }
+                Expr::Comma { lhs, rhs, .. } => {
+                    work.push((*rhs, ordered));
+                    work.push((*lhs, true));
+                }
+                Expr::Binary { op, lhs, rhs, .. } => {
+                    let sequences = matches!(op, AstBinOp::LogAnd | AstBinOp::LogOr);
+                    work.push((*rhs, ordered));
+                    work.push((*lhs, ordered || sequences));
+                }
+                Expr::Conditional {
+                    condition,
+                    then,
+                    otherwise,
+                    ..
+                } => {
+                    work.push((*otherwise, ordered));
+                    work.push((*then, ordered));
+                    work.push((*condition, true));
+                }
+                Expr::Call {
+                    callee, arguments, ..
+                } => {
+                    work.extend(arguments.iter().map(|&argument| (argument, true)));
+                    work.push((*callee, true));
+                }
+                Expr::Subscript { base, index, .. } => {
+                    work.push((*index, ordered));
+                    work.push((*base, ordered));
+                }
+                Expr::Identifier { .. }
+                | Expr::Number { .. }
+                | Expr::Member { .. }
+                | Expr::Error { .. } => {}
+            }
+        }
+        found
     }
 
     /// The function a call names.

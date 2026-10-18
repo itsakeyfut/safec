@@ -309,6 +309,54 @@ cases! {
         an_address_taken_while_another_argument_writes_it_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_write_and_a_read_in_one_argument_are_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_integer_another_argument_writes_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same conflict between the operands of an operator that does not
+        // sequence (#525): an assignment whose place reads the pointer its
+        // value writes, through `*` and through `[]`, a sum, and a subscript
+        // whose index writes its base. C17 6.5 p2 makes each undefined, and
+        // each is `SC0409` in an operator's words. Mutation: push no
+        // `Task::Conflicts` for an assignment, a binary operator or a
+        // subscript; the first three, the fourth, or the fifth goes silent.
+        // Mutation: word `Between::Operands` as a call's arguments; all five
+        // fail on their `.stderr`.
+        a_store_through_a_pointer_the_value_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_through_a_freed_pointer_the_value_replaces_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_into_an_element_of_a_pointer_the_value_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_sum_reading_a_pointer_its_other_operand_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_subscript_whose_index_writes_its_base_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What is not one: the store is sequenced after the value computations
+        // of both operands (C17 6.5.16 p3), and here the comma orders the
+        // inner write before the value is computed (6.5.17 p2). Mutation:
+        // walk the place as a value, or count a comma's left operand as
+        // unordered; this reports.
+        a_store_into_a_pointer_its_value_replaced_first_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A compound assignment reads its place, `E1 = E1 op (E2)` (C17
+        // 6.5.16.2 p3), so the read is unsequenced against the write in the
+        // value. Mutation: walk a compound assignment's place as a place; it
+        // goes silent. Found by review.
+        a_compound_assignment_reading_a_pointer_its_value_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The store is a write too, unsequenced against a write in the value
+        // that no sequence point puts first: `q = q++`, `q = (q = s)`, and a
+        // write in an arm of `?:`, which is not ordered before the value. Each
+        // is undefined by 6.5 p2. Mutation: drop the store's own check; all
+        // three go silent. Found by review.
+        a_pointer_assigned_its_own_increment_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_an_assignment_to_itself_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_from_an_arm_that_writes_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write below a binary operator, a subscript or a comma's right
+        // operand is not ordered before the value either. Mutation: push the
+        // operands of a `Binary`, of a `Subscript`, or a comma's right operand
+        // as ordered in `unordered_writes`; the matching case goes silent.
+        // Found by review.
+        a_pointer_assigned_a_sum_that_increments_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_an_element_whose_index_increments_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_a_comma_that_increments_it_last_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And where a sequence point does put the write first, C defines it: a
+        // call's argument (6.5.2.2 p10), the condition of `?:` (6.5.15 p4) and
+        // the left of `&&` (6.5.13 p4). Mutation: count any one of those as
+        // unordered; its case reports.
+        a_pointer_assigned_a_call_handed_its_increment_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_after_a_condition_increments_it_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_after_a_logical_and_increments_it_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A parameter written as an array is the pointer C17 6.7.6.3 p7 makes
         // it, so its function lowers and a read after its free is one.
         // Mutation: leave a parameter's type as written; the function is
@@ -689,9 +737,11 @@ cases! {
         // so on the order that runs the right one first this frees the pointer
         // the line above already freed. The nullability lattice has no notion
         // of order and says so; the marker that does is
-        // `Element::ArgumentsEvaluated`, which ADR-0026 emits only where no
-        // unsequenced operator encloses the call, and its absence here is what
-        // refuses the exemption. Dropping that term reports nothing at all
+        // `Element::ArgumentsEvaluated`, which ADR-0026 emits only where the
+        // root reaches the call, and its absence here is what refuses the
+        // exemption. C17 6.5 p2 makes the program undefined outright, and since
+        // #525 the write and the read of `p` are reported beside it as
+        // `SC0409`; the `SC0401` is still the guard. Dropping that term reports nothing at all
         // about a double free this check watched, which is saying safe wrongly,
         // the worst answer `docs/safety-model.md` says this compiler can give,
         // and fails this case.

@@ -18,7 +18,7 @@ fn assigns(block: &Block) -> Vec<&Operation> {
             Element::Evaluate { .. }
             | Element::Sequenced { .. }
             | Element::ArgumentsEvaluated { .. }
-            | Element::UnsequencedArguments { .. }
+            | Element::UnsequencedAccess { .. }
             | Element::StorageLive { .. }
             | Element::StorageDead { .. } => None,
         })
@@ -140,7 +140,7 @@ fn markers(function: &Function) -> Vec<(&'static str, usize)> {
             | Element::Evaluate { .. }
             | Element::Sequenced { .. }
             | Element::ArgumentsEvaluated { .. }
-            | Element::UnsequencedArguments { .. } => None,
+            | Element::UnsequencedAccess { .. } => None,
             Element::StorageLive { local, origin: _ }
             | Element::StorageDead { local, origin: _ } => Some((element.name(), local.index())),
         })

@@ -7,6 +7,6 @@ error[SC0409]: this reads `q`, which another argument of the same call writes
    │                │  
    │                ╰── read here
 ───╯
-  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: 6.5.2.2 p10 orders a call's arguments before the call and not against each other
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
   = note: this check belongs to safety level 1
   = help: assign it in a statement of its own before the call

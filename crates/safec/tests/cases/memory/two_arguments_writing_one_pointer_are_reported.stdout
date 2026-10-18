@@ -40,7 +40,7 @@ Function two_arguments_writing_one_pointer_are_reported.c:2:5 "main"
       Destination "_5"
       Use
         Copy "_2"
-    UnsequencedArguments two_arguments_writing_one_pointer_are_reported.c:5:5 written "_2"
+    UnsequencedAccess two_arguments_writing_one_pointer_are_reported.c:5:5 written "_2" Arguments
       Written two_arguments_writing_one_pointer_are_reported.c:5:7
       WrittenAgain two_arguments_writing_one_pointer_are_reported.c:5:14
     ArgumentsEvaluated two_arguments_writing_one_pointer_are_reported.c:5:5 generated

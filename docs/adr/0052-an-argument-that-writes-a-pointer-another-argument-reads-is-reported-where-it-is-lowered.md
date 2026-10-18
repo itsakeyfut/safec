@@ -27,13 +27,17 @@ C17 6.5 p2 makes each of those calls undefined, whatever `q` holds: one argument
 
 ## Decision Outcome
 
-Chosen option: **report the conflict**, found by the lowering and carried by `Element::UnsequencedArguments`, which the memory check concludes `Unsafe` as `SC0409`.
+Chosen option: **report the conflict**, found by the lowering and carried by `Element::UnsequencedAccess` (named `UnsequencedArguments` until #525), which the memory check concludes `Unsafe` as `SC0409`.
 
 The lowering has the tree, and the conflict is a fact about the tree: which pointer locals each argument writes by name, and which it reads. It is found where the call is lowered, for every argument against every other, and an element is written before the call's terminator for each local in conflict. The memory check reads nothing else about it: wherever its walk reaches the element, it is a finding, proved, because 6.5 p2 makes the call undefined on every execution that evaluates both accesses, and `Unsafe` says that some execution is undefined (`docs/safety-model.md`).
 
-**A write that may not run is still a proof.** Where one of the two accesses is behind `&&`, `||` or `?:`, the walk counts it all the same: `g(q, c && (q = &x))` is undefined on every execution where `c` holds, which is what `Unsafe` means for a parameter. The cost is a condition no execution satisfies, `g(q, 0 && (q = &x))`, which C defines and this refuses; `a_write_that_never_runs_is_still_a_conflict` pins it, and nothing about it can be silent.
+**A write that may not run is still a proof.** Where one of the two accesses is behind `&&`, `||` or `?:`, the walk counts it all the same: `g(q, c && (q = &x))` is undefined on every execution where `c` holds, which is what `Unsafe` means for a parameter. The cost is a pair no execution evaluates both of: a condition none satisfies, `g(q, 0 && (q = &x))`, and, found reviewing #525, conditions each satisfiable but never together, `x = (c ? (q = s, 0) : 0) + (c ? 0 : *q)`. C defines both and this refuses both; `a_write_that_never_runs_is_still_a_conflict` pins the first, and nothing about either can be silent.
 
-**Only pointer locals, and only a call's arguments.** `k(i, i++)` and `i + i++` are undefined by the same paragraph and stay silent: neither is something a memory check is believed about, and a check for every unsequenced operand pair is a frontend feature larger than this issue. They are a cost this record names rather than a gap it hides.
+**The store is a write too** ([#525](https://github.com/itsakeyfut/safec/issues/525)). C17 6.5.16 p3 sequences an assignment's store after the value computations of both operands and nothing more, so a write to the same local in the value is unsequenced against it unless a sequence point inside the value puts that write first: in the left operand of `,`, `&&` or `||`, the condition of `?:`, or a call's arguments. `q = q++`, `q = (q = s)` and `q = c ? (q = s) : s` are reported; `q = (q = r, q)` and `q = g(q++)` are not. A compound assignment reads its place as well (6.5.16.2 p3), so its place is walked as a value.
+
+**Only pointer locals.** `k(i, i++)` and `i + i++` are undefined by the same paragraph and stay silent: neither is something a memory check is believed about. They are a cost this record names rather than a gap it hides.
+
+**And an operator's operands, since [#525](https://github.com/itsakeyfut/safec/issues/525).** This record first asked only a call's arguments, calling every unsequenced operand pair a larger feature. Then `*q = (free(q), q = r, 0)` and `x = *q + (q = r, 0)` turned out to be the same silence, and the same walk answers them. So the search runs at an assignment, a binary operator that does not sequence, and a subscript, as well as at a call. The element's `Between` field says which, and the words follow it. An assignment's place is walked as a place: the local it names is the store's, sequenced after the value computations of both operands (C17 6.5.16 p3), so `q = (q = r, q)` is no conflict, while what computing the place reads is. A pair of accesses is found at the lowest node whose operands it lies across; an outer node can still report the same local over another pair, which is a second report rather than a missed one.
 
 **Only what is named.** A write through a pointer, `*pp = 0`, is not found, and neither is one into a member or an element of an array. Missing one is the silence that is already there, not a new one.
 
@@ -50,6 +54,10 @@ Mutations, each failing named cases:
 * Comparing an argument with itself fails `a_write_and_a_read_in_one_argument_are_not_reported`.
 * Counting only a read as the other access fails `two_arguments_writing_one_pointer_are_reported`.
 * Not asking whether the local holds a pointer fails `an_integer_another_argument_writes_is_not_reported`.
+* An assignment, a binary operator or a subscript pushing no conflict task fails `a_store_through_a_pointer_the_value_writes_is_reported` and the two beside it, `a_sum_reading_a_pointer_its_other_operand_writes_is_reported`, or `a_subscript_whose_index_writes_its_base_is_reported`, which go silent.
+* Walking an assignment's place as a value fails `a_store_into_a_pointer_its_value_replaced_first_is_not_reported`, which reports a program C defines.
+* Wording `Between::Operands` as a call's arguments fails those five on their `.stderr`.
+* Counting a write in a binary operator or a subscript as ordered before the value fails `a_pointer_assigned_a_sum_that_increments_it_is_reported` or `a_pointer_assigned_an_element_whose_index_increments_it_is_reported`, and counting a comma's right operand as ordered fails `a_pointer_assigned_a_comma_that_increments_it_last_is_reported`, each going silent.
 
 `a_local_proved_null_passed_to_a_nonnull_parameter_is_proved` is the control: the same null, not overwritten, keeps its `SC0405`.
 

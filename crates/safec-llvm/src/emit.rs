@@ -588,11 +588,12 @@ impl Emitter<'_> {
             // Nothing is written either. The conflict is reported by the memory
             // check, and a call it is about is undefined wherever both accesses
             // run, so no order emitted for it is wrong there. See ADR-0052.
-            Element::UnsequencedArguments {
+            Element::UnsequencedAccess {
                 local: _,
                 written: _,
                 accessed: _,
                 both_write: _,
+                between: _,
                 origin: _,
             } => Ok(()),
             // Nothing is written. LLVM has `llvm.lifetime.start` and `.end` for

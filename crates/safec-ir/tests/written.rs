@@ -83,11 +83,12 @@ impl Analysis for Written {
             // Neither marker writes anything either.
             Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => {}
             // Nor does saying that two arguments conflict.
-            Element::UnsequencedArguments {
+            Element::UnsequencedAccess {
                 local: _,
                 written: _,
                 accessed: _,
                 both_write: _,
+                between: _,
                 origin: _,
             } => {}
             Element::StorageLive { local, origin: _ } => value[local.index()] = false,

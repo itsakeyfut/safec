@@ -218,7 +218,7 @@ fn verdict(
         Kind::FreedBehindArgument => earliest.is_some_and(|freed| freed.sequenced),
         // Never asked: it is built from its element in `memory.rs`, not out of
         // a verdict, and it is about no free. See ADR-0052.
-        Kind::UnsequencedArguments { .. } => true,
+        Kind::UnsequencedAccess { .. } => true,
     };
 
     match earliest {

@@ -33,7 +33,7 @@ Function a_write_that_never_runs_is_still_a_conflict.c:2:5 "main"
     Branch a_write_that_never_runs_is_still_a_conflict.c:5:10 "bb2" "bb1"
       Copy "_4"
   Block "bb1"
-    UnsequencedArguments a_write_that_never_runs_is_still_a_conflict.c:5:5 written "_2"
+    UnsequencedAccess a_write_that_never_runs_is_still_a_conflict.c:5:5 written "_2" Arguments
       Written a_write_that_never_runs_is_still_a_conflict.c:5:16
       Read a_write_that_never_runs_is_still_a_conflict.c:5:7
     ArgumentsEvaluated a_write_that_never_runs_is_still_a_conflict.c:5:5 generated
