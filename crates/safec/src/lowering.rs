@@ -3113,10 +3113,11 @@ impl Lowering<'_> {
     /// assignment reads as well as writes, and the write is what is kept. See
     /// ADR-0052.
     ///
-    /// `as_place` starts the walk as a place, which is how an assignment's
-    /// left operand is read: the local it names is the store's, sequenced
-    /// after both operands (C17 6.5.16 p3), so `q = (q = r, q)` is no
-    /// conflict, while what computing the place reads, `*q` or `q[i]`, is.
+    /// `as_place` starts the walk as a place, which is how a simple
+    /// assignment's left operand is read: the local it names is the store's,
+    /// which [`Self::unsequenced`] compares against the value's writes on its
+    /// own, while what computing the place reads, `*q` or `q[i]`, is an
+    /// access here.
     ///
     /// A worklist rather than recursion, as every walk of an expression here
     /// is, because an operand is as deep as its source.
@@ -3232,10 +3233,19 @@ impl Lowering<'_> {
                 Between::Arguments,
                 *span,
             ),
+            // A compound assignment reads its place's value as well, `E1 =
+            // E1 op (E2)` by C17 6.5.16.2 p3, so its place is walked as a
+            // value and the local it names is a read. Found by review.
             Expr::Assign {
-                place, value, span, ..
+                op,
+                place,
+                value,
+                span,
             } => (
-                vec![self.accesses(*place, true), self.accesses(*value, false)],
+                vec![
+                    self.accesses(*place, op.is_none()),
+                    self.accesses(*value, false),
+                ],
                 Between::Operands,
                 *span,
             ),
@@ -3294,7 +3304,125 @@ impl Lowering<'_> {
                 }
             }
         }
+        // **The store is a write too.** C17 6.5.16 p3 sequences it after the
+        // value computations of both operands and nothing more, so a write
+        // to the same local in the value is unsequenced against it unless a
+        // sequence point inside the value puts that write first: `q = q++`
+        // and `q = (q = s)` are undefined by 6.5 p2, `q = (q = r, q)` and `q
+        // = g(q++)` are not. Found by review; see ADR-0052.
+        let store = match self.ast.expr(node) {
+            Expr::Assign {
+                op: _,
+                place,
+                value,
+                ..
+            } => self
+                .named_by_itself(*place)
+                .map(|local| (local, *place, *value)),
+            _ => None,
+        };
+        if let Some((local, place, value)) = store {
+            let pointer = match self.unit.ty(function.local(local)) {
+                Ty::Pointer(_) => true,
+                Ty::Int | Ty::Char | Ty::Void => false,
+            };
+            let unordered = self
+                .unordered_writes(value)
+                .into_iter()
+                .find(|&(other, _)| other == local);
+            if let (true, false, Some((_, written))) = (pointer, said.contains(&local), unordered) {
+                elements.push(Element::UnsequencedAccess {
+                    local,
+                    written,
+                    accessed: self.ast.expr(place).span(),
+                    both_write: true,
+                    between,
+                    origin: Origin::Written(at),
+                });
+            }
+        }
         elements
+    }
+
+    /// Every write by name in an assignment's value that no sequence point
+    /// inside the value puts before the value is computed.
+    ///
+    /// A write is ordered first where it sits in the left operand of `,`,
+    /// `&&` or `||`, in the condition of `?:`, or in a call's arguments or
+    /// callee, each of which C17 sequences before what follows (6.5.17 p2,
+    /// 6.5.13 p4, 6.5.14 p4, 6.5.15 p4, 6.5.2.2 p10). Anywhere else it is
+    /// unsequenced against the store. **Wrong in the direction of too few** is
+    /// a silence, so anything not listed counts as unordered. See ADR-0052.
+    fn unordered_writes(&self, value: ExprId) -> Vec<(LocalId, Span)> {
+        let mut found = Vec::new();
+        // The expression, and whether a sequence point inside the value
+        // already puts it before the value's computation.
+        let mut work = vec![(value, false)];
+        while let Some((id, ordered)) = work.pop() {
+            if let Some(inner) = self.seen_through(id) {
+                work.push((inner, ordered));
+                continue;
+            }
+            match self.ast.expr(id) {
+                Expr::Assign {
+                    place, value, span, ..
+                } => {
+                    if let (false, Some(local)) = (ordered, self.named_by_itself(*place)) {
+                        found.push((local, *span));
+                    }
+                    work.push((*value, ordered));
+                    work.push((*place, ordered));
+                }
+                Expr::Unary {
+                    op, operand, span, ..
+                } => {
+                    let writes = matches!(
+                        op,
+                        AstUnOp::PreInc | AstUnOp::PreDec | AstUnOp::PostInc | AstUnOp::PostDec
+                    );
+                    if let (true, false, Some(local)) =
+                        (writes, ordered, self.named_by_itself(*operand))
+                    {
+                        found.push((local, *span));
+                    }
+                    work.push((*operand, ordered));
+                }
+                Expr::Comma { lhs, rhs, .. } => {
+                    work.push((*rhs, ordered));
+                    work.push((*lhs, true));
+                }
+                Expr::Binary { op, lhs, rhs, .. } => {
+                    let sequences = matches!(op, AstBinOp::LogAnd | AstBinOp::LogOr);
+                    work.push((*rhs, ordered));
+                    work.push((*lhs, ordered || sequences));
+                }
+                Expr::Conditional {
+                    condition,
+                    then,
+                    otherwise,
+                    ..
+                } => {
+                    work.push((*otherwise, ordered));
+                    work.push((*then, ordered));
+                    work.push((*condition, true));
+                }
+                Expr::Call {
+                    callee, arguments, ..
+                } => {
+                    work.extend(arguments.iter().map(|&argument| (argument, true)));
+                    work.push((*callee, true));
+                }
+                Expr::Subscript { base, index, .. } => {
+                    work.push((*index, ordered));
+                    work.push((*base, ordered));
+                }
+                Expr::Identifier { .. }
+                | Expr::Number { .. }
+                | Expr::Member { .. }
+                | Expr::Error { .. } => {}
+            }
+        }
+        found
     }
 
     /// The function a call names.

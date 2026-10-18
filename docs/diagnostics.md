@@ -98,8 +98,8 @@ is the decision.
 
 **`SC0409` is about no value, and is always a proof.** `g(q, q = &x)` is
 undefined whatever `q` holds, on every execution that evaluates both, because C17 6.5 p2 makes a call undefined where
-one argument modifies a scalar another reads and 6.5.2.2 p10 orders the
-arguments only against the call. So the report is the conflict rather than a
+one argument modifies a scalar another reads and nothing orders the arguments
+against each other (6.5 p3), only before the call (6.5.2.2 p10). So the report is the conflict rather than a
 null or a freed pointer one order would read: the caret is on the read, or on
 the second write, and a second label is on the write. The fix is to make the
 write a statement of its own. Only a pointer local written by name is asked

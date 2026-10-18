@@ -626,8 +626,8 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
     {
         let note = match between {
             Between::Arguments => {
-                "C17 6.5 p2 makes this call undefined wherever both are evaluated: 6.5.2.2 p10 \
-                 orders a call's arguments before the call and not against each other"
+                "C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders \
+                 a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)"
             }
             Between::Operands => {
                 "C17 6.5 p2 makes this undefined wherever both are evaluated: nothing orders an \

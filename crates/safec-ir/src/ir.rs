@@ -609,8 +609,8 @@ pub enum Element {
     /// a call, or two operands of an operator that does not sequence.
     ///
     /// C17 6.5 p2 makes that undefined whatever the local holds: 6.5 p3 leaves
-    /// an operator's operands unsequenced against each other, and 6.5.2.2 p10
-    /// orders a call's arguments before the call and not against each other.
+    /// an operator's operands, and a call's arguments, unsequenced against
+    /// each other, and 6.5.2.2 p10 orders the arguments only before the call.
     /// The IR lowers the operands in one order and reads a place where the
     /// node is built, which is an order C did not choose, so the conflict is
     /// said here rather than left to whatever that order reads. A frontend
@@ -643,8 +643,8 @@ pub enum Element {
 /// it, and `true` says nothing about which words.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Between {
-    /// Two arguments of one call, which C17 6.5.2.2 p10 orders only against
-    /// the call.
+    /// Two arguments of one call, which C17 6.5.2.2 p10 orders before the call
+    /// and 6.5 p3 leaves unsequenced against each other.
     Arguments,
     /// Two operands of an operator that does not sequence: an assignment's
     /// place and value, a binary operator's two sides, a subscript's base and

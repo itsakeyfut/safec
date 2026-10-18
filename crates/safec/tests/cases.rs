@@ -323,11 +323,32 @@ cases! {
         a_store_into_an_element_of_a_pointer_the_value_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_sum_reading_a_pointer_its_other_operand_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_subscript_whose_index_writes_its_base_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // What is not one: the local an assignment stores into is the store's,
-        // sequenced after both operands (C17 6.5.16 p3), and here the comma
-        // orders the inner write before the read whose value is stored.
-        // Mutation: walk the place as a value; this reports.
+        // What is not one: the store is sequenced after the value computations
+        // of both operands (C17 6.5.16 p3), and here the comma orders the
+        // inner write before the value is computed (6.5.17 p2). Mutation:
+        // walk the place as a value, or count a comma's left operand as
+        // unordered; this reports.
         a_store_into_a_pointer_its_value_replaced_first_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A compound assignment reads its place, `E1 = E1 op (E2)` (C17
+        // 6.5.16.2 p3), so the read is unsequenced against the write in the
+        // value. Mutation: walk a compound assignment's place as a place; it
+        // goes silent. Found by review.
+        a_compound_assignment_reading_a_pointer_its_value_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The store is a write too, unsequenced against a write in the value
+        // that no sequence point puts first: `q = q++`, `q = (q = s)`, and a
+        // write in an arm of `?:`, which is not ordered before the value. Each
+        // is undefined by 6.5 p2. Mutation: drop the store's own check; all
+        // three go silent. Found by review.
+        a_pointer_assigned_its_own_increment_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_an_assignment_to_itself_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_from_an_arm_that_writes_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And where a sequence point does put the write first, C defines it: a
+        // call's argument (6.5.2.2 p10), the condition of `?:` (6.5.15 p4) and
+        // the left of `&&` (6.5.13 p4). Mutation: count any one of those as
+        // unordered; its case reports.
+        a_pointer_assigned_a_call_handed_its_increment_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_after_a_condition_increments_it_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_after_a_logical_and_increments_it_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A parameter written as an array is the pointer C17 6.7.6.3 p7 makes
         // it, so its function lowers and a read after its free is one.
         // Mutation: leave a parameter's type as written; the function is
