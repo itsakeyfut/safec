@@ -70,6 +70,7 @@ Function a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted
       Copy "_1"
   Block "bb5"
     Sequenced a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:9:9 generated
+    ArgumentsEvaluated a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:10:13 generated
     Call a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:10:13 "realloc" "bb8"
       Destination "_7"
       Copy "_2"

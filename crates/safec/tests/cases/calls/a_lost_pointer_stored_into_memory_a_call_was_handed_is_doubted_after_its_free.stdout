@@ -108,6 +108,7 @@ Function a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_it
       Use
         Copy "_2"
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:21 generated
+    ArgumentsEvaluated a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:32 generated
     Call a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:32 "malloc" "bb4"
       Destination "_7"
       Constant 4

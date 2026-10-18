@@ -98,6 +98,7 @@ Function a_slot_stored_again_after_what_it_held_was_freed_is_doubted.c:4:5 "main
       Copy "_4"
   Block "bb9"
     Sequenced a_slot_stored_again_after_what_it_held_was_freed_is_doubted.c:14:5 generated
+    ArgumentsEvaluated a_slot_stored_again_after_what_it_held_was_freed_is_doubted.c:15:12 generated
     Call a_slot_stored_again_after_what_it_held_was_freed_is_doubted.c:15:12 "malloc" "bb10"
       Destination "_8"
       Constant 4

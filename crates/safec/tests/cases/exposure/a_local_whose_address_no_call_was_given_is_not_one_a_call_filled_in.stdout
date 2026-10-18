@@ -25,6 +25,7 @@ Function a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:5
   Local "_15" "int **"
   Local "_16" "int *"
   Block "bb0" entry
+    ArgumentsEvaluated a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:10:9 generated
     Call a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:10:9 "malloc" "bb1"
       Destination "_6"
       Constant 8
@@ -57,6 +58,7 @@ Function a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:5
     Sequenced a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:11:9 generated
     Goto "bb4"
   Block "bb4"
+    ArgumentsEvaluated a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:14:9 generated
     Call a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:14:9 "malloc" "bb5"
       Destination "_9"
       Constant 4

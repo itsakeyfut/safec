@@ -583,9 +583,10 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
     //
     // **It says what this check found and not what C decided**, because the
     // two are not the same: the order really is open in `*p + (free(p), 0)`,
-    // and in `x = (free(p), *p)` C17 6.5.17 p2 settles it while this check
-    // still records nothing, which is #178. A note claiming C left those
-    // unsequenced would be false about the second.
+    // and in `*r + ((free(p), 1) && *p)` C17 6.5.13 p4 settles it while this
+    // check still records nothing, because `*r` beside it may act (ADR-0022).
+    // A note claiming C left those unsequenced would be false about the
+    // second.
     //
     // 6.5.2.2 p10 rather than 6.5 p3, which the first draft of this cited: p3
     // leaves subexpressions *unsequenced*, and unsequenced evaluations may

@@ -22,10 +22,12 @@ Function a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_al
       Copy "_1"
   Block "bb1"
     Sequenced a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:6:9 generated
+    ArgumentsEvaluated a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:7:14 generated
     Call a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:7:14 "get_slot" "bb4"
       Destination "_3"
   Block "bb2"
     Sequenced a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:6:9 generated
+    ArgumentsEvaluated a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:9:14 generated
     Call a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:9:14 "malloc" "bb5"
       Destination "_5"
       Constant 8

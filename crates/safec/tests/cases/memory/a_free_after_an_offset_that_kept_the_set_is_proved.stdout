@@ -29,6 +29,7 @@ Function a_free_after_an_offset_that_kept_the_set_is_proved.c:3:5 "f"
       Copy "_1"
   Block "bb2"
     Sequenced a_free_after_an_offset_that_kept_the_set_is_proved.c:5:9 generated
+    ArgumentsEvaluated a_free_after_an_offset_that_kept_the_set_is_proved.c:5:18 generated
     Call a_free_after_an_offset_that_kept_the_set_is_proved.c:5:18 "malloc" "bb5"
       Destination "_4"
       Constant 8

@@ -84,7 +84,9 @@ assignment, a `!`, an arithmetic operator and a call's argument list. So
 are refused, as each one's dereference spelling is on `main`, while the same
 operators at the root of a full expression build. The missing marker is the one #178 is about. #178 records the
 proof its absence costs, and this is the report it costs; this record does not
-reach either.
+reach either. Since #178 a node whose other operands cannot act keeps the
+marker (ADR-0022), so these four answer as their spellings at the root do,
+measured, and what is left is the same shape beside an operand that may act.
 
 ### Confirmation
 
@@ -140,7 +142,8 @@ case is written across two files.
   frontend that hands out spans nested wrongly.
 * Bad, because what #178's missing marker costs stays: a read and a call
   ordered by a `,`, `&&`, `||` or `?:` below any other node are still
-  reported, and `if (!(p && q))` is an ordinary shape of that.
+  reported, and `if (!(p && q))` is an ordinary shape of that. Since #178 that
+  is narrowed to a node with a second operand that may act; `!` has one.
   With #270's carry that holds in the argument spelling as well as the
   dereference one.
 * What would reverse this: an IR whose call carries its argument evaluations,

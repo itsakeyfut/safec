@@ -43,6 +43,7 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:8:9 generated
     Goto "bb3"
   Block "bb3"
+    ArgumentsEvaluated a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:11:9 generated
     Call a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:11:9 "malloc" "bb4"
       Destination "_7"
       Constant 8
@@ -75,6 +76,7 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:12:9 generated
     Goto "bb7"
   Block "bb7"
+    ArgumentsEvaluated a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:15:9 generated
     Call a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:15:9 "malloc" "bb8"
       Destination "_10"
       Constant 4

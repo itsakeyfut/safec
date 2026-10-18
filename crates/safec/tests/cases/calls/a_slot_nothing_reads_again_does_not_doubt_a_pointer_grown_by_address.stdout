@@ -105,6 +105,7 @@ Function a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:
       Destination "_9"
       Address
         Place "_1"
+    ArgumentsEvaluated a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:18:12 generated
     Call a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:18:12 "use2" "bb10"
       Destination "_10"
       Copy "_9"

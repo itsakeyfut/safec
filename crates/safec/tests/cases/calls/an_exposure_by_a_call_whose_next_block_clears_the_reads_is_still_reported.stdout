@@ -55,6 +55,7 @@ Function an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_report
       Copy "_6"
   Block "bb1"
     Sequenced an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:14:5 generated
+    ArgumentsEvaluated an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:15:9 generated
     Call an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:15:9 "malloc" "bb2"
       Destination "_7"
       Constant 4

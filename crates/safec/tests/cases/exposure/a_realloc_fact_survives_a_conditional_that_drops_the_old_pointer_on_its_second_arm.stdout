@@ -79,12 +79,14 @@ Function a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its
     Branch a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:9:9 "bb9" "bb10"
       Copy "_9"
   Block "bb7"
+    Sequenced a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:8:9 generated
     Operation a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:8:9 written
       Destination "_7"
       Use
         Copy "_2"
     Goto "bb6"
   Block "bb8"
+    Sequenced a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:8:9 generated
     Operation a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:8:9 written
       Destination "_7"
       Use

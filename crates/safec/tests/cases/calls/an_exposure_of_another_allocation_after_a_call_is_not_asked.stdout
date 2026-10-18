@@ -57,6 +57,7 @@ Function an_exposure_of_another_allocation_after_a_call_is_not_asked.c:6:5 "f"
       Copy "_7"
   Block "bb1"
     Sequenced an_exposure_of_another_allocation_after_a_call_is_not_asked.c:13:5 generated
+    ArgumentsEvaluated an_exposure_of_another_allocation_after_a_call_is_not_asked.c:14:9 generated
     Call an_exposure_of_another_allocation_after_a_call_is_not_asked.c:14:9 "malloc" "bb2"
       Destination "_8"
       Constant 4
@@ -89,6 +90,7 @@ Function an_exposure_of_another_allocation_after_a_call_is_not_asked.c:6:5 "f"
     Sequenced an_exposure_of_another_allocation_after_a_call_is_not_asked.c:15:9 generated
     Goto "bb5"
   Block "bb5"
+    ArgumentsEvaluated an_exposure_of_another_allocation_after_a_call_is_not_asked.c:18:9 generated
     Call an_exposure_of_another_allocation_after_a_call_is_not_asked.c:18:9 "malloc" "bb6"
       Destination "_11"
       Constant 4

@@ -44,6 +44,7 @@ Function a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:
     Sequenced a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:6:12 generated
     Return
   Block "bb3"
+    Sequenced a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:14 generated
     Operation a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:14 written
       Destination "_5"
       Use
@@ -51,9 +52,12 @@ Function a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:
           Deref
     Goto "bb2"
   Block "bb4"
+    Sequenced a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:14 generated
+    ArgumentsEvaluated a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:24 generated
     Call a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:24 "free" "bb5"
       Copy "_2"
   Block "bb5"
+    Sequenced a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:24 generated
     Operation a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:14 written
       Destination "_5"
       Use

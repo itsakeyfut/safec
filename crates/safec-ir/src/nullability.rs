@@ -1439,13 +1439,13 @@ pub(crate) fn null_at_terminators(
         // asking whether C put any of them before the call at the end.
         //
         // [`Element::ArgumentsEvaluated`] is the answer already in the IR.
-        // ADR-0026 emits it only where no unsequenced operator encloses the
-        // call, so this is the same test as the lowering's `at_root`, and that
-        // is why it is **sufficient** rather than merely suggestive: `at_root`
-        // holds only when every ancestor of the call sequences its operands, so
-        // everything before the call in this block is ordered before it, and a
-        // later sibling cannot be in this block because ADR-0010 makes the call
-        // end it.
+        // ADR-0026 emits it only where the lowering's `at_root` holds, and
+        // that is why it is **sufficient** rather than merely suggestive:
+        // `at_root` holds only when every ancestor of the call either
+        // sequences its operands or has no other operand that may act (#178),
+        // so everything before the call in this block is ordered before it or
+        // reads only locals by value, and a later sibling cannot be in this
+        // block because ADR-0010 makes the call end it.
         //
         // **The block's last element, because the rule is about this
         // terminator.** A call ends its block, so a block holds at most one

@@ -67,6 +67,7 @@ Function a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubt
       Use
         Copy "_2"
     Sequenced a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:10:9 generated
+    ArgumentsEvaluated a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:11:13 generated
     Call a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:11:13 "malloc" "bb4"
       Destination "_7"
       Constant 4

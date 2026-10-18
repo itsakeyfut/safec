@@ -64,6 +64,7 @@ Function a_result_of_a_call_after_a_lost_value_was_handed_away_is_doubted_with_n
       Use
         Copy "_2"
     Sequenced a_result_of_a_call_after_a_lost_value_was_handed_away_is_doubted_with_no_free_after.c:10:9 generated
+    ArgumentsEvaluated a_result_of_a_call_after_a_lost_value_was_handed_away_is_doubted_with_no_free_after.c:11:13 generated
     Call a_result_of_a_call_after_a_lost_value_was_handed_away_is_doubted_with_no_free_after.c:11:13 "malloc" "bb4"
       Destination "_7"
       Constant 4

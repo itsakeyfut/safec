@@ -51,6 +51,7 @@ Function a_call_on_the_second_arm_is_pending_after_the_join.c:6:5 "f"
       Copy "_7"
   Block "bb1"
     Sequenced a_call_on_the_second_arm_is_pending_after_the_join.c:12:5 generated
+    ArgumentsEvaluated a_call_on_the_second_arm_is_pending_after_the_join.c:13:9 generated
     Call a_call_on_the_second_arm_is_pending_after_the_join.c:13:9 "malloc" "bb2"
       Destination "_8"
       Constant 4

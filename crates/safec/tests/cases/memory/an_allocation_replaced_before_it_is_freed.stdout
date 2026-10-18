@@ -27,6 +27,7 @@ Function an_allocation_replaced_before_it_is_freed.c:3:5 "f"
       Copy "_1"
   Block "bb2"
     Sequenced an_allocation_replaced_before_it_is_freed.c:5:5 generated
+    ArgumentsEvaluated an_allocation_replaced_before_it_is_freed.c:6:9 generated
     Call an_allocation_replaced_before_it_is_freed.c:6:9 "malloc" "bb3"
       Destination "_3"
       Constant 8

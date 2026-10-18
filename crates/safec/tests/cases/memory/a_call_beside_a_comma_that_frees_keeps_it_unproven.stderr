@@ -1,0 +1,26 @@
+error[SC0402]: this may use `p` after it was freed
+   ╭─[ a_call_beside_a_comma_that_frees_keeps_it_unproven.c:6:37 ]
+   │
+ 5 │     int *p = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+ 6 │     int x = k(0) + ((free(p), 1) && *p);
+   │                      ───┬───        ─┬  
+   │                         ╰─────────────── freed here
+   │                                      │  
+   │                                      ╰── used here, perhaps after the free
+───╯
+  = note: C17 6.5.2.2 p10 leaves a call indeterminately sequenced with the rest of its expression, and this check found nothing here that orders the free before this
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: put the free and this in separate statements, so that C orders one before the other
+error[SC0403]: this may dereference `p` while it is null
+   ╭─[ a_call_beside_a_comma_that_frees_keeps_it_unproven.c:6:37 ]
+   │
+ 6 │     int x = k(0) + ((free(p), 1) && *p);
+   │                                     ─┬  
+   │                                      ╰── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

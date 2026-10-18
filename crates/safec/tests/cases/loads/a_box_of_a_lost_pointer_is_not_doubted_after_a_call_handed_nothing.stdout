@@ -139,6 +139,7 @@ Function a_box_of_a_lost_pointer_is_not_doubted_after_a_call_handed_nothing.c:9:
       Use
         Copy "_8"
     Sequenced a_box_of_a_lost_pointer_is_not_doubted_after_a_call_handed_nothing.c:18:9 generated
+    ArgumentsEvaluated a_box_of_a_lost_pointer_is_not_doubted_after_a_call_handed_nothing.c:19:13 generated
     Call a_box_of_a_lost_pointer_is_not_doubted_after_a_call_handed_nothing.c:19:13 "malloc" "bb12"
       Destination "_13"
       Constant 4

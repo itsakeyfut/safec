@@ -96,6 +96,7 @@ Function a_load_of_a_lost_pointer_moved_by_arithmetic_before_its_free_is_doubted
       Use
         Copy "_4"
     Sequenced a_load_of_a_lost_pointer_moved_by_arithmetic_before_its_free_is_doubted.c:11:9 generated
+    ArgumentsEvaluated a_load_of_a_lost_pointer_moved_by_arithmetic_before_its_free_is_doubted.c:12:13 generated
     Call a_load_of_a_lost_pointer_moved_by_arithmetic_before_its_free_is_doubted.c:12:13 "malloc" "bb8"
       Destination "_9"
       Constant 4

@@ -20,6 +20,7 @@ Function what_memset_returns_is_the_allocation_it_was_handed.c:5:5 "main"
       Destination "_0"
       Use
         Constant 0
+    ArgumentsEvaluated what_memset_returns_is_the_allocation_it_was_handed.c:6:21 generated
     Call what_memset_returns_is_the_allocation_it_was_handed.c:6:21 "malloc" "bb1"
       Destination "_2"
       Constant 4

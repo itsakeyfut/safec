@@ -98,6 +98,7 @@ Function a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_
       Use
         Copy "_5"
     Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:12:9 generated
+    ArgumentsEvaluated a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:13:13 generated
     Call a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:13:13 "malloc" "bb8"
       Destination "_10"
       Constant 4

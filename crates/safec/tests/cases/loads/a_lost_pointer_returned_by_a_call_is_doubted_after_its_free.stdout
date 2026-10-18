@@ -147,6 +147,7 @@ Function a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:8:5 "f"
       Use
         Copy "_8"
     Sequenced a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:17:9 generated
+    ArgumentsEvaluated a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:18:13 generated
     Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:18:13 "malloc" "bb12"
       Destination "_13"
       Constant 4

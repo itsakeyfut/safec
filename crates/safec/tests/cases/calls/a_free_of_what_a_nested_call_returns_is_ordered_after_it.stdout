@@ -52,15 +52,18 @@ Function a_free_of_what_a_nested_call_returns_is_ordered_after_it.c:5:5 "main"
     Sequenced a_free_of_what_a_nested_call_returns_is_ordered_after_it.c:8:9 generated
     Goto "bb4"
   Block "bb4"
+    ArgumentsEvaluated a_free_of_what_a_nested_call_returns_is_ordered_after_it.c:11:15 generated
     Call a_free_of_what_a_nested_call_returns_is_ordered_after_it.c:11:15 "memset" "bb5"
       Destination "_5"
       Copy "_1"
       Constant 0
       Constant 4
   Block "bb5"
+    ArgumentsEvaluated a_free_of_what_a_nested_call_returns_is_ordered_after_it.c:11:10 generated
     Call a_free_of_what_a_nested_call_returns_is_ordered_after_it.c:11:10 "free" "bb6"
       Copy "_5"
   Block "bb6"
+    Sequenced a_free_of_what_a_nested_call_returns_is_ordered_after_it.c:11:10 generated
     Operation a_free_of_what_a_nested_call_returns_is_ordered_after_it.c:11:5 written
       Destination "_3"
       Use

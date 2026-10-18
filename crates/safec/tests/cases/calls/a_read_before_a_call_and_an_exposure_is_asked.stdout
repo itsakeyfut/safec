@@ -56,6 +56,7 @@ Function a_read_before_a_call_and_an_exposure_is_asked.c:6:5 "f"
       Copy "_7"
   Block "bb1"
     Sequenced a_read_before_a_call_and_an_exposure_is_asked.c:13:5 generated
+    ArgumentsEvaluated a_read_before_a_call_and_an_exposure_is_asked.c:14:9 generated
     Call a_read_before_a_call_and_an_exposure_is_asked.c:14:9 "malloc" "bb2"
       Destination "_8"
       Constant 4
@@ -88,6 +89,7 @@ Function a_read_before_a_call_and_an_exposure_is_asked.c:6:5 "f"
     Sequenced a_read_before_a_call_and_an_exposure_is_asked.c:15:9 generated
     Goto "bb5"
   Block "bb5"
+    ArgumentsEvaluated a_read_before_a_call_and_an_exposure_is_asked.c:18:9 generated
     Call a_read_before_a_call_and_an_exposure_is_asked.c:18:9 "malloc" "bb6"
       Destination "_11"
       Constant 4

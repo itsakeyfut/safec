@@ -102,11 +102,13 @@ Function a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:5:5
         Copy "_3"
           Deref
     Sequenced a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:15:5 generated
+    ArgumentsEvaluated a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:16:16 generated
     Call a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:16:16 "strcpy" "bb9"
       Destination "_9"
       Copy "_1"
       Copy "_3"
   Block "bb9"
+    ArgumentsEvaluated a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:16:9 generated
     Call a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:16:9 "strlen" "bb10"
       Destination "_10"
       Copy "_9"

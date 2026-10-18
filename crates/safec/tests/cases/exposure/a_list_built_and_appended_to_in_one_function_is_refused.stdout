@@ -29,6 +29,7 @@ Function a_list_built_and_appended_to_in_one_function_is_refused.c:5:5 "build"
   Local "_18" "void *"
   Local "_19" "void *"
   Block "bb0" entry
+    ArgumentsEvaluated a_list_built_and_appended_to_in_one_function_is_refused.c:10:12 generated
     Call a_list_built_and_appended_to_in_one_function_is_refused.c:10:12 "malloc" "bb1"
       Destination "_5"
       Constant 8
@@ -72,6 +73,7 @@ Function a_list_built_and_appended_to_in_one_function_is_refused.c:5:5 "build"
         Copy "_1"
           Deref
     Sequenced a_list_built_and_appended_to_in_one_function_is_refused.c:14:5 generated
+    ArgumentsEvaluated a_list_built_and_appended_to_in_one_function_is_refused.c:15:12 generated
     Call a_list_built_and_appended_to_in_one_function_is_refused.c:15:12 "malloc" "bb5"
       Destination "_9"
       Constant 8

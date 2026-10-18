@@ -65,9 +65,11 @@ Function a_read_in_a_frees_own_argument_below_an_assignment_is_ordered_before_it
         Copy "_1"
         Copy "_1"
           Deref
+    ArgumentsEvaluated a_read_in_a_frees_own_argument_below_an_assignment_is_ordered_before_it.c:11:10 generated
     Call a_read_in_a_frees_own_argument_below_an_assignment_is_ordered_before_it.c:11:10 "free" "bb5"
       Copy "_6"
   Block "bb5"
+    Sequenced a_read_in_a_frees_own_argument_below_an_assignment_is_ordered_before_it.c:11:10 generated
     Operation a_read_in_a_frees_own_argument_below_an_assignment_is_ordered_before_it.c:11:5 written
       Destination "_3"
       Use

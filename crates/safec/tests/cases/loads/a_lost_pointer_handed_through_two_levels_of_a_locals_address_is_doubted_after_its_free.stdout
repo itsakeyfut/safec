@@ -68,6 +68,7 @@ Function a_lost_pointer_handed_through_two_levels_of_a_locals_address_is_doubted
       Use
         Copy "_2"
     Sequenced a_lost_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:9:9 generated
+    ArgumentsEvaluated a_lost_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:10:13 generated
     Call a_lost_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:10:13 "malloc" "bb4"
       Destination "_7"
       Constant 4

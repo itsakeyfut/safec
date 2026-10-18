@@ -43,6 +43,7 @@ Function a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:4:5 "f
       Copy "_6"
   Block "bb1"
     Sequenced a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:9:5 generated
+    ArgumentsEvaluated a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:10:9 generated
     Call a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:10:9 "malloc" "bb2"
       Destination "_7"
       Constant 4
@@ -114,6 +115,7 @@ Function a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:4:5 "f
     Sequenced a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:17:12 generated
     Return
   Block "bb7"
+    Sequenced a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:16:9 generated
     Operation a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:16:9 written
       Destination "_12"
       Use
@@ -121,6 +123,7 @@ Function a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:4:5 "f
           Deref
     Goto "bb6"
   Block "bb8"
+    Sequenced a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:16:9 generated
     Operation a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:16:21 written
       Destination "_3"
       Use
@@ -129,6 +132,8 @@ Function a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:4:5 "f
       Destination "_13"
       Use
         Copy "_3"
+    Sequenced a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:16:21 generated
+    ArgumentsEvaluated a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:16:33 generated
     Call a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:16:33 "now" "bb9"
       Destination "_14"
   Block "bb9"

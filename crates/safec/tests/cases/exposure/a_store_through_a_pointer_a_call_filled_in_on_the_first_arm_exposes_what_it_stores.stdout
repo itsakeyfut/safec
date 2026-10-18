@@ -27,6 +27,7 @@ Function a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_wha
   Local "_16" "int"
   Local "_17" "int *"
   Block "bb0" entry
+    ArgumentsEvaluated a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:10:9 generated
     Call a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:10:9 "malloc" "bb1"
       Destination "_6"
       Constant 8
@@ -59,6 +60,7 @@ Function a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_wha
     Sequenced a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:11:9 generated
     Goto "bb4"
   Block "bb4"
+    ArgumentsEvaluated a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:14:9 generated
     Call a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:14:9 "malloc" "bb5"
       Destination "_9"
       Constant 4

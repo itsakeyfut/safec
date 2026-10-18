@@ -36,6 +36,7 @@ Function a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_o
     Sequenced a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:7:9 generated
     Goto "bb3"
   Block "bb3"
+    ArgumentsEvaluated a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:10:9 generated
     Call a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:10:9 "malloc" "bb4"
       Destination "_5"
       Constant 4

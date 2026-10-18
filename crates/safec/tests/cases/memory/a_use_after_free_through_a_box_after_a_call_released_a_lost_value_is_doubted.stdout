@@ -156,6 +156,7 @@ Function a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_do
       Use
         Copy "_11"
     Sequenced a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:15:9 generated
+    ArgumentsEvaluated a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:16:13 generated
     Call a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:16:13 "malloc" "bb15"
       Destination "_16"
       Constant 4

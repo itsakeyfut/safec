@@ -74,6 +74,7 @@ Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:10:5 "f
       Copy "_8"
   Block "bb1"
     Sequenced a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:17:5 generated
+    ArgumentsEvaluated a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:18:9 generated
     Call a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:18:9 "malloc" "bb2"
       Destination "_9"
       Constant 4
@@ -106,6 +107,7 @@ Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:10:5 "f
     Sequenced a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:19:9 generated
     Goto "bb5"
   Block "bb5"
+    ArgumentsEvaluated a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:22:9 generated
     Call a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:22:9 "malloc" "bb6"
       Destination "_12"
       Constant 4

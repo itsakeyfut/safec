@@ -48,6 +48,7 @@ Function an_address_that_escaped_on_one_arm_only.c:3:5 "f"
     Sequenced an_address_that_escaped_on_one_arm_only.c:6:9 generated
     Goto "bb4"
   Block "bb4"
+    ArgumentsEvaluated an_address_that_escaped_on_one_arm_only.c:7:9 generated
     Call an_address_that_escaped_on_one_arm_only.c:7:9 "malloc" "bb5"
       Destination "_7"
       Constant 8

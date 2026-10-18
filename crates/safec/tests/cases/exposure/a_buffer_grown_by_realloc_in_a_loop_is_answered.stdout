@@ -34,6 +34,7 @@ Function a_buffer_grown_by_realloc_in_a_loop_is_answered.c:3:5 "f"
       Copy "_1"
   Block "bb2"
     Sequenced a_buffer_grown_by_realloc_in_a_loop_is_answered.c:6:12 generated
+    ArgumentsEvaluated a_buffer_grown_by_realloc_in_a_loop_is_answered.c:7:15 generated
     Call a_buffer_grown_by_realloc_in_a_loop_is_answered.c:7:15 "realloc" "bb4"
       Destination "_4"
       Copy "_2"

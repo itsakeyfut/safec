@@ -117,6 +117,7 @@ Function a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:3:5 "f"
       Use
         Copy "_7"
     Sequenced a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:13:9 generated
+    ArgumentsEvaluated a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:14:13 generated
     Call a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:14:13 "malloc" "bb8"
       Destination "_13"
       Constant 4
@@ -152,6 +153,7 @@ Function a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:3:5 "f"
     Sequenced a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:15:13 generated
     Goto "bb11"
   Block "bb11"
+    ArgumentsEvaluated a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:16:13 generated
     Call a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:16:13 "malloc" "bb12"
       Destination "_16"
       Constant 4

@@ -47,6 +47,7 @@ Function a_pointer_reassigned_after_its_address_escaped.c:3:5 "f"
       Use
         Copy "_6"
     Sequenced a_pointer_reassigned_after_its_address_escaped.c:6:14 generated
+    ArgumentsEvaluated a_pointer_reassigned_after_its_address_escaped.c:7:9 generated
     Call a_pointer_reassigned_after_its_address_escaped.c:7:9 "malloc" "bb3"
       Destination "_7"
       Constant 8

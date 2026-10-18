@@ -553,9 +553,9 @@ enum Task {
     /// about what came before it. The span is the call's, because that is what
     /// the point falls before.
     ///
-    /// Pushed only where nothing unsequenced encloses the call, which is why
-    /// the flag is read rather than the task always being pushed: see
-    /// [`Lowering::begin_value`].
+    /// Pushed only where the flag reaches the call, which is why the flag is
+    /// read rather than the task always being pushed: see
+    /// [`Lowering::begin_value`] and [`Lowering::descend`].
     ///
     /// [`Lowering::begin_value`]: Lowering::begin_value
     Arguments(Span),
@@ -1901,10 +1901,129 @@ impl Lowering<'_> {
     /// apart here before. A C++ adapter with a sequencing
     /// operator that yields an lvalue makes the call live without anybody
     /// having to notice.
+    ///
+    /// **Not at every such node: only where two of its operands may act**
+    /// ([`Self::at_most_one_acts`]). What a marker below one operand could
+    /// misorder is something another operand puts in the block, and a
+    /// constant or a local read by value puts nothing there. So `x = (free(p),
+    /// *p);` keeps the comma's marker and is the proof `int x = (free(p),
+    /// *p);` is, while `*r + ((free(p), 1) && *p)` drops it (#178). See
+    /// ADR-0022.
     fn descend(&mut self, id: ExprId, tasks: &mut Vec<Task>) {
-        if self.top_level && !sequences(self.ast.expr(id)) {
+        if self.top_level && !sequences(self.ast.expr(id)) && !self.at_most_one_acts(id) {
             tasks.push(Task::Restore(true));
             self.top_level = false;
+        }
+    }
+
+    /// Whether at most one operand of this node may act: read through a
+    /// pointer, call, or write.
+    ///
+    /// That operand is the only one that can hold a marker or anything a
+    /// marker orders, so the node keeps [`Lowering::top_level`] for it, and
+    /// the flag reaches a marker only through nodes that each passed this.
+    /// **The direction to be wrong in is counting too many**: an operand
+    /// answered inert that does act is a read the marker orders before a free
+    /// C leaves it unordered against, which is a silence. See ADR-0022.
+    fn at_most_one_acts(&self, id: ExprId) -> bool {
+        let acting = match self.ast.expr(id) {
+            Expr::Assign { place, value, .. } => {
+                usize::from(!self.inert_place(*place)) + usize::from(!self.inert(*value))
+            }
+            Expr::Binary { lhs, rhs, .. } => {
+                usize::from(!self.inert(*lhs)) + usize::from(!self.inert(*rhs))
+            }
+            Expr::Subscript { base, index, .. } => {
+                usize::from(!self.inert(*base)) + usize::from(!self.inert(*index))
+            }
+            Expr::Call {
+                callee, arguments, ..
+            } => {
+                usize::from(!self.inert(*callee))
+                    + arguments
+                        .iter()
+                        .filter(|&&argument| !self.inert(argument))
+                        .count()
+            }
+            // One operand, so nothing beside it.
+            Expr::Unary { .. } => 1,
+            // Written out rather than `_`, so a kind added later is asked.
+            // These sequence, have no operands, or are refused.
+            Expr::Number { .. }
+            | Expr::Identifier { .. }
+            | Expr::Member { .. }
+            | Expr::Conditional { .. }
+            | Expr::Comma { .. }
+            | Expr::Error { .. } => 2,
+        };
+        acting <= 1
+    }
+
+    /// Whether evaluating this puts nothing in the block a marker could
+    /// misorder: constants, locals read by value, `&` of a local, and
+    /// arithmetic over those.
+    ///
+    /// A local read by value is not a read through a pointer, which is all the
+    /// memory check carries forwards to a free, and its value changes only by
+    /// a write, which is not inert. A dereference, a subscript, a call, an
+    /// assignment, an increment and a member are none of these.
+    ///
+    /// **That last argument has a limit**: the operand that does act may be
+    /// the write. `*q = (free(q), q = r, 0)` reads `q` for the place and writes
+    /// it in the value with nothing ordering the two, which C17 6.5 p2 makes
+    /// undefined, and nothing here reports it outside a call's arguments
+    /// (ADR-0052). The markers do not decide that silence, which `main` has
+    /// too, but this argument does not answer it either.
+    fn inert(&self, id: ExprId) -> bool {
+        match self.ast.expr(id) {
+            Expr::Number { .. } | Expr::Identifier { .. } => true,
+            Expr::Unary { op, operand, .. } => match op {
+                AstUnOp::AddrOf => matches!(self.ast.expr(*operand), Expr::Identifier { .. }),
+                AstUnOp::Plus | AstUnOp::Minus | AstUnOp::Not | AstUnOp::BitNot => {
+                    self.inert(*operand)
+                }
+                AstUnOp::Deref
+                | AstUnOp::PreInc
+                | AstUnOp::PreDec
+                | AstUnOp::PostInc
+                | AstUnOp::PostDec => false,
+            },
+            Expr::Binary { lhs, rhs, .. } | Expr::Comma { lhs, rhs, .. } => {
+                self.inert(*lhs) && self.inert(*rhs)
+            }
+            Expr::Conditional {
+                condition,
+                then,
+                otherwise,
+                ..
+            } => self.inert(*condition) && self.inert(*then) && self.inert(*otherwise),
+            Expr::Assign { .. }
+            | Expr::Call { .. }
+            | Expr::Subscript { .. }
+            | Expr::Member { .. }
+            | Expr::Error { .. } => false,
+        }
+    }
+
+    /// Whether the place an assignment writes is computed without acting: a
+    /// local, or `*` or `[]` over inert operands.
+    ///
+    /// Computing that place reads only those operands. The store itself is
+    /// sequenced after the value computations of both operands (C17 6.5.16
+    /// p3), so it follows the right operand's markers in C as in the block.
+    /// Where the right operand writes a local the place reads, the place may
+    /// be computed from either value, which [`Self::inert`] says is not
+    /// answered here.
+    fn inert_place(&self, id: ExprId) -> bool {
+        match self.ast.expr(id) {
+            Expr::Identifier { .. } => true,
+            Expr::Unary {
+                op: AstUnOp::Deref,
+                operand,
+                ..
+            } => self.inert(*operand),
+            Expr::Subscript { base, index, .. } => self.inert(*base) && self.inert(*index),
+            _ => false,
         }
     }
 
@@ -1936,8 +2055,8 @@ impl Lowering<'_> {
 
         // Before [`Lowering::descend`], which is what takes the flag away for
         // this node's own operands. What the call arm below asks is whether
-        // anything unsequenced encloses **the call**, and asking after the
-        // descent answers about its arguments instead, which is always no.
+        // the flag reaches **the call**, and asking after the descent answers
+        // about its arguments instead.
         let at_root = self.top_level;
         self.descend(id, tasks);
 
@@ -2015,13 +2134,14 @@ impl Lowering<'_> {
                 // and before the `Finish` that builds the terminator, which is
                 // where C puts it.
                 //
-                // **Only where nothing unsequenced encloses the call.** The
-                // marker is a claim about the whole block, and a block holds
-                // the other operands of whatever encloses this: emitting one
-                // for `*p + (free(p), 0)` would order the read against a free
-                // C leaves it unordered against. That is ADR-0022's enclosure
-                // rule, asked about the call rather than about the point, and
-                // it is the same rule the four operators already ask. See
+                // **Only where the flag reaches the call.** The marker is a
+                // claim about the whole block, and a block holds the other
+                // operands of whatever encloses this: emitting one for `*p +
+                // (free(p), 0)` would order the read against a free C leaves
+                // it unordered against. That is ADR-0022's enclosure rule,
+                // asked about the call rather than about the point, and it is
+                // the same rule the four operators already ask, including
+                // that a node whose other operands cannot act keeps it. See
                 // ADR-0026.
                 //
                 // Mutation: emit it whatever encloses the call. Four cases

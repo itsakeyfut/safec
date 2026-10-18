@@ -33,6 +33,7 @@ Function a_scope_reentered_forgets_what_its_local_held.c:3:5 "f"
         Copy "_2"
           Deref
     Sequenced a_scope_reentered_forgets_what_its_local_held.c:6:9 generated
+    ArgumentsEvaluated a_scope_reentered_forgets_what_its_local_held.c:7:13 generated
     Call a_scope_reentered_forgets_what_its_local_held.c:7:13 "malloc" "bb4"
       Destination "_4"
       Constant 4

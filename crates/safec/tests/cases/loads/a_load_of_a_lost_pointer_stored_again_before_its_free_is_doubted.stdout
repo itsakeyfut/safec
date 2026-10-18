@@ -102,6 +102,7 @@ Function a_load_of_a_lost_pointer_stored_again_before_its_free_is_doubted.c:5:5 
       Use
         Copy "_4"
     Sequenced a_load_of_a_lost_pointer_stored_again_before_its_free_is_doubted.c:12:9 generated
+    ArgumentsEvaluated a_load_of_a_lost_pointer_stored_again_before_its_free_is_doubted.c:13:13 generated
     Call a_load_of_a_lost_pointer_stored_again_before_its_free_is_doubted.c:13:13 "malloc" "bb8"
       Destination "_9"
       Constant 4

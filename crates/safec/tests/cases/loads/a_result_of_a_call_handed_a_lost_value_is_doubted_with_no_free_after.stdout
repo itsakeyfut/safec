@@ -139,6 +139,7 @@ Function a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:
       Use
         Copy "_8"
     Sequenced a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:17:9 generated
+    ArgumentsEvaluated a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:18:13 generated
     Call a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:18:13 "malloc" "bb12"
       Destination "_13"
       Constant 4

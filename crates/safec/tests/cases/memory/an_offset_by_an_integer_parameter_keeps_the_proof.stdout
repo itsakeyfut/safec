@@ -30,6 +30,7 @@ Function an_offset_by_an_integer_parameter_keeps_the_proof.c:3:5 "f"
       Copy "_1"
   Block "bb2"
     Sequenced an_offset_by_an_integer_parameter_keeps_the_proof.c:5:9 generated
+    ArgumentsEvaluated an_offset_by_an_integer_parameter_keeps_the_proof.c:5:18 generated
     Call an_offset_by_an_integer_parameter_keeps_the_proof.c:5:18 "malloc" "bb5"
       Destination "_5"
       Constant 8

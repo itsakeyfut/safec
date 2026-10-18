@@ -64,6 +64,7 @@ Function a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_af
       Use
         Copy "_2"
     Sequenced a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:10:9 generated
+    ArgumentsEvaluated a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:11:13 generated
     Call a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:11:13 "malloc" "bb4"
       Destination "_7"
       Constant 4

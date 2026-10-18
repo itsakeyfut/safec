@@ -51,6 +51,7 @@ Function an_exposure_on_one_arm_after_a_call_is_asked.c:6:5 "f"
       Copy "_7"
   Block "bb1"
     Sequenced an_exposure_on_one_arm_after_a_call_is_asked.c:12:5 generated
+    ArgumentsEvaluated an_exposure_on_one_arm_after_a_call_is_asked.c:13:9 generated
     Call an_exposure_on_one_arm_after_a_call_is_asked.c:13:9 "malloc" "bb2"
       Destination "_8"
       Constant 4
