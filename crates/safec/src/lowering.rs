@@ -32,7 +32,7 @@ use crate::ast::{
 };
 use crate::ast::{Nullability, Specifier, TypeId, UnOp as AstUnOp, spell_type};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
-use crate::sema::Resolution;
+use crate::sema::{DOES_NOT_RETURN, Resolution};
 use crate::types::Types;
 use safec_ir::ir::{
     Between, BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin,
@@ -244,7 +244,6 @@ pub fn lower(
         prototypes: HashMap::new(),
         return_nullability: HashMap::new(),
         refused: HashSet::new(),
-        defined: HashSet::new(),
         pending: HashMap::new(),
         top_level: false,
         root: None,
@@ -314,12 +313,6 @@ struct Lowering<'a> {
     /// reported again: the caller wrote an ordinary call and the fault is in a
     /// declaration somewhere else.
     refused: HashSet<String>,
-    /// The names this translation unit defines a function for.
-    ///
-    /// Asked of this rather than of the IR, because bodies are lowered in file
-    /// order and a function defined below a call to it has no body in the IR
-    /// yet when the call is lowered. Read by [`Lowering::does_not_return`].
-    defined: HashSet<String>,
     /// Where a `&&`, `||` or `?:` puts its answer, and where control rejoins.
     ///
     /// Filled when the first operand has been evaluated and read when the last
@@ -635,7 +628,6 @@ impl Lowering<'_> {
                 Item::Function(function) => {
                     let (name, ty, written) =
                         (function.name, function.ty, function.return_nullability);
-                    self.defined.insert(self.sources.snippet(name).to_owned());
                     self.declare_one(name, ty, written, true, diagnostics);
                 }
                 Item::Declaration { declarators, .. } => {
@@ -3461,26 +3453,17 @@ impl Lowering<'_> {
 
     /// Whether a call to `called` is one C says does not return.
     ///
-    /// Decided by name, and only for a function this translation unit does
-    /// not define: one defined here is lowered like any other, and its body is
-    /// what the checks read rather than its name. See ADR-0051.
+    /// Decided by name alone. A unit that defines one of these never reaches
+    /// here, because names refuses the definition, so whatever defines it
+    /// elsewhere is a program C does not define and is not asked about. See
+    /// ADR-0051.
     fn does_not_return(&self, called: FuncId) -> bool {
         let name = self.sources.snippet(self.unit.function(called).name);
-        DOES_NOT_RETURN.contains(&name) && !self.defined.contains(name)
+        DOES_NOT_RETURN
+            .iter()
+            .any(|&(reserved, _)| reserved == name)
     }
 }
-
-/// Four of the library functions C says do not return to their caller.
-///
-/// `abort` (C17 7.22.4.1), `exit` (7.22.4.4), `_Exit` (7.22.4.5) and
-/// `quick_exit` (7.22.4.7). `longjmp` (7.13.2.1) and `thrd_exit` (7.26.5.5)
-/// do not return either: the first takes a `jmp_buf`, which this frontend
-/// cannot declare, and the second belongs to the threads that
-/// `docs/roadmap.md` places in Phase 8. The name is believed because 7.1.3 reserves it: a
-/// program that defines one with external linkage has no behaviour C
-/// defines. [`Lowering::does_not_return`] answers `false` for one defined
-/// here all the same, so its body is what the checks read.
-const DOES_NOT_RETURN: &[&str] = &["abort", "exit", "_Exit", "quick_exit"];
 
 /// Whether an operand is non-zero, as a value.
 ///

@@ -1,0 +1,8 @@
+error[SC0319]: this defines `abort`, which C reserves for the library
+   ╭─[ a_function_defined_here_named_abort_is_refused.c:1:6 ]
+   │
+ 1 │ void abort(void) {
+   │      ──┬──  
+   │        ╰──── defined here
+───╯
+  = note: C17 7.1.3 p2 makes a program that defines it undefined, and this compiler believes the library's: `abort` does not return (7.22.4.1), so rename this function

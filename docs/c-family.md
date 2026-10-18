@@ -401,9 +401,9 @@ without a `return` where it wrote one.
 A `Terminator::Call` whose `then` is `None` has no edge out of it, so every
 analysis reads what follows it as reached by no execution, and **a call is
 given no continuation only where its callee cannot return**. The C frontend
-gives none to a call of `abort`, `exit`, `_Exit` or `quick_exit` that this
-translation unit does not define and that is the whole of its full
-expression, and keeps one for every other call.
+gives none to a call of `abort`, `exit`, `_Exit` or `quick_exit` that is the
+whole of its full expression, and keeps one for every other call; a definition
+of one of those names is refused (`SC0319`).
 
 Two things that look like the answer are not. A callee whose body is in the
 unit keeps its edge whatever it is declared as, because the body is what the
@@ -417,8 +417,10 @@ operand would land where nothing reaches.
 
 **The two ways to break it fail in opposite directions.** A call given no
 continuation that does return hides the code after it from every check, which
-is a silence: `code_after_a_function_defined_here_named_abort_is_asked` in
-`crates/safec/tests/cases` holds that a definition here keeps its edge. A call
+is a silence: since #343 a definition of one of those names is refused, so
+none can hide a body that returns, and
+`a_function_defined_here_named_abort_is_refused` in `crates/safec/tests/cases`
+holds that. A call
 given a continuation it never takes keeps code no execution reaches in the
 graph, which is a false report, and is what a call to a function of the
 program's own that never returns still costs.
