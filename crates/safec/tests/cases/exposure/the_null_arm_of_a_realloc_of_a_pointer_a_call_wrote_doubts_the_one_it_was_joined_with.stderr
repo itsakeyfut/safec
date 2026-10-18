@@ -1,0 +1,20 @@
+warning[SC0401]: this frees `r`, which this check stopped following
+    ╭─[ the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:10:14 ]
+    │
+ 10 │     int *s = realloc(r, 8);
+    │              ──────┬──────  
+    │                    ╰──────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+warning[SC0401]: this frees `q`, which may have been freed already
+    ╭─[ the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:11:15 ]
+    │
+ 11 │     if (!s) { free(q); return 0; }
+    │               ───┬───  
+    │                  ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
