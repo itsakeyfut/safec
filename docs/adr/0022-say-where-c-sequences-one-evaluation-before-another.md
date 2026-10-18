@@ -202,9 +202,19 @@ has not chosen rather than quiet about one it has.
 | `sequences` answers `true` for a call | `a_comma_inside_a_call_argument_orders_nothing_outside_it` |
 | `&&` and `\|\|`'s marker stops asking | `a_logical_and_inside_an_unsequenced_operand_orders_nothing` |
 | `?:`'s markers stop asking | `a_conditional_inside_an_unsequenced_operand_orders_nothing` |
+| every node answered as having at most one operand that acts | the three above, `an_unsequenced_free_and_use_is_not_proved` and `a_call_beside_a_comma_that_frees_keeps_it_unproven`, among others |
+| a dereference counted inert | the three above and `an_unsequenced_free_and_use_is_not_proved` |
+| a call counted inert | `a_call_beside_a_comma_that_frees_keeps_it_unproven` and `a_comma_inside_a_call_argument_orders_nothing_outside_it` |
 | `Freeing::new` starts sequenced | the four above and three beside them |
 | `Freeing::joined` takes the stronger flag | `a_free_sequenced_on_one_arm_only_is_not_a_proof` and `a_may_set_where_one_free_is_sequenced_and_one_is_not` |
 | `Freeing::joined` keeps its own span rather than the earlier | the first of those, and `a_use_after_two_allocations_names_no_allocation` |
+
+And the quiet direction of the sibling test: dropping the root at every node
+that does not sequence, as before #178, fails
+`an_assignment_of_a_comma_that_frees_is_proved` and the three cases beside it,
+which go back to doubts, and
+`a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked`, which
+reports again.
 
 And three where asking about the order was the wrong question, each of which
 this change got wrong until review measured it against the binary it replaced.
