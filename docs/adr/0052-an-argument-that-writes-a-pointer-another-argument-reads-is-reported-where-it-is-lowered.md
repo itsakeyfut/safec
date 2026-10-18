@@ -37,7 +37,7 @@ The lowering has the tree, and the conflict is a fact about the tree: which poin
 
 **Only pointer locals.** `k(i, i++)` and `i + i++` are undefined by the same paragraph and stay silent: neither is something a memory check is believed about. They are a cost this record names rather than a gap it hides.
 
-**And an operator's operands, since [#525](https://github.com/itsakeyfut/safec/issues/525).** This record first asked only a call's arguments, calling every unsequenced operand pair a larger feature. Then `*q = (free(q), q = r, 0)` and `x = *q + (q = r, 0)` turned out to be the same silence, and the same walk answers them. So the search runs at an assignment, a binary operator that does not sequence, and a subscript, as well as at a call. The element's `Between` field says which, and the words follow it. An assignment's place is walked as a place: the local it names is the store's, sequenced after the value computations of both operands (C17 6.5.16 p3), so `q = (q = r, q)` is no conflict, while what computing the place reads is. A conflict is found once, at the lowest node whose operands it lies across.
+**And an operator's operands, since [#525](https://github.com/itsakeyfut/safec/issues/525).** This record first asked only a call's arguments, calling every unsequenced operand pair a larger feature. Then `*q = (free(q), q = r, 0)` and `x = *q + (q = r, 0)` turned out to be the same silence, and the same walk answers them. So the search runs at an assignment, a binary operator that does not sequence, and a subscript, as well as at a call. The element's `Between` field says which, and the words follow it. An assignment's place is walked as a place: the local it names is the store's, sequenced after the value computations of both operands (C17 6.5.16 p3), so `q = (q = r, q)` is no conflict, while what computing the place reads is. A pair of accesses is found at the lowest node whose operands it lies across; an outer node can still report the same local over another pair, which is a second report rather than a missed one.
 
 **Only what is named.** A write through a pointer, `*pp = 0`, is not found, and neither is one into a member or an element of an array. Missing one is the silence that is already there, not a new one.
 
@@ -57,6 +57,7 @@ Mutations, each failing named cases:
 * An assignment, a binary operator or a subscript pushing no conflict task fails `a_store_through_a_pointer_the_value_writes_is_reported` and the two beside it, `a_sum_reading_a_pointer_its_other_operand_writes_is_reported`, or `a_subscript_whose_index_writes_its_base_is_reported`, which go silent.
 * Walking an assignment's place as a value fails `a_store_into_a_pointer_its_value_replaced_first_is_not_reported`, which reports a program C defines.
 * Wording `Between::Operands` as a call's arguments fails those five on their `.stderr`.
+* Counting a write in a binary operator or a subscript as ordered before the value fails `a_pointer_assigned_a_sum_that_increments_it_is_reported` or `a_pointer_assigned_an_element_whose_index_increments_it_is_reported`, and counting a comma's right operand as ordered fails `a_pointer_assigned_a_comma_that_increments_it_last_is_reported`, each going silent.
 
 `a_local_proved_null_passed_to_a_nonnull_parameter_is_proved` is the control: the same null, not overwritten, keeps its `SC0405`.
 

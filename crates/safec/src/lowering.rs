@@ -3210,9 +3210,11 @@ impl Lowering<'_> {
     ///
     /// The operands are a call's arguments, an assignment's place and value,
     /// a binary operator's two sides, or a subscript's base and index. A
-    /// conflict is found once, at the lowest node whose operands it lies
-    /// across, since below that both accesses are in one operand. A node that
-    /// sequences never asks, and neither does one with a single operand.
+    /// pair of accesses is found at the lowest node whose operands it lies
+    /// across, since below that both are in one operand; an outer node can
+    /// still report the same local over another pair, which is a second
+    /// report rather than a missed one. A node that sequences never asks, and
+    /// neither does one with a single operand.
     ///
     /// Only a pointer, because that is what the memory check is believed
     /// about; `k(i, i++)` is undefined by the same paragraph and is not

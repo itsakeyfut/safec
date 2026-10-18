@@ -1,0 +1,12 @@
+error[SC0409]: this writes `q`, which another operand of the same expression writes too
+   ╭─[ a_pointer_assigned_an_element_whose_index_increments_it_is_reported.c:3:5 ]
+   │
+ 3 │     q = &r[!q++];
+   │     ┬       ─┬─  
+   │     ╰──────────── written here as well
+   │              │   
+   │              ╰─── written here
+───╯
+  = note: C17 6.5 p2 makes this undefined wherever both are evaluated: nothing orders an operator's operands against each other (6.5 p3)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before this expression

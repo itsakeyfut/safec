@@ -342,6 +342,14 @@ cases! {
         a_pointer_assigned_its_own_increment_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_assigned_an_assignment_to_itself_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_assigned_from_an_arm_that_writes_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write below a binary operator, a subscript or a comma's right
+        // operand is not ordered before the value either. Mutation: push the
+        // operands of a `Binary`, of a `Subscript`, or a comma's right operand
+        // as ordered in `unordered_writes`; the matching case goes silent.
+        // Found by review.
+        a_pointer_assigned_a_sum_that_increments_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_an_element_whose_index_increments_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_a_comma_that_increments_it_last_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And where a sequence point does put the write first, C defines it: a
         // call's argument (6.5.2.2 p10), the condition of `?:` (6.5.15 p4) and
         // the left of `&&` (6.5.13 p4). Mutation: count any one of those as
