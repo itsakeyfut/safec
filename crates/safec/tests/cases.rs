@@ -1123,19 +1123,21 @@ cases! {
         code_after_an_if_on_zero_is_still_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         code_under_an_if_on_zero_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_loop_on_zero_is_never_entered: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Code after a call that does not return is reached by nothing, and a
-        // function defined here is read rather than believed by its name
+        // Code after a call that does not return is reached by nothing
         // (ADR-0051). Mutation: have the lowering give every call its
-        // continuation; the first is reported. Mutation: have
-        // `Lowering::does_not_return` ignore `defined`; the second and third
-        // go silent. Mutation: have it ask the IR whether the callee has a
-        // body instead of `defined`; the third goes silent, because a body
-        // below the call is not lowered yet. The `SC0402` beside the `SC0403`
-        // in both is the memory check doubting `p` after a call whose body it
-        // does not read, as it does after `g();` for any `g` defined here.
+        // continuation; the first is reported. And a definition of `abort`,
+        // above the call or below it, is refused at the definition (#343):
+        // C17 7.1.3 reserves the name, and honouring the definition here
+        // while believing it in another file of the run was a silence.
+        // Mutation: have names report no reserved definition; the second and
+        // third build, and the read after the call is asked of nothing.
         code_after_abort_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        code_after_a_function_defined_here_named_abort_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        code_after_a_function_defined_below_named_abort_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_function_defined_here_named_abort_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_function_defined_below_its_call_named_abort_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local or a parameter of the name has no linkage, so 7.1.3 does not
+        // reserve it there, and names never asks. Mutation: ask every
+        // declaration rather than function definitions; this is refused.
+        a_local_named_exit_is_not_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call inside a larger full expression keeps its edge, because a
         // read written before it is lowered after it. Mutation: drop the
         // `root` test where the call decides its continuation; both reads go

@@ -48,7 +48,7 @@ records why the prefix is this one and what was rejected.
 | `SC00xx` | not a topic: examples and tests, never emitted by the compiler | `SC0001` |
 | `SC01xx` | lexical, what a character or a token is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105`, `SC0106`, `SC0107`, `SC0108` |
 | `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203`, `SC0204`, `SC0205`, `SC0206`, `SC0207` |
-| `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305`, `SC0306`, `SC0307`, `SC0308`, `SC0309`, `SC0310`, `SC0311`, `SC0312`, `SC0313`, `SC0314`, `SC0315`, `SC0316`, `SC0317`, `SC0318` |
+| `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305`, `SC0306`, `SC0307`, `SC0308`, `SC0309`, `SC0310`, `SC0311`, `SC0312`, `SC0313`, `SC0314`, `SC0315`, `SC0316`, `SC0317`, `SC0318`, `SC0319` |
 | `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406`, `SC0407`, `SC0408`, `SC0409` |
 | `SC05xx` | lifetime | none yet |
 | `SC06xx` | ownership | `SC0601` |
@@ -110,6 +110,15 @@ unsequenced; the words then name an operand of the same expression rather than
 an argument of the same call.
 [ADR-0052](adr/0052-an-argument-that-writes-a-pointer-another-argument-reads-is-reported-where-it-is-lowered.md)
 is the decision.
+
+**`SC0319` refuses a name the checks believe.** A call to `abort`, `exit`,
+`_Exit` or `quick_exit` gets no continuation, because C says none returns, and
+that belief is only true of a program that does not define one: C17 7.1.3
+reserves the names, and p2 makes a program defining one undefined. So a
+definition of one is refused at its name, in whichever file of the run it is,
+and the fix is a rename.
+[ADR-0051](adr/0051-a-call-that-does-not-return-has-no-edge-out-of-it.md) is
+the decision.
 
 The frontend refusals that come with these, `SC0204` for a
 nullability specifier where it cannot apply, `SC0307` for two declarations

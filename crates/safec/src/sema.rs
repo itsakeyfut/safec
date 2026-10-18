@@ -68,6 +68,37 @@ const REDEFINED: Code = Code::new("SC0312");
 /// gives.
 const CONFLICTING: Code = Code::new("SC0313");
 
+/// A definition of a name C reserves for the library, and that this compiler
+/// believes by name: one of [`DOES_NOT_RETURN`].
+///
+/// Its own code rather than [`REDEFINED`]'s or [`CONFLICTING`]'s: nothing is
+/// given twice and nothing disagrees, the name is the fault, and the fix is a
+/// rename. See ADR-0051.
+const RESERVED_DEFINITION: Code = Code::new("SC0319");
+
+/// Four of the library functions C says do not return to their caller, with
+/// the clause that says so.
+///
+/// `abort` (C17 7.22.4.1), `exit` (7.22.4.4), `_Exit` (7.22.4.5) and
+/// `quick_exit` (7.22.4.7). `longjmp` (7.13.2.1) and `thrd_exit` (7.26.5.5)
+/// do not return either: the first takes a `jmp_buf`, which this frontend
+/// cannot declare, and the second belongs to the threads that
+/// `docs/roadmap.md` places in Phase 8.
+///
+/// **Believed by name because 7.1.3 reserves the name**: p1 reserves each for
+/// use as an identifier with external linkage, and p2 makes a program that
+/// defines one undefined. So the lowering gives a call to one no continuation,
+/// and names refuses a definition of one, wherever it is, rather than
+/// honouring it: a definition in another file of the run would otherwise be
+/// believed away in silence (#343). One list for both, so the names believed
+/// and the names refused cannot drift apart. See ADR-0051.
+pub(crate) const DOES_NOT_RETURN: &[(&str, &str)] = &[
+    ("abort", "7.22.4.1"),
+    ("exit", "7.22.4.4"),
+    ("_Exit", "7.22.4.5"),
+    ("quick_exit", "7.22.4.7"),
+];
+
 /// A member of a struct whose type a member cannot have, which C17 6.7.2.1 p3
 /// forbids: "A structure or union shall not contain a member with incomplete
 /// or function type", except for the flexible array member p18 allows last.
@@ -1351,6 +1382,27 @@ impl Resolver<'_> {
     /// would be in a body nothing was wrong with.
     fn define(&mut self, name: Span, diagnostics: &mut DiagnosticSink) {
         let spelled = self.sources.snippet(name);
+        // Every function this frontend reads is at file scope and has external
+        // linkage, since there is no `static`, so a definition of one of these
+        // is one C17 7.1.3 p1 reserves. A local or a parameter of the name has
+        // no linkage and never reaches here. See [`DOES_NOT_RETURN`].
+        if let Some(&(_, clause)) = DOES_NOT_RETURN
+            .iter()
+            .find(|&&(reserved, _)| reserved == spelled)
+        {
+            diagnostics.report(
+                Diagnostic::error(format!(
+                    "this defines `{spelled}`, which C reserves for the library"
+                ))
+                .with_code(RESERVED_DEFINITION)
+                .with_label(Label::primary(name, "defined here"))
+                .with_note(format!(
+                    "C17 7.1.3 p2 makes a program that defines it undefined, and this compiler \
+                     believes the library's: `{spelled}` does not return ({clause}), so rename this \
+                     function"
+                )),
+            );
+        }
         match self.definitions.get(spelled) {
             Some(&first) => {
                 diagnostics.report(redefined(spelled, name, first, "defined", "C17 6.9 p5"))
@@ -2863,5 +2915,61 @@ mod tests {
                 "conflicting types for `n`",
             ]
         );
+    }
+
+    /// Each of the four names C says does not return is refused where a
+    /// function of that name is defined, at the name, under its own code,
+    /// with the clause that says it does not return (#343). Written out one
+    /// program per name, so that a name dropped from [`DOES_NOT_RETURN`] fails
+    /// for that name. Mutation: report no reserved definition, or drop a name
+    /// from the list; this fails. See ADR-0051.
+    #[test]
+    fn each_name_c_says_does_not_return_is_refused_where_it_is_defined() {
+        for (name, clause, text) in [
+            (
+                "abort",
+                "7.22.4.1",
+                "void abort(void) { }
+",
+            ),
+            (
+                "exit",
+                "7.22.4.4",
+                "void exit(int status) { }
+",
+            ),
+            (
+                "_Exit",
+                "7.22.4.5",
+                "void _Exit(int status) { }
+",
+            ),
+            (
+                "quick_exit",
+                "7.22.4.7",
+                "void quick_exit(int status) { }
+",
+            ),
+        ] {
+            let resolved = resolved(text);
+            let [reported] = resolved.diagnostics.diagnostics() else {
+                panic!("{name}: {:?}", resolved.diagnostics.diagnostics());
+            };
+            assert_eq!(
+                reported.code().map(|code| code.to_string()).as_deref(),
+                Some("SC0319"),
+                "{name}"
+            );
+            assert_eq!(
+                reported.primary_label().map(Label::span),
+                Some(resolved.occurrence(name, 0)),
+                "{name}"
+            );
+            assert!(
+                reported.notes().iter().any(|note| note.contains(clause)),
+                "{name}: {:?}",
+                reported.notes()
+            );
+        }
     }
 }

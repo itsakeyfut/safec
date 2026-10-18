@@ -417,8 +417,10 @@ operand would land where nothing reaches.
 
 **The two ways to break it fail in opposite directions.** A call given no
 continuation that does return hides the code after it from every check, which
-is a silence: `code_after_a_function_defined_here_named_abort_is_asked` in
-`crates/safec/tests/cases` holds that a definition here keeps its edge. A call
+is a silence: since #343 a definition of one of those names is refused, so
+none can hide a body that returns, and
+`a_function_defined_here_named_abort_is_refused` in `crates/safec/tests/cases`
+holds that. A call
 given a continuation it never takes keeps code no execution reaches in the
 graph, which is a false report, and is what a call to a function of the
 program's own that never returns still costs.
