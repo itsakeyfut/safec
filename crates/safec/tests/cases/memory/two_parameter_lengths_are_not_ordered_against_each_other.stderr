@@ -7,7 +7,7 @@ error[SC0402]: this may use `p` after it was freed
    │                                              │     
    │                                              ╰───── freed here
 ───╯
-  = note: C17 6.7.6 p3 puts a sequence point only at the end of a full declarator, and a parameter's declarator is not one, so nothing orders one parameter's length against another's, and this check found nothing here that orders the free before this
+  = note: C17 6.7.6 p3 puts a sequence point at the end of a full declarator, and a parameter's declarator is not one, so nothing orders one parameter's length against another's, and this check found nothing here that orders the free before this
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: free it in the body instead, where every parameter's length has already been evaluated

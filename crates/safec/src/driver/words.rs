@@ -678,8 +678,11 @@ pub(super) fn memory_finding(
                 "C17 6.5.2.2 p10 leaves a call indeterminately sequenced with the rest of its \
                  expression, and this check found nothing here that orders the free before this"
             }
+            // Not "only at the end of a full declarator": a comma inside a
+            // length is a sequence point too, and p3 says nothing about
+            // where else there are any. Found by review.
             Unordered::AcrossLengths => {
-                "C17 6.7.6 p3 puts a sequence point only at the end of a full declarator, and a \
+                "C17 6.7.6 p3 puts a sequence point at the end of a full declarator, and a \
                  parameter's declarator is not one, so nothing orders one parameter's length \
                  against another's, and this check found nothing here that orders the free \
                  before this"
