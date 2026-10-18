@@ -3162,13 +3162,21 @@ cases! {
         a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And two or three levels of address down, `pa = &a; copy2(&r,
         // &pa);` (#513). Mutation: follow `writes_to` one level only; both go
-        // quiet at the use. Mutation: give every escaped local every stored
-        // site, dropping the exclusion of what a local it points at holds;
+        // quiet at the use. What only a deeper level hands is kept out of a
+        // local that holds a local's address, and what one level hands is
+        // not: the third, `k = 0; r = &k; get(&r, u);`, was read in silence
+        // when it was, found by review. Mutation: keep every stored site out
+        // of such a local; the third goes quiet. Mutation: keep none out;
+        // the fourth, `two(&pa, &pb); *pa = q;`, and the fifth, three levels
+        // of address, report the write, as do
         // `a_write_through_a_pointer_whose_own_address_escaped` and
-        // `a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target`
-        // report `*pp = q`, the output-parameter idiom.
+        // `a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target`,
+        // the output-parameter idiom.
         a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_write_through_a_pointer_whose_address_escaped_two_levels_up_does_not_doubt_that_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         an_end_pointer_set_by_a_call_handed_an_allocation_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

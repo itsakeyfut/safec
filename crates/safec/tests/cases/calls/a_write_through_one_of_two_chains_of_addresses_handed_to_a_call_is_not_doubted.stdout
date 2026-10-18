@@ -1,0 +1,195 @@
+Target "x86_64-pc-windows-msvc"
+Function a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:1:27 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:1:47 "two" declared
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "x"
+  Local "_2" "int ***" parameter "y"
+Function a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:2:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" "a"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *" "b"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *" "q"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int **" "pa"
+  Local "_11" "int **"
+  Local "_12" "int **" "pb"
+  Local "_13" "int **"
+  Local "_14" "int ***"
+  Local "_15" "int ***"
+  Local "_16" "int *"
+  Local "_17" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:3:12 generated
+    Call a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:3:12 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:3:8 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:3:12 generated
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:3:26 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:3:26 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:3:26 generated
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:3:30 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:3:37 generated
+    Return
+  Block "bb3"
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:3:26 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:4:12 generated
+    Call a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:4:12 "malloc" "bb5"
+      Destination "_5"
+      Constant 4
+  Block "bb5"
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:4:8 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:4:12 generated
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:4:26 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_4"
+    Branch a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:4:26 "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:4:26 generated
+    ArgumentsEvaluated a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:4:32 generated
+    Call a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:4:32 "free" "bb9"
+      Copy "_1"
+  Block "bb7"
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:4:26 generated
+    Goto "bb8"
+  Block "bb8"
+    ArgumentsEvaluated a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:5:12 generated
+    Call a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:5:12 "malloc" "bb10"
+      Destination "_8"
+      Constant 4
+  Block "bb9"
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:4:32 generated
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:4:41 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:4:48 generated
+    Return
+  Block "bb10"
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:5:8 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:5:12 generated
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:5:26 written
+      Destination "_9"
+      Unary "Not"
+        Copy "_7"
+    Branch a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:5:26 "bb11" "bb12"
+      Copy "_9"
+  Block "bb11"
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:5:26 generated
+    ArgumentsEvaluated a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:5:32 generated
+    Call a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:5:32 "free" "bb14"
+      Copy "_1"
+  Block "bb12"
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:5:26 generated
+    Goto "bb13"
+  Block "bb13"
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:6:14 written
+      Destination "_11"
+      Address
+        Place "_1"
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:6:9 written
+      Destination "_10"
+      Use
+        Copy "_11"
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:6:14 generated
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:6:29 written
+      Destination "_13"
+      Address
+        Place "_4"
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:6:24 written
+      Destination "_12"
+      Use
+        Copy "_13"
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:6:29 generated
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:7:7 written
+      Destination "_14"
+      Address
+        Place "_10"
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:7:12 written
+      Destination "_15"
+      Address
+        Place "_12"
+    ArgumentsEvaluated a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:7:3 generated
+    Call a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:7:3 "two" "bb16"
+      Copy "_14"
+      Copy "_15"
+  Block "bb14"
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:5:32 generated
+    ArgumentsEvaluated a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:5:41 generated
+    Call a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:5:41 "free" "bb15"
+      Copy "_4"
+  Block "bb15"
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:5:41 generated
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:5:50 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:5:57 generated
+    Return
+  Block "bb16"
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:7:3 generated
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:8:3 written
+      Destination "_10"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:8:3 written
+      Destination "_16"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:8:3 generated
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:9:3 written
+      Destination "_7"
+        Deref
+      Use
+        Constant 1
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:9:3 written
+      Destination "_17"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:9:3 generated
+    ArgumentsEvaluated a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:10:3 generated
+    Call a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:10:3 "free" "bb17"
+      Copy "_7"
+  Block "bb17"
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:10:3 generated
+    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:11:3 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:11:10 generated
+    Return

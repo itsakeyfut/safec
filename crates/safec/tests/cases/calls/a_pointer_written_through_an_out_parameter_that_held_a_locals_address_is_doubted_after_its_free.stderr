@@ -1,0 +1,20 @@
+warning[SC0401]: this frees `u`, which may have been freed already
+    ╭─[ a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:10:5 ]
+    │
+ 10 │     free(u);
+    │     ───┬───  
+    │        ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0402]: this uses `s`, which may have been freed
+    ╭─[ a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:12:5 ]
+    │
+ 12 │     return *s;
+    │     ─────┬────  
+    │          ╰────── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

@@ -2136,37 +2136,47 @@ impl Analysis for Allocations<'_> {
                 // `*r` after `free(u)` was read in silence. Found by review.
                 // At any depth, since `pa = &a; get(&r, &pa);` hands `a`'s
                 // too and read `*r` in silence the same way (#513).
+                let mut deeper: Vec<usize> = Vec::new();
                 for argument in handed {
                     if let Operand::Copy(place) = argument {
-                        for target in value.beneath(value.written_through(place.local)) {
+                        let first = value.written_through(place.local);
+                        for &target in &first {
                             handed_memory.extend(value.points_to[target].sites());
+                        }
+                        for target in value.beneath(first) {
+                            deeper.extend(value.points_to[target].sites());
                         }
                     }
                 }
+                let shallow = value.closure(handed_memory.clone());
+                handed_memory.extend(deeper);
                 let stored: Vec<usize> = value.closure(handed_memory).into_iter().collect();
+                // **What only a deeper level hands is kept out of a local that
+                // holds a local's address**: `pp`, in `pp = &p; opaque(&pp);`,
+                // points at `p` and not at the allocation `p` holds, and giving
+                // it that allocation doubted `*pp = q`, the output-parameter
+                // idiom ADR-0017 declines to report; so did giving `pa`, in
+                // `two(&pa, &pb);`, what `pb`'s chain hands. Only for those
+                // sites, so what one level hands is held as before this rule:
+                // kept out of it, `k = 0; r = &k; get(&r, u);` read `*r` after
+                // `free(u)` in silence, and so did `void *` spellings in which
+                // such a local really may hold it. Read from `writes_to`
+                // rather than from a declared type, which nothing here
+                // enforces; so a deeper pointer a callee stores into a local
+                // that holds an address, through `void *` or a cast, is
+                // missed, as it was before. Found by review. See ADR-0044.
+                let deep: Vec<bool> = (0..value.state.len())
+                    .map(|site| !shallow.contains(&site))
+                    .collect();
                 for local in 0..value.escaped.len() {
                     if !value.escaped[local] {
                         continue;
                     }
-                    // **Not what a local it points at holds**, which is a
-                    // level below it: `pp`, in `pp = &p; opaque(&pp);`, points
-                    // at `p` and not at the allocation `p` holds, and giving it
-                    // that allocation doubted `*pp = q`, the output-parameter
-                    // idiom ADR-0017 declines to report. Read from `writes_to`
-                    // rather than from a declared type, which nothing here
-                    // enforces. A callee that stores a deeper pointer into a
-                    // shallower local by changing its type is missed, and needs
-                    // a cast this frontend does not read yet. See ADR-0044.
-                    let own = value.points_to[local].writes_to.clone();
-                    let mut below = vec![false; value.state.len()];
-                    for under in value.beneath((0..own.len()).filter(|&next| own[next])) {
-                        for site in value.points_to[under].sites() {
-                            below[site] = true;
-                        }
-                    }
+                    let holds_an_address =
+                        value.points_to[local].writes_to.iter().any(|&edge| edge);
                     let held = &mut value.points_to[local];
                     for &site in &stored {
-                        if !below[site] {
+                        if !(holds_an_address && deep[site]) {
                             held.hold(site, Offset::Unknown);
                         }
                     }
