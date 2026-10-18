@@ -257,7 +257,8 @@ and letting a place with a projection through fails
 `a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone`, and
 keeping the fact for an old pointer a call this check cannot read wrote fails
 `a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free`
-([#499](https://github.com/itsakeyfut/safec/issues/499)). Five
+([#499](https://github.com/itsakeyfut/safec/issues/499)), at the cost
+`the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with` pins: the null arm no longer restores what it was handed. Five
 parts fail nothing, measured: a join keeping a fact one arm lacks, a rebirth
 leaving it, a fact kept for old allocations not all live, one kept for an old
 pointer this check stopped following, and the null arm restoring an old

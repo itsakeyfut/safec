@@ -1715,6 +1715,11 @@ cases! {
         // `foreign` from the fact's condition; `free(q)` is proved a double
         // free again.
         a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // What that costs: with no fact, the null arm no longer says the old
+        // allocations are live, so `free(q)` there is doubted, though `q`
+        // is live on that arm whichever pointer `realloc` was handed. Found
+        // by review.
+        the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Refused and well defined: a cost ADR-0039 accepts, pinned so that a
         // change to it is seen.
         a_call_after_an_allocation_was_exposed_may_return_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
