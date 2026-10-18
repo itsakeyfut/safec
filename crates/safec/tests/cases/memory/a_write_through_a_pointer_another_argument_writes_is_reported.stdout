@@ -42,10 +42,10 @@ Function a_write_through_a_pointer_another_argument_writes_is_reported.c:2:5 "ma
       Use
         Copy "_2"
           Deref
-    ArgumentsEvaluated a_write_through_a_pointer_another_argument_writes_is_reported.c:5:5 generated
     UnsequencedArguments a_write_through_a_pointer_another_argument_writes_is_reported.c:5:5 written "_2"
       Written a_write_through_a_pointer_another_argument_writes_is_reported.c:5:7
       Read a_write_through_a_pointer_another_argument_writes_is_reported.c:5:16
+    ArgumentsEvaluated a_write_through_a_pointer_another_argument_writes_is_reported.c:5:5 generated
     Call a_write_through_a_pointer_another_argument_writes_is_reported.c:5:5 "h" "bb1"
       Copy "_4"
       Copy "_5"

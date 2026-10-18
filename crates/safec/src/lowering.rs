@@ -559,6 +559,16 @@ enum Task {
     ///
     /// [`Lowering::begin_value`]: Lowering::begin_value
     Arguments(Span),
+    /// Every argument of this call has been lowered; say which of them
+    /// conflict over a local, before anything says they were evaluated.
+    ///
+    /// Before [`Self::Arguments`] rather than where the call finishes,
+    /// because `nullability::null_at_terminators` reads a block whose last
+    /// element is [`Element::ArgumentsEvaluated`] as one whose arguments are
+    /// ordered, and an element after it turned that answer off for the whole
+    /// block. Pushed whatever encloses the call, which is the difference
+    /// from that task. See ADR-0052.
+    Conflicts(ExprId),
     /// Put [`Lowering::top_level`] back to what it was before this node.
     ///
     /// Pushed before a node's own tasks, so it is popped after all of them.
@@ -1808,6 +1818,11 @@ impl Lowering<'_> {
                 Task::Arguments(span) => builder.element(Element::ArgumentsEvaluated {
                     origin: Origin::Generated(span),
                 }),
+                Task::Conflicts(id) => {
+                    for element in self.unsequenced(&builder.function, id) {
+                        builder.element(element);
+                    }
+                }
                 Task::Restore(top_level) => self.top_level = top_level,
             }
         }
@@ -2018,6 +2033,7 @@ impl Lowering<'_> {
                 if at_root {
                     tasks.push(Task::Arguments(span));
                 }
+                tasks.push(Task::Conflicts(id));
                 for &argument in arguments.iter().rev() {
                     tasks.push(Task::Value(argument));
                 }
@@ -2378,13 +2394,6 @@ impl Lowering<'_> {
                 span,
             } => {
                 let (callee, count, span) = (*callee, arguments.len(), *span);
-                // Before the terminator, so in the block the call is in, and
-                // on the tree, because the conflict is between the arguments
-                // as written and not in the order they were lowered. See
-                // ADR-0052.
-                for element in self.unsequenced(&builder.function, arguments, span) {
-                    builder.element(element);
-                }
                 let at = values.len() - count;
                 let arguments: Vec<Operand> = values.split_off(at);
                 let called = self.callee(callee, diagnostics)?;
@@ -2940,8 +2949,31 @@ impl Lowering<'_> {
     /// The local an expression is, where it is an identifier and nothing
     /// more: the operand a write by name lands in.
     fn named_by_itself(&self, id: ExprId) -> Option<LocalId> {
-        match self.ast.expr(id) {
-            Expr::Identifier { .. } => self.named(id),
+        match self.seen_through(id) {
+            Some(inner) => self.named_by_itself(inner),
+            None => match self.ast.expr(id) {
+                Expr::Identifier { .. } => self.named(id),
+                _ => None,
+            },
+        }
+    }
+
+    /// What `*&E` is, which is `E`, where `id` is that shape.
+    fn seen_through(&self, id: ExprId) -> Option<ExprId> {
+        let Expr::Unary {
+            op: AstUnOp::Deref,
+            operand,
+            ..
+        } = self.ast.expr(id)
+        else {
+            return None;
+        };
+        match self.ast.expr(*operand) {
+            Expr::Unary {
+                op: AstUnOp::AddrOf,
+                operand: inner,
+                ..
+            } => Some(*inner),
             _ => None,
         }
     }
@@ -2965,6 +2997,14 @@ impl Lowering<'_> {
         // its value. Pushed in reverse, so they come off in source order.
         let mut work = vec![(argument, false)];
         while let Some((id, place)) = work.pop() {
+            // **`*&E` is `E`**, because the lowering reads it so: `*&q = &x`
+            // is a write of `q` by name in the IR, and walking it as a write
+            // through a pointer left `h(*q, *&q = &x)` silent. See
+            // `begin_place`.
+            if let Some(inner) = self.seen_through(id) {
+                work.push((inner, place));
+                continue;
+            }
             match self.ast.expr(id) {
                 Expr::Identifier { span, .. } => {
                     if let (false, Some(local)) = (place, self.named(id)) {
@@ -3042,7 +3082,19 @@ impl Lowering<'_> {
     /// about; `k(i, i++)` is undefined by the same paragraph and is not
     /// reported, which `an_integer_another_argument_writes_is_not_reported`
     /// pins. See ADR-0052.
-    fn unsequenced(&self, function: &Function, arguments: &[ExprId], at: Span) -> Vec<Element> {
+    ///
+    /// On the tree, because the conflict is between the arguments as written
+    /// and not in the order they were lowered.
+    fn unsequenced(&self, function: &Function, call: ExprId) -> Vec<Element> {
+        let Expr::Call {
+            arguments, span, ..
+        } = self.ast.expr(call)
+        else {
+            // Only the call arm pushes the task, and it pushes it for a call;
+            // nothing, rather than a panic, as `discard` answers.
+            return Vec::new();
+        };
+        let at = *span;
         let each: Vec<_> = arguments
             .iter()
             .map(|&argument| self.accesses(argument))

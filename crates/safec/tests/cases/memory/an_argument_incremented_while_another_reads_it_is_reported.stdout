@@ -59,10 +59,10 @@ Function an_argument_incremented_while_another_reads_it_is_reported.c:3:5 "main"
       Destination "_1"
       Use
         Copy "_5"
-    ArgumentsEvaluated an_argument_incremented_while_another_reads_it_is_reported.c:6:5 generated
     UnsequencedArguments an_argument_incremented_while_another_reads_it_is_reported.c:6:5 written "_1"
       Written an_argument_incremented_while_another_reads_it_is_reported.c:6:10
       Read an_argument_incremented_while_another_reads_it_is_reported.c:6:7
+    ArgumentsEvaluated an_argument_incremented_while_another_reads_it_is_reported.c:6:5 generated
     Call an_argument_incremented_while_another_reads_it_is_reported.c:6:5 "g" "bb5"
       Copy "_1"
       Copy "_4"

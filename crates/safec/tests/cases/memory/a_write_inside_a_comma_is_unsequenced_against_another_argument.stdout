@@ -36,10 +36,10 @@ Function a_write_inside_a_comma_is_unsequenced_against_another_argument.c:2:5 "m
       Destination "_4"
       Use
         Copy "_2"
-    ArgumentsEvaluated a_write_inside_a_comma_is_unsequenced_against_another_argument.c:5:5 generated
     UnsequencedArguments a_write_inside_a_comma_is_unsequenced_against_another_argument.c:5:5 written "_2"
       Written a_write_inside_a_comma_is_unsequenced_against_another_argument.c:5:12
       Read a_write_inside_a_comma_is_unsequenced_against_another_argument.c:5:8
+    ArgumentsEvaluated a_write_inside_a_comma_is_unsequenced_against_another_argument.c:5:5 generated
     Call a_write_inside_a_comma_is_unsequenced_against_another_argument.c:5:5 "h" "bb1"
       Copy "_2"
         Deref

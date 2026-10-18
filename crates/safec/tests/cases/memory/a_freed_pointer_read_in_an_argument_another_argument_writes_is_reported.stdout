@@ -72,10 +72,10 @@ Function a_freed_pointer_read_in_an_argument_another_argument_writes_is_reported
       Destination "_6"
       Use
         Copy "_2"
-    ArgumentsEvaluated a_freed_pointer_read_in_an_argument_another_argument_writes_is_reported.c:9:5 generated
     UnsequencedArguments a_freed_pointer_read_in_an_argument_another_argument_writes_is_reported.c:9:5 written "_2"
       Written a_freed_pointer_read_in_an_argument_another_argument_writes_is_reported.c:9:11
       Read a_freed_pointer_read_in_an_argument_another_argument_writes_is_reported.c:9:8
+    ArgumentsEvaluated a_freed_pointer_read_in_an_argument_another_argument_writes_is_reported.c:9:5 generated
     Call a_freed_pointer_read_in_an_argument_another_argument_writes_is_reported.c:9:5 "h" "bb6"
       Copy "_2"
         Deref

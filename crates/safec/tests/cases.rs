@@ -256,6 +256,17 @@ cases! {
         // name; each goes silent.
         an_argument_incremented_while_another_reads_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_write_through_a_pointer_another_argument_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*&q = &x` is a write of `q` by name, because the lowering reads
+        // `*&E` as `E`, so a walk that took it for a write through a pointer
+        // left the read of a freed `q` silent. Mutation: do not see through
+        // `*&`; it goes silent. Found by review.
+        a_write_through_the_address_of_a_pointer_is_a_write_by_name: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The element goes before the call's `ArgumentsEvaluated`, which a
+        // block has to end with for ADR-0027's null exemption to hold, so the
+        // free `realloc` makes of a `p` that is null in every order is not
+        // reported beside the conflict. Mutation: emit the element where the
+        // call finishes; an `SC0401` appears. Found by review.
+        a_conflict_leaves_a_null_argument_exempt_from_the_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What is not a conflict. `&q` takes the address and reads nothing
         // (C17 6.5.3.2 p3), and a write and a read inside one argument are
         // ordered by the comma between them. Mutation: count `&q` as a read,
