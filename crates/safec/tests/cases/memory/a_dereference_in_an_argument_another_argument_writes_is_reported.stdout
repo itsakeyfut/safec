@@ -1,0 +1,49 @@
+Target "x86_64-pc-windows-msvc"
+Function a_dereference_in_an_argument_another_argument_writes_is_reported.c:1:6 "h" declared
+  Local "_0" "void" return
+  Local "_1" "int" parameter "v"
+  Local "_2" "int *" parameter "r"
+Function a_dereference_in_an_argument_another_argument_writes_is_reported.c:2:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int" "x"
+  Local "_2" "int *" "q"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Block "bb0" entry
+    Operation a_dereference_in_an_argument_another_argument_writes_is_reported.c:2:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_dereference_in_an_argument_another_argument_writes_is_reported.c:4:10 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_dereference_in_an_argument_another_argument_writes_is_reported.c:4:14 generated
+    Operation a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:15 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Operation a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:11 written
+      Destination "_4"
+      Use
+        Copy "_2"
+    UnsequencedArguments a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:5 written "_2"
+      Written a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:11
+      Read a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:8
+    ArgumentsEvaluated a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:5 generated
+    Call a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:5 "h" "bb1"
+      Copy "_2"
+        Deref
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:5 generated
+    Operation a_dereference_in_an_argument_another_argument_writes_is_reported.c:6:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_dereference_in_an_argument_another_argument_writes_is_reported.c:6:12 generated
+    Return

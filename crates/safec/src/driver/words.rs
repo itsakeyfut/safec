@@ -80,6 +80,14 @@ const RETURN_AFTER_FREE: Code = Code::new("SC0406");
 /// believes its parameter is live and cannot see why it is not. See ADR-0042.
 const ARGUMENT_AFTER_FREE: Code = Code::new("SC0407");
 
+/// A pointer local one argument of a call writes and another reads or writes.
+///
+/// Not about what the pointer holds, so not any of the codes above: C17 6.5
+/// p2 makes the call undefined whatever that is, and the fix is to put the
+/// write in a statement of its own rather than to change the pointer. See
+/// ADR-0052.
+const UNSEQUENCED_ARGUMENTS: Code = Code::new("SC0409");
+
 /// What to change where this check stopped following a pointer and cannot
 /// say why: `LostReason::Other`.
 ///
@@ -508,6 +516,45 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
             "this offset may not be zero",
             "free the pointer the allocation was made with if this offset can be non-zero",
         ),
+        (Kind::UnsequencedArguments { both_write, .. }, Conclusion::Unsafe, _) => (
+            UNSEQUENCED_ARGUMENTS,
+            if both_write {
+                said(
+                    name,
+                    "this writes a pointer another argument of the same call writes too",
+                    |name| {
+                        format!(
+                            "this writes `{name}`, which another argument of the same call writes too"
+                        )
+                    },
+                )
+            } else {
+                said(
+                    name,
+                    "this reads a pointer another argument of the same call writes",
+                    |name| {
+                        format!(
+                            "this reads `{name}`, which another argument of the same call writes"
+                        )
+                    },
+                )
+            },
+            if both_write {
+                "written here as well"
+            } else {
+                "read here"
+            },
+            "assign it in a statement of its own before the call",
+        ),
+        // Never built: the memory check concludes this one `Unsafe` from its
+        // element and asks no lattice. Written out rather than `_`, for the
+        // reason the double-free rows give.
+        (Kind::UnsequencedArguments { .. }, Conclusion::Unknown, _) => (
+            UNSEQUENCED_ARGUMENTS,
+            "nothing".to_owned(),
+            "nothing",
+            "nothing",
+        ),
         // Neither check answers this and `Diagnostic::concluded` gives `None`
         // for it, so none of the four is read. Written out rather than `_` so
         // that a fourth conclusion has to be answered for here.
@@ -552,6 +599,17 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
     }
     if let Some(made) = finding.made {
         diagnostic = diagnostic.with_label(Label::secondary(made, "allocated here"));
+    }
+    // **What C says is wrong, because the caret alone does not.** The read
+    // and the write are both in plain sight and look ordered left to right,
+    // which C17 does not make them. See ADR-0052.
+    if let Kind::UnsequencedArguments { written, .. } = finding.kind {
+        diagnostic = diagnostic
+            .with_label(Label::secondary(written, "written here"))
+            .with_note(
+                "C17 6.5 p2 makes this call undefined wherever both are evaluated: 6.5.2.2 p10 \
+                 orders a call's arguments before the call and not against each other",
+            );
     }
 
     Some(diagnostic)

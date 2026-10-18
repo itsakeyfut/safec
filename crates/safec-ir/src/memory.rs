@@ -106,6 +106,19 @@ pub enum Kind {
     /// may read and use. Never a proof, since it may only write there. See
     /// ADR-0042.
     FreedBehindArgument,
+    /// `g(q, q = &x)`
+    ///
+    /// Not about what `q` holds, which is why it is always a proof: C17 6.5
+    /// p2 makes the call undefined whatever that is, because one argument
+    /// writes `q` and another reads it with nothing ordering them. The
+    /// lowering finds it and [`Element::UnsequencedArguments`] carries it, so
+    /// this check concludes it without asking its lattice. See ADR-0052.
+    UnsequencedArguments {
+        /// Where one argument writes the local, which a label points at.
+        written: Span,
+        /// Whether the access at the caret is a write too.
+        both_write: bool,
+    },
 }
 
 /// One thing this check concluded, and where.
@@ -373,6 +386,32 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 ) {
                     after_a_call(&mut findings, &mut said, &known, func);
                 }
+                // Wherever the walk reaches it, and asking nothing of `known`:
+                // the call it stands before is undefined on every execution
+                // that evaluates both accesses, and one behind `&&`, `||` or
+                // `?:` is counted all the same. See ADR-0052.
+                if let Element::UnsequencedArguments {
+                    local,
+                    written,
+                    accessed,
+                    both_write,
+                    origin: _,
+                } = *element
+                {
+                    findings.push(Finding {
+                        function: func,
+                        kind: Kind::UnsequencedArguments {
+                            written,
+                            both_write,
+                        },
+                        conclusion: Conclusion::Unsafe,
+                        at: accessed,
+                        local: Some(local),
+                        freed: None,
+                        made: None,
+                        unproven: None,
+                    });
+                }
                 analysis.element(function, element, &mut known);
             }
 
@@ -456,6 +495,15 @@ pub(crate) fn dereferenced_in_element(element: &Element) -> Option<(Span, Vec<&P
         // Neither marker, nor storage beginning or ending, reads anything
         // through anything.
         Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => None,
+        // Nor does a conflict between two arguments: it names a local the
+        // arguments' own elements and the call read.
+        Element::UnsequencedArguments {
+            local: _,
+            written: _,
+            accessed: _,
+            both_write: _,
+            origin: _,
+        } => None,
         Element::StorageLive {
             local: _,
             origin: _,

@@ -49,7 +49,7 @@ records why the prefix is this one and what was rejected.
 | `SC01xx` | lexical, what a character or a token is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105`, `SC0106`, `SC0107`, `SC0108` |
 | `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203`, `SC0204`, `SC0205`, `SC0206`, `SC0207` |
 | `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305`, `SC0306`, `SC0307`, `SC0308`, `SC0309`, `SC0310`, `SC0311`, `SC0312`, `SC0313`, `SC0314`, `SC0315`, `SC0316`, `SC0317`, `SC0318` |
-| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406`, `SC0407`, `SC0408` |
+| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406`, `SC0407`, `SC0408`, `SC0409` |
 | `SC05xx` | lifetime | none yet |
 | `SC06xx` | ownership | `SC0601` |
 | `SC07xx` | thread | none yet |
@@ -58,15 +58,16 @@ records why the prefix is this one and what was rejected.
 
 `SC04xx` through `SC07xx` are the four safeties [`concept.md`](concept.md) asks
 the question about, in the order it names them, so they were reserved before
-anything could emit from them. The first of the four now does, eight times:
+anything could emit from them. The first of the four now does, nine times:
 `SC0401` is a value freed where it may already have been freed, `SC0402` is
 a value used where it may already have been freed, `SC0403` is a value read
 or written through a pointer that may be null, `SC0404` is a value freed
 through a pointer that may not be the start of its allocation, `SC0405` is
 a pointer that may be null passed to a parameter declared `_Nonnull`,
 `SC0406` is a pointer to an allocation that may have been freed, handed back by
-a `return`, `SC0407` is the same pointer handed to a call, and `SC0408` is a
-pointer that may be null handed back by a function that promised it is not. They are
+a `return`, `SC0407` is the same pointer handed to a call, `SC0408` is a
+pointer that may be null handed back by a function that promised it is not, and
+`SC0409` is a pointer one argument of a call writes and another reads or writes. They are
 the first codes in this compiler that say something about what a program does
 rather than about how it is written.
 
@@ -93,6 +94,17 @@ keep the promise, or the end of a body reached without a `return` at all. The
 fix is at the `return`, or at the promise, and it carries a second label at the
 promise it broke: the `_Nonnull`, or the function's name where level 5 made it.
 [ADR-0050](adr/0050-at-level-5-a-pointer-is-non-null-unless-it-is-written-nullable.md)
+is the decision.
+
+**`SC0409` is about no value, and is always a proof.** `g(q, q = &x)` is
+undefined whatever `q` holds, on every execution that evaluates both, because C17 6.5 p2 makes a call undefined where
+one argument modifies a scalar another reads and 6.5.2.2 p10 orders the
+arguments only against the call. So the report is the conflict rather than a
+null or a freed pointer one order would read: the caret is on the read, or on
+the second write, and a second label is on the write. The fix is to make the
+write a statement of its own. Only a pointer local written by name is asked
+about; `k(i, i++)` is undefined by the same paragraph and is not reported.
+[ADR-0052](adr/0052-an-argument-that-writes-a-pointer-another-argument-reads-is-reported-where-it-is-lowered.md)
 is the decision.
 
 The frontend refusals that come with these, `SC0204` for a

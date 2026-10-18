@@ -559,6 +559,16 @@ enum Task {
     ///
     /// [`Lowering::begin_value`]: Lowering::begin_value
     Arguments(Span),
+    /// Every argument of this call has been lowered; say which of them
+    /// conflict over a local, before anything says they were evaluated.
+    ///
+    /// Before [`Self::Arguments`] rather than where the call finishes,
+    /// because `nullability::null_at_terminators` reads a block whose last
+    /// element is [`Element::ArgumentsEvaluated`] as one whose arguments are
+    /// ordered, and an element after it turned that answer off for the whole
+    /// block. Pushed whatever encloses the call, which is the difference
+    /// from that task. See ADR-0052.
+    Conflicts(ExprId),
     /// Put [`Lowering::top_level`] back to what it was before this node.
     ///
     /// Pushed before a node's own tasks, so it is popped after all of them.
@@ -1808,6 +1818,11 @@ impl Lowering<'_> {
                 Task::Arguments(span) => builder.element(Element::ArgumentsEvaluated {
                     origin: Origin::Generated(span),
                 }),
+                Task::Conflicts(id) => {
+                    for element in self.unsequenced(&builder.function, id) {
+                        builder.element(element);
+                    }
+                }
                 Task::Restore(top_level) => self.top_level = top_level,
             }
         }
@@ -2018,6 +2033,7 @@ impl Lowering<'_> {
                 if at_root {
                     tasks.push(Task::Arguments(span));
                 }
+                tasks.push(Task::Conflicts(id));
                 for &argument in arguments.iter().rev() {
                     tasks.push(Task::Value(argument));
                 }
@@ -2904,11 +2920,7 @@ impl Lowering<'_> {
     /// other.
     fn local(&mut self, id: ExprId, diagnostics: &mut DiagnosticSink) -> Option<LocalId> {
         let span = self.ast.expr(id).span();
-        let local = self
-            .resolution
-            .resolved(id)
-            .map(|binding| self.resolution.binding(binding).name)
-            .and_then(|name| self.locals.get(&name).copied());
+        let local = self.named(id);
 
         if local.is_none() {
             diagnostics.report(
@@ -2920,6 +2932,205 @@ impl Lowering<'_> {
         }
 
         local
+    }
+
+    /// The local an identifier means, or `None` with nothing said.
+    ///
+    /// [`Self::local`]'s question for a reader that is not lowering the
+    /// identifier: a callee's name is a function and has no local, and
+    /// whoever lowers it is the one who reports that.
+    fn named(&self, id: ExprId) -> Option<LocalId> {
+        self.resolution
+            .resolved(id)
+            .map(|binding| self.resolution.binding(binding).name)
+            .and_then(|name| self.locals.get(&name).copied())
+    }
+
+    /// The local an expression is, where it is an identifier and nothing
+    /// more: the operand a write by name lands in.
+    fn named_by_itself(&self, id: ExprId) -> Option<LocalId> {
+        match self.seen_through(id) {
+            Some(inner) => self.named_by_itself(inner),
+            None => match self.ast.expr(id) {
+                Expr::Identifier { .. } => self.named(id),
+                _ => None,
+            },
+        }
+    }
+
+    /// What `*&E` is, which is `E`, where `id` is that shape.
+    fn seen_through(&self, id: ExprId) -> Option<ExprId> {
+        let Expr::Unary {
+            op: AstUnOp::Deref,
+            operand,
+            ..
+        } = self.ast.expr(id)
+        else {
+            return None;
+        };
+        match self.ast.expr(*operand) {
+            Expr::Unary {
+                op: AstUnOp::AddrOf,
+                operand: inner,
+                ..
+            } => Some(*inner),
+            _ => None,
+        }
+    }
+
+    /// Every named local one argument reads or writes, in source order, each
+    /// with where and whether it is a write.
+    ///
+    /// **What C17 6.5 p2 asks about, and no more.** A local is accessed where
+    /// its value is read or where it is assigned, incremented or decremented
+    /// by name. Taking its address reads nothing (6.3.2.1 p2), so `&q` is no
+    /// access, and neither is a write through a pointer, into a member or into
+    /// an element: nothing here says which object those land in. A compound
+    /// assignment reads as well as writes, and the write is what is kept. See
+    /// ADR-0052.
+    ///
+    /// A worklist rather than recursion, as every walk of an expression here
+    /// is, because an argument is as deep as its source.
+    fn accesses(&self, argument: ExprId) -> Vec<(LocalId, Span, bool)> {
+        let mut found = Vec::new();
+        // The expression, and whether it is read as a place rather than for
+        // its value. Pushed in reverse, so they come off in source order.
+        let mut work = vec![(argument, false)];
+        while let Some((id, place)) = work.pop() {
+            // **`*&E` is `E`**, because the lowering reads it so: `*&q = &x`
+            // is a write of `q` by name in the IR, and walking it as a write
+            // through a pointer left `h(*q, *&q = &x)` silent. See
+            // `begin_place`.
+            if let Some(inner) = self.seen_through(id) {
+                work.push((inner, place));
+                continue;
+            }
+            match self.ast.expr(id) {
+                Expr::Identifier { span, .. } => {
+                    if let (false, Some(local)) = (place, self.named(id)) {
+                        found.push((local, *span, false));
+                    }
+                }
+                Expr::Assign {
+                    place: target,
+                    value,
+                    span,
+                    ..
+                } => {
+                    if let Some(local) = self.named_by_itself(*target) {
+                        found.push((local, *span, true));
+                        work.push((*value, false));
+                    } else {
+                        work.push((*value, false));
+                        work.push((*target, true));
+                    }
+                }
+                Expr::Unary {
+                    op, operand, span, ..
+                } => match op {
+                    AstUnOp::PreInc | AstUnOp::PreDec | AstUnOp::PostInc | AstUnOp::PostDec => {
+                        if let Some(local) = self.named_by_itself(*operand) {
+                            found.push((local, *span, true));
+                        } else {
+                            work.push((*operand, true));
+                        }
+                    }
+                    AstUnOp::AddrOf => work.push((*operand, true)),
+                    AstUnOp::Deref
+                    | AstUnOp::Plus
+                    | AstUnOp::Minus
+                    | AstUnOp::Not
+                    | AstUnOp::BitNot => work.push((*operand, false)),
+                },
+                Expr::Binary { lhs, rhs, .. } | Expr::Comma { lhs, rhs, .. } => {
+                    work.push((*rhs, false));
+                    work.push((*lhs, false));
+                }
+                Expr::Subscript { base, index, .. } => {
+                    work.push((*index, false));
+                    work.push((*base, false));
+                }
+                Expr::Conditional {
+                    condition,
+                    then,
+                    otherwise,
+                    ..
+                } => {
+                    work.push((*otherwise, false));
+                    work.push((*then, false));
+                    work.push((*condition, false));
+                }
+                Expr::Call {
+                    callee, arguments, ..
+                } => {
+                    work.extend(arguments.iter().rev().map(|&argument| (argument, false)));
+                    work.push((*callee, false));
+                }
+                // A member is refused before anything reads it, and the other
+                // two name nothing.
+                Expr::Member { .. } | Expr::Number { .. } | Expr::Error { .. } => {}
+            }
+        }
+        found
+    }
+
+    /// One [`Element::UnsequencedArguments`] for each pointer local one of
+    /// these arguments writes and another reads or writes: the first write,
+    /// and the first access in another argument.
+    ///
+    /// Only a pointer, because that is what the memory check is believed
+    /// about; `k(i, i++)` is undefined by the same paragraph and is not
+    /// reported, which `an_integer_another_argument_writes_is_not_reported`
+    /// pins. See ADR-0052.
+    ///
+    /// On the tree, because the conflict is between the arguments as written
+    /// and not in the order they were lowered.
+    fn unsequenced(&self, function: &Function, call: ExprId) -> Vec<Element> {
+        let Expr::Call {
+            arguments, span, ..
+        } = self.ast.expr(call)
+        else {
+            // Only the call arm pushes the task, and it pushes it for a call;
+            // nothing, rather than a panic, as `discard` answers.
+            return Vec::new();
+        };
+        let at = *span;
+        let each: Vec<_> = arguments
+            .iter()
+            .map(|&argument| self.accesses(argument))
+            .collect();
+        let mut said: Vec<LocalId> = Vec::new();
+        let mut elements = Vec::new();
+        for (i, accesses) in each.iter().enumerate() {
+            for &(local, written, write) in accesses {
+                // Written out rather than spelled `matches!`, for the reason
+                // `promoted` gives.
+                let pointer = match self.unit.ty(function.local(local)) {
+                    Ty::Pointer(_) => true,
+                    Ty::Int | Ty::Char | Ty::Void => false,
+                };
+                if !write || !pointer || said.contains(&local) {
+                    continue;
+                }
+                let other = each
+                    .iter()
+                    .enumerate()
+                    .filter(|&(j, _)| j != i)
+                    .flat_map(|(_, accesses)| accesses)
+                    .find(|&&(other, _, _)| other == local);
+                if let Some(&(_, accessed, both_write)) = other {
+                    said.push(local);
+                    elements.push(Element::UnsequencedArguments {
+                        local,
+                        written,
+                        accessed,
+                        both_write,
+                        origin: Origin::Written(at),
+                    });
+                }
+            }
+        }
+        elements
     }
 
     /// The function a call names.

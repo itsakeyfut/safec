@@ -239,8 +239,11 @@ it can.
   been evaluated, so `g(q, q = &x)` with `q` null is silent. C17 6.5 p2 makes
   that call undefined, since one argument writes what another reads with nothing
   ordering them, and `h(*q, q = &x)` is silent on the dereference side in the
-  same way. Found by review and not answered here; it is
-  [#247](https://github.com/itsakeyfut/safec/issues/247).
+  same way. Found by review and not answered here. Since
+  [#247](https://github.com/itsakeyfut/safec/issues/247) the conflict itself is
+  reported, as `SC0409` from the memory check, and the null is still not asked
+  about at either order: see
+  [ADR-0052](0052-an-argument-that-writes-a-pointer-another-argument-reads-is-reported-where-it-is-lowered.md).
 * Bad, because it is stricter than `clang` in two places a user will meet:
   `clang` inherits `_Nonnull` from one declaration to another in silence, and
   accepts it on a local. Both are refused here, at every level. Both are false

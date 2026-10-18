@@ -1080,6 +1080,16 @@ impl Analysis for Allocations<'_> {
             // free about `g((free(p), 0), *p)`, whose two arguments C leaves
             // unsequenced. See ADR-0026.
             Element::ArgumentsEvaluated { origin: _ } => value.pending.clear(),
+            // Reported where the walk reaches it, and nothing a pointer holds
+            // changes: the element says what the arguments do, and their own
+            // elements and the call are what do it. See ADR-0052.
+            Element::UnsequencedArguments {
+                local: _,
+                written: _,
+                accessed: _,
+                both_write: _,
+                origin: _,
+            } => {}
             Element::Assign(operation) => {
                 // **This check follows a write through exactly one `Deref` and
                 // nothing deeper.** The edge recorded at `Rvalue::Address` is
@@ -2520,7 +2530,14 @@ pub(super) fn live_in(function: &Function) -> Vec<Vec<bool>> {
                     origin: _,
                 }
                 | Element::Sequenced { origin: _ }
-                | Element::ArgumentsEvaluated { origin: _ } => {}
+                | Element::ArgumentsEvaluated { origin: _ }
+                | Element::UnsequencedArguments {
+                    local: _,
+                    written: _,
+                    accessed: _,
+                    both_write: _,
+                    origin: _,
+                } => {}
             }
         }
         match &block.terminator {
