@@ -1707,6 +1707,12 @@ cases! {
         a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_realloc_fact_survives_a_join_where_one_arm_dropped_the_old_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_use_after_a_realloc_is_proved_where_one_arm_dropped_the_old_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // The same with the arms the other way round, so the arm that left
+        // the old block `Unheld` is the one the join keeps rather than the
+        // one it takes in. The two cases above hold only the side taken in.
+        // Mutation: count an `Unheld` side as disagreeing only where it is
+        // the side kept; this reports at the free on the null arm.
+        a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // `if (*q)` tests what `realloc` returned points at, not whether it
         // returned null, so neither arm says what became of `p`, and the free
         // of it after a call that succeeded is still asked about. Mutation:
