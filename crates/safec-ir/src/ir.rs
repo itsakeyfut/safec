@@ -581,16 +581,19 @@ pub enum Element {
     /// C leaves unsequenced.
     ///
     /// **What the omission can cost is bounded**, because anything in the same
-    /// full expression that can follow one of these is one of three things. It
+    /// full expression that can follow one of these is one of four things. It
     /// is separated from it by a [`Self::Sequenced`], because the sequencing
     /// operators emit one: `free(p), *p = 42;` is the case to read, where the
     /// free is a comma's left operand, the write follows it, and the comma's
     /// own marker proves it. Or it is a sibling that cannot act, which reads
     /// no pointer and frees nothing. Or it is the store of an assignment whose
-    /// place cannot act, which C17 6.5.16 p3 puts after both operands: a free
-    /// behind this element that such a store needs ordered is ordered only by
-    /// a marker of its own, and where it has none the store is a doubt C would
-    /// have licensed as a proof, which a reader can see (#178).
+    /// place cannot act, which C17 6.5.16 p3 sequences after the value
+    /// computations of both operands: a free behind this element that such a
+    /// store needs ordered is ordered only by a marker of its own, and where
+    /// it has none the store is a doubt C would have licensed as a proof,
+    /// which a reader can see (#178). Or it is what the enclosing node does
+    /// with the call's result, a call it is an argument of or a dereference of
+    /// it, which comes after the call (6.5.2.2 p10, 6.5 p1).
     ///
     /// So a consumer that answers this element by doing nothing is this
     /// compiler before it existed: a suspicion where C licensed silence, which

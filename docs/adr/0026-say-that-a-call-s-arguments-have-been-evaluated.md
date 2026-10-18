@@ -86,8 +86,8 @@ would prove it whatever this element concluded.
 Since [#178](https://github.com/itsakeyfut/safec/issues/178) a node whose other
 operands cannot act keeps a call eligible too (ADR-0022), so two more things can
 follow one: a sibling that reads no pointer and frees nothing, and the store of
-an assignment whose place cannot act, which C17 6.5.16 p3 puts after both
-operands. Neither is something a read behind this element could be ordered
+an assignment whose place cannot act, which C17 6.5.16 p3 sequences after the
+value computations of both operands. Neither is something a read behind this element could be ordered
 wrongly against. A free behind it that such a store needs ordered is ordered
 only by a marker of its own, so the omitted half can cost a proof there, which
 is a report the reader can see. `Element::ArgumentsEvaluated`'s doc comment

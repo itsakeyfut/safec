@@ -240,7 +240,7 @@ cases! {
         a_logical_and_inside_an_unsequenced_operand_orders_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_conditional_inside_an_unsequenced_operand_orders_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same operators below a node whose other operands cannot act,
-        // which C17 6.5.16 p3, 6.5.17 p2 and 6.5.13 p4 order as at the root:
+        // whose order C17 6.5.17 p2 and 6.5.13 p4 fix whatever encloses them:
         // an assignment to a local, a negation, and a call whose other
         // argument is a constant. Each is the proof `int x = (free(p), *p);`
         // is (#178). Mutation: drop the root at every node that does not

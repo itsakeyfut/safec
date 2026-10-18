@@ -99,7 +99,7 @@ nothing in the block a marker could misorder. A constant, a local read by value,
 `&` of a local, and arithmetic over those are that; a dereference, a subscript,
 a call, an assignment, an increment and a member are not. An assignment's place
 is the same question about the operands it is computed from, because C17 6.5.16
-p3 puts the store after both operands. So `x = (free(p), *p);` keeps the
+p3 sequences the store after the value computations of both operands. So `x = (free(p), *p);` keeps the
 comma's marker and is the proof `int x = (free(p), *p);` is, and `*r + ((free(p),
 1) && *p)` drops it. Counting an operand inert that acts is the silence this
 record is about, so the list is short on purpose.
