@@ -1,0 +1,92 @@
+Target "x86_64-pc-windows-msvc"
+Function a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "n"
+  Local "_2" "int *" "p"
+  Local "_3" "void *"
+  Local "_4" "int" "x"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:4:14 generated
+    Call a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:4:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:4:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:4:14 generated
+    Operation a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:6:9 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:6:9 "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:6:9 generated
+    Operation a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:6:17 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:6:24 generated
+    Return
+  Block "bb3"
+    Sequenced a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:7:10 written
+      Destination "_6"
+      Binary "Add"
+        Copy "_2"
+          Deref
+        Constant 1
+    Branch a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:7:23 "bb6" "bb7"
+      Copy "_1"
+  Block "bb5"
+    Operation a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:7:10 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_6"
+        Copy "_7"
+    Operation a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:7:5 written
+      Destination "_4"
+      Use
+        Copy "_8"
+    Operation a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:7:5 written
+      Destination "_9"
+      Use
+        Copy "_4"
+    Sequenced a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:7:5 generated
+    Operation a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:8:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+    Sequenced a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:8:12 generated
+    Return
+  Block "bb6"
+    Call a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:7:28 "free" "bb8"
+      Copy "_2"
+  Block "bb7"
+    Operation a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:7:23 written
+      Destination "_7"
+      Use
+        Constant 0
+    Goto "bb5"
+  Block "bb8"
+    Operation a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:7:23 written
+      Destination "_7"
+      Use
+        Constant 0
+    Goto "bb5"

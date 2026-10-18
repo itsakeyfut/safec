@@ -252,6 +252,15 @@ cases! {
         a_negation_of_a_comma_that_frees_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_logical_and_in_an_argument_beside_a_constant_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_beside_a_comma_that_frees_keeps_it_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A sibling that reads through a pointer by any spelling acts, and so
+        // does the place of a store through one: each read becomes an element
+        // before the `?:`'s marker, which would clear it before the free. So
+        // each of these keeps its doubt. Mutation: count a subscript, a
+        // post-increment, or a dereferenced place whatever it dereferences,
+        // as inert; each in turn goes silent. Found by review.
+        a_subscript_beside_a_conditional_that_frees_keeps_it_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_increment_beside_a_conditional_that_frees_keeps_it_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_through_a_pointer_read_beside_a_conditional_that_frees_keeps_it_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // One argument writes a pointer another reads, which C17 6.5 p2 makes
         // undefined whatever it holds, so the conflict is the report, `SC0409`,
         // and a proof: through a `_Nonnull` parameter, a dereference, a

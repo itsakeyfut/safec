@@ -1967,6 +1967,13 @@ impl Lowering<'_> {
     /// memory check carries forwards to a free, and its value changes only by
     /// a write, which is not inert. A dereference, a subscript, a call, an
     /// assignment, an increment and a member are none of these.
+    ///
+    /// **That last argument has a limit**: the operand that does act may be
+    /// the write. `*q = (free(q), q = r, 0)` reads `q` for the place and writes
+    /// it in the value with nothing ordering the two, which C17 6.5 p2 makes
+    /// undefined, and nothing here reports it outside a call's arguments
+    /// (ADR-0052). The markers do not decide that silence, which `main` has
+    /// too, but this argument does not answer it either.
     fn inert(&self, id: ExprId) -> bool {
         match self.ast.expr(id) {
             Expr::Number { .. } | Expr::Identifier { .. } => true,
@@ -2004,6 +2011,9 @@ impl Lowering<'_> {
     /// Computing that place reads only those operands. The store itself is
     /// sequenced after the value computations of both operands (C17 6.5.16
     /// p3), so it follows the right operand's markers in C as in the block.
+    /// Where the right operand writes a local the place reads, the place may
+    /// be computed from either value, which [`Self::inert`] says is not
+    /// answered here.
     fn inert_place(&self, id: ExprId) -> bool {
         match self.ast.expr(id) {
             Expr::Identifier { .. } => true,
