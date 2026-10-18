@@ -235,6 +235,30 @@ cases! {
         a_comma_inside_a_call_argument_orders_nothing_outside_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_logical_and_inside_an_unsequenced_operand_orders_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_conditional_inside_an_unsequenced_operand_orders_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // One argument writes a pointer another reads, which C17 6.5 p2 makes
+        // undefined whatever it holds, so the conflict is the report, `SC0409`,
+        // and a proof: through a `_Nonnull` parameter, a dereference, a
+        // pointer freed before the call, and a write inside a comma, which
+        // orders nothing outside its own argument (#247). Mutation: have the
+        // lowering find no conflict, or the memory check's arm for the
+        // element do nothing; all four go silent. Two writes are the same
+        // conflict in other words. Mutation: count only a read as the other
+        // access; the fifth goes silent.
+        an_argument_read_while_another_argument_writes_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_dereference_in_an_argument_another_argument_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_freed_pointer_read_in_an_argument_another_argument_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_write_inside_a_comma_is_unsequenced_against_another_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        two_arguments_writing_one_pointer_are_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What is not a conflict. `&q` takes the address and reads nothing
+        // (C17 6.5.3.2 p3), and a write and a read inside one argument are
+        // ordered by the comma between them. Mutation: count `&q` as a read,
+        // or compare an argument with itself; each reports `SC0409`. And what
+        // is not asked about: `k(i, i++)` is undefined by the same paragraph,
+        // and an integer is not what this check is believed about. Mutation:
+        // drop the pointer filter; it reports. See ADR-0052.
+        an_address_taken_while_another_argument_writes_it_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_write_and_a_read_in_one_argument_are_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_integer_another_argument_writes_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A parameter written as an array is the pointer C17 6.7.6.3 p7 makes
         // it, so its function lowers and a read after its free is one.
         // Mutation: leave a parameter's type as written; the function is

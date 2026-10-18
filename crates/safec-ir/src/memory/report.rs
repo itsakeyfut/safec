@@ -216,6 +216,9 @@ fn verdict(
         // The same question, one level in. No proof reaches it, because
         // `handed_below` always answers `Reached::Partial` beside its sites.
         Kind::FreedBehindArgument => earliest.is_some_and(|freed| freed.sequenced),
+        // Never asked: it is built from its element in `memory.rs`, not out of
+        // a verdict, and it is about no free. See ADR-0052.
+        Kind::UnsequencedArguments { .. } => true,
     };
 
     match earliest {
