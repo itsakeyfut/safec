@@ -1,0 +1,147 @@
+Target "x86_64-pc-windows-msvc"
+Function a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:3:6 "get" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "pp"
+Function a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:4:7 "realloc" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "p"
+  Local "_2" "int" parameter "n"
+Function a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:5:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "u"
+  Local "_3" "int **"
+  Local "_4" "int *" "q"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *" "r"
+  Local "_8" "int *"
+  Local "_9" "int *"
+  Local "_10" "int *" "s"
+  Local "_11" "void *"
+  Local "_12" "int"
+  Block "bb0" entry
+    Operation a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:6:17 written
+      Destination "_3"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:6:13 generated
+    Call a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:6:13 "get" "bb1"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:6:13 generated
+    ArgumentsEvaluated a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:7:14 generated
+    Call a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:7:14 "malloc" "bb2"
+      Destination "_5"
+      Constant 4
+  Block "bb2"
+    Operation a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:7:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:7:14 generated
+    Operation a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:7:29 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_4"
+    Branch a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:7:29 "bb3" "bb4"
+      Copy "_6"
+  Block "bb3"
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:7:29 generated
+    Operation a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:7:33 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:7:40 generated
+    Return
+  Block "bb4"
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:7:29 generated
+    Goto "bb5"
+  Block "bb5"
+    Branch a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:9:9 "bb6" "bb7"
+      Copy "_1"
+  Block "bb6"
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:9:9 generated
+    Operation a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:9:14 written
+      Destination "_7"
+      Use
+        Copy "_2"
+    Operation a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:9:14 written
+      Destination "_8"
+      Use
+        Copy "_7"
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:9:14 generated
+    Goto "bb8"
+  Block "bb7"
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:9:9 generated
+    Operation a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:9:30 written
+      Destination "_7"
+      Use
+        Copy "_4"
+    Operation a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:9:30 written
+      Destination "_9"
+      Use
+        Copy "_7"
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:9:30 generated
+    Goto "bb8"
+  Block "bb8"
+    ArgumentsEvaluated a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:10:14 generated
+    Call a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:10:14 "realloc" "bb9"
+      Destination "_11"
+      Copy "_7"
+      Constant 8
+  Block "bb9"
+    Operation a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:10:10 written
+      Destination "_10"
+      Use
+        Copy "_11"
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:10:14 generated
+    Operation a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:11:9 written
+      Destination "_12"
+      Unary "Not"
+        Copy "_10"
+    Branch a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:11:9 "bb10" "bb11"
+      Copy "_12"
+  Block "bb10"
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:11:9 generated
+    Operation a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:11:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:11:20 generated
+    Return
+  Block "bb11"
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:11:9 generated
+    Goto "bb12"
+  Block "bb12"
+    Branch a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:12:9 "bb13" "bb14"
+      Copy "_1"
+  Block "bb13"
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:12:9 generated
+    ArgumentsEvaluated a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:12:12 generated
+    Call a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:12:12 "free" "bb16"
+      Copy "_4"
+  Block "bb14"
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:12:9 generated
+    Goto "bb15"
+  Block "bb15"
+    ArgumentsEvaluated a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:13:5 generated
+    Call a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:13:5 "free" "bb17"
+      Copy "_10"
+  Block "bb16"
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:12:12 generated
+    Goto "bb15"
+  Block "bb17"
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:13:5 generated
+    Operation a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:14:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free.c:14:12 generated
+    Return

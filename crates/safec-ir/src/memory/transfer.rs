@@ -1621,7 +1621,11 @@ impl Analysis for Allocations<'_> {
 
         // **What a `realloc` with a non-zero constant size was handed, while
         // it is all live**, before the transfer below makes it unproven: the
-        // branch on the result is what says which it became. See ADR-0039.
+        // branch on the result is what says which it became. **Not for a
+        // pointer a call this check cannot read wrote**, which may hold what
+        // it does not name, as at a free (#497): `r` is `u` on one arm and `q`
+        // on the other, and a fact naming `q` alone proved `free(q)` a double
+        // free on the arm where `realloc` was handed `u` (#499). See ADR-0039.
         let realloced: Option<Vec<(usize, Option<Span>)>> = match (kind, &arguments[..]) {
             (Callee::Reallocates, [Operand::Copy(old), Operand::Constant(size), ..])
                 if *size != 0 && old.projection.is_empty() =>
@@ -1637,7 +1641,11 @@ impl Analysis for Allocations<'_> {
                         | SiteState::Unheld => None,
                     })
                     .collect();
-                (!held.lost && !old.is_empty() && old.len() == held.sites().count()).then_some(old)
+                (!held.lost
+                    && !held.foreign
+                    && !old.is_empty()
+                    && old.len() == held.sites().count())
+                .then_some(old)
             }
             _ => None,
         };

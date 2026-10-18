@@ -254,7 +254,10 @@ with a join's disagreement also gone
 exposure also gone
 `the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported`;
 and letting a place with a projection through fails
-`a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone`. Five
+`a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone`, and
+keeping the fact for an old pointer a call this check cannot read wrote fails
+`a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free`
+([#499](https://github.com/itsakeyfut/safec/issues/499)). Five
 parts fail nothing, measured: a join keeping a fact one arm lacks, a rebirth
 leaving it, a fact kept for old allocations not all live, one kept for an old
 pointer this check stopped following, and the null arm restoring an old
