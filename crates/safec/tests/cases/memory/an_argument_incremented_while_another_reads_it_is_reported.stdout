@@ -1,0 +1,76 @@
+Target "x86_64-pc-windows-msvc"
+Function an_argument_incremented_while_another_reads_it_is_reported.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function an_argument_incremented_while_another_reads_it_is_reported.c:2:6 "g" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+  Local "_2" "int *" parameter "r"
+Function an_argument_incremented_while_another_reads_it_is_reported.c:3:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *" "q"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Block "bb0" entry
+    Operation an_argument_incremented_while_another_reads_it_is_reported.c:3:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated an_argument_incremented_while_another_reads_it_is_reported.c:4:14 generated
+    Call an_argument_incremented_while_another_reads_it_is_reported.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation an_argument_incremented_while_another_reads_it_is_reported.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced an_argument_incremented_while_another_reads_it_is_reported.c:4:14 generated
+    Operation an_argument_incremented_while_another_reads_it_is_reported.c:5:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch an_argument_incremented_while_another_reads_it_is_reported.c:5:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced an_argument_incremented_while_another_reads_it_is_reported.c:5:9 generated
+    Operation an_argument_incremented_while_another_reads_it_is_reported.c:5:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_argument_incremented_while_another_reads_it_is_reported.c:5:20 generated
+    Return
+  Block "bb3"
+    Sequenced an_argument_incremented_while_another_reads_it_is_reported.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation an_argument_incremented_while_another_reads_it_is_reported.c:6:10 written
+      Destination "_4"
+      Use
+        Copy "_1"
+    Operation an_argument_incremented_while_another_reads_it_is_reported.c:6:10 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_1"
+        Constant 1
+    Operation an_argument_incremented_while_another_reads_it_is_reported.c:6:10 written
+      Destination "_1"
+      Use
+        Copy "_5"
+    ArgumentsEvaluated an_argument_incremented_while_another_reads_it_is_reported.c:6:5 generated
+    UnsequencedArguments an_argument_incremented_while_another_reads_it_is_reported.c:6:5 written "_1"
+      Written an_argument_incremented_while_another_reads_it_is_reported.c:6:10
+      Read an_argument_incremented_while_another_reads_it_is_reported.c:6:7
+    Call an_argument_incremented_while_another_reads_it_is_reported.c:6:5 "g" "bb5"
+      Copy "_1"
+      Copy "_4"
+  Block "bb5"
+    Sequenced an_argument_incremented_while_another_reads_it_is_reported.c:6:5 generated
+    Operation an_argument_incremented_while_another_reads_it_is_reported.c:7:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_argument_incremented_while_another_reads_it_is_reported.c:7:12 generated
+    Return

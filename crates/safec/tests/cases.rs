@@ -241,14 +241,21 @@ cases! {
         // pointer freed before the call, and a write inside a comma, which
         // orders nothing outside its own argument (#247). Mutation: have the
         // lowering find no conflict, or the memory check's arm for the
-        // element do nothing; all four go silent. Two writes are the same
-        // conflict in other words. Mutation: count only a read as the other
-        // access; the fifth goes silent.
+        // element do nothing; all five below go silent. Two writes are the
+        // same conflict in other words. Mutation: count only a read as the
+        // other access, or report a local once per write rather than once
+        // per call; the fifth goes silent, or reports twice.
         an_argument_read_while_another_argument_writes_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_dereference_in_an_argument_another_argument_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_freed_pointer_read_in_an_argument_another_argument_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_write_inside_a_comma_is_unsequenced_against_another_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         two_arguments_writing_one_pointer_are_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write by name is an increment as much as an assignment, and a
+        // write through `q` reads `q`. Mutation: leave out an increment's
+        // write, or walk nothing below an assignment's place that is not a
+        // name; each goes silent.
+        an_argument_incremented_while_another_reads_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_write_through_a_pointer_another_argument_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What is not a conflict. `&q` takes the address and reads nothing
         // (C17 6.5.3.2 p3), and a write and a read inside one argument are
         // ordered by the comma between them. Mutation: count `&q` as a read,

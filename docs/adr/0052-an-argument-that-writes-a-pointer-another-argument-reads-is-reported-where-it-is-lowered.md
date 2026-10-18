@@ -41,8 +41,9 @@ The lowering has the tree, and the conflict is a fact about the tree: which poin
 
 Mutations, each failing named cases:
 
-* The lowering finding nothing fails `an_argument_read_while_another_argument_writes_it_is_reported`, `a_dereference_in_an_argument_another_argument_writes_is_reported`, `a_freed_pointer_read_in_an_argument_another_argument_writes_is_reported` and `a_write_inside_a_comma_is_unsequenced_against_another_argument`, which go silent.
-* The memory check's arm for the element doing nothing fails the same four.
+* The lowering finding nothing fails `an_argument_read_while_another_argument_writes_it_is_reported`, `a_dereference_in_an_argument_another_argument_writes_is_reported`, `a_freed_pointer_read_in_an_argument_another_argument_writes_is_reported`, `a_write_inside_a_comma_is_unsequenced_against_another_argument` and `two_arguments_writing_one_pointer_are_reported`, which go silent.
+* The memory check's arm for the element doing nothing fails the same five.
+* Leaving out an increment's write fails `an_argument_incremented_while_another_reads_it_is_reported`, and walking nothing below an assignment's place that is not a name fails `a_write_through_a_pointer_another_argument_writes_is_reported`.
 * Counting an address, `&q`, as a read fails `an_address_taken_while_another_argument_writes_it_is_not_reported`.
 * Comparing an argument with itself fails `a_write_and_a_read_in_one_argument_are_not_reported`.
 * Counting only a read as the other access fails `two_arguments_writing_one_pointer_are_reported`.
