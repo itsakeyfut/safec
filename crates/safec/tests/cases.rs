@@ -1140,6 +1140,12 @@ cases! {
         // there all the same, as `clang` accepts it.) Mutation: ask every
         // declaration rather than function definitions; this is refused.
         a_local_named_exit_is_not_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A name that only begins with one of the four is an ordinary
+        // function: it is neither refused where it is defined nor believed
+        // where it is called, so the read after the call is asked. Mutation:
+        // match a reserved name as a prefix, in names or in the lowering; this
+        // is refused, or goes silent. Found by review.
+        code_after_a_function_whose_name_begins_with_exit_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call inside a larger full expression keeps its edge, because a
         // read written before it is lowered after it. Mutation: drop the
         // `root` test where the call decides its continuation; both reads go
