@@ -387,6 +387,11 @@ cases! {
         // and the length's remedy. Mutation: keep `UNSEQUENCED_REMEDY` in
         // that row; the remedy says to write separate statements.
         a_pointer_passed_in_one_length_and_freed_in_another_is_told_why: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Every definition's lengths are collected, not only the first's, so
+        // the free in `f`, after `h` and its own length, still cites 6.7.6
+        // p3. Mutation: collect from `ast.items().iter().take(2)`; the note
+        // falls back to 6.5.2.2 p10 and separate statements. Found by review.
+        a_definition_s_lengths_are_found_after_another_definition: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A length's value is read only once every length is lowered, as a
         // call's arguments are read at the call, so the read of `*q` in `b`
         // is checked against the `q` that `a` may write first, and the free

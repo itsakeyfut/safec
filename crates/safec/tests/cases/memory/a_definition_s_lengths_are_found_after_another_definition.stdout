@@ -1,0 +1,35 @@
+Target "x86_64-pc-windows-msvc"
+Function a_definition_s_lengths_are_found_after_another_definition.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_definition_s_lengths_are_found_after_another_definition.c:3:5 "h"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "n"
+  Local "_2" "int *" parameter "c"
+  Block "bb0" entry
+    Sequenced a_definition_s_lengths_are_found_after_another_definition.c:3:20 generated
+    Operation a_definition_s_lengths_are_found_after_another_definition.c:4:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_definition_s_lengths_are_found_after_another_definition.c:4:12 generated
+    Return
+Function a_definition_s_lengths_are_found_after_another_definition.c:7:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter _Nonnull "p"
+  Local "_2" "int *" parameter "b"
+  Local "_3" "int *" parameter "a"
+  Block "bb0" entry
+    Call a_definition_s_lengths_are_found_after_another_definition.c:7:43 "free" "bb1"
+      Copy "_1"
+  Block "bb1"
+    Evaluate a_definition_s_lengths_are_found_after_another_definition.c:7:31 written
+      Place "_1"
+        Deref
+    Sequenced a_definition_s_lengths_are_found_after_another_definition.c:7:43 generated
+    Operation a_definition_s_lengths_are_found_after_another_definition.c:8:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_definition_s_lengths_are_found_after_another_definition.c:8:12 generated
+    Return
