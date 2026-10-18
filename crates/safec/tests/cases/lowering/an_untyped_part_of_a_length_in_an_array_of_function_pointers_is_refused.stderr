@@ -1,0 +1,10 @@
+error[SC0304]: cannot compile a parameter declared as this array yet
+   ╭─[ an_untyped_part_of_a_length_in_an_array_of_function_pointers_is_refused.c:1:42 ]
+   │
+ 1 │ int (*fps[2])(int *p, int *q, int n, int a[(*(p - q) = 0, n)]);
+   │                                          ┬  ──────┬─────  
+   │                                          ╰──────────────── declared here
+   │                                                   │       
+   │                                                   ╰─────── nothing worked out what type this has
+───╯
+  = note: this is a gap in this compiler: whether this parameter is valid C is not checked

@@ -4288,6 +4288,19 @@ cases! {
         // Mutation: look only at the length's own operands; the last builds.
         // Mutation: drop the label on the untyped part; every block changes.
         an_untyped_part_of_a_prototype_s_length_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same length inside the type of a file-scope object, which
+        // nothing lowers while nothing uses it, is asked too (#448): a
+        // function pointer, a prototype nested in one of its parameters, and
+        // an array of them. Mutation: have `declare_one` not walk an object's
+        // type; the first builds. Mutation: have the walk not enter a
+        // function's parameters, or an array's element; the third, or the
+        // fourth, builds. And a length typed throughout still builds there.
+        // Mutation: refuse every length the walk meets; the second is
+        // refused.
+        an_untyped_part_of_a_file_scope_function_pointer_s_length_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_file_scope_function_pointer_s_length_typed_throughout_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_untyped_part_of_a_length_in_a_prototype_nested_in_a_function_pointer_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_untyped_part_of_a_length_in_an_array_of_function_pointers_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         edges_of_a_branch_and_a_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         every_shape_the_artifact_spells: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `i` and `j`, declared by the `for`, begin their storage once before
