@@ -187,7 +187,12 @@ already settles it where one does, as null is, and otherwise as a diagnostic
 about the program's text, with a code of its own and a remedy saying how to write
 it inside, rather than as a conclusion it could not prove. The level is chosen
 per translation unit, and what a declaration from code the translation unit
-cannot see does not say is answered conservatively. What level 5 restricts is a list, and an entry is
+cannot see does not say is answered conservatively. Levels are not mixed inside
+one: a function to be held to level 5 before the rest of its file is moved to a
+file of its own, compiled by its own run, and meets the rest through
+declarations, so that boundary is the one between them. A hatch is not a lower
+level, only a place where what was not proved is listed.
+[ADR-0053](adr/0053-levels-are-not-mixed-inside-a-translation-unit.md) has why. What level 5 restricts is a list, and an entry is
 added by the phase whose check needs it, with a record of its own; the first is
 null, under [Annotations](#annotations) below.
 [ADR-0049](adr/0049-level-5-restricts-what-may-be-written-and-levels-1-to-4-do-not.md)
@@ -225,9 +230,9 @@ is level 1 and rejects what it cannot prove, because `--safety` defaults to
 `--allow-unknown`, which reports the same conclusions and lets the build
 through.
 
-What is decided is the two kinds and the first restriction. Which restrictions
-follow, and whether levels can be mixed inside one translation unit, are decided
-as the phases that need them are built.
+What is decided is the two kinds, the first restriction, and that levels are
+not mixed inside a translation unit. Which restrictions follow is decided as the
+phases that need them are built.
 
 ## Annotations
 
