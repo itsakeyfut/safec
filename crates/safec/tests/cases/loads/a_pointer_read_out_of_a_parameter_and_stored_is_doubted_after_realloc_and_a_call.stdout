@@ -29,7 +29,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_a
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:6:9 "bb1" "bb2"
+    Branch a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:6:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:6:9 generated
@@ -54,7 +54,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_a
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:10:9 "bb4" "bb5"
+    Branch a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:10:9 written "bb4" "bb5"
       Copy "_4"
   Block "bb4"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:10:9 generated
@@ -69,7 +69,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_a
     Goto "bb6"
   Block "bb6"
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:13:17 generated
-    Call a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:13:17 "malloc" "bb7"
+    Call a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:13:17 written "malloc" "bb7"
       Destination "_6"
       Constant 8
   Block "bb7"
@@ -83,7 +83,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_a
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:14:9 "bb8" "bb9"
+    Branch a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:14:9 written "bb8" "bb9"
       Copy "_7"
   Block "bb8"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:14:9 generated
@@ -109,7 +109,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_a
           Deref
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:17:5 generated
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:18:17 generated
-    Call a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:18:17 "realloc" "bb11"
+    Call a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:18:17 written "realloc" "bb11"
       Destination "_10"
       Copy "_5"
       Constant 16
@@ -124,7 +124,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_a
       Binary "Eq"
         Copy "_9"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:19:9 "bb12" "bb13"
+    Branch a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:19:9 written "bb12" "bb13"
       Copy "_11"
   Block "bb12"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:19:9 generated
@@ -139,7 +139,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_a
     Goto "bb14"
   Block "bb14"
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:22:5 generated
-    Call a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:22:5 "release_all" "bb15"
+    Call a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:22:5 written "release_all" "bb15"
   Block "bb15"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:22:5 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:23:10 written
@@ -153,7 +153,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_a
       Binary "Eq"
         Copy "_12"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:24:9 "bb16" "bb17"
+    Branch a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:24:9 written "bb16" "bb17"
       Copy "_13"
   Block "bb16"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:24:9 generated

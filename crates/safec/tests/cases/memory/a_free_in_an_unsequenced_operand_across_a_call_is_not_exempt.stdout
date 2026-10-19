@@ -19,7 +19,7 @@ Function a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:4:5 "f"
   Local "_7" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:5:14 generated
-    Call a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:5:14 "malloc" "bb1"
+    Call a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:5:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -29,7 +29,7 @@ Function a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:4:5 "f"
         Copy "_2"
     Sequenced a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:5:14 generated
     ArgumentsEvaluated a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:6:5 generated
-    Call a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:6:5 "free" "bb2"
+    Call a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:6:5 written "free" "bb2"
       Copy "_1"
   Block "bb2"
     Sequenced a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:6:5 generated
@@ -41,11 +41,11 @@ Function a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:4:5 "f"
       Destination "_4"
       Use
         Copy "_1"
-    Call a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:7:27 "g" "bb3"
+    Call a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:7:27 written "g" "bb3"
       Destination "_5"
       Constant 0
   Block "bb3"
-    Call a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:7:35 "free" "bb4"
+    Call a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:7:35 written "free" "bb4"
       Copy "_1"
   Block "bb4"
     Operation a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:7:27 written

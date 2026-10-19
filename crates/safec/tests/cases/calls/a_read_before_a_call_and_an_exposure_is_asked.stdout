@@ -52,12 +52,12 @@ Function a_read_before_a_call_and_an_exposure_is_asked.c:6:5 "f"
       Address
         Place "_5"
     ArgumentsEvaluated a_read_before_a_call_and_an_exposure_is_asked.c:13:5 generated
-    Call a_read_before_a_call_and_an_exposure_is_asked.c:13:5 "stash" "bb1"
+    Call a_read_before_a_call_and_an_exposure_is_asked.c:13:5 written "stash" "bb1"
       Copy "_7"
   Block "bb1"
     Sequenced a_read_before_a_call_and_an_exposure_is_asked.c:13:5 generated
     ArgumentsEvaluated a_read_before_a_call_and_an_exposure_is_asked.c:14:9 generated
-    Call a_read_before_a_call_and_an_exposure_is_asked.c:14:9 "malloc" "bb2"
+    Call a_read_before_a_call_and_an_exposure_is_asked.c:14:9 written "malloc" "bb2"
       Destination "_8"
       Constant 4
   Block "bb2"
@@ -75,7 +75,7 @@ Function a_read_before_a_call_and_an_exposure_is_asked.c:6:5 "f"
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_read_before_a_call_and_an_exposure_is_asked.c:15:9 "bb3" "bb4"
+    Branch a_read_before_a_call_and_an_exposure_is_asked.c:15:9 written "bb3" "bb4"
       Copy "_10"
   Block "bb3"
     Sequenced a_read_before_a_call_and_an_exposure_is_asked.c:15:9 generated
@@ -90,7 +90,7 @@ Function a_read_before_a_call_and_an_exposure_is_asked.c:6:5 "f"
     Goto "bb5"
   Block "bb5"
     ArgumentsEvaluated a_read_before_a_call_and_an_exposure_is_asked.c:18:9 generated
-    Call a_read_before_a_call_and_an_exposure_is_asked.c:18:9 "malloc" "bb6"
+    Call a_read_before_a_call_and_an_exposure_is_asked.c:18:9 written "malloc" "bb6"
       Destination "_11"
       Constant 4
   Block "bb6"
@@ -108,7 +108,7 @@ Function a_read_before_a_call_and_an_exposure_is_asked.c:6:5 "f"
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_read_before_a_call_and_an_exposure_is_asked.c:19:9 "bb7" "bb8"
+    Branch a_read_before_a_call_and_an_exposure_is_asked.c:19:9 written "bb7" "bb8"
       Copy "_13"
   Block "bb7"
     Sequenced a_read_before_a_call_and_an_exposure_is_asked.c:19:9 generated
@@ -142,7 +142,7 @@ Function a_read_before_a_call_and_an_exposure_is_asked.c:6:5 "f"
       Destination "_15"
       Use
         Copy "_1"
-    Call a_read_before_a_call_and_an_exposure_is_asked.c:23:22 "release_all" "bb10"
+    Call a_read_before_a_call_and_an_exposure_is_asked.c:23:22 written "release_all" "bb10"
       Destination "_16"
   Block "bb10"
     Operation a_read_before_a_call_and_an_exposure_is_asked.c:23:10 written

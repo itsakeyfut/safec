@@ -52,13 +52,13 @@ Function a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_
       Binary "Lt"
         Copy "_4"
         Constant 2
-    Branch a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:8:12 "bb2" "bb3"
+    Branch a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:8:12 written "bb2" "bb3"
       Copy "_5"
   Block "bb2"
     Sequenced a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:8:12 generated
     StorageLive a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:9:9 generated "_6"
     ArgumentsEvaluated a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:9:18 generated
-    Call a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:9:18 "malloc" "bb4"
+    Call a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:9:18 written "malloc" "bb4"
       Destination "_7"
       Constant 4
   Block "bb3"
@@ -80,7 +80,7 @@ Function a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_
       Binary "Eq"
         Copy "_6"
         Constant 0
-    Branch a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:10:13 "bb5" "bb6"
+    Branch a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:10:13 written "bb5" "bb6"
       Copy "_8"
   Block "bb5"
     Sequenced a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:10:13 generated
@@ -111,7 +111,7 @@ Function a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_
       Binary "Eq"
         Copy "_4"
         Constant 1
-    Branch a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:14:13 "bb8" "bb9"
+    Branch a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:14:13 written "bb8" "bb9"
       Copy "_10"
   Block "bb8"
     Sequenced a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:14:13 generated
@@ -120,7 +120,7 @@ Function a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:15:17 "bb11" "bb12"
+    Branch a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:15:17 written "bb11" "bb12"
       Copy "_11"
   Block "bb9"
     Sequenced a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:14:13 generated
@@ -136,7 +136,7 @@ Function a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_
         Copy "_1"
     Sequenced a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:20:9 generated
     ArgumentsEvaluated a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:21:9 generated
-    Call a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:21:9 "free" "bb14"
+    Call a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:21:9 written "free" "bb14"
       Copy "_6"
   Block "bb11"
     Sequenced a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:15:17 generated

@@ -51,7 +51,7 @@ Function a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_af
       Binary "Lt"
         Copy "_4"
         Constant 2
-    Branch a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:9:12 "bb2" "bb3"
+    Branch a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:9:12 written "bb2" "bb3"
       Copy "_5"
   Block "bb2"
     Sequenced a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:9:12 generated
@@ -65,13 +65,13 @@ Function a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_af
         Copy "_2"
     Sequenced a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:10:9 generated
     ArgumentsEvaluated a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:11:13 generated
-    Call a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:11:13 "malloc" "bb4"
+    Call a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:11:13 written "malloc" "bb4"
       Destination "_7"
       Constant 4
   Block "bb3"
     Sequenced a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:9:12 generated
     ArgumentsEvaluated a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:16:5 generated
-    Call a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:16:5 "stash" "bb8"
+    Call a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:16:5 written "stash" "bb8"
       Copy "_2"
   Block "bb4"
     Operation a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:11:9 written
@@ -87,7 +87,7 @@ Function a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_af
       Destination "_9"
       Unary "Not"
         Copy "_3"
-    Branch a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:12:13 "bb5" "bb6"
+    Branch a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:12:13 written "bb5" "bb6"
       Copy "_9"
   Block "bb5"
     Sequenced a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:12:13 generated
@@ -130,7 +130,7 @@ Function a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_af
   Block "bb8"
     Sequenced a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:16:5 generated
     ArgumentsEvaluated a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:17:14 generated
-    Call a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:17:14 "fetch" "bb9"
+    Call a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:17:14 written "fetch" "bb9"
       Destination "_14"
   Block "bb9"
     Operation a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:17:10 written
@@ -139,7 +139,7 @@ Function a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_af
         Copy "_14"
     Sequenced a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:17:14 generated
     ArgumentsEvaluated a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:18:5 generated
-    Call a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:18:5 "free" "bb10"
+    Call a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:18:5 written "free" "bb10"
       Copy "_2"
   Block "bb10"
     Sequenced a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:18:5 generated
@@ -147,7 +147,7 @@ Function a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_af
       Destination "_15"
       Unary "Not"
         Copy "_13"
-    Branch a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:19:9 "bb11" "bb12"
+    Branch a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:19:9 written "bb11" "bb12"
       Copy "_15"
   Block "bb11"
     Sequenced a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:19:9 generated
@@ -168,7 +168,7 @@ Function a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_af
           Deref
     Sequenced a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:20:13 generated
     ArgumentsEvaluated a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:21:5 generated
-    Call a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:21:5 "free" "bb14"
+    Call a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:21:5 written "free" "bb14"
       Copy "_3"
   Block "bb14"
     Sequenced a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free.c:21:5 generated

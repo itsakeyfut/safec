@@ -11,7 +11,7 @@ Function a_discarded_dereference_after_a_free.c:3:5 "f"
   Local "_2" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_discarded_dereference_after_a_free.c:4:14 generated
-    Call a_discarded_dereference_after_a_free.c:4:14 "malloc" "bb1"
+    Call a_discarded_dereference_after_a_free.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -21,7 +21,7 @@ Function a_discarded_dereference_after_a_free.c:3:5 "f"
         Copy "_2"
     Sequenced a_discarded_dereference_after_a_free.c:4:14 generated
     ArgumentsEvaluated a_discarded_dereference_after_a_free.c:5:5 generated
-    Call a_discarded_dereference_after_a_free.c:5:5 "free" "bb2"
+    Call a_discarded_dereference_after_a_free.c:5:5 written "free" "bb2"
       Copy "_1"
   Block "bb2"
     Sequenced a_discarded_dereference_after_a_free.c:5:5 generated

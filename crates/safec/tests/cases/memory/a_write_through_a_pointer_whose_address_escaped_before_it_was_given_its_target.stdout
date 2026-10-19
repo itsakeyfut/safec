@@ -23,7 +23,7 @@ Function a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its
   Local "_11" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:5:14 generated
-    Call a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:5:14 "malloc" "bb1"
+    Call a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:5:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -33,7 +33,7 @@ Function a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its
         Copy "_2"
     Sequenced a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:5:14 generated
     ArgumentsEvaluated a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:6:14 generated
-    Call a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:6:14 "malloc" "bb2"
+    Call a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:6:14 written "malloc" "bb2"
       Destination "_4"
       Constant 8
   Block "bb2"
@@ -65,7 +65,7 @@ Function a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its
         Copy "_5"
     Sequenced a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:9:5 generated
     ArgumentsEvaluated a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:10:5 generated
-    Call a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:10:5 "opaque" "bb3"
+    Call a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:10:5 written "opaque" "bb3"
       Copy "_6"
   Block "bb3"
     Sequenced a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:10:5 generated
@@ -81,7 +81,7 @@ Function a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its
           Deref
     Sequenced a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:11:5 generated
     ArgumentsEvaluated a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:12:5 generated
-    Call a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:12:5 "free" "bb4"
+    Call a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:12:5 written "free" "bb4"
       Copy "_1"
   Block "bb4"
     Sequenced a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:12:5 generated

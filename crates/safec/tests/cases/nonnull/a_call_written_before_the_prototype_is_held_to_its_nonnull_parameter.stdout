@@ -11,7 +11,7 @@ Function a_call_written_before_the_prototype_is_held_to_its_nonnull_parameter.c:
       Use
         Constant 0
     ArgumentsEvaluated a_call_written_before_the_prototype_is_held_to_its_nonnull_parameter.c:3:12 generated
-    Call a_call_written_before_the_prototype_is_held_to_its_nonnull_parameter.c:3:12 "f" "bb1"
+    Call a_call_written_before_the_prototype_is_held_to_its_nonnull_parameter.c:3:12 written "f" "bb1"
       Destination "_1"
       Constant 0
   Block "bb1"

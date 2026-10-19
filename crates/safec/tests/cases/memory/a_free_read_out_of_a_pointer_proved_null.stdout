@@ -12,7 +12,7 @@ Function a_free_read_out_of_a_pointer_proved_null.c:2:5 "f"
         Constant 0
     Sequenced a_free_read_out_of_a_pointer_proved_null.c:3:16 generated
     ArgumentsEvaluated a_free_read_out_of_a_pointer_proved_null.c:4:5 generated
-    Call a_free_read_out_of_a_pointer_proved_null.c:4:5 "free" "bb1"
+    Call a_free_read_out_of_a_pointer_proved_null.c:4:5 written "free" "bb1"
       Copy "_1"
         Deref
   Block "bb1"

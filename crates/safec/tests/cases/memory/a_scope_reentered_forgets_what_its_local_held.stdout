@@ -17,7 +17,7 @@ Function a_scope_reentered_forgets_what_its_local_held.c:3:5 "f"
   Block "bb0" entry
     Goto "bb1"
   Block "bb1"
-    Branch a_scope_reentered_forgets_what_its_local_held.c:4:12 "bb2" "bb3"
+    Branch a_scope_reentered_forgets_what_its_local_held.c:4:12 written "bb2" "bb3"
       Copy "_1"
   Block "bb2"
     Sequenced a_scope_reentered_forgets_what_its_local_held.c:4:12 generated
@@ -34,7 +34,7 @@ Function a_scope_reentered_forgets_what_its_local_held.c:3:5 "f"
           Deref
     Sequenced a_scope_reentered_forgets_what_its_local_held.c:6:9 generated
     ArgumentsEvaluated a_scope_reentered_forgets_what_its_local_held.c:7:13 generated
-    Call a_scope_reentered_forgets_what_its_local_held.c:7:13 "malloc" "bb4"
+    Call a_scope_reentered_forgets_what_its_local_held.c:7:13 written "malloc" "bb4"
       Destination "_4"
       Constant 4
   Block "bb3"
@@ -56,7 +56,7 @@ Function a_scope_reentered_forgets_what_its_local_held.c:3:5 "f"
         Copy "_2"
     Sequenced a_scope_reentered_forgets_what_its_local_held.c:7:9 generated
     ArgumentsEvaluated a_scope_reentered_forgets_what_its_local_held.c:8:9 generated
-    Call a_scope_reentered_forgets_what_its_local_held.c:8:9 "free" "bb5"
+    Call a_scope_reentered_forgets_what_its_local_held.c:8:9 written "free" "bb5"
       Copy "_2"
   Block "bb5"
     Sequenced a_scope_reentered_forgets_what_its_local_held.c:8:9 generated

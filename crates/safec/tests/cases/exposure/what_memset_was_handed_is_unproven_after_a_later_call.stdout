@@ -24,7 +24,7 @@ Function what_memset_was_handed_is_unproven_after_a_later_call.c:6:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated what_memset_was_handed_is_unproven_after_a_later_call.c:7:14 generated
-    Call what_memset_was_handed_is_unproven_after_a_later_call.c:7:14 "malloc" "bb1"
+    Call what_memset_was_handed_is_unproven_after_a_later_call.c:7:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -38,7 +38,7 @@ Function what_memset_was_handed_is_unproven_after_a_later_call.c:6:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch what_memset_was_handed_is_unproven_after_a_later_call.c:8:9 "bb2" "bb3"
+    Branch what_memset_was_handed_is_unproven_after_a_later_call.c:8:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced what_memset_was_handed_is_unproven_after_a_later_call.c:8:9 generated
@@ -53,7 +53,7 @@ Function what_memset_was_handed_is_unproven_after_a_later_call.c:6:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated what_memset_was_handed_is_unproven_after_a_later_call.c:11:5 generated
-    Call what_memset_was_handed_is_unproven_after_a_later_call.c:11:5 "memset" "bb5"
+    Call what_memset_was_handed_is_unproven_after_a_later_call.c:11:5 written "memset" "bb5"
       Destination "_4"
       Copy "_1"
       Constant 0
@@ -61,7 +61,7 @@ Function what_memset_was_handed_is_unproven_after_a_later_call.c:6:5 "main"
   Block "bb5"
     Sequenced what_memset_was_handed_is_unproven_after_a_later_call.c:11:5 generated
     ArgumentsEvaluated what_memset_was_handed_is_unproven_after_a_later_call.c:12:5 generated
-    Call what_memset_was_handed_is_unproven_after_a_later_call.c:12:5 "forget" "bb6"
+    Call what_memset_was_handed_is_unproven_after_a_later_call.c:12:5 written "forget" "bb6"
   Block "bb6"
     Sequenced what_memset_was_handed_is_unproven_after_a_later_call.c:12:5 generated
     Operation what_memset_was_handed_is_unproven_after_a_later_call.c:13:5 written

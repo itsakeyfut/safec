@@ -486,10 +486,19 @@ fn dump_terminator(
     out: &mut String,
 ) {
     match terminator {
+        // Whether the source wrote it as well as where, as every element
+        // says, because every origin the IR carries reaches this printer, and
+        // these are the two terminators that carry one. A destructor at the
+        // end of a scope, `docs/c-family.md`'s case, is a generated call
+        // (#148).
         Terminator::Call { origin, .. } | Terminator::Branch { origin, .. } => {
             dump_node(sources, terminator.name(), origin.span(), depth, out);
+            write!(out, " {}", origin.name()).expect("writing to a string cannot fail");
         }
-        Terminator::Goto(_) | Terminator::Return | Terminator::Abnormal { .. } => {
+        // Each field named, so a field added later is `error[E0027]` here,
+        // where a position and an origin's word are printed, and not only in
+        // the match below. Found by review.
+        Terminator::Goto(_) | Terminator::Return | Terminator::Abnormal { to: _ } => {
             dump_line(terminator.name(), depth, out)
         }
     }
@@ -503,8 +512,9 @@ fn dump_terminator(
             condition,
             then,
             otherwise,
-            // Printed above, beside the kind, which is where `Call` puts its
-            // own and where a reader looks for a position.
+            // Printed above, beside the kind, with whether it was written,
+            // which is where `Call` puts its own and where a reader looks for
+            // a position.
             origin: _,
         } => {
             write!(
@@ -734,6 +744,76 @@ mod tests {
             .filter_map(|line| line.split_whitespace().nth(1))
             .collect();
         assert_eq!(origins, ["written", "generated"], "{out}");
+    }
+
+    /// A call and a branch say whether the source wrote them, as an element
+    /// does, so a generated terminator and a written one are two artifacts
+    /// rather than one (#148).
+    ///
+    /// Built by hand both ways round, since the lowering generates neither
+    /// yet: a C++ destructor's call and a synthesized loop condition will be
+    /// the first.
+    ///
+    /// Mutation: print `written` whatever the origin. This fails on the
+    /// generated one. Mutation: print the word for a call and not for a
+    /// branch. This fails on the branch.
+    #[test]
+    fn a_terminator_that_nobody_wrote_says_so() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "void f(void) { if (1) g(); }\n");
+        let at = Span::new(file, 15, 26);
+
+        let dumped = |call: Origin, branch: Origin| {
+            let mut unit = TranslationUnit::new(a_target());
+            let void = unit.push_type(Ty::Void);
+            let callee = unit.push_function(Function::declaration(at, void, []));
+            let mut function = Function::new(at, void, []);
+            let end = function.push_block(Block {
+                elements: Vec::new(),
+                terminator: Terminator::Return,
+            });
+            let test = function.push_block(Block {
+                elements: Vec::new(),
+                terminator: Terminator::Branch {
+                    condition: Operand::Constant(1),
+                    then: end,
+                    otherwise: end,
+                    origin: branch,
+                },
+            });
+            function.push_block(Block {
+                elements: Vec::new(),
+                terminator: Terminator::Call {
+                    callee,
+                    arguments: Vec::new(),
+                    destination: None,
+                    then: Some(test),
+                    origin: call,
+                },
+            });
+            unit.push_function(function);
+            let mut out = String::new();
+            dump_ir(&sources, &unit, &mut out);
+            out
+        };
+        // The word after a terminator's position, for each terminator of
+        // that kind.
+        let said = |out: &str, kind: &str| -> Vec<String> {
+            out.lines()
+                .filter_map(|line| line.trim_start().strip_prefix(kind))
+                .filter_map(|line| line.split_whitespace().nth(1))
+                .map(str::to_owned)
+                .collect()
+        };
+
+        let one = dumped(Origin::Written(at), Origin::Generated(at));
+        let other = dumped(Origin::Generated(at), Origin::Written(at));
+
+        assert_eq!(said(&one, "Call "), ["written"], "{one}");
+        assert_eq!(said(&one, "Branch "), ["generated"], "{one}");
+        assert_eq!(said(&other, "Call "), ["generated"], "{other}");
+        assert_eq!(said(&other, "Branch "), ["written"], "{other}");
+        assert_ne!(one, other);
     }
 
     /// The shapes the printer has to answer for and no C program makes.

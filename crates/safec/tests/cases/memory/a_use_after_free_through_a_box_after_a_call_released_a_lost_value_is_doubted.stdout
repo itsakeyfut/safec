@@ -45,7 +45,7 @@ Function a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_do
       Destination "_3"
       Unary "Not"
         Copy "_2"
-    Branch a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:5:9 "bb1" "bb2"
+    Branch a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:5:9 written "bb1" "bb2"
       Copy "_3"
   Block "bb1"
     Sequenced a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:5:9 generated
@@ -66,7 +66,7 @@ Function a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_do
           Deref
     Sequenced a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:6:14 generated
     ArgumentsEvaluated a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:7:17 generated
-    Call a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:7:17 "malloc" "bb4"
+    Call a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:7:17 written "malloc" "bb4"
       Destination "_6"
       Constant 8
   Block "bb4"
@@ -79,7 +79,7 @@ Function a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_do
       Destination "_7"
       Unary "Not"
         Copy "_5"
-    Branch a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:8:9 "bb5" "bb6"
+    Branch a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:8:9 written "bb5" "bb6"
       Copy "_7"
   Block "bb5"
     Sequenced a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:8:9 generated
@@ -94,7 +94,7 @@ Function a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_do
     Goto "bb7"
   Block "bb7"
     ArgumentsEvaluated a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:9:20 generated
-    Call a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:9:20 "malloc" "bb8"
+    Call a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:9:20 written "malloc" "bb8"
       Destination "_9"
       Constant 8
   Block "bb8"
@@ -107,7 +107,7 @@ Function a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_do
       Destination "_10"
       Unary "Not"
         Copy "_8"
-    Branch a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:10:9 "bb9" "bb10"
+    Branch a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:10:9 written "bb9" "bb10"
       Copy "_10"
   Block "bb9"
     Sequenced a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:10:9 generated
@@ -143,7 +143,7 @@ Function a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_do
       Binary "Lt"
         Copy "_13"
         Constant 2
-    Branch a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:14:12 "bb13" "bb14"
+    Branch a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:14:12 written "bb13" "bb14"
       Copy "_14"
   Block "bb13"
     Sequenced a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:14:12 generated
@@ -157,7 +157,7 @@ Function a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_do
         Copy "_11"
     Sequenced a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:15:9 generated
     ArgumentsEvaluated a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:16:13 generated
-    Call a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:16:13 "malloc" "bb15"
+    Call a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:16:13 written "malloc" "bb15"
       Destination "_16"
       Constant 4
   Block "bb14"
@@ -174,7 +174,7 @@ Function a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_do
           Deref
     Sequenced a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:21:5 generated
     ArgumentsEvaluated a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:22:5 generated
-    Call a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:22:5 "release" "bb19"
+    Call a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:22:5 written "release" "bb19"
       Copy "_8"
   Block "bb15"
     Operation a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:16:9 written
@@ -190,7 +190,7 @@ Function a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_do
       Destination "_18"
       Unary "Not"
         Copy "_12"
-    Branch a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:17:13 "bb16" "bb17"
+    Branch a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:17:13 written "bb16" "bb17"
       Copy "_18"
   Block "bb16"
     Sequenced a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:17:13 generated
@@ -232,7 +232,7 @@ Function a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_do
     Goto "bb12"
   Block "bb19"
     Sequenced a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:22:5 generated
-    Branch a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:23:9 "bb20" "bb21"
+    Branch a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:23:9 written "bb20" "bb21"
       Copy "_1"
   Block "bb20"
     Sequenced a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:23:9 generated
@@ -248,7 +248,7 @@ Function a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_do
           Deref
     Sequenced a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:23:14 generated
     ArgumentsEvaluated a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:23:24 generated
-    Call a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:23:24 "free" "bb23"
+    Call a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:23:24 written "free" "bb23"
       Copy "_12"
   Block "bb21"
     Sequenced a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:23:9 generated
@@ -275,7 +275,7 @@ Function a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_do
       Destination "_27"
       Unary "Not"
         Copy "_26"
-    Branch a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:25:9 "bb24" "bb25"
+    Branch a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:25:9 written "bb24" "bb25"
       Copy "_27"
   Block "bb23"
     Sequenced a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted.c:23:24 generated

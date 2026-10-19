@@ -8,7 +8,7 @@ Function two_parameter_lengths_are_not_ordered_against_each_other.c:3:5 "f"
   Local "_2" "int *" parameter "b"
   Local "_3" "int *" parameter "a"
   Block "bb0" entry
-    Call two_parameter_lengths_are_not_ordered_against_each_other.c:3:43 "free" "bb1"
+    Call two_parameter_lengths_are_not_ordered_against_each_other.c:3:43 written "free" "bb1"
       Copy "_1"
   Block "bb1"
     Evaluate two_parameter_lengths_are_not_ordered_against_each_other.c:3:31 written

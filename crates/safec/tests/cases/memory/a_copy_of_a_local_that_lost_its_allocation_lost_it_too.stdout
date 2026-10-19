@@ -25,12 +25,12 @@ Function a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:3:5 "f"
     Sequenced a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:5:17 generated
     Goto "bb1"
   Block "bb1"
-    Branch a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:6:12 "bb2" "bb3"
+    Branch a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:6:12 written "bb2" "bb3"
       Copy "_1"
   Block "bb2"
     Sequenced a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:6:12 generated
     ArgumentsEvaluated a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:7:13 generated
-    Call a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:7:13 "malloc" "bb4"
+    Call a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:7:13 written "malloc" "bb4"
       Destination "_4"
       Constant 8
   Block "bb3"
@@ -51,7 +51,7 @@ Function a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:3:5 "f"
       Use
         Copy "_2"
     Sequenced a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:7:9 generated
-    Branch a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:8:13 "bb5" "bb6"
+    Branch a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:8:13 written "bb5" "bb6"
       Copy "_3"
   Block "bb5"
     Sequenced a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:8:13 generated
@@ -88,7 +88,7 @@ Function a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:3:5 "f"
         Copy "_3"
     Sequenced a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:12:9 generated
     ArgumentsEvaluated a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:13:9 generated
-    Call a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:13:9 "free" "bb8"
+    Call a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:13:9 written "free" "bb8"
       Copy "_2"
   Block "bb8"
     Sequenced a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:13:9 generated

@@ -11,7 +11,7 @@ Function a_nonnull_parameter_is_held_after_a_later_declaration_without_one.c:3:5
       Use
         Constant 0
     ArgumentsEvaluated a_nonnull_parameter_is_held_after_a_later_declaration_without_one.c:4:12 generated
-    Call a_nonnull_parameter_is_held_after_a_later_declaration_without_one.c:4:12 "f" "bb1"
+    Call a_nonnull_parameter_is_held_after_a_later_declaration_without_one.c:4:12 written "f" "bb1"
       Destination "_1"
       Constant 0
   Block "bb1"

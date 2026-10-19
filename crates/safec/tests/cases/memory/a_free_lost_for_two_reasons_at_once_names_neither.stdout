@@ -26,12 +26,12 @@ Function a_free_lost_for_two_reasons_at_once_names_neither.c:5:5 "f"
       Address
         Place "_2"
     ArgumentsEvaluated a_free_lost_for_two_reasons_at_once_names_neither.c:7:5 generated
-    Call a_free_lost_for_two_reasons_at_once_names_neither.c:7:5 "init" "bb1"
+    Call a_free_lost_for_two_reasons_at_once_names_neither.c:7:5 written "init" "bb1"
       Copy "_3"
   Block "bb1"
     Sequenced a_free_lost_for_two_reasons_at_once_names_neither.c:7:5 generated
     ArgumentsEvaluated a_free_lost_for_two_reasons_at_once_names_neither.c:8:15 generated
-    Call a_free_lost_for_two_reasons_at_once_names_neither.c:8:15 "table" "bb2"
+    Call a_free_lost_for_two_reasons_at_once_names_neither.c:8:15 written "table" "bb2"
       Destination "_5"
   Block "bb2"
     Operation a_free_lost_for_two_reasons_at_once_names_neither.c:8:11 written
@@ -44,7 +44,7 @@ Function a_free_lost_for_two_reasons_at_once_names_neither.c:5:5 "f"
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_free_lost_for_two_reasons_at_once_names_neither.c:9:9 "bb3" "bb4"
+    Branch a_free_lost_for_two_reasons_at_once_names_neither.c:9:9 written "bb3" "bb4"
       Copy "_6"
   Block "bb3"
     Sequenced a_free_lost_for_two_reasons_at_once_names_neither.c:9:9 generated
@@ -63,7 +63,7 @@ Function a_free_lost_for_two_reasons_at_once_names_neither.c:5:5 "f"
       Use
         Copy "_2"
     Sequenced a_free_lost_for_two_reasons_at_once_names_neither.c:12:14 generated
-    Branch a_free_lost_for_two_reasons_at_once_names_neither.c:13:9 "bb6" "bb7"
+    Branch a_free_lost_for_two_reasons_at_once_names_neither.c:13:9 written "bb6" "bb7"
       Copy "_1"
   Block "bb6"
     Sequenced a_free_lost_for_two_reasons_at_once_names_neither.c:13:9 generated
@@ -83,7 +83,7 @@ Function a_free_lost_for_two_reasons_at_once_names_neither.c:5:5 "f"
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated a_free_lost_for_two_reasons_at_once_names_neither.c:16:5 generated
-    Call a_free_lost_for_two_reasons_at_once_names_neither.c:16:5 "free" "bb9"
+    Call a_free_lost_for_two_reasons_at_once_names_neither.c:16:5 written "free" "bb9"
       Copy "_7"
   Block "bb9"
     Sequenced a_free_lost_for_two_reasons_at_once_names_neither.c:16:5 generated

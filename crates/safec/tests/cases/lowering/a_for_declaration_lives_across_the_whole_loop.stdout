@@ -36,7 +36,7 @@ Function a_for_declaration_lives_across_the_whole_loop.c:1:5 "f"
       Binary "Lt"
         Copy "_3"
         Copy "_4"
-    Branch a_for_declaration_lives_across_the_whole_loop.c:3:28 "bb2" "bb3"
+    Branch a_for_declaration_lives_across_the_whole_loop.c:3:28 written "bb2" "bb3"
       Copy "_5"
   Block "bb2"
     Sequenced a_for_declaration_lives_across_the_whole_loop.c:3:28 generated

@@ -29,7 +29,7 @@ Function a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is
   Local "_17" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:6:15 generated
-    Call a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:6:15 "malloc" "bb1"
+    Call a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:6:15 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -43,7 +43,7 @@ Function a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:7:9 "bb2" "bb3"
+    Branch a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:7:9 generated
@@ -58,7 +58,7 @@ Function a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:10:14 generated
-    Call a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:10:14 "malloc" "bb5"
+    Call a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:10:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -72,7 +72,7 @@ Function a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:11:9 "bb6" "bb7"
+    Branch a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:11:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:11:9 generated
@@ -98,12 +98,12 @@ Function a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is
           Deref
     Sequenced a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:14:5 generated
     ArgumentsEvaluated a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:15:5 generated
-    Call a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:15:5 "free" "bb9"
+    Call a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:15:5 written "free" "bb9"
       Copy "_4"
   Block "bb9"
     Sequenced a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:15:5 generated
     ArgumentsEvaluated a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:16:16 generated
-    Call a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:16:16 "malloc" "bb10"
+    Call a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:16:16 written "malloc" "bb10"
       Destination "_9"
       Constant 8
   Block "bb10"
@@ -117,7 +117,7 @@ Function a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is
       Binary "Eq"
         Copy "_8"
         Constant 0
-    Branch a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:17:9 "bb11" "bb12"
+    Branch a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:17:9 written "bb11" "bb12"
       Copy "_10"
   Block "bb11"
     Sequenced a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:17:9 generated
@@ -152,7 +152,7 @@ Function a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is
       Address
         Place "_12"
     ArgumentsEvaluated a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:22:5 generated
-    Call a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:22:5 "release_ref2" "bb14"
+    Call a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:22:5 written "release_ref2" "bb14"
       Copy "_13"
   Block "bb14"
     Sequenced a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:22:5 generated
@@ -167,7 +167,7 @@ Function a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is
       Binary "Eq"
         Copy "_14"
         Constant 0
-    Branch a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:24:9 "bb15" "bb16"
+    Branch a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:24:9 written "bb15" "bb16"
       Copy "_15"
   Block "bb15"
     Sequenced a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:24:9 generated
@@ -192,7 +192,7 @@ Function a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is
       Binary "Eq"
         Copy "_16"
         Constant 0
-    Branch a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:28:9 "bb18" "bb19"
+    Branch a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:28:9 written "bb18" "bb19"
       Copy "_17"
   Block "bb18"
     Sequenced a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:28:9 generated

@@ -27,7 +27,7 @@ Function a_pointer_two_tables_deep_is_reached_through_both.c:5:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_pointer_two_tables_deep_is_reached_through_both.c:6:14 generated
-    Call a_pointer_two_tables_deep_is_reached_through_both.c:6:14 "malloc" "bb1"
+    Call a_pointer_two_tables_deep_is_reached_through_both.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -41,7 +41,7 @@ Function a_pointer_two_tables_deep_is_reached_through_both.c:5:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_two_tables_deep_is_reached_through_both.c:7:9 "bb2" "bb3"
+    Branch a_pointer_two_tables_deep_is_reached_through_both.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_two_tables_deep_is_reached_through_both.c:7:9 generated
@@ -56,7 +56,7 @@ Function a_pointer_two_tables_deep_is_reached_through_both.c:5:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_pointer_two_tables_deep_is_reached_through_both.c:10:19 generated
-    Call a_pointer_two_tables_deep_is_reached_through_both.c:10:19 "malloc" "bb5"
+    Call a_pointer_two_tables_deep_is_reached_through_both.c:10:19 written "malloc" "bb5"
       Destination "_5"
       Constant 8
   Block "bb5"
@@ -70,7 +70,7 @@ Function a_pointer_two_tables_deep_is_reached_through_both.c:5:5 "main"
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_pointer_two_tables_deep_is_reached_through_both.c:11:9 "bb6" "bb7"
+    Branch a_pointer_two_tables_deep_is_reached_through_both.c:11:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_pointer_two_tables_deep_is_reached_through_both.c:11:9 generated
@@ -85,7 +85,7 @@ Function a_pointer_two_tables_deep_is_reached_through_both.c:5:5 "main"
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated a_pointer_two_tables_deep_is_reached_through_both.c:14:20 generated
-    Call a_pointer_two_tables_deep_is_reached_through_both.c:14:20 "malloc" "bb9"
+    Call a_pointer_two_tables_deep_is_reached_through_both.c:14:20 written "malloc" "bb9"
       Destination "_8"
       Constant 8
   Block "bb9"
@@ -99,7 +99,7 @@ Function a_pointer_two_tables_deep_is_reached_through_both.c:5:5 "main"
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch a_pointer_two_tables_deep_is_reached_through_both.c:15:9 "bb10" "bb11"
+    Branch a_pointer_two_tables_deep_is_reached_through_both.c:15:9 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced a_pointer_two_tables_deep_is_reached_through_both.c:15:9 generated
@@ -136,7 +136,7 @@ Function a_pointer_two_tables_deep_is_reached_through_both.c:5:5 "main"
           Deref
     Sequenced a_pointer_two_tables_deep_is_reached_through_both.c:19:5 generated
     ArgumentsEvaluated a_pointer_two_tables_deep_is_reached_through_both.c:20:5 generated
-    Call a_pointer_two_tables_deep_is_reached_through_both.c:20:5 "drop_all" "bb13"
+    Call a_pointer_two_tables_deep_is_reached_through_both.c:20:5 written "drop_all" "bb13"
       Copy "_7"
   Block "bb13"
     Sequenced a_pointer_two_tables_deep_is_reached_through_both.c:20:5 generated

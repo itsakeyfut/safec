@@ -6,7 +6,7 @@ Function a_free_of_a_null_constant.c:2:5 "f"
   Local "_0" "int" return
   Block "bb0" entry
     ArgumentsEvaluated a_free_of_a_null_constant.c:3:5 generated
-    Call a_free_of_a_null_constant.c:3:5 "free" "bb1"
+    Call a_free_of_a_null_constant.c:3:5 written "free" "bb1"
       Constant 0
   Block "bb1"
     Sequenced a_free_of_a_null_constant.c:3:5 generated

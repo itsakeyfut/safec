@@ -25,7 +25,7 @@ Function a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read
       Use
         Constant 0
     ArgumentsEvaluated a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:5:14 generated
-    Call a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:5:14 "malloc" "bb1"
+    Call a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:5:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -39,7 +39,7 @@ Function a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:6:9 "bb2" "bb3"
+    Branch a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:6:9 generated
@@ -65,7 +65,7 @@ Function a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read
           Deref
     Sequenced a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:9:5 generated
     ArgumentsEvaluated a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:10:17 generated
-    Call a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:10:17 "malloc" "bb5"
+    Call a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:10:17 written "malloc" "bb5"
       Destination "_6"
       Constant 8
   Block "bb5"
@@ -79,7 +79,7 @@ Function a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:11:9 "bb6" "bb7"
+    Branch a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:11:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:11:9 generated

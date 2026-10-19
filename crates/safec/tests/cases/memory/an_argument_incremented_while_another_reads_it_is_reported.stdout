@@ -19,7 +19,7 @@ Function an_argument_incremented_while_another_reads_it_is_reported.c:3:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated an_argument_incremented_while_another_reads_it_is_reported.c:4:14 generated
-    Call an_argument_incremented_while_another_reads_it_is_reported.c:4:14 "malloc" "bb1"
+    Call an_argument_incremented_while_another_reads_it_is_reported.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -32,7 +32,7 @@ Function an_argument_incremented_while_another_reads_it_is_reported.c:3:5 "main"
       Destination "_3"
       Unary "Not"
         Copy "_1"
-    Branch an_argument_incremented_while_another_reads_it_is_reported.c:5:9 "bb2" "bb3"
+    Branch an_argument_incremented_while_another_reads_it_is_reported.c:5:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced an_argument_incremented_while_another_reads_it_is_reported.c:5:9 generated
@@ -63,7 +63,7 @@ Function an_argument_incremented_while_another_reads_it_is_reported.c:3:5 "main"
       Written an_argument_incremented_while_another_reads_it_is_reported.c:6:10
       Read an_argument_incremented_while_another_reads_it_is_reported.c:6:7
     ArgumentsEvaluated an_argument_incremented_while_another_reads_it_is_reported.c:6:5 generated
-    Call an_argument_incremented_while_another_reads_it_is_reported.c:6:5 "g" "bb5"
+    Call an_argument_incremented_while_another_reads_it_is_reported.c:6:5 written "g" "bb5"
       Copy "_1"
       Copy "_4"
   Block "bb5"

@@ -11,7 +11,7 @@ Function a_pointer_one_length_reads_and_another_writes_is_reported.c:3:5 "f"
   Local "_4" "int"
   Local "_5" "int *"
   Block "bb0" entry
-    Call a_pointer_one_length_reads_and_another_writes_is_reported.c:3:21 "g" "bb1"
+    Call a_pointer_one_length_reads_and_another_writes_is_reported.c:3:21 written "g" "bb1"
       Destination "_4"
       Copy "_1"
       Constant 1

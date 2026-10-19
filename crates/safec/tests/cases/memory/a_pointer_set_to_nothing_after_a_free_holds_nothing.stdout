@@ -12,7 +12,7 @@ Function a_pointer_set_to_nothing_after_a_free_holds_nothing.c:3:5 "f"
   Local "_3" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_set_to_nothing_after_a_free_holds_nothing.c:4:14 generated
-    Call a_pointer_set_to_nothing_after_a_free_holds_nothing.c:4:14 "malloc" "bb1"
+    Call a_pointer_set_to_nothing_after_a_free_holds_nothing.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -22,7 +22,7 @@ Function a_pointer_set_to_nothing_after_a_free_holds_nothing.c:3:5 "f"
         Copy "_2"
     Sequenced a_pointer_set_to_nothing_after_a_free_holds_nothing.c:4:14 generated
     ArgumentsEvaluated a_pointer_set_to_nothing_after_a_free_holds_nothing.c:5:5 generated
-    Call a_pointer_set_to_nothing_after_a_free_holds_nothing.c:5:5 "free" "bb2"
+    Call a_pointer_set_to_nothing_after_a_free_holds_nothing.c:5:5 written "free" "bb2"
       Copy "_1"
   Block "bb2"
     Sequenced a_pointer_set_to_nothing_after_a_free_holds_nothing.c:5:5 generated
@@ -36,7 +36,7 @@ Function a_pointer_set_to_nothing_after_a_free_holds_nothing.c:3:5 "f"
         Copy "_1"
     Sequenced a_pointer_set_to_nothing_after_a_free_holds_nothing.c:6:5 generated
     ArgumentsEvaluated a_pointer_set_to_nothing_after_a_free_holds_nothing.c:7:5 generated
-    Call a_pointer_set_to_nothing_after_a_free_holds_nothing.c:7:5 "free" "bb3"
+    Call a_pointer_set_to_nothing_after_a_free_holds_nothing.c:7:5 written "free" "bb3"
       Copy "_1"
   Block "bb3"
     Sequenced a_pointer_set_to_nothing_after_a_free_holds_nothing.c:7:5 generated

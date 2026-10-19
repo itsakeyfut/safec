@@ -17,13 +17,13 @@ Function an_address_taken_of_a_local_declared_in_a_loop.c:3:5 "f"
   Block "bb0" entry
     Goto "bb1"
   Block "bb1"
-    Branch an_address_taken_of_a_local_declared_in_a_loop.c:4:12 "bb2" "bb3"
+    Branch an_address_taken_of_a_local_declared_in_a_loop.c:4:12 written "bb2" "bb3"
       Copy "_1"
   Block "bb2"
     Sequenced an_address_taken_of_a_local_declared_in_a_loop.c:4:12 generated
     StorageLive an_address_taken_of_a_local_declared_in_a_loop.c:5:9 generated "_2"
     ArgumentsEvaluated an_address_taken_of_a_local_declared_in_a_loop.c:5:18 generated
-    Call an_address_taken_of_a_local_declared_in_a_loop.c:5:18 "malloc" "bb4"
+    Call an_address_taken_of_a_local_declared_in_a_loop.c:5:18 written "malloc" "bb4"
       Destination "_3"
       Constant 4
   Block "bb3"
@@ -41,7 +41,7 @@ Function an_address_taken_of_a_local_declared_in_a_loop.c:3:5 "f"
         Copy "_3"
     Sequenced an_address_taken_of_a_local_declared_in_a_loop.c:5:18 generated
     ArgumentsEvaluated an_address_taken_of_a_local_declared_in_a_loop.c:6:9 generated
-    Call an_address_taken_of_a_local_declared_in_a_loop.c:6:9 "free" "bb5"
+    Call an_address_taken_of_a_local_declared_in_a_loop.c:6:9 written "free" "bb5"
       Copy "_2"
   Block "bb5"
     Sequenced an_address_taken_of_a_local_declared_in_a_loop.c:6:9 generated

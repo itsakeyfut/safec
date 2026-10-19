@@ -25,7 +25,7 @@ Function a_chain_of_assignments_in_a_condition_refines_every_pointer_in_it.c:1:5
       Destination "_5"
       Use
         Copy "_3"
-    Branch a_chain_of_assignments_in_a_condition_refines_every_pointer_in_it.c:4:10 "bb1" "bb2"
+    Branch a_chain_of_assignments_in_a_condition_refines_every_pointer_in_it.c:4:10 written "bb1" "bb2"
       Copy "_5"
   Block "bb1"
     Sequenced a_chain_of_assignments_in_a_condition_refines_every_pointer_in_it.c:4:10 generated

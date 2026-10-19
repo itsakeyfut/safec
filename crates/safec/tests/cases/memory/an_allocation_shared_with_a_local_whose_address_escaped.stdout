@@ -14,7 +14,7 @@ Function an_allocation_shared_with_a_local_whose_address_escaped.c:3:5 "f"
   Local "_5" "int **"
   Block "bb0" entry
     ArgumentsEvaluated an_allocation_shared_with_a_local_whose_address_escaped.c:4:14 generated
-    Call an_allocation_shared_with_a_local_whose_address_escaped.c:4:14 "malloc" "bb1"
+    Call an_allocation_shared_with_a_local_whose_address_escaped.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -38,7 +38,7 @@ Function an_allocation_shared_with_a_local_whose_address_escaped.c:3:5 "f"
         Copy "_5"
     Sequenced an_allocation_shared_with_a_local_whose_address_escaped.c:6:16 generated
     ArgumentsEvaluated an_allocation_shared_with_a_local_whose_address_escaped.c:7:5 generated
-    Call an_allocation_shared_with_a_local_whose_address_escaped.c:7:5 "free" "bb2"
+    Call an_allocation_shared_with_a_local_whose_address_escaped.c:7:5 written "free" "bb2"
       Copy "_3"
   Block "bb2"
     Sequenced an_allocation_shared_with_a_local_whose_address_escaped.c:7:5 generated

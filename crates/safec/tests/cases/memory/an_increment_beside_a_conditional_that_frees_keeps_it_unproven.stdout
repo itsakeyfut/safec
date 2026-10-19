@@ -19,7 +19,7 @@ Function an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:3:5 "f
   Local "_10" "int"
   Block "bb0" entry
     ArgumentsEvaluated an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:4:14 generated
-    Call an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:4:14 "malloc" "bb1"
+    Call an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:4:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -33,7 +33,7 @@ Function an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:3:5 "f
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:6:9 "bb2" "bb3"
+    Branch an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:6:9 written "bb2" "bb3"
       Copy "_5"
   Block "bb2"
     Sequenced an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:6:9 generated
@@ -63,7 +63,7 @@ Function an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:3:5 "f
         Deref
       Use
         Copy "_7"
-    Branch an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:7:19 "bb6" "bb7"
+    Branch an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:7:19 written "bb6" "bb7"
       Copy "_1"
   Block "bb5"
     Operation an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:7:10 written
@@ -87,7 +87,7 @@ Function an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:3:5 "f
     Sequenced an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:8:12 generated
     Return
   Block "bb6"
-    Call an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:7:24 "free" "bb8"
+    Call an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:7:24 written "free" "bb8"
       Copy "_2"
   Block "bb7"
     Operation an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:7:19 written

@@ -25,7 +25,7 @@ Function a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:6:
   Local "_11" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:7:14 generated
-    Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:7:14 "malloc" "bb1"
+    Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:7:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -39,7 +39,7 @@ Function a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:6:
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:8:9 "bb2" "bb3"
+    Branch a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:8:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:8:9 generated
@@ -54,7 +54,7 @@ Function a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:6:
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:11:16 generated
-    Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:11:16 "malloc" "bb5"
+    Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:11:16 written "malloc" "bb5"
       Destination "_5"
       Constant 8
   Block "bb5"
@@ -68,7 +68,7 @@ Function a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:6:
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:12:9 "bb6" "bb7"
+    Branch a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:12:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:12:9 generated
@@ -103,12 +103,12 @@ Function a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:6:
           Deref
     Sequenced a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:16:5 generated
     ArgumentsEvaluated a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:17:5 generated
-    Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:17:5 "stash" "bb9"
+    Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:17:5 written "stash" "bb9"
       Copy "_4"
   Block "bb9"
     Sequenced a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:17:5 generated
     ArgumentsEvaluated a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:18:5 generated
-    Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:18:5 "grow_all" "bb10"
+    Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:18:5 written "grow_all" "bb10"
   Block "bb10"
     Sequenced a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:18:5 generated
     Operation a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:19:17 written
@@ -116,7 +116,7 @@ Function a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:6:
       Address
         Place "_1"
     ArgumentsEvaluated a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:19:12 generated
-    Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:19:12 "use2" "bb11"
+    Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:19:12 written "use2" "bb11"
       Destination "_11"
       Copy "_10"
   Block "bb11"

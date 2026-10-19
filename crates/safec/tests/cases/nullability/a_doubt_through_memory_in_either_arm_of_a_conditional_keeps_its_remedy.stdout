@@ -6,7 +6,7 @@ Function a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.
   Local "_3" "int **" parameter "q"
   Local "_4" "int"
   Block "bb0" entry
-    Branch a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:2:12 "bb2" "bb3"
+    Branch a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:2:12 written "bb2" "bb3"
       Copy "_1"
   Block "bb1"
     Operation a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:2:5 written
@@ -39,7 +39,7 @@ Function a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.
   Local "_3" "int **" parameter "q"
   Local "_4" "int"
   Block "bb0" entry
-    Branch a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:6:12 "bb2" "bb3"
+    Branch a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:6:12 written "bb2" "bb3"
       Copy "_1"
   Block "bb1"
     Operation a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:6:5 written

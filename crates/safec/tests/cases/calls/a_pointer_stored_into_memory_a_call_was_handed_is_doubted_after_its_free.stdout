@@ -99,7 +99,7 @@ Function a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_fre
       Binary "Lt"
         Copy "_4"
         Constant 2
-    Branch a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:12 "bb2" "bb3"
+    Branch a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:12 written "bb2" "bb3"
       Copy "_5"
   Block "bb2"
     Sequenced a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:12 generated
@@ -113,13 +113,13 @@ Function a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_fre
         Copy "_2"
     Sequenced a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:21 generated
     ArgumentsEvaluated a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:32 generated
-    Call a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:32 "malloc" "bb4"
+    Call a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:32 written "malloc" "bb4"
       Destination "_7"
       Constant 4
   Block "bb3"
     Sequenced a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:12 generated
     ArgumentsEvaluated a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:9:15 generated
-    Call a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:9:15 "malloc" "bb8"
+    Call a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:9:15 written "malloc" "bb8"
       Destination "_14"
       Constant 4
   Block "bb4"
@@ -136,7 +136,7 @@ Function a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_fre
       Destination "_9"
       Unary "Not"
         Copy "_3"
-    Branch a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:47 "bb5" "bb6"
+    Branch a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:47 written "bb5" "bb6"
       Copy "_9"
   Block "bb5"
     Sequenced a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:47 generated
@@ -186,7 +186,7 @@ Function a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_fre
       Destination "_15"
       Unary "Not"
         Copy "_13"
-    Branch a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:9:30 "bb9" "bb10"
+    Branch a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:9:30 written "bb9" "bb10"
       Copy "_15"
   Block "bb9"
     Sequenced a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:9:30 generated
@@ -212,7 +212,7 @@ Function a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_fre
           Deref
     Sequenced a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:9:45 generated
     ArgumentsEvaluated a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:10:17 generated
-    Call a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:10:17 "malloc" "bb12"
+    Call a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:10:17 written "malloc" "bb12"
       Destination "_18"
       Constant 8
   Block "bb12"
@@ -225,7 +225,7 @@ Function a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_fre
       Destination "_19"
       Unary "Not"
         Copy "_17"
-    Branch a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:10:32 "bb13" "bb14"
+    Branch a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:10:32 written "bb13" "bb14"
       Copy "_19"
   Block "bb13"
     Sequenced a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:10:32 generated
@@ -240,7 +240,7 @@ Function a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_fre
     Goto "bb15"
   Block "bb15"
     ArgumentsEvaluated a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:11:5 generated
-    Call a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:11:5 "put" "bb16"
+    Call a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:11:5 written "put" "bb16"
       Copy "_17"
       Copy "_13"
   Block "bb16"
@@ -252,7 +252,7 @@ Function a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_fre
           Deref
     Sequenced a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:12:14 generated
     ArgumentsEvaluated a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:13:5 generated
-    Call a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:13:5 "free" "bb17"
+    Call a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:13:5 written "free" "bb17"
       Copy "_13"
   Block "bb17"
     Sequenced a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:13:5 generated
@@ -260,7 +260,7 @@ Function a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_fre
       Destination "_21"
       Unary "Not"
         Copy "_20"
-    Branch a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:14:9 "bb18" "bb19"
+    Branch a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:14:9 written "bb18" "bb19"
       Copy "_21"
   Block "bb18"
     Sequenced a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:14:9 generated
@@ -281,12 +281,12 @@ Function a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_fre
           Deref
     Sequenced a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:15:13 generated
     ArgumentsEvaluated a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:16:5 generated
-    Call a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:16:5 "free" "bb21"
+    Call a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:16:5 written "free" "bb21"
       Copy "_17"
   Block "bb21"
     Sequenced a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:16:5 generated
     ArgumentsEvaluated a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:16:16 generated
-    Call a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:16:16 "free" "bb22"
+    Call a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:16:16 written "free" "bb22"
       Copy "_3"
   Block "bb22"
     Sequenced a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:16:16 generated

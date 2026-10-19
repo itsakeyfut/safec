@@ -22,7 +22,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_wh
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:5:9 "bb1" "bb2"
+    Branch a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:5:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:5:9 generated
@@ -47,7 +47,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_wh
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:9:9 "bb4" "bb5"
+    Branch a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:9:9 written "bb4" "bb5"
       Copy "_4"
   Block "bb4"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:9:9 generated
@@ -62,7 +62,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_wh
     Goto "bb6"
   Block "bb6"
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:12:17 generated
-    Call a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:12:17 "malloc" "bb7"
+    Call a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:12:17 written "malloc" "bb7"
       Destination "_6"
       Constant 8
   Block "bb7"
@@ -76,7 +76,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_wh
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:13:9 "bb8" "bb9"
+    Branch a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:13:9 written "bb8" "bb9"
       Copy "_7"
   Block "bb8"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:13:9 generated
@@ -91,7 +91,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_wh
     Goto "bb10"
   Block "bb10"
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:16:5 generated
-    Call a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:16:5 "release_all" "bb11"
+    Call a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:16:5 written "release_all" "bb11"
   Block "bb11"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:16:5 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:17:5 written
@@ -116,7 +116,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_wh
       Binary "Eq"
         Copy "_9"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:19:9 "bb12" "bb13"
+    Branch a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:19:9 written "bb12" "bb13"
       Copy "_10"
   Block "bb12"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back.c:19:9 generated

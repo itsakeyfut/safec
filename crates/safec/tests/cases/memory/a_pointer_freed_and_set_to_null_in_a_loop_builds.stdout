@@ -25,7 +25,7 @@ Function a_pointer_freed_and_set_to_null_in_a_loop_builds.c:5:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_pointer_freed_and_set_to_null_in_a_loop_builds.c:6:14 generated
-    Call a_pointer_freed_and_set_to_null_in_a_loop_builds.c:6:14 "malloc" "bb1"
+    Call a_pointer_freed_and_set_to_null_in_a_loop_builds.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -46,7 +46,7 @@ Function a_pointer_freed_and_set_to_null_in_a_loop_builds.c:5:5 "main"
       Binary "Lt"
         Copy "_3"
         Constant 3
-    Branch a_pointer_freed_and_set_to_null_in_a_loop_builds.c:8:12 "bb3" "bb4"
+    Branch a_pointer_freed_and_set_to_null_in_a_loop_builds.c:8:12 written "bb3" "bb4"
       Copy "_4"
   Block "bb3"
     Sequenced a_pointer_freed_and_set_to_null_in_a_loop_builds.c:8:12 generated
@@ -55,7 +55,7 @@ Function a_pointer_freed_and_set_to_null_in_a_loop_builds.c:5:5 "main"
       Binary "Ne"
         Copy "_1"
         Constant 0
-    Branch a_pointer_freed_and_set_to_null_in_a_loop_builds.c:9:13 "bb5" "bb6"
+    Branch a_pointer_freed_and_set_to_null_in_a_loop_builds.c:9:13 written "bb5" "bb6"
       Copy "_5"
   Block "bb4"
     Sequenced a_pointer_freed_and_set_to_null_in_a_loop_builds.c:8:12 generated
@@ -64,12 +64,12 @@ Function a_pointer_freed_and_set_to_null_in_a_loop_builds.c:5:5 "main"
       Binary "Ne"
         Copy "_1"
         Constant 0
-    Branch a_pointer_freed_and_set_to_null_in_a_loop_builds.c:17:9 "bb13" "bb14"
+    Branch a_pointer_freed_and_set_to_null_in_a_loop_builds.c:17:9 written "bb13" "bb14"
       Copy "_10"
   Block "bb5"
     Sequenced a_pointer_freed_and_set_to_null_in_a_loop_builds.c:9:13 generated
     ArgumentsEvaluated a_pointer_freed_and_set_to_null_in_a_loop_builds.c:10:17 generated
-    Call a_pointer_freed_and_set_to_null_in_a_loop_builds.c:10:17 "cond" "bb8"
+    Call a_pointer_freed_and_set_to_null_in_a_loop_builds.c:10:17 written "cond" "bb8"
       Destination "_6"
   Block "bb6"
     Sequenced a_pointer_freed_and_set_to_null_in_a_loop_builds.c:9:13 generated
@@ -91,12 +91,12 @@ Function a_pointer_freed_and_set_to_null_in_a_loop_builds.c:5:5 "main"
     Sequenced a_pointer_freed_and_set_to_null_in_a_loop_builds.c:15:9 generated
     Goto "bb2"
   Block "bb8"
-    Branch a_pointer_freed_and_set_to_null_in_a_loop_builds.c:10:17 "bb9" "bb10"
+    Branch a_pointer_freed_and_set_to_null_in_a_loop_builds.c:10:17 written "bb9" "bb10"
       Copy "_6"
   Block "bb9"
     Sequenced a_pointer_freed_and_set_to_null_in_a_loop_builds.c:10:17 generated
     ArgumentsEvaluated a_pointer_freed_and_set_to_null_in_a_loop_builds.c:11:17 generated
-    Call a_pointer_freed_and_set_to_null_in_a_loop_builds.c:11:17 "free" "bb12"
+    Call a_pointer_freed_and_set_to_null_in_a_loop_builds.c:11:17 written "free" "bb12"
       Copy "_1"
   Block "bb10"
     Sequenced a_pointer_freed_and_set_to_null_in_a_loop_builds.c:10:17 generated
@@ -118,7 +118,7 @@ Function a_pointer_freed_and_set_to_null_in_a_loop_builds.c:5:5 "main"
   Block "bb13"
     Sequenced a_pointer_freed_and_set_to_null_in_a_loop_builds.c:17:9 generated
     ArgumentsEvaluated a_pointer_freed_and_set_to_null_in_a_loop_builds.c:18:9 generated
-    Call a_pointer_freed_and_set_to_null_in_a_loop_builds.c:18:9 "free" "bb16"
+    Call a_pointer_freed_and_set_to_null_in_a_loop_builds.c:18:9 written "free" "bb16"
       Copy "_1"
   Block "bb14"
     Sequenced a_pointer_freed_and_set_to_null_in_a_loop_builds.c:17:9 generated

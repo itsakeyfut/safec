@@ -14,7 +14,7 @@ Function each_function_that_cannot_return_ends_a_body.c:6:16 "a"
   Local "_0" "int *" return _Nonnull
   Local "_1" "int *" parameter "p"
   Block "bb0" entry
-    Branch each_function_that_cannot_return_ends_a_body.c:7:9 "bb1" "bb2"
+    Branch each_function_that_cannot_return_ends_a_body.c:7:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced each_function_that_cannot_return_ends_a_body.c:7:9 generated
@@ -29,7 +29,7 @@ Function each_function_that_cannot_return_ends_a_body.c:6:16 "a"
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated each_function_that_cannot_return_ends_a_body.c:10:5 generated
-    Call each_function_that_cannot_return_ends_a_body.c:10:5 "abort" noreturn
+    Call each_function_that_cannot_return_ends_a_body.c:10:5 written "abort" noreturn
   Block "bb4"
     Sequenced each_function_that_cannot_return_ends_a_body.c:10:5 generated
     Return
@@ -37,7 +37,7 @@ Function each_function_that_cannot_return_ends_a_body.c:13:16 "b"
   Local "_0" "int *" return _Nonnull
   Local "_1" "int *" parameter "p"
   Block "bb0" entry
-    Branch each_function_that_cannot_return_ends_a_body.c:14:9 "bb1" "bb2"
+    Branch each_function_that_cannot_return_ends_a_body.c:14:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced each_function_that_cannot_return_ends_a_body.c:14:9 generated
@@ -52,7 +52,7 @@ Function each_function_that_cannot_return_ends_a_body.c:13:16 "b"
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated each_function_that_cannot_return_ends_a_body.c:17:5 generated
-    Call each_function_that_cannot_return_ends_a_body.c:17:5 "exit" noreturn
+    Call each_function_that_cannot_return_ends_a_body.c:17:5 written "exit" noreturn
       Constant 1
   Block "bb4"
     Sequenced each_function_that_cannot_return_ends_a_body.c:17:5 generated
@@ -61,7 +61,7 @@ Function each_function_that_cannot_return_ends_a_body.c:20:16 "c"
   Local "_0" "int *" return _Nonnull
   Local "_1" "int *" parameter "p"
   Block "bb0" entry
-    Branch each_function_that_cannot_return_ends_a_body.c:21:9 "bb1" "bb2"
+    Branch each_function_that_cannot_return_ends_a_body.c:21:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced each_function_that_cannot_return_ends_a_body.c:21:9 generated
@@ -76,7 +76,7 @@ Function each_function_that_cannot_return_ends_a_body.c:20:16 "c"
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated each_function_that_cannot_return_ends_a_body.c:24:5 generated
-    Call each_function_that_cannot_return_ends_a_body.c:24:5 "_Exit" noreturn
+    Call each_function_that_cannot_return_ends_a_body.c:24:5 written "_Exit" noreturn
       Constant 1
   Block "bb4"
     Sequenced each_function_that_cannot_return_ends_a_body.c:24:5 generated
@@ -85,7 +85,7 @@ Function each_function_that_cannot_return_ends_a_body.c:27:16 "d"
   Local "_0" "int *" return _Nonnull
   Local "_1" "int *" parameter "p"
   Block "bb0" entry
-    Branch each_function_that_cannot_return_ends_a_body.c:28:9 "bb1" "bb2"
+    Branch each_function_that_cannot_return_ends_a_body.c:28:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced each_function_that_cannot_return_ends_a_body.c:28:9 generated
@@ -100,7 +100,7 @@ Function each_function_that_cannot_return_ends_a_body.c:27:16 "d"
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated each_function_that_cannot_return_ends_a_body.c:31:5 generated
-    Call each_function_that_cannot_return_ends_a_body.c:31:5 "quick_exit" noreturn
+    Call each_function_that_cannot_return_ends_a_body.c:31:5 written "quick_exit" noreturn
       Constant 1
   Block "bb4"
     Sequenced each_function_that_cannot_return_ends_a_body.c:31:5 generated

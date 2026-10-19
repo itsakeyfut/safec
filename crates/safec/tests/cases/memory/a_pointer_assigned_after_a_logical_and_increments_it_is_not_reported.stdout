@@ -33,7 +33,7 @@ Function a_pointer_assigned_after_a_logical_and_increments_it_is_not_reported.c:
       Binary "Ne"
         Copy "_4"
         Constant 0
-    Branch a_pointer_assigned_after_a_logical_and_increments_it_is_not_reported.c:3:14 "bb2" "bb1"
+    Branch a_pointer_assigned_after_a_logical_and_increments_it_is_not_reported.c:3:14 written "bb2" "bb1"
       Copy "_6"
   Block "bb1"
     Operation a_pointer_assigned_after_a_logical_and_increments_it_is_not_reported.c:3:9 written

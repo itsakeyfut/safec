@@ -26,7 +26,7 @@ Function the_old_pointer_used_on_reallocs_failure_branch_builds.c:5:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated the_old_pointer_used_on_reallocs_failure_branch_builds.c:6:14 generated
-    Call the_old_pointer_used_on_reallocs_failure_branch_builds.c:6:14 "malloc" "bb1"
+    Call the_old_pointer_used_on_reallocs_failure_branch_builds.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -40,7 +40,7 @@ Function the_old_pointer_used_on_reallocs_failure_branch_builds.c:5:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch the_old_pointer_used_on_reallocs_failure_branch_builds.c:7:9 "bb2" "bb3"
+    Branch the_old_pointer_used_on_reallocs_failure_branch_builds.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced the_old_pointer_used_on_reallocs_failure_branch_builds.c:7:9 generated
@@ -66,7 +66,7 @@ Function the_old_pointer_used_on_reallocs_failure_branch_builds.c:5:5 "main"
           Deref
     Sequenced the_old_pointer_used_on_reallocs_failure_branch_builds.c:10:5 generated
     ArgumentsEvaluated the_old_pointer_used_on_reallocs_failure_branch_builds.c:11:14 generated
-    Call the_old_pointer_used_on_reallocs_failure_branch_builds.c:11:14 "realloc" "bb5"
+    Call the_old_pointer_used_on_reallocs_failure_branch_builds.c:11:14 written "realloc" "bb5"
       Destination "_6"
       Copy "_1"
       Constant 8
@@ -81,7 +81,7 @@ Function the_old_pointer_used_on_reallocs_failure_branch_builds.c:5:5 "main"
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch the_old_pointer_used_on_reallocs_failure_branch_builds.c:12:9 "bb6" "bb7"
+    Branch the_old_pointer_used_on_reallocs_failure_branch_builds.c:12:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced the_old_pointer_used_on_reallocs_failure_branch_builds.c:12:9 generated
@@ -97,7 +97,7 @@ Function the_old_pointer_used_on_reallocs_failure_branch_builds.c:5:5 "main"
           Deref
     Sequenced the_old_pointer_used_on_reallocs_failure_branch_builds.c:13:9 generated
     ArgumentsEvaluated the_old_pointer_used_on_reallocs_failure_branch_builds.c:14:9 generated
-    Call the_old_pointer_used_on_reallocs_failure_branch_builds.c:14:9 "free" "bb9"
+    Call the_old_pointer_used_on_reallocs_failure_branch_builds.c:14:9 written "free" "bb9"
       Copy "_1"
   Block "bb7"
     Sequenced the_old_pointer_used_on_reallocs_failure_branch_builds.c:12:9 generated
@@ -115,7 +115,7 @@ Function the_old_pointer_used_on_reallocs_failure_branch_builds.c:5:5 "main"
           Deref
     Sequenced the_old_pointer_used_on_reallocs_failure_branch_builds.c:17:5 generated
     ArgumentsEvaluated the_old_pointer_used_on_reallocs_failure_branch_builds.c:18:5 generated
-    Call the_old_pointer_used_on_reallocs_failure_branch_builds.c:18:5 "free" "bb10"
+    Call the_old_pointer_used_on_reallocs_failure_branch_builds.c:18:5 written "free" "bb10"
       Copy "_5"
   Block "bb9"
     Sequenced the_old_pointer_used_on_reallocs_failure_branch_builds.c:14:9 generated

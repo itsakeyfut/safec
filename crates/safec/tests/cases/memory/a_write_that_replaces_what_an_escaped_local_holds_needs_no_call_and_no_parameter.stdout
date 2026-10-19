@@ -20,7 +20,7 @@ Function a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_
   Local "_11" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:4:14 generated
-    Call a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:4:14 "malloc" "bb1"
+    Call a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -59,7 +59,7 @@ Function a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_
           Deref
     Sequenced a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:8:16 generated
     ArgumentsEvaluated a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:9:11 generated
-    Call a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:9:11 "malloc" "bb2"
+    Call a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:9:11 written "malloc" "bb2"
       Destination "_9"
       Constant 8
   Block "bb2"
@@ -75,7 +75,7 @@ Function a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_
           Deref
     Sequenced a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:9:5 generated
     ArgumentsEvaluated a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:10:5 generated
-    Call a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:10:5 "free" "bb3"
+    Call a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:10:5 written "free" "bb3"
       Copy "_1"
   Block "bb3"
     Sequenced a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:10:5 generated

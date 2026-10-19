@@ -40,7 +40,7 @@ Function a_write_inside_a_comma_is_unsequenced_against_another_argument.c:2:5 "m
       Written a_write_inside_a_comma_is_unsequenced_against_another_argument.c:5:12
       Read a_write_inside_a_comma_is_unsequenced_against_another_argument.c:5:8
     ArgumentsEvaluated a_write_inside_a_comma_is_unsequenced_against_another_argument.c:5:5 generated
-    Call a_write_inside_a_comma_is_unsequenced_against_another_argument.c:5:5 "h" "bb1"
+    Call a_write_inside_a_comma_is_unsequenced_against_another_argument.c:5:5 written "h" "bb1"
       Copy "_2"
         Deref
       Constant 0

@@ -50,7 +50,7 @@ Function a_load_through_two_locals_addresses_reads_what_the_last_holds.c:4:5 "ma
         Copy "_5"
     Sequenced a_load_through_two_locals_addresses_reads_what_the_last_holds.c:7:17 generated
     ArgumentsEvaluated a_load_through_two_locals_addresses_reads_what_the_last_holds.c:8:14 generated
-    Call a_load_through_two_locals_addresses_reads_what_the_last_holds.c:8:14 "malloc" "bb1"
+    Call a_load_through_two_locals_addresses_reads_what_the_last_holds.c:8:14 written "malloc" "bb1"
       Destination "_7"
       Constant 4
   Block "bb1"
@@ -64,7 +64,7 @@ Function a_load_through_two_locals_addresses_reads_what_the_last_holds.c:4:5 "ma
       Binary "Eq"
         Copy "_6"
         Constant 0
-    Branch a_load_through_two_locals_addresses_reads_what_the_last_holds.c:9:9 "bb2" "bb3"
+    Branch a_load_through_two_locals_addresses_reads_what_the_last_holds.c:9:9 written "bb2" "bb3"
       Copy "_8"
   Block "bb2"
     Sequenced a_load_through_two_locals_addresses_reads_what_the_last_holds.c:9:9 generated
@@ -99,7 +99,7 @@ Function a_load_through_two_locals_addresses_reads_what_the_last_holds.c:4:5 "ma
         Copy "_1"
     Sequenced a_load_through_two_locals_addresses_reads_what_the_last_holds.c:13:5 generated
     ArgumentsEvaluated a_load_through_two_locals_addresses_reads_what_the_last_holds.c:14:5 generated
-    Call a_load_through_two_locals_addresses_reads_what_the_last_holds.c:14:5 "free" "bb5"
+    Call a_load_through_two_locals_addresses_reads_what_the_last_holds.c:14:5 written "free" "bb5"
       Copy "_6"
   Block "bb5"
     Sequenced a_load_through_two_locals_addresses_reads_what_the_last_holds.c:14:5 generated
@@ -114,7 +114,7 @@ Function a_load_through_two_locals_addresses_reads_what_the_last_holds.c:4:5 "ma
       Binary "Eq"
         Copy "_11"
         Constant 0
-    Branch a_load_through_two_locals_addresses_reads_what_the_last_holds.c:16:9 "bb6" "bb7"
+    Branch a_load_through_two_locals_addresses_reads_what_the_last_holds.c:16:9 written "bb6" "bb7"
       Copy "_12"
   Block "bb6"
     Sequenced a_load_through_two_locals_addresses_reads_what_the_last_holds.c:16:9 generated
@@ -139,7 +139,7 @@ Function a_load_through_two_locals_addresses_reads_what_the_last_holds.c:4:5 "ma
       Binary "Eq"
         Copy "_13"
         Constant 0
-    Branch a_load_through_two_locals_addresses_reads_what_the_last_holds.c:20:9 "bb9" "bb10"
+    Branch a_load_through_two_locals_addresses_reads_what_the_last_holds.c:20:9 written "bb9" "bb10"
       Copy "_14"
   Block "bb9"
     Sequenced a_load_through_two_locals_addresses_reads_what_the_last_holds.c:20:9 generated

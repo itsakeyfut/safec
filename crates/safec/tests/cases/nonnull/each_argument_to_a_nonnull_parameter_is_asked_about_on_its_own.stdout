@@ -8,7 +8,7 @@ Function each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own.c:2:5 "f
   Local "_1" "int *" parameter "q"
   Block "bb0" entry
     ArgumentsEvaluated each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own.c:3:5 generated
-    Call each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own.c:3:5 "two" "bb1"
+    Call each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own.c:3:5 written "two" "bb1"
       Copy "_1"
       Copy "_1"
   Block "bb1"

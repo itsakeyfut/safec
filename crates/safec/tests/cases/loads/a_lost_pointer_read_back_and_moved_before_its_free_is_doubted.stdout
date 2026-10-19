@@ -33,7 +33,7 @@ Function a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:4:5 "f"
   Local "_19" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:5:17 generated
-    Call a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:5:17 "malloc" "bb1"
+    Call a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:5:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -46,7 +46,7 @@ Function a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:4:5 "f"
       Destination "_3"
       Unary "Not"
         Copy "_1"
-    Branch a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:6:9 "bb2" "bb3"
+    Branch a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:6:9 generated
@@ -82,7 +82,7 @@ Function a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:4:5 "f"
       Binary "Lt"
         Copy "_6"
         Constant 2
-    Branch a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:10:12 "bb6" "bb7"
+    Branch a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:10:12 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:10:12 generated
@@ -96,7 +96,7 @@ Function a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:4:5 "f"
         Copy "_4"
     Sequenced a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:11:9 generated
     ArgumentsEvaluated a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:12:13 generated
-    Call a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:12:13 "malloc" "bb8"
+    Call a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:12:13 written "malloc" "bb8"
       Destination "_9"
       Constant 4
   Block "bb7"
@@ -124,7 +124,7 @@ Function a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:4:5 "f"
         Copy "_17"
     Sequenced a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:18:14 generated
     ArgumentsEvaluated a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:19:5 generated
-    Call a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:19:5 "free" "bb12"
+    Call a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:19:5 written "free" "bb12"
       Copy "_4"
   Block "bb8"
     Operation a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:12:9 written
@@ -140,7 +140,7 @@ Function a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:4:5 "f"
       Destination "_11"
       Unary "Not"
         Copy "_5"
-    Branch a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:13:13 "bb9" "bb10"
+    Branch a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:13:13 written "bb9" "bb10"
       Copy "_11"
   Block "bb9"
     Sequenced a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:13:13 generated
@@ -186,7 +186,7 @@ Function a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:4:5 "f"
       Destination "_18"
       Unary "Not"
         Copy "_16"
-    Branch a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:20:9 "bb13" "bb14"
+    Branch a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:20:9 written "bb13" "bb14"
       Copy "_18"
   Block "bb13"
     Sequenced a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:20:9 generated
@@ -207,12 +207,12 @@ Function a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:4:5 "f"
           Deref
     Sequenced a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:21:13 generated
     ArgumentsEvaluated a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:22:5 generated
-    Call a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:22:5 "free" "bb16"
+    Call a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:22:5 written "free" "bb16"
       Copy "_5"
   Block "bb16"
     Sequenced a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:22:5 generated
     ArgumentsEvaluated a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:23:5 generated
-    Call a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:23:5 "free" "bb17"
+    Call a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:23:5 written "free" "bb17"
       Copy "_1"
   Block "bb17"
     Sequenced a_lost_pointer_read_back_and_moved_before_its_free_is_doubted.c:23:5 generated

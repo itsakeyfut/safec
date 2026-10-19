@@ -35,7 +35,7 @@ Function a_dereference_in_an_argument_another_argument_writes_is_reported.c:2:5 
       Written a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:11
       Read a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:8
     ArgumentsEvaluated a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:5 generated
-    Call a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:5 "h" "bb1"
+    Call a_dereference_in_an_argument_another_argument_writes_is_reported.c:5:5 written "h" "bb1"
       Copy "_2"
         Deref
       Copy "_4"

@@ -25,7 +25,7 @@ Function a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c
       Use
         Constant 0
     ArgumentsEvaluated a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:5:14 generated
-    Call a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:5:14 "malloc" "bb1"
+    Call a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:5:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -39,7 +39,7 @@ Function a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:6:9 "bb2" "bb3"
+    Branch a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:6:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:6:9 generated
@@ -54,7 +54,7 @@ Function a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:7:14 generated
-    Call a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:7:14 "realloc" "bb5"
+    Call a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:7:14 written "realloc" "bb5"
       Destination "_6"
       Copy "_2"
       Constant 8
@@ -64,12 +64,12 @@ Function a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c
       Use
         Copy "_6"
     Sequenced a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:7:14 generated
-    Branch a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:8:9 "bb6" "bb7"
+    Branch a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:8:9 written "bb6" "bb7"
       Copy "_1"
   Block "bb6"
     Sequenced a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:8:9 generated
     ArgumentsEvaluated a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:9:9 generated
-    Call a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:9:9 "free" "bb9"
+    Call a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:9:9 written "free" "bb9"
       Copy "_5"
   Block "bb7"
     Sequenced a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:8:9 generated
@@ -80,7 +80,7 @@ Function a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:12:9 "bb10" "bb11"
+    Branch a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:12:9 written "bb10" "bb11"
       Copy "_8"
   Block "bb9"
     Sequenced a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:9:9 generated
@@ -97,14 +97,14 @@ Function a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c
   Block "bb10"
     Sequenced a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:12:9 generated
     ArgumentsEvaluated a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:13:9 generated
-    Call a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:13:9 "free" "bb13"
+    Call a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:13:9 written "free" "bb13"
       Copy "_2"
   Block "bb11"
     Sequenced a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:12:9 generated
     Goto "bb12"
   Block "bb12"
     ArgumentsEvaluated a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:16:5 generated
-    Call a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:16:5 "free" "bb14"
+    Call a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:16:5 written "free" "bb14"
       Copy "_5"
   Block "bb13"
     Sequenced a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:13:9 generated

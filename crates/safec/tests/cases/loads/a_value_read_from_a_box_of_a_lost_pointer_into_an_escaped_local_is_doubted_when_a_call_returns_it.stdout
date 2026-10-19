@@ -37,7 +37,7 @@ Function a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doub
   Local "_23" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:6:17 generated
-    Call a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:6:17 "malloc" "bb1"
+    Call a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:6:17 written "malloc" "bb1"
       Destination "_3"
       Constant 8
   Block "bb1"
@@ -50,7 +50,7 @@ Function a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doub
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:7:9 "bb2" "bb3"
+    Branch a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:7:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:7:9 generated
@@ -86,7 +86,7 @@ Function a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doub
       Binary "Lt"
         Copy "_7"
         Constant 2
-    Branch a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:11:12 "bb6" "bb7"
+    Branch a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:11:12 written "bb6" "bb7"
       Copy "_8"
   Block "bb6"
     Sequenced a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:11:12 generated
@@ -100,7 +100,7 @@ Function a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doub
         Copy "_5"
     Sequenced a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:12:9 generated
     ArgumentsEvaluated a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:13:13 generated
-    Call a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:13:13 "malloc" "bb8"
+    Call a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:13:13 written "malloc" "bb8"
       Destination "_10"
       Constant 4
   Block "bb7"
@@ -126,7 +126,7 @@ Function a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doub
       Address
         Place "_17"
     ArgumentsEvaluated a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:20:5 generated
-    Call a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:20:5 "stash_pp" "bb12"
+    Call a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:20:5 written "stash_pp" "bb12"
       Copy "_18"
   Block "bb8"
     Operation a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:13:9 written
@@ -142,7 +142,7 @@ Function a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doub
       Destination "_12"
       Unary "Not"
         Copy "_6"
-    Branch a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:14:13 "bb9" "bb10"
+    Branch a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:14:13 written "bb9" "bb10"
       Copy "_12"
   Block "bb9"
     Sequenced a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:14:13 generated
@@ -195,7 +195,7 @@ Function a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doub
         Copy "_17"
     Sequenced a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:21:5 generated
     ArgumentsEvaluated a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:22:14 generated
-    Call a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:22:14 "fetch" "bb13"
+    Call a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:22:14 written "fetch" "bb13"
       Destination "_21"
   Block "bb13"
     Operation a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:22:10 written
@@ -204,7 +204,7 @@ Function a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doub
         Copy "_21"
     Sequenced a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:22:14 generated
     ArgumentsEvaluated a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:23:5 generated
-    Call a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:23:5 "free" "bb14"
+    Call a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:23:5 written "free" "bb14"
       Copy "_5"
   Block "bb14"
     Sequenced a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:23:5 generated
@@ -212,7 +212,7 @@ Function a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doub
       Destination "_22"
       Unary "Not"
         Copy "_20"
-    Branch a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:24:9 "bb15" "bb16"
+    Branch a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:24:9 written "bb15" "bb16"
       Copy "_22"
   Block "bb15"
     Sequenced a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:24:9 generated
@@ -233,12 +233,12 @@ Function a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doub
           Deref
     Sequenced a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:25:13 generated
     ArgumentsEvaluated a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:26:5 generated
-    Call a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:26:5 "free" "bb18"
+    Call a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:26:5 written "free" "bb18"
       Copy "_2"
   Block "bb18"
     Sequenced a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:26:5 generated
     ArgumentsEvaluated a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:27:5 generated
-    Call a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:27:5 "free" "bb19"
+    Call a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:27:5 written "free" "bb19"
       Copy "_6"
   Block "bb19"
     Sequenced a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it.c:27:5 generated

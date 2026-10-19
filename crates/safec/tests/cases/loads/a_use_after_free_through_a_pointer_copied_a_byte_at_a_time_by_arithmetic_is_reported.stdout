@@ -39,7 +39,7 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmeti
       Use
         Constant 0
     ArgumentsEvaluated a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:5:17 generated
-    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:5:17 "malloc" "bb1"
+    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:5:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -53,7 +53,7 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmeti
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:6:9 "bb2" "bb3"
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:6:9 generated
@@ -68,7 +68,7 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmeti
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:9:19 generated
-    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:9:19 "malloc" "bb5"
+    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:9:19 written "malloc" "bb5"
       Destination "_5"
       Constant 8
   Block "bb5"
@@ -82,7 +82,7 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmeti
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:10:9 "bb6" "bb7"
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:10:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:10:9 generated
@@ -97,7 +97,7 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmeti
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:13:14 generated
-    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:13:14 "malloc" "bb9"
+    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:13:14 written "malloc" "bb9"
       Destination "_8"
       Constant 4
   Block "bb9"
@@ -111,7 +111,7 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmeti
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:14:9 "bb10" "bb11"
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:14:9 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:14:9 generated
@@ -168,7 +168,7 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmeti
       Binary "Lt"
         Copy "_15"
         Constant 8
-    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:23:12 "bb14" "bb15"
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:23:12 written "bb14" "bb15"
       Copy "_16"
   Block "bb14"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:23:12 generated
@@ -177,12 +177,12 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmeti
       Binary "Ne"
         Copy "_13"
         Constant 0
-    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:24:13 "bb16" "bb17"
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:24:13 written "bb16" "bb17"
       Copy "_17"
   Block "bb15"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:23:12 generated
     ArgumentsEvaluated a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:33:5 generated
-    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:33:5 "release" "bb22"
+    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:33:5 written "release" "bb22"
       Copy "_4"
         Deref
   Block "bb16"
@@ -192,7 +192,7 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmeti
       Binary "Ne"
         Copy "_14"
         Constant 0
-    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:25:17 "bb19" "bb20"
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:25:17 written "bb19" "bb20"
       Copy "_18"
   Block "bb17"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:24:13 generated

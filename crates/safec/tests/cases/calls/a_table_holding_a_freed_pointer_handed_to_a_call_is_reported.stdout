@@ -24,7 +24,7 @@ Function a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:5:5 "mai
       Use
         Constant 0
     ArgumentsEvaluated a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:6:15 generated
-    Call a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:6:15 "malloc" "bb1"
+    Call a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:6:15 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -38,7 +38,7 @@ Function a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:5:5 "mai
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:7:9 "bb2" "bb3"
+    Branch a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:7:9 generated
@@ -53,7 +53,7 @@ Function a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:5:5 "mai
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:10:14 generated
-    Call a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:10:14 "malloc" "bb5"
+    Call a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:10:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -67,7 +67,7 @@ Function a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:5:5 "mai
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:11:9 "bb6" "bb7"
+    Branch a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:11:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:11:9 generated
@@ -93,12 +93,12 @@ Function a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:5:5 "mai
           Deref
     Sequenced a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:14:5 generated
     ArgumentsEvaluated a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:15:5 generated
-    Call a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:15:5 "free" "bb9"
+    Call a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:15:5 written "free" "bb9"
       Copy "_4"
   Block "bb9"
     Sequenced a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:15:5 generated
     ArgumentsEvaluated a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:16:12 generated
-    Call a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:16:12 "use2" "bb10"
+    Call a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:16:12 written "use2" "bb10"
       Destination "_8"
       Copy "_1"
   Block "bb10"

@@ -29,7 +29,7 @@ Function a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_p
       Use
         Constant 0
     ArgumentsEvaluated a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:6:14 generated
-    Call a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:6:14 "malloc" "bb1"
+    Call a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:6:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -43,7 +43,7 @@ Function a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_p
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:7:9 "bb2" "bb3"
+    Branch a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:7:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:7:9 generated
@@ -58,7 +58,7 @@ Function a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_p
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:8:14 generated
-    Call a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:8:14 "realloc" "bb5"
+    Call a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:8:14 written "realloc" "bb5"
       Destination "_6"
       Copy "_2"
       Constant 8
@@ -73,7 +73,7 @@ Function a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_p
       Use
         Copy "_5"
     Sequenced a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:9:14 generated
-    Branch a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:10:9 "bb6" "bb7"
+    Branch a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:10:9 written "bb6" "bb7"
       Copy "_1"
   Block "bb6"
     Sequenced a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:10:9 generated
@@ -96,19 +96,19 @@ Function a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_p
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:11:9 "bb9" "bb10"
+    Branch a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:11:9 written "bb9" "bb10"
       Copy "_9"
   Block "bb9"
     Sequenced a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:11:9 generated
     ArgumentsEvaluated a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:11:19 generated
-    Call a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:11:19 "free" "bb12"
+    Call a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:11:19 written "free" "bb12"
       Copy "_2"
   Block "bb10"
     Sequenced a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:11:9 generated
     Goto "bb11"
   Block "bb11"
     ArgumentsEvaluated a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:12:5 generated
-    Call a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:12:5 "free" "bb13"
+    Call a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:12:5 written "free" "bb13"
       Copy "_7"
   Block "bb12"
     Sequenced a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved.c:11:19 generated

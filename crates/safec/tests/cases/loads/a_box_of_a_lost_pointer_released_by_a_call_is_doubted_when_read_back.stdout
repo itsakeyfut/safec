@@ -37,7 +37,7 @@ Function a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:
   Local "_25" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:5:17 generated
-    Call a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:5:17 "malloc" "bb1"
+    Call a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:5:17 written "malloc" "bb1"
       Destination "_3"
       Constant 8
   Block "bb1"
@@ -50,7 +50,7 @@ Function a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:6:9 "bb2" "bb3"
+    Branch a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:6:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:6:9 generated
@@ -65,7 +65,7 @@ Function a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:7:20 generated
-    Call a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:7:20 "malloc" "bb5"
+    Call a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:7:20 written "malloc" "bb5"
       Destination "_6"
       Constant 8
   Block "bb5"
@@ -78,7 +78,7 @@ Function a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:
       Destination "_7"
       Unary "Not"
         Copy "_5"
-    Branch a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:8:9 "bb6" "bb7"
+    Branch a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:8:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:8:9 generated
@@ -114,7 +114,7 @@ Function a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:
       Binary "Lt"
         Copy "_10"
         Constant 2
-    Branch a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:12:12 "bb10" "bb11"
+    Branch a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:12:12 written "bb10" "bb11"
       Copy "_11"
   Block "bb10"
     Sequenced a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:12:12 generated
@@ -128,7 +128,7 @@ Function a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:
         Copy "_8"
     Sequenced a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:13:9 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:14:13 generated
-    Call a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:14:13 "malloc" "bb12"
+    Call a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:14:13 written "malloc" "bb12"
       Destination "_13"
       Constant 4
   Block "bb11"
@@ -145,7 +145,7 @@ Function a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:
           Deref
     Sequenced a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:19:5 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:20:5 generated
-    Call a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:20:5 "release" "bb16"
+    Call a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:20:5 written "release" "bb16"
       Copy "_5"
   Block "bb12"
     Operation a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:14:9 written
@@ -161,7 +161,7 @@ Function a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:
       Destination "_15"
       Unary "Not"
         Copy "_9"
-    Branch a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:15:13 "bb13" "bb14"
+    Branch a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:15:13 written "bb13" "bb14"
       Copy "_15"
   Block "bb13"
     Sequenced a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:15:13 generated
@@ -203,7 +203,7 @@ Function a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:
     Goto "bb9"
   Block "bb16"
     Sequenced a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:20:5 generated
-    Branch a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:21:9 "bb17" "bb18"
+    Branch a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:21:9 written "bb17" "bb18"
       Copy "_1"
   Block "bb17"
     Sequenced a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:21:9 generated
@@ -219,7 +219,7 @@ Function a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:
           Deref
     Sequenced a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:21:14 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:21:24 generated
-    Call a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:21:24 "free" "bb20"
+    Call a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:21:24 written "free" "bb20"
       Copy "_9"
   Block "bb18"
     Sequenced a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:21:9 generated
@@ -246,7 +246,7 @@ Function a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:
       Destination "_24"
       Unary "Not"
         Copy "_23"
-    Branch a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:23:9 "bb21" "bb22"
+    Branch a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:23:9 written "bb21" "bb22"
       Copy "_24"
   Block "bb20"
     Sequenced a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back.c:21:24 generated

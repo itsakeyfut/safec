@@ -22,7 +22,7 @@ Function a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_bac
   Local "_13" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:4:17 generated
-    Call a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:4:17 "malloc" "bb1"
+    Call a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:4:17 written "malloc" "bb1"
       Destination "_3"
       Constant 8
   Block "bb1"
@@ -35,7 +35,7 @@ Function a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_bac
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:5:9 "bb2" "bb3"
+    Branch a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:5:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:5:9 generated
@@ -50,7 +50,7 @@ Function a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_bac
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:6:18 generated
-    Call a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:6:18 "malloc" "bb5"
+    Call a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:6:18 written "malloc" "bb5"
       Destination "_6"
       Constant 8
   Block "bb5"
@@ -63,7 +63,7 @@ Function a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_bac
       Destination "_7"
       Unary "Not"
         Copy "_5"
-    Branch a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:7:9 "bb6" "bb7"
+    Branch a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:7:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:7:9 generated
@@ -95,7 +95,7 @@ Function a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_bac
           Deref
     Sequenced a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:9:14 generated
     ArgumentsEvaluated a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:10:5 generated
-    Call a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:10:5 "free" "bb9"
+    Call a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:10:5 written "free" "bb9"
       Copy "_9"
   Block "bb9"
     Sequenced a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:10:5 generated
@@ -121,7 +121,7 @@ Function a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_bac
       Use
         Constant 0
     Sequenced a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:13:13 generated
-    Branch a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:14:9 "bb10" "bb11"
+    Branch a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:14:9 written "bb10" "bb11"
       Copy "_11"
   Block "bb10"
     Sequenced a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:14:9 generated
@@ -141,12 +141,12 @@ Function a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_bac
     Goto "bb12"
   Block "bb12"
     ArgumentsEvaluated a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:15:5 generated
-    Call a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:15:5 "free" "bb13"
+    Call a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:15:5 written "free" "bb13"
       Copy "_5"
   Block "bb13"
     Sequenced a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:15:5 generated
     ArgumentsEvaluated a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:16:5 generated
-    Call a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:16:5 "free" "bb14"
+    Call a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:16:5 written "free" "bb14"
       Copy "_2"
   Block "bb14"
     Sequenced a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:16:5 generated

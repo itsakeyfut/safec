@@ -25,7 +25,7 @@ Function an_allocation_stored_through_a_load_may_land_in_another_parameter_s_mem
       Destination "_3"
       Unary "Not"
         Copy "_1"
-    Branch an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:4:9 "bb1" "bb2"
+    Branch an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:4:9 written "bb1" "bb2"
       Copy "_3"
   Block "bb1"
     Sequenced an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:4:9 generated
@@ -43,7 +43,7 @@ Function an_allocation_stored_through_a_load_may_land_in_another_parameter_s_mem
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:5:9 "bb4" "bb5"
+    Branch an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:5:9 written "bb4" "bb5"
       Copy "_4"
   Block "bb4"
     Sequenced an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:5:9 generated
@@ -67,7 +67,7 @@ Function an_allocation_stored_through_a_load_may_land_in_another_parameter_s_mem
       Destination "_6"
       Unary "Not"
         Copy "_5"
-    Branch an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:7:9 "bb7" "bb8"
+    Branch an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:7:9 written "bb7" "bb8"
       Copy "_6"
   Block "bb7"
     Sequenced an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:7:9 generated
@@ -82,7 +82,7 @@ Function an_allocation_stored_through_a_load_may_land_in_another_parameter_s_mem
     Goto "bb9"
   Block "bb9"
     ArgumentsEvaluated an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:8:14 generated
-    Call an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:8:14 "malloc" "bb10"
+    Call an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:8:14 written "malloc" "bb10"
       Destination "_8"
       Constant 4
   Block "bb10"
@@ -95,7 +95,7 @@ Function an_allocation_stored_through_a_load_may_land_in_another_parameter_s_mem
       Destination "_9"
       Unary "Not"
         Copy "_7"
-    Branch an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:9:9 "bb11" "bb12"
+    Branch an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:9:9 written "bb11" "bb12"
       Copy "_9"
   Block "bb11"
     Sequenced an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:9:9 generated
@@ -132,7 +132,7 @@ Function an_allocation_stored_through_a_load_may_land_in_another_parameter_s_mem
           Deref
     Sequenced an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:11:5 generated
     ArgumentsEvaluated an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:12:5 generated
-    Call an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:12:5 "free" "bb14"
+    Call an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:12:5 written "free" "bb14"
       Copy "_7"
   Block "bb14"
     Sequenced an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:12:5 generated
@@ -146,7 +146,7 @@ Function an_allocation_stored_through_a_load_may_land_in_another_parameter_s_mem
       Destination "_13"
       Unary "Not"
         Copy "_12"
-    Branch an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:14:9 "bb15" "bb16"
+    Branch an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:14:9 written "bb15" "bb16"
       Copy "_13"
   Block "bb15"
     Sequenced an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory.c:14:9 generated

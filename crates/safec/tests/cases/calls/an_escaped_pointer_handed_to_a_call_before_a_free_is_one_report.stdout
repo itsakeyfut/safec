@@ -26,7 +26,7 @@ Function an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:5:5 "
       Use
         Constant 0
     ArgumentsEvaluated an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:6:14 generated
-    Call an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:6:14 "malloc" "bb1"
+    Call an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -49,7 +49,7 @@ Function an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:5:5 "
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:8:9 "bb2" "bb3"
+    Branch an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:8:9 written "bb2" "bb3"
       Copy "_5"
   Block "bb2"
     Sequenced an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:8:9 generated
@@ -63,7 +63,7 @@ Function an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:5:5 "
     Sequenced an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:8:9 generated
     Goto "bb4"
   Block "bb4"
-    Call an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:11:13 "memset" "bb5"
+    Call an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:11:13 written "memset" "bb5"
       Destination "_6"
       Copy "_1"
       Constant 0
@@ -74,7 +74,7 @@ Function an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:5:5 "
       Binary "Ne"
         Copy "_6"
         Constant 0
-    Call an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:11:38 "free" "bb6"
+    Call an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:11:38 written "free" "bb6"
       Copy "_1"
   Block "bb6"
     Operation an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:11:13 written

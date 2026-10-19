@@ -30,7 +30,7 @@ Function a_pointer_assigned_a_call_handed_its_increment_is_not_reported.c:2:5 "f
       Use
         Copy "_4"
     ArgumentsEvaluated a_pointer_assigned_a_call_handed_its_increment_is_not_reported.c:4:9 generated
-    Call a_pointer_assigned_a_call_handed_its_increment_is_not_reported.c:4:9 "g" "bb1"
+    Call a_pointer_assigned_a_call_handed_its_increment_is_not_reported.c:4:9 written "g" "bb1"
       Destination "_5"
       Copy "_3"
   Block "bb1"

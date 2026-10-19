@@ -19,7 +19,7 @@ Function an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:8:5 "ma
       Use
         Constant 0
     ArgumentsEvaluated an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:9:14 generated
-    Call an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:9:14 "malloc" "bb1"
+    Call an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:9:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -29,11 +29,11 @@ Function an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:8:5 "ma
         Copy "_2"
     Sequenced an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:9:14 generated
     ArgumentsEvaluated an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:10:5 generated
-    Call an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:10:5 "nothing" "bb2"
+    Call an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:10:5 written "nothing" "bb2"
   Block "bb2"
     Sequenced an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:10:5 generated
     ArgumentsEvaluated an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:11:5 generated
-    Call an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:11:5 "free" "bb3"
+    Call an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:11:5 written "free" "bb3"
       Copy "_1"
   Block "bb3"
     Sequenced an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:11:5 generated

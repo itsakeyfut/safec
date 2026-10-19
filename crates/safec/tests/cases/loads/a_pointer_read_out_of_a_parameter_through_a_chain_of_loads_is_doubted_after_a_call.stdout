@@ -15,7 +15,7 @@ Function a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_a
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:3:9 "bb1" "bb2"
+    Branch a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:3:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:3:9 generated
@@ -40,7 +40,7 @@ Function a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_a
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:5:9 "bb4" "bb5"
+    Branch a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:5:9 written "bb4" "bb5"
       Copy "_4"
   Block "bb4"
     Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:5:9 generated
@@ -65,7 +65,7 @@ Function a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_a
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:7:9 "bb7" "bb8"
+    Branch a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:7:9 written "bb7" "bb8"
       Copy "_6"
   Block "bb7"
     Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:7:9 generated
@@ -80,7 +80,7 @@ Function a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_a
     Goto "bb9"
   Block "bb9"
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:8:5 generated
-    Call a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:8:5 "release_all" "bb10"
+    Call a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:8:5 written "release_all" "bb10"
   Block "bb10"
     Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:8:5 generated
     Operation a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:9:5 written

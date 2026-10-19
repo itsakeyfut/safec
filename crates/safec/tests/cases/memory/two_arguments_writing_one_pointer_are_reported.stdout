@@ -44,7 +44,7 @@ Function two_arguments_writing_one_pointer_are_reported.c:2:5 "main"
       Written two_arguments_writing_one_pointer_are_reported.c:5:7
       WrittenAgain two_arguments_writing_one_pointer_are_reported.c:5:14
     ArgumentsEvaluated two_arguments_writing_one_pointer_are_reported.c:5:5 generated
-    Call two_arguments_writing_one_pointer_are_reported.c:5:5 "g" "bb1"
+    Call two_arguments_writing_one_pointer_are_reported.c:5:5 written "g" "bb1"
       Copy "_3"
       Copy "_5"
   Block "bb1"

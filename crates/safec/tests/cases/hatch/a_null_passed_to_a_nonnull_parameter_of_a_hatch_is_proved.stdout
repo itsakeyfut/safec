@@ -19,7 +19,7 @@ Function a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved.c:6:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved.c:7:12 generated
-    Call a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved.c:7:12 "raw" "bb1"
+    Call a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved.c:7:12 written "raw" "bb1"
       Destination "_1"
       Constant 0
   Block "bb1"

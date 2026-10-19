@@ -29,7 +29,7 @@ Function an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:6:9 "bb1" "bb2"
+    Branch an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:6:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:6:9 generated
@@ -54,7 +54,7 @@ Function an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:10:9 "bb4" "bb5"
+    Branch an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:10:9 written "bb4" "bb5"
       Copy "_4"
   Block "bb4"
     Sequenced an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:10:9 generated
@@ -69,7 +69,7 @@ Function an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_
     Goto "bb6"
   Block "bb6"
     ArgumentsEvaluated an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:13:14 generated
-    Call an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:13:14 "malloc" "bb7"
+    Call an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:13:14 written "malloc" "bb7"
       Destination "_6"
       Constant 4
   Block "bb7"
@@ -83,7 +83,7 @@ Function an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:14:9 "bb8" "bb9"
+    Branch an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:14:9 written "bb8" "bb9"
       Copy "_7"
   Block "bb8"
     Sequenced an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:14:9 generated
@@ -133,7 +133,7 @@ Function an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_
           Deref
     Sequenced an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:19:5 generated
     ArgumentsEvaluated an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:20:5 generated
-    Call an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:20:5 "grow_all" "bb11"
+    Call an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:20:5 written "grow_all" "bb11"
   Block "bb11"
     Sequenced an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:20:5 generated
     Operation an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:21:17 written
@@ -141,7 +141,7 @@ Function an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_
       Address
         Place "_5"
     ArgumentsEvaluated an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:21:12 generated
-    Call an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:21:12 "use2" "bb12"
+    Call an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:21:12 written "use2" "bb12"
       Destination "_14"
       Copy "_13"
   Block "bb12"

@@ -45,12 +45,12 @@ Function a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it
       Address
         Place "_4"
     ArgumentsEvaluated a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:11:5 generated
-    Call a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:11:5 "stash" "bb1"
+    Call a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:11:5 written "stash" "bb1"
       Copy "_6"
   Block "bb1"
     Sequenced a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:11:5 generated
     ArgumentsEvaluated a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:12:9 generated
-    Call a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:12:9 "malloc" "bb2"
+    Call a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:12:9 written "malloc" "bb2"
       Destination "_7"
       Constant 4
   Block "bb2"
@@ -68,7 +68,7 @@ Function a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:13:9 "bb3" "bb4"
+    Branch a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:13:9 written "bb3" "bb4"
       Copy "_9"
   Block "bb3"
     Sequenced a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:13:9 generated
@@ -93,7 +93,7 @@ Function a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it
         Copy "_3"
           Deref
     Sequenced a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:16:5 generated
-    Call a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:17:9 "release_all" "bb6"
+    Call a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:17:9 written "release_all" "bb6"
       Destination "_11"
   Block "bb6"
     Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:17:26 written

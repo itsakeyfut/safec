@@ -30,7 +30,7 @@ Function a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:4:5
       Use
         Constant 0
     ArgumentsEvaluated a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:5:17 generated
-    Call a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:5:17 "malloc" "bb1"
+    Call a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:5:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -44,7 +44,7 @@ Function a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:4:5
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:6:9 "bb2" "bb3"
+    Branch a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:6:9 generated
@@ -59,7 +59,7 @@ Function a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:4:5
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:9:16 generated
-    Call a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:9:16 "malloc" "bb5"
+    Call a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:9:16 written "malloc" "bb5"
       Destination "_5"
       Constant 8
   Block "bb5"
@@ -73,7 +73,7 @@ Function a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:4:5
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:10:9 "bb6" "bb7"
+    Branch a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:10:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:10:9 generated
@@ -88,7 +88,7 @@ Function a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:4:5
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:13:14 generated
-    Call a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:13:14 "malloc" "bb9"
+    Call a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:13:14 written "malloc" "bb9"
       Destination "_8"
       Constant 4
   Block "bb9"
@@ -102,7 +102,7 @@ Function a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:4:5
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:14:9 "bb10" "bb11"
+    Branch a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:14:9 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:14:9 generated
@@ -171,7 +171,7 @@ Function a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:4:5
       Binary "Eq"
         Copy "_14"
         Constant 0
-    Branch a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:22:9 "bb13" "bb14"
+    Branch a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:22:9 written "bb13" "bb14"
       Copy "_15"
   Block "bb13"
     Sequenced a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:22:9 generated
@@ -196,7 +196,7 @@ Function a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:4:5
       Binary "Eq"
         Copy "_16"
         Constant 0
-    Branch a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:26:9 "bb16" "bb17"
+    Branch a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:26:9 written "bb16" "bb17"
       Copy "_17"
   Block "bb16"
     Sequenced a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:26:9 generated

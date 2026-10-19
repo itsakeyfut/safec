@@ -14,7 +14,7 @@ Function a_pointer_read_out_of_a_parameter_with_no_call_before_its_use_is_read_i
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_with_no_call_before_its_use_is_read_in_silence.c:5:9 "bb1" "bb2"
+    Branch a_pointer_read_out_of_a_parameter_with_no_call_before_its_use_is_read_in_silence.c:5:9 written "bb1" "bb2"
       Copy "_3"
   Block "bb1"
     Sequenced a_pointer_read_out_of_a_parameter_with_no_call_before_its_use_is_read_in_silence.c:5:9 generated
@@ -43,7 +43,7 @@ Function a_pointer_read_out_of_a_parameter_with_no_call_before_its_use_is_read_i
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_with_no_call_before_its_use_is_read_in_silence.c:9:9 "bb4" "bb5"
+    Branch a_pointer_read_out_of_a_parameter_with_no_call_before_its_use_is_read_in_silence.c:9:9 written "bb4" "bb5"
       Copy "_5"
   Block "bb4"
     Sequenced a_pointer_read_out_of_a_parameter_with_no_call_before_its_use_is_read_in_silence.c:9:9 generated

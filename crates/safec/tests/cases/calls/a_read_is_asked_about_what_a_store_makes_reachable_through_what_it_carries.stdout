@@ -35,7 +35,7 @@ Function a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carr
       Use
         Constant 0
     ArgumentsEvaluated a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:8:18 generated
-    Call a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:8:18 "malloc" "bb1"
+    Call a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:8:18 written "malloc" "bb1"
       Destination "_4"
       Constant 8
   Block "bb1"
@@ -45,7 +45,7 @@ Function a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carr
         Copy "_4"
     Sequenced a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:8:18 generated
     ArgumentsEvaluated a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:9:17 generated
-    Call a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:9:17 "malloc" "bb2"
+    Call a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:9:17 written "malloc" "bb2"
       Destination "_6"
       Constant 8
   Block "bb2"
@@ -55,7 +55,7 @@ Function a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carr
         Copy "_6"
     Sequenced a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:9:17 generated
     ArgumentsEvaluated a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:10:14 generated
-    Call a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:10:14 "malloc" "bb3"
+    Call a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:10:14 written "malloc" "bb3"
       Destination "_8"
       Constant 4
   Block "bb3"
@@ -69,7 +69,7 @@ Function a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carr
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:11:9 "bb4" "bb5"
+    Branch a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:11:9 written "bb4" "bb5"
       Copy "_9"
   Block "bb4"
     Sequenced a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:11:9 generated
@@ -88,7 +88,7 @@ Function a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carr
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:14:9 "bb7" "bb8"
+    Branch a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:14:9 written "bb7" "bb8"
       Copy "_10"
   Block "bb7"
     Sequenced a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:14:9 generated
@@ -107,7 +107,7 @@ Function a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carr
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:17:9 "bb10" "bb11"
+    Branch a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:17:9 written "bb10" "bb11"
       Copy "_11"
   Block "bb10"
     Sequenced a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:17:9 generated
@@ -122,7 +122,7 @@ Function a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carr
     Goto "bb12"
   Block "bb12"
     ArgumentsEvaluated a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:20:5 generated
-    Call a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:20:5 "keep" "bb13"
+    Call a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:20:5 written "keep" "bb13"
       Destination "_12"
       Copy "_3"
   Block "bb13"
@@ -173,7 +173,7 @@ Function a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carr
       Binary "Add"
         Copy "_15"
         Constant 0
-    Call a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:23:40 "release_all" "bb14"
+    Call a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:23:40 written "release_all" "bb14"
       Destination "_18"
   Block "bb14"
     Operation a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:23:10 written

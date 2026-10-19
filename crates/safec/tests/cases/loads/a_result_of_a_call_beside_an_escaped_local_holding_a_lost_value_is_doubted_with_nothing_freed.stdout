@@ -40,7 +40,7 @@ Function a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doub
       Address
         Place "_2"
     ArgumentsEvaluated a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:7:5 generated
-    Call a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:7:5 "init" "bb1"
+    Call a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:7:5 written "init" "bb1"
       Copy "_3"
   Block "bb1"
     Sequenced a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:7:5 generated
@@ -61,7 +61,7 @@ Function a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doub
       Binary "Lt"
         Copy "_5"
         Constant 2
-    Branch a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:10:12 "bb3" "bb4"
+    Branch a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:10:12 written "bb3" "bb4"
       Copy "_6"
   Block "bb3"
     Sequenced a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:10:12 generated
@@ -75,13 +75,13 @@ Function a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doub
         Copy "_2"
     Sequenced a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:11:9 generated
     ArgumentsEvaluated a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:12:13 generated
-    Call a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:12:13 "malloc" "bb5"
+    Call a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:12:13 written "malloc" "bb5"
       Destination "_8"
       Constant 4
   Block "bb4"
     Sequenced a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:10:12 generated
     ArgumentsEvaluated a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:17:14 generated
-    Call a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:17:14 "get" "bb9"
+    Call a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:17:14 written "get" "bb9"
       Destination "_15"
   Block "bb5"
     Operation a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:12:9 written
@@ -97,7 +97,7 @@ Function a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doub
       Destination "_10"
       Unary "Not"
         Copy "_4"
-    Branch a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:13:13 "bb6" "bb7"
+    Branch a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:13:13 written "bb6" "bb7"
       Copy "_10"
   Block "bb6"
     Sequenced a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:13:13 generated
@@ -147,7 +147,7 @@ Function a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doub
       Destination "_16"
       Unary "Not"
         Copy "_14"
-    Branch a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:18:9 "bb10" "bb11"
+    Branch a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:18:9 written "bb10" "bb11"
       Copy "_16"
   Block "bb10"
     Sequenced a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:18:9 generated
@@ -168,7 +168,7 @@ Function a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doub
           Deref
     Sequenced a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:19:13 generated
     ArgumentsEvaluated a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:20:5 generated
-    Call a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:20:5 "free" "bb13"
+    Call a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:20:5 written "free" "bb13"
       Copy "_4"
   Block "bb13"
     Sequenced a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:20:5 generated

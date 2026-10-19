@@ -31,7 +31,7 @@ Function a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_cal
       Address
         Place "_1"
     ArgumentsEvaluated a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:6:5 generated
-    Call a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:6:5 "get" "bb1"
+    Call a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:6:5 written "get" "bb1"
       Copy "_2"
   Block "bb1"
     Sequenced a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:6:5 generated
@@ -49,7 +49,7 @@ Function a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_cal
       Address
         Place "_1"
     ArgumentsEvaluated a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:8:5 generated
-    Call a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:8:5 "memcpy" "bb2"
+    Call a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:8:5 written "memcpy" "bb2"
       Destination "_6"
       Copy "_4"
       Copy "_5"
@@ -61,7 +61,7 @@ Function a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_cal
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:9:9 "bb3" "bb4"
+    Branch a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:9:9 written "bb3" "bb4"
       Copy "_7"
   Block "bb3"
     Sequenced a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:9:9 generated
@@ -76,7 +76,7 @@ Function a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_cal
     Goto "bb5"
   Block "bb5"
     ArgumentsEvaluated a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:12:12 generated
-    Call a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:12:12 "use" "bb6"
+    Call a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:12:12 written "use" "bb6"
       Destination "_8"
       Copy "_3"
   Block "bb6"

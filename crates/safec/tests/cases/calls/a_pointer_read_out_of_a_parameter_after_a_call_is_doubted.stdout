@@ -7,7 +7,7 @@ Function a_pointer_read_out_of_a_parameter_after_a_call_is_doubted.c:3:5 "f"
   Local "_2" "int *" "q"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_after_a_call_is_doubted.c:4:5 generated
-    Call a_pointer_read_out_of_a_parameter_after_a_call_is_doubted.c:4:5 "release" "bb1"
+    Call a_pointer_read_out_of_a_parameter_after_a_call_is_doubted.c:4:5 written "release" "bb1"
   Block "bb1"
     Sequenced a_pointer_read_out_of_a_parameter_after_a_call_is_doubted.c:4:5 generated
     Operation a_pointer_read_out_of_a_parameter_after_a_call_is_doubted.c:5:10 written

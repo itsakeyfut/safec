@@ -11,7 +11,7 @@ Function a_read_written_before_a_call_that_does_not_return_inside_an_expression_
   Local "_1" "int *" parameter "p"
   Local "_2" "int"
   Block "bb0" entry
-    Call a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:5:18 "exit" "bb1"
+    Call a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:5:18 written "exit" "bb1"
       Constant 1
   Block "bb1"
     Operation a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:5:12 written
@@ -31,11 +31,11 @@ Function a_read_written_before_a_call_that_does_not_return_inside_an_expression_
   Local "_1" "int *" parameter "q"
   Local "_2" "int"
   Block "bb0" entry
-    Call a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:9:15 "exit" "bb1"
+    Call a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:9:15 written "exit" "bb1"
       Constant 1
   Block "bb1"
     ArgumentsEvaluated a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:9:12 generated
-    Call a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:9:12 "g" "bb2"
+    Call a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:9:12 written "g" "bb2"
       Destination "_2"
       Constant 0
       Copy "_1"

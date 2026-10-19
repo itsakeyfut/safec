@@ -8,7 +8,7 @@ Function a_hatch_promises_nothing_by_default_at_level_5.c:4:6 "make" hatch
   Local "_2" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_hatch_promises_nothing_by_default_at_level_5.c:5:14 generated
-    Call a_hatch_promises_nothing_by_default_at_level_5.c:5:14 "malloc" "bb1"
+    Call a_hatch_promises_nothing_by_default_at_level_5.c:5:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -33,7 +33,7 @@ Function a_hatch_promises_nothing_by_default_at_level_5.c:9:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_hatch_promises_nothing_by_default_at_level_5.c:10:14 generated
-    Call a_hatch_promises_nothing_by_default_at_level_5.c:10:14 "make" "bb1"
+    Call a_hatch_promises_nothing_by_default_at_level_5.c:10:14 written "make" "bb1"
       Destination "_2"
   Block "bb1"
     Operation a_hatch_promises_nothing_by_default_at_level_5.c:10:10 written

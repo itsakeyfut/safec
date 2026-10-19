@@ -10,12 +10,12 @@ Function a_parameter_freed_and_handed_on.c:4:6 "finish"
   Local "_1" "int *" parameter "p"
   Block "bb0" entry
     ArgumentsEvaluated a_parameter_freed_and_handed_on.c:5:5 generated
-    Call a_parameter_freed_and_handed_on.c:5:5 "free" "bb1"
+    Call a_parameter_freed_and_handed_on.c:5:5 written "free" "bb1"
       Copy "_1"
   Block "bb1"
     Sequenced a_parameter_freed_and_handed_on.c:5:5 generated
     ArgumentsEvaluated a_parameter_freed_and_handed_on.c:6:5 generated
-    Call a_parameter_freed_and_handed_on.c:6:5 "run" "bb2"
+    Call a_parameter_freed_and_handed_on.c:6:5 written "run" "bb2"
       Copy "_1"
   Block "bb2"
     Sequenced a_parameter_freed_and_handed_on.c:6:5 generated

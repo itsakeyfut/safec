@@ -30,7 +30,7 @@ Function the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:5:5 "mai
         Constant 8
     Sequenced the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:6:13 generated
     ArgumentsEvaluated the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:7:14 generated
-    Call the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:7:14 "malloc" "bb1"
+    Call the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:7:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -44,7 +44,7 @@ Function the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:5:5 "mai
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:8:9 "bb2" "bb3"
+    Branch the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:8:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:8:9 generated
@@ -59,7 +59,7 @@ Function the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:5:5 "mai
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:11:14 generated
-    Call the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:11:14 "realloc" "bb5"
+    Call the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:11:14 written "realloc" "bb5"
       Destination "_6"
       Copy "_2"
       Copy "_1"
@@ -74,7 +74,7 @@ Function the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:5:5 "mai
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:12:9 "bb6" "bb7"
+    Branch the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:12:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:12:9 generated
@@ -100,7 +100,7 @@ Function the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:5:5 "mai
           Deref
     Sequenced the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:15:5 generated
     ArgumentsEvaluated the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:16:5 generated
-    Call the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:16:5 "free" "bb9"
+    Call the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:16:5 written "free" "bb9"
       Copy "_5"
   Block "bb9"
     Sequenced the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:16:5 generated

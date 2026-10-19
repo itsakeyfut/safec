@@ -46,7 +46,7 @@ Function a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:7
   Local "_22" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:8:17 generated
-    Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:8:17 "malloc" "bb1"
+    Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:8:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -59,7 +59,7 @@ Function a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:7
       Destination "_3"
       Unary "Not"
         Copy "_1"
-    Branch a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:9:9 "bb2" "bb3"
+    Branch a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:9:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:9:9 generated
@@ -95,7 +95,7 @@ Function a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:7
       Binary "Lt"
         Copy "_6"
         Constant 2
-    Branch a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:13:12 "bb6" "bb7"
+    Branch a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:13:12 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:13:12 generated
@@ -109,13 +109,13 @@ Function a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:7
         Copy "_4"
     Sequenced a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:14:9 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:15:13 generated
-    Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:15:13 "malloc" "bb8"
+    Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:15:13 written "malloc" "bb8"
       Destination "_9"
       Constant 4
   Block "bb7"
     Sequenced a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:13:12 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:20:18 generated
-    Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:20:18 "malloc" "bb12"
+    Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:20:18 written "malloc" "bb12"
       Destination "_16"
       Constant 8
   Block "bb8"
@@ -132,7 +132,7 @@ Function a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:7
       Destination "_11"
       Unary "Not"
         Copy "_5"
-    Branch a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:16:13 "bb9" "bb10"
+    Branch a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:16:13 written "bb9" "bb10"
       Copy "_11"
   Block "bb9"
     Sequenced a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:16:13 generated
@@ -182,7 +182,7 @@ Function a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:7
       Destination "_17"
       Unary "Not"
         Copy "_15"
-    Branch a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:21:9 "bb13" "bb14"
+    Branch a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:21:9 written "bb13" "bb14"
       Copy "_17"
   Block "bb13"
     Sequenced a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:21:9 generated
@@ -208,7 +208,7 @@ Function a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:7
           Deref
     Sequenced a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:22:5 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:23:5 generated
-    Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:23:5 "memcpy" "bb16"
+    Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:23:5 written "memcpy" "bb16"
       Destination "_19"
       Copy "_15"
       Copy "_1"
@@ -216,7 +216,7 @@ Function a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:7
   Block "bb16"
     Sequenced a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:23:5 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:24:5 generated
-    Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:24:5 "free" "bb17"
+    Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:24:5 written "free" "bb17"
       Copy "_4"
   Block "bb17"
     Sequenced a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:24:5 generated
@@ -227,7 +227,7 @@ Function a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:7
           Deref
     Sequenced a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:25:14 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:26:5 generated
-    Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:26:5 "free" "bb18"
+    Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:26:5 written "free" "bb18"
       Copy "_15"
   Block "bb18"
     Sequenced a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:26:5 generated
@@ -235,7 +235,7 @@ Function a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:7
       Destination "_21"
       Unary "Not"
         Copy "_20"
-    Branch a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:27:9 "bb19" "bb20"
+    Branch a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:27:9 written "bb19" "bb20"
       Copy "_21"
   Block "bb19"
     Sequenced a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:27:9 generated
@@ -256,12 +256,12 @@ Function a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:7
           Deref
     Sequenced a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:28:13 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:29:5 generated
-    Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:29:5 "free" "bb22"
+    Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:29:5 written "free" "bb22"
       Copy "_5"
   Block "bb22"
     Sequenced a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:29:5 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:30:5 generated
-    Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:30:5 "free" "bb23"
+    Call a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:30:5 written "free" "bb23"
       Copy "_1"
   Block "bb23"
     Sequenced a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted.c:30:5 generated

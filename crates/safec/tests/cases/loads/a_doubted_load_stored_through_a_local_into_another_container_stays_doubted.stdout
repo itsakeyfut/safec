@@ -34,7 +34,7 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
       Use
         Constant 0
     ArgumentsEvaluated a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:5:16 generated
-    Call a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:5:16 "malloc" "bb1"
+    Call a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:5:16 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -48,7 +48,7 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:6:9 "bb2" "bb3"
+    Branch a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:6:9 generated
@@ -68,7 +68,7 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
         Constant 0
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:9:13 generated
     ArgumentsEvaluated a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:10:16 generated
-    Call a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:10:16 "malloc" "bb5"
+    Call a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:10:16 written "malloc" "bb5"
       Destination "_6"
       Constant 8
   Block "bb5"
@@ -82,7 +82,7 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:11:9 "bb6" "bb7"
+    Branch a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:11:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:11:9 generated
@@ -108,13 +108,13 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
       Binary "Lt"
         Copy "_8"
         Constant 2
-    Branch a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:15:12 "bb10" "bb11"
+    Branch a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:15:12 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:15:12 generated
     StorageLive a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:16:9 generated "_10"
     ArgumentsEvaluated a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:16:18 generated
-    Call a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:16:18 "malloc" "bb12"
+    Call a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:16:18 written "malloc" "bb12"
       Destination "_11"
       Constant 4
   Block "bb11"
@@ -136,7 +136,7 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
       Binary "Eq"
         Copy "_10"
         Constant 0
-    Branch a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:17:13 "bb13" "bb14"
+    Branch a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:17:13 written "bb13" "bb14"
       Copy "_12"
   Block "bb13"
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:17:13 generated
@@ -167,7 +167,7 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
       Binary "Eq"
         Copy "_8"
         Constant 1
-    Branch a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:21:13 "bb16" "bb17"
+    Branch a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:21:13 written "bb16" "bb17"
       Copy "_14"
   Block "bb16"
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:21:13 generated
@@ -201,7 +201,7 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
       Binary "Eq"
         Copy "_17"
         Constant 0
-    Branch a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:25:17 "bb19" "bb20"
+    Branch a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:25:17 written "bb19" "bb20"
       Copy "_18"
   Block "bb17"
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:21:13 generated
@@ -219,7 +219,7 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
           Deref
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:30:9 generated
     ArgumentsEvaluated a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:31:9 generated
-    Call a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:31:9 "free" "bb22"
+    Call a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:31:9 written "free" "bb22"
       Copy "_10"
   Block "bb19"
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:25:17 generated

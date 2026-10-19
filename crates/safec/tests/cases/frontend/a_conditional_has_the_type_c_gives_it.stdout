@@ -6,7 +6,7 @@ Function a_conditional_has_the_type_c_gives_it.c:1:5 "f"
   Local "_3" "int *" "r"
   Local "_4" "int *"
   Block "bb0" entry
-    Branch a_conditional_has_the_type_c_gives_it.c:2:14 "bb2" "bb3"
+    Branch a_conditional_has_the_type_c_gives_it.c:2:14 written "bb2" "bb3"
       Copy "_1"
   Block "bb1"
     Operation a_conditional_has_the_type_c_gives_it.c:2:10 written

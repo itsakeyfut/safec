@@ -21,7 +21,7 @@ Function a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_a
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call.c:4:9 "bb1" "bb2"
+    Branch a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call.c:4:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call.c:4:9 generated
@@ -45,7 +45,7 @@ Function a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_a
       Address
         Place "_3"
     ArgumentsEvaluated a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call.c:8:5 generated
-    Call a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call.c:8:5 "memcpy" "bb4"
+    Call a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call.c:8:5 written "memcpy" "bb4"
       Destination "_5"
       Copy "_4"
       Copy "_1"
@@ -62,7 +62,7 @@ Function a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_a
       Binary "Eq"
         Copy "_6"
         Constant 0
-    Branch a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call.c:10:9 "bb5" "bb6"
+    Branch a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call.c:10:9 written "bb5" "bb6"
       Copy "_7"
   Block "bb5"
     Sequenced a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call.c:10:9 generated
@@ -77,7 +77,7 @@ Function a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_a
     Goto "bb7"
   Block "bb7"
     ArgumentsEvaluated a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call.c:13:5 generated
-    Call a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call.c:13:5 "release" "bb8"
+    Call a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call.c:13:5 written "release" "bb8"
   Block "bb8"
     Sequenced a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call.c:13:5 generated
     Operation a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call.c:14:5 written

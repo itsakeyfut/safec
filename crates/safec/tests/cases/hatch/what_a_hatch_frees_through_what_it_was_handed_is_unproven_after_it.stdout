@@ -10,7 +10,7 @@ Function what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:5:
   Local "_1" "int **" parameter "box"
   Block "bb0" entry
     ArgumentsEvaluated what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:6:5 generated
-    Call what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:6:5 "free" "bb1"
+    Call what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:6:5 written "free" "bb1"
       Copy "_1"
         Deref
   Block "bb1"
@@ -32,7 +32,7 @@ Function what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:9:
       Use
         Constant 0
     ArgumentsEvaluated what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:10:17 generated
-    Call what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:10:17 "malloc" "bb1"
+    Call what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:10:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -46,7 +46,7 @@ Function what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:9:
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:11:9 "bb2" "bb3"
+    Branch what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:11:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:11:9 generated
@@ -61,7 +61,7 @@ Function what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:9:
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:14:14 generated
-    Call what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:14:14 "malloc" "bb5"
+    Call what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:14:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -75,7 +75,7 @@ Function what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:9:
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:15:9 "bb6" "bb7"
+    Branch what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:15:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:15:9 generated
@@ -101,7 +101,7 @@ Function what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:9:
           Deref
     Sequenced what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:18:5 generated
     ArgumentsEvaluated what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:19:5 generated
-    Call what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:19:5 "drop_inner" "bb9"
+    Call what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:19:5 written "drop_inner" "bb9"
       Copy "_1"
   Block "bb9"
     Sequenced what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:19:5 generated

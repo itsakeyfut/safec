@@ -10,12 +10,12 @@ Function a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller
   Local "_1" "int *" parameter "p"
   Local "_2" "int" parameter "c"
   Block "bb0" entry
-    Branch a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:5:9 "bb1" "bb2"
+    Branch a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:5:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:5:9 generated
     ArgumentsEvaluated a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:6:9 generated
-    Call a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:6:9 "free" "bb4"
+    Call a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:6:9 written "free" "bb4"
       Copy "_1"
   Block "bb2"
     Sequenced a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:5:9 generated
@@ -44,7 +44,7 @@ Function a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller
       Use
         Constant 0
     ArgumentsEvaluated a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:12:14 generated
-    Call a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:12:14 "malloc" "bb1"
+    Call a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:12:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -58,7 +58,7 @@ Function a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:13:9 "bb2" "bb3"
+    Branch a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:13:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:13:9 generated
@@ -73,7 +73,7 @@ Function a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:16:14 generated
-    Call a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:16:14 "maybe" "bb5"
+    Call a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:16:14 written "maybe" "bb5"
       Destination "_5"
       Copy "_1"
       Constant 1
@@ -88,7 +88,7 @@ Function a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:17:9 "bb6" "bb7"
+    Branch a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:17:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:17:9 generated

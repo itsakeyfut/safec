@@ -11,7 +11,7 @@ Function a_conflict_between_operands_inside_a_length_is_told_to_write_in_the_bod
   Local "_4" "int *"
   Local "_5" "int"
   Block "bb0" entry
-    Call a_conflict_between_operands_inside_a_length_is_told_to_write_in_the_body.c:3:21 "g" "bb1"
+    Call a_conflict_between_operands_inside_a_length_is_told_to_write_in_the_body.c:3:21 written "g" "bb1"
       Destination "_3"
       Copy "_1"
       Constant 1

@@ -22,7 +22,7 @@ Function the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:5:
       Use
         Constant 0
     ArgumentsEvaluated the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:6:14 generated
-    Call the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:6:14 "malloc" "bb1"
+    Call the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -36,7 +36,7 @@ Function the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:5:
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:7:9 "bb2" "bb3"
+    Branch the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:7:9 generated
@@ -51,7 +51,7 @@ Function the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:5:
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:10:5 generated
-    Call the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:10:5 "free" "bb5"
+    Call the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:10:5 written "free" "bb5"
       Copy "_1"
   Block "bb5"
     Sequenced the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:10:5 generated
@@ -69,7 +69,7 @@ Function the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:5:
       Address
         Place "_1"
     ArgumentsEvaluated the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:12:12 generated
-    Call the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:12:12 "use2" "bb6"
+    Call the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:12:12 written "use2" "bb6"
       Destination "_6"
       Copy "_5"
   Block "bb6"

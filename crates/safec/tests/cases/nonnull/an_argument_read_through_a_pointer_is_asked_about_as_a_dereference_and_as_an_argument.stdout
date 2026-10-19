@@ -7,7 +7,7 @@ Function an_argument_read_through_a_pointer_is_asked_about_as_a_dereference_and_
   Local "_1" "int **" parameter "pp"
   Block "bb0" entry
     ArgumentsEvaluated an_argument_read_through_a_pointer_is_asked_about_as_a_dereference_and_as_an_argument.c:3:5 generated
-    Call an_argument_read_through_a_pointer_is_asked_about_as_a_dereference_and_as_an_argument.c:3:5 "g" "bb1"
+    Call an_argument_read_through_a_pointer_is_asked_about_as_a_dereference_and_as_an_argument.c:3:5 written "g" "bb1"
       Copy "_1"
         Deref
   Block "bb1"

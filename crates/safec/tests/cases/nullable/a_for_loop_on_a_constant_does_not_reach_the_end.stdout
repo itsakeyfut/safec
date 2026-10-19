@@ -8,7 +8,7 @@ Function a_for_loop_on_a_constant_does_not_reach_the_end.c:1:16 "f"
     Goto "bb2"
   Block "bb2"
     Sequenced a_for_loop_on_a_constant_does_not_reach_the_end.c:2:12 generated
-    Branch a_for_loop_on_a_constant_does_not_reach_the_end.c:3:13 "bb4" "bb5"
+    Branch a_for_loop_on_a_constant_does_not_reach_the_end.c:3:13 written "bb4" "bb5"
       Copy "_1"
   Block "bb3"
     Sequenced a_for_loop_on_a_constant_does_not_reach_the_end.c:2:12 generated

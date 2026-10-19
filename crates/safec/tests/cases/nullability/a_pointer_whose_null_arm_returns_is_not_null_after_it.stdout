@@ -10,7 +10,7 @@ Function a_pointer_whose_null_arm_returns_is_not_null_after_it.c:1:5 "f"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_whose_null_arm_returns_is_not_null_after_it.c:2:9 "bb1" "bb2"
+    Branch a_pointer_whose_null_arm_returns_is_not_null_after_it.c:2:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_pointer_whose_null_arm_returns_is_not_null_after_it.c:2:9 generated

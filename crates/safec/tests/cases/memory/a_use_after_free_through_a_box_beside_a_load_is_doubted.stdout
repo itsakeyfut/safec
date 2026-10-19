@@ -38,7 +38,7 @@ Function a_use_after_free_through_a_box_beside_a_load_is_doubted.c:3:5 "f"
       Destination "_3"
       Unary "Not"
         Copy "_2"
-    Branch a_use_after_free_through_a_box_beside_a_load_is_doubted.c:4:9 "bb1" "bb2"
+    Branch a_use_after_free_through_a_box_beside_a_load_is_doubted.c:4:9 written "bb1" "bb2"
       Copy "_3"
   Block "bb1"
     Sequenced a_use_after_free_through_a_box_beside_a_load_is_doubted.c:4:9 generated
@@ -59,7 +59,7 @@ Function a_use_after_free_through_a_box_beside_a_load_is_doubted.c:3:5 "f"
           Deref
     Sequenced a_use_after_free_through_a_box_beside_a_load_is_doubted.c:5:14 generated
     ArgumentsEvaluated a_use_after_free_through_a_box_beside_a_load_is_doubted.c:6:17 generated
-    Call a_use_after_free_through_a_box_beside_a_load_is_doubted.c:6:17 "malloc" "bb4"
+    Call a_use_after_free_through_a_box_beside_a_load_is_doubted.c:6:17 written "malloc" "bb4"
       Destination "_6"
       Constant 8
   Block "bb4"
@@ -72,7 +72,7 @@ Function a_use_after_free_through_a_box_beside_a_load_is_doubted.c:3:5 "f"
       Destination "_7"
       Unary "Not"
         Copy "_5"
-    Branch a_use_after_free_through_a_box_beside_a_load_is_doubted.c:7:9 "bb5" "bb6"
+    Branch a_use_after_free_through_a_box_beside_a_load_is_doubted.c:7:9 written "bb5" "bb6"
       Copy "_7"
   Block "bb5"
     Sequenced a_use_after_free_through_a_box_beside_a_load_is_doubted.c:7:9 generated
@@ -108,7 +108,7 @@ Function a_use_after_free_through_a_box_beside_a_load_is_doubted.c:3:5 "f"
       Binary "Lt"
         Copy "_10"
         Constant 2
-    Branch a_use_after_free_through_a_box_beside_a_load_is_doubted.c:11:12 "bb9" "bb10"
+    Branch a_use_after_free_through_a_box_beside_a_load_is_doubted.c:11:12 written "bb9" "bb10"
       Copy "_11"
   Block "bb9"
     Sequenced a_use_after_free_through_a_box_beside_a_load_is_doubted.c:11:12 generated
@@ -122,12 +122,12 @@ Function a_use_after_free_through_a_box_beside_a_load_is_doubted.c:3:5 "f"
         Copy "_8"
     Sequenced a_use_after_free_through_a_box_beside_a_load_is_doubted.c:12:9 generated
     ArgumentsEvaluated a_use_after_free_through_a_box_beside_a_load_is_doubted.c:13:13 generated
-    Call a_use_after_free_through_a_box_beside_a_load_is_doubted.c:13:13 "malloc" "bb11"
+    Call a_use_after_free_through_a_box_beside_a_load_is_doubted.c:13:13 written "malloc" "bb11"
       Destination "_13"
       Constant 4
   Block "bb10"
     Sequenced a_use_after_free_through_a_box_beside_a_load_is_doubted.c:11:12 generated
-    Branch a_use_after_free_through_a_box_beside_a_load_is_doubted.c:18:9 "bb15" "bb16"
+    Branch a_use_after_free_through_a_box_beside_a_load_is_doubted.c:18:9 written "bb15" "bb16"
       Copy "_1"
   Block "bb11"
     Operation a_use_after_free_through_a_box_beside_a_load_is_doubted.c:13:9 written
@@ -143,7 +143,7 @@ Function a_use_after_free_through_a_box_beside_a_load_is_doubted.c:3:5 "f"
       Destination "_15"
       Unary "Not"
         Copy "_9"
-    Branch a_use_after_free_through_a_box_beside_a_load_is_doubted.c:14:13 "bb12" "bb13"
+    Branch a_use_after_free_through_a_box_beside_a_load_is_doubted.c:14:13 written "bb12" "bb13"
       Copy "_15"
   Block "bb12"
     Sequenced a_use_after_free_through_a_box_beside_a_load_is_doubted.c:14:13 generated
@@ -197,7 +197,7 @@ Function a_use_after_free_through_a_box_beside_a_load_is_doubted.c:3:5 "f"
           Deref
     Sequenced a_use_after_free_through_a_box_beside_a_load_is_doubted.c:18:14 generated
     ArgumentsEvaluated a_use_after_free_through_a_box_beside_a_load_is_doubted.c:18:24 generated
-    Call a_use_after_free_through_a_box_beside_a_load_is_doubted.c:18:24 "free" "bb18"
+    Call a_use_after_free_through_a_box_beside_a_load_is_doubted.c:18:24 written "free" "bb18"
       Copy "_8"
   Block "bb16"
     Sequenced a_use_after_free_through_a_box_beside_a_load_is_doubted.c:18:9 generated
@@ -224,12 +224,12 @@ Function a_use_after_free_through_a_box_beside_a_load_is_doubted.c:3:5 "f"
       Destination "_23"
       Unary "Not"
         Copy "_22"
-    Branch a_use_after_free_through_a_box_beside_a_load_is_doubted.c:20:9 "bb20" "bb21"
+    Branch a_use_after_free_through_a_box_beside_a_load_is_doubted.c:20:9 written "bb20" "bb21"
       Copy "_23"
   Block "bb18"
     Sequenced a_use_after_free_through_a_box_beside_a_load_is_doubted.c:18:24 generated
     ArgumentsEvaluated a_use_after_free_through_a_box_beside_a_load_is_doubted.c:18:33 generated
-    Call a_use_after_free_through_a_box_beside_a_load_is_doubted.c:18:33 "free" "bb19"
+    Call a_use_after_free_through_a_box_beside_a_load_is_doubted.c:18:33 written "free" "bb19"
       Copy "_9"
   Block "bb19"
     Sequenced a_use_after_free_through_a_box_beside_a_load_is_doubted.c:18:33 generated

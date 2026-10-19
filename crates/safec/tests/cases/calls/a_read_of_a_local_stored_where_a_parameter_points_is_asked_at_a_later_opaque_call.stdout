@@ -22,7 +22,7 @@ Function a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_o
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:7:9 "bb1" "bb2"
+    Branch a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:7:9 written "bb1" "bb2"
       Copy "_4"
   Block "bb1"
     Sequenced a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:7:9 generated
@@ -37,7 +37,7 @@ Function a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_o
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:10:9 generated
-    Call a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:10:9 "malloc" "bb4"
+    Call a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:10:9 written "malloc" "bb4"
       Destination "_5"
       Constant 4
   Block "bb4"
@@ -55,7 +55,7 @@ Function a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_o
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:11:9 "bb5" "bb6"
+    Branch a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:11:9 written "bb5" "bb6"
       Copy "_7"
   Block "bb5"
     Sequenced a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:11:9 generated
@@ -89,7 +89,7 @@ Function a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_o
       Destination "_9"
       Use
         Copy "_2"
-    Call a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:15:26 "release_all" "bb8"
+    Call a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:15:26 written "release_all" "bb8"
   Block "bb8"
     Operation a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:15:13 written
       Destination "_10"

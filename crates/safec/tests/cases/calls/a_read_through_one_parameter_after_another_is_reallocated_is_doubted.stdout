@@ -18,7 +18,7 @@ Function a_read_through_one_parameter_after_another_is_reallocated_is_doubted.c:
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_read_through_one_parameter_after_another_is_reallocated_is_doubted.c:4:9 "bb1" "bb2"
+    Branch a_read_through_one_parameter_after_another_is_reallocated_is_doubted.c:4:9 written "bb1" "bb2"
       Copy "_3"
   Block "bb1"
     Sequenced a_read_through_one_parameter_after_another_is_reallocated_is_doubted.c:4:9 generated
@@ -33,7 +33,7 @@ Function a_read_through_one_parameter_after_another_is_reallocated_is_doubted.c:
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated a_read_through_one_parameter_after_another_is_reallocated_is_doubted.c:7:14 generated
-    Call a_read_through_one_parameter_after_another_is_reallocated_is_doubted.c:7:14 "realloc" "bb4"
+    Call a_read_through_one_parameter_after_another_is_reallocated_is_doubted.c:7:14 written "realloc" "bb4"
       Destination "_5"
       Copy "_2"
       Constant 64
@@ -48,7 +48,7 @@ Function a_read_through_one_parameter_after_another_is_reallocated_is_doubted.c:
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_read_through_one_parameter_after_another_is_reallocated_is_doubted.c:8:9 "bb5" "bb6"
+    Branch a_read_through_one_parameter_after_another_is_reallocated_is_doubted.c:8:9 written "bb5" "bb6"
       Copy "_6"
   Block "bb5"
     Sequenced a_read_through_one_parameter_after_another_is_reallocated_is_doubted.c:8:9 generated

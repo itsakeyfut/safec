@@ -22,7 +22,7 @@ Function a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:4
   Local "_9" "int" "r"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:5:14 generated
-    Call a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:5:14 "malloc" "bb1"
+    Call a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:5:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -35,7 +35,7 @@ Function a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:4
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:6:9 "bb2" "bb3"
+    Branch a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:6:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:6:9 generated
@@ -60,12 +60,12 @@ Function a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:4
         Copy "_2"
           Deref
     Sequenced a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:7:5 generated
-    Branch a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:8:9 "bb5" "bb6"
+    Branch a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:8:9 written "bb5" "bb6"
       Copy "_1"
   Block "bb5"
     Sequenced a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:8:9 generated
     ArgumentsEvaluated a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:8:16 generated
-    Call a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:8:16 "realloc" "bb8"
+    Call a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:8:16 written "realloc" "bb8"
       Destination "_6"
       Copy "_2"
       Constant 8
@@ -77,7 +77,7 @@ Function a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:4
       Destination "_8"
       Unary "Not"
         Copy "_2"
-    Branch a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:9:9 "bb9" "bb10"
+    Branch a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:9:9 written "bb9" "bb10"
       Copy "_8"
   Block "bb8"
     Operation a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:8:12 written
@@ -109,7 +109,7 @@ Function a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:4
           Deref
     Sequenced a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:10:13 generated
     ArgumentsEvaluated a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:11:5 generated
-    Call a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:11:5 "free" "bb12"
+    Call a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:11:5 written "free" "bb12"
       Copy "_2"
   Block "bb12"
     Sequenced a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test.c:11:5 generated

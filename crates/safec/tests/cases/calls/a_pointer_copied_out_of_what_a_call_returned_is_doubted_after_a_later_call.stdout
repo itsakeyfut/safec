@@ -24,7 +24,7 @@ Function a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_c
   Local "_9" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:6:16 generated
-    Call a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:6:16 "get_slot" "bb1"
+    Call a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:6:16 written "get_slot" "bb1"
       Destination "_2"
   Block "bb1"
     Operation a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:6:11 written
@@ -37,7 +37,7 @@ Function a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_c
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:7:9 "bb2" "bb3"
+    Branch a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:7:9 generated
@@ -52,7 +52,7 @@ Function a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_c
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:10:17 generated
-    Call a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:10:17 "malloc" "bb5"
+    Call a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:10:17 written "malloc" "bb5"
       Destination "_5"
       Constant 8
   Block "bb5"
@@ -66,7 +66,7 @@ Function a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_c
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:11:9 "bb6" "bb7"
+    Branch a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:11:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:11:9 generated
@@ -81,7 +81,7 @@ Function a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_c
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:14:5 generated
-    Call a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:14:5 "memcpy" "bb9"
+    Call a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:14:5 written "memcpy" "bb9"
       Destination "_7"
       Copy "_4"
       Copy "_1"
@@ -99,7 +99,7 @@ Function a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_c
       Binary "Eq"
         Copy "_8"
         Constant 0
-    Branch a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:16:9 "bb10" "bb11"
+    Branch a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:16:9 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:16:9 generated
@@ -114,7 +114,7 @@ Function a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_c
     Goto "bb12"
   Block "bb12"
     ArgumentsEvaluated a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:19:5 generated
-    Call a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:19:5 "release" "bb13"
+    Call a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:19:5 written "release" "bb13"
   Block "bb13"
     Sequenced a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:19:5 generated
     Operation a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:20:5 written

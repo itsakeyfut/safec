@@ -17,7 +17,7 @@ Function a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_retu
   Local "_8" "int *" "q"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:5:17 generated
-    Call a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:5:17 "malloc" "bb1"
+    Call a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:5:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -31,7 +31,7 @@ Function a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_retu
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:6:9 "bb2" "bb3"
+    Branch a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:6:9 generated
@@ -46,7 +46,7 @@ Function a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_retu
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:9:14 generated
-    Call a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:9:14 "malloc" "bb5"
+    Call a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:9:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -60,7 +60,7 @@ Function a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_retu
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:10:9 "bb6" "bb7"
+    Branch a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:10:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:10:9 generated
@@ -86,7 +86,7 @@ Function a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_retu
           Deref
     Sequenced a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:13:5 generated
     ArgumentsEvaluated a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:14:5 generated
-    Call a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:14:5 "free" "bb9"
+    Call a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:14:5 written "free" "bb9"
       Copy "_4"
   Block "bb9"
     Sequenced a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:14:5 generated

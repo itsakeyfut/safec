@@ -15,7 +15,7 @@ Function a_pointer_replaced_through_its_own_address.c:3:5 "f"
   Local "_6" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_replaced_through_its_own_address.c:4:14 generated
-    Call a_pointer_replaced_through_its_own_address.c:4:14 "malloc" "bb1"
+    Call a_pointer_replaced_through_its_own_address.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -34,12 +34,12 @@ Function a_pointer_replaced_through_its_own_address.c:3:5 "f"
         Copy "_4"
     Sequenced a_pointer_replaced_through_its_own_address.c:5:16 generated
     ArgumentsEvaluated a_pointer_replaced_through_its_own_address.c:6:5 generated
-    Call a_pointer_replaced_through_its_own_address.c:6:5 "free" "bb2"
+    Call a_pointer_replaced_through_its_own_address.c:6:5 written "free" "bb2"
       Copy "_1"
   Block "bb2"
     Sequenced a_pointer_replaced_through_its_own_address.c:6:5 generated
     ArgumentsEvaluated a_pointer_replaced_through_its_own_address.c:7:11 generated
-    Call a_pointer_replaced_through_its_own_address.c:7:11 "malloc" "bb3"
+    Call a_pointer_replaced_through_its_own_address.c:7:11 written "malloc" "bb3"
       Destination "_5"
       Constant 8
   Block "bb3"
@@ -55,7 +55,7 @@ Function a_pointer_replaced_through_its_own_address.c:3:5 "f"
           Deref
     Sequenced a_pointer_replaced_through_its_own_address.c:7:5 generated
     ArgumentsEvaluated a_pointer_replaced_through_its_own_address.c:8:5 generated
-    Call a_pointer_replaced_through_its_own_address.c:8:5 "free" "bb4"
+    Call a_pointer_replaced_through_its_own_address.c:8:5 written "free" "bb4"
       Copy "_1"
   Block "bb4"
     Sequenced a_pointer_replaced_through_its_own_address.c:8:5 generated

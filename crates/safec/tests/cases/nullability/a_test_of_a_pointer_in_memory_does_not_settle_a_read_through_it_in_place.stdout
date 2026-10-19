@@ -3,11 +3,11 @@ Function a_test_of_a_pointer_in_memory_does_not_settle_a_read_through_it_in_plac
   Local "_0" "int" return
   Local "_1" "int **" parameter "pp"
   Block "bb0" entry
-    Branch a_test_of_a_pointer_in_memory_does_not_settle_a_read_through_it_in_place.c:2:9 "bb1" "bb2"
+    Branch a_test_of_a_pointer_in_memory_does_not_settle_a_read_through_it_in_place.c:2:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced a_test_of_a_pointer_in_memory_does_not_settle_a_read_through_it_in_place.c:2:9 generated
-    Branch a_test_of_a_pointer_in_memory_does_not_settle_a_read_through_it_in_place.c:3:13 "bb4" "bb5"
+    Branch a_test_of_a_pointer_in_memory_does_not_settle_a_read_through_it_in_place.c:3:13 written "bb4" "bb5"
       Copy "_1"
         Deref
   Block "bb2"

@@ -12,7 +12,7 @@ Function an_allocating_call_leaves_its_argument_alone.c:3:5 "f"
   Local "_3" "void *"
   Block "bb0" entry
     ArgumentsEvaluated an_allocating_call_leaves_its_argument_alone.c:4:14 generated
-    Call an_allocating_call_leaves_its_argument_alone.c:4:14 "malloc" "bb1"
+    Call an_allocating_call_leaves_its_argument_alone.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 0
   Block "bb1"
@@ -22,18 +22,18 @@ Function an_allocating_call_leaves_its_argument_alone.c:3:5 "f"
         Copy "_2"
     Sequenced an_allocating_call_leaves_its_argument_alone.c:4:14 generated
     ArgumentsEvaluated an_allocating_call_leaves_its_argument_alone.c:5:5 generated
-    Call an_allocating_call_leaves_its_argument_alone.c:5:5 "malloc" "bb2"
+    Call an_allocating_call_leaves_its_argument_alone.c:5:5 written "malloc" "bb2"
       Destination "_3"
       Copy "_1"
   Block "bb2"
     Sequenced an_allocating_call_leaves_its_argument_alone.c:5:5 generated
     ArgumentsEvaluated an_allocating_call_leaves_its_argument_alone.c:6:5 generated
-    Call an_allocating_call_leaves_its_argument_alone.c:6:5 "free" "bb3"
+    Call an_allocating_call_leaves_its_argument_alone.c:6:5 written "free" "bb3"
       Copy "_1"
   Block "bb3"
     Sequenced an_allocating_call_leaves_its_argument_alone.c:6:5 generated
     ArgumentsEvaluated an_allocating_call_leaves_its_argument_alone.c:7:5 generated
-    Call an_allocating_call_leaves_its_argument_alone.c:7:5 "free" "bb4"
+    Call an_allocating_call_leaves_its_argument_alone.c:7:5 written "free" "bb4"
       Copy "_1"
   Block "bb4"
     Sequenced an_allocating_call_leaves_its_argument_alone.c:7:5 generated

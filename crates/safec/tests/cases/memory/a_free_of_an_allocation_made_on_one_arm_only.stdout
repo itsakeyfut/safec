@@ -17,12 +17,12 @@ Function a_free_of_an_allocation_made_on_one_arm_only.c:3:5 "f"
       Use
         Constant 0
     Sequenced a_free_of_an_allocation_made_on_one_arm_only.c:4:14 generated
-    Branch a_free_of_an_allocation_made_on_one_arm_only.c:5:9 "bb1" "bb2"
+    Branch a_free_of_an_allocation_made_on_one_arm_only.c:5:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced a_free_of_an_allocation_made_on_one_arm_only.c:5:9 generated
     ArgumentsEvaluated a_free_of_an_allocation_made_on_one_arm_only.c:6:13 generated
-    Call a_free_of_an_allocation_made_on_one_arm_only.c:6:13 "malloc" "bb4"
+    Call a_free_of_an_allocation_made_on_one_arm_only.c:6:13 written "malloc" "bb4"
       Destination "_3"
       Constant 4
   Block "bb2"
@@ -30,7 +30,7 @@ Function a_free_of_an_allocation_made_on_one_arm_only.c:3:5 "f"
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated a_free_of_an_allocation_made_on_one_arm_only.c:8:5 generated
-    Call a_free_of_an_allocation_made_on_one_arm_only.c:8:5 "free" "bb5"
+    Call a_free_of_an_allocation_made_on_one_arm_only.c:8:5 written "free" "bb5"
       Copy "_2"
   Block "bb4"
     Operation a_free_of_an_allocation_made_on_one_arm_only.c:6:9 written

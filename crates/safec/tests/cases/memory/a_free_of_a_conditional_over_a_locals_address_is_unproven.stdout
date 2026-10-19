@@ -19,7 +19,7 @@ Function a_free_of_a_conditional_over_a_locals_address_is_unproven.c:4:5 "g"
   Local "_10" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_free_of_a_conditional_over_a_locals_address_is_unproven.c:6:15 generated
-    Call a_free_of_a_conditional_over_a_locals_address_is_unproven.c:6:15 "malloc" "bb1"
+    Call a_free_of_a_conditional_over_a_locals_address_is_unproven.c:6:15 written "malloc" "bb1"
       Destination "_4"
       Constant 4
   Block "bb1"
@@ -29,7 +29,7 @@ Function a_free_of_a_conditional_over_a_locals_address_is_unproven.c:4:5 "g"
         Copy "_4"
     Sequenced a_free_of_a_conditional_over_a_locals_address_is_unproven.c:6:15 generated
     ArgumentsEvaluated a_free_of_a_conditional_over_a_locals_address_is_unproven.c:7:14 generated
-    Call a_free_of_a_conditional_over_a_locals_address_is_unproven.c:7:14 "malloc" "bb2"
+    Call a_free_of_a_conditional_over_a_locals_address_is_unproven.c:7:14 written "malloc" "bb2"
       Destination "_6"
       Constant 4
   Block "bb2"
@@ -38,11 +38,11 @@ Function a_free_of_a_conditional_over_a_locals_address_is_unproven.c:4:5 "g"
       Use
         Copy "_6"
     Sequenced a_free_of_a_conditional_over_a_locals_address_is_unproven.c:7:14 generated
-    Branch a_free_of_a_conditional_over_a_locals_address_is_unproven.c:8:10 "bb4" "bb5"
+    Branch a_free_of_a_conditional_over_a_locals_address_is_unproven.c:8:10 written "bb4" "bb5"
       Copy "_1"
   Block "bb3"
     ArgumentsEvaluated a_free_of_a_conditional_over_a_locals_address_is_unproven.c:8:5 generated
-    Call a_free_of_a_conditional_over_a_locals_address_is_unproven.c:8:5 "free" "bb6"
+    Call a_free_of_a_conditional_over_a_locals_address_is_unproven.c:8:5 written "free" "bb6"
       Copy "_7"
   Block "bb4"
     Sequenced a_free_of_a_conditional_over_a_locals_address_is_unproven.c:8:10 generated
@@ -64,11 +64,11 @@ Function a_free_of_a_conditional_over_a_locals_address_is_unproven.c:4:5 "g"
     Goto "bb3"
   Block "bb6"
     Sequenced a_free_of_a_conditional_over_a_locals_address_is_unproven.c:8:5 generated
-    Branch a_free_of_a_conditional_over_a_locals_address_is_unproven.c:9:10 "bb8" "bb9"
+    Branch a_free_of_a_conditional_over_a_locals_address_is_unproven.c:9:10 written "bb8" "bb9"
       Copy "_1"
   Block "bb7"
     ArgumentsEvaluated a_free_of_a_conditional_over_a_locals_address_is_unproven.c:9:5 generated
-    Call a_free_of_a_conditional_over_a_locals_address_is_unproven.c:9:5 "free" "bb10"
+    Call a_free_of_a_conditional_over_a_locals_address_is_unproven.c:9:5 written "free" "bb10"
       Copy "_9"
   Block "bb8"
     Sequenced a_free_of_a_conditional_over_a_locals_address_is_unproven.c:9:10 generated

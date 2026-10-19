@@ -24,7 +24,7 @@ Function a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_aft
       Use
         Constant 0
     ArgumentsEvaluated a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:7:14 generated
-    Call a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:7:14 "malloc" "bb1"
+    Call a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:7:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -38,7 +38,7 @@ Function a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_aft
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:8:9 "bb2" "bb3"
+    Branch a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:8:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:8:9 generated
@@ -62,7 +62,7 @@ Function a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_aft
       Address
         Place "_4"
     ArgumentsEvaluated a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:12:5 generated
-    Call a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:12:5 "keep" "bb5"
+    Call a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:12:5 written "keep" "bb5"
       Copy "_5"
   Block "bb5"
     Sequenced a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:12:5 generated
@@ -76,7 +76,7 @@ Function a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_aft
         Copy "_4"
     Sequenced a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:13:5 generated
     ArgumentsEvaluated a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:14:5 generated
-    Call a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:14:5 "forget" "bb6"
+    Call a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:14:5 written "forget" "bb6"
   Block "bb6"
     Sequenced a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:14:5 generated
     Operation a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:15:5 written

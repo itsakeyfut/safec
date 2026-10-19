@@ -17,7 +17,7 @@ Function an_unsequenced_use_the_check_meets_first_is_reported.c:4:5 "f"
   Local "_5" "int"
   Block "bb0" entry
     ArgumentsEvaluated an_unsequenced_use_the_check_meets_first_is_reported.c:5:14 generated
-    Call an_unsequenced_use_the_check_meets_first_is_reported.c:5:14 "malloc" "bb1"
+    Call an_unsequenced_use_the_check_meets_first_is_reported.c:5:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -26,12 +26,12 @@ Function an_unsequenced_use_the_check_meets_first_is_reported.c:4:5 "f"
       Use
         Copy "_2"
     Sequenced an_unsequenced_use_the_check_meets_first_is_reported.c:5:14 generated
-    Call an_unsequenced_use_the_check_meets_first_is_reported.c:6:13 "g" "bb2"
+    Call an_unsequenced_use_the_check_meets_first_is_reported.c:6:13 written "g" "bb2"
       Destination "_4"
       Copy "_1"
         Deref
   Block "bb2"
-    Call an_unsequenced_use_the_check_meets_first_is_reported.c:6:22 "free" "bb3"
+    Call an_unsequenced_use_the_check_meets_first_is_reported.c:6:22 written "free" "bb3"
       Copy "_1"
   Block "bb3"
     Operation an_unsequenced_use_the_check_meets_first_is_reported.c:6:13 written

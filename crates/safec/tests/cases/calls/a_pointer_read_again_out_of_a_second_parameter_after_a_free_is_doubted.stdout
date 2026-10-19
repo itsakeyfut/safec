@@ -18,7 +18,7 @@ Function a_pointer_read_again_out_of_a_second_parameter_after_a_free_is_doubted.
           Deref
     Sequenced a_pointer_read_again_out_of_a_second_parameter_after_a_free_is_doubted.c:4:14 generated
     ArgumentsEvaluated a_pointer_read_again_out_of_a_second_parameter_after_a_free_is_doubted.c:5:5 generated
-    Call a_pointer_read_again_out_of_a_second_parameter_after_a_free_is_doubted.c:5:5 "free" "bb1"
+    Call a_pointer_read_again_out_of_a_second_parameter_after_a_free_is_doubted.c:5:5 written "free" "bb1"
       Copy "_3"
   Block "bb1"
     Sequenced a_pointer_read_again_out_of_a_second_parameter_after_a_free_is_doubted.c:5:5 generated

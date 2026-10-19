@@ -10,7 +10,7 @@ Function a_null_passed_to_a_nullable_parameter_is_accepted.c:3:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_null_passed_to_a_nullable_parameter_is_accepted.c:4:5 generated
-    Call a_null_passed_to_a_nullable_parameter_is_accepted.c:4:5 "g" "bb1"
+    Call a_null_passed_to_a_nullable_parameter_is_accepted.c:4:5 written "g" "bb1"
       Constant 0
   Block "bb1"
     Sequenced a_null_passed_to_a_nullable_parameter_is_accepted.c:4:5 generated

@@ -12,7 +12,7 @@ Function a_call_may_return_what_a_parameter_holds.c:4:5 "f"
   Local "_4" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_call_may_return_what_a_parameter_holds.c:5:14 generated
-    Call a_call_may_return_what_a_parameter_holds.c:5:14 "lookup" "bb1"
+    Call a_call_may_return_what_a_parameter_holds.c:5:14 written "lookup" "bb1"
       Destination "_3"
   Block "bb1"
     Operation a_call_may_return_what_a_parameter_holds.c:5:10 written
@@ -25,7 +25,7 @@ Function a_call_may_return_what_a_parameter_holds.c:4:5 "f"
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_call_may_return_what_a_parameter_holds.c:6:9 "bb2" "bb3"
+    Branch a_call_may_return_what_a_parameter_holds.c:6:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_call_may_return_what_a_parameter_holds.c:6:9 generated
@@ -40,7 +40,7 @@ Function a_call_may_return_what_a_parameter_holds.c:4:5 "f"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_call_may_return_what_a_parameter_holds.c:9:5 generated
-    Call a_call_may_return_what_a_parameter_holds.c:9:5 "free" "bb5"
+    Call a_call_may_return_what_a_parameter_holds.c:9:5 written "free" "bb5"
       Copy "_1"
   Block "bb5"
     Sequenced a_call_may_return_what_a_parameter_holds.c:9:5 generated

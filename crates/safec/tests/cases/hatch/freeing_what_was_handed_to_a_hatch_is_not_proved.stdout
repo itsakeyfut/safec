@@ -20,7 +20,7 @@ Function freeing_what_was_handed_to_a_hatch_is_not_proved.c:8:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated freeing_what_was_handed_to_a_hatch_is_not_proved.c:9:14 generated
-    Call freeing_what_was_handed_to_a_hatch_is_not_proved.c:9:14 "malloc" "bb1"
+    Call freeing_what_was_handed_to_a_hatch_is_not_proved.c:9:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -30,12 +30,12 @@ Function freeing_what_was_handed_to_a_hatch_is_not_proved.c:8:5 "main"
         Copy "_2"
     Sequenced freeing_what_was_handed_to_a_hatch_is_not_proved.c:9:14 generated
     ArgumentsEvaluated freeing_what_was_handed_to_a_hatch_is_not_proved.c:10:5 generated
-    Call freeing_what_was_handed_to_a_hatch_is_not_proved.c:10:5 "keep" "bb2"
+    Call freeing_what_was_handed_to_a_hatch_is_not_proved.c:10:5 written "keep" "bb2"
       Copy "_1"
   Block "bb2"
     Sequenced freeing_what_was_handed_to_a_hatch_is_not_proved.c:10:5 generated
     ArgumentsEvaluated freeing_what_was_handed_to_a_hatch_is_not_proved.c:11:5 generated
-    Call freeing_what_was_handed_to_a_hatch_is_not_proved.c:11:5 "free" "bb3"
+    Call freeing_what_was_handed_to_a_hatch_is_not_proved.c:11:5 written "free" "bb3"
       Copy "_1"
   Block "bb3"
     Sequenced freeing_what_was_handed_to_a_hatch_is_not_proved.c:11:5 generated

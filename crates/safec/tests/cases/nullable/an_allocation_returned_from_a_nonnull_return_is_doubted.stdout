@@ -7,7 +7,7 @@ Function an_allocation_returned_from_a_nonnull_return_is_doubted.c:3:16 "f"
   Local "_1" "void *"
   Block "bb0" entry
     ArgumentsEvaluated an_allocation_returned_from_a_nonnull_return_is_doubted.c:4:12 generated
-    Call an_allocation_returned_from_a_nonnull_return_is_doubted.c:4:12 "malloc" "bb1"
+    Call an_allocation_returned_from_a_nonnull_return_is_doubted.c:4:12 written "malloc" "bb1"
       Destination "_1"
       Constant 4
   Block "bb1"

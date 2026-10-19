@@ -34,7 +34,7 @@ Function a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:5
       Use
         Constant 0
     ArgumentsEvaluated a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:8:17 generated
-    Call a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:8:17 "malloc" "bb1"
+    Call a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:8:17 written "malloc" "bb1"
       Destination "_4"
       Constant 8
   Block "bb1"
@@ -44,7 +44,7 @@ Function a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:5
         Copy "_4"
     Sequenced a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:8:17 generated
     ArgumentsEvaluated a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:9:14 generated
-    Call a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:9:14 "malloc" "bb2"
+    Call a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:9:14 written "malloc" "bb2"
       Destination "_6"
       Constant 4
   Block "bb2"
@@ -58,7 +58,7 @@ Function a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:5
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:10:9 "bb3" "bb4"
+    Branch a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:10:9 written "bb3" "bb4"
       Copy "_7"
   Block "bb3"
     Sequenced a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:10:9 generated
@@ -77,7 +77,7 @@ Function a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:5
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:13:9 "bb6" "bb7"
+    Branch a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:13:9 written "bb6" "bb7"
       Copy "_8"
   Block "bb6"
     Sequenced a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:13:9 generated
@@ -122,7 +122,7 @@ Function a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:5
       Destination "_11"
       Use
         Copy "_1"
-    Call a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:18:23 "memset" "bb9"
+    Call a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:18:23 written "memset" "bb9"
       Destination "_12"
       Copy "_3"
       Constant 0
@@ -138,7 +138,7 @@ Function a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:5
       Binary "Add"
         Copy "_11"
         Copy "_13"
-    Call a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:18:49 "release_all" "bb10"
+    Call a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:18:49 written "release_all" "bb10"
       Destination "_15"
   Block "bb10"
     Operation a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:18:10 written

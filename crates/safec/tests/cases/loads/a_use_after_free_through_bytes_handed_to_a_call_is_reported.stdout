@@ -31,7 +31,7 @@ Function a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:5:5 "main
       Use
         Constant 0
     ArgumentsEvaluated a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:6:17 generated
-    Call a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:6:17 "malloc" "bb1"
+    Call a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:6:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -45,7 +45,7 @@ Function a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:5:5 "main
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:7:9 "bb2" "bb3"
+    Branch a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:7:9 generated
@@ -60,7 +60,7 @@ Function a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:5:5 "main
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:10:14 generated
-    Call a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:10:14 "malloc" "bb5"
+    Call a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:10:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -74,7 +74,7 @@ Function a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:5:5 "main
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:11:9 "bb6" "bb7"
+    Branch a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:11:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:11:9 generated
@@ -121,7 +121,7 @@ Function a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:5:5 "main
       Binary "Lt"
         Copy "_10"
         Constant 8
-    Branch a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:18:12 "bb10" "bb11"
+    Branch a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:18:12 written "bb10" "bb11"
       Copy "_11"
   Block "bb10"
     Sequenced a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:18:12 generated
@@ -130,16 +130,16 @@ Function a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:5:5 "main
       Binary "Ne"
         Copy "_9"
         Constant 0
-    Branch a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:19:13 "bb12" "bb13"
+    Branch a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:19:13 written "bb12" "bb13"
       Copy "_12"
   Block "bb11"
     Sequenced a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:18:12 generated
     ArgumentsEvaluated a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:25:5 generated
-    Call a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:25:5 "release_stashed" "bb16"
+    Call a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:25:5 written "release_stashed" "bb16"
   Block "bb12"
     Sequenced a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:19:13 generated
     ArgumentsEvaluated a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:20:13 generated
-    Call a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:20:13 "stash" "bb15"
+    Call a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:20:13 written "stash" "bb15"
       Copy "_9"
         Deref
   Block "bb13"

@@ -16,7 +16,7 @@ Function a_conditional_inside_an_unsequenced_operand_orders_nothing.c:3:5 "f"
   Local "_7" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_conditional_inside_an_unsequenced_operand_orders_nothing.c:4:14 generated
-    Call a_conditional_inside_an_unsequenced_operand_orders_nothing.c:4:14 "malloc" "bb1"
+    Call a_conditional_inside_an_unsequenced_operand_orders_nothing.c:4:14 written "malloc" "bb1"
       Destination "_4"
       Constant 4
   Block "bb1"
@@ -25,10 +25,10 @@ Function a_conditional_inside_an_unsequenced_operand_orders_nothing.c:3:5 "f"
       Use
         Copy "_4"
     Sequenced a_conditional_inside_an_unsequenced_operand_orders_nothing.c:4:14 generated
-    Call a_conditional_inside_an_unsequenced_operand_orders_nothing.c:5:20 "free" "bb2"
+    Call a_conditional_inside_an_unsequenced_operand_orders_nothing.c:5:20 written "free" "bb2"
       Copy "_3"
   Block "bb2"
-    Branch a_conditional_inside_an_unsequenced_operand_orders_nothing.c:5:29 "bb4" "bb5"
+    Branch a_conditional_inside_an_unsequenced_operand_orders_nothing.c:5:29 written "bb4" "bb5"
       Copy "_2"
   Block "bb3"
     Operation a_conditional_inside_an_unsequenced_operand_orders_nothing.c:5:13 written

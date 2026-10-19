@@ -10,7 +10,7 @@ Function a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_l
   Local "_5" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_later_call.c:3:16 generated
-    Call a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_later_call.c:3:16 "get_slot" "bb1"
+    Call a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_later_call.c:3:16 written "get_slot" "bb1"
       Destination "_2"
   Block "bb1"
     Operation a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_later_call.c:3:11 written
@@ -23,7 +23,7 @@ Function a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_l
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_later_call.c:4:9 "bb2" "bb3"
+    Branch a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_later_call.c:4:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_later_call.c:4:9 generated
@@ -48,7 +48,7 @@ Function a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_l
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_later_call.c:8:9 "bb5" "bb6"
+    Branch a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_later_call.c:8:9 written "bb5" "bb6"
       Copy "_5"
   Block "bb5"
     Sequenced a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_later_call.c:8:9 generated

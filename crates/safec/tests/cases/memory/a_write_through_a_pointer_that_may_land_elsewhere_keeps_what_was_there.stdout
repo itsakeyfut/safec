@@ -22,7 +22,7 @@ Function a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.
   Local "_13" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:4:14 generated
-    Call a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:4:14 "malloc" "bb1"
+    Call a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:4:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -37,7 +37,7 @@ Function a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.
         Copy "_2"
     Sequenced a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:5:14 generated
     ArgumentsEvaluated a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:7:14 generated
-    Call a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:7:14 "malloc" "bb2"
+    Call a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:7:14 written "malloc" "bb2"
       Destination "_7"
       Constant 8
   Block "bb2"
@@ -55,7 +55,7 @@ Function a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.
       Use
         Copy "_9"
     Sequenced a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:8:16 generated
-    Branch a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:9:9 "bb3" "bb4"
+    Branch a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:9:9 written "bb3" "bb4"
       Copy "_1"
   Block "bb3"
     Sequenced a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:9:9 generated
@@ -89,7 +89,7 @@ Function a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.
           Deref
     Sequenced a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:10:5 generated
     ArgumentsEvaluated a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:11:5 generated
-    Call a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:11:5 "free" "bb6"
+    Call a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:11:5 written "free" "bb6"
       Copy "_4"
   Block "bb6"
     Sequenced a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:11:5 generated

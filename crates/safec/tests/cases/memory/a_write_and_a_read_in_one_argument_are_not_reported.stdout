@@ -33,7 +33,7 @@ Function a_write_and_a_read_in_one_argument_are_not_reported.c:2:5 "main"
         Copy "_2"
     Sequenced a_write_and_a_read_in_one_argument_are_not_reported.c:5:8 generated
     ArgumentsEvaluated a_write_and_a_read_in_one_argument_are_not_reported.c:5:5 generated
-    Call a_write_and_a_read_in_one_argument_are_not_reported.c:5:5 "g" "bb1"
+    Call a_write_and_a_read_in_one_argument_are_not_reported.c:5:5 written "g" "bb1"
       Copy "_2"
       Constant 0
   Block "bb1"

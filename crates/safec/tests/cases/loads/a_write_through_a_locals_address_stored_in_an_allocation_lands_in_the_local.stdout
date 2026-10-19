@@ -26,7 +26,7 @@ Function a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_l
       Use
         Constant 0
     ArgumentsEvaluated a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:5:14 generated
-    Call a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:5:14 "malloc" "bb1"
+    Call a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:5:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -40,7 +40,7 @@ Function a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_l
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:6:9 "bb2" "bb3"
+    Branch a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:6:9 generated
@@ -66,7 +66,7 @@ Function a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_l
           Deref
     Sequenced a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:9:5 generated
     ArgumentsEvaluated a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:10:17 generated
-    Call a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:10:17 "malloc" "bb5"
+    Call a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:10:17 written "malloc" "bb5"
       Destination "_6"
       Constant 8
   Block "bb5"
@@ -80,7 +80,7 @@ Function a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_l
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:11:9 "bb6" "bb7"
+    Branch a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:11:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:11:9 generated
@@ -133,7 +133,7 @@ Function a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_l
             Deref
     Sequenced a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:17:5 generated
     ArgumentsEvaluated a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:18:5 generated
-    Call a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:18:5 "free" "bb9"
+    Call a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:18:5 written "free" "bb9"
       Copy "_1"
   Block "bb9"
     Sequenced a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:18:5 generated
@@ -142,7 +142,7 @@ Function a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_l
       Binary "Eq"
         Copy "_8"
         Constant 0
-    Branch a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:19:9 "bb10" "bb11"
+    Branch a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:19:9 written "bb10" "bb11"
       Copy "_13"
   Block "bb10"
     Sequenced a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:19:9 generated

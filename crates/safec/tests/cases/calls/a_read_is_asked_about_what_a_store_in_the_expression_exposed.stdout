@@ -27,7 +27,7 @@ Function a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:4:5 "f"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:8:9 "bb1" "bb2"
+    Branch a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:8:9 written "bb1" "bb2"
       Copy "_5"
   Block "bb1"
     Sequenced a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:8:9 generated
@@ -42,7 +42,7 @@ Function a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:4:5 "f"
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:11:9 generated
-    Call a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:11:9 "malloc" "bb4"
+    Call a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:11:9 written "malloc" "bb4"
       Destination "_6"
       Constant 4
   Block "bb4"
@@ -60,7 +60,7 @@ Function a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:4:5 "f"
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:12:9 "bb5" "bb6"
+    Branch a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:12:9 written "bb5" "bb6"
       Copy "_8"
   Block "bb5"
     Sequenced a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:12:9 generated
@@ -109,7 +109,7 @@ Function a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:4:5 "f"
       Binary "Add"
         Copy "_10"
         Constant 0
-    Call a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:16:36 "release_all" "bb8"
+    Call a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:16:36 written "release_all" "bb8"
       Destination "_13"
   Block "bb8"
     Operation a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:16:10 written

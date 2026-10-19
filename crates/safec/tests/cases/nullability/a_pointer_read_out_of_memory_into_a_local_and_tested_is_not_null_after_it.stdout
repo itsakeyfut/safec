@@ -4,7 +4,7 @@ Function a_pointer_read_out_of_memory_into_a_local_and_tested_is_not_null_after_
   Local "_1" "int **" parameter "pp"
   Local "_2" "int *" "q"
   Block "bb0" entry
-    Branch a_pointer_read_out_of_memory_into_a_local_and_tested_is_not_null_after_it.c:2:9 "bb1" "bb2"
+    Branch a_pointer_read_out_of_memory_into_a_local_and_tested_is_not_null_after_it.c:2:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced a_pointer_read_out_of_memory_into_a_local_and_tested_is_not_null_after_it.c:2:9 generated
@@ -15,7 +15,7 @@ Function a_pointer_read_out_of_memory_into_a_local_and_tested_is_not_null_after_
         Copy "_1"
           Deref
     Sequenced a_pointer_read_out_of_memory_into_a_local_and_tested_is_not_null_after_it.c:3:18 generated
-    Branch a_pointer_read_out_of_memory_into_a_local_and_tested_is_not_null_after_it.c:4:13 "bb4" "bb5"
+    Branch a_pointer_read_out_of_memory_into_a_local_and_tested_is_not_null_after_it.c:4:13 written "bb4" "bb5"
       Copy "_2"
   Block "bb2"
     Sequenced a_pointer_read_out_of_memory_into_a_local_and_tested_is_not_null_after_it.c:2:9 generated

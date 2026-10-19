@@ -21,7 +21,7 @@ Function a_freed_pointer_handed_twice_to_one_call_is_one_report.c:5:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_freed_pointer_handed_twice_to_one_call_is_one_report.c:6:14 generated
-    Call a_freed_pointer_handed_twice_to_one_call_is_one_report.c:6:14 "malloc" "bb1"
+    Call a_freed_pointer_handed_twice_to_one_call_is_one_report.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -35,7 +35,7 @@ Function a_freed_pointer_handed_twice_to_one_call_is_one_report.c:5:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_freed_pointer_handed_twice_to_one_call_is_one_report.c:7:9 "bb2" "bb3"
+    Branch a_freed_pointer_handed_twice_to_one_call_is_one_report.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_freed_pointer_handed_twice_to_one_call_is_one_report.c:7:9 generated
@@ -50,12 +50,12 @@ Function a_freed_pointer_handed_twice_to_one_call_is_one_report.c:5:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_freed_pointer_handed_twice_to_one_call_is_one_report.c:10:5 generated
-    Call a_freed_pointer_handed_twice_to_one_call_is_one_report.c:10:5 "free" "bb5"
+    Call a_freed_pointer_handed_twice_to_one_call_is_one_report.c:10:5 written "free" "bb5"
       Copy "_1"
   Block "bb5"
     Sequenced a_freed_pointer_handed_twice_to_one_call_is_one_report.c:10:5 generated
     ArgumentsEvaluated a_freed_pointer_handed_twice_to_one_call_is_one_report.c:11:12 generated
-    Call a_freed_pointer_handed_twice_to_one_call_is_one_report.c:11:12 "both" "bb6"
+    Call a_freed_pointer_handed_twice_to_one_call_is_one_report.c:11:12 written "both" "bb6"
       Destination "_4"
       Copy "_1"
       Copy "_1"

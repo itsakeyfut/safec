@@ -23,7 +23,7 @@ Function what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_af
       Use
         Constant 0
     ArgumentsEvaluated what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:6:17 generated
-    Call what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:6:17 "malloc" "bb1"
+    Call what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:6:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -37,7 +37,7 @@ Function what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_af
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:7:9 "bb2" "bb3"
+    Branch what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:7:9 generated
@@ -52,7 +52,7 @@ Function what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_af
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:10:14 generated
-    Call what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:10:14 "malloc" "bb5"
+    Call what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:10:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -66,7 +66,7 @@ Function what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_af
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:11:9 "bb6" "bb7"
+    Branch what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:11:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:11:9 generated
@@ -92,7 +92,7 @@ Function what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_af
           Deref
     Sequenced what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:14:5 generated
     ArgumentsEvaluated what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:15:5 generated
-    Call what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:15:5 "drop_inner" "bb9"
+    Call what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:15:5 written "drop_inner" "bb9"
       Copy "_1"
   Block "bb9"
     Sequenced what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:15:5 generated

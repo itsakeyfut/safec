@@ -26,7 +26,7 @@ Function memcpy_frees_neither_of_its_arguments.c:5:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated memcpy_frees_neither_of_its_arguments.c:6:14 generated
-    Call memcpy_frees_neither_of_its_arguments.c:6:14 "malloc" "bb1"
+    Call memcpy_frees_neither_of_its_arguments.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -36,7 +36,7 @@ Function memcpy_frees_neither_of_its_arguments.c:5:5 "main"
         Copy "_2"
     Sequenced memcpy_frees_neither_of_its_arguments.c:6:14 generated
     ArgumentsEvaluated memcpy_frees_neither_of_its_arguments.c:7:14 generated
-    Call memcpy_frees_neither_of_its_arguments.c:7:14 "malloc" "bb2"
+    Call memcpy_frees_neither_of_its_arguments.c:7:14 written "malloc" "bb2"
       Destination "_4"
       Constant 4
   Block "bb2"
@@ -50,7 +50,7 @@ Function memcpy_frees_neither_of_its_arguments.c:5:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch memcpy_frees_neither_of_its_arguments.c:8:9 "bb3" "bb4"
+    Branch memcpy_frees_neither_of_its_arguments.c:8:9 written "bb3" "bb4"
       Copy "_5"
   Block "bb3"
     Sequenced memcpy_frees_neither_of_its_arguments.c:8:9 generated
@@ -69,7 +69,7 @@ Function memcpy_frees_neither_of_its_arguments.c:5:5 "main"
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch memcpy_frees_neither_of_its_arguments.c:11:9 "bb6" "bb7"
+    Branch memcpy_frees_neither_of_its_arguments.c:11:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced memcpy_frees_neither_of_its_arguments.c:11:9 generated
@@ -95,7 +95,7 @@ Function memcpy_frees_neither_of_its_arguments.c:5:5 "main"
           Deref
     Sequenced memcpy_frees_neither_of_its_arguments.c:14:5 generated
     ArgumentsEvaluated memcpy_frees_neither_of_its_arguments.c:15:5 generated
-    Call memcpy_frees_neither_of_its_arguments.c:15:5 "memcpy" "bb9"
+    Call memcpy_frees_neither_of_its_arguments.c:15:5 written "memcpy" "bb9"
       Destination "_8"
       Copy "_3"
       Copy "_1"
@@ -103,12 +103,12 @@ Function memcpy_frees_neither_of_its_arguments.c:5:5 "main"
   Block "bb9"
     Sequenced memcpy_frees_neither_of_its_arguments.c:15:5 generated
     ArgumentsEvaluated memcpy_frees_neither_of_its_arguments.c:16:5 generated
-    Call memcpy_frees_neither_of_its_arguments.c:16:5 "free" "bb10"
+    Call memcpy_frees_neither_of_its_arguments.c:16:5 written "free" "bb10"
       Copy "_1"
   Block "bb10"
     Sequenced memcpy_frees_neither_of_its_arguments.c:16:5 generated
     ArgumentsEvaluated memcpy_frees_neither_of_its_arguments.c:17:5 generated
-    Call memcpy_frees_neither_of_its_arguments.c:17:5 "free" "bb11"
+    Call memcpy_frees_neither_of_its_arguments.c:17:5 written "free" "bb11"
       Copy "_3"
   Block "bb11"
     Sequenced memcpy_frees_neither_of_its_arguments.c:17:5 generated

@@ -35,7 +35,7 @@ Function a_conflict_leaves_a_null_argument_exempt_from_the_free.c:3:5 "main"
       Written a_conflict_leaves_a_null_argument_exempt_from_the_free.c:5:26
       Read a_conflict_leaves_a_null_argument_exempt_from_the_free.c:5:22
     ArgumentsEvaluated a_conflict_leaves_a_null_argument_exempt_from_the_free.c:5:14 generated
-    Call a_conflict_leaves_a_null_argument_exempt_from_the_free.c:5:14 "realloc" "bb1"
+    Call a_conflict_leaves_a_null_argument_exempt_from_the_free.c:5:14 written "realloc" "bb1"
       Destination "_4"
       Copy "_1"
       Constant 4
@@ -46,7 +46,7 @@ Function a_conflict_leaves_a_null_argument_exempt_from_the_free.c:3:5 "main"
         Copy "_4"
     Sequenced a_conflict_leaves_a_null_argument_exempt_from_the_free.c:5:14 generated
     ArgumentsEvaluated a_conflict_leaves_a_null_argument_exempt_from_the_free.c:6:5 generated
-    Call a_conflict_leaves_a_null_argument_exempt_from_the_free.c:6:5 "free" "bb2"
+    Call a_conflict_leaves_a_null_argument_exempt_from_the_free.c:6:5 written "free" "bb2"
       Copy "_2"
   Block "bb2"
     Sequenced a_conflict_leaves_a_null_argument_exempt_from_the_free.c:6:5 generated

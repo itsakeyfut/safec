@@ -35,7 +35,7 @@ Function a_live_load_moved_by_a_subscript_is_read_in_silence.c:4:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_live_load_moved_by_a_subscript_is_read_in_silence.c:5:17 generated
-    Call a_live_load_moved_by_a_subscript_is_read_in_silence.c:5:17 "malloc" "bb1"
+    Call a_live_load_moved_by_a_subscript_is_read_in_silence.c:5:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -49,7 +49,7 @@ Function a_live_load_moved_by_a_subscript_is_read_in_silence.c:4:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_live_load_moved_by_a_subscript_is_read_in_silence.c:6:9 "bb2" "bb3"
+    Branch a_live_load_moved_by_a_subscript_is_read_in_silence.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_live_load_moved_by_a_subscript_is_read_in_silence.c:6:9 generated
@@ -64,7 +64,7 @@ Function a_live_load_moved_by_a_subscript_is_read_in_silence.c:4:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_live_load_moved_by_a_subscript_is_read_in_silence.c:9:16 generated
-    Call a_live_load_moved_by_a_subscript_is_read_in_silence.c:9:16 "malloc" "bb5"
+    Call a_live_load_moved_by_a_subscript_is_read_in_silence.c:9:16 written "malloc" "bb5"
       Destination "_5"
       Constant 8
   Block "bb5"
@@ -78,7 +78,7 @@ Function a_live_load_moved_by_a_subscript_is_read_in_silence.c:4:5 "main"
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_live_load_moved_by_a_subscript_is_read_in_silence.c:10:9 "bb6" "bb7"
+    Branch a_live_load_moved_by_a_subscript_is_read_in_silence.c:10:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_live_load_moved_by_a_subscript_is_read_in_silence.c:10:9 generated
@@ -93,7 +93,7 @@ Function a_live_load_moved_by_a_subscript_is_read_in_silence.c:4:5 "main"
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated a_live_load_moved_by_a_subscript_is_read_in_silence.c:13:14 generated
-    Call a_live_load_moved_by_a_subscript_is_read_in_silence.c:13:14 "malloc" "bb9"
+    Call a_live_load_moved_by_a_subscript_is_read_in_silence.c:13:14 written "malloc" "bb9"
       Destination "_8"
       Constant 4
   Block "bb9"
@@ -107,7 +107,7 @@ Function a_live_load_moved_by_a_subscript_is_read_in_silence.c:4:5 "main"
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch a_live_load_moved_by_a_subscript_is_read_in_silence.c:14:9 "bb10" "bb11"
+    Branch a_live_load_moved_by_a_subscript_is_read_in_silence.c:14:9 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced a_live_load_moved_by_a_subscript_is_read_in_silence.c:14:9 generated
@@ -122,7 +122,7 @@ Function a_live_load_moved_by_a_subscript_is_read_in_silence.c:4:5 "main"
     Goto "bb12"
   Block "bb12"
     ArgumentsEvaluated a_live_load_moved_by_a_subscript_is_read_in_silence.c:17:14 generated
-    Call a_live_load_moved_by_a_subscript_is_read_in_silence.c:17:14 "malloc" "bb13"
+    Call a_live_load_moved_by_a_subscript_is_read_in_silence.c:17:14 written "malloc" "bb13"
       Destination "_11"
       Constant 4
   Block "bb13"
@@ -136,7 +136,7 @@ Function a_live_load_moved_by_a_subscript_is_read_in_silence.c:4:5 "main"
       Binary "Eq"
         Copy "_10"
         Constant 0
-    Branch a_live_load_moved_by_a_subscript_is_read_in_silence.c:18:9 "bb14" "bb15"
+    Branch a_live_load_moved_by_a_subscript_is_read_in_silence.c:18:9 written "bb14" "bb15"
       Copy "_12"
   Block "bb14"
     Sequenced a_live_load_moved_by_a_subscript_is_read_in_silence.c:18:9 generated
@@ -232,7 +232,7 @@ Function a_live_load_moved_by_a_subscript_is_read_in_silence.c:4:5 "main"
       Binary "Eq"
         Copy "_19"
         Constant 0
-    Branch a_live_load_moved_by_a_subscript_is_read_in_silence.c:28:9 "bb17" "bb18"
+    Branch a_live_load_moved_by_a_subscript_is_read_in_silence.c:28:9 written "bb17" "bb18"
       Copy "_22"
   Block "bb17"
     Sequenced a_live_load_moved_by_a_subscript_is_read_in_silence.c:28:9 generated

@@ -46,12 +46,12 @@ Function a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:5:5
       Address
         Place "_4"
     ArgumentsEvaluated a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:11:5 generated
-    Call a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:11:5 "stash" "bb1"
+    Call a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:11:5 written "stash" "bb1"
       Copy "_6"
   Block "bb1"
     Sequenced a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:11:5 generated
     ArgumentsEvaluated a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:12:9 generated
-    Call a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:12:9 "malloc" "bb2"
+    Call a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:12:9 written "malloc" "bb2"
       Destination "_7"
       Constant 4
   Block "bb2"
@@ -69,7 +69,7 @@ Function a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:5:5
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:13:9 "bb3" "bb4"
+    Branch a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:13:9 written "bb3" "bb4"
       Copy "_9"
   Block "bb3"
     Sequenced a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:13:9 generated
@@ -94,7 +94,7 @@ Function a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:5:5
         Copy "_3"
           Deref
     Sequenced a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:16:5 generated
-    Call a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:17:9 "release_all" "bb6"
+    Call a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:17:9 written "release_all" "bb6"
       Destination "_11"
   Block "bb6"
     Operation a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:17:26 written
@@ -111,7 +111,7 @@ Function a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:5:5
       Binary "Add"
         Copy "_11"
         Copy "_12"
-    Call a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:17:39 "memset" "bb7"
+    Call a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:17:39 written "memset" "bb7"
       Destination "_14"
       Copy "_3"
       Constant 0

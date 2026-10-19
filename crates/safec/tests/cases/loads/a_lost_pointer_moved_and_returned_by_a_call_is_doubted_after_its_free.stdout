@@ -38,7 +38,7 @@ Function a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c
   Local "_20" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:7:17 generated
-    Call a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:7:17 "malloc" "bb1"
+    Call a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:7:17 written "malloc" "bb1"
       Destination "_3"
       Constant 8
   Block "bb1"
@@ -51,7 +51,7 @@ Function a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:8:9 "bb2" "bb3"
+    Branch a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:8:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:8:9 generated
@@ -87,7 +87,7 @@ Function a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c
       Binary "Lt"
         Copy "_7"
         Constant 2
-    Branch a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:12:12 "bb6" "bb7"
+    Branch a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:12:12 written "bb6" "bb7"
       Copy "_8"
   Block "bb6"
     Sequenced a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:12:12 generated
@@ -101,7 +101,7 @@ Function a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c
         Copy "_5"
     Sequenced a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:12:21 generated
     ArgumentsEvaluated a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:12:32 generated
-    Call a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:12:32 "malloc" "bb8"
+    Call a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:12:32 written "malloc" "bb8"
       Destination "_10"
       Constant 4
   Block "bb7"
@@ -112,7 +112,7 @@ Function a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c
         Copy "_5"
         Constant 1
     ArgumentsEvaluated a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:13:14 generated
-    Call a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:13:14 "id" "bb12"
+    Call a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:13:14 written "id" "bb12"
       Destination "_18"
       Copy "_17"
   Block "bb8"
@@ -129,7 +129,7 @@ Function a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c
       Destination "_12"
       Unary "Not"
         Copy "_6"
-    Branch a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:12:47 "bb9" "bb10"
+    Branch a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:12:47 written "bb9" "bb10"
       Copy "_12"
   Block "bb9"
     Sequenced a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:12:47 generated
@@ -176,7 +176,7 @@ Function a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c
         Copy "_18"
     Sequenced a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:13:14 generated
     ArgumentsEvaluated a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:14:5 generated
-    Call a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:14:5 "free" "bb13"
+    Call a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:14:5 written "free" "bb13"
       Copy "_5"
   Block "bb13"
     Sequenced a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:14:5 generated
@@ -184,7 +184,7 @@ Function a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c
       Destination "_19"
       Unary "Not"
         Copy "_16"
-    Branch a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:15:9 "bb14" "bb15"
+    Branch a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:15:9 written "bb14" "bb15"
       Copy "_19"
   Block "bb14"
     Sequenced a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:15:9 generated

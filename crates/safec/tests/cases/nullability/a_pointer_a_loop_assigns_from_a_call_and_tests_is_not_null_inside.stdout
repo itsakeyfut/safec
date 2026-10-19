@@ -19,7 +19,7 @@ Function a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:2:5
     Goto "bb1"
   Block "bb1"
     ArgumentsEvaluated a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:4:17 generated
-    Call a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:4:17 "next" "bb2"
+    Call a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:4:17 written "next" "bb2"
       Destination "_3"
       Copy "_1"
   Block "bb2"
@@ -31,7 +31,7 @@ Function a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:2:5
       Destination "_4"
       Use
         Copy "_1"
-    Branch a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:4:13 "bb3" "bb4"
+    Branch a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:4:13 written "bb3" "bb4"
       Copy "_4"
   Block "bb3"
     Sequenced a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:4:13 generated

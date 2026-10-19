@@ -26,7 +26,7 @@ Function a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_res
   Local "_10" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_result.c:8:9 generated
-    Call a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_result.c:8:9 "malloc" "bb1"
+    Call a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_result.c:8:9 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -44,7 +44,7 @@ Function a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_res
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_result.c:9:9 "bb2" "bb3"
+    Branch a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_result.c:9:9 written "bb2" "bb3"
       Copy "_5"
   Block "bb2"
     Sequenced a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_result.c:9:9 generated
@@ -58,16 +58,16 @@ Function a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_res
     Sequenced a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_result.c:9:9 generated
     Goto "bb4"
   Block "bb4"
-    Call a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_result.c:12:9 "release_all" "bb5"
+    Call a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_result.c:12:9 written "release_all" "bb5"
       Destination "_6"
   Block "bb5"
-    Call a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_result.c:12:29 "memset" "bb6"
+    Call a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_result.c:12:29 written "memset" "bb6"
       Destination "_7"
       Copy "_2"
       Constant 0
       Constant 4
   Block "bb6"
-    Call a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_result.c:12:25 "use" "bb7"
+    Call a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_result.c:12:25 written "use" "bb7"
       Destination "_8"
       Copy "_7"
   Block "bb7"

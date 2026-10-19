@@ -20,7 +20,7 @@ Function what_a_call_returned_is_unproven_after_a_later_call.c:6:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated what_a_call_returned_is_unproven_after_a_later_call.c:7:14 generated
-    Call what_a_call_returned_is_unproven_after_a_later_call.c:7:14 "make" "bb1"
+    Call what_a_call_returned_is_unproven_after_a_later_call.c:7:14 written "make" "bb1"
       Destination "_2"
   Block "bb1"
     Operation what_a_call_returned_is_unproven_after_a_later_call.c:7:10 written
@@ -33,7 +33,7 @@ Function what_a_call_returned_is_unproven_after_a_later_call.c:6:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch what_a_call_returned_is_unproven_after_a_later_call.c:8:9 "bb2" "bb3"
+    Branch what_a_call_returned_is_unproven_after_a_later_call.c:8:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced what_a_call_returned_is_unproven_after_a_later_call.c:8:9 generated
@@ -48,7 +48,7 @@ Function what_a_call_returned_is_unproven_after_a_later_call.c:6:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated what_a_call_returned_is_unproven_after_a_later_call.c:11:5 generated
-    Call what_a_call_returned_is_unproven_after_a_later_call.c:11:5 "forget" "bb5"
+    Call what_a_call_returned_is_unproven_after_a_later_call.c:11:5 written "forget" "bb5"
   Block "bb5"
     Sequenced what_a_call_returned_is_unproven_after_a_later_call.c:11:5 generated
     Operation what_a_call_returned_is_unproven_after_a_later_call.c:12:5 written

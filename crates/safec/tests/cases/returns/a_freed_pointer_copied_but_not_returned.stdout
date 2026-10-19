@@ -14,7 +14,7 @@ Function a_freed_pointer_copied_but_not_returned.c:4:6 "keep"
   Local "_5" "int *" "q"
   Block "bb0" entry
     ArgumentsEvaluated a_freed_pointer_copied_but_not_returned.c:5:14 generated
-    Call a_freed_pointer_copied_but_not_returned.c:5:14 "malloc" "bb1"
+    Call a_freed_pointer_copied_but_not_returned.c:5:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -24,7 +24,7 @@ Function a_freed_pointer_copied_but_not_returned.c:4:6 "keep"
         Copy "_2"
     Sequenced a_freed_pointer_copied_but_not_returned.c:5:14 generated
     ArgumentsEvaluated a_freed_pointer_copied_but_not_returned.c:6:18 generated
-    Call a_freed_pointer_copied_but_not_returned.c:6:18 "malloc" "bb2"
+    Call a_freed_pointer_copied_but_not_returned.c:6:18 written "malloc" "bb2"
       Destination "_4"
       Constant 4
   Block "bb2"
@@ -34,7 +34,7 @@ Function a_freed_pointer_copied_but_not_returned.c:4:6 "keep"
         Copy "_4"
     Sequenced a_freed_pointer_copied_but_not_returned.c:6:18 generated
     ArgumentsEvaluated a_freed_pointer_copied_but_not_returned.c:7:5 generated
-    Call a_freed_pointer_copied_but_not_returned.c:7:5 "free" "bb3"
+    Call a_freed_pointer_copied_but_not_returned.c:7:5 written "free" "bb3"
       Copy "_1"
   Block "bb3"
     Sequenced a_freed_pointer_copied_but_not_returned.c:7:5 generated

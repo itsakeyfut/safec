@@ -20,7 +20,7 @@ Function a_definition_s_lengths_are_found_after_another_definition.c:7:5 "f"
   Local "_2" "int *" parameter "b"
   Local "_3" "int *" parameter "a"
   Block "bb0" entry
-    Call a_definition_s_lengths_are_found_after_another_definition.c:7:43 "free" "bb1"
+    Call a_definition_s_lengths_are_found_after_another_definition.c:7:43 written "free" "bb1"
       Copy "_1"
   Block "bb1"
     Evaluate a_definition_s_lengths_are_found_after_another_definition.c:7:31 written

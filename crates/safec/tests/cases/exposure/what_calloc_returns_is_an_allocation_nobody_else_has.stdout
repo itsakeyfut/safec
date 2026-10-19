@@ -23,7 +23,7 @@ Function what_calloc_returns_is_an_allocation_nobody_else_has.c:5:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated what_calloc_returns_is_an_allocation_nobody_else_has.c:6:14 generated
-    Call what_calloc_returns_is_an_allocation_nobody_else_has.c:6:14 "calloc" "bb1"
+    Call what_calloc_returns_is_an_allocation_nobody_else_has.c:6:14 written "calloc" "bb1"
       Destination "_2"
       Constant 1
       Constant 4
@@ -38,7 +38,7 @@ Function what_calloc_returns_is_an_allocation_nobody_else_has.c:5:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch what_calloc_returns_is_an_allocation_nobody_else_has.c:7:9 "bb2" "bb3"
+    Branch what_calloc_returns_is_an_allocation_nobody_else_has.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced what_calloc_returns_is_an_allocation_nobody_else_has.c:7:9 generated
@@ -53,7 +53,7 @@ Function what_calloc_returns_is_an_allocation_nobody_else_has.c:5:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated what_calloc_returns_is_an_allocation_nobody_else_has.c:10:13 generated
-    Call what_calloc_returns_is_an_allocation_nobody_else_has.c:10:13 "abs" "bb5"
+    Call what_calloc_returns_is_an_allocation_nobody_else_has.c:10:13 written "abs" "bb5"
       Destination "_5"
       Constant -1
   Block "bb5"
@@ -74,7 +74,7 @@ Function what_calloc_returns_is_an_allocation_nobody_else_has.c:5:5 "main"
           Deref
     Sequenced what_calloc_returns_is_an_allocation_nobody_else_has.c:11:5 generated
     ArgumentsEvaluated what_calloc_returns_is_an_allocation_nobody_else_has.c:12:5 generated
-    Call what_calloc_returns_is_an_allocation_nobody_else_has.c:12:5 "free" "bb6"
+    Call what_calloc_returns_is_an_allocation_nobody_else_has.c:12:5 written "free" "bb6"
       Copy "_1"
   Block "bb6"
     Sequenced what_calloc_returns_is_an_allocation_nobody_else_has.c:12:5 generated

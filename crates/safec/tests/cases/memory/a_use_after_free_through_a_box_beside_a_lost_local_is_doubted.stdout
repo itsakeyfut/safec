@@ -36,7 +36,7 @@ Function a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:3:5 "f"
   Local "_27" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:4:17 generated
-    Call a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:4:17 "malloc" "bb1"
+    Call a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:4:17 written "malloc" "bb1"
       Destination "_3"
       Constant 8
   Block "bb1"
@@ -49,7 +49,7 @@ Function a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:3:5 "f"
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:5:9 "bb2" "bb3"
+    Branch a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:5:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:5:9 generated
@@ -95,7 +95,7 @@ Function a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:3:5 "f"
       Binary "Lt"
         Copy "_9"
         Constant 2
-    Branch a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:11:12 "bb6" "bb7"
+    Branch a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:11:12 written "bb6" "bb7"
       Copy "_10"
   Block "bb6"
     Sequenced a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:11:12 generated
@@ -118,12 +118,12 @@ Function a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:3:5 "f"
         Copy "_7"
     Sequenced a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:13:9 generated
     ArgumentsEvaluated a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:14:13 generated
-    Call a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:14:13 "malloc" "bb8"
+    Call a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:14:13 written "malloc" "bb8"
       Destination "_13"
       Constant 4
   Block "bb7"
     Sequenced a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:11:12 generated
-    Branch a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:21:9 "bb16" "bb17"
+    Branch a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:21:9 written "bb16" "bb17"
       Copy "_1"
   Block "bb8"
     Operation a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:14:9 written
@@ -139,7 +139,7 @@ Function a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:3:5 "f"
       Destination "_15"
       Unary "Not"
         Copy "_6"
-    Branch a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:15:13 "bb9" "bb10"
+    Branch a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:15:13 written "bb9" "bb10"
       Copy "_15"
   Block "bb9"
     Sequenced a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:15:13 generated
@@ -154,7 +154,7 @@ Function a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:3:5 "f"
     Goto "bb11"
   Block "bb11"
     ArgumentsEvaluated a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:16:13 generated
-    Call a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:16:13 "malloc" "bb12"
+    Call a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:16:13 written "malloc" "bb12"
       Destination "_16"
       Constant 4
   Block "bb12"
@@ -171,7 +171,7 @@ Function a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:3:5 "f"
       Destination "_18"
       Unary "Not"
         Copy "_8"
-    Branch a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:17:13 "bb13" "bb14"
+    Branch a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:17:13 written "bb13" "bb14"
       Copy "_18"
   Block "bb13"
     Sequenced a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:17:13 generated
@@ -225,7 +225,7 @@ Function a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:3:5 "f"
           Deref
     Sequenced a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:21:14 generated
     ArgumentsEvaluated a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:21:24 generated
-    Call a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:21:24 "free" "bb19"
+    Call a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:21:24 written "free" "bb19"
       Copy "_5"
   Block "bb17"
     Sequenced a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:21:9 generated
@@ -252,12 +252,12 @@ Function a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:3:5 "f"
       Destination "_26"
       Unary "Not"
         Copy "_25"
-    Branch a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:23:9 "bb21" "bb22"
+    Branch a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:23:9 written "bb21" "bb22"
       Copy "_26"
   Block "bb19"
     Sequenced a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:21:24 generated
     ArgumentsEvaluated a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:21:33 generated
-    Call a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:21:33 "free" "bb20"
+    Call a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:21:33 written "free" "bb20"
       Copy "_6"
   Block "bb20"
     Sequenced a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:21:33 generated
@@ -290,7 +290,7 @@ Function a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:3:5 "f"
           Deref
     Sequenced a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:24:13 generated
     ArgumentsEvaluated a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:25:5 generated
-    Call a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:25:5 "free" "bb24"
+    Call a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:25:5 written "free" "bb24"
       Copy "_7"
   Block "bb24"
     Sequenced a_use_after_free_through_a_box_beside_a_lost_local_is_doubted.c:25:5 generated

@@ -15,7 +15,7 @@ Function a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:3
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:4:9 "bb1" "bb2"
+    Branch a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:4:9 written "bb1" "bb2"
       Copy "_3"
   Block "bb1"
     Sequenced a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:4:9 generated
@@ -45,7 +45,7 @@ Function a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:3
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:8:9 "bb4" "bb5"
+    Branch a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:8:9 written "bb4" "bb5"
       Copy "_6"
   Block "bb4"
     Sequenced a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:8:9 generated
@@ -60,7 +60,7 @@ Function a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:3
     Goto "bb6"
   Block "bb6"
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:11:5 generated
-    Call a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:11:5 "release_all" "bb7"
+    Call a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:11:5 written "release_all" "bb7"
   Block "bb7"
     Sequenced a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:11:5 generated
     Operation a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:12:5 written

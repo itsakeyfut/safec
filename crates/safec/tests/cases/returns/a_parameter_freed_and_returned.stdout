@@ -7,7 +7,7 @@ Function a_parameter_freed_and_returned.c:3:6 "release"
   Local "_1" "int *" parameter "p"
   Block "bb0" entry
     ArgumentsEvaluated a_parameter_freed_and_returned.c:4:5 generated
-    Call a_parameter_freed_and_returned.c:4:5 "free" "bb1"
+    Call a_parameter_freed_and_returned.c:4:5 written "free" "bb1"
       Copy "_1"
   Block "bb1"
     Sequenced a_parameter_freed_and_returned.c:4:5 generated

@@ -11,7 +11,7 @@ Function an_allocation_a_parameter_holds_is_unproven_after_any_call.c:3:5 "f"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch an_allocation_a_parameter_holds_is_unproven_after_any_call.c:4:9 "bb1" "bb2"
+    Branch an_allocation_a_parameter_holds_is_unproven_after_any_call.c:4:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced an_allocation_a_parameter_holds_is_unproven_after_any_call.c:4:9 generated
@@ -26,7 +26,7 @@ Function an_allocation_a_parameter_holds_is_unproven_after_any_call.c:3:5 "f"
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated an_allocation_a_parameter_holds_is_unproven_after_any_call.c:7:5 generated
-    Call an_allocation_a_parameter_holds_is_unproven_after_any_call.c:7:5 "release_all" "bb4"
+    Call an_allocation_a_parameter_holds_is_unproven_after_any_call.c:7:5 written "release_all" "bb4"
   Block "bb4"
     Sequenced an_allocation_a_parameter_holds_is_unproven_after_any_call.c:7:5 generated
     Operation an_allocation_a_parameter_holds_is_unproven_after_any_call.c:8:5 written

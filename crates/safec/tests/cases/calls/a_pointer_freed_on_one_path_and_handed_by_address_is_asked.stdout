@@ -24,7 +24,7 @@ Function a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:6:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:7:14 generated
-    Call a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:7:14 "malloc" "bb1"
+    Call a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:7:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -38,7 +38,7 @@ Function a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:6:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:8:9 "bb2" "bb3"
+    Branch a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:8:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:8:9 generated
@@ -53,15 +53,15 @@ Function a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:6:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:11:9 generated
-    Call a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:11:9 "cond" "bb5"
+    Call a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:11:9 written "cond" "bb5"
       Destination "_4"
   Block "bb5"
-    Branch a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:11:9 "bb6" "bb7"
+    Branch a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:11:9 written "bb6" "bb7"
       Copy "_4"
   Block "bb6"
     Sequenced a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:11:9 generated
     ArgumentsEvaluated a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:12:9 generated
-    Call a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:12:9 "free" "bb9"
+    Call a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:12:9 written "free" "bb9"
       Copy "_1"
   Block "bb7"
     Sequenced a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:11:9 generated
@@ -72,7 +72,7 @@ Function a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:6:5 "main"
       Address
         Place "_1"
     ArgumentsEvaluated a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:14:12 generated
-    Call a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:14:12 "use2" "bb10"
+    Call a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:14:12 written "use2" "bb10"
       Destination "_6"
       Copy "_5"
   Block "bb9"

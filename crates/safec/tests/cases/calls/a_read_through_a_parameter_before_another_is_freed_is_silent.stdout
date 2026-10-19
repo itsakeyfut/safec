@@ -15,7 +15,7 @@ Function a_read_through_a_parameter_before_another_is_freed_is_silent.c:3:5 "con
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_read_through_a_parameter_before_another_is_freed_is_silent.c:4:9 "bb1" "bb2"
+    Branch a_read_through_a_parameter_before_another_is_freed_is_silent.c:4:9 written "bb1" "bb2"
       Copy "_3"
   Block "bb1"
     Sequenced a_read_through_a_parameter_before_another_is_freed_is_silent.c:4:9 generated
@@ -34,7 +34,7 @@ Function a_read_through_a_parameter_before_another_is_freed_is_silent.c:3:5 "con
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_read_through_a_parameter_before_another_is_freed_is_silent.c:7:9 "bb4" "bb5"
+    Branch a_read_through_a_parameter_before_another_is_freed_is_silent.c:7:9 written "bb4" "bb5"
       Copy "_4"
   Block "bb4"
     Sequenced a_read_through_a_parameter_before_another_is_freed_is_silent.c:7:9 generated
@@ -55,7 +55,7 @@ Function a_read_through_a_parameter_before_another_is_freed_is_silent.c:3:5 "con
           Deref
     Sequenced a_read_through_a_parameter_before_another_is_freed_is_silent.c:10:13 generated
     ArgumentsEvaluated a_read_through_a_parameter_before_another_is_freed_is_silent.c:11:5 generated
-    Call a_read_through_a_parameter_before_another_is_freed_is_silent.c:11:5 "free" "bb7"
+    Call a_read_through_a_parameter_before_another_is_freed_is_silent.c:11:5 written "free" "bb7"
       Copy "_1"
   Block "bb7"
     Sequenced a_read_through_a_parameter_before_another_is_freed_is_silent.c:11:5 generated

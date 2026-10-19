@@ -12,11 +12,11 @@ Function a_pointer_passed_in_one_length_and_freed_in_another_is_told_why.c:4:5 "
   Local "_3" "int *" parameter "a"
   Local "_4" "int"
   Block "bb0" entry
-    Call a_pointer_passed_in_one_length_and_freed_in_another_is_told_why.c:4:31 "g" "bb1"
+    Call a_pointer_passed_in_one_length_and_freed_in_another_is_told_why.c:4:31 written "g" "bb1"
       Destination "_4"
       Copy "_1"
   Block "bb1"
-    Call a_pointer_passed_in_one_length_and_freed_in_another_is_told_why.c:4:45 "free" "bb2"
+    Call a_pointer_passed_in_one_length_and_freed_in_another_is_told_why.c:4:45 written "free" "bb2"
       Copy "_1"
   Block "bb2"
     Sequenced a_pointer_passed_in_one_length_and_freed_in_another_is_told_why.c:4:45 generated

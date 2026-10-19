@@ -10,7 +10,7 @@ Function a_null_passed_to_a_function_only_declared_here_is_not_reported_at_level
       Use
         Constant 0
     ArgumentsEvaluated a_null_passed_to_a_function_only_declared_here_is_not_reported_at_level_5.c:4:5 generated
-    Call a_null_passed_to_a_function_only_declared_here_is_not_reported_at_level_5.c:4:5 "free" "bb1"
+    Call a_null_passed_to_a_function_only_declared_here_is_not_reported_at_level_5.c:4:5 written "free" "bb1"
       Constant 0
   Block "bb1"
     Sequenced a_null_passed_to_a_function_only_declared_here_is_not_reported_at_level_5.c:4:5 generated

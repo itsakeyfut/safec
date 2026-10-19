@@ -29,7 +29,7 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:8:9 "bb1" "bb2"
+    Branch a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:8:9 written "bb1" "bb2"
       Copy "_6"
   Block "bb1"
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:8:9 generated
@@ -44,7 +44,7 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:11:9 generated
-    Call a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:11:9 "malloc" "bb4"
+    Call a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:11:9 written "malloc" "bb4"
       Destination "_7"
       Constant 8
   Block "bb4"
@@ -62,7 +62,7 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:12:9 "bb5" "bb6"
+    Branch a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:12:9 written "bb5" "bb6"
       Copy "_9"
   Block "bb5"
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:12:9 generated
@@ -77,7 +77,7 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
     Goto "bb7"
   Block "bb7"
     ArgumentsEvaluated a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:15:9 generated
-    Call a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:15:9 "malloc" "bb8"
+    Call a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:15:9 written "malloc" "bb8"
       Destination "_10"
       Constant 4
   Block "bb8"
@@ -95,7 +95,7 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:16:9 "bb9" "bb10"
+    Branch a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:16:9 written "bb9" "bb10"
       Copy "_12"
   Block "bb9"
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:16:9 generated
@@ -120,7 +120,7 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
         Copy "_5"
           Deref
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:19:5 generated
-    Branch a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:20:9 "bb12" "bb13"
+    Branch a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:20:9 written "bb12" "bb13"
       Copy "_1"
   Block "bb12"
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:20:9 generated
@@ -153,7 +153,7 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:25:9 "bb15" "bb16"
+    Branch a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:25:9 written "bb15" "bb16"
       Copy "_16"
   Block "bb15"
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:25:9 generated
@@ -179,7 +179,7 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
           Deref
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:28:5 generated
     ArgumentsEvaluated a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:29:5 generated
-    Call a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:29:5 "release_all" "bb18"
+    Call a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:29:5 written "release_all" "bb18"
   Block "bb18"
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:29:5 generated
     Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:30:5 written

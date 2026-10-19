@@ -21,7 +21,7 @@ Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_
   Local "_9" "int *" "q"
   Block "bb0" entry
     ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:7:17 generated
-    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:7:17 "malloc" "bb1"
+    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:7:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -35,7 +35,7 @@ Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:8:9 "bb2" "bb3"
+    Branch a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:8:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:8:9 generated
@@ -50,7 +50,7 @@ Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:11:14 generated
-    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:11:14 "malloc" "bb5"
+    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:11:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -64,7 +64,7 @@ Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:12:9 "bb6" "bb7"
+    Branch a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:12:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:12:9 generated
@@ -101,7 +101,7 @@ Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_
           Deref
     Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:16:5 generated
     ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:17:5 generated
-    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:17:5 "free" "bb9"
+    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:17:5 written "free" "bb9"
       Copy "_4"
   Block "bb9"
     Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:17:5 generated
@@ -112,7 +112,7 @@ Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_
           Deref
     Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:18:14 generated
     ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:19:5 generated
-    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:19:5 "g" "bb10"
+    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:19:5 written "g" "bb10"
       Copy "_9"
   Block "bb10"
     Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:19:5 generated
@@ -132,7 +132,7 @@ Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_
       Use
         Constant 0
     ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:23:25 generated
-    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:23:25 "read_after_free" "bb1"
+    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:23:25 written "read_after_free" "bb1"
       Destination "_1"
   Block "bb1"
     Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:23:18 written

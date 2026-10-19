@@ -22,7 +22,7 @@ Function a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_f
       Destination "_2"
       Unary "Not"
         Copy "_1"
-    Branch a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:6:9 "bb1" "bb2"
+    Branch a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:6:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:6:9 generated
@@ -36,12 +36,12 @@ Function a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_f
     Sequenced a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:6:9 generated
     Goto "bb3"
   Block "bb3"
-    Call a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:9:13 "g" "bb4"
+    Call a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:9:13 written "g" "bb4"
       Destination "_4"
       Copy "_1"
         Deref
   Block "bb4"
-    Call a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:9:21 "h" "bb5"
+    Call a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:9:21 written "h" "bb5"
       Destination "_5"
       Copy "_1"
   Block "bb5"
@@ -50,7 +50,7 @@ Function a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_f
       Binary "Add"
         Copy "_4"
         Copy "_5"
-    Call a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:9:29 "free" "bb6"
+    Call a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:9:29 written "free" "bb6"
       Copy "_1"
   Block "bb6"
     Operation a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:9:13 written
@@ -83,7 +83,7 @@ Function a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_f
       Destination "_2"
       Unary "Not"
         Copy "_1"
-    Branch a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:14:9 "bb1" "bb2"
+    Branch a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:14:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:14:9 generated
@@ -97,12 +97,12 @@ Function a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_f
     Sequenced a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:14:9 generated
     Goto "bb3"
   Block "bb3"
-    Call a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:17:13 "g" "bb4"
+    Call a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:17:13 written "g" "bb4"
       Destination "_4"
       Copy "_1"
         Deref
   Block "bb4"
-    Call a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:17:22 "free" "bb5"
+    Call a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:17:22 written "free" "bb5"
       Copy "_1"
   Block "bb5"
     Operation a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:17:13 written
@@ -110,7 +110,7 @@ Function a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_f
       Binary "Add"
         Copy "_4"
         Constant 0
-    Call a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:17:36 "h" "bb6"
+    Call a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:17:36 written "h" "bb6"
       Destination "_6"
       Copy "_1"
   Block "bb6"

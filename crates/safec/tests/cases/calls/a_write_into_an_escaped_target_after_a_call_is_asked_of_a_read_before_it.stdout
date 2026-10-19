@@ -47,12 +47,12 @@ Function a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_i
         Copy "_2"
     Sequenced a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it.c:11:5 generated
     ArgumentsEvaluated a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it.c:12:5 generated
-    Call a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it.c:12:5 "keep" "bb1"
+    Call a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it.c:12:5 written "keep" "bb1"
       Copy "_2"
   Block "bb1"
     Sequenced a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it.c:12:5 generated
     ArgumentsEvaluated a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it.c:13:9 generated
-    Call a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it.c:13:9 "malloc" "bb2"
+    Call a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it.c:13:9 written "malloc" "bb2"
       Destination "_8"
       Constant 4
   Block "bb2"
@@ -70,7 +70,7 @@ Function a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_i
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it.c:14:9 "bb3" "bb4"
+    Branch a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it.c:14:9 written "bb3" "bb4"
       Copy "_10"
   Block "bb3"
     Sequenced a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it.c:14:9 generated
@@ -93,7 +93,7 @@ Function a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_i
       Destination "_11"
       Use
         Copy "_4"
-    Call a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it.c:17:26 "release_all" "bb6"
+    Call a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it.c:17:26 written "release_all" "bb6"
   Block "bb6"
     Operation a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it.c:17:13 written
       Destination "_12"

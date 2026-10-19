@@ -18,17 +18,17 @@ Function a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_al
   Local "_8" "int *" "q"
   Local "_9" "int"
   Block "bb0" entry
-    Branch a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:6:9 "bb1" "bb2"
+    Branch a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:6:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:6:9 generated
     ArgumentsEvaluated a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:7:14 generated
-    Call a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:7:14 "get_slot" "bb4"
+    Call a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:7:14 written "get_slot" "bb4"
       Destination "_3"
   Block "bb2"
     Sequenced a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:6:9 generated
     ArgumentsEvaluated a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:9:14 generated
-    Call a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:9:14 "malloc" "bb5"
+    Call a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:9:14 written "malloc" "bb5"
       Destination "_5"
       Constant 8
   Block "bb3"
@@ -37,7 +37,7 @@ Function a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_al
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:11:9 "bb6" "bb7"
+    Branch a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:11:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb4"
     Operation a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:7:9 written
@@ -84,7 +84,7 @@ Function a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_al
       Binary "Eq"
         Copy "_8"
         Constant 0
-    Branch a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:15:9 "bb9" "bb10"
+    Branch a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:15:9 written "bb9" "bb10"
       Copy "_9"
   Block "bb9"
     Sequenced a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:15:9 generated
@@ -99,7 +99,7 @@ Function a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_al
     Goto "bb11"
   Block "bb11"
     ArgumentsEvaluated a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:18:5 generated
-    Call a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:18:5 "release" "bb12"
+    Call a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:18:5 written "release" "bb12"
   Block "bb12"
     Sequenced a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:18:5 generated
     Operation a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:19:5 written

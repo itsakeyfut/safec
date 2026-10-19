@@ -31,7 +31,7 @@ Function a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_
       Address
         Place "_1"
     ArgumentsEvaluated a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:6:5 generated
-    Call a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:6:5 "acquire" "bb1"
+    Call a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:6:5 written "acquire" "bb1"
       Copy "_2"
   Block "bb1"
     Sequenced a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:6:5 generated
@@ -54,7 +54,7 @@ Function a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_
       Address
         Place "_3"
     ArgumentsEvaluated a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:9:5 generated
-    Call a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:9:5 "memcpy" "bb2"
+    Call a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:9:5 written "memcpy" "bb2"
       Destination "_7"
       Copy "_6"
       Copy "_4"
@@ -71,7 +71,7 @@ Function a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_
       Binary "Eq"
         Copy "_8"
         Constant 0
-    Branch a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:11:9 "bb3" "bb4"
+    Branch a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:11:9 written "bb3" "bb4"
       Copy "_9"
   Block "bb3"
     Sequenced a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:11:9 generated
@@ -86,7 +86,7 @@ Function a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_
     Goto "bb5"
   Block "bb5"
     ArgumentsEvaluated a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:14:5 generated
-    Call a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:14:5 "release" "bb6"
+    Call a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:14:5 written "release" "bb6"
   Block "bb6"
     Sequenced a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:14:5 generated
     Operation a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:15:5 written

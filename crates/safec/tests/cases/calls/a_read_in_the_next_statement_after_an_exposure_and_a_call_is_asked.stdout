@@ -53,12 +53,12 @@ Function a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:6:
       Address
         Place "_5"
     ArgumentsEvaluated a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:13:5 generated
-    Call a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:13:5 "stash" "bb1"
+    Call a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:13:5 written "stash" "bb1"
       Copy "_7"
   Block "bb1"
     Sequenced a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:13:5 generated
     ArgumentsEvaluated a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:14:9 generated
-    Call a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:14:9 "malloc" "bb2"
+    Call a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:14:9 written "malloc" "bb2"
       Destination "_8"
       Constant 4
   Block "bb2"
@@ -76,7 +76,7 @@ Function a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:6:
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:15:9 "bb3" "bb4"
+    Branch a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:15:9 written "bb3" "bb4"
       Copy "_10"
   Block "bb3"
     Sequenced a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:15:9 generated
@@ -91,7 +91,7 @@ Function a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:6:
     Goto "bb5"
   Block "bb5"
     ArgumentsEvaluated a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:18:9 generated
-    Call a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:18:9 "malloc" "bb6"
+    Call a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:18:9 written "malloc" "bb6"
       Destination "_11"
       Constant 4
   Block "bb6"
@@ -109,7 +109,7 @@ Function a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:6:
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:19:9 "bb7" "bb8"
+    Branch a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:19:9 written "bb7" "bb8"
       Copy "_13"
   Block "bb7"
     Sequenced a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:19:9 generated
@@ -134,10 +134,10 @@ Function a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:6:
         Copy "_3"
           Deref
     Sequenced a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:22:5 generated
-    Call a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:23:9 "release_all" "bb10"
+    Call a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:23:9 written "release_all" "bb10"
       Destination "_15"
   Block "bb10"
-    Call a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:23:26 "memset" "bb11"
+    Call a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:23:26 written "memset" "bb11"
       Destination "_16"
       Copy "_3"
       Constant 0

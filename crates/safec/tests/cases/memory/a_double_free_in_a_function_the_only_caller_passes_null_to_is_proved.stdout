@@ -7,12 +7,12 @@ Function a_double_free_in_a_function_the_only_caller_passes_null_to_is_proved.c:
   Local "_1" "int *" parameter "p"
   Block "bb0" entry
     ArgumentsEvaluated a_double_free_in_a_function_the_only_caller_passes_null_to_is_proved.c:3:5 generated
-    Call a_double_free_in_a_function_the_only_caller_passes_null_to_is_proved.c:3:5 "free" "bb1"
+    Call a_double_free_in_a_function_the_only_caller_passes_null_to_is_proved.c:3:5 written "free" "bb1"
       Copy "_1"
   Block "bb1"
     Sequenced a_double_free_in_a_function_the_only_caller_passes_null_to_is_proved.c:3:5 generated
     ArgumentsEvaluated a_double_free_in_a_function_the_only_caller_passes_null_to_is_proved.c:4:5 generated
-    Call a_double_free_in_a_function_the_only_caller_passes_null_to_is_proved.c:4:5 "free" "bb2"
+    Call a_double_free_in_a_function_the_only_caller_passes_null_to_is_proved.c:4:5 written "free" "bb2"
       Copy "_1"
   Block "bb2"
     Sequenced a_double_free_in_a_function_the_only_caller_passes_null_to_is_proved.c:4:5 generated
@@ -31,7 +31,7 @@ Function a_double_free_in_a_function_the_only_caller_passes_null_to_is_proved.c:
       Use
         Constant 0
     ArgumentsEvaluated a_double_free_in_a_function_the_only_caller_passes_null_to_is_proved.c:7:25 generated
-    Call a_double_free_in_a_function_the_only_caller_passes_null_to_is_proved.c:7:25 "f" "bb1"
+    Call a_double_free_in_a_function_the_only_caller_passes_null_to_is_proved.c:7:25 written "f" "bb1"
       Destination "_1"
       Constant 0
   Block "bb1"

@@ -16,7 +16,7 @@ Function a_write_through_an_alias_keeps_what_it_carried_proved.c:3:5 "f"
   Local "_7" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_write_through_an_alias_keeps_what_it_carried_proved.c:4:14 generated
-    Call a_write_through_an_alias_keeps_what_it_carried_proved.c:4:14 "malloc" "bb1"
+    Call a_write_through_an_alias_keeps_what_it_carried_proved.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -26,7 +26,7 @@ Function a_write_through_an_alias_keeps_what_it_carried_proved.c:3:5 "f"
         Copy "_2"
     Sequenced a_write_through_an_alias_keeps_what_it_carried_proved.c:4:14 generated
     ArgumentsEvaluated a_write_through_an_alias_keeps_what_it_carried_proved.c:5:14 generated
-    Call a_write_through_an_alias_keeps_what_it_carried_proved.c:5:14 "malloc" "bb2"
+    Call a_write_through_an_alias_keeps_what_it_carried_proved.c:5:14 written "malloc" "bb2"
       Destination "_4"
       Constant 4
   Block "bb2"
@@ -45,7 +45,7 @@ Function a_write_through_an_alias_keeps_what_it_carried_proved.c:3:5 "f"
         Copy "_6"
     Sequenced a_write_through_an_alias_keeps_what_it_carried_proved.c:6:16 generated
     ArgumentsEvaluated a_write_through_an_alias_keeps_what_it_carried_proved.c:7:5 generated
-    Call a_write_through_an_alias_keeps_what_it_carried_proved.c:7:5 "free" "bb3"
+    Call a_write_through_an_alias_keeps_what_it_carried_proved.c:7:5 written "free" "bb3"
       Copy "_1"
   Block "bb3"
     Sequenced a_write_through_an_alias_keeps_what_it_carried_proved.c:7:5 generated
@@ -61,7 +61,7 @@ Function a_write_through_an_alias_keeps_what_it_carried_proved.c:3:5 "f"
           Deref
     Sequenced a_write_through_an_alias_keeps_what_it_carried_proved.c:8:5 generated
     ArgumentsEvaluated a_write_through_an_alias_keeps_what_it_carried_proved.c:9:5 generated
-    Call a_write_through_an_alias_keeps_what_it_carried_proved.c:9:5 "free" "bb4"
+    Call a_write_through_an_alias_keeps_what_it_carried_proved.c:9:5 written "free" "bb4"
       Copy "_1"
   Block "bb4"
     Sequenced a_write_through_an_alias_keeps_what_it_carried_proved.c:9:5 generated

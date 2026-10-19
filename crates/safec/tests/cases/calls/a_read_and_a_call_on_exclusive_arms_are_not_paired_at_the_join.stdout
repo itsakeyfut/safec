@@ -39,12 +39,12 @@ Function a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:4:5 "f
       Address
         Place "_3"
     ArgumentsEvaluated a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:9:5 generated
-    Call a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:9:5 "watch" "bb1"
+    Call a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:9:5 written "watch" "bb1"
       Copy "_6"
   Block "bb1"
     Sequenced a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:9:5 generated
     ArgumentsEvaluated a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:10:9 generated
-    Call a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:10:9 "malloc" "bb2"
+    Call a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:10:9 written "malloc" "bb2"
       Destination "_7"
       Constant 4
   Block "bb2"
@@ -62,7 +62,7 @@ Function a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:4:5 "f
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:11:9 "bb3" "bb4"
+    Branch a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:11:9 written "bb3" "bb4"
       Copy "_9"
   Block "bb3"
     Sequenced a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:11:9 generated
@@ -96,7 +96,7 @@ Function a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:4:5 "f
       Use
         Copy "_4"
     Sequenced a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:15:5 generated
-    Branch a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:16:9 "bb7" "bb8"
+    Branch a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:16:9 written "bb7" "bb8"
       Copy "_1"
   Block "bb6"
     Operation a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:16:5 written
@@ -134,7 +134,7 @@ Function a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:4:5 "f
         Copy "_3"
     Sequenced a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:16:21 generated
     ArgumentsEvaluated a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:16:33 generated
-    Call a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:16:33 "now" "bb9"
+    Call a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:16:33 written "now" "bb9"
       Destination "_14"
   Block "bb9"
     Operation a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join.c:16:9 written
