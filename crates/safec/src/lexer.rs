@@ -441,7 +441,12 @@ impl<'a> Lexer<'a> {
                 continue;
             }
             match self.bump() {
-                Some('\n') => self.at_line_start = true,
+                // A newline here does not open a line for a directive: the
+                // comment is one space by the time directives are found (C17
+                // 5.1.1.2 p1, phase 3), so a `#` after one that follows code
+                // follows code (6.10 p2). Setting the flag here read
+                // `int a; /* x`, a newline, `*/ #include "a.h"` as an include.
+                // Found by review.
                 Some(_) => {}
                 None => {
                     diagnostics.report(
@@ -1155,6 +1160,9 @@ int x;
             "a #define X 1
 ",
             "a /* note */ #define X 1
+",
+            "a /* two
+   lines */ #define X 1
 ",
         ] {
             // Asked of the token, since a directive is reported by the

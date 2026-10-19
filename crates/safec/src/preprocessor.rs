@@ -38,12 +38,10 @@ const UNSUPPORTED_SPLICE: Code = Code::new("SC0107");
 
 /// How many files may be being read at once, the input among them.
 ///
-/// The recursion takes a native stack frame per file, so a chain of different
-/// files, each including the next, ended the process with nothing to read
-/// once it was long enough: 300 overflowed a debug build on Windows, measured,
-/// and 250 did not. Found by review. C17 5.2.4.1 asks for 15 levels, so this
-/// leaves a program written for any compiler room, and a refusal past it says
-/// where.
+/// Not a bound on the native stack, which [`splice`] does not recurse on. It
+/// bounds a chain of different files, each including the next, which nothing
+/// else ends. C17 5.2.4.1 asks for 15 levels, so this leaves a program written
+/// for any compiler room, and a refusal past it says where.
 const MAX_DEPTH: usize = 200;
 
 /// How many inclusions one input may make in all.
@@ -91,9 +89,13 @@ pub fn preprocess(
 /// Append `tokens` to `spliced`, an `#include "file"` replaced by that file's,
 /// and no end of file.
 ///
-/// Recursion ends because a file being read is never read again, a chain of
-/// different files stops at [`MAX_DEPTH`], and a tree of them at
-/// [`MAX_INCLUSIONS`].
+/// One frame per file being read, the input's at the bottom, each holding its
+/// tokens and how far they have been read. A stack of its own rather than the
+/// native one: recursing once per file overflowed the main thread's stack on
+/// a chain of 160 headers, well inside [`MAX_DEPTH`], and where it overflowed
+/// moved whenever a frame grew. Found by review. The reading ends because a
+/// file being read is never read again, a chain of different files stops at
+/// [`MAX_DEPTH`], and a tree of them at [`MAX_INCLUSIONS`].
 fn splice(
     tokens: &[Token],
     sources: &mut SourceMap,
@@ -101,7 +103,19 @@ fn splice(
     diagnostics: &mut DiagnosticSink,
     spliced: &mut Vec<Token>,
 ) {
-    for &token in tokens {
+    let mut frames = vec![(tokens.to_vec(), 0)];
+    while let Some((tokens, at)) = frames.last_mut() {
+        let next = tokens.get(*at).copied();
+        *at += 1;
+        let Some(token) = next else {
+            frames.pop();
+            // Each frame above the input's is one `include` pushed onto
+            // `open`, and the input's own may not be there at all.
+            if !frames.is_empty() {
+                reading.open.pop();
+            }
+            continue;
+        };
         match token.kind {
             TokenKind::Eof => {}
             TokenKind::Directive => {
@@ -114,15 +128,11 @@ fn splice(
                             token.span.start() + at,
                             token.span.start() + at + name.len() as u32 + 2,
                         );
-                        include(
-                            token.span,
-                            quoted,
-                            name,
-                            sources,
-                            reading,
-                            diagnostics,
-                            spliced,
-                        );
+                        if let Some(included) =
+                            include(token.span, quoted, name, sources, reading, diagnostics)
+                        {
+                            frames.push((included, 0));
+                        }
                     }
                     Form::Spliced => diagnostics.report(
                         refused(
@@ -184,7 +194,8 @@ fn splice(
 }
 
 /// Read the file `name` names, relative to the file the directive is in, and
-/// splice its tokens.
+/// give back its tokens, with it pushed onto the files being read; or report
+/// why not, and give back nothing.
 ///
 /// `directive` is the whole line and `quoted` the name with its quotes, which
 /// is where a report about the file is put.
@@ -195,8 +206,7 @@ fn include(
     sources: &mut SourceMap,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
-    spliced: &mut Vec<Token>,
-) {
+) -> Option<Vec<Token>> {
     let unreadable = |note: String| {
         Diagnostic::error("cannot read the included file")
             .with_code(UNREADABLE_INCLUSION)
@@ -209,7 +219,7 @@ fn include(
             "`{name}` is found from the directory of the file that includes it, and this \
              file has no directory"
         )));
-        return;
+        return None;
     };
     let path = resolved(includer, name);
 
@@ -220,13 +230,13 @@ fn include(
                 .with_label(Label::primary(quoted, "included here"))
                 .with_note(format!("{MAX_DEPTH} files are already being read here")),
         );
-        return;
+        return None;
     }
     // Once, at the first one past it, rather than at each of the thousands
     // after it, which would bury the report it is.
     if reading.included >= MAX_INCLUSIONS {
         if reading.included > MAX_INCLUSIONS {
-            return;
+            return None;
         }
         reading.included += 1;
         diagnostics.report(
@@ -238,7 +248,7 @@ fn include(
                      include guards are not read yet"
                 )),
         );
-        return;
+        return None;
     }
 
     let canonical = canonical(&path);
@@ -263,7 +273,7 @@ fn include(
             )),
         };
         diagnostics.report(refused);
-        return;
+        return None;
     }
 
     // Asked before the file is opened, because opening is what never returns
@@ -280,7 +290,7 @@ fn include(
             "`{name}` was looked for at `{}`: {why}",
             path.display()
         )));
-        return;
+        return None;
     }
 
     let file = match sources.include(&path, directive) {
@@ -297,15 +307,14 @@ fn include(
                 "`{name}` was looked for at `{}`: {why}",
                 path.display()
             )));
-            return;
+            return None;
         }
     };
 
     reading.included += 1;
     let tokens = lex(file, &sources.file_owned(file), diagnostics);
     reading.open.push((canonical, file));
-    splice(&tokens, sources, reading, diagnostics, spliced);
-    reading.open.pop();
+    Some(tokens)
 }
 
 /// What an `#include` is spelled as, which decides what is done with it.
@@ -577,13 +586,28 @@ mod tests {
     /// the bound rather than read until the native stack runs out, and read
     /// up to it: `MAX_DEPTH` files at once, the input among them.
     ///
+    /// Run on a thread whose stack is a quarter of a megabyte, smaller than
+    /// the main thread's anywhere this runs, so that reading the chain the
+    /// bound allows is asked of a stack that could not hold one frame per file.
+    ///
     /// Mutation: drop the check of `MAX_DEPTH`. The longer chain is read to
-    /// its end and nothing is reported. Not an overflow here: a test thread's
-    /// stack is larger than the main thread's, which is where the bound is
-    /// needed. Mutation: refuse one file sooner or one later. One of the two
-    /// chains answers wrongly.
+    /// its end and nothing is reported. Mutation: refuse one file sooner or one
+    /// later. One of the two chains answers wrongly. Mutation: recurse once
+    /// per file, as `splice` did. The thread overflows its stack.
     #[test]
     fn includes_nested_past_the_bound_are_refused() {
+        // Named, so that an overflow, which aborts the whole test binary,
+        // still says which test it was.
+        std::thread::Builder::new()
+            .name("includes_nested_past_the_bound_are_refused".to_owned())
+            .stack_size(256 * 1024)
+            .spawn(nested_past_the_bound)
+            .unwrap()
+            .join()
+            .unwrap();
+    }
+
+    fn nested_past_the_bound() {
         let chain = |headers: usize| {
             let mut files = vec![("main.c".to_owned(), "#include \"0.h\"\n".to_owned())];
             for at in 0..headers - 1 {
