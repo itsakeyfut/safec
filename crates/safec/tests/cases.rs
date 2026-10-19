@@ -4147,6 +4147,11 @@ cases! {
         missing_semicolon: ["--emit", "ast"],
         mvp_program: ["--emit", "ast"],
         not_a_declaration: ["--emit", "ast"],
+        // Three broken items around one that is fine report three errors,
+        // and the tree keeps the good one between the `Error` items (#35).
+        // Mutation: do not clear `failed` before each item in `Parser::run`;
+        // this reports one.
+        three_syntax_errors_are_three_reports: ["--emit", "ast"],
         parentheses_regroup: ["--emit", "ast"],
         parsed_function: ["--emit", "ast"],
         pointer_declaration: ["--emit", "ast"],

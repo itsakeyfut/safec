@@ -552,8 +552,9 @@ pub fn parse(tokens: &[Token], diagnostics: &mut DiagnosticSink) -> Ast {
     // its pieces make a parser produce an avalanche of errors about a line it
     // was never meant to read. Keeping the line whole only moves that avalanche
     // to one error instead of many, and one error is still one too many, since
-    // the lexer has already reported the line and this parser stops at the
-    // first thing it cannot read. Dropped here, in one place, rather than
+    // the lexer has already reported the line and this parser stops reading an
+    // item at the first thing in it that it cannot read. Dropped here, in one
+    // place, rather than
     // skipped at each of the two loops, so that no position can be added later
     // where a directive is looked at.
     let tokens: Vec<Token> = tokens
@@ -562,11 +563,23 @@ pub fn parse(tokens: &[Token], diagnostics: &mut DiagnosticSink) -> Ast {
         .filter(|token| token.kind != TokenKind::Directive)
         .collect();
 
+    // For each token, where the next brace or the end of the file is, found
+    // once here rather than by a scan from every `;` recovery meets.
+    let mut next_brace = vec![tokens.len(); tokens.len()];
+    for at in (0..tokens.len()).rev() {
+        next_brace[at] = match tokens[at].kind {
+            TokenKind::Punct(Punct::LeftBrace | Punct::RightBrace) | TokenKind::Eof => at,
+            _ => next_brace.get(at + 1).copied().unwrap_or(tokens.len()),
+        };
+    }
+
     Parser {
         tokens: &tokens,
+        next_brace,
         at: 0,
         ast: Ast::new(),
         failed: false,
+        reported: 0,
         budget: tokens.len() + 1,
         depth: 0,
         loops: 0,
@@ -576,14 +589,23 @@ pub fn parse(tokens: &[Token], diagnostics: &mut DiagnosticSink) -> Ast {
 
 struct Parser<'a> {
     tokens: &'a [Token],
+    /// For each token, the index of the first `{`, `}` or end of file at or
+    /// after it, which [`Parser::body_after_declarations`] reads instead of
+    /// scanning. A scan from every `;` recovery met was quadratic in a file of
+    /// broken declarations with no brace in it. Found by review.
+    next_brace: Vec<usize>,
     at: usize,
     ast: Ast,
-    /// Whether a syntax error has been reported for this file.
+    /// Whether a syntax error has been reported for the item being read.
     ///
-    /// One is all this issue reports. Recovering and carrying on is a sibling
-    /// issue, and until it lands a second error would be reported from a
-    /// position the parser has no reason to believe in.
+    /// One per item, cleared by [`Parser::run`] before each. A second error
+    /// inside the item that failed would be reported from a position the
+    /// parser has no reason to believe in; the next item begins where
+    /// [`Parser::resync`] put the cursor, which is a position it does (#35).
     failed: bool,
+    /// The token the item's error was reported at, which recovery does not
+    /// read again. Set by [`Parser::report_built`] with `failed`.
+    reported: usize,
     /// How many more times any loop here may go round.
     ///
     /// Every iteration that succeeds consumes at least one token and every
@@ -609,25 +631,116 @@ struct Parser<'a> {
 }
 
 impl Parser<'_> {
-    /// Read items until the file ends or one of them fails.
+    /// Read items until the file ends, recovering from one that fails at the
+    /// end of that item and reading on (#35).
     ///
-    /// Stopping at the first is this issue's decision, and the sibling issue
-    /// that adds recovery is what takes `failed` away. When it does, the budget
-    /// below is what is left holding termination, and it owes a recovery that
-    /// advances rather than one that merely reports.
+    /// An item that fails is kept as `Item::Error` and has reported one
+    /// error, and [`Parser::resync`] moves past it. The budget is what holds
+    /// termination: a recovery that did not advance would meet the same item
+    /// until it ran out, and that is a panic naming the defect rather than a
+    /// hang.
     ///
-    /// Mutation: drop `!self.failed` from the condition. The parser then meets
-    /// the same token forever, the budget runs out, and
-    /// `only_the_first_syntax_error_is_reported` fails by name instead of the
-    /// suite hanging.
+    /// Mutation: do not clear `failed` before each item.
+    /// `three_items_with_a_syntax_error_each_report_three` reports one.
     fn run(mut self, diagnostics: &mut DiagnosticSink) -> Ast {
-        while !self.at_end() && !self.failed {
+        while !self.at_end() {
             self.spend();
+            self.failed = false;
+            let start = self.at;
             let item = self.item(diagnostics);
             self.ast.push_item(item);
+            if self.failed {
+                self.resync(start);
+            }
         }
 
         self.ast
+    }
+
+    /// Move the cursor to the end of the item that began at token `start`
+    /// and failed, found from the tokens rather than from wherever the failed
+    /// read stopped, whose state nothing vouches for.
+    ///
+    /// The item ends after a `;` at brace depth 0; after a `}` that brings
+    /// the depth back to 0, where what follows begins an item or ends the
+    /// file, which is how a function definition ends; after a `}` with no
+    /// `{` open; or at the end of the file. A struct's closing brace is
+    /// followed by `;` or a declarator, so `struct S { ... };` scans on to
+    /// its `;`. An end is taken only past the token the item's error was
+    /// reported at, [`Parser::reported`]: `struct S { int a; } const s;` is
+    /// reported at `const`, and ending at the `}` before it would read
+    /// `const` again and report it twice. Found by review. And never before
+    /// what the failed read consumed, so nothing it took is read twice.
+    ///
+    /// Mutation: take an end at or before the reported token.
+    /// `valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not`
+    /// reports `const` twice.
+    ///
+    /// Mutation: leave the cursor at `start`. The budget runs out in
+    /// `three_items_with_a_syntax_error_each_report_three`. Mutation: end at
+    /// any `}` that brings the depth to 0.
+    /// `recovery_ends_a_struct_at_its_semicolon_not_its_brace` reports three.
+    fn resync(&mut self, start: usize) {
+        let reported = self.reported;
+        let mut depth = 0usize;
+        let mut end = start;
+        while end < self.tokens.len() && !self.tokens[end].is_eof() {
+            let kind = self.tokens[end].kind;
+            end += 1;
+            let past = end > reported;
+            match kind {
+                // Not the end where a body follows a declaration list: an
+                // old-style definition, C17 6.9.1 p6, puts `int a; int b;`
+                // between its declarator and its `{`, and ending the item at
+                // the first `;` reported that body as an item of its own.
+                // Found by review.
+                TokenKind::Punct(Punct::Semicolon) if depth == 0 && past => {
+                    match self.body_after_declarations(end) {
+                        Some(body) => end = body,
+                        None => break,
+                    }
+                }
+                TokenKind::Punct(Punct::LeftBrace) => depth += 1,
+                TokenKind::Punct(Punct::RightBrace) if depth == 0 && past => break,
+                TokenKind::Punct(Punct::RightBrace) if depth == 0 => {}
+                TokenKind::Punct(Punct::RightBrace) => {
+                    depth -= 1;
+                    let next = self.tokens.get(end).copied();
+                    // What begins an item includes what the parser refuses
+                    // at the start of one, `static` and `typedef` among them,
+                    // or a `}` before one swallowed it. Found by review. Not
+                    // a name, which is a struct's declarator here.
+                    let ends_here = next.is_none_or(|next| {
+                        next.is_eof()
+                            || begins_specifiers(next.kind)
+                            || next.kind == TokenKind::Annotation(Annotation::Attribute)
+                            || matches!(next.kind, TokenKind::Keyword(keyword)
+                                if unread_keyword(keyword, Position::FileScope).is_some())
+                    });
+                    if depth == 0 && ends_here && past {
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        self.at = self.at.max(end);
+    }
+
+    /// Where the `{` of a body is, if the tokens from `from` are declarations
+    /// ending in `;` and then that `{`, which is how an old-style definition's
+    /// declaration list leads to its body.
+    ///
+    /// A `{` that does not follow a `;` is somebody else's: `int g(void) {`
+    /// begins the next definition. So is anything after a `}`, a `{` nested
+    /// in a declaration, or the end of the file. Nothing at file scope begins
+    /// with `{`, so taking one that does follow a `;` hides no valid item.
+    fn body_after_declarations(&self, from: usize) -> Option<usize> {
+        let at = *self.next_brace.get(from)?;
+        let brace = self.tokens.get(at)?;
+        let after_semicolon =
+            at > 0 && self.tokens[at - 1].kind == TokenKind::Punct(Punct::Semicolon);
+        (brace.kind == TokenKind::Punct(Punct::LeftBrace) && after_semicolon).then_some(at)
     }
 
     /// Take one from the budget, or say that the parser stopped moving.
@@ -2682,6 +2795,7 @@ impl Parser<'_> {
     ) -> Span {
         if !self.failed {
             self.failed = true;
+            self.reported = self.at;
             diagnostics.report(diagnostic);
         }
 

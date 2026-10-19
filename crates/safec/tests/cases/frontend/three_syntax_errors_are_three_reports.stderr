@@ -1,0 +1,21 @@
+error[SC0201]: expected an expression
+   ╭─[ three_syntax_errors_are_three_reports.c:1:15 ]
+   │
+ 1 │ int a(void) { ) }
+   │               ┬  
+   │               ╰── this cannot begin one
+───╯
+error[SC0201]: expected an expression
+   ╭─[ three_syntax_errors_are_three_reports.c:7:9 ]
+   │
+ 7 │ int b = ;
+   │         ┬  
+   │         ╰── this cannot begin one
+───╯
+error[SC0201]: expected an expression
+    ╭─[ three_syntax_errors_are_three_reports.c:10:14 ]
+    │
+ 10 │     return ( ;
+    │              ┬  
+    │              ╰── this cannot begin one
+────╯
