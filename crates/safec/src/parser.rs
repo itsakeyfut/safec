@@ -289,20 +289,19 @@ enum Derivation {
     Function(Parameters),
 }
 
-/// The type a declaration specifier names, if this token is one.
+/// The type a C17 6.7.2 type-specifier written as one keyword names, if this
+/// token is one: `int`, `char` or `void`.
 ///
-/// One place, asked from three. `specifiers` asks and consumes;
-/// `parenthesised_declarator` asks without consuming, to tell a parenthesised
-/// declarator from a parameter list; `compound` asks without consuming, to tell
-/// C17 6.8.2's two kinds of block-item apart. All three have to agree about
-/// what begins a declaration, and a second copy of the answer is what would let
-/// them stop agreeing, and two spellings of one decision have already left a
-/// case here answered by neither.
+/// Not the whole of 6.7.2, whose `struct-or-union-specifier` is more than one
+/// token and is [`Parser::struct_specifier`]'s, and not 6.7's
+/// `declaration-specifiers`, which adds qualifiers, storage classes and
+/// function and alignment specifiers. Whether a declaration begins here, the
+/// wider question, is [`begins_specifiers`]'s.
 ///
 /// `docs/frontend.md` gives Stage 1 `int`, `char` and `void`. C's other
 /// specifiers, its qualifiers and its storage classes are later stages, and
 /// the module comment lists them among what is not read yet.
-fn specifier(kind: TokenKind) -> Option<Type> {
+fn type_specifier_keyword(kind: TokenKind) -> Option<Type> {
     match kind {
         TokenKind::Keyword(Keyword::Int) => Some(Type::Int),
         TokenKind::Keyword(Keyword::Char) => Some(Type::Char),
@@ -311,12 +310,21 @@ fn specifier(kind: TokenKind) -> Option<Type> {
     }
 }
 
-/// Whether declaration specifiers begin at this token: one [`specifier`]
-/// names, or `struct`, which is more than one token and is read by
-/// [`Parser::struct_specifier`]. The one test for where a declaration, a
-/// parameter list or a `for`'s declaration begins.
+/// Whether declaration specifiers begin at this token: one
+/// [`type_specifier_keyword`] names, or `struct`, which is more than one token
+/// and is read by [`Parser::struct_specifier`]. The one test for where a
+/// declaration, a parameter list or a `for`'s declaration begins.
+///
+/// One place, asked from five, none of which consumes: `compound` and
+/// `for_statement`, to tell a declaration from a statement (C17 6.8.2, 6.8.5);
+/// `parenthesised_declarator`, to tell a parenthesised declarator from a
+/// parameter list; `primary`, to tell a type name in parentheses from an
+/// expression; and `ends_a_label_c17_forbids`. All of them have to agree about
+/// what begins a declaration, and a second copy of the answer is what would let
+/// them stop agreeing, and two spellings of one decision have already left a
+/// case here answered by neither.
 fn begins_specifiers(kind: TokenKind) -> bool {
-    specifier(kind).is_some() || kind == TokenKind::Keyword(Keyword::Struct)
+    type_specifier_keyword(kind).is_some() || kind == TokenKind::Keyword(Keyword::Struct)
 }
 
 /// Where a parse failed, which decides what C would have allowed there.
@@ -1021,7 +1029,7 @@ impl Parser<'_> {
             return self.no_unread_specifier_after(ty, at, diagnostics);
         }
 
-        let Some(ty) = specifier(self.peek().kind) else {
+        let Some(ty) = type_specifier_keyword(self.peek().kind) else {
             if self.refuse_unread(at, diagnostics) {
                 return None;
             }
@@ -1762,8 +1770,9 @@ impl Parser<'_> {
 
                     // C17 6.8.2 makes a block-item a declaration or a
                     // statement, and a declaration is not a statement in C.
-                    // Which of the two is here is decided by the same
-                    // `specifier` the declaration reads with.
+                    // Which of the two is here is decided by
+                    // `begins_specifiers`, the test the declaration's own
+                    // specifiers begin with.
                     // `__attribute__` goes with the declarations, where
                     // `specifiers` refuses it by name, rather than to the
                     // expressions, which would call it a missing one.
