@@ -552,8 +552,9 @@ pub fn parse(tokens: &[Token], diagnostics: &mut DiagnosticSink) -> Ast {
     // its pieces make a parser produce an avalanche of errors about a line it
     // was never meant to read. Keeping the line whole only moves that avalanche
     // to one error instead of many, and one error is still one too many, since
-    // the lexer has already reported the line and this parser stops at the
-    // first thing it cannot read. Dropped here, in one place, rather than
+    // the lexer has already reported the line and this parser stops reading an
+    // item at the first thing in it that it cannot read. Dropped here, in one
+    // place, rather than
     // skipped at each of the two loops, so that no position can be added later
     // where a directive is looked at.
     let tokens: Vec<Token> = tokens
@@ -662,7 +663,17 @@ impl Parser<'_> {
             let kind = self.tokens[end].kind;
             end += 1;
             match kind {
-                TokenKind::Punct(Punct::Semicolon) if depth == 0 => break,
+                // Not the end where a body follows a declaration list: an
+                // old-style definition, C17 6.9.1 p6, puts `int a; int b;`
+                // between its declarator and its `{`, and ending the item at
+                // the first `;` reported that body as an item of its own.
+                // Found by review.
+                TokenKind::Punct(Punct::Semicolon) if depth == 0 => {
+                    match self.body_after_declarations(end) {
+                        Some(body) => end = body,
+                        None => break,
+                    }
+                }
                 TokenKind::Punct(Punct::LeftBrace) => depth += 1,
                 TokenKind::Punct(Punct::RightBrace) if depth == 0 => break,
                 TokenKind::Punct(Punct::RightBrace) => {
@@ -681,6 +692,29 @@ impl Parser<'_> {
             }
         }
         self.at = self.at.max(end);
+    }
+
+    /// Where the `{` of a body is, if the tokens from `from` are declarations
+    /// ending in `;` and then that `{`, which is how an old-style definition's
+    /// declaration list leads to its body.
+    ///
+    /// A `{` that does not follow a `;` is somebody else's: `int g(void) {`
+    /// begins the next definition. So is anything after a `}`, a `{` nested
+    /// in a declaration, or the end of the file. Nothing at file scope begins
+    /// with `{`, so taking one that does follow a `;` hides no valid item.
+    fn body_after_declarations(&self, from: usize) -> Option<usize> {
+        let mut at = from;
+        loop {
+            match self.tokens.get(at)?.kind {
+                TokenKind::Punct(Punct::LeftBrace) => {
+                    let after_semicolon =
+                        at > 0 && self.tokens[at - 1].kind == TokenKind::Punct(Punct::Semicolon);
+                    return after_semicolon.then_some(at);
+                }
+                TokenKind::Punct(Punct::RightBrace) | TokenKind::Eof => return None,
+                _ => at += 1,
+            }
+        }
     }
 
     /// Take one from the budget, or say that the parser stopped moving.

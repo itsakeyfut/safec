@@ -243,6 +243,32 @@ fn recovery_ends_a_struct_at_its_semicolon_not_its_brace() {
     );
 }
 
+/// An old-style definition's declaration list is not where its item ends,
+/// so the body after it is not reported as an item of its own, and nothing in
+/// it becomes a declaration at file scope. C17 6.9.1 p6 makes it C, which
+/// this parser does not read; it is reported once.
+///
+/// Mutation: in `Parser::resync`, end at every `;` at depth 0. This reports
+/// twice. Mutation: in `Parser::body_after_declarations`, take a `{` whether
+/// or not a `;` precedes it. `three_items_with_a_syntax_error_each_report_three`
+/// loses the function its broken item is followed by.
+#[test]
+fn an_old_style_definition_is_one_report() {
+    let parsed =
+        parsed("int f(a, b)\n    int a;\n    int b;\n{\n    return a + b;\n}\nint g = ;\n");
+    assert_eq!(
+        parsed.diagnostics.diagnostics().len(),
+        2,
+        "{:?}",
+        parsed.diagnostics.diagnostics()
+    );
+    // Two items, the definition and `g`: none of the declaration list or the
+    // body read as items at file scope.
+    let items = parsed.ast.items();
+    assert_eq!(items.len(), 2, "{items:?}");
+    assert!(matches!(items[0], Item::Error { .. }), "{items:?}");
+}
+
 /// No malformed input makes the parser report at one position twice, or
 /// stop moving.
 ///
@@ -1536,11 +1562,15 @@ fn what_was_expected_is_named_in_the_message() {
         let parsed = parsed(text);
         let reported = parsed.diagnostics.diagnostics();
 
-        // The first report is the one about the item, and it is what this
-        // test is about. Recovery reads on after it (#35), so a later item
-        // can speak too: `int main(void) return 0; }` ends its item at the
-        // `;` and the `}` is a second, as it is in `clang`.
-        assert!(!reported.is_empty(), "{text:?}");
+        // One report per input, except where a missing `{` leaves the `}`
+        // to be read as an item of its own after recovery (#35), which is a
+        // second report in `clang` as well.
+        let reports = if text == "int main(void) return 0; }\n" {
+            2
+        } else {
+            1
+        };
+        assert_eq!(reported.len(), reports, "{text:?} gave {reported:?}");
         assert_eq!(reported[0].message(), expected, "{text:?}");
     }
 }
