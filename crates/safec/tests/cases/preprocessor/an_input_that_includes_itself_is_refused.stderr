@@ -5,4 +5,4 @@ error[SC0110]: this file includes itself
    │          ──────────────────────┬─────────────────────  
    │                                ╰─────────────────────── already being read
 ───╯
-  = note: `an_input_that_includes_itself_is_refused.c` is being read as the input, so reading it here would never end
+  = note: `an_input_that_includes_itself_is_refused.c` is the input, so reading it here would never end

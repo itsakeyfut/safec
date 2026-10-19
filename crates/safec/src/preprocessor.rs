@@ -42,7 +42,7 @@ pub fn preprocess(
 ) -> Vec<Token> {
     let mut reading = Vec::new();
     if let Some(path) = path_of(sources.file(file).name()) {
-        reading.push(canonical(path));
+        reading.push((canonical(path), file));
     }
 
     let mut spliced = Vec::with_capacity(tokens.len());
@@ -54,14 +54,14 @@ pub fn preprocess(
 /// Append `tokens` to `spliced`, an `#include "file"` replaced by that file's,
 /// and no end of file.
 ///
-/// `reading` is the files being read, outermost first, each as its canonical
+/// `reading` is the files being read, outermost first, each by its canonical
 /// path, so a cycle is found whatever spelling reached it. Recursion ends
 /// because a file on it is never read again, and a chain of different files is
 /// as deep as the files on disk make it.
 fn splice(
     tokens: &[Token],
     sources: &mut SourceMap,
-    reading: &mut Vec<PathBuf>,
+    reading: &mut Vec<(PathBuf, FileId)>,
     diagnostics: &mut DiagnosticSink,
     spliced: &mut Vec<Token>,
 ) {
@@ -127,7 +127,7 @@ fn include(
     quoted: Span,
     name: &str,
     sources: &mut SourceMap,
-    reading: &mut Vec<PathBuf>,
+    reading: &mut Vec<(PathBuf, FileId)>,
     diagnostics: &mut DiagnosticSink,
     spliced: &mut Vec<Token>,
 ) {
@@ -148,23 +148,27 @@ fn include(
     let path = resolved(includer, name);
 
     let canonical = canonical(&path);
-    if let Some(open) = reading.iter().position(|being| *being == canonical) {
-        diagnostics.report(
-            Diagnostic::error("this file includes itself")
-                .with_code(RECURSIVE_INCLUSION)
-                .with_label(Label::primary(quoted, "already being read"))
+    if let Some(&(_, open)) = reading.iter().find(|(being, _)| *being == canonical) {
+        let refused = Diagnostic::error("this file includes itself")
+            .with_code(RECURSIVE_INCLUSION)
+            .with_label(Label::primary(quoted, "already being read"));
+        // Where the open one began to be read: the directive that included
+        // it, or nowhere, if it is the input. Asked of the file rather than
+        // of its place on the stack, which says the same only while the input
+        // is the first thing pushed.
+        let refused = match sources.file(open).name() {
+            FileName::Inclusion { at, .. } => refused
+                .with_label(Label::secondary(*at, "where it began to be read"))
                 .with_note(format!(
-                    "`{}` is being read {}, so reading it here would never end",
-                    path.display(),
-                    // The outermost is the input, and every one after it is
-                    // an inclusion of the one before.
-                    if open == 0 {
-                        "as the input"
-                    } else {
-                        "for an `#include` that has not finished"
-                    }
+                    "`{}` has not finished, so reading it here would never end",
+                    path.display()
                 )),
-        );
+            FileName::Real(_) | FileName::Virtual(_) => refused.with_note(format!(
+                "`{}` is the input, so reading it here would never end",
+                path.display()
+            )),
+        };
+        diagnostics.report(refused);
         return;
     }
 
@@ -187,7 +191,7 @@ fn include(
     };
 
     let tokens = lex(file, &sources.file_owned(file), diagnostics);
-    reading.push(canonical);
+    reading.push((canonical, file));
     splice(&tokens, sources, reading, diagnostics, spliced);
     reading.pop();
 }
