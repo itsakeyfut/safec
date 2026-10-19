@@ -4304,6 +4304,10 @@ cases! {
         // only the innermost file being read rather than all of them. The
         // two are read in turn until the native stack runs out.
         a_file_that_includes_itself_through_another_is_refused: ["--emit", "ast"],
+        // `./` before its own name. Mutation: compare the paths as they were
+        // resolved rather than canonicalized. It is read once more as an
+        // inclusion before the cycle is seen.
+        an_input_that_includes_itself_by_another_spelling_is_refused: ["--emit", "ast"],
         // Mutation: drop the note. What was looked for, and why it was not
         // read, goes with it.
         an_include_that_names_no_file_is_refused: ["--emit", "ast"],

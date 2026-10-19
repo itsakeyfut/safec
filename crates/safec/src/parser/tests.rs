@@ -1668,3 +1668,117 @@ fn a_parameter_declared_as_an_array_or_a_function_is_a_pointer() {
     assert!(parsed.ast.compatible(first, second, &|_, _| false));
     assert!(!parsed.diagnostics.has_errors());
 }
+
+/// A program cut in two at every token, the tokens after the cut placed in a
+/// second file, is refused where the cut falls inside an item and read where
+/// it falls between two, and never panics.
+///
+/// Every join the parser makes goes through `join`, and a site written with
+/// `Span::to` instead panics on a cut that falls inside the construct it
+/// builds. These two programs reach all 24 sites, counted by having `join`
+/// print its `#[track_caller]` line, so cutting them everywhere asks each one:
+/// the corpus asks two. A site added later is asked only if a program here
+/// reaches it.
+///
+/// Mutation: write any one site's join as `Span::to`, or have `join` call it
+/// unchecked. This panics. Mutation: have `Parser::in_one_file` look at every
+/// token but the item's last. The cut before a `;` that ends a declaration is
+/// read.
+#[test]
+fn a_program_cut_into_two_files_at_any_token_is_refused_inside_an_item_and_never_panics() {
+    let text = "struct S { int a, c; int b[2]; };
+int g(int n, int v[n], int *p);
+__attribute__((annotate(\"safec_unchecked\"))) void h(void) {}
+int f(int *p, struct S *s) {
+    struct S;
+    int x = -p[0] + g(1, 0, &x) * 2, y;
+    if (x) { x = s->a; } else x = (*s).b[1];
+    while (x < 3) x++;
+    for (int i = 0; i < 2; i = i + 1) { x += i, x--; }
+    return x ? 1 : !y;
+}
+";
+    let mut sources = SourceMap::new();
+    let first = sources.add_virtual("a.c", text);
+    let second = sources.add_virtual("b.h", text);
+    let mut scanned = DiagnosticSink::new();
+    let tokens = lex(first, sources.file(first), &mut scanned);
+    let mut whole = DiagnosticSink::new();
+    let ast = parse(&tokens, &mut whole);
+    assert!(
+        scanned.diagnostics().is_empty() && whole.diagnostics().is_empty(),
+        "{:?} {:?}",
+        scanned.diagnostics(),
+        whole.diagnostics()
+    );
+    assert!(!ast.items().is_empty());
+    // Where one item ends and the next begins, from the tokens: a `;` or a `}`
+    // at brace depth 0, unless a `;` follows that `}`, as after a struct. An
+    // item's span is no help, since a function's starts after its attribute.
+    let mut between = vec![false; tokens.len()];
+    let mut depth = 0usize;
+    for at in 0..tokens.len() - 1 {
+        match tokens[at].kind {
+            TokenKind::Punct(Punct::LeftBrace) => depth += 1,
+            TokenKind::Punct(Punct::RightBrace) => depth -= 1,
+            _ => {}
+        }
+        between[at + 1] = depth == 0
+            && match tokens[at].kind {
+                TokenKind::Punct(Punct::Semicolon) => true,
+                TokenKind::Punct(Punct::RightBrace) => {
+                    tokens[at + 1].kind != TokenKind::Punct(Punct::Semicolon)
+                }
+                _ => false,
+            };
+    }
+
+    for cut in 1..tokens.len() - 1 {
+        let split: Vec<Token> = tokens
+            .iter()
+            .enumerate()
+            .map(|(at, token)| Token {
+                kind: token.kind,
+                span: if at < cut {
+                    token.span
+                } else {
+                    Span::new(second, token.span.start(), token.span.end())
+                },
+            })
+            .collect();
+        let mut diagnostics = DiagnosticSink::new();
+        parse(&split, &mut diagnostics);
+
+        let codes: Vec<String> = diagnostics
+            .diagnostics()
+            .iter()
+            .filter_map(|diagnostic| diagnostic.code())
+            .map(|code| code.to_string())
+            .collect();
+        let expected: &[&str] = if between[cut] { &[] } else { &["SC0207"] };
+        assert_eq!(codes, expected, "cut before token {cut}, {:?}", tokens[cut]);
+    }
+
+    // The one join on a path that reports: a declaration of nothing is
+    // refused for that, cut or not, so all this asks of it is no panic.
+    let text = "struct { int a; };";
+    let mut sources = SourceMap::new();
+    let first = sources.add_virtual("a.c", text);
+    let second = sources.add_virtual("b.h", text);
+    let tokens = lex(first, sources.file(first), &mut DiagnosticSink::new());
+    for cut in 1..tokens.len() - 1 {
+        let split: Vec<Token> = tokens
+            .iter()
+            .enumerate()
+            .map(|(at, token)| Token {
+                kind: token.kind,
+                span: if at < cut {
+                    token.span
+                } else {
+                    Span::new(second, token.span.start(), token.span.end())
+                },
+            })
+            .collect();
+        parse(&split, &mut DiagnosticSink::new());
+    }
+}

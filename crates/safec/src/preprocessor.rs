@@ -421,42 +421,74 @@ mod tests {
         );
     }
 
-    /// A chain of different files, each including the next, is refused past
-    /// the bound rather than read until the native stack runs out.
-    ///
-    /// Mutation: drop the check of `MAX_DEPTH`. The chain is read to its end
-    /// and nothing is reported. Not an overflow here: a test thread's stack is
-    /// larger than the main thread's, which is where the bound is needed.
-    #[test]
-    fn includes_nested_past_the_bound_are_refused() {
-        let directory = std::env::temp_dir().join(format!("safec_deep_{}", std::process::id()));
+    /// The codes reported for `main.c` in a directory of its own holding
+    /// `files`, each a path under it and what it holds.
+    fn reported(name: &str, files: &[(String, String)]) -> Vec<String> {
+        let directory = std::env::temp_dir().join(format!("safec_{name}_{}", std::process::id()));
         let _ = fs::remove_dir_all(&directory);
-        fs::create_dir_all(&directory).unwrap();
-        for at in 0..MAX_DEPTH {
-            fs::write(
-                directory.join(format!("{at}.h")),
-                format!("#include \"{}.h\"\n", at + 1),
-            )
-            .unwrap();
+        for (path, contents) in files {
+            let path = directory.join(path);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, contents).unwrap();
         }
-        fs::write(directory.join(format!("{MAX_DEPTH}.h")), "int z;\n").unwrap();
-        let input = directory.join("deep.c");
-        fs::write(&input, "#include \"0.h\"\n").unwrap();
 
         let mut sources = SourceMap::new();
-        let file = sources.load(&input).unwrap();
+        let file = sources.load(directory.join("main.c")).unwrap();
         let mut diagnostics = DiagnosticSink::new();
         let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
         preprocess(file, &tokens, &mut sources, &mut diagnostics);
         let _ = fs::remove_dir_all(&directory);
 
-        let codes: Vec<String> = diagnostics
+        diagnostics
             .diagnostics()
             .iter()
             .filter_map(|diagnostic| diagnostic.code())
             .map(|code| code.to_string())
-            .collect();
-        assert_eq!(codes, ["SC0111"]);
+            .collect()
+    }
+
+    /// A chain of different files, each including the next, is refused past
+    /// the bound rather than read until the native stack runs out, and read
+    /// up to it: `MAX_DEPTH` files at once, the input among them.
+    ///
+    /// Mutation: drop the check of `MAX_DEPTH`. The longer chain is read to
+    /// its end and nothing is reported. Not an overflow here: a test thread's
+    /// stack is larger than the main thread's, which is where the bound is
+    /// needed. Mutation: refuse one file sooner or one later. One of the two
+    /// chains answers wrongly.
+    #[test]
+    fn includes_nested_past_the_bound_are_refused() {
+        let chain = |headers: usize| {
+            let mut files = vec![("main.c".to_owned(), "#include \"0.h\"\n".to_owned())];
+            for at in 0..headers - 1 {
+                files.push((format!("{at}.h"), format!("#include \"{}.h\"\n", at + 1)));
+            }
+            files.push((format!("{}.h", headers - 1), "int z;\n".to_owned()));
+            files
+        };
+
+        assert_eq!(
+            reported("deep_enough", &chain(MAX_DEPTH - 1)),
+            Vec::<String>::new()
+        );
+        assert_eq!(reported("too_deep", &chain(MAX_DEPTH)), ["SC0111"]);
+    }
+
+    /// An included file's own includes are found beside it, not beside the
+    /// input: `sub/b.h` writes `c.h` and means `sub/c.h`.
+    ///
+    /// Mutation: resolve every include against the input's directory. `c.h`
+    /// is looked for beside `main.c`, where there is none.
+    #[test]
+    fn an_include_in_an_included_file_is_found_beside_that_file() {
+        let files = [
+            ("main.c", "#include \"sub/b.h\"\n"),
+            ("sub/b.h", "#include \"c.h\"\n"),
+            ("sub/c.h", "int c;\n"),
+        ]
+        .map(|(path, contents)| (path.to_owned(), contents.to_owned()));
+
+        assert_eq!(reported("nested", &files), Vec::<String>::new());
     }
 
     /// The code moved from the lexer with the report, and is the handle a
