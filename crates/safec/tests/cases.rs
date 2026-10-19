@@ -4302,7 +4302,8 @@ cases! {
         an_input_that_includes_itself_is_refused: ["--emit", "ast"],
         // The input includes a header that includes the input. Mutation: ask
         // only the innermost file being read rather than all of them. The
-        // two are read in turn until the native stack runs out.
+        // two are read in turn until the depth bound refuses the next, so the
+        // report is `SC0111` rather than `SC0110`.
         a_file_that_includes_itself_through_another_is_refused: ["--emit", "ast"],
         // `./` before its own name. Mutation: compare the paths as they were
         // resolved rather than canonicalized. It is read once more as an

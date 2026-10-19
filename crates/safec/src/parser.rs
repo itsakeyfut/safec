@@ -572,10 +572,9 @@ pub fn parse(tokens: &[Token], diagnostics: &mut DiagnosticSink) -> Ast {
     // to one error instead of many, and one error is still one too many, since
     // the preprocessor has already read the line or reported it, and this
     // parser stops reading an item at the first thing in it that it cannot
-    // read. Dropped here, in one
-    // place, rather than
-    // skipped at each of the two loops, so that no position can be added later
-    // where a directive is looked at.
+    // read. Dropped here, in one place, rather than skipped at each of the two
+    // loops, so that no position can be added later where a directive is
+    // looked at.
     let tokens: Vec<Token> = tokens
         .iter()
         .copied()
@@ -689,8 +688,9 @@ impl Parser<'_> {
     /// lifts are built (#546). Asked of the tokens rather than at each join,
     /// because a join sees only the two ends it is handed: `g(` then
     /// `#include "arg.h"` then `)` joins `g` with `)`, both in one file, and
-    /// the argument inside is in another, which `inside` and every other
-    /// comparison would then answer for spans that share no file. With every
+    /// the argument inside is in another, which the memory check's `inside`
+    /// in `safec-ir`, and every other comparison of two spans, would then
+    /// answer for spans that share no file. With every
     /// item in one file, no span built from one, here or after the parse, is
     /// in two.
     ///

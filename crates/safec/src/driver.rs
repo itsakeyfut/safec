@@ -494,10 +494,10 @@ struct Analysed {
 /// The first gate is this input read whole. `has_errors` answers for the whole
 /// run, so a count taken either side of the work on one file is what says
 /// whether that file came through it. A directive is the case that separates
-/// "read whole" from "parsed": the lexer reports it, says in its own note that
-/// the line is not compiled, and hands the parser a token it skips without
-/// complaint, so a gate placed after the scan is open on a file whose
-/// declarations were dropped.
+/// "read whole" from "parsed": the preprocessor reports one it does not read,
+/// says in its own note that the line is not compiled, and hands the parser a
+/// token it skips without complaint, so a gate placed after the scan is open on
+/// a file whose declarations were dropped.
 ///
 /// The second is the parse. What the parser says about a token stream with a
 /// hole in it is a second diagnostic about the first one's problem, and the

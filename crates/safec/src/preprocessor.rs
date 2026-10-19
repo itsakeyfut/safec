@@ -233,8 +233,10 @@ enum Form<'a> {
 
 /// Read a directive's text, from its `#` to the end of its line.
 ///
-/// Whitespace may stand between the `#`, the name and the file (C17 6.10 p5),
-/// and a comment may follow the file. A `\r` is whitespace here, because the
+/// Space and horizontal tab may stand between the `#`, the name and the file
+/// (C17 6.10 p5). A vertical tab and a form feed are taken as spaces, which
+/// the same paragraph allows translation phase 3 to have done, and a comment
+/// may follow the file. A `\r` is whitespace here too, because the
 /// line of a file saved with CRLF ends in one, and a header that did not read
 /// on Windows would be a header that did not read for most of the people who
 /// write one.
@@ -247,10 +249,6 @@ fn form(text: &str) -> Form<'_> {
     let Some(rest) = rest.trim_start_matches(blank).strip_prefix("include") else {
         return Form::Other;
     };
-    // `#included` is a directive of another name.
-    if rest.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_') {
-        return Form::Other;
-    }
     let rest = rest.trim_start_matches(blank);
     if rest.starts_with('<') {
         return Form::Angled;
@@ -338,8 +336,10 @@ fn canonical(path: &Path) -> PathBuf {
 mod tests {
     use super::*;
 
-    /// Every spelling C allows of the one form read, and the ones beside it
-    /// that are not it.
+    /// Every spelling C allows of the one form read.
+    ///
+    /// Mutation: take `\r` out of `blank`. The line a CRLF file ends with is
+    /// not read.
     #[test]
     fn an_include_is_read_however_it_is_spaced() {
         for (text, name) in [
@@ -360,6 +360,10 @@ mod tests {
         }
     }
 
+    /// And the ones beside it that are not it. `#included` needs no test of
+    /// its own in `form`: what follows `include` has to be `<` or `"`.
+    ///
+    /// Mutation: accept anything after the closing quote. `"a.h" x` is read.
     #[test]
     fn what_is_not_a_quoted_include_is_not_read_as_one() {
         for (text, expected) in [

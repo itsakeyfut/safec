@@ -1675,8 +1675,9 @@ fn a_parameter_declared_as_an_array_or_a_function_is_a_pointer() {
 ///
 /// Every join the parser makes goes through `join`, and a site written with
 /// `Span::to` instead panics on a cut that falls inside the construct it
-/// builds. These two programs reach all 24 sites, counted by having `join`
-/// print its `#[track_caller]` line, so cutting them everywhere asks each one:
+/// builds. These two programs reach all 24 sites, counted by marking `join`
+/// `#[track_caller]` for one run and printing its caller's line, so cutting
+/// them everywhere asks each one:
 /// the corpus asks two. A site added later is asked only if a program here
 /// reaches it.
 ///

@@ -51,7 +51,8 @@ const EMPTY_LITERAL: Code = Code::new("SC0105");
 /// Valid C the lexer does not read yet outside a comment: a line splice, a
 /// `\` or `??/` before a newline (C17 5.1.1.2 p1 phase 2), or a trigraph
 /// (5.2.1.1, phase 1). Not `SC0103`, which says a character can begin no
-/// token, where these are C; this is `SC0104`'s kind of refusal.
+/// token, where these are C; this is the kind of refusal the preprocessor's
+/// `SC0104` is for a directive.
 const UNSUPPORTED_SPLICE: Code = Code::new("SC0107");
 /// A `\` and the newline it splices with only spaces or tabs between them,
 /// a warning. C17 splices only a `\` right before the newline, and how
@@ -1101,8 +1102,8 @@ int x;
     }
 
     /// The line is kept rather than dropped, which is the rule this module is
-    /// built on. The span covers the directive, so stage 3 can scan inside it
-    /// without the scan having had to understand it first.
+    /// built on. The span covers the directive, so the preprocessor can read
+    /// inside it without the scan having had to understand it first.
     #[test]
     fn a_directive_keeps_the_text_it_covers() {
         let scan = scan(
