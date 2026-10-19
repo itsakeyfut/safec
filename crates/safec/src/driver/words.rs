@@ -153,6 +153,12 @@ const UNSEQUENCED_REMEDY: &str = "put the free and this in separate statements, 
 const LENGTH_REMEDY: &str =
     "free it in the body instead, where every parameter's length has already been evaluated";
 
+/// What to change where a pointer is written in a conflict inside a
+/// parameter's length, or between two lengths: no statement can be written
+/// in a declarator, and the body runs after every length (#529, #531).
+const WRITE_IN_BODY_REMEDY: &str =
+    "write it in the body instead, where every parameter's length has already been evaluated";
+
 /// Where the free and the use an [`Unproven::Unsequenced`] finding names were
 /// written, which decides what C left unordered between them (#444).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -586,7 +592,7 @@ pub(super) fn memory_finding(
         ),
         (
             Kind::UnsequencedAccess {
-                written: _,
+                written,
                 both_write,
                 between,
             },
@@ -595,7 +601,7 @@ pub(super) fn memory_finding(
         ) => {
             // What the two accesses are operands of is the only difference in
             // the words, so it is chosen once. See ADR-0052.
-            let (other, remedy) = match between {
+            let (other, in_a_statement) = match between {
                 Between::Arguments => (
                     "another argument of the same call",
                     "assign it in a statement of its own before the call",
@@ -604,13 +610,19 @@ pub(super) fn memory_finding(
                     "another operand of the same expression",
                     "assign it in a statement of its own before this expression",
                 ),
-                // No statement can be written in a declarator, so the remedy
-                // is the body, which runs after every length (#529).
-                Between::Lengths => (
-                    "another parameter's length",
-                    "write it in the body instead, where every parameter's length has already \
-                     been evaluated",
-                ),
+                Between::Lengths => ("another parameter's length", WRITE_IN_BODY_REMEDY),
+            };
+            // **Where the two are decides the remedy, not what they are
+            // operands of.** A call's arguments or an operator's operands
+            // inside a parameter's length cannot be split into a statement
+            // either, since a declarator holds none (#531). The two spans
+            // are inside one length exactly then; across two lengths is
+            // `Between::Lengths`, whose remedy this already is. `self::`
+            // because the local `unordered` above answers about the free,
+            // which this finding has none of.
+            let remedy = match self::unordered(Some(written), finding.at, lengths) {
+                Unordered::InTheBody => in_a_statement,
+                Unordered::InOneLength | Unordered::AcrossLengths => WRITE_IN_BODY_REMEDY,
             };
             (
                 UNSEQUENCED_ACCESS,
