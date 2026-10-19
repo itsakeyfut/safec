@@ -336,6 +336,16 @@ cases! {
         // first two. Mutation: build `each` from `walked.iter().take(2)`;
         // this exits 0. Found by review.
         a_pointer_the_third_length_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A conflict inside one length keeps the words of what the two are
+        // operands of, and is told to write in the body, since a declarator
+        // holds no statement (#531). Mutation: answer the remedy from
+        // `between` alone; both are told to use a statement of their own.
+        // Mutation: give the body the length's remedy too;
+        // `a_sum_reading_a_pointer_its_other_operand_writes_is_reported` and
+        // `an_argument_read_while_another_argument_writes_it_is_reported`
+        // fail beside the other body cases.
+        a_conflict_between_operands_inside_a_length_is_told_to_write_in_the_body: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_conflict_between_arguments_inside_a_length_is_told_to_write_in_the_body: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An integer two lengths write is undefined by the same paragraph and
         // not what this check is believed about, as for a call's arguments.
         // Mutation: drop the pointer filter in `conflicts`; this reports.

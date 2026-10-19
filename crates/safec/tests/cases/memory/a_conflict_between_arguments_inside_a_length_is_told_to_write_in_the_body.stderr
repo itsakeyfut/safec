@@ -1,0 +1,12 @@
+error[SC0409]: this reads `p`, which another argument of the same call writes
+   ╭─[ a_conflict_between_arguments_inside_a_length_is_told_to_write_in_the_body.c:3:23 ]
+   │
+ 3 │ int f(int *p, int a[g(p, (p = 0, 1))]) {
+   │                       ┬   ──┬──  
+   │                       ╰────────── read here
+   │                             │    
+   │                             ╰──── written here
+───╯
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
+  = note: this check belongs to safety level 1
+  = help: write it in the body instead, where every parameter's length has already been evaluated
