@@ -233,6 +233,11 @@ is what reports a double free.
 
 Safety levels 4 and 5.
 
+- a parameter of function-pointer type and an argument that names a function,
+  which is what `pthread_create`'s start routine is; brought forward from Phase
+  9, which keeps the rest of compiling a function pointer (#115). `<pthread.h>`
+  needs `typedef` and `union`, which are Phase 9's too, so a program here
+  declares the thread functions it calls by hand
 - thread creation and join
 - shared state
 - synchronization primitives
@@ -257,8 +262,9 @@ Everything the subset left out. See [frontend.md](frontend.md), Stages 2 and 4.
 - the rest of the preprocessor: function-like macros, `#` and `##`, `#if` with a
   full constant expression, conditional compilation
 - `typedef`, `enum`, `union`
-- compiling a function pointer, which already parses and type-checks
-  ([frontend.md](frontend.md), Stage 1)
+- compiling the rest of a function pointer, which already parses and
+  type-checks ([frontend.md](frontend.md), Stage 1): storing one, calling
+  through one, and comparing two. Phase 8 names one and passes it (#115)
 - variadic functions
 - broader compatibility, potentially C11 or C17
 
