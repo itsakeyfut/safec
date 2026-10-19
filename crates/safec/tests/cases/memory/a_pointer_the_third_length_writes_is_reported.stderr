@@ -1,0 +1,12 @@
+error[SC0409]: this reads `p`, which another parameter's length writes
+   ╭─[ a_pointer_the_third_length_writes_is_reported.c:1:21 ]
+   │
+ 1 │ int f(int *p, int a[p ? 1 : 2], int b[p ? 2 : 3], int c[(p = 0, 1)]) {
+   │                     ┬                                    ──┬──  
+   │                     ╰─────────────────────────────────────────── read here
+   │                                                            │    
+   │                                                            ╰──── written here
+───╯
+  = note: C17 6.5 p2 makes this undefined wherever both are evaluated: a parameter's declarator is not a full declarator (6.7.6 p3), so nothing orders one parameter's length against another's
+  = note: this check belongs to safety level 1
+  = help: write it in the body instead, where every parameter's length has already been evaluated

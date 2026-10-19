@@ -331,6 +331,11 @@ cases! {
         // `Between::Lengths` as operands; both fail on `.stderr`.
         a_pointer_one_length_reads_and_another_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         two_lengths_writing_one_pointer_are_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Every length against every other, not only the first two or the
+        // adjacent ones: here the write is in the third and the reads in the
+        // first two. Mutation: build `each` from `walked.iter().take(2)`;
+        // this exits 0. Found by review.
+        a_pointer_the_third_length_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An integer two lengths write is undefined by the same paragraph and
         // not what this check is believed about, as for a call's arguments.
         // Mutation: drop the pointer filter in `conflicts`; this reports.
