@@ -100,17 +100,20 @@ fn read_includes(
     diagnostics: &mut DiagnosticSink,
     spliced: &mut Vec<Token>,
 ) {
-    let mut frames = vec![(tokens.to_vec(), 0)];
-    while let Some((tokens, cursor)) = frames.last_mut() {
+    // Each frame says whether it is an inclusion, which `include` pushed onto
+    // `open` and whose end pops it. Said by the frame rather than by its place
+    // above the input's, so that a frame of another kind, a macro's expansion,
+    // cannot pop a file that is still being read: one did, in a prototype, and
+    // the cycle it hid was refused as too many inclusions instead.
+    let mut frames = vec![(tokens.to_vec(), 0, false)];
+    while let Some((tokens, cursor, inclusion)) = frames.last_mut() {
         let next = tokens.get(*cursor).copied();
         *cursor += 1;
         let Some(token) = next else {
-            frames.pop();
-            // Each frame above the input's is one `include` pushed onto
-            // `open`, and the input's own may not be there at all.
-            if !frames.is_empty() {
+            if *inclusion {
                 reading.open.pop();
             }
+            frames.pop();
             continue;
         };
         match token.kind {
@@ -128,7 +131,7 @@ fn read_includes(
                         if let Some(included) =
                             include(token.span, quoted, name, sources, reading, diagnostics)
                         {
-                            frames.push((included, 0));
+                            frames.push((included, 0, true));
                         }
                     }
                     IncludeForm::Spliced => diagnostics.report(
