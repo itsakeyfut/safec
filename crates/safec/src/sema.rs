@@ -159,9 +159,12 @@ pub struct Binding {
 /// What each use of a name refers to.
 ///
 /// Keyed by the id of the identifier expression, which ADR-0008 makes unique
-/// by construction. A span is not: a macro body is one piece of text, so two
-/// uses expanded from one `#define` carry one span and can refer to two
-/// different declarations. A table keyed on that keeps the later answer and
+/// by construction. A span was not, when this was written: a macro body is one
+/// piece of text, and two uses expanded from one `#define` were expected to
+/// carry one span and could refer to two different declarations. ADR-0054
+/// since gives every expansion a file of its own, so two uses no longer share
+/// a span, and the id is still the key because it needs no argument about
+/// expansions at all. A table keyed on that keeps the later answer and
 /// says `Some` for both, which is the shape of wrong answer this compiler
 /// exists to not give. ADR-0006's addendum ruled out an index into the token
 /// stream, which the tree does not hold; the tree's own id is a third thing

@@ -81,13 +81,18 @@ impl fmt::Display for FileName {
 
 /// A region of a source file, as a half-open range of byte offsets.
 ///
-/// The fields are private on purpose. A span is expected to grow a third
-/// coordinate: a macro expansion, and later a template instantiation, needs to
-/// say both where the code is written and where it came from.
+/// The fields are private on purpose. A macro expansion, and later a template
+/// instantiation, needs to say both where the code is written and where it
+/// came from, and ADR-0054 decides how without a third field: every expansion
+/// is a copy of the macro's body registered as a file of its own, its tokens
+/// are located in that copy, and the source map records where the copy was
+/// spelled and used. So within one expansion spans compare as they would
+/// written out, and a containment test across an expansion lifts both spans to
+/// a file they share first.
 ///
-/// Privacy is only half of what that will take. [`Span::new`] and the accessors
-/// below pin the shape just as firmly, so reaching that point means revisiting
-/// them too: it is the callers that are protected, not the design.
+/// [`Span::new`] and the accessors below pin the shape, and the decision keeps
+/// it. What changes is how spans from two files are joined, which goes through
+/// the source map's lift rather than [`Span::to`] alone.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Span {
     file: FileId,
@@ -364,7 +369,8 @@ impl SourceMap {
     /// Add a file that is not on disk.
     ///
     /// For test inputs today. Later for the buffers the Clang adapter hands
-    /// over, and for macro expansions.
+    /// over. A macro expansion and an inclusion get a kind of their own, since
+    /// each records where it was used (ADR-0054).
     pub fn add_virtual(&mut self, name: impl Into<String>, contents: impl Into<String>) -> FileId {
         self.add(FileName::Virtual(name.into()), contents.into())
     }
