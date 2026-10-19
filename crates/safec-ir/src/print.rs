@@ -487,8 +487,9 @@ fn dump_terminator(
 ) {
     match terminator {
         // Whether the source wrote it as well as where, as every element
-        // says, because these two are the terminators a second frontend will
-        // generate first: a destructor's call, a synthesized loop's branch
+        // says, because every origin the IR carries reaches this printer, and
+        // these are the two terminators that carry one. A destructor at the
+        // end of a scope, `docs/c-family.md`'s case, is a generated call
         // (#148).
         Terminator::Call { origin, .. } | Terminator::Branch { origin, .. } => {
             dump_node(sources, terminator.name(), origin.span(), depth, out);
