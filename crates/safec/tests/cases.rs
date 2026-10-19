@@ -1728,7 +1728,8 @@ cases! {
         an_annotation_other_than_the_hatch_is_refused: ["--emit", "ast"],
         // No spelling of a level on a function is read, because levels are
         // not mixed inside a translation unit. See ADR-0053. Mutation: accept
-        // `safec_level(...)` beside the hatch; this parses.
+        // `safec_level(...)` beside the hatch; the function is no longer
+        // refused.
         an_annotation_naming_a_level_is_refused: ["--emit", "ast"],
         a_second_attribute_before_a_definition_is_refused: ["--emit", "ast"],
         an_attribute_after_a_specifier_is_refused: ["--emit", "ast"],
