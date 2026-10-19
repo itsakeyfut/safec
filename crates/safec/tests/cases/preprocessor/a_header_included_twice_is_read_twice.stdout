@@ -1,0 +1,11 @@
+Declaration a_header_included_twice_is_read_twice.h:1:1 "f" "int (void)"
+Declaration a_header_included_twice_is_read_twice.h:1:1 "f" "int (void)"
+Function a_header_included_twice_is_read_twice.c:4:1 "main" "int (void)"
+  Compound a_header_included_twice_is_read_twice.c:4:16
+    Return a_header_included_twice_is_read_twice.c:4:18
+      Call a_header_included_twice_is_read_twice.c:4:25
+        Identifier a_header_included_twice_is_read_twice.c:4:25 "f"
+Function a_header_included_twice_is_read_twice.c:6:1 "f" "int (void)"
+  Compound a_header_included_twice_is_read_twice.c:6:13
+    Return a_header_included_twice_is_read_twice.c:6:15
+      Number a_header_included_twice_is_read_twice.c:6:22 "0"

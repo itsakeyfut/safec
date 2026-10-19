@@ -1,0 +1,7 @@
+error[SC0103]: unexpected character
+   ╭─[ a_diagnostic_in_an_included_file_names_that_file.h:1:27 ]
+   │
+ 1 │ int broken(void) { return @; }
+   │                           ┬  
+   │                           ╰── not part of any token
+───╯

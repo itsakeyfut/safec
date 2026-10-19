@@ -39,6 +39,7 @@ use crate::lexer::lex;
 use crate::lowering::lower;
 use crate::options::{EmitKind, Options};
 use crate::parser::parse;
+use crate::preprocessor::preprocess;
 use crate::safety::SafetyLevel;
 use crate::sema::{Resolution, resolve};
 use crate::token::Token;
@@ -291,25 +292,32 @@ pub fn compile(options: &Options) -> Compiled {
     };
     for &file in &loaded {
         // `file_owned` rather than `file`: the scan holds its text for longer
-        // than a statement, and adds to the map while doing so once `#include`
-        // lands. See ADR-0005.
+        // than a statement, and `#include` adds to the map while it does. See
+        // ADR-0005.
         let source = sources.file_owned(file);
 
         // Taken before the scan rather than before the parse, so that it
         // answers "was this input read whole" rather than "did it parse". A
-        // directive is the case that separates the two: the lexer reports it,
-        // says in its own note that the line is not compiled, and hands the
-        // parser a token it skips without complaint, so a gate placed after
-        // the scan is open on a file whose declarations were dropped. Every
-        // macro name in it is then a name nothing declares.
+        // directive is the case that separates the two: the preprocessor
+        // reports one it does not read, says in its own note that the line is
+        // not compiled, and hands the parser a token it skips without
+        // complaint, so a gate placed after the scan is open on a file whose
+        // declarations were dropped. Every macro name in it is then a name
+        // nothing declares. An included file that cannot be read is the same
+        // case again.
         let read_whole = diagnostics.error_count();
-        let tokens = lex(file, &source, &mut diagnostics);
+        let scanned = lex(file, &source, &mut diagnostics);
+        // Run whatever is emitted, so a directive is reported under
+        // `--emit tokens` as it was when the lexer reported it.
+        let tokens = preprocess(file, &scanned, &mut sources, &mut diagnostics);
 
         // Every input appends to one artifact, and every line names its file,
         // so `--emit tokens a.c b.c` reads as one dump rather than needing two
         // destinations.
         match &mut artifact {
-            Emitted::Tokens(out) => dump_tokens(&source, &tokens, out),
+            // The input's own scan: an included file's tokens are what the
+            // parser reads, and are not this input's.
+            Emitted::Tokens(out) => dump_tokens(&source, &scanned, out),
             Emitted::Ast(out) => {
                 let Some(analysed) = analysed(
                     &sources,
@@ -982,7 +990,7 @@ fn load_failure(path: &Path, error: &io::Error) -> Diagnostic {
 /// Which way a path was being used when it failed, so that a note can say
 /// what safec wanted from it.
 #[derive(Clone, Copy)]
-enum Access {
+pub(crate) enum Access {
     Read,
     Write,
 }
@@ -1001,7 +1009,7 @@ enum Access {
 /// hosts: `a.c/x.c` with `a.c` a file is `NotFound` on Windows, measured, and
 /// `NotADirectory` on Linux, read from `std`'s mapping of `ENOTDIR` rather than
 /// run. Both are fairly called missing.
-fn reason(path: &Path, error: &io::Error, access: Access) -> String {
+pub(crate) fn reason(path: &Path, error: &io::Error, access: Access) -> String {
     // The path is asked before the error, because the error does not say this
     // the same way everywhere: Windows reports a directory as
     // `PermissionDenied`, for reading and for creating alike, and naming the

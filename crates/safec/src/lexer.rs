@@ -47,7 +47,6 @@ use safec_ir::source::{FileId, SourceFile, Span};
 const UNTERMINATED_COMMENT: Code = Code::new("SC0101");
 const UNTERMINATED_LITERAL: Code = Code::new("SC0102");
 const UNEXPECTED_CHARACTERS: Code = Code::new("SC0103");
-const UNSUPPORTED_DIRECTIVE: Code = Code::new("SC0104");
 const EMPTY_LITERAL: Code = Code::new("SC0105");
 /// Valid C the lexer does not read yet outside a comment: a line splice, a
 /// `\` or `??/` before a newline (C17 5.1.1.2 p1 phase 2), or a trigraph
@@ -114,7 +113,7 @@ impl<'a> Lexer<'a> {
             let kind = if self.at_line_start
                 && Punct::starting(self.rest()).is_some_and(|(punct, _)| punct == Punct::Hash)
             {
-                self.scan_directive(diagnostics)
+                self.scan_directive()
             } else {
                 self.scan(c, diagnostics)
             };
@@ -349,40 +348,16 @@ impl<'a> Lexer<'a> {
     /// translation unit.
     ///
     /// Kept rather than skipped, because the rule this module is built on is
-    /// that every byte gets a place. This is the same answer [`TokenKind::Unknown`]
-    /// gives for a different reason: name it, report it, and hand it over. Stage
-    /// 3 has the span and can scan inside it when there is something to do with
-    /// it.
+    /// that every byte gets a place. Not reported here: the preprocessor reads
+    /// the line and refuses what it does not read, so a directive is reported
+    /// by the stage that knows which one it is.
     ///
     /// Line continuations are not implemented, so "the line" runs to the next
     /// newline even where C would join two.
-    fn scan_directive(&mut self, diagnostics: &mut DiagnosticSink) -> TokenKind {
-        let opening = self.offset;
-        // Two bytes where the `#` is written `%:`.
-        let hash = Punct::starting(self.rest()).map_or(1, |(_, spelled)| spelled.len());
+    fn scan_directive(&mut self) -> TokenKind {
         while self.peek().is_some_and(|c| c != '\n') {
             self.bump();
         }
-
-        diagnostics.report(
-            Diagnostic::error("preprocessor directives are not supported yet")
-                .with_code(UNSUPPORTED_DIRECTIVE)
-                .with_label(Label::primary(
-                    // The `#`, not the line. A caret under a long macro
-                    // definition is a wall, and the line is quoted above it
-                    // anyway.
-                    Span::new(self.file, opening as u32, (opening + hash) as u32),
-                    "directive begins here",
-                ))
-                // Which directives, rather than which stage. `docs/frontend.md`
-                // puts the preprocessor in its Stage 3 and `docs/roadmap.md`
-                // pulls four of them forward, so a stage number in a diagnostic
-                // is both a number the reader does not have and one that stopped
-                // being the whole answer. These four are what `roadmap.md`
-                // promises first.
-                .with_note("`#include`, `#define`, `#ifdef` and `#ifndef` come first")
-                .with_note("the line is one token and is not compiled"),
-        );
         TokenKind::Directive
     }
 
@@ -985,7 +960,6 @@ mod tests {
             ("/* on and on", "SC0101"),
             ("s = \"oops;\n", "SC0102"),
             ("int x = @;\n", "SC0103"),
-            ("#define X 1\n", "SC0104"),
             ("c = '';\n", "SC0105"),
             ("int a\\\nb;\n", "SC0107"),
             ("// a \\ \nb\n", "SC0108"),
@@ -1104,7 +1078,8 @@ mod tests {
         assert!(scan.texts().contains(&"y"));
     }
 
-    /// One token for the line, and one report. Broken into its pieces, a
+    /// One token for the line, and no report: the preprocessor reports what
+    /// it does not read. Broken into its pieces, a
     /// directive gives a parser `<`, `stdio`, `.`, `h`, `>` to make sense of,
     /// and a recovery looking for the next `;` runs past the end of the
     /// directive into the declaration below it.
@@ -1116,10 +1091,7 @@ int x;
 ",
         );
 
-        assert_eq!(
-            scan.messages(),
-            ["preprocessor directives are not supported yet"]
-        );
+        assert!(scan.messages().is_empty(), "{:?}", scan.messages());
         assert_eq!(scan.kinds()[0], TokenKind::Directive);
         assert_eq!(
             scan.texts(),
@@ -1167,7 +1139,10 @@ int x;
    lines */ #define X 1
 ",
         ] {
-            assert_eq!(scan(text).diagnostics.error_count(), 1, "{text:?}");
+            assert!(
+                scan(text).kinds().contains(&TokenKind::Directive),
+                "{text:?}"
+            );
         }
     }
 
@@ -1181,12 +1156,11 @@ int x;
             "a /* note */ #define X 1
 ",
         ] {
-            let scan = scan(text);
-
+            // Asked of the token, since a directive is reported by the
+            // preprocessor and a scan with none in it says nothing either way.
             assert!(
-                scan.diagnostics.is_empty(),
-                "{text:?} {:?}",
-                scan.messages()
+                !scan(text).kinds().contains(&TokenKind::Directive),
+                "{text:?}"
             );
         }
     }

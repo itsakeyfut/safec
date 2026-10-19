@@ -1,0 +1,8 @@
+error[SC0110]: this file includes itself
+   ╭─[ a_header_that_includes_itself_is_refused.h:1:10 ]
+   │
+ 1 │ #include "a_header_that_includes_itself_is_refused.h"
+   │          ──────────────────────┬─────────────────────  
+   │                                ╰─────────────────────── already being read
+───╯
+  = note: `a_header_that_includes_itself_is_refused.h` is being read for an `#include` that has not finished, so reading it here would never end

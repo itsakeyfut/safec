@@ -18,6 +18,7 @@ pub mod lexer;
 pub mod lowering;
 pub mod options;
 pub mod parser;
+pub mod preprocessor;
 pub mod safety;
 pub mod sema;
 pub mod token;

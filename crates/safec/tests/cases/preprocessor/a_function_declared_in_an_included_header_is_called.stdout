@@ -1,0 +1,15 @@
+Declaration a_function_declared_in_an_included_header_is_called.h:1:1 "twice" "int (int)"
+  Parameter a_function_declared_in_an_included_header_is_called.h:1:11 "x" "int"
+Function a_function_declared_in_an_included_header_is_called.c:3:1 "main" "int (void)"
+  Compound a_function_declared_in_an_included_header_is_called.c:3:16
+    Return a_function_declared_in_an_included_header_is_called.c:3:18
+      Call a_function_declared_in_an_included_header_is_called.c:3:25
+        Identifier a_function_declared_in_an_included_header_is_called.c:3:25 "twice"
+        Number a_function_declared_in_an_included_header_is_called.c:3:31 "2"
+Function a_function_declared_in_an_included_header_is_called.c:5:1 "twice" "int (int)"
+  Parameter a_function_declared_in_an_included_header_is_called.c:5:11 "x" "int"
+  Compound a_function_declared_in_an_included_header_is_called.c:5:18
+    Return a_function_declared_in_an_included_header_is_called.c:5:20
+      Binary a_function_declared_in_an_included_header_is_called.c:5:27 "+"
+        Identifier a_function_declared_in_an_included_header_is_called.c:5:27 "x"
+        Identifier a_function_declared_in_an_included_header_is_called.c:5:31 "x"

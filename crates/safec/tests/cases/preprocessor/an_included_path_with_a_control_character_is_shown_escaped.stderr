@@ -1,0 +1,8 @@
+error[SC0109]: cannot read the included file
+   ╭─[ an_included_path_with_a_control_character_is_shown_escaped.c:1:10 ]
+   │
+ 1 │ #include "a¿2Jb.h"
+   │          ────┬────  
+   │              ╰────── included here
+───╯
+  = note: `a\u{9b}2Jb.h` was looked for at `a\u{9b}2Jb.h`: nothing exists at this path

@@ -372,8 +372,9 @@ fn a_file_the_lexer_could_not_read_still_parses_to_a_tree() {
 
 /// A directive never reaches the grammar.
 ///
-/// The lexer keeps the line whole and reports it, and `TokenKind::Directive`
-/// says that is so a parser is not made to answer for a line that is not C.
+/// The lexer keeps the line whole and the preprocessor reports it, and
+/// `TokenKind::Directive` says that is so a parser is not made to answer for a
+/// line that is not C.
 /// Keeping the line whole only turns an avalanche into one error, and one
 /// is still one too many: this parser stops reading an item at the first
 /// thing in it that it cannot read, so a `#include` at the top of a real file
@@ -389,10 +390,11 @@ int main(void) { return 0; }
 ",
     );
 
-    // The lexer's own report stands. What must not be there is a second.
+    // Not preprocessed here, so nothing has reported the line, and what must
+    // not be there is a report of the parser's.
     assert_eq!(
         parsed.diagnostics.diagnostics().len(),
-        1,
+        0,
         "{:?}",
         parsed.diagnostics.diagnostics()
     );

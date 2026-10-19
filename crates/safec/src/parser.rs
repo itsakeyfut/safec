@@ -570,8 +570,9 @@ pub fn parse(tokens: &[Token], diagnostics: &mut DiagnosticSink) -> Ast {
     // its pieces make a parser produce an avalanche of errors about a line it
     // was never meant to read. Keeping the line whole only moves that avalanche
     // to one error instead of many, and one error is still one too many, since
-    // the lexer has already reported the line and this parser stops reading an
-    // item at the first thing in it that it cannot read. Dropped here, in one
+    // the preprocessor has already read the line or reported it, and this
+    // parser stops reading an item at the first thing in it that it cannot
+    // read. Dropped here, in one
     // place, rather than
     // skipped at each of the two loops, so that no position can be added later
     // where a directive is looked at.
