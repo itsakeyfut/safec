@@ -1,0 +1,2 @@
+error: `--emit ast` would write over `an_output_that_names_an_included_file_is_refused.h`, which an `#include` read
+  = note: give it a name that no input includes

@@ -4328,6 +4328,12 @@ cases! {
         // Mutation: do not pop a file off the stack when its inclusion ends.
         // The second inclusion is refused as one that includes itself.
         a_header_included_twice_is_read_twice: ["--emit", "ast"],
+        // `-o` naming the header the input includes. Mutation: ask only the
+        // inputs the command line named. The dump is written over the header
+        // and the run succeeds.
+        an_output_that_names_an_included_file_is_refused: [
+            "--emit", "ast", "-o", "an_output_that_names_an_included_file_is_refused.h"
+        ],
         // C joins the line below to the comment after the name, so the null
         // test is not code. Mutation: read the include whatever its line ends
         // in. The null test is compiled and the program checks as safe, which

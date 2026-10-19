@@ -405,6 +405,38 @@ pub fn compile(options: &Options) -> Compiled {
         }
     }
 
+    // An included file is an input the command line did not name, so the
+    // check above, made before anything is read, cannot see it: `-o ok.h`
+    // wrote the dump over the header the run had just read. Found by review.
+    // Asked by canonical path, because an include is spelled from the
+    // directory of the file that includes it and `-o` from where safec runs.
+    // A destination that does not exist yet is no file anything read.
+    if let Some(path) = destination(options) {
+        if let Ok(written) = fs::canonicalize(&path) {
+            let included = sources.files().any(|(_, file)| match file.name() {
+                FileName::Inclusion { path: read, .. } => {
+                    fs::canonicalize(read).is_ok_and(|read| read == written)
+                }
+                FileName::Real(_) | FileName::Virtual(_) => false,
+            });
+            if included {
+                diagnostics.report(
+                    Diagnostic::error(format!(
+                        "`--emit {}` would write over `{}`, which an `#include` read",
+                        options.emit.spelling(),
+                        path.display()
+                    ))
+                    .with_note("give it a name that no input includes"),
+                );
+                return Compiled {
+                    sources,
+                    diagnostics,
+                    artifact: None,
+                };
+            }
+        }
+    }
+
     finish(&mut artifact, options, &mut diagnostics);
 
     // Where the artifact goes is `run_compiler`'s and not this function's: what

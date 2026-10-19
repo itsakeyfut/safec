@@ -145,6 +145,18 @@ fn splice(
                         )
                         .with_note("only `#include \"...\"` is read yet"),
                     ),
+                    Form::Unread => diagnostics.report(
+                        refused(
+                            &text,
+                            token.span,
+                            UNSUPPORTED_DIRECTIVE,
+                            "this `#include` is not read yet",
+                        )
+                        .with_note(
+                            "only `#include \"...\"` is read yet, with nothing but a comment \
+                             after it on its line",
+                        ),
+                    ),
                     Form::Other => diagnostics.report(
                         refused(
                             &text,
@@ -313,8 +325,10 @@ enum Form<'a> {
     /// comment, and a null test there went missing from the safety check.
     /// Found by review.
     Spliced,
-    /// Any other directive, and an `#include` that is neither of those, such
-    /// as one naming a macro.
+    /// An `#include` that is none of those, such as one naming a macro or one
+    /// with more than a comment after its name.
+    Unread,
+    /// Any other directive.
     Other,
 }
 
@@ -336,15 +350,20 @@ fn form(text: &str) -> Form<'_> {
     let Some(rest) = rest.trim_start_matches(blank).strip_prefix("include") else {
         return Form::Other;
     };
+    // `#included` is a directive of another name, and is not refused as an
+    // `#include` of a form not read.
+    if rest.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_') {
+        return Form::Other;
+    }
     let rest = rest.trim_start_matches(blank);
     if rest.starts_with('<') {
         return Form::Angled;
     }
     let Some(quoted) = rest.strip_prefix('"') else {
-        return Form::Other;
+        return Form::Unread;
     };
     let Some((name, mut tail)) = quoted.split_once('"') else {
-        return Form::Other;
+        return Form::Unread;
     };
 
     loop {
@@ -357,7 +376,7 @@ fn form(text: &str) -> Form<'_> {
             .and_then(|comment| comment.split_once("*/"))
         {
             Some((_, after)) => tail = after,
-            None => return Form::Other,
+            None => return Form::Unread,
         }
     }
 
@@ -455,10 +474,13 @@ mod tests {
         }
     }
 
-    /// And the ones beside it that are not it. `#included` needs no test of
-    /// its own in `form`: what follows `include` has to be `<` or `"`.
+    /// And the ones beside it that are not it.
     ///
     /// Mutation: accept anything after the closing quote. `"a.h" x` is read.
+    /// Mutation: answer an `#include` of another form as any other
+    /// directive. Its note says `#include "..."` is read, under a refusal of
+    /// one. Mutation: drop the test that `include` ends the name. `#included`
+    /// is refused as an `#include`.
     #[test]
     fn what_is_not_a_quoted_include_is_not_read_as_one() {
         for (text, expected) in [
@@ -466,10 +488,11 @@ mod tests {
             ("#  include<stdio.h>", Form::Angled),
             ("#define X 1", Form::Other),
             ("#included \"a.h\"", Form::Other),
-            ("#include HEADER", Form::Other),
-            ("#include \"a.h", Form::Other),
-            ("#include \"a.h\" x", Form::Other),
-            ("#include \"a.h\" /* open", Form::Other),
+            ("#include HEADER", Form::Unread),
+            ("#include \"a.h", Form::Unread),
+            ("#include \"a.h\" x", Form::Unread),
+            ("#include \"a.h\"\rint z;", Form::Unread),
+            ("#include \"a.h\" /* open", Form::Unread),
             ("#include \"a.h\" // \\", Form::Spliced),
             ("#include \"a.h\" // \\ \r", Form::Spliced),
             ("#include \"a.h\" // ??/", Form::Spliced),
