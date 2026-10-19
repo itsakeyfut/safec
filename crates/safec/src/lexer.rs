@@ -52,8 +52,9 @@ const EMPTY_LITERAL: Code = Code::new("SC0105");
 /// `\` or `??/` before a newline (C17 5.1.1.2 p1 phase 2), or a trigraph
 /// (5.2.1.1, phase 1). Not `SC0103`, which says a character can begin no
 /// token, where these are C; this is the kind of refusal the preprocessor's
-/// `SC0104` is for a directive.
-const UNSUPPORTED_SPLICE: Code = Code::new("SC0107");
+/// `SC0104` is for a directive. The preprocessor refuses an `#include` line
+/// that holds a splice or a trigraph with this code too.
+pub(crate) const UNSUPPORTED_SPLICE: Code = Code::new("SC0107");
 /// A `\` and the newline it splices with only spaces or tabs between them,
 /// a warning. C17 splices only a `\` right before the newline, and how
 /// physical lines map to source lines is phase 1's, an implementation's

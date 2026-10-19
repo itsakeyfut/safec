@@ -1,4 +1,4 @@
-error[SC0110]: this file includes itself
+error[SC0110]: this `#include` would read a file that is already being read
    ╭─[ a_header_that_includes_itself_is_refused.c:1:1 ]
    │
  1 │ #include "a_header_that_includes_itself_is_refused.h"

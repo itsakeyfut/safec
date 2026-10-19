@@ -4294,7 +4294,8 @@ cases! {
         // header line stops naming the `.h`.
         a_diagnostic_in_an_included_file_names_that_file: ["--emit", "ast"],
         // Mutation: do not push the included file on the stack of those being
-        // read. The header is read until the native stack runs out.
+        // read. The header is read until the bound on inclusions refuses it,
+        // as `SC0112` rather than `SC0110`.
         a_header_that_includes_itself_is_refused: ["--emit", "ast"],
         // Mutation: do not put the input on that stack. It is read once more
         // as an inclusion, and the report points at that directive rather

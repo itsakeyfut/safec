@@ -1,4 +1,4 @@
-error[SC0207]: a construct that crosses an `#include` is not read yet
+error[SC0207]: an item that crosses an `#include` is not read yet
    ╭─[ a_construct_that_crosses_an_include_is_refused.c:2:1 ]
    │
  2 │ x;

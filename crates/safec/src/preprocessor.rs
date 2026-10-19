@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::driver::{Access, reason};
-use crate::lexer::lex;
+use crate::lexer::{UNSUPPORTED_SPLICE, lex};
 use crate::token::{Token, TokenKind};
 use safec_ir::source::{FileId, FileName, SourceMap, Span};
 
@@ -32,13 +32,10 @@ const RECURSIVE_INCLUSION: Code = Code::new("SC0110");
 const TOO_DEEP: Code = Code::new("SC0111");
 /// An `#include` past [`MAX_INCLUSIONS`].
 const TOO_MANY: Code = Code::new("SC0112");
-/// The lexer's code for a splice or a trigraph it does not perform, which an
-/// `#include` line is refused with for the same reason.
-const UNSUPPORTED_SPLICE: Code = Code::new("SC0107");
 
 /// How many files may be being read at once, the input among them.
 ///
-/// Not a bound on the native stack, which [`splice`] does not recurse on. It
+/// Not a bound on the native stack, which [`read_includes`] does not recurse on. It
 /// bounds a chain of different files, each including the next, which nothing
 /// else ends. C17 5.2.4.1 asks for 15 levels, so this leaves a program written
 /// for any compiler room, and a refusal past it says where.
@@ -58,7 +55,7 @@ struct Reading {
     /// Outermost first, each by its canonical path, so a cycle is found
     /// whatever spelling reached it.
     open: Vec<(PathBuf, FileId)>,
-    included: usize,
+    inclusions: usize,
 }
 
 /// Splice every `#include "file"` in `tokens`, the scan of `file`, and report
@@ -74,14 +71,14 @@ pub fn preprocess(
 ) -> Vec<Token> {
     let mut reading = Reading {
         open: Vec::new(),
-        included: 0,
+        inclusions: 0,
     };
     if let Some(path) = path_of(sources.file(file).name()) {
         reading.open.push((canonical(path), file));
     }
 
     let mut spliced = Vec::with_capacity(tokens.len());
-    splice(tokens, sources, &mut reading, diagnostics, &mut spliced);
+    read_includes(tokens, sources, &mut reading, diagnostics, &mut spliced);
     spliced.extend(tokens.iter().copied().filter(|token| token.is_eof()));
     spliced
 }
@@ -96,7 +93,7 @@ pub fn preprocess(
 /// moved whenever a frame grew. Found by review. The reading ends because a
 /// file being read is never read again, a chain of different files stops at
 /// [`MAX_DEPTH`], and a tree of them at [`MAX_INCLUSIONS`].
-fn splice(
+fn read_includes(
     tokens: &[Token],
     sources: &mut SourceMap,
     reading: &mut Reading,
@@ -104,9 +101,9 @@ fn splice(
     spliced: &mut Vec<Token>,
 ) {
     let mut frames = vec![(tokens.to_vec(), 0)];
-    while let Some((tokens, at)) = frames.last_mut() {
-        let next = tokens.get(*at).copied();
-        *at += 1;
+    while let Some((tokens, cursor)) = frames.last_mut() {
+        let next = tokens.get(*cursor).copied();
+        *cursor += 1;
         let Some(token) = next else {
             frames.pop();
             // Each frame above the input's is one `include` pushed onto
@@ -121,12 +118,12 @@ fn splice(
             TokenKind::Directive => {
                 // Owned, because reading the file it names adds to the map.
                 let text = sources.snippet(token.span).to_owned();
-                match form(&text) {
-                    Form::Quoted { name, at } => {
+                match include_form(&text) {
+                    IncludeForm::Quoted { name, quote } => {
                         let quoted = Span::new(
                             token.span.file(),
-                            token.span.start() + at,
-                            token.span.start() + at + name.len() as u32 + 2,
+                            token.span.start() + quote,
+                            token.span.start() + quote + name.len() as u32 + 2,
                         );
                         if let Some(included) =
                             include(token.span, quoted, name, sources, reading, diagnostics)
@@ -134,7 +131,7 @@ fn splice(
                             frames.push((included, 0));
                         }
                     }
-                    Form::Spliced => diagnostics.report(
+                    IncludeForm::Spliced => diagnostics.report(
                         refused(
                             &text,
                             token.span,
@@ -146,7 +143,7 @@ fn splice(
                              compiled as code instead",
                         ),
                     ),
-                    Form::Angled => diagnostics.report(
+                    IncludeForm::Angled => diagnostics.report(
                         refused(
                             &text,
                             token.span,
@@ -155,7 +152,7 @@ fn splice(
                         )
                         .with_note("only `#include \"...\"` is read yet"),
                     ),
-                    Form::Unread => diagnostics.report(
+                    IncludeForm::Unread => diagnostics.report(
                         refused(
                             &text,
                             token.span,
@@ -167,7 +164,7 @@ fn splice(
                              after it on its line",
                         ),
                     ),
-                    Form::Other => diagnostics.report(
+                    IncludeForm::Other => diagnostics.report(
                         refused(
                             &text,
                             token.span,
@@ -225,7 +222,7 @@ fn include(
 
     if reading.open.len() == MAX_DEPTH {
         diagnostics.report(
-            Diagnostic::error("`#include`s are nested too deeply")
+            Diagnostic::error("this `#include` is nested too deeply")
                 .with_code(TOO_DEEP)
                 .with_label(Label::primary(quoted, "included here"))
                 .with_note(format!("{MAX_DEPTH} files are already being read here")),
@@ -234,11 +231,11 @@ fn include(
     }
     // Once, at the first one past it, rather than at each of the thousands
     // after it, which would bury the report it is.
-    if reading.included >= MAX_INCLUSIONS {
-        if reading.included > MAX_INCLUSIONS {
+    if reading.inclusions >= MAX_INCLUSIONS {
+        if reading.inclusions > MAX_INCLUSIONS {
             return None;
         }
-        reading.included += 1;
+        reading.inclusions += 1;
         diagnostics.report(
             Diagnostic::error("this input includes too many files")
                 .with_code(TOO_MANY)
@@ -251,28 +248,31 @@ fn include(
         return None;
     }
 
-    let canonical = canonical(&path);
-    if let Some(&(_, open)) = reading.open.iter().find(|(being, _)| *being == canonical) {
-        let refused = Diagnostic::error("this file includes itself")
-            .with_code(RECURSIVE_INCLUSION)
-            .with_label(Label::primary(quoted, "already being read"));
+    let real = canonical(&path);
+    if let Some(&(_, open)) = reading.open.iter().find(|(being, _)| *being == real) {
+        // Of the `#include`, not of the file it is in: the file being read may
+        // be another one, which includes this one through others.
+        let refusal =
+            Diagnostic::error("this `#include` would read a file that is already being read")
+                .with_code(RECURSIVE_INCLUSION)
+                .with_label(Label::primary(quoted, "already being read"));
         // Where the open one began to be read: the directive that included
         // it, or nowhere, if it is the input. Asked of the file rather than
         // of its place on the stack, which says the same only while the input
         // is the first thing pushed.
-        let refused = match sources.file(open).name() {
-            FileName::Inclusion { at, .. } => refused
+        let refusal = match sources.file(open).name() {
+            FileName::Inclusion { at, .. } => refusal
                 .with_label(Label::secondary(*at, "where it began to be read"))
                 .with_note(format!(
                     "`{}` has not finished, so reading it here would never end",
                     path.display()
                 )),
-            FileName::Real(_) | FileName::Virtual(_) => refused.with_note(format!(
+            FileName::Real(_) | FileName::Virtual(_) => refusal.with_note(format!(
                 "`{}` is the input, so reading it here would never end",
                 path.display()
             )),
         };
-        diagnostics.report(refused);
+        diagnostics.report(refusal);
         return None;
     }
 
@@ -311,18 +311,18 @@ fn include(
         }
     };
 
-    reading.included += 1;
+    reading.inclusions += 1;
     let tokens = lex(file, &sources.file_owned(file), diagnostics);
-    reading.open.push((canonical, file));
+    reading.open.push((real, file));
     Some(tokens)
 }
 
 /// What an `#include` is spelled as, which decides what is done with it.
 #[derive(Debug, PartialEq, Eq)]
-enum Form<'a> {
-    /// `#include "name"`, with `at` the offset of the opening quote in the
-    /// directive's text.
-    Quoted { name: &'a str, at: u32 },
+enum IncludeForm<'a> {
+    /// `#include "name"`, with `quote` the offset of the opening quote in
+    /// the directive's text.
+    Quoted { name: &'a str, quote: u32 },
     /// `#include <name>`.
     Angled,
     /// `#include "name"` on a line that ends in a splice or holds a trigraph.
@@ -350,29 +350,29 @@ enum Form<'a> {
 /// line of a file saved with CRLF ends in one, and a header that did not read
 /// on Windows would be a header that did not read for most of the people who
 /// write one.
-fn form(text: &str) -> Form<'_> {
+fn include_form(text: &str) -> IncludeForm<'_> {
     let blank = [' ', '\t', '\u{b}', '\u{c}', '\r'];
 
     let Some(rest) = text.strip_prefix('#').or_else(|| text.strip_prefix("%:")) else {
-        return Form::Other;
+        return IncludeForm::Other;
     };
     let Some(rest) = rest.trim_start_matches(blank).strip_prefix("include") else {
-        return Form::Other;
+        return IncludeForm::Other;
     };
     // `#included` is a directive of another name, and is not refused as an
     // `#include` of a form not read.
     if rest.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_') {
-        return Form::Other;
+        return IncludeForm::Other;
     }
     let rest = rest.trim_start_matches(blank);
     if rest.starts_with('<') {
-        return Form::Angled;
+        return IncludeForm::Angled;
     }
     let Some(quoted) = rest.strip_prefix('"') else {
-        return Form::Unread;
+        return IncludeForm::Unread;
     };
     let Some((name, mut tail)) = quoted.split_once('"') else {
-        return Form::Unread;
+        return IncludeForm::Unread;
     };
 
     loop {
@@ -385,7 +385,7 @@ fn form(text: &str) -> Form<'_> {
             .and_then(|comment| comment.split_once("*/"))
         {
             Some((_, after)) => tail = after,
-            None => return Form::Unread,
+            None => return IncludeForm::Unread,
         }
     }
 
@@ -394,12 +394,12 @@ fn form(text: &str) -> Form<'_> {
         .windows(3)
         .any(|three| three[..2] == *b"??" && b"=()/'<>!-".contains(&three[2]));
     if text.trim_end_matches([' ', '\t', '\r']).ends_with('\\') || trigraph {
-        return Form::Spliced;
+        return IncludeForm::Spliced;
     }
 
-    Form::Quoted {
+    IncludeForm::Quoted {
         name,
-        at: (text.len() - rest.len()) as u32,
+        quote: (text.len() - rest.len()) as u32,
     }
 }
 
@@ -475,11 +475,14 @@ mod tests {
             ("#include \"a.h\" /* why */ ", "a.h"),
             ("#include \"dir/a b.h\"", "dir/a b.h"),
         ] {
-            let Form::Quoted { name: read, at } = form(text) else {
-                panic!("{text:?} is not read as an include: {:?}", form(text));
+            let IncludeForm::Quoted { name: read, quote } = include_form(text) else {
+                panic!(
+                    "{text:?} is not read as an include: {:?}",
+                    include_form(text)
+                );
             };
             assert_eq!(read, name, "{text:?}");
-            assert_eq!(&text[at as usize..at as usize + 1], "\"", "{text:?}");
+            assert_eq!(&text[quote as usize..quote as usize + 1], "\"", "{text:?}");
         }
     }
 
@@ -493,22 +496,22 @@ mod tests {
     #[test]
     fn what_is_not_a_quoted_include_is_not_read_as_one() {
         for (text, expected) in [
-            ("#include <stdio.h>", Form::Angled),
-            ("#  include<stdio.h>", Form::Angled),
-            ("#define X 1", Form::Other),
-            ("#included \"a.h\"", Form::Other),
-            ("#include HEADER", Form::Unread),
-            ("#include \"a.h", Form::Unread),
-            ("#include \"a.h\" x", Form::Unread),
-            ("#include \"a.h\"\rint z;", Form::Unread),
-            ("#include \"a.h\" /* open", Form::Unread),
-            ("#include \"a.h\" // \\", Form::Spliced),
-            ("#include \"a.h\" // \\ \r", Form::Spliced),
-            ("#include \"a.h\" // ??/", Form::Spliced),
-            ("#include \"a??=.h\"", Form::Spliced),
-            ("#", Form::Other),
+            ("#include <stdio.h>", IncludeForm::Angled),
+            ("#  include<stdio.h>", IncludeForm::Angled),
+            ("#define X 1", IncludeForm::Other),
+            ("#included \"a.h\"", IncludeForm::Other),
+            ("#include HEADER", IncludeForm::Unread),
+            ("#include \"a.h", IncludeForm::Unread),
+            ("#include \"a.h\" x", IncludeForm::Unread),
+            ("#include \"a.h\"\rint z;", IncludeForm::Unread),
+            ("#include \"a.h\" /* open", IncludeForm::Unread),
+            ("#include \"a.h\" // \\", IncludeForm::Spliced),
+            ("#include \"a.h\" // \\ \r", IncludeForm::Spliced),
+            ("#include \"a.h\" // ??/", IncludeForm::Spliced),
+            ("#include \"a??=.h\"", IncludeForm::Spliced),
+            ("#", IncludeForm::Other),
         ] {
-            assert_eq!(form(text), expected, "{text:?}");
+            assert_eq!(include_form(text), expected, "{text:?}");
         }
     }
 
@@ -518,7 +521,7 @@ mod tests {
     /// Mutation: resolve with `Path::join`. Fails on Windows, which is where
     /// the separator differs.
     #[test]
-    fn an_include_is_found_beside_the_file_that_includes_it() {
+    fn a_name_is_joined_to_the_including_file_s_directory_with_a_slash() {
         assert_eq!(resolved(Path::new("a.c"), "a.h"), PathBuf::from("a.h"));
         assert_eq!(resolved(Path::new("src/a.c"), "a.h").as_os_str(), "src/a.h");
         assert_eq!(
@@ -593,7 +596,7 @@ mod tests {
     /// Mutation: drop the check of `MAX_DEPTH`. The longer chain is read to
     /// its end and nothing is reported. Mutation: refuse one file sooner or one
     /// later. One of the two chains answers wrongly. Mutation: recurse once
-    /// per file, as `splice` did. The thread overflows its stack.
+    /// per file, as `read_includes` did. The thread overflows its stack.
     #[test]
     fn includes_nested_past_the_bound_are_refused() {
         // Named, so that an overflow, which aborts the whole test binary,

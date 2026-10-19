@@ -1,4 +1,4 @@
-error[SC0207]: a construct that crosses an `#include` is not read yet
+error[SC0207]: an item that crosses an `#include` is not read yet
    ╭─[ an_include_inside_a_function_body_is_refused.c:1:1 ]
    │
  1 │ int main(void) {

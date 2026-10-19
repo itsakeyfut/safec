@@ -705,12 +705,11 @@ impl Parser<'_> {
             return item;
         };
 
-        let diagnostic =
-            Diagnostic::error("a construct that crosses an `#include` is not read yet")
-                .with_code(UNREAD)
-                .with_label(Label::primary(other.span, "goes on in another file here"))
-                .with_label(Label::secondary(first, "the item begins here"))
-                .with_note("an item is read when every token of it is in one file");
+        let diagnostic = Diagnostic::error("an item that crosses an `#include` is not read yet")
+            .with_code(UNREAD)
+            .with_label(Label::primary(other.span, "goes on in another file here"))
+            .with_label(Label::secondary(first, "the item begins here"))
+            .with_note("an item is read when every token of it is in one file");
         self.report_built(other.span, diagnostic, diagnostics);
         Item::Error { span: first }
     }
