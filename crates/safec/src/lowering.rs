@@ -3404,37 +3404,7 @@ impl Lowering<'_> {
             | Expr::Error { .. } => return Vec::new(),
         };
         let mut said: Vec<LocalId> = Vec::new();
-        let mut elements = Vec::new();
-        for (i, accesses) in each.iter().enumerate() {
-            for &(local, written, write) in accesses {
-                // Written out rather than spelled `matches!`, for the reason
-                // `promoted` gives.
-                let pointer = match self.unit.ty(function.local(local)) {
-                    Ty::Pointer(_) => true,
-                    Ty::Int | Ty::Char | Ty::Void => false,
-                };
-                if !write || !pointer || said.contains(&local) {
-                    continue;
-                }
-                let other = each
-                    .iter()
-                    .enumerate()
-                    .filter(|&(j, _)| j != i)
-                    .flat_map(|(_, accesses)| accesses)
-                    .find(|&&(other, _, _)| other == local);
-                if let Some(&(_, accessed, both_write)) = other {
-                    said.push(local);
-                    elements.push(Element::UnsequencedAccess {
-                        local,
-                        written,
-                        accessed,
-                        both_write,
-                        between,
-                        origin: Origin::Written(at),
-                    });
-                }
-            }
-        }
+        let mut elements = self.conflicts(function, &each, between, at, &mut said);
         // **The store is a write too.** C17 6.5.16 p3 sequences it after the
         // value computations of both operands and nothing more, so a write
         // to the same local in the value is unsequenced against it unless a
@@ -3470,6 +3440,55 @@ impl Lowering<'_> {
                     between,
                     origin: Origin::Written(at),
                 });
+            }
+        }
+        elements
+    }
+
+    /// One [`Element::UnsequencedAccess`] for each pointer local one list of
+    /// accesses writes and another list reads or writes, each list being one
+    /// operand C leaves unsequenced against the others.
+    ///
+    /// `said` is every local already reported for these operands, and gains
+    /// each one this reports, so [`Self::unsequenced`]'s store check does not
+    /// report it again.
+    fn conflicts(
+        &self,
+        function: &Function,
+        each: &[Vec<(LocalId, Span, bool)>],
+        between: Between,
+        at: Span,
+        said: &mut Vec<LocalId>,
+    ) -> Vec<Element> {
+        let mut elements = Vec::new();
+        for (i, accesses) in each.iter().enumerate() {
+            for &(local, written, write) in accesses {
+                // Written out rather than spelled `matches!`, for the reason
+                // `promoted` gives.
+                let pointer = match self.unit.ty(function.local(local)) {
+                    Ty::Pointer(_) => true,
+                    Ty::Int | Ty::Char | Ty::Void => false,
+                };
+                if !write || !pointer || said.contains(&local) {
+                    continue;
+                }
+                let other = each
+                    .iter()
+                    .enumerate()
+                    .filter(|&(j, _)| j != i)
+                    .flat_map(|(_, accesses)| accesses)
+                    .find(|&&(other, _, _)| other == local);
+                if let Some(&(_, accessed, both_write)) = other {
+                    said.push(local);
+                    elements.push(Element::UnsequencedAccess {
+                        local,
+                        written,
+                        accessed,
+                        both_write,
+                        between,
+                        origin: Origin::Written(at),
+                    });
+                }
             }
         }
         elements
