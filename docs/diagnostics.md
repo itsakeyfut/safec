@@ -556,7 +556,8 @@ that does not, so a reader scanning coloured output can tell a rejection from
 everything else before reading a word. Which colours those are is the
 renderer's to choose and may change, and two severities on the same side may
 share one, as a note and a help do. Colour is emitted only where `--color`
-asks for it, and the words always carry everything the colour does.
+allows it, which by default means when the stream is a terminal, and the
+words always carry everything the colour does.
 
 ## Where this lives now
 
