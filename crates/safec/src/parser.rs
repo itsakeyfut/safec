@@ -646,7 +646,10 @@ impl Parser<'_> {
     /// `{` open; or at the end of the file. A struct's closing brace is
     /// followed by `;` or a declarator, so `struct S { ... };` scans on to
     /// its `;`. Never backwards past what the failed read consumed, so a
-    /// position is not reported twice.
+    /// position cannot be reported twice. No input found makes the failed
+    /// read go past the end found here, since a read stops at the token it
+    /// could not take, so that comparison holds nothing today; it is one
+    /// comparison, kept so that a read which does is not read again.
     ///
     /// Mutation: leave the cursor at `start`. The budget runs out in
     /// `three_items_with_a_syntax_error_each_report_three`. Mutation: end at

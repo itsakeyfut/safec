@@ -251,9 +251,8 @@ fn recovery_ends_a_struct_at_its_semicolon_not_its_brace() {
 /// parser that stopped advancing would spend its budget and panic, which
 /// fails this by name rather than hanging the suite.
 ///
-/// Mutation: in `Parser::resync`, set the cursor to the end it found rather
-/// than to the later of that and where the failed read stopped. A position
-/// is then reported twice.
+/// Mutation: in `Parser::resync`, leave the cursor where the failed item
+/// began. The budget runs out on the first input and this panics.
 #[test]
 fn no_malformed_input_makes_the_parser_report_twice_at_one_place_or_hang() {
     let program = "struct S { int a; };\nint f(int *p, int n) {\n    int i;\n    for (i = 0; i < n; i++) {\n        if (p[i]) return i;\n    }\n    return -1;\n}\nint g(void) { return f(0, 0); }\n";
