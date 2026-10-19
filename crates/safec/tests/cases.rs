@@ -3580,7 +3580,7 @@ cases! {
         // of one and a function returning one, each used. Mutation: stop
         // reading a member list's `,`; `int a, b` is `expected ;`. Mutation:
         // test a `for` or a parenthesised declarator for a specifier with
-        // `specifier` alone; the `for` or `abstract`'s parameter is a syntax
+        // `type_specifier_keyword` alone; the `for` or `abstract`'s parameter is a syntax
         // error.
         a_struct_is_read_and_refused_until_it_means_something: ["--emit", "ast"],
         // A program that uses structs as C allows, an object assigned from
