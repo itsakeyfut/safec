@@ -233,9 +233,11 @@ is what reports a double free.
 
 Safety levels 4 and 5.
 
-- naming a function as a value and passing it to a call, which is what
-  `pthread_create`'s start routine is; brought forward from Phase 9, which keeps
-  the rest of compiling a function pointer (#115)
+- a parameter of function-pointer type and an argument that names a function,
+  which is what `pthread_create`'s start routine is; brought forward from Phase
+  9, which keeps the rest of compiling a function pointer (#115). `<pthread.h>`
+  needs `typedef` and `union`, which are Phase 9's too, so a program here
+  declares the thread functions it calls by hand
 - thread creation and join
 - shared state
 - synchronization primitives
