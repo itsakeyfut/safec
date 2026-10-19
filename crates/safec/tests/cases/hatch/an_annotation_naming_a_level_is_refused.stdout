@@ -1,0 +1,4 @@
+Function an_annotation_naming_a_level_is_refused.c:2:1 "f" "int (void)" __attribute__ "annotate" "\"safec_level(5)\""
+  Compound an_annotation_naming_a_level_is_refused.c:2:13
+    Return an_annotation_naming_a_level_is_refused.c:3:5
+      Number an_annotation_naming_a_level_is_refused.c:3:12 "0"
