@@ -1793,3 +1793,32 @@ fn an_expression_deeper_than_the_parser_nests_still_lowers() {
     // place.
     assert_eq!(operations, terms + 1);
 }
+
+/// A conflict between two parameters' lengths is placed across every length
+/// it was asked over, from the first to the last, as a call's is placed on
+/// the call: there is no node that holds the lengths, so their extent is the
+/// nearest thing to one (#529). Nothing else reads the end of an origin, and
+/// the artifact prints only its start.
+///
+/// Mutation: give `conflicts` the first length's span alone. This fails.
+#[test]
+fn a_conflict_between_lengths_spans_every_length() {
+    let lowered =
+        lowered("int f(int *p, int a[(p = 0, 1)], int b[(p = 0, 2)]) {\n    return 0;\n}\n");
+    assert_eq!(codes(&lowered), Vec::<String>::new());
+
+    let f = function(&lowered, "f");
+    let origins: Vec<_> = f
+        .blocks()
+        .flat_map(|block| &block.elements)
+        .filter_map(|element| match element {
+            Element::UnsequencedAccess {
+                between: Between::Lengths,
+                origin,
+                ..
+            } => Some(lowered.sources.snippet(origin.span()).to_owned()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(origins, ["p = 0, 1)], int b[(p = 0, 2"]);
+}
