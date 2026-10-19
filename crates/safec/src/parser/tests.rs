@@ -615,8 +615,6 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "`static` or a qualifier",
             "6.7.6.3 p7",
         ),
-        ("void f(int a[*]);\n", "`[*]`", "6.7.6.2"),
-        ("void f(int a[2][*]);\n", "`[*]`", "6.7.6.2"),
         (
             "void f(int (a)[static 3]);\n",
             "`static` or a qualifier",
@@ -701,6 +699,58 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             .map(|code| code.to_string())
             .collect::<Vec<_>>();
         assert_eq!(codes, ["SC0201"], "{source:?}");
+    }
+}
+
+/// `[*]` is told where C17 6.7.6.2 p4 allows it, at function prototype scope,
+/// and not that it is valid where it is: it is refused before the parser
+/// knows whether a body follows, and a definition's own parameters are not at
+/// that scope (#532). So the same words go to a declaration, to a definition,
+/// whose `[*]` is not C, and to a prototype nested in a definition, whose
+/// `[*]` is.
+///
+/// Each source is here because the parser refuses it; the day `[*]` is read,
+/// the definition's is the one that must still be refused, and as not C.
+///
+/// Mutation: call `report_unread` for `[*]` again. Every source fails on its
+/// note, and the definition is told it is valid C.
+#[test]
+fn a_star_length_says_where_c_allows_it_rather_than_that_it_is_allowed_here() {
+    let sources = [
+        "void f(int a[*]);\n",
+        "void f(int a[2][*]);\n",
+        "int f(int *p, int a[*], int b[*]) {\n    return 0;\n}\n",
+        "int f(void (*g)(int a[*])) {\n    return 0;\n}\n",
+    ];
+    for source in sources {
+        let parsed = parsed(source);
+        let [reported] = parsed.diagnostics.diagnostics() else {
+            panic!("{source:?}: {:?}", parsed.diagnostics.diagnostics());
+        };
+        assert_eq!(
+            reported.code().map(|code| code.to_string()).as_deref(),
+            Some("SC0207"),
+            "{source:?}: {reported:?}"
+        );
+        assert_eq!(reported.message(), "`[*]` is not read yet", "{source:?}");
+        let labels: Vec<_> = reported
+            .labels()
+            .iter()
+            .map(|label| label.message())
+            .collect();
+        assert_eq!(
+            labels,
+            ["allowed only at function prototype scope, and not read yet"],
+            "{source:?}"
+        );
+        assert_eq!(
+            reported.notes(),
+            [
+                "C17 6.7.6.2 p4 allows `[*]` only at function prototype scope, which a definition's \
+              own parameters are not at; this compiler does not read it anywhere yet"
+            ],
+            "{source:?}"
+        );
     }
 }
 
