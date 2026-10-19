@@ -495,7 +495,10 @@ fn dump_terminator(
             dump_node(sources, terminator.name(), origin.span(), depth, out);
             write!(out, " {}", origin.name()).expect("writing to a string cannot fail");
         }
-        Terminator::Goto(_) | Terminator::Return | Terminator::Abnormal { .. } => {
+        // Each field named, so a field added later is `error[E0027]` here,
+        // where a position and an origin's word are printed, and not only in
+        // the match below. Found by review.
+        Terminator::Goto(_) | Terminator::Return | Terminator::Abnormal { to: _ } => {
             dump_line(terminator.name(), depth, out)
         }
     }
