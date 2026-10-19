@@ -1317,6 +1317,11 @@ impl Lowering<'_> {
     /// order written, which is an order C allows and the one the backend
     /// emits; the missing markers and the held values are what stop an
     /// analysis concluding from it.
+    ///
+    /// **And asked for conflicts against each other**, as a call's arguments
+    /// are, because nothing else sets two lengths side by side: each is
+    /// walked on its own, so `int a[g(p, 1)], int b[(p = 0, 1)]` exited 0
+    /// where the same pair in a body is `SC0409` (#529). See ADR-0052.
     fn lengths(
         &mut self,
         builder: &mut Builder,
@@ -1332,6 +1337,7 @@ impl Lowering<'_> {
         // the next length is lowered, and `int b[*p], int a[(p = 0, 1)]`
         // then checks `*p` against the `p` before the write C may run first.
         let mut held = Vec::new();
+        let mut walked = Vec::new();
         for parameter in parameters {
             let Type::Array {
                 length: Some(length),
@@ -1347,6 +1353,24 @@ impl Lowering<'_> {
             let span = self.ast.expr(length).span();
             let value = self.walk(builder, length, false, diagnostics)?;
             held.push((value, span));
+            walked.push(length);
+        }
+        if let (Some(first), Some(last)) = (walked.first(), walked.last()) {
+            let at = self.ast.expr(*first).span().to(self.ast.expr(*last).span());
+            let each: Vec<_> = walked
+                .iter()
+                .map(|&length| self.accesses(length, false))
+                .collect();
+            let conflicts = self.conflicts(
+                &builder.function,
+                &each,
+                Between::Lengths,
+                at,
+                &mut Vec::new(),
+            );
+            for element in conflicts {
+                builder.element(element);
+            }
         }
         let last = held.last().map(|(_, span)| *span);
         for (value, span) in held {
@@ -3451,7 +3475,8 @@ impl Lowering<'_> {
     ///
     /// `said` is every local already reported for these operands, and gains
     /// each one this reports, so [`Self::unsequenced`]'s store check does not
-    /// report it again.
+    /// report it again. Shared with [`Self::lengths`], whose lengths are
+    /// unsequenced against each other just as a call's arguments are (#529).
     fn conflicts(
         &self,
         function: &Function,

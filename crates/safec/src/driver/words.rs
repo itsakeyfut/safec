@@ -604,6 +604,13 @@ pub(super) fn memory_finding(
                     "another operand of the same expression",
                     "assign it in a statement of its own before this expression",
                 ),
+                // No statement can be written in a declarator, so the remedy
+                // is the body, which runs after every length (#529).
+                Between::Lengths => (
+                    "another parameter's length",
+                    "write it in the body instead, where every parameter's length has already \
+                     been evaluated",
+                ),
             };
             (
                 UNSEQUENCED_ACCESS,
@@ -716,6 +723,11 @@ pub(super) fn memory_finding(
             Between::Operands => {
                 "C17 6.5 p2 makes this undefined wherever both are evaluated: nothing orders an \
                  operator's operands against each other (6.5 p3)"
+            }
+            Between::Lengths => {
+                "C17 6.5 p2 makes this undefined wherever both are evaluated: a parameter's \
+                 declarator is not a full declarator (6.7.6 p3), so nothing orders one \
+                 parameter's length against another's"
             }
         };
         diagnostic = diagnostic

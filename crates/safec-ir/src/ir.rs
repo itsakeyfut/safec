@@ -650,6 +650,10 @@ pub enum Between {
     /// place and value, a binary operator's two sides, a subscript's base and
     /// index, which C17 6.5 p3 leaves unsequenced.
     Operands,
+    /// Two parameters' lengths, which C17 6.9.1 p10 evaluates on entry and
+    /// gives no order: a parameter's declarator is not a full declarator, so
+    /// its end is no sequence point (6.7.6 p3).
+    Lengths,
 }
 
 impl Element {

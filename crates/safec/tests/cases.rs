@@ -323,6 +323,18 @@ cases! {
         a_store_into_an_element_of_a_pointer_the_value_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_sum_reading_a_pointer_its_other_operand_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_subscript_whose_index_writes_its_base_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Two parameters' lengths are unsequenced against each other (C17
+        // 6.7.6 p3), so they are asked as a call's arguments are, and the
+        // words name a length (#529). Mutation: `Lowering::lengths` does not
+        // call `conflicts`; both exit 0. Mutation: pass `Between::Operands`
+        // there; both fail on `.stdout` and `.stderr`. Mutation: word
+        // `Between::Lengths` as operands; both fail on `.stderr`.
+        a_pointer_one_length_reads_and_another_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        two_lengths_writing_one_pointer_are_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An integer two lengths write is undefined by the same paragraph and
+        // not what this check is believed about, as for a call's arguments.
+        // Mutation: drop the pointer filter in `conflicts`; this reports.
+        an_integer_two_lengths_write_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What is not one: the store is sequenced after the value computations
         // of both operands (C17 6.5.16 p3), and here the comma orders the
         // inner write before the value is computed (6.5.17 p2). Mutation:
@@ -397,7 +409,8 @@ cases! {
         // is checked against the `q` that `a` may write first, and the free
         // of what `q` then points at reaches it. Mutation: discard each
         // length's value where it finishes; the read is checked before the
-        // write and this exits 0.
+        // write and the `SC0402` goes, leaving only the `SC0409` the two
+        // lengths' conflict over `q` is (#529).
         a_read_in_one_length_meets_what_another_length_frees: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The four constructs that do order their operands, one case each,
         // because C17 Annex C names four and a list implemented three-quarters
@@ -1098,7 +1111,10 @@ cases! {
         // Two parameters' lengths are unsequenced (C17 6.7.6 p3), so `*p` in
         // `b` may follow `p = 0` in `a`. A length's value is read only once
         // every length is lowered, so the read meets the null. Mutation:
-        // discard each length's value where it finishes; this exits 0.
+        // discard each length's value where it finishes; the `SC0403` goes,
+        // leaving only the `SC0409` the two lengths' conflict over `p` is,
+        // which is what the same pair prints in a body, `*p + (p = 0, 1)`
+        // (#529).
         a_read_in_one_length_meets_a_null_another_length_writes: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // **Three tests of a pointer are three cases and not one**, because the
         // shapes reach the check differently: `if (p)` hands the pointer's own
