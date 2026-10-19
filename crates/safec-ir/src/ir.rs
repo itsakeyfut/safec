@@ -396,11 +396,10 @@ impl Rvalue {
 
 /// Whether the source wrote an operation, or something else caused it.
 ///
-/// `docs/c-family.md` calls this attribution, and `Span`'s own doc comment says
-/// it expects a third coordinate for where code came from, which implicit
-/// operations are named as one consumer of. If that coordinate arrives and
-/// wants this name, this is the type that gives way: what it distinguishes is
-/// narrower, and a span's origin is the more obvious reading of the word.
+/// `docs/c-family.md` calls this attribution. Where code came from through a
+/// macro is the file a span is in, an instance (ADR-0054), which left this
+/// type as it is: a macro's body was written, so its operations are `Written`,
+/// and a generated operation has no spelling to come from.
 ///
 /// Both carry a span, because both have somewhere to point. What differs is
 /// what a diagnostic may say: text that a user wrote can be quoted back, and a

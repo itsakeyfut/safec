@@ -369,7 +369,8 @@ impl SourceMap {
     /// Add a file that is not on disk.
     ///
     /// For test inputs today. Later for the buffers the Clang adapter hands
-    /// over, and for macro expansions.
+    /// over. A macro expansion and an inclusion get a kind of their own, since
+    /// each records where it was used (ADR-0054).
     pub fn add_virtual(&mut self, name: impl Into<String>, contents: impl Into<String>) -> FileId {
         self.add(FileName::Virtual(name.into()), contents.into())
     }

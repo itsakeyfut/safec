@@ -110,6 +110,10 @@ sake.
   own type `Binding` rather than `Symbol` so that the name this record spends
   below is still free.
 
+  ADR-0054 later located every expansion in a file of its own, so two uses
+  expanded from one `#define` no longer carry one span; what is keyed by an
+  expression's id stays keyed by it.
+
   The shape it takes then is decided here too, because it is what makes "later"
   cheap: interning is a pass *after* the scan, over `(&SourceMap, &[Token])`,
   producing a `Vec<Symbol>` parallel to the tokens or resolving lazily. `Token`
