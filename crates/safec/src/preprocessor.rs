@@ -370,6 +370,35 @@ mod tests {
         );
     }
 
+    /// A file with no path has no directory to find a name from, and is not
+    /// taken to be in the one the compiler happens to run in.
+    ///
+    /// Mutation: resolve against an empty directory for a file with no path.
+    /// The note says the name was looked for, at a path nobody wrote.
+    #[test]
+    fn an_include_in_a_file_with_no_path_is_refused() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "#include \"a.h\"\n");
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        preprocess(file, &tokens, &mut sources, &mut diagnostics);
+
+        let [refused] = diagnostics.diagnostics() else {
+            panic!("{:?}", diagnostics.diagnostics());
+        };
+        assert_eq!(
+            refused.code().map(|code| code.to_string()).as_deref(),
+            Some("SC0109")
+        );
+        assert_eq!(
+            refused.notes(),
+            [
+                "`a.h` is found from the directory of the file that includes it, and this file \
+              has no directory"
+            ]
+        );
+    }
+
     /// The code moved from the lexer with the report, and is the handle a
     /// reader kept, so it is asserted by itself here as the lexer's are there.
     #[test]

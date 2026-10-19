@@ -1,0 +1,8 @@
+error[SC0109]: cannot read the included file
+   ╭─[ an_included_file_that_is_not_utf_8_is_refused.c:1:10 ]
+   │
+ 1 │ #include "an_included_file_that_is_not_utf_8_is_refused.h"
+   │          ────────────────────────┬────────────────────────  
+   │                                  ╰────────────────────────── included here
+───╯
+  = note: `an_included_file_that_is_not_utf_8_is_refused.h` was looked for at `an_included_file_that_is_not_utf_8_is_refused.h`: it is not valid UTF-8, and safec reads source files as UTF-8

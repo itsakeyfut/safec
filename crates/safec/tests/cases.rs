@@ -4290,18 +4290,24 @@ cases! {
         // Mutation: splice nothing in place of the directive. `twice` is a
         // name nothing declares.
         a_function_declared_in_an_included_header_is_called: ["--emit", "ast"],
-        // Mutation: register the inclusion under the including file's name.
-        // The header line names the `.c`, at a line it does not have.
+        // Mutation: display an inclusion as any name but its path. The
+        // header line stops naming the `.h`.
         a_diagnostic_in_an_included_file_names_that_file: ["--emit", "ast"],
         // Mutation: do not push the included file on the stack of those being
         // read. The header is read until the native stack runs out.
         a_header_that_includes_itself_is_refused: ["--emit", "ast"],
-        // Mutation: do not put the input on that stack. The same, one file
-        // higher.
+        // Mutation: do not put the input on that stack. It is read once more
+        // as an inclusion, and the report points at that directive rather
+        // than saying it is the input.
         an_input_that_includes_itself_is_refused: ["--emit", "ast"],
         // Mutation: drop the note. What was looked for, and why it was not
         // read, goes with it.
         an_include_that_names_no_file_is_refused: ["--emit", "ast"],
+        // A Latin-1 byte in a comment, which is ordinary in the code this
+        // compiler is for. Mutation: answer every failure with `reason`. The
+        // note gives the standard library's words for a decoding failure
+        // under a label saying they are the operating system's.
+        an_included_file_that_is_not_utf_8_is_refused: ["--emit", "ast"],
         // A body whose braces are in one file and whose statement is in
         // another, so no join the parser makes crosses a file. Mutation: have
         // `Parser::in_one_file` return the item. The function compiles.
