@@ -94,7 +94,7 @@ A macro expansion is the first thing that needs `Span`'s third coordinate. That
 coordinate has to serve three consumers and not one: a macro expansion, a
 template instantiation, and an operation no source text produced. Deciding its
 shape against macros alone means redoing it in Phase 2. See
-[c-family.md](c-family.md).
+[c-family.md](c-family.md), and [ADR-0054](adr/0054-a-span-from-an-expansion-is-located-in-a-copy-of-the-macro-s-body.md) for the shape it takes.
 
 **Done when:** the MVP program above parses and type-checks, `--emit ast` prints
 it, and a file that fails to parse does not stop the next file from being read.

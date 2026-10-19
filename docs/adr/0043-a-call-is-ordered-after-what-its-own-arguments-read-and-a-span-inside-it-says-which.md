@@ -72,9 +72,11 @@ only reads that carry exactly the call's span are the call's own operand reads
 and what the call is handed, which `Allocations::terminator` records after this
 call has been asked, so nothing is lost at this call. What strictness buys is
 the direction of a future mistake. If macro expansion ever attributes a call and
-a sibling operand to one span, which `Span`'s third coordinate has yet to
-decide, the sibling is still asked and reported, rather than excluded and
-silent.
+a sibling operand to one span, the sibling is still asked and reported,
+rather than excluded and silent. ADR-0054 decided how an expansion is
+located: in a copy of the macro's body, so spans inside one expansion compare
+as they would written out, and this test lifts both spans to a file they
+share before comparing.
 
 **What it does not close.** A `,`, `&&`, `||` or `?:` below any node other
 than one of those four gets no `Element::Sequenced`, which includes an
