@@ -4300,6 +4300,10 @@ cases! {
         // as an inclusion, and the report points at that directive rather
         // than saying it is the input.
         an_input_that_includes_itself_is_refused: ["--emit", "ast"],
+        // The input includes a header that includes the input. Mutation: ask
+        // only the innermost file being read rather than all of them. The
+        // two are read in turn until the native stack runs out.
+        a_file_that_includes_itself_through_another_is_refused: ["--emit", "ast"],
         // Mutation: drop the note. What was looked for, and why it was not
         // read, goes with it.
         an_include_that_names_no_file_is_refused: ["--emit", "ast"],
