@@ -2673,7 +2673,19 @@ impl Parser<'_> {
             return Some(span);
         }
 
-        self.report(
+        // Where what is missing would have been, which is the token that is
+        // there, unless that token is in another file: `int x` at the end of a
+        // header put the caret on the `int main` after the `#include`, in a
+        // file where nothing is missing. Found by review. The end of the token
+        // before is in the file the item was being read in.
+        let next = self.peek().span;
+        let at = match self.at.checked_sub(1).map(|at| self.tokens[at].span) {
+            Some(before) if before.file() != next.file() => Span::at(before.file(), before.end()),
+            _ => next,
+        };
+        self.report_at(
+            at,
+            EXPECTED,
             format!("expected {what}"),
             format!("{what} is missing here"),
             diagnostics,

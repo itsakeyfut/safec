@@ -4328,6 +4328,15 @@ cases! {
         // Mutation: do not pop a file off the stack when its inclusion ends.
         // The second inclusion is refused as one that includes itself.
         a_header_included_twice_is_read_twice: ["--emit", "ast"],
+        // C joins the line below to the comment after the name, so the null
+        // test is not code. Mutation: read the include whatever its line ends
+        // in. The null test is compiled and the program checks as safe, which
+        // in C it is not.
+        an_include_whose_line_ends_in_a_splice_is_refused: ["--emit", "safety-ir"],
+        // Mutation: report a missing token at the token that is there, as
+        // every other expectation is. The caret goes under `int main`, in the
+        // `.c`, where nothing is missing.
+        a_missing_semicolon_at_the_end_of_a_header_is_placed_in_the_header: ["--emit", "ast"],
         // Mutation: write the note's path with no escaping on the way out.
         // The escape sequence reaches the terminal.
         an_included_path_with_a_control_character_is_shown_escaped: ["--emit", "ast"],

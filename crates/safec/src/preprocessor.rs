@@ -30,6 +30,11 @@ const UNREADABLE_INCLUSION: Code = Code::new("SC0109");
 const RECURSIVE_INCLUSION: Code = Code::new("SC0110");
 /// An `#include` nested deeper than [`MAX_DEPTH`].
 const TOO_DEEP: Code = Code::new("SC0111");
+/// An `#include` past [`MAX_INCLUSIONS`].
+const TOO_MANY: Code = Code::new("SC0112");
+/// The lexer's code for a splice or a trigraph it does not perform, which an
+/// `#include` line is refused with for the same reason.
+const UNSUPPORTED_SPLICE: Code = Code::new("SC0107");
 
 /// How many files may be being read at once, the input among them.
 ///
@@ -40,6 +45,23 @@ const TOO_DEEP: Code = Code::new("SC0111");
 /// leaves a program written for any compiler room, and a refusal past it says
 /// where.
 const MAX_DEPTH: usize = 200;
+
+/// How many inclusions one input may make in all.
+///
+/// [`MAX_DEPTH`] bounds a chain, not a tree: a header that includes the next
+/// one twice, fifteen deep, is 65,536 inclusions, each a file of its own
+/// (ADR-0054), and every two levels more took four times as long, measured,
+/// with nothing printed until it ended. An include guard would stop that in a
+/// real header, and `#ifndef` is not read yet. Found by review.
+const MAX_INCLUSIONS: usize = 4096;
+
+/// The files being read, and how many have been included so far.
+struct Reading {
+    /// Outermost first, each by its canonical path, so a cycle is found
+    /// whatever spelling reached it.
+    open: Vec<(PathBuf, FileId)>,
+    included: usize,
+}
 
 /// Splice every `#include "file"` in `tokens`, the scan of `file`, and report
 /// every directive that is not one.
@@ -52,9 +74,12 @@ pub fn preprocess(
     sources: &mut SourceMap,
     diagnostics: &mut DiagnosticSink,
 ) -> Vec<Token> {
-    let mut reading = Vec::new();
+    let mut reading = Reading {
+        open: Vec::new(),
+        included: 0,
+    };
     if let Some(path) = path_of(sources.file(file).name()) {
-        reading.push((canonical(path), file));
+        reading.open.push((canonical(path), file));
     }
 
     let mut spliced = Vec::with_capacity(tokens.len());
@@ -66,14 +91,13 @@ pub fn preprocess(
 /// Append `tokens` to `spliced`, an `#include "file"` replaced by that file's,
 /// and no end of file.
 ///
-/// `reading` is the files being read, outermost first, each by its canonical
-/// path, so a cycle is found whatever spelling reached it. Recursion ends
-/// because a file on it is never read again, and a chain of different files
-/// stops at [`MAX_DEPTH`].
+/// Recursion ends because a file being read is never read again, a chain of
+/// different files stops at [`MAX_DEPTH`], and a tree of them at
+/// [`MAX_INCLUSIONS`].
 fn splice(
     tokens: &[Token],
     sources: &mut SourceMap,
-    reading: &mut Vec<(PathBuf, FileId)>,
+    reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
     spliced: &mut Vec<Token>,
 ) {
@@ -100,14 +124,32 @@ fn splice(
                             spliced,
                         );
                     }
+                    Form::Spliced => diagnostics.report(
+                        refused(
+                            &text,
+                            token.span,
+                            UNSUPPORTED_SPLICE,
+                            "a line splice or a trigraph in an `#include` is not read yet",
+                        )
+                        .with_note(
+                            "C can join the line below to this one, and it would be \
+                             compiled as code instead",
+                        ),
+                    ),
                     Form::Angled => diagnostics.report(
-                        refused(&text, token.span, "`#include <...>` is not read yet")
-                            .with_note("only `#include \"...\"` is read yet"),
+                        refused(
+                            &text,
+                            token.span,
+                            UNSUPPORTED_DIRECTIVE,
+                            "`#include <...>` is not read yet",
+                        )
+                        .with_note("only `#include \"...\"` is read yet"),
                     ),
                     Form::Other => diagnostics.report(
                         refused(
                             &text,
                             token.span,
+                            UNSUPPORTED_DIRECTIVE,
                             "preprocessor directives are not supported yet",
                         )
                         // Which directives, rather than which stage.
@@ -139,7 +181,7 @@ fn include(
     quoted: Span,
     name: &str,
     sources: &mut SourceMap,
-    reading: &mut Vec<(PathBuf, FileId)>,
+    reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
     spliced: &mut Vec<Token>,
 ) {
@@ -159,7 +201,7 @@ fn include(
     };
     let path = resolved(includer, name);
 
-    if reading.len() == MAX_DEPTH {
+    if reading.open.len() == MAX_DEPTH {
         diagnostics.report(
             Diagnostic::error("`#include`s are nested too deeply")
                 .with_code(TOO_DEEP)
@@ -168,9 +210,27 @@ fn include(
         );
         return;
     }
+    // Once, at the first one past it, rather than at each of the thousands
+    // after it, which would bury the report it is.
+    if reading.included >= MAX_INCLUSIONS {
+        if reading.included > MAX_INCLUSIONS {
+            return;
+        }
+        reading.included += 1;
+        diagnostics.report(
+            Diagnostic::error("this input includes too many files")
+                .with_code(TOO_MANY)
+                .with_label(Label::primary(quoted, "included here"))
+                .with_note(format!(
+                    "{MAX_INCLUSIONS} inclusions have already been read for it, and \
+                     include guards are not read yet"
+                )),
+        );
+        return;
+    }
 
     let canonical = canonical(&path);
-    if let Some(&(_, open)) = reading.iter().find(|(being, _)| *being == canonical) {
+    if let Some(&(_, open)) = reading.open.iter().find(|(being, _)| *being == canonical) {
         let refused = Diagnostic::error("this file includes itself")
             .with_code(RECURSIVE_INCLUSION)
             .with_label(Label::primary(quoted, "already being read"));
@@ -194,6 +254,23 @@ fn include(
         return;
     }
 
+    // Asked before the file is opened, because opening is what never returns
+    // for a console or a pipe: `#include "CON"` waited on the terminal until
+    // it was killed. Found by review. A device that cannot even be asked, as
+    // Windows answers for `CON`, is refused with what it said.
+    let not_a_file = match fs::metadata(&path) {
+        Ok(metadata) if metadata.is_file() || metadata.is_dir() => None,
+        Ok(_) => Some("this is not a regular file, and safec reads a source file".to_owned()),
+        Err(error) => Some(reason(&path, &error, Access::Read)),
+    };
+    if let Some(why) = not_a_file {
+        diagnostics.report(unreadable(format!(
+            "`{name}` was looked for at `{}`: {why}",
+            path.display()
+        )));
+        return;
+    }
+
     let file = match sources.include(&path, directive) {
         Ok(file) => file,
         Err(error) => {
@@ -212,10 +289,11 @@ fn include(
         }
     };
 
+    reading.included += 1;
     let tokens = lex(file, &sources.file_owned(file), diagnostics);
-    reading.push((canonical, file));
+    reading.open.push((canonical, file));
     splice(&tokens, sources, reading, diagnostics, spliced);
-    reading.pop();
+    reading.open.pop();
 }
 
 /// What an `#include` is spelled as, which decides what is done with it.
@@ -226,6 +304,15 @@ enum Form<'a> {
     Quoted { name: &'a str, at: u32 },
     /// `#include <name>`.
     Angled,
+    /// `#include "name"` on a line that ends in a splice or holds a trigraph.
+    ///
+    /// Both change what the line is before any directive is found (C17
+    /// 5.1.1.2 p1, phases 1 and 2), and the lexer ends a directive at its
+    /// newline without performing either. Read as it stands, `// \` after the
+    /// name left the line below to be compiled where C makes it part of the
+    /// comment, and a null test there went missing from the safety check.
+    /// Found by review.
+    Spliced,
     /// Any other directive, and an `#include` that is neither of those, such
     /// as one naming a macro.
     Other,
@@ -274,6 +361,14 @@ fn form(text: &str) -> Form<'_> {
         }
     }
 
+    let trigraph = text
+        .as_bytes()
+        .windows(3)
+        .any(|three| three[..2] == *b"??" && b"=()/'<>!-".contains(&three[2]));
+    if text.trim_end_matches([' ', '\t', '\r']).ends_with('\\') || trigraph {
+        return Form::Spliced;
+    }
+
     Form::Quoted {
         name,
         at: (text.len() - rest.len()) as u32,
@@ -284,11 +379,11 @@ fn form(text: &str) -> Form<'_> {
 ///
 /// The `#`, not the line. A caret under a long macro definition is a wall, and
 /// the line is quoted above it anyway.
-fn refused(text: &str, directive: Span, message: &str) -> Diagnostic {
+fn refused(text: &str, directive: Span, code: Code, message: &str) -> Diagnostic {
     // Two bytes where the `#` is written `%:`.
     let hash = if text.starts_with("%:") { 2 } else { 1 };
     Diagnostic::error(message)
-        .with_code(UNSUPPORTED_DIRECTIVE)
+        .with_code(code)
         .with_label(Label::primary(
             Span::new(
                 directive.file(),
@@ -375,6 +470,10 @@ mod tests {
             ("#include \"a.h", Form::Other),
             ("#include \"a.h\" x", Form::Other),
             ("#include \"a.h\" /* open", Form::Other),
+            ("#include \"a.h\" // \\", Form::Spliced),
+            ("#include \"a.h\" // \\ \r", Form::Spliced),
+            ("#include \"a.h\" // ??/", Form::Spliced),
+            ("#include \"a??=.h\"", Form::Spliced),
             ("#", Form::Other),
         ] {
             assert_eq!(form(text), expected, "{text:?}");
@@ -476,6 +575,42 @@ mod tests {
             Vec::<String>::new()
         );
         assert_eq!(reported("too_deep", &chain(MAX_DEPTH)), ["SC0111"]);
+    }
+
+    /// A header that includes the next one twice, thirteen deep, is refused
+    /// once its inclusions pass the bound, and said once.
+    ///
+    /// Mutation: drop the bound. Every inclusion is read and nothing is
+    /// reported. Mutation: report every inclusion past it. One is reported
+    /// for each file still open, since a refused one reads nothing more.
+    #[test]
+    fn a_tree_of_inclusions_past_the_bound_is_refused_once() {
+        let levels = 13;
+        let mut files = vec![("main.c".to_owned(), "#include \"0.h\"\n".to_owned())];
+        for at in 0..levels {
+            let next = format!("#include \"{}.h\"\n", at + 1);
+            files.push((format!("{at}.h"), next.repeat(2)));
+        }
+        files.push((format!("{levels}.h"), "int z;\n".to_owned()));
+
+        assert_eq!(reported("wide", &files), ["SC0112"]);
+    }
+
+    /// A device is refused before it is opened, since opening one can wait
+    /// for ever: `CON` waited on the terminal.
+    ///
+    /// Mutation: drop the question asked before opening. The device reads as
+    /// an empty file and nothing is reported.
+    #[test]
+    fn an_include_of_a_device_is_refused() {
+        let device = if cfg!(windows) {
+            "//./NUL"
+        } else {
+            "/dev/null"
+        };
+        let files = [("main.c".to_owned(), format!("#include \"{device}\"\n"))];
+
+        assert_eq!(reported("device", &files), ["SC0109"]);
     }
 
     /// An included file's own includes are found beside it, not beside the
