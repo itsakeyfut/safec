@@ -243,6 +243,27 @@ fn recovery_ends_a_struct_at_its_semicolon_not_its_brace() {
     );
 }
 
+/// A body's `}` ends its item where what follows begins one the parser
+/// refuses, such as a `static` function, and not only where it begins one the
+/// parser reads; otherwise the next item is swallowed and its own error is
+/// never reported.
+///
+/// Mutation: in `Parser::resync`, do not count a keyword `unread_keyword`
+/// names at file scope as beginning an item. The `static` function's report
+/// goes, and this sees two.
+#[test]
+fn recovery_ends_a_body_before_an_item_the_parser_refuses() {
+    let parsed = parsed("int f(void) { int x = ; }\nstatic int g(void) { return 1; }\nint y = ;\n");
+    let reported: Vec<_> = parsed
+        .diagnostics
+        .diagnostics()
+        .iter()
+        .filter_map(|diagnostic| diagnostic.code())
+        .map(|code| code.to_string())
+        .collect();
+    assert_eq!(reported, ["SC0201", "SC0207", "SC0201"]);
+}
+
 /// An old-style definition's declaration list is not where its item ends,
 /// so the body after it is not reported as an item of its own, and nothing in
 /// it becomes a declaration at file scope. C17 6.9.1 p6 makes it C, which
