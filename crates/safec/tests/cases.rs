@@ -375,6 +375,23 @@ cases! {
         // walk each length as a full expression, or put a marker after each;
         // the read is taken as first, and this goes silent.
         two_parameter_lengths_are_not_ordered_against_each_other: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A free and a use in one length are one expression, so the note is
+        // 6.5.2.2 p10's as in a body, but no statement can be written in a
+        // declarator, so the remedy is the length's (#444). Mutation: answer
+        // `AcrossLengths` wherever the free is in a length; the note cites
+        // 6.7.6 p3. Mutation: answer `InTheBody` always; the remedy says to
+        // write separate statements.
+        a_free_and_a_use_in_one_parameter_length_keep_the_call_s_note: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The pass-after-free row is worded by the same rule as the use, so
+        // a pointer passed in one length and freed in another cites 6.7.6 p3
+        // and the length's remedy. Mutation: keep `UNSEQUENCED_REMEDY` in
+        // that row; the remedy says to write separate statements.
+        a_pointer_passed_in_one_length_and_freed_in_another_is_told_why: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Every definition's lengths are collected, not only the first's, so
+        // the free in `f`, after `h` and its own length, still cites 6.7.6
+        // p3. Mutation: collect from `ast.items().iter().take(2)`; the note
+        // falls back to 6.5.2.2 p10 and separate statements. Found by review.
+        a_definition_s_lengths_are_found_after_another_definition: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A length's value is read only once every length is lowered, as a
         // call's arguments are read at the call, so the read of `*q` in `b`
         // is checked against the `q` that `a` may write first, and the free

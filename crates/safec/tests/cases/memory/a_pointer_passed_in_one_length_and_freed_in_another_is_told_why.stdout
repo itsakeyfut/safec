@@ -1,0 +1,28 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_passed_in_one_length_and_freed_in_another_is_told_why.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_passed_in_one_length_and_freed_in_another_is_told_why.c:2:5 "g" declared
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "q"
+Function a_pointer_passed_in_one_length_and_freed_in_another_is_told_why.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter _Nonnull "p"
+  Local "_2" "int *" parameter "b"
+  Local "_3" "int *" parameter "a"
+  Local "_4" "int"
+  Block "bb0" entry
+    Call a_pointer_passed_in_one_length_and_freed_in_another_is_told_why.c:4:31 "g" "bb1"
+      Destination "_4"
+      Copy "_1"
+  Block "bb1"
+    Call a_pointer_passed_in_one_length_and_freed_in_another_is_told_why.c:4:45 "free" "bb2"
+      Copy "_1"
+  Block "bb2"
+    Sequenced a_pointer_passed_in_one_length_and_freed_in_another_is_told_why.c:4:45 generated
+    Operation a_pointer_passed_in_one_length_and_freed_in_another_is_told_why.c:5:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_passed_in_one_length_and_freed_in_another_is_told_why.c:5:12 generated
+    Return
