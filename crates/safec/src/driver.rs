@@ -930,7 +930,9 @@ fn finish(artifact: &mut Emitted, options: &Options, diagnostics: &mut Diagnosti
 /// test builds one.
 fn stem(name: &FileName) -> String {
     match name {
-        FileName::Real(path) => path
+        // An inclusion is never an input, so nothing names an artifact after
+        // one, and it answers as the file on disk it is.
+        FileName::Real(path) | FileName::Inclusion { path, .. } => path
             .file_stem()
             .unwrap_or(path.as_os_str())
             .to_string_lossy()
