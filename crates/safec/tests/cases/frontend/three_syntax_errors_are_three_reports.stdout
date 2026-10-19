@@ -1,0 +1,11 @@
+Error three_syntax_errors_are_three_reports.c:1:1
+Function three_syntax_errors_are_three_reports.c:3:1 "ok" "int (void)"
+  Compound three_syntax_errors_are_three_reports.c:3:14
+    Return three_syntax_errors_are_three_reports.c:4:5
+      Number three_syntax_errors_are_three_reports.c:4:12 "0"
+Declaration three_syntax_errors_are_three_reports.c:7:1 "b" "int"
+  Error three_syntax_errors_are_three_reports.c:7:9
+Function three_syntax_errors_are_three_reports.c:9:1 "c" "int (void)"
+  Compound three_syntax_errors_are_three_reports.c:9:13
+    Return three_syntax_errors_are_three_reports.c:10:5
+      Error three_syntax_errors_are_three_reports.c:10:12

@@ -578,11 +578,12 @@ struct Parser<'a> {
     tokens: &'a [Token],
     at: usize,
     ast: Ast,
-    /// Whether a syntax error has been reported for this file.
+    /// Whether a syntax error has been reported for the item being read.
     ///
-    /// One is all this issue reports. Recovering and carrying on is a sibling
-    /// issue, and until it lands a second error would be reported from a
-    /// position the parser has no reason to believe in.
+    /// One per item, cleared by [`Parser::run`] before each. A second error
+    /// inside the item that failed would be reported from a position the
+    /// parser has no reason to believe in; the next item begins where
+    /// [`Parser::resync`] put the cursor, which is a position it does (#35).
     failed: bool,
     /// How many more times any loop here may go round.
     ///
@@ -609,25 +610,74 @@ struct Parser<'a> {
 }
 
 impl Parser<'_> {
-    /// Read items until the file ends or one of them fails.
+    /// Read items until the file ends, recovering from one that fails at the
+    /// end of that item and reading on (#35).
     ///
-    /// Stopping at the first is this issue's decision, and the sibling issue
-    /// that adds recovery is what takes `failed` away. When it does, the budget
-    /// below is what is left holding termination, and it owes a recovery that
-    /// advances rather than one that merely reports.
+    /// An item that fails is kept as `Item::Error` and has reported one
+    /// error, and [`Parser::resync`] moves past it. The budget is what holds
+    /// termination: a recovery that did not advance would meet the same item
+    /// until it ran out, and that is a panic naming the defect rather than a
+    /// hang.
     ///
-    /// Mutation: drop `!self.failed` from the condition. The parser then meets
-    /// the same token forever, the budget runs out, and
-    /// `only_the_first_syntax_error_is_reported` fails by name instead of the
-    /// suite hanging.
+    /// Mutation: do not clear `failed` before each item.
+    /// `three_items_with_a_syntax_error_each_report_three` reports one.
     fn run(mut self, diagnostics: &mut DiagnosticSink) -> Ast {
-        while !self.at_end() && !self.failed {
+        while !self.at_end() {
             self.spend();
+            self.failed = false;
+            let start = self.at;
             let item = self.item(diagnostics);
             self.ast.push_item(item);
+            if self.failed {
+                self.resync(start);
+            }
         }
 
         self.ast
+    }
+
+    /// Move the cursor to the end of the item that began at token `start`
+    /// and failed, found from the tokens rather than from wherever the failed
+    /// read stopped, whose state nothing vouches for.
+    ///
+    /// The item ends after a `;` at brace depth 0; after a `}` that brings
+    /// the depth back to 0, where what follows begins an item or ends the
+    /// file, which is how a function definition ends; after a `}` with no
+    /// `{` open; or at the end of the file. A struct's closing brace is
+    /// followed by `;` or a declarator, so `struct S { ... };` scans on to
+    /// its `;`. Never backwards past what the failed read consumed, so a
+    /// position is not reported twice.
+    ///
+    /// Mutation: leave the cursor at `start`. The budget runs out in
+    /// `three_items_with_a_syntax_error_each_report_three`. Mutation: end at
+    /// any `}` that brings the depth to 0.
+    /// `recovery_ends_a_struct_at_its_semicolon_not_its_brace` reports three.
+    fn resync(&mut self, start: usize) {
+        let mut depth = 0usize;
+        let mut end = start;
+        while end < self.tokens.len() && !self.tokens[end].is_eof() {
+            let kind = self.tokens[end].kind;
+            end += 1;
+            match kind {
+                TokenKind::Punct(Punct::Semicolon) if depth == 0 => break,
+                TokenKind::Punct(Punct::LeftBrace) => depth += 1,
+                TokenKind::Punct(Punct::RightBrace) if depth == 0 => break,
+                TokenKind::Punct(Punct::RightBrace) => {
+                    depth -= 1;
+                    let next = self.tokens.get(end).copied();
+                    let ends_here = next.is_none_or(|next| {
+                        next.is_eof()
+                            || begins_specifiers(next.kind)
+                            || next.kind == TokenKind::Annotation(Annotation::Attribute)
+                    });
+                    if depth == 0 && ends_here {
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        self.at = self.at.max(end);
     }
 
     /// Take one from the budget, or say that the parser stopped moving.

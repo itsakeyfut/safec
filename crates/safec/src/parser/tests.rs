@@ -169,11 +169,11 @@ fn a_null_statement_is_an_expression_statement_with_nothing_in_it() {
     ));
 }
 
-/// One syntax error per file, however many the file has.
+/// One syntax error per item, however many the item has.
 ///
 /// Reporting the second would mean believing a position the parser has no
-/// reason to believe in, because nothing has recovered yet. The sibling
-/// issue that adds recovery is what makes a second report worth reading.
+/// reason to believe in, because nothing inside the item has recovered.
+/// Recovery is at the item's end (#35), so a second item is read afresh.
 ///
 /// The input matters, and its first version did not. `)` begins no
 /// expression, and the brace after it is then not where the compound
@@ -186,12 +186,10 @@ fn a_null_statement_is_an_expression_statement_with_nothing_in_it() {
 /// mind when picking a replacement: an input chosen because the parser
 /// rejects it stops testing anything the day the parser accepts it.
 ///
-/// Two mutations, and each fails this on its own. Take the `failed` check
-/// out of `report` and the closing brace speaks as well as the statement.
-/// Drop `!self.failed` from the loop in `run` and the parser meets the same
-/// token until the budget runs out.
+/// Mutation: take the `failed` check out of `report_built`. The closing
+/// brace speaks as well as the statement.
 #[test]
-fn only_the_first_syntax_error_is_reported() {
+fn only_the_first_syntax_error_in_an_item_is_reported() {
     let parsed = parsed("int main(void) { ) }\n");
 
     assert_eq!(
@@ -200,6 +198,103 @@ fn only_the_first_syntax_error_is_reported() {
         "{:?}",
         parsed.diagnostics.diagnostics()
     );
+}
+
+/// An item that fails is skipped to its end and the next one is read, so a
+/// file with three broken items reports three, and an item between them that
+/// is fine is parsed as one (#35).
+///
+/// Mutation: do not clear `failed` before each item in `Parser::run`. One is
+/// reported. Mutation: leave the cursor where the failed item began, in
+/// `Parser::resync`. The budget runs out and this panics by name.
+#[test]
+fn three_items_with_a_syntax_error_each_report_three() {
+    let parsed = parsed(
+        "int a(void) { ) }\nint ok(void) { return 0; }\nint b = ;\nint c(void) { return ( ; }\n",
+    );
+    let codes: Vec<_> = parsed
+        .diagnostics
+        .diagnostics()
+        .iter()
+        .filter_map(|diagnostic| diagnostic.code())
+        .map(|code| code.to_string())
+        .collect();
+    assert_eq!(codes, ["SC0201", "SC0201", "SC0201"]);
+    assert!(
+        matches!(parsed.ast.items()[1], Item::Function(_)),
+        "{:?}",
+        parsed.ast.items()
+    );
+}
+
+/// A struct's closing brace is not where its declaration ends, so recovery
+/// goes on to the `;` and does not read that `;` as an item of its own.
+///
+/// Mutation: in `Parser::resync`, end at any `}` that brings the depth back
+/// to 0. The `;` after the struct is then a third report.
+#[test]
+fn recovery_ends_a_struct_at_its_semicolon_not_its_brace() {
+    let parsed = parsed("struct S { int a int b; };\nint x = ;\n");
+    assert_eq!(
+        parsed.diagnostics.diagnostics().len(),
+        2,
+        "{:?}",
+        parsed.diagnostics.diagnostics()
+    );
+}
+
+/// No malformed input makes the parser report at one position twice, or
+/// stop moving.
+///
+/// Bounded rather than random: every input made from one valid program by
+/// deleting one token, and every one made by cutting it after one token. A
+/// parser that stopped advancing would spend its budget and panic, which
+/// fails this by name rather than hanging the suite.
+///
+/// Mutation: in `Parser::resync`, set the cursor to the end it found rather
+/// than to the later of that and where the failed read stopped. A position
+/// is then reported twice.
+#[test]
+fn no_malformed_input_makes_the_parser_report_twice_at_one_place_or_hang() {
+    let program = "struct S { int a; };\nint f(int *p, int n) {\n    int i;\n    for (i = 0; i < n; i++) {\n        if (p[i]) return i;\n    }\n    return -1;\n}\nint g(void) { return f(0, 0); }\n";
+    let mut sources = SourceMap::new();
+    let file = sources.add_virtual("p.c", program);
+    let mut lexed = DiagnosticSink::new();
+    let tokens: Vec<Token> = lex(file, sources.file(file), &mut lexed)
+        .into_iter()
+        .filter(|token| !token.is_eof())
+        .collect();
+    assert!(lexed.diagnostics().is_empty());
+    assert!(tokens.len() > 40, "{}", tokens.len());
+
+    let text = |kept: &[Token]| {
+        kept.iter()
+            .map(|token| &program[token.span.start() as usize..token.span.end() as usize])
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    let mut inputs = Vec::new();
+    for i in 0..tokens.len() {
+        let mut kept = tokens.clone();
+        kept.remove(i);
+        inputs.push(text(&kept));
+        inputs.push(text(&tokens[..=i]));
+    }
+
+    for input in inputs {
+        let parsed = parsed(&format!("{input}\n"));
+        let starts: Vec<u32> = parsed
+            .diagnostics
+            .diagnostics()
+            .iter()
+            .filter_map(|diagnostic| diagnostic.primary_label())
+            .map(|label| label.span().start())
+            .collect();
+        assert!(
+            starts.windows(2).all(|pair| pair[0] < pair[1]),
+            "{input:?}: {starts:?}"
+        );
+    }
 }
 
 /// The parser stops rather than reading past the end.
@@ -234,9 +329,9 @@ fn a_file_the_lexer_could_not_read_still_parses_to_a_tree() {
 /// The lexer keeps the line whole and reports it, and `TokenKind::Directive`
 /// says that is so a parser is not made to answer for a line that is not C.
 /// Keeping the line whole only turns an avalanche into one error, and one
-/// is still one too many: this parser stops at the first thing it cannot
-/// read, so a `#include` at the top of a real file left the function under
-/// it unparsed.
+/// is still one too many: this parser stops reading an item at the first
+/// thing in it that it cannot read, so a `#include` at the top of a real file
+/// left the function under it unparsed.
 ///
 /// Mutation: drop the filter in `parse`. The tree becomes a single error
 /// node and the parser adds a report of its own, and this fails on both.
@@ -1442,7 +1537,11 @@ fn what_was_expected_is_named_in_the_message() {
         let parsed = parsed(text);
         let reported = parsed.diagnostics.diagnostics();
 
-        assert_eq!(reported.len(), 1, "{text:?} gave {reported:?}");
+        // The first report is the one about the item, and it is what this
+        // test is about. Recovery reads on after it (#35), so a later item
+        // can speak too: `int main(void) return 0; }` ends its item at the
+        // `;` and the `}` is a second, as it is in `clang`.
+        assert!(!reported.is_empty(), "{text:?}");
         assert_eq!(reported[0].message(), expected, "{text:?}");
     }
 }
