@@ -28,6 +28,18 @@ const UNSUPPORTED_DIRECTIVE: Code = Code::new("SC0104");
 const UNREADABLE_INCLUSION: Code = Code::new("SC0109");
 /// An `#include` of a file that is already being read.
 const RECURSIVE_INCLUSION: Code = Code::new("SC0110");
+/// An `#include` nested deeper than [`MAX_DEPTH`].
+const TOO_DEEP: Code = Code::new("SC0111");
+
+/// How many files may be being read at once, the input among them.
+///
+/// The recursion takes a native stack frame per file, so a chain of different
+/// files, each including the next, ended the process with nothing to read
+/// once it was long enough: 300 overflowed a debug build on Windows, measured,
+/// and 250 did not. Found by review. C17 5.2.4.1 asks for 15 levels, so this
+/// leaves a program written for any compiler room, and a refusal past it says
+/// where.
+const MAX_DEPTH: usize = 200;
 
 /// Splice every `#include "file"` in `tokens`, the scan of `file`, and report
 /// every directive that is not one.
@@ -56,8 +68,8 @@ pub fn preprocess(
 ///
 /// `reading` is the files being read, outermost first, each by its canonical
 /// path, so a cycle is found whatever spelling reached it. Recursion ends
-/// because a file on it is never read again, and a chain of different files is
-/// as deep as the files on disk make it.
+/// because a file on it is never read again, and a chain of different files
+/// stops at [`MAX_DEPTH`].
 fn splice(
     tokens: &[Token],
     sources: &mut SourceMap,
@@ -146,6 +158,16 @@ fn include(
         return;
     };
     let path = resolved(includer, name);
+
+    if reading.len() == MAX_DEPTH {
+        diagnostics.report(
+            Diagnostic::error("`#include`s are nested too deeply")
+                .with_code(TOO_DEEP)
+                .with_label(Label::primary(quoted, "included here"))
+                .with_note(format!("{MAX_DEPTH} files are already being read here")),
+        );
+        return;
+    }
 
     let canonical = canonical(&path);
     if let Some(&(_, open)) = reading.iter().find(|(being, _)| *being == canonical) {
@@ -397,6 +419,44 @@ mod tests {
               has no directory"
             ]
         );
+    }
+
+    /// A chain of different files, each including the next, is refused past
+    /// the bound rather than read until the native stack runs out.
+    ///
+    /// Mutation: drop the check of `MAX_DEPTH`. The chain is read to its end
+    /// and nothing is reported. Not an overflow here: a test thread's stack is
+    /// larger than the main thread's, which is where the bound is needed.
+    #[test]
+    fn includes_nested_past_the_bound_are_refused() {
+        let directory = std::env::temp_dir().join(format!("safec_deep_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&directory);
+        fs::create_dir_all(&directory).unwrap();
+        for at in 0..MAX_DEPTH {
+            fs::write(
+                directory.join(format!("{at}.h")),
+                format!("#include \"{}.h\"\n", at + 1),
+            )
+            .unwrap();
+        }
+        fs::write(directory.join(format!("{MAX_DEPTH}.h")), "int z;\n").unwrap();
+        let input = directory.join("deep.c");
+        fs::write(&input, "#include \"0.h\"\n").unwrap();
+
+        let mut sources = SourceMap::new();
+        let file = sources.load(&input).unwrap();
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        preprocess(file, &tokens, &mut sources, &mut diagnostics);
+        let _ = fs::remove_dir_all(&directory);
+
+        let codes: Vec<String> = diagnostics
+            .diagnostics()
+            .iter()
+            .filter_map(|diagnostic| diagnostic.code())
+            .map(|code| code.to_string())
+            .collect();
+        assert_eq!(codes, ["SC0111"]);
     }
 
     /// The code moved from the lexer with the report, and is the handle a
