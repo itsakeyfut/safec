@@ -12,7 +12,7 @@ Function a_live_read_and_a_freed_one_in_one_or_are_reported_apart.c:3:5 "f"
   Local "_3" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_live_read_and_a_freed_one_in_one_or_are_reported_apart.c:4:14 generated
-    Call a_live_read_and_a_freed_one_in_one_or_are_reported_apart.c:4:14 "malloc" "bb1"
+    Call a_live_read_and_a_freed_one_in_one_or_are_reported_apart.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -27,15 +27,15 @@ Function a_live_read_and_a_freed_one_in_one_or_are_reported_apart.c:3:5 "f"
         Copy "_1"
           Deref
         Constant 0
-    Branch a_live_read_and_a_freed_one_in_one_or_are_reported_apart.c:5:9 "bb2" "bb3"
+    Branch a_live_read_and_a_freed_one_in_one_or_are_reported_apart.c:5:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
-    Branch a_live_read_and_a_freed_one_in_one_or_are_reported_apart.c:5:9 "bb5" "bb6"
+    Branch a_live_read_and_a_freed_one_in_one_or_are_reported_apart.c:5:9 written "bb5" "bb6"
       Copy "_3"
   Block "bb3"
     Sequenced a_live_read_and_a_freed_one_in_one_or_are_reported_apart.c:5:9 generated
     ArgumentsEvaluated a_live_read_and_a_freed_one_in_one_or_are_reported_apart.c:5:16 generated
-    Call a_live_read_and_a_freed_one_in_one_or_are_reported_apart.c:5:16 "free" "bb4"
+    Call a_live_read_and_a_freed_one_in_one_or_are_reported_apart.c:5:16 written "free" "bb4"
       Copy "_1"
   Block "bb4"
     Sequenced a_live_read_and_a_freed_one_in_one_or_are_reported_apart.c:5:16 generated

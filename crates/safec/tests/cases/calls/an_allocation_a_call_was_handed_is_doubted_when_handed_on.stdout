@@ -20,7 +20,7 @@ Function an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:5:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:6:14 generated
-    Call an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:6:14 "malloc" "bb1"
+    Call an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -34,7 +34,7 @@ Function an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:5:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:7:9 "bb2" "bb3"
+    Branch an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:7:9 generated
@@ -49,12 +49,12 @@ Function an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:5:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:10:5 generated
-    Call an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:10:5 "init" "bb5"
+    Call an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:10:5 written "init" "bb5"
       Copy "_1"
   Block "bb5"
     Sequenced an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:10:5 generated
     ArgumentsEvaluated an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:11:12 generated
-    Call an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:11:12 "use" "bb6"
+    Call an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:11:12 written "use" "bb6"
       Destination "_4"
       Copy "_1"
   Block "bb6"

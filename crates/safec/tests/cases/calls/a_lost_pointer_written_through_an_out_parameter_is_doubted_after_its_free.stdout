@@ -94,7 +94,7 @@ Function a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_fr
       Binary "Lt"
         Copy "_4"
         Constant 2
-    Branch a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:8:12 "bb2" "bb3"
+    Branch a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:8:12 written "bb2" "bb3"
       Copy "_5"
   Block "bb2"
     Sequenced a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:8:12 generated
@@ -108,7 +108,7 @@ Function a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_fr
         Copy "_2"
     Sequenced a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:8:21 generated
     ArgumentsEvaluated a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:8:32 generated
-    Call a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:8:32 "malloc" "bb4"
+    Call a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:8:32 written "malloc" "bb4"
       Destination "_7"
       Constant 4
   Block "bb3"
@@ -123,7 +123,7 @@ Function a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_fr
       Address
         Place "_13"
     ArgumentsEvaluated a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:10:5 generated
-    Call a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:10:5 "get" "bb8"
+    Call a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:10:5 written "get" "bb8"
       Copy "_14"
       Copy "_2"
   Block "bb4"
@@ -140,7 +140,7 @@ Function a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_fr
       Destination "_9"
       Unary "Not"
         Copy "_3"
-    Branch a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:8:47 "bb5" "bb6"
+    Branch a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:8:47 written "bb5" "bb6"
       Copy "_9"
   Block "bb5"
     Sequenced a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:8:47 generated
@@ -188,7 +188,7 @@ Function a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_fr
         Copy "_13"
     Sequenced a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:11:14 generated
     ArgumentsEvaluated a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:12:5 generated
-    Call a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:12:5 "free" "bb9"
+    Call a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:12:5 written "free" "bb9"
       Copy "_2"
   Block "bb9"
     Sequenced a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:12:5 generated
@@ -196,7 +196,7 @@ Function a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_fr
       Destination "_16"
       Unary "Not"
         Copy "_15"
-    Branch a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:13:9 "bb10" "bb11"
+    Branch a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:13:9 written "bb10" "bb11"
       Copy "_16"
   Block "bb10"
     Sequenced a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:13:9 generated
@@ -217,7 +217,7 @@ Function a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_fr
           Deref
     Sequenced a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:14:13 generated
     ArgumentsEvaluated a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:15:5 generated
-    Call a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:15:5 "free" "bb13"
+    Call a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:15:5 written "free" "bb13"
       Copy "_3"
   Block "bb13"
     Sequenced a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:15:5 generated

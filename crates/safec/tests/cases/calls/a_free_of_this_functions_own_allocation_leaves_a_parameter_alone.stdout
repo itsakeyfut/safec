@@ -19,7 +19,7 @@ Function a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:4:5 
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:5:9 "bb1" "bb2"
+    Branch a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:5:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:5:9 generated
@@ -34,7 +34,7 @@ Function a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:4:5 
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:8:14 generated
-    Call a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:8:14 "malloc" "bb4"
+    Call a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:8:14 written "malloc" "bb4"
       Destination "_4"
       Constant 4
   Block "bb4"
@@ -48,7 +48,7 @@ Function a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:4:5 
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:9:9 "bb5" "bb6"
+    Branch a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:9:9 written "bb5" "bb6"
       Copy "_5"
   Block "bb5"
     Sequenced a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:9:9 generated
@@ -74,7 +74,7 @@ Function a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:4:5 
           Deref
     Sequenced a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:12:5 generated
     ArgumentsEvaluated a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:13:5 generated
-    Call a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:13:5 "free" "bb8"
+    Call a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:13:5 written "free" "bb8"
       Copy "_3"
   Block "bb8"
     Sequenced a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:13:5 generated

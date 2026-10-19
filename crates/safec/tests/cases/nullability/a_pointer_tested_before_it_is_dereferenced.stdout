@@ -4,7 +4,7 @@ Function a_pointer_tested_before_it_is_dereferenced.c:1:5 "f"
   Local "_1" "int *" parameter "p"
   Local "_2" "int"
   Block "bb0" entry
-    Branch a_pointer_tested_before_it_is_dereferenced.c:2:9 "bb1" "bb2"
+    Branch a_pointer_tested_before_it_is_dereferenced.c:2:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced a_pointer_tested_before_it_is_dereferenced.c:2:9 generated

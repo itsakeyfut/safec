@@ -19,12 +19,12 @@ Function a_call_may_return_a_locals_address_an_earlier_call_kept.c:5:5 "g"
       Address
         Place "_1"
     ArgumentsEvaluated a_call_may_return_a_locals_address_an_earlier_call_kept.c:7:5 generated
-    Call a_call_may_return_a_locals_address_an_earlier_call_kept.c:7:5 "stash" "bb1"
+    Call a_call_may_return_a_locals_address_an_earlier_call_kept.c:7:5 written "stash" "bb1"
       Copy "_2"
   Block "bb1"
     Sequenced a_call_may_return_a_locals_address_an_earlier_call_kept.c:7:5 generated
     ArgumentsEvaluated a_call_may_return_a_locals_address_an_earlier_call_kept.c:8:14 generated
-    Call a_call_may_return_a_locals_address_an_earlier_call_kept.c:8:14 "get" "bb2"
+    Call a_call_may_return_a_locals_address_an_earlier_call_kept.c:8:14 written "get" "bb2"
       Destination "_4"
   Block "bb2"
     Operation a_call_may_return_a_locals_address_an_earlier_call_kept.c:8:10 written
@@ -33,7 +33,7 @@ Function a_call_may_return_a_locals_address_an_earlier_call_kept.c:5:5 "g"
         Copy "_4"
     Sequenced a_call_may_return_a_locals_address_an_earlier_call_kept.c:8:14 generated
     ArgumentsEvaluated a_call_may_return_a_locals_address_an_earlier_call_kept.c:9:5 generated
-    Call a_call_may_return_a_locals_address_an_earlier_call_kept.c:9:5 "free" "bb3"
+    Call a_call_may_return_a_locals_address_an_earlier_call_kept.c:9:5 written "free" "bb3"
       Copy "_3"
   Block "bb3"
     Sequenced a_call_may_return_a_locals_address_an_earlier_call_kept.c:9:5 generated

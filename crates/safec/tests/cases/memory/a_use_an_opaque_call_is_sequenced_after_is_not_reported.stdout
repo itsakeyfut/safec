@@ -22,7 +22,7 @@ Function a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:4:5 "f"
   Local "_10" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:5:14 generated
-    Call a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:5:14 "malloc" "bb1"
+    Call a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:5:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -35,7 +35,7 @@ Function a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:4:5 "f"
       Destination "_3"
       Unary "Not"
         Copy "_1"
-    Branch a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:6:9 "bb2" "bb3"
+    Branch a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:6:9 generated
@@ -61,7 +61,7 @@ Function a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:4:5 "f"
           Deref
     Sequenced a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:9:5 generated
     ArgumentsEvaluated a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:10:13 generated
-    Call a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:10:13 "g" "bb5"
+    Call a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:10:13 written "g" "bb5"
       Destination "_6"
       Copy "_1"
         Deref
@@ -72,7 +72,7 @@ Function a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:4:5 "f"
         Copy "_6"
     Sequenced a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:10:13 generated
     ArgumentsEvaluated a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:11:13 generated
-    Call a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:11:13 "h" "bb6"
+    Call a_use_an_opaque_call_is_sequenced_after_is_not_reported.c:11:13 written "h" "bb6"
       Destination "_8"
       Copy "_1"
   Block "bb6"

@@ -30,7 +30,7 @@ Function a_table_realloc_grew_still_holds_what_it_held.c:6:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_table_realloc_grew_still_holds_what_it_held.c:7:14 generated
-    Call a_table_realloc_grew_still_holds_what_it_held.c:7:14 "malloc" "bb1"
+    Call a_table_realloc_grew_still_holds_what_it_held.c:7:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -44,7 +44,7 @@ Function a_table_realloc_grew_still_holds_what_it_held.c:6:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_table_realloc_grew_still_holds_what_it_held.c:8:9 "bb2" "bb3"
+    Branch a_table_realloc_grew_still_holds_what_it_held.c:8:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_table_realloc_grew_still_holds_what_it_held.c:8:9 generated
@@ -59,7 +59,7 @@ Function a_table_realloc_grew_still_holds_what_it_held.c:6:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_table_realloc_grew_still_holds_what_it_held.c:11:17 generated
-    Call a_table_realloc_grew_still_holds_what_it_held.c:11:17 "malloc" "bb5"
+    Call a_table_realloc_grew_still_holds_what_it_held.c:11:17 written "malloc" "bb5"
       Destination "_5"
       Constant 8
   Block "bb5"
@@ -73,7 +73,7 @@ Function a_table_realloc_grew_still_holds_what_it_held.c:6:5 "main"
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_table_realloc_grew_still_holds_what_it_held.c:12:9 "bb6" "bb7"
+    Branch a_table_realloc_grew_still_holds_what_it_held.c:12:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_table_realloc_grew_still_holds_what_it_held.c:12:9 generated
@@ -99,7 +99,7 @@ Function a_table_realloc_grew_still_holds_what_it_held.c:6:5 "main"
           Deref
     Sequenced a_table_realloc_grew_still_holds_what_it_held.c:15:5 generated
     ArgumentsEvaluated a_table_realloc_grew_still_holds_what_it_held.c:16:20 generated
-    Call a_table_realloc_grew_still_holds_what_it_held.c:16:20 "realloc" "bb9"
+    Call a_table_realloc_grew_still_holds_what_it_held.c:16:20 written "realloc" "bb9"
       Destination "_9"
       Copy "_4"
       Constant 16
@@ -114,7 +114,7 @@ Function a_table_realloc_grew_still_holds_what_it_held.c:6:5 "main"
       Binary "Eq"
         Copy "_8"
         Constant 0
-    Branch a_table_realloc_grew_still_holds_what_it_held.c:17:9 "bb10" "bb11"
+    Branch a_table_realloc_grew_still_holds_what_it_held.c:17:9 written "bb10" "bb11"
       Copy "_10"
   Block "bb10"
     Sequenced a_table_realloc_grew_still_holds_what_it_held.c:17:9 generated
@@ -129,7 +129,7 @@ Function a_table_realloc_grew_still_holds_what_it_held.c:6:5 "main"
     Goto "bb12"
   Block "bb12"
     ArgumentsEvaluated a_table_realloc_grew_still_holds_what_it_held.c:20:5 generated
-    Call a_table_realloc_grew_still_holds_what_it_held.c:20:5 "drop_inner" "bb13"
+    Call a_table_realloc_grew_still_holds_what_it_held.c:20:5 written "drop_inner" "bb13"
       Copy "_8"
   Block "bb13"
     Sequenced a_table_realloc_grew_still_holds_what_it_held.c:20:5 generated

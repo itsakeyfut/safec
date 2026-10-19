@@ -10,19 +10,19 @@ Function an_unproven_free_is_a_warning_under_allow_unknown.c:3:5 "f"
   Local "_1" "int" parameter "c"
   Local "_2" "int *" parameter "p"
   Block "bb0" entry
-    Branch an_unproven_free_is_a_warning_under_allow_unknown.c:4:9 "bb1" "bb2"
+    Branch an_unproven_free_is_a_warning_under_allow_unknown.c:4:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced an_unproven_free_is_a_warning_under_allow_unknown.c:4:9 generated
     ArgumentsEvaluated an_unproven_free_is_a_warning_under_allow_unknown.c:4:14 generated
-    Call an_unproven_free_is_a_warning_under_allow_unknown.c:4:14 "free" "bb4"
+    Call an_unproven_free_is_a_warning_under_allow_unknown.c:4:14 written "free" "bb4"
       Copy "_2"
   Block "bb2"
     Sequenced an_unproven_free_is_a_warning_under_allow_unknown.c:4:9 generated
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated an_unproven_free_is_a_warning_under_allow_unknown.c:5:5 generated
-    Call an_unproven_free_is_a_warning_under_allow_unknown.c:5:5 "free" "bb5"
+    Call an_unproven_free_is_a_warning_under_allow_unknown.c:5:5 written "free" "bb5"
       Copy "_2"
   Block "bb4"
     Sequenced an_unproven_free_is_a_warning_under_allow_unknown.c:4:14 generated

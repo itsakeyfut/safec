@@ -23,7 +23,7 @@ Function a_call_handed_an_address_may_return_what_is_behind_it.c:5:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_call_handed_an_address_may_return_what_is_behind_it.c:6:14 generated
-    Call a_call_handed_an_address_may_return_what_is_behind_it.c:6:14 "malloc" "bb1"
+    Call a_call_handed_an_address_may_return_what_is_behind_it.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -37,7 +37,7 @@ Function a_call_handed_an_address_may_return_what_is_behind_it.c:5:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_call_handed_an_address_may_return_what_is_behind_it.c:7:9 "bb2" "bb3"
+    Branch a_call_handed_an_address_may_return_what_is_behind_it.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_call_handed_an_address_may_return_what_is_behind_it.c:7:9 generated
@@ -56,7 +56,7 @@ Function a_call_handed_an_address_may_return_what_is_behind_it.c:5:5 "main"
       Address
         Place "_1"
     ArgumentsEvaluated a_call_handed_an_address_may_return_what_is_behind_it.c:10:14 generated
-    Call a_call_handed_an_address_may_return_what_is_behind_it.c:10:14 "give" "bb5"
+    Call a_call_handed_an_address_may_return_what_is_behind_it.c:10:14 written "give" "bb5"
       Destination "_6"
       Copy "_5"
   Block "bb5"
@@ -70,7 +70,7 @@ Function a_call_handed_an_address_may_return_what_is_behind_it.c:5:5 "main"
       Binary "Ne"
         Copy "_4"
         Constant 0
-    Branch a_call_handed_an_address_may_return_what_is_behind_it.c:11:9 "bb6" "bb7"
+    Branch a_call_handed_an_address_may_return_what_is_behind_it.c:11:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_call_handed_an_address_may_return_what_is_behind_it.c:11:9 generated

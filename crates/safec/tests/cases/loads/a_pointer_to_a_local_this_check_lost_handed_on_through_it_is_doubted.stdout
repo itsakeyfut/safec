@@ -55,13 +55,13 @@ Function a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:
       Binary "Lt"
         Copy "_4"
         Constant 2
-    Branch a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:9:12 "bb2" "bb3"
+    Branch a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:9:12 written "bb2" "bb3"
       Copy "_5"
   Block "bb2"
     Sequenced a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:9:12 generated
     StorageLive a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:10:9 generated "_6"
     ArgumentsEvaluated a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:10:18 generated
-    Call a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:10:18 "malloc" "bb4"
+    Call a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:10:18 written "malloc" "bb4"
       Destination "_7"
       Constant 4
   Block "bb3"
@@ -83,7 +83,7 @@ Function a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:
       Binary "Eq"
         Copy "_6"
         Constant 0
-    Branch a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:11:13 "bb5" "bb6"
+    Branch a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:11:13 written "bb5" "bb6"
       Copy "_8"
   Block "bb5"
     Sequenced a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:11:13 generated
@@ -114,12 +114,12 @@ Function a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:
       Binary "Eq"
         Copy "_4"
         Constant 1
-    Branch a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:15:13 "bb8" "bb9"
+    Branch a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:15:13 written "bb8" "bb9"
       Copy "_10"
   Block "bb8"
     Sequenced a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:15:13 generated
     ArgumentsEvaluated a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:16:20 generated
-    Call a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:16:20 "deref" "bb11"
+    Call a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:16:20 written "deref" "bb11"
       Destination "_11"
       Copy "_2"
         Deref
@@ -137,7 +137,7 @@ Function a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:
         Copy "_1"
     Sequenced a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:18:9 generated
     ArgumentsEvaluated a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:19:9 generated
-    Call a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:19:9 "free" "bb12"
+    Call a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:19:9 written "free" "bb12"
       Copy "_6"
   Block "bb11"
     Operation a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:16:13 written

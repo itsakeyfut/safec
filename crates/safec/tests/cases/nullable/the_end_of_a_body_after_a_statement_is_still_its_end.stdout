@@ -11,7 +11,7 @@ Function the_end_of_a_body_after_a_statement_is_still_its_end.c:1:16 "f"
       Use
         Constant 0
     Sequenced the_end_of_a_body_after_a_statement_is_still_its_end.c:2:13 generated
-    Branch the_end_of_a_body_after_a_statement_is_still_its_end.c:3:9 "bb1" "bb2"
+    Branch the_end_of_a_body_after_a_statement_is_still_its_end.c:3:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced the_end_of_a_body_after_a_statement_is_still_its_end.c:3:9 generated

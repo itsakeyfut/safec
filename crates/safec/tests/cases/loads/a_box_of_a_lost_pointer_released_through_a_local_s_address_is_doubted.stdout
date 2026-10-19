@@ -52,7 +52,7 @@ Function a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c
   Local "_25" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:9:17 generated
-    Call a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:9:17 "malloc" "bb1"
+    Call a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:9:17 written "malloc" "bb1"
       Destination "_3"
       Constant 8
   Block "bb1"
@@ -65,7 +65,7 @@ Function a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:10:9 "bb2" "bb3"
+    Branch a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:10:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:10:9 generated
@@ -80,7 +80,7 @@ Function a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:11:18 generated
-    Call a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:11:18 "malloc" "bb5"
+    Call a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:11:18 written "malloc" "bb5"
       Destination "_6"
       Constant 8
   Block "bb5"
@@ -93,7 +93,7 @@ Function a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c
       Destination "_7"
       Unary "Not"
         Copy "_5"
-    Branch a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:12:9 "bb6" "bb7"
+    Branch a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:12:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:12:9 generated
@@ -129,7 +129,7 @@ Function a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c
       Binary "Lt"
         Copy "_10"
         Constant 2
-    Branch a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:16:12 "bb10" "bb11"
+    Branch a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:16:12 written "bb10" "bb11"
       Copy "_11"
   Block "bb10"
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:16:12 generated
@@ -143,7 +143,7 @@ Function a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c
         Copy "_8"
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:17:9 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:18:13 generated
-    Call a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:18:13 "malloc" "bb12"
+    Call a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:18:13 written "malloc" "bb12"
       Destination "_13"
       Constant 4
   Block "bb11"
@@ -180,7 +180,7 @@ Function a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c
       Address
         Place "_21"
     ArgumentsEvaluated a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:26:5 generated
-    Call a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:26:5 "release_ppp" "bb16"
+    Call a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:26:5 written "release_ppp" "bb16"
       Copy "_22"
   Block "bb12"
     Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:18:9 written
@@ -196,7 +196,7 @@ Function a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c
       Destination "_15"
       Unary "Not"
         Copy "_9"
-    Branch a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:19:13 "bb13" "bb14"
+    Branch a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:19:13 written "bb13" "bb14"
       Copy "_15"
   Block "bb13"
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:19:13 generated
@@ -248,7 +248,7 @@ Function a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c
       Destination "_24"
       Unary "Not"
         Copy "_23"
-    Branch a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:28:9 "bb17" "bb18"
+    Branch a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:28:9 written "bb17" "bb18"
       Copy "_24"
   Block "bb17"
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:28:9 generated

@@ -30,7 +30,7 @@ Function an_integer_read_out_of_memory_is_not_a_load.c:5:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated an_integer_read_out_of_memory_is_not_a_load.c:6:17 generated
-    Call an_integer_read_out_of_memory_is_not_a_load.c:6:17 "malloc" "bb1"
+    Call an_integer_read_out_of_memory_is_not_a_load.c:6:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -44,7 +44,7 @@ Function an_integer_read_out_of_memory_is_not_a_load.c:5:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch an_integer_read_out_of_memory_is_not_a_load.c:7:9 "bb2" "bb3"
+    Branch an_integer_read_out_of_memory_is_not_a_load.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced an_integer_read_out_of_memory_is_not_a_load.c:7:9 generated
@@ -59,7 +59,7 @@ Function an_integer_read_out_of_memory_is_not_a_load.c:5:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated an_integer_read_out_of_memory_is_not_a_load.c:10:14 generated
-    Call an_integer_read_out_of_memory_is_not_a_load.c:10:14 "malloc" "bb5"
+    Call an_integer_read_out_of_memory_is_not_a_load.c:10:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -73,7 +73,7 @@ Function an_integer_read_out_of_memory_is_not_a_load.c:5:5 "main"
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch an_integer_read_out_of_memory_is_not_a_load.c:11:9 "bb6" "bb7"
+    Branch an_integer_read_out_of_memory_is_not_a_load.c:11:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced an_integer_read_out_of_memory_is_not_a_load.c:11:9 generated
@@ -88,7 +88,7 @@ Function an_integer_read_out_of_memory_is_not_a_load.c:5:5 "main"
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated an_integer_read_out_of_memory_is_not_a_load.c:14:14 generated
-    Call an_integer_read_out_of_memory_is_not_a_load.c:14:14 "malloc" "bb9"
+    Call an_integer_read_out_of_memory_is_not_a_load.c:14:14 written "malloc" "bb9"
       Destination "_8"
       Constant 8
   Block "bb9"
@@ -102,7 +102,7 @@ Function an_integer_read_out_of_memory_is_not_a_load.c:5:5 "main"
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch an_integer_read_out_of_memory_is_not_a_load.c:15:9 "bb10" "bb11"
+    Branch an_integer_read_out_of_memory_is_not_a_load.c:15:9 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced an_integer_read_out_of_memory_is_not_a_load.c:15:9 generated
@@ -145,7 +145,7 @@ Function an_integer_read_out_of_memory_is_not_a_load.c:5:5 "main"
           Deref
     Sequenced an_integer_read_out_of_memory_is_not_a_load.c:20:13 generated
     ArgumentsEvaluated an_integer_read_out_of_memory_is_not_a_load.c:21:5 generated
-    Call an_integer_read_out_of_memory_is_not_a_load.c:21:5 "log_int" "bb13"
+    Call an_integer_read_out_of_memory_is_not_a_load.c:21:5 written "log_int" "bb13"
       Copy "_12"
   Block "bb13"
     Sequenced an_integer_read_out_of_memory_is_not_a_load.c:21:5 generated
@@ -161,7 +161,7 @@ Function an_integer_read_out_of_memory_is_not_a_load.c:5:5 "main"
         Copy "_14"
     Sequenced an_integer_read_out_of_memory_is_not_a_load.c:22:14 generated
     ArgumentsEvaluated an_integer_read_out_of_memory_is_not_a_load.c:23:5 generated
-    Call an_integer_read_out_of_memory_is_not_a_load.c:23:5 "show" "bb14"
+    Call an_integer_read_out_of_memory_is_not_a_load.c:23:5 written "show" "bb14"
       Copy "_13"
   Block "bb14"
     Sequenced an_integer_read_out_of_memory_is_not_a_load.c:23:5 generated

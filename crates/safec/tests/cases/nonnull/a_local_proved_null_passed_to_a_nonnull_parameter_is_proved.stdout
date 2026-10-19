@@ -12,7 +12,7 @@ Function a_local_proved_null_passed_to_a_nonnull_parameter_is_proved.c:2:5 "f"
         Constant 0
     Sequenced a_local_proved_null_passed_to_a_nonnull_parameter_is_proved.c:3:14 generated
     ArgumentsEvaluated a_local_proved_null_passed_to_a_nonnull_parameter_is_proved.c:4:5 generated
-    Call a_local_proved_null_passed_to_a_nonnull_parameter_is_proved.c:4:5 "g" "bb1"
+    Call a_local_proved_null_passed_to_a_nonnull_parameter_is_proved.c:4:5 written "g" "bb1"
       Copy "_1"
   Block "bb1"
     Sequenced a_local_proved_null_passed_to_a_nonnull_parameter_is_proved.c:4:5 generated

@@ -10,12 +10,12 @@ Function a_memory_diagnostic_names_the_value_it_is_about.c:3:6 "twice"
   Local "_1" "int *" parameter "p"
   Block "bb0" entry
     ArgumentsEvaluated a_memory_diagnostic_names_the_value_it_is_about.c:4:5 generated
-    Call a_memory_diagnostic_names_the_value_it_is_about.c:4:5 "free" "bb1"
+    Call a_memory_diagnostic_names_the_value_it_is_about.c:4:5 written "free" "bb1"
       Copy "_1"
   Block "bb1"
     Sequenced a_memory_diagnostic_names_the_value_it_is_about.c:4:5 generated
     ArgumentsEvaluated a_memory_diagnostic_names_the_value_it_is_about.c:5:5 generated
-    Call a_memory_diagnostic_names_the_value_it_is_about.c:5:5 "free" "bb2"
+    Call a_memory_diagnostic_names_the_value_it_is_about.c:5:5 written "free" "bb2"
       Copy "_1"
   Block "bb2"
     Sequenced a_memory_diagnostic_names_the_value_it_is_about.c:5:5 generated
@@ -31,7 +31,7 @@ Function a_memory_diagnostic_names_the_value_it_is_about.c:7:5 "through_another"
         Copy "_1"
     Sequenced a_memory_diagnostic_names_the_value_it_is_about.c:8:14 generated
     ArgumentsEvaluated a_memory_diagnostic_names_the_value_it_is_about.c:9:5 generated
-    Call a_memory_diagnostic_names_the_value_it_is_about.c:9:5 "free" "bb1"
+    Call a_memory_diagnostic_names_the_value_it_is_about.c:9:5 written "free" "bb1"
       Copy "_2"
   Block "bb1"
     Sequenced a_memory_diagnostic_names_the_value_it_is_about.c:9:5 generated
@@ -49,12 +49,12 @@ Function a_memory_diagnostic_names_the_value_it_is_about.c:12:5 "both"
   Local "_3" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_memory_diagnostic_names_the_value_it_is_about.c:13:5 generated
-    Call a_memory_diagnostic_names_the_value_it_is_about.c:13:5 "free" "bb1"
+    Call a_memory_diagnostic_names_the_value_it_is_about.c:13:5 written "free" "bb1"
       Copy "_1"
   Block "bb1"
     Sequenced a_memory_diagnostic_names_the_value_it_is_about.c:13:5 generated
     ArgumentsEvaluated a_memory_diagnostic_names_the_value_it_is_about.c:14:5 generated
-    Call a_memory_diagnostic_names_the_value_it_is_about.c:14:5 "free" "bb2"
+    Call a_memory_diagnostic_names_the_value_it_is_about.c:14:5 written "free" "bb2"
       Copy "_2"
   Block "bb2"
     Sequenced a_memory_diagnostic_names_the_value_it_is_about.c:14:5 generated
@@ -76,7 +76,7 @@ Function a_memory_diagnostic_names_the_value_it_is_about.c:17:5 "first_level"
   Local "_1" "int **" parameter "pp"
   Block "bb0" entry
     ArgumentsEvaluated a_memory_diagnostic_names_the_value_it_is_about.c:18:5 generated
-    Call a_memory_diagnostic_names_the_value_it_is_about.c:18:5 "free" "bb1"
+    Call a_memory_diagnostic_names_the_value_it_is_about.c:18:5 written "free" "bb1"
       Copy "_1"
   Block "bb1"
     Sequenced a_memory_diagnostic_names_the_value_it_is_about.c:18:5 generated
@@ -93,7 +93,7 @@ Function a_memory_diagnostic_names_the_value_it_is_about.c:21:6 "returned"
   Local "_1" "int *" parameter "p"
   Block "bb0" entry
     ArgumentsEvaluated a_memory_diagnostic_names_the_value_it_is_about.c:22:5 generated
-    Call a_memory_diagnostic_names_the_value_it_is_about.c:22:5 "free" "bb1"
+    Call a_memory_diagnostic_names_the_value_it_is_about.c:22:5 written "free" "bb1"
       Copy "_1"
   Block "bb1"
     Sequenced a_memory_diagnostic_names_the_value_it_is_about.c:22:5 generated
@@ -108,12 +108,12 @@ Function a_memory_diagnostic_names_the_value_it_is_about.c:25:6 "passed"
   Local "_1" "int *" parameter "p"
   Block "bb0" entry
     ArgumentsEvaluated a_memory_diagnostic_names_the_value_it_is_about.c:26:5 generated
-    Call a_memory_diagnostic_names_the_value_it_is_about.c:26:5 "free" "bb1"
+    Call a_memory_diagnostic_names_the_value_it_is_about.c:26:5 written "free" "bb1"
       Copy "_1"
   Block "bb1"
     Sequenced a_memory_diagnostic_names_the_value_it_is_about.c:26:5 generated
     ArgumentsEvaluated a_memory_diagnostic_names_the_value_it_is_about.c:27:5 generated
-    Call a_memory_diagnostic_names_the_value_it_is_about.c:27:5 "g" "bb2"
+    Call a_memory_diagnostic_names_the_value_it_is_about.c:27:5 written "g" "bb2"
       Copy "_1"
   Block "bb2"
     Sequenced a_memory_diagnostic_names_the_value_it_is_about.c:27:5 generated
@@ -130,7 +130,7 @@ Function a_memory_diagnostic_names_the_value_it_is_about.c:29:6 "lost"
           Deref
     Sequenced a_memory_diagnostic_names_the_value_it_is_about.c:30:14 generated
     ArgumentsEvaluated a_memory_diagnostic_names_the_value_it_is_about.c:31:5 generated
-    Call a_memory_diagnostic_names_the_value_it_is_about.c:31:5 "free" "bb1"
+    Call a_memory_diagnostic_names_the_value_it_is_about.c:31:5 written "free" "bb1"
       Copy "_2"
   Block "bb1"
     Sequenced a_memory_diagnostic_names_the_value_it_is_about.c:31:5 generated
@@ -152,7 +152,7 @@ Function a_memory_diagnostic_names_the_value_it_is_about.c:33:6 "interior"
         Copy "_3"
     Sequenced a_memory_diagnostic_names_the_value_it_is_about.c:34:14 generated
     ArgumentsEvaluated a_memory_diagnostic_names_the_value_it_is_about.c:35:5 generated
-    Call a_memory_diagnostic_names_the_value_it_is_about.c:35:5 "free" "bb1"
+    Call a_memory_diagnostic_names_the_value_it_is_about.c:35:5 written "free" "bb1"
       Copy "_2"
   Block "bb1"
     Sequenced a_memory_diagnostic_names_the_value_it_is_about.c:35:5 generated

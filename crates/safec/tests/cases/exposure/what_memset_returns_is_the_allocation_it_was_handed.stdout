@@ -21,12 +21,12 @@ Function what_memset_returns_is_the_allocation_it_was_handed.c:5:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated what_memset_returns_is_the_allocation_it_was_handed.c:6:21 generated
-    Call what_memset_returns_is_the_allocation_it_was_handed.c:6:21 "malloc" "bb1"
+    Call what_memset_returns_is_the_allocation_it_was_handed.c:6:21 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
     ArgumentsEvaluated what_memset_returns_is_the_allocation_it_was_handed.c:6:14 generated
-    Call what_memset_returns_is_the_allocation_it_was_handed.c:6:14 "memset" "bb2"
+    Call what_memset_returns_is_the_allocation_it_was_handed.c:6:14 written "memset" "bb2"
       Destination "_3"
       Copy "_2"
       Constant 0
@@ -38,7 +38,7 @@ Function what_memset_returns_is_the_allocation_it_was_handed.c:5:5 "main"
         Copy "_3"
     Sequenced what_memset_returns_is_the_allocation_it_was_handed.c:6:14 generated
     ArgumentsEvaluated what_memset_returns_is_the_allocation_it_was_handed.c:7:5 generated
-    Call what_memset_returns_is_the_allocation_it_was_handed.c:7:5 "free" "bb3"
+    Call what_memset_returns_is_the_allocation_it_was_handed.c:7:5 written "free" "bb3"
       Copy "_1"
   Block "bb3"
     Sequenced what_memset_returns_is_the_allocation_it_was_handed.c:7:5 generated

@@ -21,7 +21,7 @@ Function an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free
       Use
         Constant 0
     ArgumentsEvaluated an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free.c:6:14 generated
-    Call an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free.c:6:14 "malloc" "bb1"
+    Call an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -35,7 +35,7 @@ Function an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free.c:7:9 "bb2" "bb3"
+    Branch an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free.c:7:9 generated
@@ -49,11 +49,11 @@ Function an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free
     Sequenced an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free.c:7:9 generated
     Goto "bb4"
   Block "bb4"
-    Call an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free.c:10:12 "g" "bb5"
+    Call an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free.c:10:12 written "g" "bb5"
       Destination "_4"
       Copy "_1"
   Block "bb5"
-    Call an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free.c:10:20 "free" "bb6"
+    Call an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free.c:10:20 written "free" "bb6"
       Copy "_1"
   Block "bb6"
     Operation an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free.c:10:12 written

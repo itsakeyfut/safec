@@ -11,7 +11,7 @@ Function a_loop_whose_condition_reads_what_its_body_freed.c:3:5 "f"
   Local "_2" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_loop_whose_condition_reads_what_its_body_freed.c:4:14 generated
-    Call a_loop_whose_condition_reads_what_its_body_freed.c:4:14 "malloc" "bb1"
+    Call a_loop_whose_condition_reads_what_its_body_freed.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -22,13 +22,13 @@ Function a_loop_whose_condition_reads_what_its_body_freed.c:3:5 "f"
     Sequenced a_loop_whose_condition_reads_what_its_body_freed.c:4:14 generated
     Goto "bb2"
   Block "bb2"
-    Branch a_loop_whose_condition_reads_what_its_body_freed.c:5:12 "bb3" "bb4"
+    Branch a_loop_whose_condition_reads_what_its_body_freed.c:5:12 written "bb3" "bb4"
       Copy "_1"
         Deref
   Block "bb3"
     Sequenced a_loop_whose_condition_reads_what_its_body_freed.c:5:12 generated
     ArgumentsEvaluated a_loop_whose_condition_reads_what_its_body_freed.c:5:18 generated
-    Call a_loop_whose_condition_reads_what_its_body_freed.c:5:18 "free" "bb5"
+    Call a_loop_whose_condition_reads_what_its_body_freed.c:5:18 written "free" "bb5"
       Copy "_1"
   Block "bb4"
     Sequenced a_loop_whose_condition_reads_what_its_body_freed.c:5:12 generated

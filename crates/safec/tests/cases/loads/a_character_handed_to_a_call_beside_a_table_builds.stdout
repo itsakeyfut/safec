@@ -30,7 +30,7 @@ Function a_character_handed_to_a_call_beside_a_table_builds.c:5:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_character_handed_to_a_call_beside_a_table_builds.c:6:17 generated
-    Call a_character_handed_to_a_call_beside_a_table_builds.c:6:17 "malloc" "bb1"
+    Call a_character_handed_to_a_call_beside_a_table_builds.c:6:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -44,7 +44,7 @@ Function a_character_handed_to_a_call_beside_a_table_builds.c:5:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_character_handed_to_a_call_beside_a_table_builds.c:7:9 "bb2" "bb3"
+    Branch a_character_handed_to_a_call_beside_a_table_builds.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:7:9 generated
@@ -59,7 +59,7 @@ Function a_character_handed_to_a_call_beside_a_table_builds.c:5:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_character_handed_to_a_call_beside_a_table_builds.c:10:14 generated
-    Call a_character_handed_to_a_call_beside_a_table_builds.c:10:14 "malloc" "bb5"
+    Call a_character_handed_to_a_call_beside_a_table_builds.c:10:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -73,7 +73,7 @@ Function a_character_handed_to_a_call_beside_a_table_builds.c:5:5 "main"
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_character_handed_to_a_call_beside_a_table_builds.c:11:9 "bb6" "bb7"
+    Branch a_character_handed_to_a_call_beside_a_table_builds.c:11:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:11:9 generated
@@ -110,7 +110,7 @@ Function a_character_handed_to_a_call_beside_a_table_builds.c:5:5 "main"
           Deref
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:15:5 generated
     ArgumentsEvaluated a_character_handed_to_a_call_beside_a_table_builds.c:16:15 generated
-    Call a_character_handed_to_a_call_beside_a_table_builds.c:16:15 "malloc" "bb9"
+    Call a_character_handed_to_a_call_beside_a_table_builds.c:16:15 written "malloc" "bb9"
       Destination "_10"
       Constant 4
   Block "bb9"
@@ -124,7 +124,7 @@ Function a_character_handed_to_a_call_beside_a_table_builds.c:5:5 "main"
       Binary "Eq"
         Copy "_9"
         Constant 0
-    Branch a_character_handed_to_a_call_beside_a_table_builds.c:17:9 "bb10" "bb11"
+    Branch a_character_handed_to_a_call_beside_a_table_builds.c:17:9 written "bb10" "bb11"
       Copy "_11"
   Block "bb10"
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:17:9 generated
@@ -156,7 +156,7 @@ Function a_character_handed_to_a_call_beside_a_table_builds.c:5:5 "main"
           Deref
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:21:14 generated
     ArgumentsEvaluated a_character_handed_to_a_call_beside_a_table_builds.c:22:5 generated
-    Call a_character_handed_to_a_call_beside_a_table_builds.c:22:5 "emit" "bb13"
+    Call a_character_handed_to_a_call_beside_a_table_builds.c:22:5 written "emit" "bb13"
       Copy "_13"
   Block "bb13"
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:22:5 generated
@@ -168,17 +168,17 @@ Function a_character_handed_to_a_call_beside_a_table_builds.c:5:5 "main"
             Deref
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:23:13 generated
     ArgumentsEvaluated a_character_handed_to_a_call_beside_a_table_builds.c:24:5 generated
-    Call a_character_handed_to_a_call_beside_a_table_builds.c:24:5 "free" "bb14"
+    Call a_character_handed_to_a_call_beside_a_table_builds.c:24:5 written "free" "bb14"
       Copy "_4"
   Block "bb14"
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:24:5 generated
     ArgumentsEvaluated a_character_handed_to_a_call_beside_a_table_builds.c:25:5 generated
-    Call a_character_handed_to_a_call_beside_a_table_builds.c:25:5 "free" "bb15"
+    Call a_character_handed_to_a_call_beside_a_table_builds.c:25:5 written "free" "bb15"
       Copy "_1"
   Block "bb15"
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:25:5 generated
     ArgumentsEvaluated a_character_handed_to_a_call_beside_a_table_builds.c:26:5 generated
-    Call a_character_handed_to_a_call_beside_a_table_builds.c:26:5 "free" "bb16"
+    Call a_character_handed_to_a_call_beside_a_table_builds.c:26:5 written "free" "bb16"
       Copy "_9"
   Block "bb16"
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:26:5 generated

@@ -24,7 +24,7 @@ Function a_live_pointer_read_out_of_memory_is_read_in_silence.c:4:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_live_pointer_read_out_of_memory_is_read_in_silence.c:5:17 generated
-    Call a_live_pointer_read_out_of_memory_is_read_in_silence.c:5:17 "malloc" "bb1"
+    Call a_live_pointer_read_out_of_memory_is_read_in_silence.c:5:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -38,7 +38,7 @@ Function a_live_pointer_read_out_of_memory_is_read_in_silence.c:4:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_live_pointer_read_out_of_memory_is_read_in_silence.c:6:9 "bb2" "bb3"
+    Branch a_live_pointer_read_out_of_memory_is_read_in_silence.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_live_pointer_read_out_of_memory_is_read_in_silence.c:6:9 generated
@@ -53,7 +53,7 @@ Function a_live_pointer_read_out_of_memory_is_read_in_silence.c:4:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_live_pointer_read_out_of_memory_is_read_in_silence.c:9:14 generated
-    Call a_live_pointer_read_out_of_memory_is_read_in_silence.c:9:14 "malloc" "bb5"
+    Call a_live_pointer_read_out_of_memory_is_read_in_silence.c:9:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -67,7 +67,7 @@ Function a_live_pointer_read_out_of_memory_is_read_in_silence.c:4:5 "main"
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_live_pointer_read_out_of_memory_is_read_in_silence.c:10:9 "bb6" "bb7"
+    Branch a_live_pointer_read_out_of_memory_is_read_in_silence.c:10:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_live_pointer_read_out_of_memory_is_read_in_silence.c:10:9 generated
@@ -114,7 +114,7 @@ Function a_live_pointer_read_out_of_memory_is_read_in_silence.c:4:5 "main"
       Binary "Eq"
         Copy "_9"
         Constant 0
-    Branch a_live_pointer_read_out_of_memory_is_read_in_silence.c:16:9 "bb9" "bb10"
+    Branch a_live_pointer_read_out_of_memory_is_read_in_silence.c:16:9 written "bb9" "bb10"
       Copy "_10"
   Block "bb9"
     Sequenced a_live_pointer_read_out_of_memory_is_read_in_silence.c:16:9 generated
@@ -135,12 +135,12 @@ Function a_live_pointer_read_out_of_memory_is_read_in_silence.c:4:5 "main"
           Deref
     Sequenced a_live_pointer_read_out_of_memory_is_read_in_silence.c:19:13 generated
     ArgumentsEvaluated a_live_pointer_read_out_of_memory_is_read_in_silence.c:20:5 generated
-    Call a_live_pointer_read_out_of_memory_is_read_in_silence.c:20:5 "free" "bb12"
+    Call a_live_pointer_read_out_of_memory_is_read_in_silence.c:20:5 written "free" "bb12"
       Copy "_4"
   Block "bb12"
     Sequenced a_live_pointer_read_out_of_memory_is_read_in_silence.c:20:5 generated
     ArgumentsEvaluated a_live_pointer_read_out_of_memory_is_read_in_silence.c:21:5 generated
-    Call a_live_pointer_read_out_of_memory_is_read_in_silence.c:21:5 "free" "bb13"
+    Call a_live_pointer_read_out_of_memory_is_read_in_silence.c:21:5 written "free" "bb13"
       Copy "_1"
   Block "bb13"
     Sequenced a_live_pointer_read_out_of_memory_is_read_in_silence.c:21:5 generated

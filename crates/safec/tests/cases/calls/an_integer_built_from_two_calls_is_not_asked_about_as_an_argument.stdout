@@ -18,10 +18,10 @@ Function an_integer_built_from_two_calls_is_not_asked_about_as_an_argument.c:5:5
       Destination "_0"
       Use
         Constant 0
-    Call an_integer_built_from_two_calls_is_not_asked_about_as_an_argument.c:6:13 "f" "bb1"
+    Call an_integer_built_from_two_calls_is_not_asked_about_as_an_argument.c:6:13 written "f" "bb1"
       Destination "_2"
   Block "bb1"
-    Call an_integer_built_from_two_calls_is_not_asked_about_as_an_argument.c:6:19 "g" "bb2"
+    Call an_integer_built_from_two_calls_is_not_asked_about_as_an_argument.c:6:19 written "g" "bb2"
       Destination "_3"
   Block "bb2"
     Operation an_integer_built_from_two_calls_is_not_asked_about_as_an_argument.c:6:13 written
@@ -35,7 +35,7 @@ Function an_integer_built_from_two_calls_is_not_asked_about_as_an_argument.c:5:5
         Copy "_4"
     Sequenced an_integer_built_from_two_calls_is_not_asked_about_as_an_argument.c:6:13 generated
     ArgumentsEvaluated an_integer_built_from_two_calls_is_not_asked_about_as_an_argument.c:7:12 generated
-    Call an_integer_built_from_two_calls_is_not_asked_about_as_an_argument.c:7:12 "h" "bb3"
+    Call an_integer_built_from_two_calls_is_not_asked_about_as_an_argument.c:7:12 written "h" "bb3"
       Destination "_5"
       Copy "_1"
   Block "bb3"

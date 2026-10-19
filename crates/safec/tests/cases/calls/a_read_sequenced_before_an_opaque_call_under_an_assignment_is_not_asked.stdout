@@ -15,7 +15,7 @@ Function a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked.c:5:9 "bb1" "bb2"
+    Branch a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked.c:5:9 written "bb1" "bb2"
       Copy "_3"
   Block "bb1"
     Sequenced a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked.c:5:9 generated
@@ -29,7 +29,7 @@ Function a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked
     Sequenced a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked.c:5:9 generated
     Goto "bb3"
   Block "bb3"
-    Branch a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked.c:8:9 "bb5" "bb6"
+    Branch a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked.c:8:9 written "bb5" "bb6"
       Copy "_1"
         Deref
   Block "bb4"
@@ -51,7 +51,7 @@ Function a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked
   Block "bb5"
     Sequenced a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked.c:8:9 generated
     ArgumentsEvaluated a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked.c:8:16 generated
-    Call a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked.c:8:16 "g" "bb7"
+    Call a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked.c:8:16 written "g" "bb7"
       Destination "_5"
   Block "bb6"
     Sequenced a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked.c:8:9 generated

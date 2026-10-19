@@ -26,7 +26,7 @@ Function the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_r
       Use
         Constant 0
     ArgumentsEvaluated the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:6:14 generated
-    Call the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:6:14 "malloc" "bb1"
+    Call the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -40,7 +40,7 @@ Function the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_r
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:7:9 "bb2" "bb3"
+    Branch the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:7:9 generated
@@ -55,7 +55,7 @@ Function the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_r
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:8:14 generated
-    Call the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:8:14 "realloc" "bb5"
+    Call the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:8:14 written "realloc" "bb5"
       Destination "_5"
       Copy "_1"
       Constant 8
@@ -66,7 +66,7 @@ Function the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_r
         Copy "_5"
     Sequenced the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:8:14 generated
     ArgumentsEvaluated the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:9:5 generated
-    Call the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:9:5 "g" "bb6"
+    Call the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:9:5 written "g" "bb6"
       Copy "_1"
   Block "bb6"
     Sequenced the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:9:5 generated
@@ -75,19 +75,19 @@ Function the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_r
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:10:9 "bb7" "bb8"
+    Branch the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:10:9 written "bb7" "bb8"
       Copy "_6"
   Block "bb7"
     Sequenced the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:10:9 generated
     ArgumentsEvaluated the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:10:19 generated
-    Call the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:10:19 "free" "bb10"
+    Call the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:10:19 written "free" "bb10"
       Copy "_1"
   Block "bb8"
     Sequenced the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:10:9 generated
     Goto "bb9"
   Block "bb9"
     ArgumentsEvaluated the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:11:5 generated
-    Call the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:11:5 "free" "bb11"
+    Call the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:11:5 written "free" "bb11"
       Copy "_4"
   Block "bb10"
     Sequenced the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported.c:10:19 generated

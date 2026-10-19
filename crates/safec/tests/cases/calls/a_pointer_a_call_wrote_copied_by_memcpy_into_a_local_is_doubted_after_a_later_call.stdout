@@ -30,7 +30,7 @@ Function a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a
       Address
         Place "_1"
     ArgumentsEvaluated a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:6:5 generated
-    Call a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:6:5 "acquire" "bb1"
+    Call a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:6:5 written "acquire" "bb1"
       Copy "_2"
   Block "bb1"
     Sequenced a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:6:5 generated
@@ -48,7 +48,7 @@ Function a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a
       Address
         Place "_1"
     ArgumentsEvaluated a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:8:5 generated
-    Call a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:8:5 "memcpy" "bb2"
+    Call a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:8:5 written "memcpy" "bb2"
       Destination "_6"
       Copy "_4"
       Copy "_5"
@@ -65,7 +65,7 @@ Function a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:10:9 "bb3" "bb4"
+    Branch a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:10:9 written "bb3" "bb4"
       Copy "_8"
   Block "bb3"
     Sequenced a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:10:9 generated
@@ -80,7 +80,7 @@ Function a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a
     Goto "bb5"
   Block "bb5"
     ArgumentsEvaluated a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:13:5 generated
-    Call a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:13:5 "release" "bb6"
+    Call a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:13:5 written "release" "bb6"
   Block "bb6"
     Sequenced a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:13:5 generated
     Operation a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:14:5 written

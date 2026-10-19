@@ -15,7 +15,7 @@ Function a_freed_pointer_handed_to_a_function_defined_in_the_file.c:4:5 "use"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_freed_pointer_handed_to_a_function_defined_in_the_file.c:5:9 "bb1" "bb2"
+    Branch a_freed_pointer_handed_to_a_function_defined_in_the_file.c:5:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_freed_pointer_handed_to_a_function_defined_in_the_file.c:5:9 generated
@@ -48,7 +48,7 @@ Function a_freed_pointer_handed_to_a_function_defined_in_the_file.c:11:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_freed_pointer_handed_to_a_function_defined_in_the_file.c:12:14 generated
-    Call a_freed_pointer_handed_to_a_function_defined_in_the_file.c:12:14 "malloc" "bb1"
+    Call a_freed_pointer_handed_to_a_function_defined_in_the_file.c:12:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -62,7 +62,7 @@ Function a_freed_pointer_handed_to_a_function_defined_in_the_file.c:11:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_freed_pointer_handed_to_a_function_defined_in_the_file.c:13:9 "bb2" "bb3"
+    Branch a_freed_pointer_handed_to_a_function_defined_in_the_file.c:13:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_freed_pointer_handed_to_a_function_defined_in_the_file.c:13:9 generated
@@ -77,12 +77,12 @@ Function a_freed_pointer_handed_to_a_function_defined_in_the_file.c:11:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_freed_pointer_handed_to_a_function_defined_in_the_file.c:16:5 generated
-    Call a_freed_pointer_handed_to_a_function_defined_in_the_file.c:16:5 "free" "bb5"
+    Call a_freed_pointer_handed_to_a_function_defined_in_the_file.c:16:5 written "free" "bb5"
       Copy "_1"
   Block "bb5"
     Sequenced a_freed_pointer_handed_to_a_function_defined_in_the_file.c:16:5 generated
     ArgumentsEvaluated a_freed_pointer_handed_to_a_function_defined_in_the_file.c:17:12 generated
-    Call a_freed_pointer_handed_to_a_function_defined_in_the_file.c:17:12 "use" "bb6"
+    Call a_freed_pointer_handed_to_a_function_defined_in_the_file.c:17:12 written "use" "bb6"
       Destination "_4"
       Copy "_1"
   Block "bb6"

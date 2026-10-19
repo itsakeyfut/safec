@@ -24,7 +24,7 @@ Function a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:5:5 "mai
       Use
         Constant 0
     ArgumentsEvaluated a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:6:14 generated
-    Call a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:6:14 "malloc" "bb1"
+    Call a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -38,7 +38,7 @@ Function a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:5:5 "mai
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:7:9 "bb2" "bb3"
+    Branch a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:7:9 generated
@@ -52,7 +52,7 @@ Function a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:5:5 "mai
     Sequenced a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:7:9 generated
     Goto "bb4"
   Block "bb4"
-    Call a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:10:13 "memset" "bb5"
+    Call a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:10:13 written "memset" "bb5"
       Destination "_4"
       Copy "_1"
       Constant 0
@@ -63,7 +63,7 @@ Function a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:5:5 "mai
       Binary "Ne"
         Copy "_4"
         Constant 0
-    Call a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:10:38 "free" "bb6"
+    Call a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:10:38 written "free" "bb6"
       Copy "_1"
   Block "bb6"
     Operation a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:10:13 written

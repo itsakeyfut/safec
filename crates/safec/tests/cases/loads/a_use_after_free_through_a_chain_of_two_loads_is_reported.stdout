@@ -29,7 +29,7 @@ Function a_use_after_free_through_a_chain_of_two_loads_is_reported.c:4:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_use_after_free_through_a_chain_of_two_loads_is_reported.c:5:17 generated
-    Call a_use_after_free_through_a_chain_of_two_loads_is_reported.c:5:17 "malloc" "bb1"
+    Call a_use_after_free_through_a_chain_of_two_loads_is_reported.c:5:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -43,7 +43,7 @@ Function a_use_after_free_through_a_chain_of_two_loads_is_reported.c:4:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_use_after_free_through_a_chain_of_two_loads_is_reported.c:6:9 "bb2" "bb3"
+    Branch a_use_after_free_through_a_chain_of_two_loads_is_reported.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_use_after_free_through_a_chain_of_two_loads_is_reported.c:6:9 generated
@@ -58,7 +58,7 @@ Function a_use_after_free_through_a_chain_of_two_loads_is_reported.c:4:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_use_after_free_through_a_chain_of_two_loads_is_reported.c:9:16 generated
-    Call a_use_after_free_through_a_chain_of_two_loads_is_reported.c:9:16 "malloc" "bb5"
+    Call a_use_after_free_through_a_chain_of_two_loads_is_reported.c:9:16 written "malloc" "bb5"
       Destination "_5"
       Constant 8
   Block "bb5"
@@ -72,7 +72,7 @@ Function a_use_after_free_through_a_chain_of_two_loads_is_reported.c:4:5 "main"
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_use_after_free_through_a_chain_of_two_loads_is_reported.c:10:9 "bb6" "bb7"
+    Branch a_use_after_free_through_a_chain_of_two_loads_is_reported.c:10:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_use_after_free_through_a_chain_of_two_loads_is_reported.c:10:9 generated
@@ -87,7 +87,7 @@ Function a_use_after_free_through_a_chain_of_two_loads_is_reported.c:4:5 "main"
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated a_use_after_free_through_a_chain_of_two_loads_is_reported.c:13:14 generated
-    Call a_use_after_free_through_a_chain_of_two_loads_is_reported.c:13:14 "malloc" "bb9"
+    Call a_use_after_free_through_a_chain_of_two_loads_is_reported.c:13:14 written "malloc" "bb9"
       Destination "_8"
       Constant 4
   Block "bb9"
@@ -101,7 +101,7 @@ Function a_use_after_free_through_a_chain_of_two_loads_is_reported.c:4:5 "main"
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch a_use_after_free_through_a_chain_of_two_loads_is_reported.c:14:9 "bb10" "bb11"
+    Branch a_use_after_free_through_a_chain_of_two_loads_is_reported.c:14:9 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced a_use_after_free_through_a_chain_of_two_loads_is_reported.c:14:9 generated
@@ -149,7 +149,7 @@ Function a_use_after_free_through_a_chain_of_two_loads_is_reported.c:4:5 "main"
           Deref
     Sequenced a_use_after_free_through_a_chain_of_two_loads_is_reported.c:19:5 generated
     ArgumentsEvaluated a_use_after_free_through_a_chain_of_two_loads_is_reported.c:20:5 generated
-    Call a_use_after_free_through_a_chain_of_two_loads_is_reported.c:20:5 "free" "bb13"
+    Call a_use_after_free_through_a_chain_of_two_loads_is_reported.c:20:5 written "free" "bb13"
       Copy "_7"
   Block "bb13"
     Sequenced a_use_after_free_through_a_chain_of_two_loads_is_reported.c:20:5 generated
@@ -164,7 +164,7 @@ Function a_use_after_free_through_a_chain_of_two_loads_is_reported.c:4:5 "main"
       Binary "Eq"
         Copy "_13"
         Constant 0
-    Branch a_use_after_free_through_a_chain_of_two_loads_is_reported.c:22:9 "bb14" "bb15"
+    Branch a_use_after_free_through_a_chain_of_two_loads_is_reported.c:22:9 written "bb14" "bb15"
       Copy "_14"
   Block "bb14"
     Sequenced a_use_after_free_through_a_chain_of_two_loads_is_reported.c:22:9 generated
@@ -189,7 +189,7 @@ Function a_use_after_free_through_a_chain_of_two_loads_is_reported.c:4:5 "main"
       Binary "Eq"
         Copy "_15"
         Constant 0
-    Branch a_use_after_free_through_a_chain_of_two_loads_is_reported.c:26:9 "bb17" "bb18"
+    Branch a_use_after_free_through_a_chain_of_two_loads_is_reported.c:26:9 written "bb17" "bb18"
       Copy "_16"
   Block "bb17"
     Sequenced a_use_after_free_through_a_chain_of_two_loads_is_reported.c:26:9 generated

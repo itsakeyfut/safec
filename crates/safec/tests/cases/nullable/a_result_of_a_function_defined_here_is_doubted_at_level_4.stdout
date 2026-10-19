@@ -30,7 +30,7 @@ Function a_result_of_a_function_defined_here_is_doubted_at_level_4.c:5:5 "main"
       Address
         Place "_1"
     ArgumentsEvaluated a_result_of_a_function_defined_here_is_doubted_at_level_4.c:7:14 generated
-    Call a_result_of_a_function_defined_here_is_doubted_at_level_4.c:7:14 "pick" "bb1"
+    Call a_result_of_a_function_defined_here_is_doubted_at_level_4.c:7:14 written "pick" "bb1"
       Destination "_4"
       Copy "_3"
   Block "bb1"

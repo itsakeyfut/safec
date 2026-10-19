@@ -19,7 +19,7 @@ Function a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:3:5
       Binary "Lt"
         Copy "_1"
         Constant 1
-    Branch a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:4:9 "bb1" "bb2"
+    Branch a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:4:9 written "bb1" "bb2"
       Copy "_3"
   Block "bb1"
     Sequenced a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:4:9 generated
@@ -38,7 +38,7 @@ Function a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:3:5
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:7:9 "bb4" "bb5"
+    Branch a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:7:9 written "bb4" "bb5"
       Copy "_4"
   Block "bb4"
     Sequenced a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:7:9 generated
@@ -63,7 +63,7 @@ Function a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:3:5
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:11:9 "bb7" "bb8"
+    Branch a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:11:9 written "bb7" "bb8"
       Copy "_6"
   Block "bb7"
     Sequenced a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:11:9 generated
@@ -78,7 +78,7 @@ Function a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:3:5
     Goto "bb9"
   Block "bb9"
     ArgumentsEvaluated a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:14:5 generated
-    Call a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:14:5 "release_all" "bb10"
+    Call a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:14:5 written "release_all" "bb10"
   Block "bb10"
     Sequenced a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:14:5 generated
     Operation a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:15:5 written

@@ -29,7 +29,7 @@ Function a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:5:5
       Use
         Constant 0
     ArgumentsEvaluated a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:6:15 generated
-    Call a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:6:15 "malloc" "bb1"
+    Call a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:6:15 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -39,7 +39,7 @@ Function a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:5:5
         Copy "_2"
     Sequenced a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:6:15 generated
     ArgumentsEvaluated a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:7:15 generated
-    Call a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:7:15 "malloc" "bb2"
+    Call a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:7:15 written "malloc" "bb2"
       Destination "_4"
       Constant 8
   Block "bb2"
@@ -58,7 +58,7 @@ Function a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:5:5
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:9:9 "bb3" "bb4"
+    Branch a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:9:9 written "bb3" "bb4"
       Copy "_6"
   Block "bb3"
     Sequenced a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:9:9 generated
@@ -77,7 +77,7 @@ Function a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:5:5
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:12:9 "bb6" "bb7"
+    Branch a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:12:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:12:9 generated
@@ -103,13 +103,13 @@ Function a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:5:5
           Deref
     Sequenced a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:15:5 generated
     ArgumentsEvaluated a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:16:16 generated
-    Call a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:16:16 "strcpy" "bb9"
+    Call a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:16:16 written "strcpy" "bb9"
       Destination "_9"
       Copy "_1"
       Copy "_3"
   Block "bb9"
     ArgumentsEvaluated a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:16:9 generated
-    Call a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:16:9 "strlen" "bb10"
+    Call a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:16:9 written "strlen" "bb10"
       Destination "_10"
       Copy "_9"
   Block "bb10"
@@ -118,7 +118,7 @@ Function a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:5:5
       Binary "Gt"
         Copy "_10"
         Constant 0
-    Branch a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:16:9 "bb11" "bb12"
+    Branch a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:16:9 written "bb11" "bb12"
       Copy "_11"
   Block "bb11"
     Sequenced a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:16:9 generated

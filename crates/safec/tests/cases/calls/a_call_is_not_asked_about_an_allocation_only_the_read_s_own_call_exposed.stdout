@@ -24,7 +24,7 @@ Function a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_expose
       Use
         Constant 0
     ArgumentsEvaluated a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:7:14 generated
-    Call a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:7:14 "malloc" "bb1"
+    Call a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:7:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -38,7 +38,7 @@ Function a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_expose
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:8:9 "bb2" "bb3"
+    Branch a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:8:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:8:9 generated
@@ -63,11 +63,11 @@ Function a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_expose
         Copy "_2"
           Deref
     Sequenced a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:11:5 generated
-    Call a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:12:9 "keep" "bb5"
+    Call a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:12:9 written "keep" "bb5"
       Destination "_6"
       Copy "_2"
   Block "bb5"
-    Call a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:12:19 "release_all" "bb6"
+    Call a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:12:19 written "release_all" "bb6"
       Destination "_7"
   Block "bb6"
     Operation a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:12:9 written

@@ -35,7 +35,7 @@ Function an_argument_read_while_another_argument_writes_it_is_reported.c:2:5 "ma
       Written an_argument_read_while_another_argument_writes_it_is_reported.c:5:10
       Read an_argument_read_while_another_argument_writes_it_is_reported.c:5:7
     ArgumentsEvaluated an_argument_read_while_another_argument_writes_it_is_reported.c:5:5 generated
-    Call an_argument_read_while_another_argument_writes_it_is_reported.c:5:5 "g" "bb1"
+    Call an_argument_read_while_another_argument_writes_it_is_reported.c:5:5 written "g" "bb1"
       Copy "_2"
       Copy "_4"
   Block "bb1"

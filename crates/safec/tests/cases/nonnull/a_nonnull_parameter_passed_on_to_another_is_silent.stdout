@@ -7,7 +7,7 @@ Function a_nonnull_parameter_passed_on_to_another_is_silent.c:2:6 "f"
   Local "_1" "int *" parameter _Nonnull "q"
   Block "bb0" entry
     ArgumentsEvaluated a_nonnull_parameter_passed_on_to_another_is_silent.c:3:5 generated
-    Call a_nonnull_parameter_passed_on_to_another_is_silent.c:3:5 "g" "bb1"
+    Call a_nonnull_parameter_passed_on_to_another_is_silent.c:3:5 written "g" "bb1"
       Copy "_1"
   Block "bb1"
     Sequenced a_nonnull_parameter_passed_on_to_another_is_silent.c:3:5 generated

@@ -30,7 +30,7 @@ Function a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:5:5
       Use
         Constant 0
     ArgumentsEvaluated a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:6:17 generated
-    Call a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:6:17 "malloc" "bb1"
+    Call a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:6:17 written "malloc" "bb1"
       Destination "_2"
       Constant 16
   Block "bb1"
@@ -44,7 +44,7 @@ Function a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:5:5
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:7:9 "bb2" "bb3"
+    Branch a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:7:9 generated
@@ -59,7 +59,7 @@ Function a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:5:5
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:10:16 generated
-    Call a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:10:16 "malloc" "bb5"
+    Call a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:10:16 written "malloc" "bb5"
       Destination "_5"
       Constant 16
   Block "bb5"
@@ -73,7 +73,7 @@ Function a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:5:5
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:11:9 "bb6" "bb7"
+    Branch a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:11:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:11:9 generated
@@ -88,7 +88,7 @@ Function a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:5:5
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:14:14 generated
-    Call a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:14:14 "malloc" "bb9"
+    Call a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:14:14 written "malloc" "bb9"
       Destination "_8"
       Constant 8
   Block "bb9"
@@ -102,7 +102,7 @@ Function a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:5:5
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:15:9 "bb10" "bb11"
+    Branch a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:15:9 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:15:9 generated
@@ -155,7 +155,7 @@ Function a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:5:5
         Constant 0
     Sequenced a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:21:13 generated
     ArgumentsEvaluated a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:22:5 generated
-    Call a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:22:5 "free" "bb13"
+    Call a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:22:5 written "free" "bb13"
       Copy "_7"
   Block "bb13"
     Sequenced a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:22:5 generated
@@ -167,7 +167,7 @@ Function a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:5:5
             Deref
         Constant 1
     ArgumentsEvaluated a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:23:5 generated
-    Call a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:23:5 "release" "bb14"
+    Call a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:23:5 written "release" "bb14"
       Copy "_14"
   Block "bb14"
     Sequenced a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:23:5 generated

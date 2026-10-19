@@ -23,7 +23,7 @@ Function a_free_proved_before_a_call_stays_proved_after_it.c:6:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_free_proved_before_a_call_stays_proved_after_it.c:7:14 generated
-    Call a_free_proved_before_a_call_stays_proved_after_it.c:7:14 "malloc" "bb1"
+    Call a_free_proved_before_a_call_stays_proved_after_it.c:7:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -33,7 +33,7 @@ Function a_free_proved_before_a_call_stays_proved_after_it.c:6:5 "main"
         Copy "_2"
     Sequenced a_free_proved_before_a_call_stays_proved_after_it.c:7:14 generated
     ArgumentsEvaluated a_free_proved_before_a_call_stays_proved_after_it.c:8:5 generated
-    Call a_free_proved_before_a_call_stays_proved_after_it.c:8:5 "memset" "bb2"
+    Call a_free_proved_before_a_call_stays_proved_after_it.c:8:5 written "memset" "bb2"
       Destination "_3"
       Copy "_1"
       Constant 0
@@ -41,16 +41,16 @@ Function a_free_proved_before_a_call_stays_proved_after_it.c:6:5 "main"
   Block "bb2"
     Sequenced a_free_proved_before_a_call_stays_proved_after_it.c:8:5 generated
     ArgumentsEvaluated a_free_proved_before_a_call_stays_proved_after_it.c:9:5 generated
-    Call a_free_proved_before_a_call_stays_proved_after_it.c:9:5 "free" "bb3"
+    Call a_free_proved_before_a_call_stays_proved_after_it.c:9:5 written "free" "bb3"
       Copy "_1"
   Block "bb3"
     Sequenced a_free_proved_before_a_call_stays_proved_after_it.c:9:5 generated
     ArgumentsEvaluated a_free_proved_before_a_call_stays_proved_after_it.c:10:5 generated
-    Call a_free_proved_before_a_call_stays_proved_after_it.c:10:5 "forget" "bb4"
+    Call a_free_proved_before_a_call_stays_proved_after_it.c:10:5 written "forget" "bb4"
   Block "bb4"
     Sequenced a_free_proved_before_a_call_stays_proved_after_it.c:10:5 generated
     ArgumentsEvaluated a_free_proved_before_a_call_stays_proved_after_it.c:11:5 generated
-    Call a_free_proved_before_a_call_stays_proved_after_it.c:11:5 "free" "bb5"
+    Call a_free_proved_before_a_call_stays_proved_after_it.c:11:5 written "free" "bb5"
       Copy "_1"
   Block "bb5"
     Sequenced a_free_proved_before_a_call_stays_proved_after_it.c:11:5 generated

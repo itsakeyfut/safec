@@ -13,10 +13,10 @@ Function several_declarators_each_become_a_function.c:2:5 "main"
       Destination "_0"
       Use
         Constant 0
-    Call several_declarators_each_become_a_function.c:3:12 "f" "bb1"
+    Call several_declarators_each_become_a_function.c:3:12 written "f" "bb1"
       Destination "_1"
   Block "bb1"
-    Call several_declarators_each_become_a_function.c:3:18 "g" "bb2"
+    Call several_declarators_each_become_a_function.c:3:18 written "g" "bb2"
       Destination "_2"
   Block "bb2"
     Operation several_declarators_each_become_a_function.c:3:12 written

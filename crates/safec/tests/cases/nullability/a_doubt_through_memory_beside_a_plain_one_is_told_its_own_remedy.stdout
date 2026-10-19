@@ -5,7 +5,7 @@ Function a_doubt_through_memory_beside_a_plain_one_is_told_its_own_remedy.c:1:5 
   Local "_2" "int **" parameter "q"
   Local "_3" "int"
   Block "bb0" entry
-    Branch a_doubt_through_memory_beside_a_plain_one_is_told_its_own_remedy.c:2:9 "bb1" "bb2"
+    Branch a_doubt_through_memory_beside_a_plain_one_is_told_its_own_remedy.c:2:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_doubt_through_memory_beside_a_plain_one_is_told_its_own_remedy.c:2:9 generated
@@ -15,7 +15,7 @@ Function a_doubt_through_memory_beside_a_plain_one_is_told_its_own_remedy.c:1:5 
         Copy "_1"
           Deref
         Constant 0
-    Branch a_doubt_through_memory_beside_a_plain_one_is_told_its_own_remedy.c:3:16 "bb5" "bb4"
+    Branch a_doubt_through_memory_beside_a_plain_one_is_told_its_own_remedy.c:3:16 written "bb5" "bb4"
       Copy "_3"
   Block "bb2"
     Sequenced a_doubt_through_memory_beside_a_plain_one_is_told_its_own_remedy.c:2:9 generated

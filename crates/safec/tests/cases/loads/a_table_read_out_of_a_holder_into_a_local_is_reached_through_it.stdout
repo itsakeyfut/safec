@@ -25,7 +25,7 @@ Function a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:4:5 "
       Use
         Constant 0
     ArgumentsEvaluated a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:5:21 generated
-    Call a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:5:21 "malloc" "bb1"
+    Call a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:5:21 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -39,7 +39,7 @@ Function a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:4:5 "
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:6:9 "bb2" "bb3"
+    Branch a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:6:9 generated
@@ -54,7 +54,7 @@ Function a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:4:5 "
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:9:17 generated
-    Call a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:9:17 "malloc" "bb5"
+    Call a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:9:17 written "malloc" "bb5"
       Destination "_5"
       Constant 8
   Block "bb5"
@@ -68,7 +68,7 @@ Function a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:4:5 "
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:10:9 "bb6" "bb7"
+    Branch a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:10:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:10:9 generated
@@ -83,7 +83,7 @@ Function a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:4:5 "
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:13:14 generated
-    Call a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:13:14 "malloc" "bb9"
+    Call a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:13:14 written "malloc" "bb9"
       Destination "_8"
       Constant 4
   Block "bb9"
@@ -97,7 +97,7 @@ Function a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:4:5 "
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:14:9 "bb10" "bb11"
+    Branch a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:14:9 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:14:9 generated
@@ -140,7 +140,7 @@ Function a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:4:5 "
           Deref
     Sequenced a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:19:15 generated
     ArgumentsEvaluated a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:20:5 generated
-    Call a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:20:5 "drop_inner" "bb13"
+    Call a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:20:5 written "drop_inner" "bb13"
       Copy "_12"
   Block "bb13"
     Sequenced a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:20:5 generated

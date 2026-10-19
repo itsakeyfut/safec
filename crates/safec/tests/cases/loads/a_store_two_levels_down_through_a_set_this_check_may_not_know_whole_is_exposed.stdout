@@ -30,7 +30,7 @@ Function a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:6:9 "bb1" "bb2"
+    Branch a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:6:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:6:9 generated
@@ -45,7 +45,7 @@ Function a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:9:17 generated
-    Call a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:9:17 "malloc" "bb4"
+    Call a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:9:17 written "malloc" "bb4"
       Destination "_4"
       Constant 8
   Block "bb4"
@@ -59,7 +59,7 @@ Function a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:10:9 "bb5" "bb6"
+    Branch a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:10:9 written "bb5" "bb6"
       Copy "_5"
   Block "bb5"
     Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:10:9 generated
@@ -74,7 +74,7 @@ Function a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_
     Goto "bb7"
   Block "bb7"
     ArgumentsEvaluated a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:13:16 generated
-    Call a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:13:16 "malloc" "bb8"
+    Call a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:13:16 written "malloc" "bb8"
       Destination "_7"
       Constant 8
   Block "bb8"
@@ -88,7 +88,7 @@ Function a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_
       Binary "Eq"
         Copy "_6"
         Constant 0
-    Branch a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:14:9 "bb9" "bb10"
+    Branch a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:14:9 written "bb9" "bb10"
       Copy "_8"
   Block "bb9"
     Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:14:9 generated
@@ -114,10 +114,10 @@ Function a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_
           Deref
     Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:17:5 generated
     ArgumentsEvaluated a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:18:9 generated
-    Call a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:18:9 "cond" "bb12"
+    Call a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:18:9 written "cond" "bb12"
       Destination "_10"
   Block "bb12"
-    Branch a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:18:9 "bb13" "bb14"
+    Branch a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:18:9 written "bb13" "bb14"
       Copy "_10"
   Block "bb13"
     Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:18:9 generated
@@ -139,7 +139,7 @@ Function a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_
     Goto "bb15"
   Block "bb15"
     ArgumentsEvaluated a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:21:14 generated
-    Call a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:21:14 "malloc" "bb16"
+    Call a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:21:14 written "malloc" "bb16"
       Destination "_13"
       Constant 4
   Block "bb16"
@@ -153,7 +153,7 @@ Function a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_
       Binary "Eq"
         Copy "_12"
         Constant 0
-    Branch a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:22:9 "bb17" "bb18"
+    Branch a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:22:9 written "bb17" "bb18"
       Copy "_14"
   Block "bb17"
     Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:22:9 generated
@@ -192,7 +192,7 @@ Function a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_
             Deref
     Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:26:5 generated
     ArgumentsEvaluated a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:27:5 generated
-    Call a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:27:5 "release_all" "bb20"
+    Call a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:27:5 written "release_all" "bb20"
   Block "bb20"
     Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:27:5 generated
     Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:28:5 written

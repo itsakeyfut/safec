@@ -17,7 +17,7 @@ Function each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_f
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:4:9 "bb1" "bb2"
+    Branch each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:4:9 written "bb1" "bb2"
       Copy "_3"
   Block "bb1"
     Sequenced each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:4:9 generated
@@ -36,7 +36,7 @@ Function each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_f
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:7:9 "bb4" "bb5"
+    Branch each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:7:9 written "bb4" "bb5"
       Copy "_4"
   Block "bb4"
     Sequenced each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:7:9 generated
@@ -50,11 +50,11 @@ Function each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_f
     Sequenced each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:7:9 generated
     Goto "bb6"
   Block "bb6"
-    Call each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:12 "strlen" "bb7"
+    Call each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:12 written "strlen" "bb7"
       Destination "_5"
       Copy "_1"
   Block "bb7"
-    Call each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:24 "strlen" "bb8"
+    Call each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:24 written "strlen" "bb8"
       Destination "_6"
       Copy "_2"
   Block "bb8"

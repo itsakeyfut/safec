@@ -33,7 +33,7 @@ Function a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:
       Destination "_2"
       Unary "Not"
         Copy "_1"
-    Branch a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:5:9 "bb1" "bb2"
+    Branch a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:5:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:5:9 generated
@@ -48,7 +48,7 @@ Function a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:6:14 generated
-    Call a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:6:14 "malloc" "bb4"
+    Call a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:6:14 written "malloc" "bb4"
       Destination "_4"
       Constant 4
   Block "bb4"
@@ -61,7 +61,7 @@ Function a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:
       Destination "_5"
       Unary "Not"
         Copy "_3"
-    Branch a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:7:9 "bb5" "bb6"
+    Branch a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:7:9 written "bb5" "bb6"
       Copy "_5"
   Block "bb5"
     Sequenced a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:7:9 generated
@@ -87,7 +87,7 @@ Function a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:
           Deref
     Sequenced a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:8:5 generated
     ArgumentsEvaluated a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:9:15 generated
-    Call a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:9:15 "malloc" "bb8"
+    Call a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:9:15 written "malloc" "bb8"
       Destination "_8"
       Constant 8
   Block "bb8"
@@ -100,7 +100,7 @@ Function a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:
       Destination "_9"
       Unary "Not"
         Copy "_7"
-    Branch a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:10:9 "bb9" "bb10"
+    Branch a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:10:9 written "bb9" "bb10"
       Copy "_9"
   Block "bb9"
     Sequenced a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:10:9 generated
@@ -115,7 +115,7 @@ Function a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:
     Goto "bb11"
   Block "bb11"
     ArgumentsEvaluated a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:11:15 generated
-    Call a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:11:15 "malloc" "bb12"
+    Call a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:11:15 written "malloc" "bb12"
       Destination "_11"
       Constant 8
   Block "bb12"
@@ -128,7 +128,7 @@ Function a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:
       Destination "_12"
       Unary "Not"
         Copy "_10"
-    Branch a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:12:9 "bb13" "bb14"
+    Branch a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:12:9 written "bb13" "bb14"
       Copy "_12"
   Block "bb13"
     Sequenced a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:12:9 generated
@@ -154,7 +154,7 @@ Function a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:
           Deref
     Sequenced a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:13:5 generated
     ArgumentsEvaluated a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:14:5 generated
-    Call a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:14:5 "memcpy" "bb16"
+    Call a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:14:5 written "memcpy" "bb16"
       Destination "_14"
       Copy "_10"
       Copy "_7"
@@ -162,17 +162,17 @@ Function a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:
   Block "bb16"
     Sequenced a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:14:5 generated
     ArgumentsEvaluated a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:15:5 generated
-    Call a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:15:5 "free" "bb17"
+    Call a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:15:5 written "free" "bb17"
       Copy "_7"
   Block "bb17"
     Sequenced a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:15:5 generated
     ArgumentsEvaluated a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:16:5 generated
-    Call a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:16:5 "free" "bb18"
+    Call a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:16:5 written "free" "bb18"
       Copy "_10"
   Block "bb18"
     Sequenced a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:16:5 generated
     ArgumentsEvaluated a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:17:5 generated
-    Call a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:17:5 "free" "bb19"
+    Call a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:17:5 written "free" "bb19"
       Copy "_3"
   Block "bb19"
     Sequenced a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:17:5 generated
@@ -186,7 +186,7 @@ Function a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:
       Destination "_16"
       Unary "Not"
         Copy "_15"
-    Branch a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:19:9 "bb20" "bb21"
+    Branch a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:19:9 written "bb20" "bb21"
       Copy "_16"
   Block "bb20"
     Sequenced a_copy_between_this_function_s_own_allocations_lands_in_no_parameter.c:19:9 generated

@@ -28,7 +28,7 @@ Function a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:5:
       Use
         Constant 0
     ArgumentsEvaluated a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:6:14 generated
-    Call a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:6:14 "malloc" "bb1"
+    Call a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:6:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -42,7 +42,7 @@ Function a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:5:
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:7:9 "bb2" "bb3"
+    Branch a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:7:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:7:9 generated
@@ -68,7 +68,7 @@ Function a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:5:
           Deref
     Sequenced a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:10:5 generated
     ArgumentsEvaluated a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:11:14 generated
-    Call a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:11:14 "realloc" "bb5"
+    Call a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:11:14 written "realloc" "bb5"
       Destination "_7"
       Copy "_2"
       Constant 8
@@ -78,13 +78,13 @@ Function a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:5:
       Use
         Copy "_7"
     Sequenced a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:11:14 generated
-    Branch a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:12:9 "bb6" "bb7"
+    Branch a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:12:9 written "bb6" "bb7"
       Copy "_1"
   Block "bb6"
     Sequenced a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:12:9 generated
     StorageLive a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:13:9 generated "_8"
     ArgumentsEvaluated a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:13:18 generated
-    Call a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:13:18 "malloc" "bb9"
+    Call a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:13:18 written "malloc" "bb9"
       Destination "_9"
       Constant 4
   Block "bb7"
@@ -96,7 +96,7 @@ Function a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:5:
       Binary "Eq"
         Copy "_6"
         Constant 0
-    Branch a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:16:9 "bb10" "bb11"
+    Branch a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:16:9 written "bb10" "bb11"
       Copy "_11"
   Block "bb9"
     Operation a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:13:14 written
@@ -118,7 +118,7 @@ Function a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:5:
   Block "bb10"
     Sequenced a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:16:9 generated
     ArgumentsEvaluated a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:17:9 generated
-    Call a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:17:9 "free" "bb13"
+    Call a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:17:9 written "free" "bb13"
       Copy "_2"
   Block "bb11"
     Sequenced a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:16:9 generated

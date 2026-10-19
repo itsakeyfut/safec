@@ -50,7 +50,7 @@ Function a_live_value_through_two_locals_addresses_is_read_in_silence.c:4:5 "mai
         Copy "_5"
     Sequenced a_live_value_through_two_locals_addresses_is_read_in_silence.c:7:17 generated
     ArgumentsEvaluated a_live_value_through_two_locals_addresses_is_read_in_silence.c:8:14 generated
-    Call a_live_value_through_two_locals_addresses_is_read_in_silence.c:8:14 "malloc" "bb1"
+    Call a_live_value_through_two_locals_addresses_is_read_in_silence.c:8:14 written "malloc" "bb1"
       Destination "_7"
       Constant 4
   Block "bb1"
@@ -64,7 +64,7 @@ Function a_live_value_through_two_locals_addresses_is_read_in_silence.c:4:5 "mai
       Binary "Eq"
         Copy "_6"
         Constant 0
-    Branch a_live_value_through_two_locals_addresses_is_read_in_silence.c:9:9 "bb2" "bb3"
+    Branch a_live_value_through_two_locals_addresses_is_read_in_silence.c:9:9 written "bb2" "bb3"
       Copy "_8"
   Block "bb2"
     Sequenced a_live_value_through_two_locals_addresses_is_read_in_silence.c:9:9 generated
@@ -111,7 +111,7 @@ Function a_live_value_through_two_locals_addresses_is_read_in_silence.c:4:5 "mai
       Binary "Eq"
         Copy "_11"
         Constant 0
-    Branch a_live_value_through_two_locals_addresses_is_read_in_silence.c:16:9 "bb5" "bb6"
+    Branch a_live_value_through_two_locals_addresses_is_read_in_silence.c:16:9 written "bb5" "bb6"
       Copy "_12"
   Block "bb5"
     Sequenced a_live_value_through_two_locals_addresses_is_read_in_silence.c:16:9 generated
@@ -136,7 +136,7 @@ Function a_live_value_through_two_locals_addresses_is_read_in_silence.c:4:5 "mai
       Binary "Eq"
         Copy "_13"
         Constant 0
-    Branch a_live_value_through_two_locals_addresses_is_read_in_silence.c:20:9 "bb8" "bb9"
+    Branch a_live_value_through_two_locals_addresses_is_read_in_silence.c:20:9 written "bb8" "bb9"
       Copy "_14"
   Block "bb8"
     Sequenced a_live_value_through_two_locals_addresses_is_read_in_silence.c:20:9 generated

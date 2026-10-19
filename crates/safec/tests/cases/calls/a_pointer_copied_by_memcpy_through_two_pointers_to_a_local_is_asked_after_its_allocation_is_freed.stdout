@@ -26,7 +26,7 @@ Function a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_aft
   Local "_12" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed.c:5:14 generated
-    Call a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed.c:5:14 "malloc" "bb1"
+    Call a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed.c:5:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -40,7 +40,7 @@ Function a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_aft
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed.c:6:9 "bb2" "bb3"
+    Branch a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed.c:6:9 generated
@@ -91,7 +91,7 @@ Function a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_aft
       Address
         Place "_1"
     ArgumentsEvaluated a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed.c:13:5 generated
-    Call a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed.c:13:5 "memcpy" "bb5"
+    Call a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed.c:13:5 written "memcpy" "bb5"
       Destination "_12"
       Copy "_9"
         Deref
@@ -101,7 +101,7 @@ Function a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_aft
   Block "bb5"
     Sequenced a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed.c:13:5 generated
     ArgumentsEvaluated a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed.c:14:5 generated
-    Call a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed.c:14:5 "free" "bb6"
+    Call a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed.c:14:5 written "free" "bb6"
       Copy "_1"
   Block "bb6"
     Sequenced a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed.c:14:5 generated

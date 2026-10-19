@@ -18,7 +18,7 @@ Function a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:
   Local "_9" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:4:14 generated
-    Call a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:4:14 "malloc" "bb1"
+    Call a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -28,7 +28,7 @@ Function a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:
         Copy "_2"
     Sequenced a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:4:14 generated
     ArgumentsEvaluated a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:5:14 generated
-    Call a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:5:14 "malloc" "bb2"
+    Call a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:5:14 written "malloc" "bb2"
       Destination "_4"
       Constant 4
   Block "bb2"
@@ -42,7 +42,7 @@ Function a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:6:9 "bb3" "bb4"
+    Branch a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:6:9 written "bb3" "bb4"
       Copy "_5"
   Block "bb3"
     Sequenced a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:6:9 generated
@@ -61,7 +61,7 @@ Function a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:7:9 "bb6" "bb7"
+    Branch a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:7:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:7:9 generated
@@ -76,7 +76,7 @@ Function a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:8:5 generated
-    Call a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:8:5 "free" "bb9"
+    Call a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:8:5 written "free" "bb9"
       Copy "_1"
   Block "bb9"
     Sequenced a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:8:5 generated
@@ -107,7 +107,7 @@ Function a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:
         Copy "_1"
     Sequenced a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:9:5 generated
     ArgumentsEvaluated a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:10:5 generated
-    Call a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:10:5 "free" "bb10"
+    Call a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:10:5 written "free" "bb10"
       Copy "_3"
   Block "bb10"
     Sequenced a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:10:5 generated

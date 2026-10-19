@@ -8,7 +8,7 @@ Function a_free_and_a_use_in_one_parameter_length_keep_the_call_s_note.c:3:5 "f"
   Local "_2" "int *" parameter "a"
   Local "_3" "int"
   Block "bb0" entry
-    Call a_free_and_a_use_in_one_parameter_length_keep_the_call_s_note.c:3:37 "free" "bb1"
+    Call a_free_and_a_use_in_one_parameter_length_keep_the_call_s_note.c:3:37 written "free" "bb1"
       Copy "_1"
   Block "bb1"
     Operation a_free_and_a_use_in_one_parameter_length_keep_the_call_s_note.c:3:31 written

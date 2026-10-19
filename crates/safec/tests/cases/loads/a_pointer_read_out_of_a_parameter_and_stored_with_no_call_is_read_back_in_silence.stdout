@@ -20,7 +20,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence.c:4:9 "bb1" "bb2"
+    Branch a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence.c:4:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence.c:4:9 generated
@@ -45,7 +45,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence.c:8:9 "bb4" "bb5"
+    Branch a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence.c:8:9 written "bb4" "bb5"
       Copy "_4"
   Block "bb4"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence.c:8:9 generated
@@ -60,7 +60,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_
     Goto "bb6"
   Block "bb6"
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence.c:11:17 generated
-    Call a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence.c:11:17 "malloc" "bb7"
+    Call a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence.c:11:17 written "malloc" "bb7"
       Destination "_6"
       Constant 8
   Block "bb7"
@@ -74,7 +74,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence.c:12:9 "bb8" "bb9"
+    Branch a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence.c:12:9 written "bb8" "bb9"
       Copy "_7"
   Block "bb8"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence.c:12:9 generated
@@ -110,7 +110,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_
       Binary "Eq"
         Copy "_9"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence.c:17:9 "bb11" "bb12"
+    Branch a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence.c:17:9 written "bb11" "bb12"
       Copy "_10"
   Block "bb11"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence.c:17:9 generated

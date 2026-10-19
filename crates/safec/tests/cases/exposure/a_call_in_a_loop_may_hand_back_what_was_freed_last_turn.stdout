@@ -34,13 +34,13 @@ Function a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:5:5 "main"
       Binary "Lt"
         Copy "_1"
         Constant 2
-    Branch a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:7:12 "bb2" "bb3"
+    Branch a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:7:12 written "bb2" "bb3"
       Copy "_2"
   Block "bb2"
     Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:7:12 generated
     StorageLive a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:8:9 generated "_3"
     ArgumentsEvaluated a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:8:18 generated
-    Call a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:8:18 "get" "bb4"
+    Call a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:8:18 written "get" "bb4"
       Destination "_4"
   Block "bb3"
     Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:7:12 generated
@@ -61,7 +61,7 @@ Function a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:5:5 "main"
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:9:13 "bb5" "bb6"
+    Branch a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:9:13 written "bb5" "bb6"
       Copy "_5"
   Block "bb5"
     Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:9:13 generated
@@ -84,7 +84,7 @@ Function a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:5:5 "main"
           Deref
     Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:12:17 generated
     ArgumentsEvaluated a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:13:9 generated
-    Call a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:13:9 "free" "bb8"
+    Call a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:13:9 written "free" "bb8"
       Copy "_3"
   Block "bb8"
     Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:13:9 generated

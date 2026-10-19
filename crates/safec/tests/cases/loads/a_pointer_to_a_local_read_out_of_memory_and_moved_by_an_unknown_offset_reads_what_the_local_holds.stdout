@@ -25,7 +25,7 @@ Function a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_
   Local "_16" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:4:18 generated
-    Call a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:4:18 "malloc" "bb1"
+    Call a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:4:18 written "malloc" "bb1"
       Destination "_3"
       Constant 8
   Block "bb1"
@@ -39,7 +39,7 @@ Function a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:5:9 "bb2" "bb3"
+    Branch a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:5:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:5:9 generated
@@ -79,7 +79,7 @@ Function a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_
           Deref
     Sequenced a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:10:5 generated
     ArgumentsEvaluated a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:11:14 generated
-    Call a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:11:14 "malloc" "bb5"
+    Call a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:11:14 written "malloc" "bb5"
       Destination "_10"
       Constant 4
   Block "bb5"
@@ -93,7 +93,7 @@ Function a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_
       Binary "Eq"
         Copy "_9"
         Constant 0
-    Branch a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:12:9 "bb6" "bb7"
+    Branch a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:12:9 written "bb6" "bb7"
       Copy "_11"
   Block "bb6"
     Sequenced a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:12:9 generated
@@ -128,7 +128,7 @@ Function a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_
         Copy "_5"
     Sequenced a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:16:5 generated
     ArgumentsEvaluated a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:17:5 generated
-    Call a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:17:5 "free" "bb9"
+    Call a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:17:5 written "free" "bb9"
       Copy "_9"
   Block "bb9"
     Sequenced a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:17:5 generated
@@ -149,7 +149,7 @@ Function a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_
       Binary "Eq"
         Copy "_14"
         Constant 0
-    Branch a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:19:9 "bb10" "bb11"
+    Branch a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:19:9 written "bb10" "bb11"
       Copy "_16"
   Block "bb10"
     Sequenced a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:19:9 generated

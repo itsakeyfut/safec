@@ -15,12 +15,12 @@ Function a_free_of_an_output_parameter_is_one_this_check_knows_no_allocation_for
       Address
         Place "_1"
     ArgumentsEvaluated a_free_of_an_output_parameter_is_one_this_check_knows_no_allocation_for.c:5:5 generated
-    Call a_free_of_an_output_parameter_is_one_this_check_knows_no_allocation_for.c:5:5 "get" "bb1"
+    Call a_free_of_an_output_parameter_is_one_this_check_knows_no_allocation_for.c:5:5 written "get" "bb1"
       Copy "_2"
   Block "bb1"
     Sequenced a_free_of_an_output_parameter_is_one_this_check_knows_no_allocation_for.c:5:5 generated
     ArgumentsEvaluated a_free_of_an_output_parameter_is_one_this_check_knows_no_allocation_for.c:6:5 generated
-    Call a_free_of_an_output_parameter_is_one_this_check_knows_no_allocation_for.c:6:5 "free" "bb2"
+    Call a_free_of_an_output_parameter_is_one_this_check_knows_no_allocation_for.c:6:5 written "free" "bb2"
       Copy "_1"
   Block "bb2"
     Sequenced a_free_of_an_output_parameter_is_one_this_check_knows_no_allocation_for.c:6:5 generated

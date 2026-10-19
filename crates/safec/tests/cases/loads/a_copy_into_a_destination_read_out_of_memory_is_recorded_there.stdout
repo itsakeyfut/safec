@@ -47,7 +47,7 @@ Function a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 "m
       Use
         Constant 0
     ArgumentsEvaluated a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:8:17 generated
-    Call a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:8:17 "malloc" "bb1"
+    Call a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:8:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -61,7 +61,7 @@ Function a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 "m
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:9:9 "bb2" "bb3"
+    Branch a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:9:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:9:9 generated
@@ -76,7 +76,7 @@ Function a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 "m
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:12:14 generated
-    Call a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:12:14 "malloc" "bb5"
+    Call a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:12:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -90,7 +90,7 @@ Function a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 "m
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:13:9 "bb6" "bb7"
+    Branch a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:13:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:13:9 generated
@@ -105,7 +105,7 @@ Function a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 "m
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:16:14 generated
-    Call a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:16:14 "malloc" "bb9"
+    Call a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:16:14 written "malloc" "bb9"
       Destination "_8"
       Constant 4
   Block "bb9"
@@ -119,7 +119,7 @@ Function a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 "m
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:17:9 "bb10" "bb11"
+    Branch a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:17:9 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:17:9 generated
@@ -156,7 +156,7 @@ Function a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 "m
           Deref
     Sequenced a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:21:5 generated
     ArgumentsEvaluated a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:22:17 generated
-    Call a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:22:17 "malloc" "bb13"
+    Call a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:22:17 written "malloc" "bb13"
       Destination "_13"
       Constant 8
   Block "bb13"
@@ -170,7 +170,7 @@ Function a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 "m
       Binary "Eq"
         Copy "_12"
         Constant 0
-    Branch a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:23:9 "bb14" "bb15"
+    Branch a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:23:9 written "bb14" "bb15"
       Copy "_14"
   Block "bb14"
     Sequenced a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:23:9 generated
@@ -185,7 +185,7 @@ Function a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 "m
     Goto "bb16"
   Block "bb16"
     ArgumentsEvaluated a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:26:17 generated
-    Call a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:26:17 "malloc" "bb17"
+    Call a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:26:17 written "malloc" "bb17"
       Destination "_16"
       Constant 8
   Block "bb17"
@@ -199,7 +199,7 @@ Function a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 "m
       Binary "Eq"
         Copy "_15"
         Constant 0
-    Branch a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:27:9 "bb18" "bb19"
+    Branch a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:27:9 written "bb18" "bb19"
       Copy "_17"
   Block "bb18"
     Sequenced a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:27:9 generated
@@ -247,7 +247,7 @@ Function a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 "m
           Deref
     Sequenced a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:32:5 generated
     ArgumentsEvaluated a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:33:5 generated
-    Call a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:33:5 "memcpy" "bb21"
+    Call a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:33:5 written "memcpy" "bb21"
       Destination "_21"
       Copy "_15"
         Deref
@@ -256,7 +256,7 @@ Function a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 "m
   Block "bb21"
     Sequenced a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:33:5 generated
     ArgumentsEvaluated a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:34:5 generated
-    Call a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:34:5 "free" "bb22"
+    Call a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:34:5 written "free" "bb22"
       Copy "_7"
   Block "bb22"
     Sequenced a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:34:5 generated
@@ -271,7 +271,7 @@ Function a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 "m
       Binary "Eq"
         Copy "_22"
         Constant 0
-    Branch a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:36:9 "bb23" "bb24"
+    Branch a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:36:9 written "bb23" "bb24"
       Copy "_23"
   Block "bb23"
     Sequenced a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:36:9 generated

@@ -13,7 +13,7 @@ Function a_void_read_as_a_commas_left_operand_after_a_free.c:4:5 "f"
   Local "_4" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_void_read_as_a_commas_left_operand_after_a_free.c:5:15 generated
-    Call a_void_read_as_a_commas_left_operand_after_a_free.c:5:15 "malloc" "bb1"
+    Call a_void_read_as_a_commas_left_operand_after_a_free.c:5:15 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -26,7 +26,7 @@ Function a_void_read_as_a_commas_left_operand_after_a_free.c:4:5 "f"
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_void_read_as_a_commas_left_operand_after_a_free.c:6:9 "bb2" "bb3"
+    Branch a_void_read_as_a_commas_left_operand_after_a_free.c:6:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_void_read_as_a_commas_left_operand_after_a_free.c:6:9 generated
@@ -41,7 +41,7 @@ Function a_void_read_as_a_commas_left_operand_after_a_free.c:4:5 "f"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_void_read_as_a_commas_left_operand_after_a_free.c:9:5 generated
-    Call a_void_read_as_a_commas_left_operand_after_a_free.c:9:5 "free" "bb5"
+    Call a_void_read_as_a_commas_left_operand_after_a_free.c:9:5 written "free" "bb5"
       Copy "_2"
   Block "bb5"
     Sequenced a_void_read_as_a_commas_left_operand_after_a_free.c:9:5 generated

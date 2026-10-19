@@ -27,7 +27,7 @@ Function an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:6:5 "f"
   Local "_13" "int"
   Block "bb0" entry
     ArgumentsEvaluated an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:7:14 generated
-    Call an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:7:14 "malloc" "bb1"
+    Call an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:7:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -41,7 +41,7 @@ Function an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:6:5 "f"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:8:9 "bb2" "bb3"
+    Branch an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:8:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:8:9 generated
@@ -61,7 +61,7 @@ Function an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:6:5 "f"
         Copy "_1"
     Sequenced an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:11:14 generated
     ArgumentsEvaluated an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:12:16 generated
-    Call an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:12:16 "malloc" "bb5"
+    Call an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:12:16 written "malloc" "bb5"
       Destination "_6"
       Constant 8
   Block "bb5"
@@ -75,7 +75,7 @@ Function an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:6:5 "f"
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:13:9 "bb6" "bb7"
+    Branch an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:13:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:13:9 generated
@@ -120,12 +120,12 @@ Function an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:6:5 "f"
           Deref
     Sequenced an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:17:5 generated
     ArgumentsEvaluated an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:18:5 generated
-    Call an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:18:5 "stash" "bb9"
+    Call an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:18:5 written "stash" "bb9"
       Copy "_5"
   Block "bb9"
     Sequenced an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:18:5 generated
     ArgumentsEvaluated an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:19:5 generated
-    Call an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:19:5 "grow_all" "bb10"
+    Call an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:19:5 written "grow_all" "bb10"
   Block "bb10"
     Sequenced an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:19:5 generated
     Operation an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:20:17 written
@@ -133,7 +133,7 @@ Function an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:6:5 "f"
       Address
         Place "_1"
     ArgumentsEvaluated an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:20:12 generated
-    Call an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:20:12 "use2" "bb11"
+    Call an_address_memory_may_hold_does_not_hand_its_local_to_a_call.c:20:12 written "use2" "bb11"
       Destination "_13"
       Copy "_12"
   Block "bb11"

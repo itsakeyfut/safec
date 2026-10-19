@@ -26,7 +26,7 @@ Function a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:4:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:5:14 generated
-    Call a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:5:14 "malloc" "bb1"
+    Call a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:5:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -40,7 +40,7 @@ Function a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:4:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:6:9 "bb2" "bb3"
+    Branch a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:6:9 generated
@@ -71,7 +71,7 @@ Function a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:4:5 "main"
     Sequenced a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:11:12 generated
     StorageLive a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:12:9 generated "_6"
     ArgumentsEvaluated a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:12:21 generated
-    Call a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:12:21 "malloc" "bb8"
+    Call a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:12:21 written "malloc" "bb8"
       Destination "_7"
       Constant 8
   Block "bb7"
@@ -93,7 +93,7 @@ Function a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:4:5 "main"
       Binary "Eq"
         Copy "_6"
         Constant 0
-    Branch a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:13:13 "bb9" "bb10"
+    Branch a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:13:13 written "bb9" "bb10"
       Copy "_8"
   Block "bb9"
     Sequenced a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:13:13 generated
@@ -113,12 +113,12 @@ Function a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:4:5 "main"
       Binary "Eq"
         Copy "_5"
         Constant 1
-    Branch a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:16:13 "bb12" "bb13"
+    Branch a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:16:13 written "bb12" "bb13"
       Copy "_9"
   Block "bb12"
     Sequenced a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:16:13 generated
     ArgumentsEvaluated a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:17:13 generated
-    Call a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:17:13 "release" "bb15"
+    Call a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:17:13 written "release" "bb15"
       Copy "_4"
   Block "bb13"
     Sequenced a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:16:13 generated

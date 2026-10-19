@@ -44,7 +44,7 @@ Function a_call_in_a_loop_may_return_what_it_returned_last_turn.c:6:5 "main"
       Address
         Place "_1"
     ArgumentsEvaluated a_call_in_a_loop_may_return_what_it_returned_last_turn.c:8:5 generated
-    Call a_call_in_a_loop_may_return_what_it_returned_last_turn.c:8:5 "keep" "bb1"
+    Call a_call_in_a_loop_may_return_what_it_returned_last_turn.c:8:5 written "keep" "bb1"
       Copy "_2"
   Block "bb1"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:8:5 generated
@@ -65,13 +65,13 @@ Function a_call_in_a_loop_may_return_what_it_returned_last_turn.c:6:5 "main"
       Binary "Lt"
         Copy "_3"
         Constant 2
-    Branch a_call_in_a_loop_may_return_what_it_returned_last_turn.c:11:12 "bb3" "bb4"
+    Branch a_call_in_a_loop_may_return_what_it_returned_last_turn.c:11:12 written "bb3" "bb4"
       Copy "_5"
   Block "bb3"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:11:12 generated
     StorageLive a_call_in_a_loop_may_return_what_it_returned_last_turn.c:12:9 generated "_6"
     ArgumentsEvaluated a_call_in_a_loop_may_return_what_it_returned_last_turn.c:12:18 generated
-    Call a_call_in_a_loop_may_return_what_it_returned_last_turn.c:12:18 "get" "bb5"
+    Call a_call_in_a_loop_may_return_what_it_returned_last_turn.c:12:18 written "get" "bb5"
       Destination "_7"
   Block "bb4"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:11:12 generated
@@ -92,7 +92,7 @@ Function a_call_in_a_loop_may_return_what_it_returned_last_turn.c:6:5 "main"
       Binary "Eq"
         Copy "_6"
         Constant 0
-    Branch a_call_in_a_loop_may_return_what_it_returned_last_turn.c:13:13 "bb6" "bb7"
+    Branch a_call_in_a_loop_may_return_what_it_returned_last_turn.c:13:13 written "bb6" "bb7"
       Copy "_8"
   Block "bb6"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:13:13 generated
@@ -156,7 +156,7 @@ Function a_call_in_a_loop_may_return_what_it_returned_last_turn.c:6:5 "main"
             Deref
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:19:9 generated
     ArgumentsEvaluated a_call_in_a_loop_may_return_what_it_returned_last_turn.c:20:9 generated
-    Call a_call_in_a_loop_may_return_what_it_returned_last_turn.c:20:9 "free" "bb9"
+    Call a_call_in_a_loop_may_return_what_it_returned_last_turn.c:20:9 written "free" "bb9"
       Copy "_6"
   Block "bb9"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:20:9 generated

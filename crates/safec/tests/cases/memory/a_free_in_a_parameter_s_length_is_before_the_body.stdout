@@ -7,7 +7,7 @@ Function a_free_in_a_parameter_s_length_is_before_the_body.c:3:5 "f"
   Local "_1" "int *" parameter _Nonnull "p"
   Local "_2" "int *" parameter "a"
   Block "bb0" entry
-    Call a_free_in_a_parameter_s_length_is_before_the_body.c:3:32 "free" "bb1"
+    Call a_free_in_a_parameter_s_length_is_before_the_body.c:3:32 written "free" "bb1"
       Copy "_1"
   Block "bb1"
     Sequenced a_free_in_a_parameter_s_length_is_before_the_body.c:3:32 generated

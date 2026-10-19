@@ -25,7 +25,7 @@ Function a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reach
       Use
         Constant 0
     ArgumentsEvaluated a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:6:15 generated
-    Call a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:6:15 "malloc" "bb1"
+    Call a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:6:15 written "malloc" "bb1"
       Destination "_3"
       Constant 8
   Block "bb1"
@@ -35,7 +35,7 @@ Function a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reach
         Copy "_3"
     Sequenced a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:6:15 generated
     ArgumentsEvaluated a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:7:14 generated
-    Call a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:7:14 "malloc" "bb2"
+    Call a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:7:14 written "malloc" "bb2"
       Destination "_5"
       Constant 4
   Block "bb2"
@@ -49,7 +49,7 @@ Function a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reach
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:8:9 "bb3" "bb4"
+    Branch a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:8:9 written "bb3" "bb4"
       Copy "_6"
   Block "bb3"
     Sequenced a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:8:9 generated
@@ -68,7 +68,7 @@ Function a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reach
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:11:9 "bb6" "bb7"
+    Branch a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:11:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:11:9 generated
@@ -113,7 +113,7 @@ Function a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reach
       Destination "_10"
       Use
         Copy "_1"
-    Call a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:16:26 "release" "bb9"
+    Call a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:16:26 written "release" "bb9"
       Destination "_11"
       Copy "_2"
         Deref

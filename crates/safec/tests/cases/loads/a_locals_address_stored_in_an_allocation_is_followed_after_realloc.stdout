@@ -32,7 +32,7 @@ Function a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:5:
       Use
         Constant 0
     ArgumentsEvaluated a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:6:14 generated
-    Call a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:6:14 "malloc" "bb1"
+    Call a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -46,7 +46,7 @@ Function a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:5:
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:7:9 "bb2" "bb3"
+    Branch a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:7:9 generated
@@ -72,7 +72,7 @@ Function a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:5:
           Deref
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:10:5 generated
     ArgumentsEvaluated a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:11:17 generated
-    Call a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:11:17 "malloc" "bb5"
+    Call a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:11:17 written "malloc" "bb5"
       Destination "_6"
       Constant 8
   Block "bb5"
@@ -86,7 +86,7 @@ Function a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:5:
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:12:9 "bb6" "bb7"
+    Branch a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:12:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:12:9 generated
@@ -126,7 +126,7 @@ Function a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:5:
           Deref
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:17:5 generated
     ArgumentsEvaluated a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:18:17 generated
-    Call a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:18:17 "realloc" "bb9"
+    Call a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:18:17 written "realloc" "bb9"
       Destination "_13"
       Copy "_5"
       Constant 16
@@ -141,7 +141,7 @@ Function a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:5:
       Binary "Eq"
         Copy "_12"
         Constant 0
-    Branch a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:19:9 "bb10" "bb11"
+    Branch a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:19:9 written "bb10" "bb11"
       Copy "_14"
   Block "bb10"
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:19:9 generated
@@ -169,7 +169,7 @@ Function a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:5:
             Deref
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:22:5 generated
     ArgumentsEvaluated a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:23:5 generated
-    Call a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:23:5 "free" "bb13"
+    Call a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:23:5 written "free" "bb13"
       Copy "_1"
   Block "bb13"
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:23:5 generated

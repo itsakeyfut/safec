@@ -36,7 +36,7 @@ Function a_container_grown_by_realloc_keeps_its_mark.c:5:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_container_grown_by_realloc_keeps_its_mark.c:6:16 generated
-    Call a_container_grown_by_realloc_keeps_its_mark.c:6:16 "malloc" "bb1"
+    Call a_container_grown_by_realloc_keeps_its_mark.c:6:16 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -50,7 +50,7 @@ Function a_container_grown_by_realloc_keeps_its_mark.c:5:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_container_grown_by_realloc_keeps_its_mark.c:7:9 "bb2" "bb3"
+    Branch a_container_grown_by_realloc_keeps_its_mark.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_container_grown_by_realloc_keeps_its_mark.c:7:9 generated
@@ -81,13 +81,13 @@ Function a_container_grown_by_realloc_keeps_its_mark.c:5:5 "main"
       Binary "Lt"
         Copy "_5"
         Constant 2
-    Branch a_container_grown_by_realloc_keeps_its_mark.c:12:12 "bb6" "bb7"
+    Branch a_container_grown_by_realloc_keeps_its_mark.c:12:12 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_container_grown_by_realloc_keeps_its_mark.c:12:12 generated
     StorageLive a_container_grown_by_realloc_keeps_its_mark.c:13:9 generated "_7"
     ArgumentsEvaluated a_container_grown_by_realloc_keeps_its_mark.c:13:18 generated
-    Call a_container_grown_by_realloc_keeps_its_mark.c:13:18 "malloc" "bb8"
+    Call a_container_grown_by_realloc_keeps_its_mark.c:13:18 written "malloc" "bb8"
       Destination "_8"
       Constant 4
   Block "bb7"
@@ -109,7 +109,7 @@ Function a_container_grown_by_realloc_keeps_its_mark.c:5:5 "main"
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch a_container_grown_by_realloc_keeps_its_mark.c:14:13 "bb9" "bb10"
+    Branch a_container_grown_by_realloc_keeps_its_mark.c:14:13 written "bb9" "bb10"
       Copy "_9"
   Block "bb9"
     Sequenced a_container_grown_by_realloc_keeps_its_mark.c:14:13 generated
@@ -140,13 +140,13 @@ Function a_container_grown_by_realloc_keeps_its_mark.c:5:5 "main"
       Binary "Eq"
         Copy "_5"
         Constant 1
-    Branch a_container_grown_by_realloc_keeps_its_mark.c:18:13 "bb12" "bb13"
+    Branch a_container_grown_by_realloc_keeps_its_mark.c:18:13 written "bb12" "bb13"
       Copy "_11"
   Block "bb12"
     Sequenced a_container_grown_by_realloc_keeps_its_mark.c:18:13 generated
     StorageLive a_container_grown_by_realloc_keeps_its_mark.c:19:13 generated "_12"
     ArgumentsEvaluated a_container_grown_by_realloc_keeps_its_mark.c:19:24 generated
-    Call a_container_grown_by_realloc_keeps_its_mark.c:19:24 "realloc" "bb15"
+    Call a_container_grown_by_realloc_keeps_its_mark.c:19:24 written "realloc" "bb15"
       Destination "_13"
       Copy "_1"
       Constant 16
@@ -166,7 +166,7 @@ Function a_container_grown_by_realloc_keeps_its_mark.c:5:5 "main"
           Deref
     Sequenced a_container_grown_by_realloc_keeps_its_mark.c:29:9 generated
     ArgumentsEvaluated a_container_grown_by_realloc_keeps_its_mark.c:30:9 generated
-    Call a_container_grown_by_realloc_keeps_its_mark.c:30:9 "free" "bb22"
+    Call a_container_grown_by_realloc_keeps_its_mark.c:30:9 written "free" "bb22"
       Copy "_7"
   Block "bb15"
     Operation a_container_grown_by_realloc_keeps_its_mark.c:19:19 written
@@ -179,7 +179,7 @@ Function a_container_grown_by_realloc_keeps_its_mark.c:5:5 "main"
       Binary "Eq"
         Copy "_12"
         Constant 0
-    Branch a_container_grown_by_realloc_keeps_its_mark.c:20:17 "bb16" "bb17"
+    Branch a_container_grown_by_realloc_keeps_its_mark.c:20:17 written "bb16" "bb17"
       Copy "_14"
   Block "bb16"
     Sequenced a_container_grown_by_realloc_keeps_its_mark.c:20:17 generated
@@ -207,7 +207,7 @@ Function a_container_grown_by_realloc_keeps_its_mark.c:5:5 "main"
       Binary "Eq"
         Copy "_15"
         Constant 0
-    Branch a_container_grown_by_realloc_keeps_its_mark.c:24:17 "bb19" "bb20"
+    Branch a_container_grown_by_realloc_keeps_its_mark.c:24:17 written "bb19" "bb20"
       Copy "_16"
   Block "bb19"
     Sequenced a_container_grown_by_realloc_keeps_its_mark.c:24:17 generated

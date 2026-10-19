@@ -20,7 +20,7 @@ Function a_write_this_check_is_certain_about_leaves_what_another_escaped_local_h
   Local "_11" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:4:14 generated
-    Call a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:4:14 "malloc" "bb1"
+    Call a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:4:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -50,7 +50,7 @@ Function a_write_this_check_is_certain_about_leaves_what_another_escaped_local_h
           Deref
     Sequenced a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:6:5 generated
     ArgumentsEvaluated a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:7:14 generated
-    Call a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:7:14 "malloc" "bb2"
+    Call a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:7:14 written "malloc" "bb2"
       Destination "_8"
       Constant 8
   Block "bb2"
@@ -80,12 +80,12 @@ Function a_write_this_check_is_certain_about_leaves_what_another_escaped_local_h
           Deref
     Sequenced a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:9:5 generated
     ArgumentsEvaluated a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:10:5 generated
-    Call a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:10:5 "free" "bb3"
+    Call a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:10:5 written "free" "bb3"
       Copy "_2"
   Block "bb3"
     Sequenced a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:10:5 generated
     ArgumentsEvaluated a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:11:5 generated
-    Call a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:11:5 "free" "bb4"
+    Call a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:11:5 written "free" "bb4"
       Copy "_4"
   Block "bb4"
     Sequenced a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:11:5 generated

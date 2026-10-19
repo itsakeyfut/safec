@@ -19,7 +19,7 @@ Function a_pointer_a_call_wrote_through_an_address_is_not_doubted_freed_with_no_
       Address
         Place "_1"
     ArgumentsEvaluated a_pointer_a_call_wrote_through_an_address_is_not_doubted_freed_with_no_later_call.c:4:5 generated
-    Call a_pointer_a_call_wrote_through_an_address_is_not_doubted_freed_with_no_later_call.c:4:5 "get" "bb1"
+    Call a_pointer_a_call_wrote_through_an_address_is_not_doubted_freed_with_no_later_call.c:4:5 written "get" "bb1"
       Copy "_2"
   Block "bb1"
     Sequenced a_pointer_a_call_wrote_through_an_address_is_not_doubted_freed_with_no_later_call.c:4:5 generated
@@ -28,7 +28,7 @@ Function a_pointer_a_call_wrote_through_an_address_is_not_doubted_freed_with_no_
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_a_call_wrote_through_an_address_is_not_doubted_freed_with_no_later_call.c:5:9 "bb2" "bb3"
+    Branch a_pointer_a_call_wrote_through_an_address_is_not_doubted_freed_with_no_later_call.c:5:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_a_call_wrote_through_an_address_is_not_doubted_freed_with_no_later_call.c:5:9 generated

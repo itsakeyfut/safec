@@ -16,7 +16,7 @@ Function a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_dou
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:5:9 "bb1" "bb2"
+    Branch a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:5:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:5:9 generated
@@ -46,11 +46,11 @@ Function a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_dou
         Copy "_3"
     Sequenced a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:9:5 generated
     ArgumentsEvaluated a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:10:5 generated
-    Call a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:10:5 "release_all" "bb4"
+    Call a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:10:5 written "release_all" "bb4"
   Block "bb4"
     Sequenced a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:10:5 generated
     ArgumentsEvaluated a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:11:5 generated
-    Call a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:11:5 "use" "bb5"
+    Call a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:11:5 written "use" "bb5"
       Copy "_3"
   Block "bb5"
     Sequenced a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:11:5 generated

@@ -26,7 +26,7 @@ Function a_pointer_assigned_after_a_condition_increments_it_is_not_reported.c:1:
       Destination "_2"
       Use
         Copy "_4"
-    Branch a_pointer_assigned_after_a_condition_increments_it_is_not_reported.c:3:9 "bb2" "bb3"
+    Branch a_pointer_assigned_after_a_condition_increments_it_is_not_reported.c:3:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb1"
     Operation a_pointer_assigned_after_a_condition_increments_it_is_not_reported.c:3:5 written

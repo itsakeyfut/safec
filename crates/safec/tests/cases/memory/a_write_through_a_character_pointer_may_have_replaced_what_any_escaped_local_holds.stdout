@@ -28,7 +28,7 @@ Function a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_
   Local "_19" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:4:14 generated
-    Call a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:4:14 "malloc" "bb1"
+    Call a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -43,7 +43,7 @@ Function a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_
         Copy "_1"
     Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:5:14 generated
     ArgumentsEvaluated a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:6:14 generated
-    Call a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:6:14 "malloc" "bb2"
+    Call a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:6:14 written "malloc" "bb2"
       Destination "_5"
       Constant 8
   Block "bb2"
@@ -92,7 +92,7 @@ Function a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_
       Binary "Lt"
         Copy "_12"
         Constant 8
-    Branch a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:12:12 "bb4" "bb5"
+    Branch a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:12:12 written "bb4" "bb5"
       Copy "_13"
   Block "bb4"
     Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:12:12 generated
@@ -136,7 +136,7 @@ Function a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_
   Block "bb5"
     Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:12:12 generated
     ArgumentsEvaluated a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:16:5 generated
-    Call a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:16:5 "free" "bb6"
+    Call a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:16:5 written "free" "bb6"
       Copy "_1"
   Block "bb6"
     Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:16:5 generated

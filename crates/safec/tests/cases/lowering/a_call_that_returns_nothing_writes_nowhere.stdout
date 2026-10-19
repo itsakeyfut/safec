@@ -13,24 +13,24 @@ Function a_call_that_returns_nothing_writes_nowhere.c:5:5 "f"
   Local "_3" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_call_that_returns_nothing_writes_nowhere.c:6:5 generated
-    Call a_call_that_returns_nothing_writes_nowhere.c:6:5 "free" "bb1"
+    Call a_call_that_returns_nothing_writes_nowhere.c:6:5 written "free" "bb1"
       Copy "_1"
   Block "bb1"
     Sequenced a_call_that_returns_nothing_writes_nowhere.c:6:5 generated
-    Branch a_call_that_returns_nothing_writes_nowhere.c:7:5 "bb3" "bb4"
+    Branch a_call_that_returns_nothing_writes_nowhere.c:7:5 written "bb3" "bb4"
       Copy "_2"
   Block "bb2"
     Sequenced a_call_that_returns_nothing_writes_nowhere.c:7:5 generated
     ArgumentsEvaluated a_call_that_returns_nothing_writes_nowhere.c:8:6 generated
-    Call a_call_that_returns_nothing_writes_nowhere.c:8:6 "g" "bb7"
+    Call a_call_that_returns_nothing_writes_nowhere.c:8:6 written "g" "bb7"
   Block "bb3"
     Sequenced a_call_that_returns_nothing_writes_nowhere.c:7:5 generated
     ArgumentsEvaluated a_call_that_returns_nothing_writes_nowhere.c:7:9 generated
-    Call a_call_that_returns_nothing_writes_nowhere.c:7:9 "g" "bb5"
+    Call a_call_that_returns_nothing_writes_nowhere.c:7:9 written "g" "bb5"
   Block "bb4"
     Sequenced a_call_that_returns_nothing_writes_nowhere.c:7:5 generated
     ArgumentsEvaluated a_call_that_returns_nothing_writes_nowhere.c:7:15 generated
-    Call a_call_that_returns_nothing_writes_nowhere.c:7:15 "h" "bb6"
+    Call a_call_that_returns_nothing_writes_nowhere.c:7:15 written "h" "bb6"
   Block "bb5"
     Goto "bb2"
   Block "bb6"
@@ -39,12 +39,12 @@ Function a_call_that_returns_nothing_writes_nowhere.c:5:5 "f"
     Sequenced a_call_that_returns_nothing_writes_nowhere.c:8:6 generated
     Sequenced a_call_that_returns_nothing_writes_nowhere.c:8:6 generated
     ArgumentsEvaluated a_call_that_returns_nothing_writes_nowhere.c:9:10 generated
-    Call a_call_that_returns_nothing_writes_nowhere.c:9:10 "g" "bb8"
+    Call a_call_that_returns_nothing_writes_nowhere.c:9:10 written "g" "bb8"
   Block "bb8"
     Sequenced a_call_that_returns_nothing_writes_nowhere.c:9:10 generated
     Goto "bb9"
   Block "bb9"
-    Branch a_call_that_returns_nothing_writes_nowhere.c:9:15 "bb10" "bb11"
+    Branch a_call_that_returns_nothing_writes_nowhere.c:9:15 written "bb10" "bb11"
       Copy "_2"
   Block "bb10"
     Sequenced a_call_that_returns_nothing_writes_nowhere.c:9:15 generated
@@ -58,7 +58,7 @@ Function a_call_that_returns_nothing_writes_nowhere.c:5:5 "f"
         Copy "_2"
     Sequenced a_call_that_returns_nothing_writes_nowhere.c:10:9 generated
     ArgumentsEvaluated a_call_that_returns_nothing_writes_nowhere.c:9:18 generated
-    Call a_call_that_returns_nothing_writes_nowhere.c:9:18 "g" "bb12"
+    Call a_call_that_returns_nothing_writes_nowhere.c:9:18 written "g" "bb12"
   Block "bb11"
     Sequenced a_call_that_returns_nothing_writes_nowhere.c:9:15 generated
     Operation a_call_that_returns_nothing_writes_nowhere.c:12:5 written

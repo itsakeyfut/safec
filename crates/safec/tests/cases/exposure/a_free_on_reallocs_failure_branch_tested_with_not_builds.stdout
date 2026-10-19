@@ -25,7 +25,7 @@ Function a_free_on_reallocs_failure_branch_tested_with_not_builds.c:5:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_free_on_reallocs_failure_branch_tested_with_not_builds.c:6:14 generated
-    Call a_free_on_reallocs_failure_branch_tested_with_not_builds.c:6:14 "malloc" "bb1"
+    Call a_free_on_reallocs_failure_branch_tested_with_not_builds.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -39,7 +39,7 @@ Function a_free_on_reallocs_failure_branch_tested_with_not_builds.c:5:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_free_on_reallocs_failure_branch_tested_with_not_builds.c:7:9 "bb2" "bb3"
+    Branch a_free_on_reallocs_failure_branch_tested_with_not_builds.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_free_on_reallocs_failure_branch_tested_with_not_builds.c:7:9 generated
@@ -65,7 +65,7 @@ Function a_free_on_reallocs_failure_branch_tested_with_not_builds.c:5:5 "main"
           Deref
     Sequenced a_free_on_reallocs_failure_branch_tested_with_not_builds.c:10:5 generated
     ArgumentsEvaluated a_free_on_reallocs_failure_branch_tested_with_not_builds.c:11:14 generated
-    Call a_free_on_reallocs_failure_branch_tested_with_not_builds.c:11:14 "realloc" "bb5"
+    Call a_free_on_reallocs_failure_branch_tested_with_not_builds.c:11:14 written "realloc" "bb5"
       Destination "_6"
       Copy "_1"
       Constant 8
@@ -79,12 +79,12 @@ Function a_free_on_reallocs_failure_branch_tested_with_not_builds.c:5:5 "main"
       Destination "_7"
       Unary "Not"
         Copy "_5"
-    Branch a_free_on_reallocs_failure_branch_tested_with_not_builds.c:12:9 "bb6" "bb7"
+    Branch a_free_on_reallocs_failure_branch_tested_with_not_builds.c:12:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_free_on_reallocs_failure_branch_tested_with_not_builds.c:12:9 generated
     ArgumentsEvaluated a_free_on_reallocs_failure_branch_tested_with_not_builds.c:13:9 generated
-    Call a_free_on_reallocs_failure_branch_tested_with_not_builds.c:13:9 "free" "bb9"
+    Call a_free_on_reallocs_failure_branch_tested_with_not_builds.c:13:9 written "free" "bb9"
       Copy "_1"
   Block "bb7"
     Sequenced a_free_on_reallocs_failure_branch_tested_with_not_builds.c:12:9 generated
@@ -102,7 +102,7 @@ Function a_free_on_reallocs_failure_branch_tested_with_not_builds.c:5:5 "main"
           Deref
     Sequenced a_free_on_reallocs_failure_branch_tested_with_not_builds.c:16:5 generated
     ArgumentsEvaluated a_free_on_reallocs_failure_branch_tested_with_not_builds.c:17:5 generated
-    Call a_free_on_reallocs_failure_branch_tested_with_not_builds.c:17:5 "free" "bb10"
+    Call a_free_on_reallocs_failure_branch_tested_with_not_builds.c:17:5 written "free" "bb10"
       Copy "_5"
   Block "bb9"
     Sequenced a_free_on_reallocs_failure_branch_tested_with_not_builds.c:13:9 generated

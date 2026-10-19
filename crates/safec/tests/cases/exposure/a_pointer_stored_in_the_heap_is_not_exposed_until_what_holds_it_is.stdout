@@ -23,7 +23,7 @@ Function a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:5:
       Use
         Constant 0
     ArgumentsEvaluated a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:6:17 generated
-    Call a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:6:17 "malloc" "bb1"
+    Call a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:6:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -37,7 +37,7 @@ Function a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:5:
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:7:9 "bb2" "bb3"
+    Branch a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:7:9 generated
@@ -52,7 +52,7 @@ Function a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:5:
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:10:14 generated
-    Call a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:10:14 "malloc" "bb5"
+    Call a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:10:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -66,7 +66,7 @@ Function a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:5:
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:11:9 "bb6" "bb7"
+    Branch a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:11:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:11:9 generated
@@ -92,7 +92,7 @@ Function a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:5:
           Deref
     Sequenced a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:14:5 generated
     ArgumentsEvaluated a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:15:5 generated
-    Call a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:15:5 "log_line" "bb9"
+    Call a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:15:5 written "log_line" "bb9"
   Block "bb9"
     Sequenced a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:15:5 generated
     Operation a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:16:9 written
@@ -102,12 +102,12 @@ Function a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:5:
           Deref
     Sequenced a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:16:13 generated
     ArgumentsEvaluated a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:17:5 generated
-    Call a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:17:5 "free" "bb10"
+    Call a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:17:5 written "free" "bb10"
       Copy "_4"
   Block "bb10"
     Sequenced a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:17:5 generated
     ArgumentsEvaluated a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:18:5 generated
-    Call a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:18:5 "free" "bb11"
+    Call a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:18:5 written "free" "bb11"
       Copy "_1"
   Block "bb11"
     Sequenced a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:18:5 generated

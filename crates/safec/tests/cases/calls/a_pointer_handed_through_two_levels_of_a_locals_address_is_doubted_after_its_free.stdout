@@ -42,7 +42,7 @@ Function a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_afte
   Local "_13" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:5:14 generated
-    Call a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:5:14 "malloc" "bb1"
+    Call a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:5:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -55,7 +55,7 @@ Function a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_afte
       Destination "_3"
       Unary "Not"
         Copy "_1"
-    Branch a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:5:29 "bb2" "bb3"
+    Branch a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:5:29 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:5:29 generated
@@ -108,7 +108,7 @@ Function a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_afte
       Address
         Place "_6"
     ArgumentsEvaluated a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:9:5 generated
-    Call a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:9:5 "copy2" "bb5"
+    Call a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:9:5 written "copy2" "bb5"
       Copy "_9"
       Copy "_10"
   Block "bb5"
@@ -119,7 +119,7 @@ Function a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_afte
         Copy "_8"
     Sequenced a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:10:14 generated
     ArgumentsEvaluated a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:11:5 generated
-    Call a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:11:5 "free" "bb6"
+    Call a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:11:5 written "free" "bb6"
       Copy "_1"
   Block "bb6"
     Sequenced a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:11:5 generated
@@ -127,7 +127,7 @@ Function a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_afte
       Destination "_12"
       Unary "Not"
         Copy "_11"
-    Branch a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:12:9 "bb7" "bb8"
+    Branch a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:12:9 written "bb7" "bb8"
       Copy "_12"
   Block "bb7"
     Sequenced a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:12:9 generated

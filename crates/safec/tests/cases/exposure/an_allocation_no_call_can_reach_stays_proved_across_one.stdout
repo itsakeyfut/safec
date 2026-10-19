@@ -20,7 +20,7 @@ Function an_allocation_no_call_can_reach_stays_proved_across_one.c:5:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated an_allocation_no_call_can_reach_stays_proved_across_one.c:6:14 generated
-    Call an_allocation_no_call_can_reach_stays_proved_across_one.c:6:14 "malloc" "bb1"
+    Call an_allocation_no_call_can_reach_stays_proved_across_one.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -30,7 +30,7 @@ Function an_allocation_no_call_can_reach_stays_proved_across_one.c:5:5 "main"
         Copy "_2"
     Sequenced an_allocation_no_call_can_reach_stays_proved_across_one.c:6:14 generated
     ArgumentsEvaluated an_allocation_no_call_can_reach_stays_proved_across_one.c:7:14 generated
-    Call an_allocation_no_call_can_reach_stays_proved_across_one.c:7:14 "malloc" "bb2"
+    Call an_allocation_no_call_can_reach_stays_proved_across_one.c:7:14 written "malloc" "bb2"
       Destination "_4"
       Constant 4
   Block "bb2"
@@ -40,12 +40,12 @@ Function an_allocation_no_call_can_reach_stays_proved_across_one.c:5:5 "main"
         Copy "_4"
     Sequenced an_allocation_no_call_can_reach_stays_proved_across_one.c:7:14 generated
     ArgumentsEvaluated an_allocation_no_call_can_reach_stays_proved_across_one.c:8:5 generated
-    Call an_allocation_no_call_can_reach_stays_proved_across_one.c:8:5 "show" "bb3"
+    Call an_allocation_no_call_can_reach_stays_proved_across_one.c:8:5 written "show" "bb3"
       Copy "_1"
   Block "bb3"
     Sequenced an_allocation_no_call_can_reach_stays_proved_across_one.c:8:5 generated
     ArgumentsEvaluated an_allocation_no_call_can_reach_stays_proved_across_one.c:9:5 generated
-    Call an_allocation_no_call_can_reach_stays_proved_across_one.c:9:5 "free" "bb4"
+    Call an_allocation_no_call_can_reach_stays_proved_across_one.c:9:5 written "free" "bb4"
       Copy "_3"
   Block "bb4"
     Sequenced an_allocation_no_call_can_reach_stays_proved_across_one.c:9:5 generated

@@ -44,7 +44,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:7:
       Use
         Constant 0
     ArgumentsEvaluated a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:8:17 generated
-    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:8:17 "malloc" "bb1"
+    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:8:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -58,7 +58,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:7:
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:9:9 "bb2" "bb3"
+    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:9:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:9:9 generated
@@ -73,7 +73,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:7:
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:12:14 generated
-    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:12:14 "malloc" "bb5"
+    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:12:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -87,7 +87,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:7:
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:13:9 "bb6" "bb7"
+    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:13:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:13:9 generated
@@ -102,7 +102,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:7:
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:16:14 generated
-    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:16:14 "malloc" "bb9"
+    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:16:14 written "malloc" "bb9"
       Destination "_8"
       Constant 4
   Block "bb9"
@@ -116,7 +116,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:7:
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:17:9 "bb10" "bb11"
+    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:17:9 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:17:9 generated
@@ -153,7 +153,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:7:
           Deref
     Sequenced a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:21:5 generated
     ArgumentsEvaluated a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:22:17 generated
-    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:22:17 "malloc" "bb13"
+    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:22:17 written "malloc" "bb13"
       Destination "_13"
       Constant 8
   Block "bb13"
@@ -167,7 +167,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:7:
       Binary "Eq"
         Copy "_12"
         Constant 0
-    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:23:9 "bb14" "bb15"
+    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:23:9 written "bb14" "bb15"
       Copy "_14"
   Block "bb14"
     Sequenced a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:23:9 generated
@@ -204,7 +204,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:7:
           Deref
     Sequenced a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:27:5 generated
     ArgumentsEvaluated a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:28:5 generated
-    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:28:5 "memcpy" "bb17"
+    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:28:5 written "memcpy" "bb17"
       Destination "_17"
       Copy "_1"
       Copy "_12"
@@ -233,7 +233,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:7:
       Binary "Eq"
         Copy "_19"
         Constant 0
-    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:31:9 "bb18" "bb19"
+    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:31:9 written "bb18" "bb19"
       Copy "_20"
   Block "bb18"
     Sequenced a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:31:9 generated
@@ -276,7 +276,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:37
   Local "_18" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:38:17 generated
-    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:38:17 "malloc" "bb1"
+    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:38:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -290,7 +290,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:37
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:39:9 "bb2" "bb3"
+    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:39:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:39:9 generated
@@ -305,7 +305,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:37
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:42:16 generated
-    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:42:16 "malloc" "bb5"
+    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:42:16 written "malloc" "bb5"
       Destination "_5"
       Constant 8
   Block "bb5"
@@ -319,7 +319,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:37
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:43:9 "bb6" "bb7"
+    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:43:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:43:9 generated
@@ -334,7 +334,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:37
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:46:14 generated
-    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:46:14 "malloc" "bb9"
+    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:46:14 written "malloc" "bb9"
       Destination "_8"
       Constant 4
   Block "bb9"
@@ -348,7 +348,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:37
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:47:9 "bb10" "bb11"
+    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:47:9 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:47:9 generated
@@ -363,7 +363,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:37
     Goto "bb12"
   Block "bb12"
     ArgumentsEvaluated a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:50:14 generated
-    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:50:14 "malloc" "bb13"
+    Call a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:50:14 written "malloc" "bb13"
       Destination "_11"
       Constant 4
   Block "bb13"
@@ -377,7 +377,7 @@ Function a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:37
       Binary "Eq"
         Copy "_10"
         Constant 0
-    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:51:9 "bb14" "bb15"
+    Branch a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:51:9 written "bb14" "bb15"
       Copy "_12"
   Block "bb14"
     Sequenced a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence.c:51:9 generated

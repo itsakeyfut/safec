@@ -13,7 +13,7 @@ Function a_condition_underlines_the_operand_that_decides.c:4:5 "if_comma"
   Local "_4" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:5:14 generated
-    Call a_condition_underlines_the_operand_that_decides.c:5:14 "malloc" "bb1"
+    Call a_condition_underlines_the_operand_that_decides.c:5:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -26,7 +26,7 @@ Function a_condition_underlines_the_operand_that_decides.c:4:5 "if_comma"
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_condition_underlines_the_operand_that_decides.c:6:9 "bb2" "bb3"
+    Branch a_condition_underlines_the_operand_that_decides.c:6:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_condition_underlines_the_operand_that_decides.c:6:9 generated
@@ -41,12 +41,12 @@ Function a_condition_underlines_the_operand_that_decides.c:4:5 "if_comma"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:9:5 generated
-    Call a_condition_underlines_the_operand_that_decides.c:9:5 "free" "bb5"
+    Call a_condition_underlines_the_operand_that_decides.c:9:5 written "free" "bb5"
       Copy "_2"
   Block "bb5"
     Sequenced a_condition_underlines_the_operand_that_decides.c:9:5 generated
     Sequenced a_condition_underlines_the_operand_that_decides.c:10:9 generated
-    Branch a_condition_underlines_the_operand_that_decides.c:10:12 "bb6" "bb7"
+    Branch a_condition_underlines_the_operand_that_decides.c:10:12 written "bb6" "bb7"
       Copy "_2"
         Deref
   Block "bb6"
@@ -75,7 +75,7 @@ Function a_condition_underlines_the_operand_that_decides.c:16:5 "if_chain"
   Local "_4" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:17:14 generated
-    Call a_condition_underlines_the_operand_that_decides.c:17:14 "malloc" "bb1"
+    Call a_condition_underlines_the_operand_that_decides.c:17:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -88,7 +88,7 @@ Function a_condition_underlines_the_operand_that_decides.c:16:5 "if_chain"
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_condition_underlines_the_operand_that_decides.c:18:9 "bb2" "bb3"
+    Branch a_condition_underlines_the_operand_that_decides.c:18:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_condition_underlines_the_operand_that_decides.c:18:9 generated
@@ -103,13 +103,13 @@ Function a_condition_underlines_the_operand_that_decides.c:16:5 "if_chain"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:21:5 generated
-    Call a_condition_underlines_the_operand_that_decides.c:21:5 "free" "bb5"
+    Call a_condition_underlines_the_operand_that_decides.c:21:5 written "free" "bb5"
       Copy "_2"
   Block "bb5"
     Sequenced a_condition_underlines_the_operand_that_decides.c:21:5 generated
     Sequenced a_condition_underlines_the_operand_that_decides.c:22:9 generated
     Sequenced a_condition_underlines_the_operand_that_decides.c:22:9 generated
-    Branch a_condition_underlines_the_operand_that_decides.c:22:15 "bb6" "bb7"
+    Branch a_condition_underlines_the_operand_that_decides.c:22:15 written "bb6" "bb7"
       Copy "_2"
         Deref
   Block "bb6"
@@ -138,7 +138,7 @@ Function a_condition_underlines_the_operand_that_decides.c:28:5 "if_nested"
   Local "_4" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:29:14 generated
-    Call a_condition_underlines_the_operand_that_decides.c:29:14 "malloc" "bb1"
+    Call a_condition_underlines_the_operand_that_decides.c:29:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -151,7 +151,7 @@ Function a_condition_underlines_the_operand_that_decides.c:28:5 "if_nested"
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_condition_underlines_the_operand_that_decides.c:30:9 "bb2" "bb3"
+    Branch a_condition_underlines_the_operand_that_decides.c:30:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_condition_underlines_the_operand_that_decides.c:30:9 generated
@@ -166,13 +166,13 @@ Function a_condition_underlines_the_operand_that_decides.c:28:5 "if_nested"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:33:5 generated
-    Call a_condition_underlines_the_operand_that_decides.c:33:5 "free" "bb5"
+    Call a_condition_underlines_the_operand_that_decides.c:33:5 written "free" "bb5"
       Copy "_2"
   Block "bb5"
     Sequenced a_condition_underlines_the_operand_that_decides.c:33:5 generated
     Sequenced a_condition_underlines_the_operand_that_decides.c:34:9 generated
     Sequenced a_condition_underlines_the_operand_that_decides.c:34:13 generated
-    Branch a_condition_underlines_the_operand_that_decides.c:34:16 "bb6" "bb7"
+    Branch a_condition_underlines_the_operand_that_decides.c:34:16 written "bb6" "bb7"
       Copy "_2"
         Deref
   Block "bb6"
@@ -201,7 +201,7 @@ Function a_condition_underlines_the_operand_that_decides.c:40:5 "if_left"
   Local "_4" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:41:14 generated
-    Call a_condition_underlines_the_operand_that_decides.c:41:14 "malloc" "bb1"
+    Call a_condition_underlines_the_operand_that_decides.c:41:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -214,7 +214,7 @@ Function a_condition_underlines_the_operand_that_decides.c:40:5 "if_left"
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_condition_underlines_the_operand_that_decides.c:42:9 "bb2" "bb3"
+    Branch a_condition_underlines_the_operand_that_decides.c:42:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_condition_underlines_the_operand_that_decides.c:42:9 generated
@@ -229,7 +229,7 @@ Function a_condition_underlines_the_operand_that_decides.c:40:5 "if_left"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:45:5 generated
-    Call a_condition_underlines_the_operand_that_decides.c:45:5 "free" "bb5"
+    Call a_condition_underlines_the_operand_that_decides.c:45:5 written "free" "bb5"
       Copy "_2"
   Block "bb5"
     Sequenced a_condition_underlines_the_operand_that_decides.c:45:5 generated
@@ -237,7 +237,7 @@ Function a_condition_underlines_the_operand_that_decides.c:40:5 "if_left"
       Place "_2"
         Deref
     Sequenced a_condition_underlines_the_operand_that_decides.c:46:9 generated
-    Branch a_condition_underlines_the_operand_that_decides.c:46:13 "bb6" "bb7"
+    Branch a_condition_underlines_the_operand_that_decides.c:46:13 written "bb6" "bb7"
       Copy "_1"
   Block "bb6"
     Sequenced a_condition_underlines_the_operand_that_decides.c:46:9 generated
@@ -265,7 +265,7 @@ Function a_condition_underlines_the_operand_that_decides.c:52:5 "while_comma"
   Local "_4" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:53:14 generated
-    Call a_condition_underlines_the_operand_that_decides.c:53:14 "malloc" "bb1"
+    Call a_condition_underlines_the_operand_that_decides.c:53:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -278,7 +278,7 @@ Function a_condition_underlines_the_operand_that_decides.c:52:5 "while_comma"
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_condition_underlines_the_operand_that_decides.c:54:9 "bb2" "bb3"
+    Branch a_condition_underlines_the_operand_that_decides.c:54:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_condition_underlines_the_operand_that_decides.c:54:9 generated
@@ -293,14 +293,14 @@ Function a_condition_underlines_the_operand_that_decides.c:52:5 "while_comma"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:57:5 generated
-    Call a_condition_underlines_the_operand_that_decides.c:57:5 "free" "bb5"
+    Call a_condition_underlines_the_operand_that_decides.c:57:5 written "free" "bb5"
       Copy "_2"
   Block "bb5"
     Sequenced a_condition_underlines_the_operand_that_decides.c:57:5 generated
     Goto "bb6"
   Block "bb6"
     Sequenced a_condition_underlines_the_operand_that_decides.c:58:12 generated
-    Branch a_condition_underlines_the_operand_that_decides.c:58:15 "bb7" "bb8"
+    Branch a_condition_underlines_the_operand_that_decides.c:58:15 written "bb7" "bb8"
       Copy "_2"
         Deref
   Block "bb7"
@@ -327,7 +327,7 @@ Function a_condition_underlines_the_operand_that_decides.c:64:5 "for_comma"
   Local "_4" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:65:14 generated
-    Call a_condition_underlines_the_operand_that_decides.c:65:14 "malloc" "bb1"
+    Call a_condition_underlines_the_operand_that_decides.c:65:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -340,7 +340,7 @@ Function a_condition_underlines_the_operand_that_decides.c:64:5 "for_comma"
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_condition_underlines_the_operand_that_decides.c:66:9 "bb2" "bb3"
+    Branch a_condition_underlines_the_operand_that_decides.c:66:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_condition_underlines_the_operand_that_decides.c:66:9 generated
@@ -355,14 +355,14 @@ Function a_condition_underlines_the_operand_that_decides.c:64:5 "for_comma"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:69:5 generated
-    Call a_condition_underlines_the_operand_that_decides.c:69:5 "free" "bb5"
+    Call a_condition_underlines_the_operand_that_decides.c:69:5 written "free" "bb5"
       Copy "_2"
   Block "bb5"
     Sequenced a_condition_underlines_the_operand_that_decides.c:69:5 generated
     Goto "bb6"
   Block "bb6"
     Sequenced a_condition_underlines_the_operand_that_decides.c:70:12 generated
-    Branch a_condition_underlines_the_operand_that_decides.c:70:15 "bb7" "bb8"
+    Branch a_condition_underlines_the_operand_that_decides.c:70:15 written "bb7" "bb8"
       Copy "_2"
         Deref
   Block "bb7"
@@ -390,7 +390,7 @@ Function a_condition_underlines_the_operand_that_decides.c:76:5 "conditional_com
   Local "_5" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:77:14 generated
-    Call a_condition_underlines_the_operand_that_decides.c:77:14 "malloc" "bb1"
+    Call a_condition_underlines_the_operand_that_decides.c:77:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -403,7 +403,7 @@ Function a_condition_underlines_the_operand_that_decides.c:76:5 "conditional_com
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_condition_underlines_the_operand_that_decides.c:78:9 "bb2" "bb3"
+    Branch a_condition_underlines_the_operand_that_decides.c:78:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_condition_underlines_the_operand_that_decides.c:78:9 generated
@@ -418,12 +418,12 @@ Function a_condition_underlines_the_operand_that_decides.c:76:5 "conditional_com
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:81:5 generated
-    Call a_condition_underlines_the_operand_that_decides.c:81:5 "free" "bb5"
+    Call a_condition_underlines_the_operand_that_decides.c:81:5 written "free" "bb5"
       Copy "_2"
   Block "bb5"
     Sequenced a_condition_underlines_the_operand_that_decides.c:81:5 generated
     Sequenced a_condition_underlines_the_operand_that_decides.c:82:13 generated
-    Branch a_condition_underlines_the_operand_that_decides.c:82:16 "bb7" "bb8"
+    Branch a_condition_underlines_the_operand_that_decides.c:82:16 written "bb7" "bb8"
       Copy "_2"
         Deref
   Block "bb6"
@@ -463,7 +463,7 @@ Function a_condition_underlines_the_operand_that_decides.c:86:5 "and_left"
   Local "_5" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:87:14 generated
-    Call a_condition_underlines_the_operand_that_decides.c:87:14 "malloc" "bb1"
+    Call a_condition_underlines_the_operand_that_decides.c:87:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -476,7 +476,7 @@ Function a_condition_underlines_the_operand_that_decides.c:86:5 "and_left"
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_condition_underlines_the_operand_that_decides.c:88:9 "bb2" "bb3"
+    Branch a_condition_underlines_the_operand_that_decides.c:88:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_condition_underlines_the_operand_that_decides.c:88:9 generated
@@ -491,7 +491,7 @@ Function a_condition_underlines_the_operand_that_decides.c:86:5 "and_left"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:91:5 generated
-    Call a_condition_underlines_the_operand_that_decides.c:91:5 "free" "bb5"
+    Call a_condition_underlines_the_operand_that_decides.c:91:5 written "free" "bb5"
       Copy "_2"
   Block "bb5"
     Sequenced a_condition_underlines_the_operand_that_decides.c:91:5 generated
@@ -501,7 +501,7 @@ Function a_condition_underlines_the_operand_that_decides.c:86:5 "and_left"
         Copy "_2"
           Deref
         Constant 0
-    Branch a_condition_underlines_the_operand_that_decides.c:92:12 "bb7" "bb6"
+    Branch a_condition_underlines_the_operand_that_decides.c:92:12 written "bb7" "bb6"
       Copy "_5"
   Block "bb6"
     Operation a_condition_underlines_the_operand_that_decides.c:92:5 written
@@ -534,7 +534,7 @@ Function a_condition_underlines_the_operand_that_decides.c:96:5 "or_right"
   Local "_5" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:97:14 generated
-    Call a_condition_underlines_the_operand_that_decides.c:97:14 "malloc" "bb1"
+    Call a_condition_underlines_the_operand_that_decides.c:97:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -547,7 +547,7 @@ Function a_condition_underlines_the_operand_that_decides.c:96:5 "or_right"
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_condition_underlines_the_operand_that_decides.c:98:9 "bb2" "bb3"
+    Branch a_condition_underlines_the_operand_that_decides.c:98:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_condition_underlines_the_operand_that_decides.c:98:9 generated
@@ -562,7 +562,7 @@ Function a_condition_underlines_the_operand_that_decides.c:96:5 "or_right"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:101:5 generated
-    Call a_condition_underlines_the_operand_that_decides.c:101:5 "free" "bb5"
+    Call a_condition_underlines_the_operand_that_decides.c:101:5 written "free" "bb5"
       Copy "_2"
   Block "bb5"
     Sequenced a_condition_underlines_the_operand_that_decides.c:101:5 generated
@@ -571,7 +571,7 @@ Function a_condition_underlines_the_operand_that_decides.c:96:5 "or_right"
       Binary "Ne"
         Copy "_1"
         Constant 0
-    Branch a_condition_underlines_the_operand_that_decides.c:102:12 "bb6" "bb7"
+    Branch a_condition_underlines_the_operand_that_decides.c:102:12 written "bb6" "bb7"
       Copy "_5"
   Block "bb6"
     Operation a_condition_underlines_the_operand_that_decides.c:102:5 written

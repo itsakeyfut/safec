@@ -10,7 +10,7 @@ Function a_freed_pointer_handed_to_a_function_that_frees_it.c:4:6 "drop"
   Local "_1" "int *" parameter "p"
   Block "bb0" entry
     ArgumentsEvaluated a_freed_pointer_handed_to_a_function_that_frees_it.c:5:5 generated
-    Call a_freed_pointer_handed_to_a_function_that_frees_it.c:5:5 "free" "bb1"
+    Call a_freed_pointer_handed_to_a_function_that_frees_it.c:5:5 written "free" "bb1"
       Copy "_1"
   Block "bb1"
     Sequenced a_freed_pointer_handed_to_a_function_that_frees_it.c:5:5 generated
@@ -26,7 +26,7 @@ Function a_freed_pointer_handed_to_a_function_that_frees_it.c:8:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_freed_pointer_handed_to_a_function_that_frees_it.c:9:14 generated
-    Call a_freed_pointer_handed_to_a_function_that_frees_it.c:9:14 "malloc" "bb1"
+    Call a_freed_pointer_handed_to_a_function_that_frees_it.c:9:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -40,7 +40,7 @@ Function a_freed_pointer_handed_to_a_function_that_frees_it.c:8:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_freed_pointer_handed_to_a_function_that_frees_it.c:10:9 "bb2" "bb3"
+    Branch a_freed_pointer_handed_to_a_function_that_frees_it.c:10:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_freed_pointer_handed_to_a_function_that_frees_it.c:10:9 generated
@@ -55,12 +55,12 @@ Function a_freed_pointer_handed_to_a_function_that_frees_it.c:8:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_freed_pointer_handed_to_a_function_that_frees_it.c:13:5 generated
-    Call a_freed_pointer_handed_to_a_function_that_frees_it.c:13:5 "free" "bb5"
+    Call a_freed_pointer_handed_to_a_function_that_frees_it.c:13:5 written "free" "bb5"
       Copy "_1"
   Block "bb5"
     Sequenced a_freed_pointer_handed_to_a_function_that_frees_it.c:13:5 generated
     ArgumentsEvaluated a_freed_pointer_handed_to_a_function_that_frees_it.c:14:5 generated
-    Call a_freed_pointer_handed_to_a_function_that_frees_it.c:14:5 "drop" "bb6"
+    Call a_freed_pointer_handed_to_a_function_that_frees_it.c:14:5 written "drop" "bb6"
       Copy "_1"
   Block "bb6"
     Sequenced a_freed_pointer_handed_to_a_function_that_frees_it.c:14:5 generated

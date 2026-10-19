@@ -18,7 +18,7 @@ Function the_address_of_a_live_pointer_handed_to_a_call_is_not_asked.c:4:5 "main
       Use
         Constant 0
     ArgumentsEvaluated the_address_of_a_live_pointer_handed_to_a_call_is_not_asked.c:5:14 generated
-    Call the_address_of_a_live_pointer_handed_to_a_call_is_not_asked.c:5:14 "malloc" "bb1"
+    Call the_address_of_a_live_pointer_handed_to_a_call_is_not_asked.c:5:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -32,7 +32,7 @@ Function the_address_of_a_live_pointer_handed_to_a_call_is_not_asked.c:4:5 "main
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch the_address_of_a_live_pointer_handed_to_a_call_is_not_asked.c:6:9 "bb2" "bb3"
+    Branch the_address_of_a_live_pointer_handed_to_a_call_is_not_asked.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced the_address_of_a_live_pointer_handed_to_a_call_is_not_asked.c:6:9 generated
@@ -51,7 +51,7 @@ Function the_address_of_a_live_pointer_handed_to_a_call_is_not_asked.c:4:5 "main
       Address
         Place "_1"
     ArgumentsEvaluated the_address_of_a_live_pointer_handed_to_a_call_is_not_asked.c:9:12 generated
-    Call the_address_of_a_live_pointer_handed_to_a_call_is_not_asked.c:9:12 "use2" "bb5"
+    Call the_address_of_a_live_pointer_handed_to_a_call_is_not_asked.c:9:12 written "use2" "bb5"
       Destination "_5"
       Copy "_4"
   Block "bb5"

@@ -18,7 +18,7 @@ Function a_call_beside_a_comma_that_frees_keeps_it_unproven.c:4:5 "f"
   Local "_6" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_call_beside_a_comma_that_frees_keeps_it_unproven.c:5:14 generated
-    Call a_call_beside_a_comma_that_frees_keeps_it_unproven.c:5:14 "malloc" "bb1"
+    Call a_call_beside_a_comma_that_frees_keeps_it_unproven.c:5:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -27,11 +27,11 @@ Function a_call_beside_a_comma_that_frees_keeps_it_unproven.c:4:5 "f"
       Use
         Copy "_2"
     Sequenced a_call_beside_a_comma_that_frees_keeps_it_unproven.c:5:14 generated
-    Call a_call_beside_a_comma_that_frees_keeps_it_unproven.c:6:13 "k" "bb2"
+    Call a_call_beside_a_comma_that_frees_keeps_it_unproven.c:6:13 written "k" "bb2"
       Destination "_4"
       Constant 0
   Block "bb2"
-    Call a_call_beside_a_comma_that_frees_keeps_it_unproven.c:6:22 "free" "bb3"
+    Call a_call_beside_a_comma_that_frees_keeps_it_unproven.c:6:22 written "free" "bb3"
       Copy "_1"
   Block "bb3"
     Operation a_call_beside_a_comma_that_frees_keeps_it_unproven.c:6:31 written
@@ -39,7 +39,7 @@ Function a_call_beside_a_comma_that_frees_keeps_it_unproven.c:4:5 "f"
       Binary "Ne"
         Constant 1
         Constant 0
-    Branch a_call_beside_a_comma_that_frees_keeps_it_unproven.c:6:31 "bb5" "bb4"
+    Branch a_call_beside_a_comma_that_frees_keeps_it_unproven.c:6:31 written "bb5" "bb4"
       Copy "_5"
   Block "bb4"
     Operation a_call_beside_a_comma_that_frees_keeps_it_unproven.c:6:13 written

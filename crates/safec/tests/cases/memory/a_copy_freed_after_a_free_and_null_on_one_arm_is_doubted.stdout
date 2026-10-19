@@ -18,7 +18,7 @@ Function a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:4:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:5:14 generated
-    Call a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:5:14 "malloc" "bb1"
+    Call a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:5:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -32,19 +32,19 @@ Function a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:4:5 "main"
       Use
         Copy "_2"
     Sequenced a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:6:14 generated
-    Branch a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:7:9 "bb2" "bb3"
+    Branch a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:7:9 written "bb2" "bb3"
       Copy "_1"
   Block "bb2"
     Sequenced a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:7:9 generated
     ArgumentsEvaluated a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:8:9 generated
-    Call a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:8:9 "free" "bb5"
+    Call a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:8:9 written "free" "bb5"
       Copy "_2"
   Block "bb3"
     Sequenced a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:7:9 generated
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:11:5 generated
-    Call a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:11:5 "free" "bb6"
+    Call a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:11:5 written "free" "bb6"
       Copy "_4"
   Block "bb5"
     Sequenced a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:8:9 generated

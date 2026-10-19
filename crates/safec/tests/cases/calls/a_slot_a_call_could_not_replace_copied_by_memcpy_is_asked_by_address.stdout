@@ -33,7 +33,7 @@ Function a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:
   Local "_16" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:7:14 generated
-    Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:7:14 "malloc" "bb1"
+    Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:7:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -47,7 +47,7 @@ Function a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:8:9 "bb2" "bb3"
+    Branch a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:8:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:8:9 generated
@@ -62,7 +62,7 @@ Function a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:11:15 generated
-    Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:11:15 "malloc" "bb5"
+    Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:11:15 written "malloc" "bb5"
       Destination "_5"
       Constant 8
   Block "bb5"
@@ -76,7 +76,7 @@ Function a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:12:9 "bb6" "bb7"
+    Branch a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:12:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:12:9 generated
@@ -102,7 +102,7 @@ Function a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:
           Deref
     Sequenced a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:15:5 generated
     ArgumentsEvaluated a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:16:15 generated
-    Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:16:15 "malloc" "bb9"
+    Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:16:15 written "malloc" "bb9"
       Destination "_9"
       Constant 8
   Block "bb9"
@@ -116,7 +116,7 @@ Function a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:
       Binary "Eq"
         Copy "_8"
         Constant 0
-    Branch a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:17:9 "bb10" "bb11"
+    Branch a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:17:9 written "bb10" "bb11"
       Copy "_10"
   Block "bb10"
     Sequenced a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:17:9 generated
@@ -140,12 +140,12 @@ Function a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:
       Address
         Place "_11"
     ArgumentsEvaluated a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:21:5 generated
-    Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:21:5 "release_ref" "bb13"
+    Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:21:5 written "release_ref" "bb13"
       Copy "_12"
   Block "bb13"
     Sequenced a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:21:5 generated
     ArgumentsEvaluated a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:22:5 generated
-    Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:22:5 "memcpy" "bb14"
+    Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:22:5 written "memcpy" "bb14"
       Destination "_13"
       Copy "_8"
       Copy "_4"
@@ -163,7 +163,7 @@ Function a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:
       Address
         Place "_14"
     ArgumentsEvaluated a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:24:12 generated
-    Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:24:12 "use2" "bb15"
+    Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:24:12 written "use2" "bb15"
       Destination "_16"
       Copy "_15"
   Block "bb15"

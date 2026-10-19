@@ -24,7 +24,7 @@ Function an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_thro
       Destination "_2"
       Unary "Not"
         Copy "_1"
-    Branch an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:5:9 "bb1" "bb2"
+    Branch an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:5:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:5:9 generated
@@ -48,7 +48,7 @@ Function an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_thro
       Destination "_4"
       Unary "Not"
         Copy "_3"
-    Branch an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:7:9 "bb4" "bb5"
+    Branch an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:7:9 written "bb4" "bb5"
       Copy "_4"
   Block "bb4"
     Sequenced an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:7:9 generated
@@ -63,7 +63,7 @@ Function an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_thro
     Goto "bb6"
   Block "bb6"
     ArgumentsEvaluated an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:8:14 generated
-    Call an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:8:14 "malloc" "bb7"
+    Call an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:8:14 written "malloc" "bb7"
       Destination "_6"
       Constant 4
   Block "bb7"
@@ -76,7 +76,7 @@ Function an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_thro
       Destination "_7"
       Unary "Not"
         Copy "_5"
-    Branch an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:9:9 "bb8" "bb9"
+    Branch an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:9:9 written "bb8" "bb9"
       Copy "_7"
   Block "bb8"
     Sequenced an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:9:9 generated
@@ -91,12 +91,12 @@ Function an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_thro
     Goto "bb10"
   Block "bb10"
     ArgumentsEvaluated an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:10:5 generated
-    Call an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:10:5 "stash" "bb11"
+    Call an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:10:5 written "stash" "bb11"
       Copy "_5"
   Block "bb11"
     Sequenced an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:10:5 generated
     ArgumentsEvaluated an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:11:5 generated
-    Call an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:11:5 "free" "bb12"
+    Call an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:11:5 written "free" "bb12"
       Copy "_5"
   Block "bb12"
     Sequenced an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:11:5 generated
@@ -110,7 +110,7 @@ Function an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_thro
       Destination "_9"
       Unary "Not"
         Copy "_8"
-    Branch an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:13:9 "bb13" "bb14"
+    Branch an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:13:9 written "bb13" "bb14"
       Copy "_9"
   Block "bb13"
     Sequenced an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load.c:13:9 generated

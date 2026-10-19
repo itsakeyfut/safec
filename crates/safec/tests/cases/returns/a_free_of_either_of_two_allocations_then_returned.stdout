@@ -16,7 +16,7 @@ Function a_free_of_either_of_two_allocations_then_returned.c:4:6 "either"
   Local "_7" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_free_of_either_of_two_allocations_then_returned.c:5:14 generated
-    Call a_free_of_either_of_two_allocations_then_returned.c:5:14 "malloc" "bb1"
+    Call a_free_of_either_of_two_allocations_then_returned.c:5:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -26,7 +26,7 @@ Function a_free_of_either_of_two_allocations_then_returned.c:4:6 "either"
         Copy "_3"
     Sequenced a_free_of_either_of_two_allocations_then_returned.c:5:14 generated
     ArgumentsEvaluated a_free_of_either_of_two_allocations_then_returned.c:6:14 generated
-    Call a_free_of_either_of_two_allocations_then_returned.c:6:14 "malloc" "bb2"
+    Call a_free_of_either_of_two_allocations_then_returned.c:6:14 written "malloc" "bb2"
       Destination "_5"
       Constant 4
   Block "bb2"
@@ -40,7 +40,7 @@ Function a_free_of_either_of_two_allocations_then_returned.c:4:6 "either"
       Use
         Copy "_2"
     Sequenced a_free_of_either_of_two_allocations_then_returned.c:7:14 generated
-    Branch a_free_of_either_of_two_allocations_then_returned.c:8:9 "bb3" "bb4"
+    Branch a_free_of_either_of_two_allocations_then_returned.c:8:9 written "bb3" "bb4"
       Copy "_1"
   Block "bb3"
     Sequenced a_free_of_either_of_two_allocations_then_returned.c:8:9 generated
@@ -59,7 +59,7 @@ Function a_free_of_either_of_two_allocations_then_returned.c:4:6 "either"
     Goto "bb5"
   Block "bb5"
     ArgumentsEvaluated a_free_of_either_of_two_allocations_then_returned.c:11:5 generated
-    Call a_free_of_either_of_two_allocations_then_returned.c:11:5 "free" "bb6"
+    Call a_free_of_either_of_two_allocations_then_returned.c:11:5 written "free" "bb6"
       Copy "_6"
   Block "bb6"
     Sequenced a_free_of_either_of_two_allocations_then_returned.c:11:5 generated

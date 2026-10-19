@@ -9,7 +9,7 @@ Function a_pointer_tested_with_a_logical_negation.c:1:5 "f"
       Destination "_2"
       Unary "Not"
         Copy "_1"
-    Branch a_pointer_tested_with_a_logical_negation.c:2:9 "bb1" "bb2"
+    Branch a_pointer_tested_with_a_logical_negation.c:2:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_pointer_tested_with_a_logical_negation.c:2:9 generated

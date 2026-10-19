@@ -17,7 +17,7 @@ Function a_free_of_a_pointer_an_increment_moved.c:3:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_free_of_a_pointer_an_increment_moved.c:4:14 generated
-    Call a_free_of_a_pointer_an_increment_moved.c:4:14 "malloc" "bb1"
+    Call a_free_of_a_pointer_an_increment_moved.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -41,7 +41,7 @@ Function a_free_of_a_pointer_an_increment_moved.c:3:5 "main"
         Copy "_4"
     Sequenced a_free_of_a_pointer_an_increment_moved.c:5:5 generated
     ArgumentsEvaluated a_free_of_a_pointer_an_increment_moved.c:6:5 generated
-    Call a_free_of_a_pointer_an_increment_moved.c:6:5 "free" "bb2"
+    Call a_free_of_a_pointer_an_increment_moved.c:6:5 written "free" "bb2"
       Copy "_1"
   Block "bb2"
     Sequenced a_free_of_a_pointer_an_increment_moved.c:6:5 generated

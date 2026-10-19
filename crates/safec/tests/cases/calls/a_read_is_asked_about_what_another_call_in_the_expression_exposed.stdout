@@ -30,7 +30,7 @@ Function a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:5:5
       Use
         Constant 0
     ArgumentsEvaluated a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:8:14 generated
-    Call a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:8:14 "malloc" "bb1"
+    Call a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:8:14 written "malloc" "bb1"
       Destination "_4"
       Constant 4
   Block "bb1"
@@ -44,7 +44,7 @@ Function a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:5:5
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:9:9 "bb2" "bb3"
+    Branch a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:9:9 written "bb2" "bb3"
       Copy "_5"
   Block "bb2"
     Sequenced a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:9:9 generated
@@ -78,7 +78,7 @@ Function a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:5:5
       Destination "_7"
       Use
         Copy "_1"
-    Call a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:13:23 "memset" "bb5"
+    Call a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:13:23 written "memset" "bb5"
       Destination "_8"
       Copy "_3"
       Constant 0
@@ -94,7 +94,7 @@ Function a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:5:5
       Binary "Add"
         Copy "_7"
         Copy "_9"
-    Call a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:13:47 "release_all" "bb6"
+    Call a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:13:47 written "release_all" "bb6"
       Destination "_11"
   Block "bb6"
     Operation a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:13:10 written

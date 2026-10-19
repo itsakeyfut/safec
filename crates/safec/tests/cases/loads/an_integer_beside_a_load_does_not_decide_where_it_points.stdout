@@ -33,7 +33,7 @@ Function an_integer_beside_a_load_does_not_decide_where_it_points.c:5:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated an_integer_beside_a_load_does_not_decide_where_it_points.c:6:16 generated
-    Call an_integer_beside_a_load_does_not_decide_where_it_points.c:6:16 "malloc" "bb1"
+    Call an_integer_beside_a_load_does_not_decide_where_it_points.c:6:16 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -47,7 +47,7 @@ Function an_integer_beside_a_load_does_not_decide_where_it_points.c:5:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch an_integer_beside_a_load_does_not_decide_where_it_points.c:7:9 "bb2" "bb3"
+    Branch an_integer_beside_a_load_does_not_decide_where_it_points.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:7:9 generated
@@ -62,7 +62,7 @@ Function an_integer_beside_a_load_does_not_decide_where_it_points.c:5:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated an_integer_beside_a_load_does_not_decide_where_it_points.c:10:14 generated
-    Call an_integer_beside_a_load_does_not_decide_where_it_points.c:10:14 "malloc" "bb5"
+    Call an_integer_beside_a_load_does_not_decide_where_it_points.c:10:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -76,7 +76,7 @@ Function an_integer_beside_a_load_does_not_decide_where_it_points.c:5:5 "main"
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch an_integer_beside_a_load_does_not_decide_where_it_points.c:11:9 "bb6" "bb7"
+    Branch an_integer_beside_a_load_does_not_decide_where_it_points.c:11:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:11:9 generated
@@ -91,7 +91,7 @@ Function an_integer_beside_a_load_does_not_decide_where_it_points.c:5:5 "main"
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated an_integer_beside_a_load_does_not_decide_where_it_points.c:14:14 generated
-    Call an_integer_beside_a_load_does_not_decide_where_it_points.c:14:14 "malloc" "bb9"
+    Call an_integer_beside_a_load_does_not_decide_where_it_points.c:14:14 written "malloc" "bb9"
       Destination "_8"
       Constant 4
   Block "bb9"
@@ -105,7 +105,7 @@ Function an_integer_beside_a_load_does_not_decide_where_it_points.c:5:5 "main"
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch an_integer_beside_a_load_does_not_decide_where_it_points.c:15:9 "bb10" "bb11"
+    Branch an_integer_beside_a_load_does_not_decide_where_it_points.c:15:9 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:15:9 generated
@@ -153,7 +153,7 @@ Function an_integer_beside_a_load_does_not_decide_where_it_points.c:5:5 "main"
           Deref
     Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:20:5 generated
     ArgumentsEvaluated an_integer_beside_a_load_does_not_decide_where_it_points.c:21:13 generated
-    Call an_integer_beside_a_load_does_not_decide_where_it_points.c:21:13 "h" "bb13"
+    Call an_integer_beside_a_load_does_not_decide_where_it_points.c:21:13 written "h" "bb13"
       Destination "_14"
       Copy "_7"
   Block "bb13"
@@ -163,7 +163,7 @@ Function an_integer_beside_a_load_does_not_decide_where_it_points.c:5:5 "main"
         Copy "_14"
     Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:21:13 generated
     ArgumentsEvaluated an_integer_beside_a_load_does_not_decide_where_it_points.c:22:5 generated
-    Call an_integer_beside_a_load_does_not_decide_where_it_points.c:22:5 "free" "bb14"
+    Call an_integer_beside_a_load_does_not_decide_where_it_points.c:22:5 written "free" "bb14"
       Copy "_7"
   Block "bb14"
     Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:22:5 generated
@@ -183,7 +183,7 @@ Function an_integer_beside_a_load_does_not_decide_where_it_points.c:5:5 "main"
       Binary "Eq"
         Copy "_15"
         Constant 0
-    Branch an_integer_beside_a_load_does_not_decide_where_it_points.c:24:9 "bb15" "bb16"
+    Branch an_integer_beside_a_load_does_not_decide_where_it_points.c:24:9 written "bb15" "bb16"
       Copy "_17"
   Block "bb15"
     Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:24:9 generated

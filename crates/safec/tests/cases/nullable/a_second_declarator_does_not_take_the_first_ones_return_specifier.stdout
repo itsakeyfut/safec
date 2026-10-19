@@ -13,7 +13,7 @@ Function a_second_declarator_does_not_take_the_first_ones_return_specifier.c:3:5
       Use
         Constant 0
     ArgumentsEvaluated a_second_declarator_does_not_take_the_first_ones_return_specifier.c:4:14 generated
-    Call a_second_declarator_does_not_take_the_first_ones_return_specifier.c:4:14 "g" "bb1"
+    Call a_second_declarator_does_not_take_the_first_ones_return_specifier.c:4:14 written "g" "bb1"
       Destination "_2"
   Block "bb1"
     Operation a_second_declarator_does_not_take_the_first_ones_return_specifier.c:4:10 written

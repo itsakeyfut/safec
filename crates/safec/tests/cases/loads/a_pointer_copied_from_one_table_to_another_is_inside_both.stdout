@@ -24,7 +24,7 @@ Function a_pointer_copied_from_one_table_to_another_is_inside_both.c:4:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_pointer_copied_from_one_table_to_another_is_inside_both.c:5:15 generated
-    Call a_pointer_copied_from_one_table_to_another_is_inside_both.c:5:15 "malloc" "bb1"
+    Call a_pointer_copied_from_one_table_to_another_is_inside_both.c:5:15 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -38,7 +38,7 @@ Function a_pointer_copied_from_one_table_to_another_is_inside_both.c:4:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_copied_from_one_table_to_another_is_inside_both.c:6:9 "bb2" "bb3"
+    Branch a_pointer_copied_from_one_table_to_another_is_inside_both.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_copied_from_one_table_to_another_is_inside_both.c:6:9 generated
@@ -53,7 +53,7 @@ Function a_pointer_copied_from_one_table_to_another_is_inside_both.c:4:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_pointer_copied_from_one_table_to_another_is_inside_both.c:9:15 generated
-    Call a_pointer_copied_from_one_table_to_another_is_inside_both.c:9:15 "malloc" "bb5"
+    Call a_pointer_copied_from_one_table_to_another_is_inside_both.c:9:15 written "malloc" "bb5"
       Destination "_5"
       Constant 8
   Block "bb5"
@@ -67,7 +67,7 @@ Function a_pointer_copied_from_one_table_to_another_is_inside_both.c:4:5 "main"
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_pointer_copied_from_one_table_to_another_is_inside_both.c:10:9 "bb6" "bb7"
+    Branch a_pointer_copied_from_one_table_to_another_is_inside_both.c:10:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_pointer_copied_from_one_table_to_another_is_inside_both.c:10:9 generated
@@ -82,7 +82,7 @@ Function a_pointer_copied_from_one_table_to_another_is_inside_both.c:4:5 "main"
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated a_pointer_copied_from_one_table_to_another_is_inside_both.c:13:14 generated
-    Call a_pointer_copied_from_one_table_to_another_is_inside_both.c:13:14 "malloc" "bb9"
+    Call a_pointer_copied_from_one_table_to_another_is_inside_both.c:13:14 written "malloc" "bb9"
       Destination "_8"
       Constant 4
   Block "bb9"
@@ -96,7 +96,7 @@ Function a_pointer_copied_from_one_table_to_another_is_inside_both.c:4:5 "main"
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch a_pointer_copied_from_one_table_to_another_is_inside_both.c:14:9 "bb10" "bb11"
+    Branch a_pointer_copied_from_one_table_to_another_is_inside_both.c:14:9 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced a_pointer_copied_from_one_table_to_another_is_inside_both.c:14:9 generated
@@ -134,7 +134,7 @@ Function a_pointer_copied_from_one_table_to_another_is_inside_both.c:4:5 "main"
           Deref
     Sequenced a_pointer_copied_from_one_table_to_another_is_inside_both.c:18:5 generated
     ArgumentsEvaluated a_pointer_copied_from_one_table_to_another_is_inside_both.c:19:5 generated
-    Call a_pointer_copied_from_one_table_to_another_is_inside_both.c:19:5 "drop_inner" "bb13"
+    Call a_pointer_copied_from_one_table_to_another_is_inside_both.c:19:5 written "drop_inner" "bb13"
       Copy "_4"
   Block "bb13"
     Sequenced a_pointer_copied_from_one_table_to_another_is_inside_both.c:19:5 generated

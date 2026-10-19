@@ -9,7 +9,7 @@ Function a_null_pointer_tested_and_read_through_on_the_arm_nothing_reaches_is_pr
       Use
         Constant 0
     Sequenced a_null_pointer_tested_and_read_through_on_the_arm_nothing_reaches_is_proved_null.c:2:14 generated
-    Branch a_null_pointer_tested_and_read_through_on_the_arm_nothing_reaches_is_proved_null.c:3:9 "bb1" "bb2"
+    Branch a_null_pointer_tested_and_read_through_on_the_arm_nothing_reaches_is_proved_null.c:3:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced a_null_pointer_tested_and_read_through_on_the_arm_nothing_reaches_is_proved_null.c:3:9 generated

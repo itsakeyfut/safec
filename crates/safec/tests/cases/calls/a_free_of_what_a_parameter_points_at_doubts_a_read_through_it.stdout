@@ -12,7 +12,7 @@ Function a_free_of_what_a_parameter_points_at_doubts_a_read_through_it.c:3:5 "f"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_free_of_what_a_parameter_points_at_doubts_a_read_through_it.c:4:9 "bb1" "bb2"
+    Branch a_free_of_what_a_parameter_points_at_doubts_a_read_through_it.c:4:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_free_of_what_a_parameter_points_at_doubts_a_read_through_it.c:4:9 generated
@@ -27,7 +27,7 @@ Function a_free_of_what_a_parameter_points_at_doubts_a_read_through_it.c:3:5 "f"
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated a_free_of_what_a_parameter_points_at_doubts_a_read_through_it.c:7:5 generated
-    Call a_free_of_what_a_parameter_points_at_doubts_a_read_through_it.c:7:5 "free" "bb4"
+    Call a_free_of_what_a_parameter_points_at_doubts_a_read_through_it.c:7:5 written "free" "bb4"
       Copy "_1"
         Deref
   Block "bb4"

@@ -13,7 +13,7 @@ Function a_pointer_assigned_in_a_condition_is_null_on_the_arm_not_taken.c:1:5 "f
       Destination "_3"
       Use
         Copy "_2"
-    Branch a_pointer_assigned_in_a_condition_is_null_on_the_arm_not_taken.c:3:10 "bb1" "bb2"
+    Branch a_pointer_assigned_in_a_condition_is_null_on_the_arm_not_taken.c:3:10 written "bb1" "bb2"
       Copy "_3"
   Block "bb1"
     Sequenced a_pointer_assigned_in_a_condition_is_null_on_the_arm_not_taken.c:3:10 generated

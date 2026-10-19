@@ -46,12 +46,12 @@ Function a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:6:5 "f"
       Address
         Place "_5"
     ArgumentsEvaluated a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:12:5 generated
-    Call a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:12:5 "stash" "bb1"
+    Call a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:12:5 written "stash" "bb1"
       Copy "_7"
   Block "bb1"
     Sequenced a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:12:5 generated
     ArgumentsEvaluated a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:13:9 generated
-    Call a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:13:9 "malloc" "bb2"
+    Call a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:13:9 written "malloc" "bb2"
       Destination "_8"
       Constant 4
   Block "bb2"
@@ -69,7 +69,7 @@ Function a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:6:5 "f"
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:14:9 "bb3" "bb4"
+    Branch a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:14:9 written "bb3" "bb4"
       Copy "_10"
   Block "bb3"
     Sequenced a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:14:9 generated
@@ -103,10 +103,10 @@ Function a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:6:5 "f"
       Destination "_12"
       Use
         Copy "_2"
-    Call a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:18:33 "release_all" "bb6"
+    Call a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:18:33 written "release_all" "bb6"
       Destination "_13"
   Block "bb6"
-    Call a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:18:23 "memset" "bb7"
+    Call a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it.c:18:23 written "memset" "bb7"
       Destination "_14"
       Copy "_4"
       Copy "_13"

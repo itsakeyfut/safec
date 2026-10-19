@@ -35,7 +35,7 @@ Function an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land
       Destination "_4"
       Unary "Not"
         Copy "_1"
-    Branch an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:4:9 "bb1" "bb2"
+    Branch an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:4:9 written "bb1" "bb2"
       Copy "_4"
   Block "bb1"
     Sequenced an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:4:9 generated
@@ -53,7 +53,7 @@ Function an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land
       Destination "_5"
       Unary "Not"
         Copy "_2"
-    Branch an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:5:9 "bb4" "bb5"
+    Branch an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:5:9 written "bb4" "bb5"
       Copy "_5"
   Block "bb4"
     Sequenced an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:5:9 generated
@@ -68,7 +68,7 @@ Function an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land
     Goto "bb6"
   Block "bb6"
     ArgumentsEvaluated an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:6:15 generated
-    Call an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:6:15 "malloc" "bb7"
+    Call an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:6:15 written "malloc" "bb7"
       Destination "_7"
       Constant 8
   Block "bb7"
@@ -81,7 +81,7 @@ Function an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land
       Destination "_8"
       Unary "Not"
         Copy "_6"
-    Branch an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:7:9 "bb8" "bb9"
+    Branch an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:7:9 written "bb8" "bb9"
       Copy "_8"
   Block "bb8"
     Sequenced an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:7:9 generated
@@ -118,7 +118,7 @@ Function an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land
           Deref
     Sequenced an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:9:5 generated
     ArgumentsEvaluated an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:10:15 generated
-    Call an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:10:15 "malloc" "bb11"
+    Call an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:10:15 written "malloc" "bb11"
       Destination "_12"
       Constant 8
   Block "bb11"
@@ -131,7 +131,7 @@ Function an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land
       Destination "_13"
       Unary "Not"
         Copy "_11"
-    Branch an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:11:9 "bb12" "bb13"
+    Branch an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:11:9 written "bb12" "bb13"
       Copy "_13"
   Block "bb12"
     Sequenced an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:11:9 generated
@@ -156,7 +156,7 @@ Function an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land
         Copy "_11"
           Deref
     Sequenced an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:12:5 generated
-    Branch an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:13:9 "bb15" "bb16"
+    Branch an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:13:9 written "bb15" "bb16"
       Copy "_3"
   Block "bb15"
     Sequenced an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:13:9 generated
@@ -179,7 +179,7 @@ Function an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land
       Destination "_16"
       Unary "Not"
         Copy "_11"
-    Branch an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:14:9 "bb18" "bb19"
+    Branch an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:14:9 written "bb18" "bb19"
       Copy "_16"
   Block "bb18"
     Sequenced an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:14:9 generated
@@ -194,7 +194,7 @@ Function an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land
     Goto "bb20"
   Block "bb20"
     ArgumentsEvaluated an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:15:14 generated
-    Call an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:15:14 "malloc" "bb21"
+    Call an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:15:14 written "malloc" "bb21"
       Destination "_18"
       Constant 4
   Block "bb21"
@@ -207,7 +207,7 @@ Function an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land
       Destination "_19"
       Unary "Not"
         Copy "_17"
-    Branch an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:16:9 "bb22" "bb23"
+    Branch an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:16:9 written "bb22" "bb23"
       Copy "_19"
   Block "bb22"
     Sequenced an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:16:9 generated
@@ -244,7 +244,7 @@ Function an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land
           Deref
     Sequenced an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:18:5 generated
     ArgumentsEvaluated an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:19:5 generated
-    Call an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:19:5 "free" "bb25"
+    Call an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:19:5 written "free" "bb25"
       Copy "_17"
   Block "bb25"
     Sequenced an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:19:5 generated
@@ -258,7 +258,7 @@ Function an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land
       Destination "_23"
       Unary "Not"
         Copy "_22"
-    Branch an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:21:9 "bb26" "bb27"
+    Branch an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:21:9 written "bb26" "bb27"
       Copy "_23"
   Block "bb26"
     Sequenced an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:21:9 generated

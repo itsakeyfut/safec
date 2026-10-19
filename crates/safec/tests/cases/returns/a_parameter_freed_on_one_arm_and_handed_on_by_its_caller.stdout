@@ -10,12 +10,12 @@ Function a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:4:6 "maybe"
   Local "_1" "int *" parameter "p"
   Local "_2" "int" parameter "c"
   Block "bb0" entry
-    Branch a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:5:9 "bb1" "bb2"
+    Branch a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:5:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:5:9 generated
     ArgumentsEvaluated a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:6:9 generated
-    Call a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:6:9 "free" "bb4"
+    Call a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:6:9 written "free" "bb4"
       Copy "_1"
   Block "bb2"
     Sequenced a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:5:9 generated
@@ -40,7 +40,7 @@ Function a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:11:5 "use"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:12:9 "bb1" "bb2"
+    Branch a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:12:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:12:9 generated
@@ -75,7 +75,7 @@ Function a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:18:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:19:14 generated
-    Call a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:19:14 "malloc" "bb1"
+    Call a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:19:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -89,7 +89,7 @@ Function a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:18:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:20:9 "bb2" "bb3"
+    Branch a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:20:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:20:9 generated
@@ -104,7 +104,7 @@ Function a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:18:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:23:14 generated
-    Call a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:23:14 "maybe" "bb5"
+    Call a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:23:14 written "maybe" "bb5"
       Destination "_5"
       Copy "_1"
       Constant 1
@@ -115,7 +115,7 @@ Function a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:18:5 "main"
         Copy "_5"
     Sequenced a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:23:14 generated
     ArgumentsEvaluated a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:24:12 generated
-    Call a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:24:12 "use" "bb6"
+    Call a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:24:12 written "use" "bb6"
       Destination "_6"
       Copy "_4"
   Block "bb6"

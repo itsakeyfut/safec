@@ -30,7 +30,7 @@ Function an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubte
       Address
         Place "_1"
     ArgumentsEvaluated an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:6:5 generated
-    Call an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:6:5 "get" "bb1"
+    Call an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:6:5 written "get" "bb1"
       Copy "_2"
   Block "bb1"
     Sequenced an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:6:5 generated
@@ -38,7 +38,7 @@ Function an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubte
       Destination "_3"
       Unary "Not"
         Copy "_1"
-    Branch an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:7:9 "bb2" "bb3"
+    Branch an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:7:9 generated
@@ -53,7 +53,7 @@ Function an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubte
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:8:14 generated
-    Call an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:8:14 "malloc" "bb5"
+    Call an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:8:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -66,7 +66,7 @@ Function an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubte
       Destination "_6"
       Unary "Not"
         Copy "_4"
-    Branch an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:9:9 "bb6" "bb7"
+    Branch an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:9:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:9:9 generated
@@ -92,7 +92,7 @@ Function an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubte
           Deref
     Sequenced an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:10:5 generated
     ArgumentsEvaluated an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:11:5 generated
-    Call an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:11:5 "free" "bb9"
+    Call an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:11:5 written "free" "bb9"
       Copy "_4"
   Block "bb9"
     Sequenced an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:11:5 generated
@@ -106,7 +106,7 @@ Function an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubte
       Destination "_9"
       Unary "Not"
         Copy "_8"
-    Branch an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:13:9 "bb10" "bb11"
+    Branch an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:13:9 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back.c:13:9 generated

@@ -17,17 +17,17 @@ Function a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is
   Local "_7" "int *" "q"
   Local "_8" "int *"
   Block "bb0" entry
-    Branch a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted.c:7:9 "bb1" "bb2"
+    Branch a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted.c:7:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted.c:7:9 generated
     ArgumentsEvaluated a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted.c:8:13 generated
-    Call a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted.c:8:13 "get" "bb4"
+    Call a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted.c:8:13 written "get" "bb4"
       Destination "_3"
   Block "bb2"
     Sequenced a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted.c:7:9 generated
     ArgumentsEvaluated a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted.c:10:13 generated
-    Call a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted.c:10:13 "get_other" "bb5"
+    Call a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted.c:10:13 written "get_other" "bb5"
       Destination "_5"
   Block "bb3"
     Operation a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted.c:12:10 written
@@ -37,7 +37,7 @@ Function a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is
           Deref
     Sequenced a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted.c:12:14 generated
     ArgumentsEvaluated a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted.c:13:5 generated
-    Call a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted.c:13:5 "free" "bb6"
+    Call a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted.c:13:5 written "free" "bb6"
       Copy "_7"
   Block "bb4"
     Operation a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted.c:8:9 written

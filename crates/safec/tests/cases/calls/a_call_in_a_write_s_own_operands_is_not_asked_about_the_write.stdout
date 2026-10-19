@@ -55,12 +55,12 @@ Function a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:6:5 "f"
         Copy "_5"
     Sequenced a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:14:5 generated
     ArgumentsEvaluated a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:15:5 generated
-    Call a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:15:5 "keep" "bb1"
+    Call a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:15:5 written "keep" "bb1"
       Copy "_5"
   Block "bb1"
     Sequenced a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:15:5 generated
     ArgumentsEvaluated a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:16:9 generated
-    Call a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:16:9 "malloc" "bb2"
+    Call a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:16:9 written "malloc" "bb2"
       Destination "_11"
       Constant 4
   Block "bb2"
@@ -78,7 +78,7 @@ Function a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:6:5 "f"
       Binary "Eq"
         Copy "_7"
         Constant 0
-    Branch a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:17:9 "bb3" "bb4"
+    Branch a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:17:9 written "bb3" "bb4"
       Copy "_13"
   Block "bb3"
     Sequenced a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:17:9 generated
@@ -112,7 +112,7 @@ Function a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:6:5 "f"
       Destination "_15"
       Use
         Copy "_2"
-    Call a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:21:33 "now" "bb6"
+    Call a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:21:33 written "now" "bb6"
       Destination "_16"
   Block "bb6"
     Operation a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:21:29 written

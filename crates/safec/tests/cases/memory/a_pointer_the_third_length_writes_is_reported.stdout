@@ -9,10 +9,10 @@ Function a_pointer_the_third_length_writes_is_reported.c:1:5 "f"
   Local "_6" "int"
   Local "_7" "int *"
   Block "bb0" entry
-    Branch a_pointer_the_third_length_writes_is_reported.c:1:21 "bb2" "bb3"
+    Branch a_pointer_the_third_length_writes_is_reported.c:1:21 written "bb2" "bb3"
       Copy "_1"
   Block "bb1"
-    Branch a_pointer_the_third_length_writes_is_reported.c:1:39 "bb5" "bb6"
+    Branch a_pointer_the_third_length_writes_is_reported.c:1:39 written "bb5" "bb6"
       Copy "_1"
   Block "bb2"
     Operation a_pointer_the_third_length_writes_is_reported.c:1:21 written

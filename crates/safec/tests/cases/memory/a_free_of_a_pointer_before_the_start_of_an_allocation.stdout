@@ -12,7 +12,7 @@ Function a_free_of_a_pointer_before_the_start_of_an_allocation.c:3:5 "f"
   Local "_3" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_free_of_a_pointer_before_the_start_of_an_allocation.c:4:14 generated
-    Call a_free_of_a_pointer_before_the_start_of_an_allocation.c:4:14 "malloc" "bb1"
+    Call a_free_of_a_pointer_before_the_start_of_an_allocation.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -27,7 +27,7 @@ Function a_free_of_a_pointer_before_the_start_of_an_allocation.c:3:5 "f"
         Copy "_1"
         Constant 1
     ArgumentsEvaluated a_free_of_a_pointer_before_the_start_of_an_allocation.c:5:5 generated
-    Call a_free_of_a_pointer_before_the_start_of_an_allocation.c:5:5 "free" "bb2"
+    Call a_free_of_a_pointer_before_the_start_of_an_allocation.c:5:5 written "free" "bb2"
       Copy "_3"
   Block "bb2"
     Sequenced a_free_of_a_pointer_before_the_start_of_an_allocation.c:5:5 generated

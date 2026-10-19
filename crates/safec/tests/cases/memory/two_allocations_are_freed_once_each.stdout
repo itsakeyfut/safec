@@ -13,7 +13,7 @@ Function two_allocations_are_freed_once_each.c:3:5 "f"
   Local "_4" "void *"
   Block "bb0" entry
     ArgumentsEvaluated two_allocations_are_freed_once_each.c:4:14 generated
-    Call two_allocations_are_freed_once_each.c:4:14 "malloc" "bb1"
+    Call two_allocations_are_freed_once_each.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -23,7 +23,7 @@ Function two_allocations_are_freed_once_each.c:3:5 "f"
         Copy "_2"
     Sequenced two_allocations_are_freed_once_each.c:4:14 generated
     ArgumentsEvaluated two_allocations_are_freed_once_each.c:5:14 generated
-    Call two_allocations_are_freed_once_each.c:5:14 "malloc" "bb2"
+    Call two_allocations_are_freed_once_each.c:5:14 written "malloc" "bb2"
       Destination "_4"
       Constant 4
   Block "bb2"
@@ -33,12 +33,12 @@ Function two_allocations_are_freed_once_each.c:3:5 "f"
         Copy "_4"
     Sequenced two_allocations_are_freed_once_each.c:5:14 generated
     ArgumentsEvaluated two_allocations_are_freed_once_each.c:6:5 generated
-    Call two_allocations_are_freed_once_each.c:6:5 "free" "bb3"
+    Call two_allocations_are_freed_once_each.c:6:5 written "free" "bb3"
       Copy "_1"
   Block "bb3"
     Sequenced two_allocations_are_freed_once_each.c:6:5 generated
     ArgumentsEvaluated two_allocations_are_freed_once_each.c:7:5 generated
-    Call two_allocations_are_freed_once_each.c:7:5 "free" "bb4"
+    Call two_allocations_are_freed_once_each.c:7:5 written "free" "bb4"
       Copy "_3"
   Block "bb4"
     Sequenced two_allocations_are_freed_once_each.c:7:5 generated

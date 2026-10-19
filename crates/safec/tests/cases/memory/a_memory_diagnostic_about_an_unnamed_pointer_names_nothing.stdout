@@ -11,7 +11,7 @@ Function a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:3:5 "subsc
   Local "_2" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:4:5 generated
-    Call a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:4:5 "free" "bb1"
+    Call a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:4:5 written "free" "bb1"
       Copy "_1"
   Block "bb1"
     Sequenced a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:4:5 generated
@@ -32,7 +32,7 @@ Function a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:7:6 "throu
   Local "_1" "int **" parameter "pp"
   Block "bb0" entry
     ArgumentsEvaluated a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:8:5 generated
-    Call a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:8:5 "free" "bb1"
+    Call a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:8:5 written "free" "bb1"
       Copy "_1"
         Deref
   Block "bb1"
@@ -50,7 +50,7 @@ Function a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:10:5 "deep
   Local "_8" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:11:16 generated
-    Call a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:11:16 "malloc" "bb1"
+    Call a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:11:16 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -60,7 +60,7 @@ Function a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:10:5 "deep
         Copy "_2"
     Sequenced a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:11:16 generated
     ArgumentsEvaluated a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:12:14 generated
-    Call a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:12:14 "malloc" "bb2"
+    Call a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:12:14 written "malloc" "bb2"
       Destination "_4"
       Constant 4
   Block "bb2"
@@ -78,10 +78,10 @@ Function a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:10:5 "deep
       Binary "Ne"
         Copy "_5"
         Constant 0
-    Branch a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:13:9 "bb3" "bb4"
+    Branch a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:13:9 written "bb3" "bb4"
       Copy "_6"
   Block "bb3"
-    Branch a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:13:9 "bb5" "bb6"
+    Branch a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:13:9 written "bb5" "bb6"
       Copy "_6"
   Block "bb4"
     Sequenced a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:13:9 generated
@@ -119,7 +119,7 @@ Function a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:10:5 "deep
           Deref
     Sequenced a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:16:5 generated
     ArgumentsEvaluated a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:17:5 generated
-    Call a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:17:5 "free" "bb8"
+    Call a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:17:5 written "free" "bb8"
       Copy "_3"
   Block "bb8"
     Sequenced a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:17:5 generated

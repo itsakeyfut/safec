@@ -57,7 +57,7 @@ Function a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:8:5 "f"
   Local "_23" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:9:17 generated
-    Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:9:17 "malloc" "bb1"
+    Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:9:17 written "malloc" "bb1"
       Destination "_3"
       Constant 8
   Block "bb1"
@@ -70,7 +70,7 @@ Function a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:8:5 "f"
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:10:9 "bb2" "bb3"
+    Branch a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:10:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:10:9 generated
@@ -85,7 +85,7 @@ Function a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:8:5 "f"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:11:18 generated
-    Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:11:18 "malloc" "bb5"
+    Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:11:18 written "malloc" "bb5"
       Destination "_6"
       Constant 8
   Block "bb5"
@@ -98,7 +98,7 @@ Function a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:8:5 "f"
       Destination "_7"
       Unary "Not"
         Copy "_5"
-    Branch a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:12:9 "bb6" "bb7"
+    Branch a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:12:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:12:9 generated
@@ -134,7 +134,7 @@ Function a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:8:5 "f"
       Binary "Lt"
         Copy "_10"
         Constant 2
-    Branch a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:16:12 "bb10" "bb11"
+    Branch a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:16:12 written "bb10" "bb11"
       Copy "_11"
   Block "bb10"
     Sequenced a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:16:12 generated
@@ -148,7 +148,7 @@ Function a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:8:5 "f"
         Copy "_8"
     Sequenced a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:17:9 generated
     ArgumentsEvaluated a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:18:13 generated
-    Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:18:13 "malloc" "bb12"
+    Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:18:13 written "malloc" "bb12"
       Destination "_13"
       Constant 4
   Block "bb11"
@@ -165,7 +165,7 @@ Function a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:8:5 "f"
           Deref
     Sequenced a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:23:5 generated
     ArgumentsEvaluated a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:24:14 generated
-    Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:24:14 "id" "bb16"
+    Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:24:14 written "id" "bb16"
       Destination "_21"
       Copy "_2"
         Deref
@@ -183,7 +183,7 @@ Function a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:8:5 "f"
       Destination "_15"
       Unary "Not"
         Copy "_9"
-    Branch a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:19:13 "bb13" "bb14"
+    Branch a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:19:13 written "bb13" "bb14"
       Copy "_15"
   Block "bb13"
     Sequenced a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:19:13 generated
@@ -230,7 +230,7 @@ Function a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:8:5 "f"
         Copy "_21"
     Sequenced a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:24:14 generated
     ArgumentsEvaluated a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:25:5 generated
-    Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:25:5 "free" "bb17"
+    Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:25:5 written "free" "bb17"
       Copy "_8"
   Block "bb17"
     Sequenced a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:25:5 generated
@@ -238,7 +238,7 @@ Function a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:8:5 "f"
       Destination "_22"
       Unary "Not"
         Copy "_20"
-    Branch a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:26:9 "bb18" "bb19"
+    Branch a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:26:9 written "bb18" "bb19"
       Copy "_22"
   Block "bb18"
     Sequenced a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:26:9 generated
@@ -259,17 +259,17 @@ Function a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:8:5 "f"
           Deref
     Sequenced a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:27:13 generated
     ArgumentsEvaluated a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:28:5 generated
-    Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:28:5 "free" "bb21"
+    Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:28:5 written "free" "bb21"
       Copy "_9"
   Block "bb21"
     Sequenced a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:28:5 generated
     ArgumentsEvaluated a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:29:5 generated
-    Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:29:5 "free" "bb22"
+    Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:29:5 written "free" "bb22"
       Copy "_2"
   Block "bb22"
     Sequenced a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:29:5 generated
     ArgumentsEvaluated a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:30:5 generated
-    Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:30:5 "free" "bb23"
+    Call a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:30:5 written "free" "bb23"
       Copy "_5"
   Block "bb23"
     Sequenced a_lost_pointer_returned_by_a_call_is_doubted_after_its_free.c:30:5 generated

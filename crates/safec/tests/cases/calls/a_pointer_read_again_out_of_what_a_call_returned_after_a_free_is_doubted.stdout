@@ -12,7 +12,7 @@ Function a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubte
   Local "_4" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubted.c:5:15 generated
-    Call a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubted.c:5:15 "get" "bb1"
+    Call a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubted.c:5:15 written "get" "bb1"
       Destination "_2"
   Block "bb1"
     Operation a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubted.c:5:11 written
@@ -27,7 +27,7 @@ Function a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubte
           Deref
     Sequenced a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubted.c:6:14 generated
     ArgumentsEvaluated a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubted.c:7:5 generated
-    Call a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubted.c:7:5 "free" "bb2"
+    Call a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubted.c:7:5 written "free" "bb2"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubted.c:7:5 generated

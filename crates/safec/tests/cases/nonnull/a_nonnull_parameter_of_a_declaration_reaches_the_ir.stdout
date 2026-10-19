@@ -17,7 +17,7 @@ Function a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:2:5 "f"
       Address
         Place "_1"
     ArgumentsEvaluated a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:4:5 generated
-    Call a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:4:5 "g" "bb1"
+    Call a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:4:5 written "g" "bb1"
       Copy "_2"
   Block "bb1"
     Sequenced a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:4:5 generated

@@ -18,7 +18,7 @@ Function the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:4:5 "use2
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:6:9 "bb1" "bb2"
+    Branch the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:6:9 written "bb1" "bb2"
       Copy "_3"
   Block "bb1"
     Sequenced the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:6:9 generated
@@ -47,7 +47,7 @@ Function the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:4:5 "use2
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:10:9 "bb4" "bb5"
+    Branch the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:10:9 written "bb4" "bb5"
       Copy "_5"
   Block "bb4"
     Sequenced the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:10:9 generated
@@ -81,7 +81,7 @@ Function the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:16:5 "mai
       Use
         Constant 0
     ArgumentsEvaluated the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:17:14 generated
-    Call the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:17:14 "malloc" "bb1"
+    Call the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:17:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -95,7 +95,7 @@ Function the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:16:5 "mai
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:18:9 "bb2" "bb3"
+    Branch the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:18:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:18:9 generated
@@ -110,7 +110,7 @@ Function the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:16:5 "mai
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:21:5 generated
-    Call the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:21:5 "free" "bb5"
+    Call the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:21:5 written "free" "bb5"
       Copy "_1"
   Block "bb5"
     Sequenced the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:21:5 generated
@@ -119,7 +119,7 @@ Function the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:16:5 "mai
       Address
         Place "_1"
     ArgumentsEvaluated the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:22:12 generated
-    Call the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:22:12 "use2" "bb6"
+    Call the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:22:12 written "use2" "bb6"
       Destination "_5"
       Copy "_4"
   Block "bb6"

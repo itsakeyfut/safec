@@ -32,7 +32,7 @@ Function a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:5
       Use
         Constant 0
     ArgumentsEvaluated a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:6:16 generated
-    Call a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:6:16 "malloc" "bb1"
+    Call a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:6:16 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -46,7 +46,7 @@ Function a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:5
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:7:9 "bb2" "bb3"
+    Branch a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:7:9 generated
@@ -61,7 +61,7 @@ Function a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:5
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:10:14 generated
-    Call a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:10:14 "malloc" "bb5"
+    Call a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:10:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -75,7 +75,7 @@ Function a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:5
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:11:9 "bb6" "bb7"
+    Branch a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:11:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:11:9 generated
@@ -112,7 +112,7 @@ Function a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:5
           Deref
     Sequenced a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:15:5 generated
     ArgumentsEvaluated a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:16:14 generated
-    Call a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:16:14 "realloc" "bb9"
+    Call a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:16:14 written "realloc" "bb9"
       Destination "_10"
       Copy "_1"
         Deref
@@ -128,7 +128,7 @@ Function a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:5
       Binary "Eq"
         Copy "_9"
         Constant 0
-    Branch a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:17:9 "bb10" "bb11"
+    Branch a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:17:9 written "bb10" "bb11"
       Copy "_11"
   Block "bb10"
     Sequenced a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:17:9 generated
@@ -160,7 +160,7 @@ Function a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:5
           Deref
     Sequenced a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:21:14 generated
     ArgumentsEvaluated a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:22:5 generated
-    Call a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:22:5 "free" "bb13"
+    Call a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:22:5 written "free" "bb13"
       Copy "_1"
   Block "bb13"
     Sequenced a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:22:5 generated
@@ -169,7 +169,7 @@ Function a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:5
       Binary "Eq"
         Copy "_13"
         Constant 0
-    Branch a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:23:9 "bb14" "bb15"
+    Branch a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:23:9 written "bb14" "bb15"
       Copy "_14"
   Block "bb14"
     Sequenced a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:23:9 generated
@@ -190,7 +190,7 @@ Function a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:5
           Deref
     Sequenced a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:26:13 generated
     ArgumentsEvaluated a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:27:5 generated
-    Call a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:27:5 "free" "bb17"
+    Call a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:27:5 written "free" "bb17"
       Copy "_13"
   Block "bb17"
     Sequenced a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:27:5 generated

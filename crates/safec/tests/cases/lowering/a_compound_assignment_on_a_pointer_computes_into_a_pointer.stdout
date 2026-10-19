@@ -14,7 +14,7 @@ Function a_compound_assignment_on_a_pointer_computes_into_a_pointer.c:3:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_compound_assignment_on_a_pointer_computes_into_a_pointer.c:3:27 generated
-    Call a_compound_assignment_on_a_pointer_computes_into_a_pointer.c:3:27 "malloc" "bb1"
+    Call a_compound_assignment_on_a_pointer_computes_into_a_pointer.c:3:27 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"

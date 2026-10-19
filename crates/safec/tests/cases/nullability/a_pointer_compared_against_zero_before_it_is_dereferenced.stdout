@@ -10,7 +10,7 @@ Function a_pointer_compared_against_zero_before_it_is_dereferenced.c:1:5 "f"
       Binary "Ne"
         Copy "_1"
         Constant 0
-    Branch a_pointer_compared_against_zero_before_it_is_dereferenced.c:2:9 "bb1" "bb2"
+    Branch a_pointer_compared_against_zero_before_it_is_dereferenced.c:2:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_pointer_compared_against_zero_before_it_is_dereferenced.c:2:9 generated

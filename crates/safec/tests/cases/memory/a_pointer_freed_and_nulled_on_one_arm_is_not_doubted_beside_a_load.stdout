@@ -27,7 +27,7 @@ Function a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:3:
           Deref
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:4:14 generated
     ArgumentsEvaluated a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:5:14 generated
-    Call a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:5:14 "malloc" "bb1"
+    Call a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:5:14 written "malloc" "bb1"
       Destination "_5"
       Constant 4
   Block "bb1"
@@ -40,7 +40,7 @@ Function a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:3:
       Destination "_6"
       Unary "Not"
         Copy "_4"
-    Branch a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:6:9 "bb2" "bb3"
+    Branch a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:6:9 written "bb2" "bb3"
       Copy "_6"
   Block "bb2"
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:6:9 generated
@@ -65,12 +65,12 @@ Function a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:3:
         Copy "_4"
           Deref
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:7:5 generated
-    Branch a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:8:9 "bb5" "bb6"
+    Branch a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:8:9 written "bb5" "bb6"
       Copy "_1"
   Block "bb5"
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:8:9 generated
     ArgumentsEvaluated a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:8:14 generated
-    Call a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:8:14 "free" "bb8"
+    Call a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:8:14 written "free" "bb8"
       Copy "_4"
   Block "bb6"
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:8:9 generated
@@ -80,7 +80,7 @@ Function a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:3:
       Destination "_9"
       Unary "Not"
         Copy "_4"
-    Branch a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:9:9 "bb9" "bb10"
+    Branch a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:9:9 written "bb9" "bb10"
       Copy "_9"
   Block "bb8"
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:8:14 generated
@@ -113,7 +113,7 @@ Function a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:3:
           Deref
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:10:13 generated
     ArgumentsEvaluated a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:11:5 generated
-    Call a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:11:5 "free" "bb12"
+    Call a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:11:5 written "free" "bb12"
       Copy "_4"
   Block "bb12"
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:11:5 generated

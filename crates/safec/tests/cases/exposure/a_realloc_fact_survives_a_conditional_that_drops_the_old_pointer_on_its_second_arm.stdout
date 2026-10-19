@@ -22,7 +22,7 @@ Function a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its
   Local "_9" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:5:14 generated
-    Call a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:5:14 "malloc" "bb1"
+    Call a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:5:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -35,7 +35,7 @@ Function a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:6:9 "bb2" "bb3"
+    Branch a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:6:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:6:9 generated
@@ -50,7 +50,7 @@ Function a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:7:14 generated
-    Call a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:7:14 "realloc" "bb5"
+    Call a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:7:14 written "realloc" "bb5"
       Destination "_6"
       Copy "_2"
       Constant 8
@@ -60,7 +60,7 @@ Function a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its
       Use
         Copy "_6"
     Sequenced a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:7:14 generated
-    Branch a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:8:9 "bb7" "bb8"
+    Branch a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:8:9 written "bb7" "bb8"
       Copy "_1"
   Block "bb6"
     Operation a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:8:5 written
@@ -76,7 +76,7 @@ Function a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its
       Destination "_9"
       Unary "Not"
         Copy "_5"
-    Branch a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:9:9 "bb9" "bb10"
+    Branch a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:9:9 written "bb9" "bb10"
       Copy "_9"
   Block "bb7"
     Sequenced a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:8:9 generated
@@ -94,19 +94,19 @@ Function a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its
     Goto "bb6"
   Block "bb9"
     Sequenced a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:9:9 generated
-    Branch a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:10:13 "bb12" "bb13"
+    Branch a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:10:13 written "bb12" "bb13"
       Copy "_2"
   Block "bb10"
     Sequenced a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:9:9 generated
     Goto "bb11"
   Block "bb11"
     ArgumentsEvaluated a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:13:5 generated
-    Call a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:13:5 "free" "bb16"
+    Call a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:13:5 written "free" "bb16"
       Copy "_5"
   Block "bb12"
     Sequenced a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:10:13 generated
     ArgumentsEvaluated a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:10:16 generated
-    Call a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:10:16 "free" "bb15"
+    Call a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:10:16 written "free" "bb15"
       Copy "_2"
   Block "bb13"
     Sequenced a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm.c:10:13 generated

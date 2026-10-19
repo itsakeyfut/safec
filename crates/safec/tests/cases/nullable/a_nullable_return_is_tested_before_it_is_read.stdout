@@ -14,7 +14,7 @@ Function a_nullable_return_is_tested_before_it_is_read.c:5:5 "tested"
   Local "_2" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_nullable_return_is_tested_before_it_is_read.c:6:14 generated
-    Call a_nullable_return_is_tested_before_it_is_read.c:6:14 "find" "bb1"
+    Call a_nullable_return_is_tested_before_it_is_read.c:6:14 written "find" "bb1"
       Destination "_2"
   Block "bb1"
     Operation a_nullable_return_is_tested_before_it_is_read.c:6:10 written
@@ -22,7 +22,7 @@ Function a_nullable_return_is_tested_before_it_is_read.c:5:5 "tested"
       Use
         Copy "_2"
     Sequenced a_nullable_return_is_tested_before_it_is_read.c:6:14 generated
-    Branch a_nullable_return_is_tested_before_it_is_read.c:7:9 "bb2" "bb3"
+    Branch a_nullable_return_is_tested_before_it_is_read.c:7:9 written "bb2" "bb3"
       Copy "_1"
   Block "bb2"
     Sequenced a_nullable_return_is_tested_before_it_is_read.c:7:9 generated
@@ -49,7 +49,7 @@ Function a_nullable_return_is_tested_before_it_is_read.c:13:5 "untested"
   Local "_2" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_nullable_return_is_tested_before_it_is_read.c:14:14 generated
-    Call a_nullable_return_is_tested_before_it_is_read.c:14:14 "find" "bb1"
+    Call a_nullable_return_is_tested_before_it_is_read.c:14:14 written "find" "bb1"
       Destination "_2"
   Block "bb1"
     Operation a_nullable_return_is_tested_before_it_is_read.c:14:10 written

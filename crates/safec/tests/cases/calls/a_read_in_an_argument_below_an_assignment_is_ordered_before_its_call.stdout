@@ -21,7 +21,7 @@ Function a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:
       Use
         Constant 0
     ArgumentsEvaluated a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:5:14 generated
-    Call a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:5:14 "malloc" "bb1"
+    Call a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:5:14 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -35,7 +35,7 @@ Function a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:7:9 "bb2" "bb3"
+    Branch a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:7:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:7:9 generated
@@ -67,7 +67,7 @@ Function a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:
         Copy "_1"
           Deref
     ArgumentsEvaluated a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:9 generated
-    Call a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:9 "h" "bb5"
+    Call a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:9 written "h" "bb5"
       Destination "_7"
       Copy "_6"
   Block "bb5"

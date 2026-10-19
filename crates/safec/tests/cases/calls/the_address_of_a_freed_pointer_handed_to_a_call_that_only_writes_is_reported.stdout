@@ -16,7 +16,7 @@ Function the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_rep
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:5:9 "bb1" "bb2"
+    Branch the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:5:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:5:9 generated
@@ -49,7 +49,7 @@ Function the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_rep
       Use
         Constant 0
     ArgumentsEvaluated the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:12:14 generated
-    Call the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:12:14 "malloc" "bb1"
+    Call the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:12:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -63,7 +63,7 @@ Function the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_rep
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:13:9 "bb2" "bb3"
+    Branch the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:13:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:13:9 generated
@@ -78,7 +78,7 @@ Function the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_rep
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:16:5 generated
-    Call the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:16:5 "free" "bb5"
+    Call the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:16:5 written "free" "bb5"
       Copy "_1"
   Block "bb5"
     Sequenced the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:16:5 generated
@@ -87,7 +87,7 @@ Function the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_rep
       Address
         Place "_1"
     ArgumentsEvaluated the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:17:5 generated
-    Call the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:17:5 "reset" "bb6"
+    Call the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:17:5 written "reset" "bb6"
       Copy "_4"
   Block "bb6"
     Sequenced the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported.c:17:5 generated

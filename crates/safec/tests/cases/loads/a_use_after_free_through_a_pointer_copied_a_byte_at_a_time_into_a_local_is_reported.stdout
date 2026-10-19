@@ -37,7 +37,7 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local
       Use
         Constant 0
     ArgumentsEvaluated a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:5:17 generated
-    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:5:17 "malloc" "bb1"
+    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:5:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -51,7 +51,7 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:6:9 "bb2" "bb3"
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:6:9 generated
@@ -71,7 +71,7 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local
         Constant 0
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:9:17 generated
     ArgumentsEvaluated a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:10:14 generated
-    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:10:14 "malloc" "bb5"
+    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:10:14 written "malloc" "bb5"
       Destination "_6"
       Constant 4
   Block "bb5"
@@ -85,7 +85,7 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:11:9 "bb6" "bb7"
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:11:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:11:9 generated
@@ -146,7 +146,7 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local
       Binary "Lt"
         Copy "_14"
         Constant 8
-    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:20:12 "bb10" "bb11"
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:20:12 written "bb10" "bb11"
       Copy "_15"
   Block "bb10"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:20:12 generated
@@ -155,12 +155,12 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local
       Binary "Ne"
         Copy "_12"
         Constant 0
-    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:21:13 "bb12" "bb13"
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:21:13 written "bb12" "bb13"
       Copy "_16"
   Block "bb11"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:20:12 generated
     ArgumentsEvaluated a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:30:5 generated
-    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:30:5 "release" "bb18"
+    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:30:5 written "release" "bb18"
       Copy "_4"
   Block "bb12"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:21:13 generated
@@ -169,7 +169,7 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local
       Binary "Ne"
         Copy "_13"
         Constant 0
-    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:22:17 "bb15" "bb16"
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:22:17 written "bb15" "bb16"
       Copy "_17"
   Block "bb13"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:21:13 generated

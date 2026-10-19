@@ -19,7 +19,7 @@ Function a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:4:5 "
   Local "_10" "int *" "q"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:5:15 generated
-    Call a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:5:15 "malloc" "bb1"
+    Call a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:5:15 written "malloc" "bb1"
       Destination "_3"
       Constant 8
   Block "bb1"
@@ -33,7 +33,7 @@ Function a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:4:5 "
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:6:9 "bb2" "bb3"
+    Branch a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:6:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:6:9 generated
@@ -48,7 +48,7 @@ Function a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:4:5 "
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:9:14 generated
-    Call a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:9:14 "malloc" "bb5"
+    Call a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:9:14 written "malloc" "bb5"
       Destination "_6"
       Constant 4
   Block "bb5"
@@ -62,7 +62,7 @@ Function a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:4:5 "
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:10:9 "bb6" "bb7"
+    Branch a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:10:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:10:9 generated
@@ -87,12 +87,12 @@ Function a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:4:5 "
         Copy "_2"
           Deref
     Sequenced a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:13:5 generated
-    Branch a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:14:9 "bb9" "bb10"
+    Branch a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:14:9 written "bb9" "bb10"
       Copy "_1"
   Block "bb9"
     Sequenced a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:14:9 generated
     ArgumentsEvaluated a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:15:9 generated
-    Call a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:15:9 "free" "bb12"
+    Call a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:15:9 written "free" "bb12"
       Copy "_5"
   Block "bb10"
     Sequenced a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:14:9 generated

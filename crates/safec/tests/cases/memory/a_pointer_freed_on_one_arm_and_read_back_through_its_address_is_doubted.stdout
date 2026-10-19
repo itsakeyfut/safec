@@ -15,7 +15,7 @@ Function a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted
   Local "_6" "int **"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:5:14 generated
-    Call a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:5:14 "malloc" "bb1"
+    Call a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:5:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -29,7 +29,7 @@ Function a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:6:9 "bb2" "bb3"
+    Branch a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:6:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:6:9 generated
@@ -52,12 +52,12 @@ Function a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted
       Use
         Copy "_6"
     Sequenced a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:9:16 generated
-    Branch a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:10:9 "bb5" "bb6"
+    Branch a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:10:9 written "bb5" "bb6"
       Copy "_1"
   Block "bb5"
     Sequenced a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:10:9 generated
     ArgumentsEvaluated a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:11:9 generated
-    Call a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:11:9 "free" "bb8"
+    Call a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:11:9 written "free" "bb8"
       Copy "_2"
   Block "bb6"
     Sequenced a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:10:9 generated

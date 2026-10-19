@@ -31,7 +31,7 @@ Function a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:4:
       Destination "_3"
       Unary "Not"
         Copy "_2"
-    Branch a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:5:9 "bb1" "bb2"
+    Branch a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:5:9 written "bb1" "bb2"
       Copy "_3"
   Block "bb1"
     Sequenced a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:5:9 generated
@@ -46,7 +46,7 @@ Function a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:4:
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:6:14 generated
-    Call a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:6:14 "malloc" "bb4"
+    Call a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:6:14 written "malloc" "bb4"
       Destination "_5"
       Constant 4
   Block "bb4"
@@ -59,7 +59,7 @@ Function a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:4:
       Destination "_6"
       Unary "Not"
         Copy "_4"
-    Branch a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:7:9 "bb5" "bb6"
+    Branch a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:7:9 written "bb5" "bb6"
       Copy "_6"
   Block "bb5"
     Sequenced a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:7:9 generated
@@ -85,7 +85,7 @@ Function a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:4:
           Deref
     Sequenced a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:8:5 generated
     ArgumentsEvaluated a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:9:5 generated
-    Call a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:9:5 "free" "bb8"
+    Call a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:9:5 written "free" "bb8"
       Copy "_4"
   Block "bb8"
     Sequenced a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:9:5 generated
@@ -94,12 +94,12 @@ Function a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:4:
       Address
         Place "_8"
     ArgumentsEvaluated a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:11:5 generated
-    Call a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:11:5 "get" "bb9"
+    Call a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:11:5 written "get" "bb9"
       Copy "_9"
   Block "bb9"
     Sequenced a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:11:5 generated
     ArgumentsEvaluated a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:12:14 generated
-    Call a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:12:14 "malloc" "bb10"
+    Call a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:12:14 written "malloc" "bb10"
       Destination "_11"
       Constant 4
   Block "bb10"
@@ -112,7 +112,7 @@ Function a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:4:
       Destination "_12"
       Unary "Not"
         Copy "_10"
-    Branch a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:13:9 "bb11" "bb12"
+    Branch a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:13:9 written "bb11" "bb12"
       Copy "_12"
   Block "bb11"
     Sequenced a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:13:9 generated
@@ -126,7 +126,7 @@ Function a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:4:
     Sequenced a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:13:9 generated
     Goto "bb13"
   Block "bb13"
-    Branch a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:15:9 "bb14" "bb15"
+    Branch a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:15:9 written "bb14" "bb15"
       Copy "_1"
   Block "bb14"
     Sequenced a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:15:9 generated
@@ -140,7 +140,7 @@ Function a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:4:
         Copy "_13"
     Sequenced a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:15:14 generated
     ArgumentsEvaluated a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:15:21 generated
-    Call a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:15:21 "free" "bb17"
+    Call a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:15:21 written "free" "bb17"
       Copy "_10"
   Block "bb15"
     Sequenced a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:15:9 generated
@@ -156,7 +156,7 @@ Function a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:4:
     Goto "bb16"
   Block "bb16"
     ArgumentsEvaluated a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:5 generated
-    Call a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:5 "free" "bb18"
+    Call a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:5 written "free" "bb18"
       Copy "_13"
   Block "bb17"
     Sequenced a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:15:21 generated

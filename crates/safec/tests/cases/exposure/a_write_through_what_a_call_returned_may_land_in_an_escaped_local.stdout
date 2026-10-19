@@ -40,7 +40,7 @@ Function a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:5:5
       Address
         Place "_2"
     ArgumentsEvaluated a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:8:15 generated
-    Call a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:8:15 "pick" "bb1"
+    Call a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:8:15 written "pick" "bb1"
       Destination "_6"
       Copy "_4"
       Copy "_5"
@@ -51,7 +51,7 @@ Function a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:5:5
         Copy "_6"
     Sequenced a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:8:15 generated
     ArgumentsEvaluated a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:9:14 generated
-    Call a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:9:14 "malloc" "bb2"
+    Call a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:9:14 written "malloc" "bb2"
       Destination "_8"
       Constant 4
   Block "bb2"
@@ -72,7 +72,7 @@ Function a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:5:5
           Deref
     Sequenced a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:10:5 generated
     ArgumentsEvaluated a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:11:5 generated
-    Call a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:11:5 "free" "bb3"
+    Call a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:11:5 written "free" "bb3"
       Copy "_7"
   Block "bb3"
     Sequenced a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:11:5 generated

@@ -21,7 +21,7 @@ Function a_call_may_return_what_it_was_handed.c:5:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_call_may_return_what_it_was_handed.c:6:14 generated
-    Call a_call_may_return_what_it_was_handed.c:6:14 "malloc" "bb1"
+    Call a_call_may_return_what_it_was_handed.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -31,7 +31,7 @@ Function a_call_may_return_what_it_was_handed.c:5:5 "main"
         Copy "_2"
     Sequenced a_call_may_return_what_it_was_handed.c:6:14 generated
     ArgumentsEvaluated a_call_may_return_what_it_was_handed.c:7:14 generated
-    Call a_call_may_return_what_it_was_handed.c:7:14 "give" "bb2"
+    Call a_call_may_return_what_it_was_handed.c:7:14 written "give" "bb2"
       Destination "_4"
       Copy "_1"
   Block "bb2"
@@ -45,7 +45,7 @@ Function a_call_may_return_what_it_was_handed.c:5:5 "main"
       Binary "Ne"
         Copy "_3"
         Constant 0
-    Branch a_call_may_return_what_it_was_handed.c:8:9 "bb3" "bb4"
+    Branch a_call_may_return_what_it_was_handed.c:8:9 written "bb3" "bb4"
       Copy "_5"
   Block "bb3"
     Sequenced a_call_may_return_what_it_was_handed.c:8:9 generated

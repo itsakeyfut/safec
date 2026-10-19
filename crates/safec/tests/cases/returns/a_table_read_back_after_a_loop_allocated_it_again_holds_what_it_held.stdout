@@ -28,7 +28,7 @@ Function a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:
       Use
         Constant 0
     ArgumentsEvaluated a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:5:21 generated
-    Call a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:5:21 "malloc" "bb1"
+    Call a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:5:21 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -42,7 +42,7 @@ Function a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:6:9 "bb2" "bb3"
+    Branch a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:6:9 generated
@@ -57,7 +57,7 @@ Function a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:9:14 generated
-    Call a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:9:14 "malloc" "bb5"
+    Call a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:9:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -71,7 +71,7 @@ Function a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:10:9 "bb6" "bb7"
+    Branch a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:10:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:10:9 generated
@@ -97,7 +97,7 @@ Function a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:
     Sequenced a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:14:12 generated
     StorageLive a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:15:9 generated "_8"
     ArgumentsEvaluated a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:15:21 generated
-    Call a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:15:21 "malloc" "bb12"
+    Call a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:15:21 written "malloc" "bb12"
       Destination "_9"
       Constant 8
   Block "bb11"
@@ -119,7 +119,7 @@ Function a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:
       Binary "Eq"
         Copy "_8"
         Constant 0
-    Branch a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:16:13 "bb13" "bb14"
+    Branch a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:16:13 written "bb13" "bb14"
       Copy "_10"
   Block "bb13"
     Sequenced a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:16:13 generated
@@ -139,12 +139,12 @@ Function a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:
       Binary "Eq"
         Copy "_7"
         Constant 1
-    Branch a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:19:13 "bb16" "bb17"
+    Branch a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:19:13 written "bb16" "bb17"
       Copy "_11"
   Block "bb16"
     Sequenced a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:19:13 generated
     ArgumentsEvaluated a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:20:13 generated
-    Call a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:20:13 "release" "bb19"
+    Call a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:20:13 written "release" "bb19"
       Copy "_1"
         Deref
   Block "bb17"

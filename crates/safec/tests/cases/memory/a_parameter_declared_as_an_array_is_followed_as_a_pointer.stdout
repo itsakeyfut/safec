@@ -7,7 +7,7 @@ Function a_parameter_declared_as_an_array_is_followed_as_a_pointer.c:3:5 "g"
   Local "_1" "int *" parameter "a"
   Block "bb0" entry
     ArgumentsEvaluated a_parameter_declared_as_an_array_is_followed_as_a_pointer.c:4:5 generated
-    Call a_parameter_declared_as_an_array_is_followed_as_a_pointer.c:4:5 "free" "bb1"
+    Call a_parameter_declared_as_an_array_is_followed_as_a_pointer.c:4:5 written "free" "bb1"
       Copy "_1"
   Block "bb1"
     Sequenced a_parameter_declared_as_an_array_is_followed_as_a_pointer.c:4:5 generated

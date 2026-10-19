@@ -30,7 +30,7 @@ Function a_list_built_and_appended_to_in_one_function_is_refused.c:5:5 "build"
   Local "_19" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_list_built_and_appended_to_in_one_function_is_refused.c:10:12 generated
-    Call a_list_built_and_appended_to_in_one_function_is_refused.c:10:12 "malloc" "bb1"
+    Call a_list_built_and_appended_to_in_one_function_is_refused.c:10:12 written "malloc" "bb1"
       Destination "_5"
       Constant 8
   Block "bb1"
@@ -48,7 +48,7 @@ Function a_list_built_and_appended_to_in_one_function_is_refused.c:5:5 "build"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_list_built_and_appended_to_in_one_function_is_refused.c:11:9 "bb2" "bb3"
+    Branch a_list_built_and_appended_to_in_one_function_is_refused.c:11:9 written "bb2" "bb3"
       Copy "_7"
   Block "bb2"
     Sequenced a_list_built_and_appended_to_in_one_function_is_refused.c:11:9 generated
@@ -74,7 +74,7 @@ Function a_list_built_and_appended_to_in_one_function_is_refused.c:5:5 "build"
           Deref
     Sequenced a_list_built_and_appended_to_in_one_function_is_refused.c:14:5 generated
     ArgumentsEvaluated a_list_built_and_appended_to_in_one_function_is_refused.c:15:12 generated
-    Call a_list_built_and_appended_to_in_one_function_is_refused.c:15:12 "malloc" "bb5"
+    Call a_list_built_and_appended_to_in_one_function_is_refused.c:15:12 written "malloc" "bb5"
       Destination "_9"
       Constant 8
   Block "bb5"
@@ -92,12 +92,12 @@ Function a_list_built_and_appended_to_in_one_function_is_refused.c:5:5 "build"
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_list_built_and_appended_to_in_one_function_is_refused.c:16:9 "bb6" "bb7"
+    Branch a_list_built_and_appended_to_in_one_function_is_refused.c:16:9 written "bb6" "bb7"
       Copy "_11"
   Block "bb6"
     Sequenced a_list_built_and_appended_to_in_one_function_is_refused.c:16:9 generated
     ArgumentsEvaluated a_list_built_and_appended_to_in_one_function_is_refused.c:17:9 generated
-    Call a_list_built_and_appended_to_in_one_function_is_refused.c:17:9 "free" "bb9"
+    Call a_list_built_and_appended_to_in_one_function_is_refused.c:17:9 written "free" "bb9"
       Copy "_1"
   Block "bb7"
     Sequenced a_list_built_and_appended_to_in_one_function_is_refused.c:16:9 generated
@@ -148,7 +148,7 @@ Function a_list_built_and_appended_to_in_one_function_is_refused.c:5:5 "build"
       Binary "Ne"
         Copy "_4"
         Constant 0
-    Branch a_list_built_and_appended_to_in_one_function_is_refused.c:23:12 "bb11" "bb12"
+    Branch a_list_built_and_appended_to_in_one_function_is_refused.c:23:12 written "bb11" "bb12"
       Copy "_15"
   Block "bb11"
     Sequenced a_list_built_and_appended_to_in_one_function_is_refused.c:23:12 generated
@@ -186,7 +186,7 @@ Function a_list_built_and_appended_to_in_one_function_is_refused.c:5:5 "build"
           Deref
     Sequenced a_list_built_and_appended_to_in_one_function_is_refused.c:27:5 generated
     ArgumentsEvaluated a_list_built_and_appended_to_in_one_function_is_refused.c:28:5 generated
-    Call a_list_built_and_appended_to_in_one_function_is_refused.c:28:5 "log_line" "bb13"
+    Call a_list_built_and_appended_to_in_one_function_is_refused.c:28:5 written "log_line" "bb13"
   Block "bb13"
     Sequenced a_list_built_and_appended_to_in_one_function_is_refused.c:28:5 generated
     Operation a_list_built_and_appended_to_in_one_function_is_refused.c:29:5 written
@@ -201,12 +201,12 @@ Function a_list_built_and_appended_to_in_one_function_is_refused.c:5:5 "build"
           Deref
     Sequenced a_list_built_and_appended_to_in_one_function_is_refused.c:29:5 generated
     ArgumentsEvaluated a_list_built_and_appended_to_in_one_function_is_refused.c:30:5 generated
-    Call a_list_built_and_appended_to_in_one_function_is_refused.c:30:5 "free" "bb14"
+    Call a_list_built_and_appended_to_in_one_function_is_refused.c:30:5 written "free" "bb14"
       Copy "_2"
   Block "bb14"
     Sequenced a_list_built_and_appended_to_in_one_function_is_refused.c:30:5 generated
     ArgumentsEvaluated a_list_built_and_appended_to_in_one_function_is_refused.c:31:5 generated
-    Call a_list_built_and_appended_to_in_one_function_is_refused.c:31:5 "free" "bb15"
+    Call a_list_built_and_appended_to_in_one_function_is_refused.c:31:5 written "free" "bb15"
       Copy "_1"
   Block "bb15"
     Sequenced a_list_built_and_appended_to_in_one_function_is_refused.c:31:5 generated

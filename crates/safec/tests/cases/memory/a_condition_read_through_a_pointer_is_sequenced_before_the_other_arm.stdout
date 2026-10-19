@@ -11,7 +11,7 @@ Function a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:
   Local "_2" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:4:14 generated
-    Call a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:4:14 "malloc" "bb1"
+    Call a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -20,7 +20,7 @@ Function a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:
       Use
         Copy "_2"
     Sequenced a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:4:14 generated
-    Branch a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:5:9 "bb2" "bb3"
+    Branch a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:5:9 written "bb2" "bb3"
       Copy "_1"
         Deref
   Block "bb2"
@@ -29,7 +29,7 @@ Function a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:
   Block "bb3"
     Sequenced a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:5:9 generated
     ArgumentsEvaluated a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:5:24 generated
-    Call a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:5:24 "free" "bb5"
+    Call a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:5:24 written "free" "bb5"
       Copy "_1"
   Block "bb4"
     Operation a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:6:5 written

@@ -46,7 +46,7 @@ Function a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:4:5 "f"
         Constant 0
     Sequenced a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:7:15 generated
     ArgumentsEvaluated a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:8:14 generated
-    Call a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:8:14 "malloc" "bb1"
+    Call a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:8:14 written "malloc" "bb1"
       Destination "_6"
       Constant 4
   Block "bb1"
@@ -60,7 +60,7 @@ Function a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:4:5 "f"
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:9:9 "bb2" "bb3"
+    Branch a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:9:9 written "bb2" "bb3"
       Copy "_7"
   Block "bb2"
     Sequenced a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:9:9 generated
@@ -83,7 +83,7 @@ Function a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:4:5 "f"
       Address
         Place "_2"
     ArgumentsEvaluated a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:12:5 generated
-    Call a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:12:5 "memcpy" "bb5"
+    Call a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:12:5 written "memcpy" "bb5"
       Destination "_10"
       Copy "_8"
       Copy "_9"
@@ -95,7 +95,7 @@ Function a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:4:5 "f"
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:13:9 "bb6" "bb7"
+    Branch a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:13:9 written "bb6" "bb7"
       Copy "_11"
   Block "bb6"
     Sequenced a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:13:9 generated
@@ -121,7 +121,7 @@ Function a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:4:5 "f"
           Deref
     Sequenced a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:16:5 generated
     ArgumentsEvaluated a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:17:5 generated
-    Call a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:17:5 "free" "bb9"
+    Call a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:17:5 written "free" "bb9"
       Copy "_5"
   Block "bb9"
     Sequenced a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:17:5 generated
@@ -130,7 +130,7 @@ Function a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:4:5 "f"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:18:9 "bb10" "bb11"
+    Branch a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:18:9 written "bb10" "bb11"
       Copy "_13"
   Block "bb10"
     Sequenced a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:18:9 generated

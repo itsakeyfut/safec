@@ -8,7 +8,7 @@ Function code_after_a_function_whose_name_begins_with_exit_is_asked.c:4:5 "f"
   Local "_1" "int *" parameter "p"
   Block "bb0" entry
     ArgumentsEvaluated code_after_a_function_whose_name_begins_with_exit_is_asked.c:5:5 generated
-    Call code_after_a_function_whose_name_begins_with_exit_is_asked.c:5:5 "exit_now" "bb1"
+    Call code_after_a_function_whose_name_begins_with_exit_is_asked.c:5:5 written "exit_now" "bb1"
   Block "bb1"
     Sequenced code_after_a_function_whose_name_begins_with_exit_is_asked.c:5:5 generated
     Operation code_after_a_function_whose_name_begins_with_exit_is_asked.c:6:5 written

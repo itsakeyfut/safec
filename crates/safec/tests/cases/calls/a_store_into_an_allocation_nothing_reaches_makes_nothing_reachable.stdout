@@ -27,7 +27,7 @@ Function a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:4:
       Use
         Constant 0
     ArgumentsEvaluated a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:7:17 generated
-    Call a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:7:17 "malloc" "bb1"
+    Call a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:7:17 written "malloc" "bb1"
       Destination "_4"
       Constant 8
   Block "bb1"
@@ -37,7 +37,7 @@ Function a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:4:
         Copy "_4"
     Sequenced a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:7:17 generated
     ArgumentsEvaluated a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:8:14 generated
-    Call a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:8:14 "malloc" "bb2"
+    Call a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:8:14 written "malloc" "bb2"
       Destination "_6"
       Constant 4
   Block "bb2"
@@ -51,7 +51,7 @@ Function a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:4:
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:9:9 "bb3" "bb4"
+    Branch a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:9:9 written "bb3" "bb4"
       Copy "_7"
   Block "bb3"
     Sequenced a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:9:9 generated
@@ -70,7 +70,7 @@ Function a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:4:
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:12:9 "bb6" "bb7"
+    Branch a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:12:9 written "bb6" "bb7"
       Copy "_8"
   Block "bb6"
     Sequenced a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:12:9 generated
@@ -119,7 +119,7 @@ Function a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:4:
       Binary "Add"
         Copy "_10"
         Constant 0
-    Call a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:16:38 "release_all" "bb9"
+    Call a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:16:38 written "release_all" "bb9"
       Destination "_13"
   Block "bb9"
     Operation a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable.c:16:10 written

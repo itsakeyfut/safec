@@ -24,7 +24,7 @@ Function a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.
       Use
         Constant 0
     ArgumentsEvaluated a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:5:17 generated
-    Call a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:5:17 "malloc" "bb1"
+    Call a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:5:17 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -38,7 +38,7 @@ Function a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:6:9 "bb2" "bb3"
+    Branch a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:6:9 generated
@@ -53,7 +53,7 @@ Function a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:9:14 generated
-    Call a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:9:14 "malloc" "bb5"
+    Call a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:9:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -67,7 +67,7 @@ Function a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:10:9 "bb6" "bb7"
+    Branch a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:10:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:10:9 generated
@@ -119,7 +119,7 @@ Function a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.
           Deref
     Sequenced a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:16:5 generated
     ArgumentsEvaluated a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:17:5 generated
-    Call a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:17:5 "drop_slot" "bb9"
+    Call a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:17:5 written "drop_slot" "bb9"
       Copy "_9"
   Block "bb9"
     Sequenced a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:17:5 generated

@@ -41,7 +41,7 @@ Function a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.
       Use
         Constant 0
     ArgumentsEvaluated a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:5:16 generated
-    Call a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:5:16 "malloc" "bb1"
+    Call a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:5:16 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -55,7 +55,7 @@ Function a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:6:9 "bb2" "bb3"
+    Branch a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:6:9 generated
@@ -75,7 +75,7 @@ Function a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.
         Constant 0
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:9:13 generated
     ArgumentsEvaluated a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:10:16 generated
-    Call a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:10:16 "malloc" "bb5"
+    Call a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:10:16 written "malloc" "bb5"
       Destination "_6"
       Constant 8
   Block "bb5"
@@ -89,7 +89,7 @@ Function a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:11:9 "bb6" "bb7"
+    Branch a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:11:9 written "bb6" "bb7"
       Copy "_7"
   Block "bb6"
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:11:9 generated
@@ -104,7 +104,7 @@ Function a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:14:14 generated
-    Call a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:14:14 "malloc" "bb9"
+    Call a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:14:14 written "malloc" "bb9"
       Destination "_9"
       Constant 4
   Block "bb9"
@@ -118,7 +118,7 @@ Function a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.
       Binary "Eq"
         Copy "_8"
         Constant 0
-    Branch a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:15:9 "bb10" "bb11"
+    Branch a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:15:9 written "bb10" "bb11"
       Copy "_10"
   Block "bb10"
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:15:9 generated
@@ -164,13 +164,13 @@ Function a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.
       Binary "Lt"
         Copy "_13"
         Constant 2
-    Branch a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:21:12 "bb14" "bb15"
+    Branch a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:21:12 written "bb14" "bb15"
       Copy "_14"
   Block "bb14"
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:21:12 generated
     StorageLive a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:22:9 generated "_15"
     ArgumentsEvaluated a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:22:18 generated
-    Call a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:22:18 "malloc" "bb16"
+    Call a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:22:18 written "malloc" "bb16"
       Destination "_16"
       Constant 4
   Block "bb15"
@@ -192,7 +192,7 @@ Function a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.
       Binary "Eq"
         Copy "_15"
         Constant 0
-    Branch a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:23:13 "bb17" "bb18"
+    Branch a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:23:13 written "bb17" "bb18"
       Copy "_17"
   Block "bb17"
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:23:13 generated
@@ -223,7 +223,7 @@ Function a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.
       Binary "Eq"
         Copy "_13"
         Constant 1
-    Branch a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:27:13 "bb20" "bb21"
+    Branch a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:27:13 written "bb20" "bb21"
       Copy "_19"
   Block "bb20"
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:27:13 generated
@@ -277,7 +277,7 @@ Function a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.
       Binary "Eq"
         Copy "_24"
         Constant 0
-    Branch a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:33:17 "bb23" "bb24"
+    Branch a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:33:17 written "bb23" "bb24"
       Copy "_25"
   Block "bb21"
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:27:13 generated
@@ -295,7 +295,7 @@ Function a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.
           Deref
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:38:9 generated
     ArgumentsEvaluated a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:39:9 generated
-    Call a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:39:9 "free" "bb26"
+    Call a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:39:9 written "free" "bb26"
       Copy "_15"
   Block "bb23"
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:33:17 generated

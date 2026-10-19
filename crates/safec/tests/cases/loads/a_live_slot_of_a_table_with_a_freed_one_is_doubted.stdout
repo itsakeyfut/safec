@@ -29,7 +29,7 @@ Function a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:4:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:5:17 generated
-    Call a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:5:17 "malloc" "bb1"
+    Call a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:5:17 written "malloc" "bb1"
       Destination "_2"
       Constant 16
   Block "bb1"
@@ -43,7 +43,7 @@ Function a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:4:5 "main"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:6:9 "bb2" "bb3"
+    Branch a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:6:9 generated
@@ -58,7 +58,7 @@ Function a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:4:5 "main"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:9:14 generated
-    Call a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:9:14 "malloc" "bb5"
+    Call a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:9:14 written "malloc" "bb5"
       Destination "_5"
       Constant 4
   Block "bb5"
@@ -68,7 +68,7 @@ Function a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:4:5 "main"
         Copy "_5"
     Sequenced a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:9:14 generated
     ArgumentsEvaluated a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:10:14 generated
-    Call a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:10:14 "malloc" "bb6"
+    Call a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:10:14 written "malloc" "bb6"
       Destination "_7"
       Constant 4
   Block "bb6"
@@ -82,7 +82,7 @@ Function a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:4:5 "main"
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:11:9 "bb7" "bb8"
+    Branch a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:11:9 written "bb7" "bb8"
       Copy "_8"
   Block "bb7"
     Sequenced a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:11:9 generated
@@ -101,7 +101,7 @@ Function a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:4:5 "main"
       Binary "Eq"
         Copy "_6"
         Constant 0
-    Branch a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:14:9 "bb10" "bb11"
+    Branch a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:14:9 written "bb10" "bb11"
       Copy "_9"
   Block "bb10"
     Sequenced a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:14:9 generated
@@ -154,7 +154,7 @@ Function a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:4:5 "main"
           Deref
     Sequenced a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:19:5 generated
     ArgumentsEvaluated a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:20:5 generated
-    Call a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:20:5 "free" "bb13"
+    Call a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:20:5 written "free" "bb13"
       Copy "_4"
   Block "bb13"
     Sequenced a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:20:5 generated
@@ -174,7 +174,7 @@ Function a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:4:5 "main"
       Binary "Eq"
         Copy "_14"
         Constant 0
-    Branch a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:22:9 "bb14" "bb15"
+    Branch a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:22:9 written "bb14" "bb15"
       Copy "_16"
   Block "bb14"
     Sequenced a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:22:9 generated

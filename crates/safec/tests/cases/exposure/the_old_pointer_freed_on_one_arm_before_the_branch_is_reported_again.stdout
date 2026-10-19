@@ -24,7 +24,7 @@ Function the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:
       Use
         Constant 0
     ArgumentsEvaluated the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:5:14 generated
-    Call the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:5:14 "malloc" "bb1"
+    Call the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:5:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -38,7 +38,7 @@ Function the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:6:9 "bb2" "bb3"
+    Branch the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:6:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:6:9 generated
@@ -53,7 +53,7 @@ Function the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:7:14 generated
-    Call the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:7:14 "realloc" "bb5"
+    Call the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:7:14 written "realloc" "bb5"
       Destination "_6"
       Copy "_2"
       Constant 8
@@ -63,12 +63,12 @@ Function the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:
       Use
         Copy "_6"
     Sequenced the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:7:14 generated
-    Branch the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:8:9 "bb6" "bb7"
+    Branch the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:8:9 written "bb6" "bb7"
       Copy "_1"
   Block "bb6"
     Sequenced the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:8:9 generated
     ArgumentsEvaluated the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:8:12 generated
-    Call the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:8:12 "free" "bb9"
+    Call the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:8:12 written "free" "bb9"
       Copy "_2"
   Block "bb7"
     Sequenced the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:8:9 generated
@@ -79,7 +79,7 @@ Function the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:9:9 "bb10" "bb11"
+    Branch the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:9:9 written "bb10" "bb11"
       Copy "_7"
   Block "bb9"
     Sequenced the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:8:12 generated
@@ -87,14 +87,14 @@ Function the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:
   Block "bb10"
     Sequenced the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:9:9 generated
     ArgumentsEvaluated the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:10:9 generated
-    Call the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:10:9 "free" "bb13"
+    Call the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:10:9 written "free" "bb13"
       Copy "_2"
   Block "bb11"
     Sequenced the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:9:9 generated
     Goto "bb12"
   Block "bb12"
     ArgumentsEvaluated the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:13:5 generated
-    Call the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:13:5 "free" "bb14"
+    Call the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:13:5 written "free" "bb14"
       Copy "_5"
   Block "bb13"
     Sequenced the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again.c:10:9 generated

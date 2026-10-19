@@ -5,7 +5,7 @@ Function a_function_that_ends_in_abort_does_not_reach_the_end.c:3:16 "f"
   Local "_0" "int *" return _Nonnull
   Local "_1" "int *" parameter "p"
   Block "bb0" entry
-    Branch a_function_that_ends_in_abort_does_not_reach_the_end.c:4:9 "bb1" "bb2"
+    Branch a_function_that_ends_in_abort_does_not_reach_the_end.c:4:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced a_function_that_ends_in_abort_does_not_reach_the_end.c:4:9 generated
@@ -20,7 +20,7 @@ Function a_function_that_ends_in_abort_does_not_reach_the_end.c:3:16 "f"
     Goto "bb3"
   Block "bb3"
     ArgumentsEvaluated a_function_that_ends_in_abort_does_not_reach_the_end.c:7:5 generated
-    Call a_function_that_ends_in_abort_does_not_reach_the_end.c:7:5 "abort" noreturn
+    Call a_function_that_ends_in_abort_does_not_reach_the_end.c:7:5 written "abort" noreturn
   Block "bb4"
     Sequenced a_function_that_ends_in_abort_does_not_reach_the_end.c:7:5 generated
     Return

@@ -13,7 +13,7 @@ Function a_pointer_assigned_from_an_arm_that_writes_it_is_reported.c:1:5 "f"
       Use
         Copy "_1"
     Sequenced a_pointer_assigned_from_an_arm_that_writes_it_is_reported.c:2:14 generated
-    Branch a_pointer_assigned_from_an_arm_that_writes_it_is_reported.c:3:9 "bb2" "bb3"
+    Branch a_pointer_assigned_from_an_arm_that_writes_it_is_reported.c:3:9 written "bb2" "bb3"
       Copy "_2"
   Block "bb1"
     UnsequencedAccess a_pointer_assigned_from_an_arm_that_writes_it_is_reported.c:3:5 written "_3" Operands

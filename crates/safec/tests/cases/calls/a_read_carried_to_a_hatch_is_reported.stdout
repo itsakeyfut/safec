@@ -21,7 +21,7 @@ Function a_read_carried_to_a_hatch_is_reported.c:7:5 "main"
       Use
         Constant 0
     ArgumentsEvaluated a_read_carried_to_a_hatch_is_reported.c:9:14 generated
-    Call a_read_carried_to_a_hatch_is_reported.c:9:14 "malloc" "bb1"
+    Call a_read_carried_to_a_hatch_is_reported.c:9:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -35,7 +35,7 @@ Function a_read_carried_to_a_hatch_is_reported.c:7:5 "main"
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_read_carried_to_a_hatch_is_reported.c:10:9 "bb2" "bb3"
+    Branch a_read_carried_to_a_hatch_is_reported.c:10:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_read_carried_to_a_hatch_is_reported.c:10:9 generated
@@ -69,7 +69,7 @@ Function a_read_carried_to_a_hatch_is_reported.c:7:5 "main"
       Destination "_6"
       Use
         Copy "_1"
-    Call a_read_carried_to_a_hatch_is_reported.c:14:26 "nothing" "bb5"
+    Call a_read_carried_to_a_hatch_is_reported.c:14:26 written "nothing" "bb5"
   Block "bb5"
     Operation a_read_carried_to_a_hatch_is_reported.c:14:13 written
       Destination "_7"

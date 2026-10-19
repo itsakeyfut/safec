@@ -54,7 +54,7 @@ Function a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubt
       Binary "Lt"
         Copy "_4"
         Constant 2
-    Branch a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:9:12 "bb2" "bb3"
+    Branch a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:9:12 written "bb2" "bb3"
       Copy "_5"
   Block "bb2"
     Sequenced a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:9:12 generated
@@ -68,7 +68,7 @@ Function a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubt
         Copy "_2"
     Sequenced a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:10:9 generated
     ArgumentsEvaluated a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:11:13 generated
-    Call a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:11:13 "malloc" "bb4"
+    Call a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:11:13 written "malloc" "bb4"
       Destination "_7"
       Constant 4
   Block "bb3"
@@ -83,7 +83,7 @@ Function a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubt
       Address
         Place "_13"
     ArgumentsEvaluated a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:17:5 generated
-    Call a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:17:5 "stash_pp" "bb8"
+    Call a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:17:5 written "stash_pp" "bb8"
       Copy "_14"
   Block "bb4"
     Operation a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:11:9 written
@@ -99,7 +99,7 @@ Function a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubt
       Destination "_9"
       Unary "Not"
         Copy "_3"
-    Branch a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:12:13 "bb5" "bb6"
+    Branch a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:12:13 written "bb5" "bb6"
       Copy "_9"
   Block "bb5"
     Sequenced a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:12:13 generated
@@ -151,7 +151,7 @@ Function a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubt
         Copy "_13"
     Sequenced a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:18:5 generated
     ArgumentsEvaluated a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:19:14 generated
-    Call a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:19:14 "fetch" "bb9"
+    Call a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:19:14 written "fetch" "bb9"
       Destination "_17"
   Block "bb9"
     Operation a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:19:10 written
@@ -160,7 +160,7 @@ Function a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubt
         Copy "_17"
     Sequenced a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:19:14 generated
     ArgumentsEvaluated a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:20:5 generated
-    Call a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:20:5 "free" "bb10"
+    Call a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:20:5 written "free" "bb10"
       Copy "_2"
   Block "bb10"
     Sequenced a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:20:5 generated
@@ -168,7 +168,7 @@ Function a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubt
       Destination "_18"
       Unary "Not"
         Copy "_16"
-    Branch a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:21:9 "bb11" "bb12"
+    Branch a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:21:9 written "bb11" "bb12"
       Copy "_18"
   Block "bb11"
     Sequenced a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:21:9 generated
@@ -189,7 +189,7 @@ Function a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubt
           Deref
     Sequenced a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:22:13 generated
     ArgumentsEvaluated a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:23:5 generated
-    Call a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:23:5 "free" "bb14"
+    Call a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:23:5 written "free" "bb14"
       Copy "_3"
   Block "bb14"
     Sequenced a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it.c:23:5 generated

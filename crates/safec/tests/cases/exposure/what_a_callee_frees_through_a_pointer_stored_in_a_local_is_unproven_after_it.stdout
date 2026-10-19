@@ -23,7 +23,7 @@ Function what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_aft
       Use
         Constant 0
     ArgumentsEvaluated what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:6:14 generated
-    Call what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:6:14 "malloc" "bb1"
+    Call what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:6:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -37,7 +37,7 @@ Function what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_aft
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:7:9 "bb2" "bb3"
+    Branch what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:7:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:7:9 generated
@@ -72,7 +72,7 @@ Function what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_aft
           Deref
     Sequenced what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:12:5 generated
     ArgumentsEvaluated what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:13:5 generated
-    Call what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:13:5 "drop_inner" "bb5"
+    Call what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:13:5 written "drop_inner" "bb5"
       Copy "_5"
   Block "bb5"
     Sequenced what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:13:5 generated

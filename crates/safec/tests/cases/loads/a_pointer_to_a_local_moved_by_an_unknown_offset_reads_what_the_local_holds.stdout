@@ -33,7 +33,7 @@ Function a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_ho
       Use
         Constant 0
     ArgumentsEvaluated a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:5:16 generated
-    Call a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:5:16 "malloc" "bb1"
+    Call a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:5:16 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -47,7 +47,7 @@ Function a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_ho
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:6:9 "bb2" "bb3"
+    Branch a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:6:9 generated
@@ -87,13 +87,13 @@ Function a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_ho
       Binary "Lt"
         Copy "_7"
         Constant 2
-    Branch a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:12:12 "bb6" "bb7"
+    Branch a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:12:12 written "bb6" "bb7"
       Copy "_8"
   Block "bb6"
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:12:12 generated
     StorageLive a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:13:9 generated "_9"
     ArgumentsEvaluated a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:13:18 generated
-    Call a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:13:18 "malloc" "bb8"
+    Call a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:13:18 written "malloc" "bb8"
       Destination "_10"
       Constant 4
   Block "bb7"
@@ -115,7 +115,7 @@ Function a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_ho
       Binary "Eq"
         Copy "_9"
         Constant 0
-    Branch a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:14:13 "bb9" "bb10"
+    Branch a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:14:13 written "bb9" "bb10"
       Copy "_11"
   Block "bb9"
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:14:13 generated
@@ -146,7 +146,7 @@ Function a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_ho
       Binary "Eq"
         Copy "_7"
         Constant 1
-    Branch a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:18:13 "bb12" "bb13"
+    Branch a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:18:13 written "bb12" "bb13"
       Copy "_13"
   Block "bb12"
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:18:13 generated
@@ -172,7 +172,7 @@ Function a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_ho
       Binary "Eq"
         Copy "_14"
         Constant 0
-    Branch a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:20:17 "bb15" "bb16"
+    Branch a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:20:17 written "bb15" "bb16"
       Copy "_17"
   Block "bb13"
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:18:13 generated
@@ -188,7 +188,7 @@ Function a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_ho
         Copy "_4"
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:25:9 generated
     ArgumentsEvaluated a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:26:9 generated
-    Call a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:26:9 "free" "bb18"
+    Call a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:26:9 written "free" "bb18"
       Copy "_9"
   Block "bb15"
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:20:17 generated

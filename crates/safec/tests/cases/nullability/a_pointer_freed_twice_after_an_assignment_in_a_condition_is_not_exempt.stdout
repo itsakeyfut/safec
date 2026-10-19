@@ -14,7 +14,7 @@ Function a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.
   Local "_5" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.c:4:14 generated
-    Call a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.c:4:14 "malloc" "bb1"
+    Call a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.c:4:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -35,7 +35,7 @@ Function a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.
       Destination "_5"
       Unary "Not"
         Copy "_4"
-    Branch a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.c:6:9 "bb2" "bb3"
+    Branch a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.c:6:9 written "bb2" "bb3"
       Copy "_5"
   Block "bb2"
     Sequenced a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.c:6:9 generated
@@ -50,12 +50,12 @@ Function a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.c:9:5 generated
-    Call a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.c:9:5 "free" "bb5"
+    Call a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.c:9:5 written "free" "bb5"
       Copy "_1"
   Block "bb5"
     Sequenced a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.c:9:5 generated
     ArgumentsEvaluated a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.c:10:5 generated
-    Call a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.c:10:5 "free" "bb6"
+    Call a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.c:10:5 written "free" "bb6"
       Copy "_1"
   Block "bb6"
     Sequenced a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.c:10:5 generated

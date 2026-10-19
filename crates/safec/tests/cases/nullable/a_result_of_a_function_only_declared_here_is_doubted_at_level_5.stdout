@@ -11,7 +11,7 @@ Function a_result_of_a_function_only_declared_here_is_doubted_at_level_5.c:3:5 "
       Use
         Constant 0
     ArgumentsEvaluated a_result_of_a_function_only_declared_here_is_doubted_at_level_5.c:4:14 generated
-    Call a_result_of_a_function_only_declared_here_is_doubted_at_level_5.c:4:14 "g" "bb1"
+    Call a_result_of_a_function_only_declared_here_is_doubted_at_level_5.c:4:14 written "g" "bb1"
       Destination "_2"
   Block "bb1"
     Operation a_result_of_a_function_only_declared_here_is_doubted_at_level_5.c:4:10 written

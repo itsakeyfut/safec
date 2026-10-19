@@ -13,7 +13,7 @@ Function a_discarded_name_gets_no_element.c:3:5 "f"
   Local "_4" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_discarded_name_gets_no_element.c:4:14 generated
-    Call a_discarded_name_gets_no_element.c:4:14 "malloc" "bb1"
+    Call a_discarded_name_gets_no_element.c:4:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -23,7 +23,7 @@ Function a_discarded_name_gets_no_element.c:3:5 "f"
         Copy "_3"
     Sequenced a_discarded_name_gets_no_element.c:4:14 generated
     ArgumentsEvaluated a_discarded_name_gets_no_element.c:5:5 generated
-    Call a_discarded_name_gets_no_element.c:5:5 "free" "bb2"
+    Call a_discarded_name_gets_no_element.c:5:5 written "free" "bb2"
       Copy "_2"
   Block "bb2"
     Sequenced a_discarded_name_gets_no_element.c:5:5 generated

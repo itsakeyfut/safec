@@ -31,7 +31,7 @@ Function a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:6:9 "bb1" "bb2"
+    Branch a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:6:9 written "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:6:9 generated
@@ -56,7 +56,7 @@ Function a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:10:9 "bb4" "bb5"
+    Branch a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:10:9 written "bb4" "bb5"
       Copy "_4"
   Block "bb4"
     Sequenced a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:10:9 generated
@@ -71,7 +71,7 @@ Function a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_
     Goto "bb6"
   Block "bb6"
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:13:17 generated
-    Call a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:13:17 "malloc" "bb7"
+    Call a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:13:17 written "malloc" "bb7"
       Destination "_6"
       Constant 8
   Block "bb7"
@@ -85,7 +85,7 @@ Function a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:14:9 "bb8" "bb9"
+    Branch a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:14:9 written "bb8" "bb9"
       Copy "_7"
   Block "bb8"
     Sequenced a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:14:9 generated
@@ -100,7 +100,7 @@ Function a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_
     Goto "bb10"
   Block "bb10"
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:17:18 generated
-    Call a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:17:18 "malloc" "bb11"
+    Call a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:17:18 written "malloc" "bb11"
       Destination "_9"
       Constant 8
   Block "bb11"
@@ -114,7 +114,7 @@ Function a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_
       Binary "Eq"
         Copy "_8"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:18:9 "bb12" "bb13"
+    Branch a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:18:9 written "bb12" "bb13"
       Copy "_10"
   Block "bb12"
     Sequenced a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:18:9 generated
@@ -140,7 +140,7 @@ Function a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_
           Deref
     Sequenced a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:21:5 generated
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:22:5 generated
-    Call a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:22:5 "memcpy" "bb15"
+    Call a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:22:5 written "memcpy" "bb15"
       Destination "_12"
       Copy "_8"
       Copy "_5"
@@ -158,7 +158,7 @@ Function a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_
       Binary "Eq"
         Copy "_13"
         Constant 0
-    Branch a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:24:9 "bb16" "bb17"
+    Branch a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:24:9 written "bb16" "bb17"
       Copy "_14"
   Block "bb16"
     Sequenced a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:24:9 generated
@@ -173,7 +173,7 @@ Function a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_
     Goto "bb18"
   Block "bb18"
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:27:5 generated
-    Call a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:27:5 "release_all" "bb19"
+    Call a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:27:5 written "release_all" "bb19"
   Block "bb19"
     Sequenced a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:27:5 generated
     Operation a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:28:5 written

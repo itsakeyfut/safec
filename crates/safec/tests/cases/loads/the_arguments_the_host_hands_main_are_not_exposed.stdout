@@ -19,7 +19,7 @@ Function the_arguments_the_host_hands_main_are_not_exposed.c:2:5 "main"
       Binary "Lt"
         Copy "_1"
         Constant 1
-    Branch the_arguments_the_host_hands_main_are_not_exposed.c:3:9 "bb1" "bb2"
+    Branch the_arguments_the_host_hands_main_are_not_exposed.c:3:9 written "bb1" "bb2"
       Copy "_3"
   Block "bb1"
     Sequenced the_arguments_the_host_hands_main_are_not_exposed.c:3:9 generated
@@ -38,7 +38,7 @@ Function the_arguments_the_host_hands_main_are_not_exposed.c:2:5 "main"
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch the_arguments_the_host_hands_main_are_not_exposed.c:6:9 "bb4" "bb5"
+    Branch the_arguments_the_host_hands_main_are_not_exposed.c:6:9 written "bb4" "bb5"
       Copy "_4"
   Block "bb4"
     Sequenced the_arguments_the_host_hands_main_are_not_exposed.c:6:9 generated
@@ -53,7 +53,7 @@ Function the_arguments_the_host_hands_main_are_not_exposed.c:2:5 "main"
     Goto "bb6"
   Block "bb6"
     ArgumentsEvaluated the_arguments_the_host_hands_main_are_not_exposed.c:9:5 generated
-    Call the_arguments_the_host_hands_main_are_not_exposed.c:9:5 "log_line" "bb7"
+    Call the_arguments_the_host_hands_main_are_not_exposed.c:9:5 written "log_line" "bb7"
   Block "bb7"
     Sequenced the_arguments_the_host_hands_main_are_not_exposed.c:9:5 generated
     Operation the_arguments_the_host_hands_main_are_not_exposed.c:10:11 written
@@ -67,7 +67,7 @@ Function the_arguments_the_host_hands_main_are_not_exposed.c:2:5 "main"
       Binary "Eq"
         Copy "_5"
         Constant 0
-    Branch the_arguments_the_host_hands_main_are_not_exposed.c:11:9 "bb8" "bb9"
+    Branch the_arguments_the_host_hands_main_are_not_exposed.c:11:9 written "bb8" "bb9"
       Copy "_6"
   Block "bb8"
     Sequenced the_arguments_the_host_hands_main_are_not_exposed.c:11:9 generated

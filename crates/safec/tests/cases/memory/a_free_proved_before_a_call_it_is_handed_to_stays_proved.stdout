@@ -15,7 +15,7 @@ Function a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:4:5 "f"
   Local "_3" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:5:14 generated
-    Call a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:5:14 "malloc" "bb1"
+    Call a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:5:14 written "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
@@ -29,7 +29,7 @@ Function a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:4:5 "f"
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:6:9 "bb2" "bb3"
+    Branch a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:6:9 generated
@@ -44,12 +44,12 @@ Function a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:4:5 "f"
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:9:5 generated
-    Call a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:9:5 "free" "bb5"
+    Call a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:9:5 written "free" "bb5"
       Copy "_1"
   Block "bb5"
     Sequenced a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:9:5 generated
     ArgumentsEvaluated a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:10:5 generated
-    Call a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:10:5 "log_ptr" "bb6"
+    Call a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:10:5 written "log_ptr" "bb6"
       Copy "_1"
   Block "bb6"
     Sequenced a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:10:5 generated

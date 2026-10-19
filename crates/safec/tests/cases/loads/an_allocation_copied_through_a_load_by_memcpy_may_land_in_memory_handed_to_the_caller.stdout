@@ -39,7 +39,7 @@ Function an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed
       Destination "_3"
       Unary "Not"
         Copy "_1"
-    Branch an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:5:9 "bb1" "bb2"
+    Branch an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:5:9 written "bb1" "bb2"
       Copy "_3"
   Block "bb1"
     Sequenced an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:5:9 generated
@@ -57,7 +57,7 @@ Function an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:6:9 "bb4" "bb5"
+    Branch an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:6:9 written "bb4" "bb5"
       Copy "_4"
   Block "bb4"
     Sequenced an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:6:9 generated
@@ -72,7 +72,7 @@ Function an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed
     Goto "bb6"
   Block "bb6"
     ArgumentsEvaluated an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:7:15 generated
-    Call an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:7:15 "malloc" "bb7"
+    Call an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:7:15 written "malloc" "bb7"
       Destination "_6"
       Constant 8
   Block "bb7"
@@ -85,7 +85,7 @@ Function an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed
       Destination "_7"
       Unary "Not"
         Copy "_5"
-    Branch an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:8:9 "bb8" "bb9"
+    Branch an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:8:9 written "bb8" "bb9"
       Copy "_7"
   Block "bb8"
     Sequenced an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:8:9 generated
@@ -131,7 +131,7 @@ Function an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed
       Destination "_11"
       Unary "Not"
         Copy "_10"
-    Branch an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:12:9 "bb11" "bb12"
+    Branch an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:12:9 written "bb11" "bb12"
       Copy "_11"
   Block "bb11"
     Sequenced an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:12:9 generated
@@ -146,7 +146,7 @@ Function an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed
     Goto "bb13"
   Block "bb13"
     ArgumentsEvaluated an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:13:14 generated
-    Call an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:13:14 "malloc" "bb14"
+    Call an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:13:14 written "malloc" "bb14"
       Destination "_13"
       Constant 4
   Block "bb14"
@@ -159,7 +159,7 @@ Function an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed
       Destination "_14"
       Unary "Not"
         Copy "_12"
-    Branch an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:14:9 "bb15" "bb16"
+    Branch an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:14:9 written "bb15" "bb16"
       Copy "_14"
   Block "bb15"
     Sequenced an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:14:9 generated
@@ -185,7 +185,7 @@ Function an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed
           Deref
     Sequenced an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:15:5 generated
     ArgumentsEvaluated an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:16:15 generated
-    Call an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:16:15 "malloc" "bb18"
+    Call an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:16:15 written "malloc" "bb18"
       Destination "_17"
       Constant 8
   Block "bb18"
@@ -198,7 +198,7 @@ Function an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed
       Destination "_18"
       Unary "Not"
         Copy "_16"
-    Branch an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:17:9 "bb19" "bb20"
+    Branch an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:17:9 written "bb19" "bb20"
       Copy "_18"
   Block "bb19"
     Sequenced an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:17:9 generated
@@ -224,7 +224,7 @@ Function an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed
           Deref
     Sequenced an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:18:5 generated
     ArgumentsEvaluated an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:19:5 generated
-    Call an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:19:5 "memcpy" "bb22"
+    Call an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:19:5 written "memcpy" "bb22"
       Destination "_20"
       Copy "_10"
       Copy "_16"
@@ -232,12 +232,12 @@ Function an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed
   Block "bb22"
     Sequenced an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:19:5 generated
     ArgumentsEvaluated an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:20:5 generated
-    Call an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:20:5 "free" "bb23"
+    Call an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:20:5 written "free" "bb23"
       Copy "_16"
   Block "bb23"
     Sequenced an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:20:5 generated
     ArgumentsEvaluated an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:21:5 generated
-    Call an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:21:5 "free" "bb24"
+    Call an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:21:5 written "free" "bb24"
       Copy "_12"
   Block "bb24"
     Sequenced an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:21:5 generated
@@ -251,7 +251,7 @@ Function an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed
       Destination "_22"
       Unary "Not"
         Copy "_21"
-    Branch an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:23:9 "bb25" "bb26"
+    Branch an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:23:9 written "bb25" "bb26"
       Copy "_22"
   Block "bb25"
     Sequenced an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller.c:23:9 generated

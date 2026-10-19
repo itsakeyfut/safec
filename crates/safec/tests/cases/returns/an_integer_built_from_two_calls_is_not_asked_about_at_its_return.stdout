@@ -9,10 +9,10 @@ Function an_integer_built_from_two_calls_is_not_asked_about_at_its_return.c:4:5 
   Local "_2" "int"
   Local "_3" "int"
   Block "bb0" entry
-    Call an_integer_built_from_two_calls_is_not_asked_about_at_its_return.c:5:12 "f" "bb1"
+    Call an_integer_built_from_two_calls_is_not_asked_about_at_its_return.c:5:12 written "f" "bb1"
       Destination "_1"
   Block "bb1"
-    Call an_integer_built_from_two_calls_is_not_asked_about_at_its_return.c:5:18 "g" "bb2"
+    Call an_integer_built_from_two_calls_is_not_asked_about_at_its_return.c:5:18 written "g" "bb2"
       Destination "_2"
   Block "bb2"
     Operation an_integer_built_from_two_calls_is_not_asked_about_at_its_return.c:5:12 written

@@ -53,7 +53,7 @@ Function a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_
       Binary "Lt"
         Copy "_4"
         Constant 2
-    Branch a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:10:12 "bb2" "bb3"
+    Branch a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:10:12 written "bb2" "bb3"
       Copy "_5"
   Block "bb2"
     Sequenced a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:10:12 generated
@@ -67,13 +67,13 @@ Function a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_
         Copy "_2"
     Sequenced a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:11:9 generated
     ArgumentsEvaluated a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:12:13 generated
-    Call a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:12:13 "malloc" "bb4"
+    Call a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:12:13 written "malloc" "bb4"
       Destination "_7"
       Constant 4
   Block "bb3"
     Sequenced a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:10:12 generated
     ArgumentsEvaluated a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:17:5 generated
-    Call a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:17:5 "stash" "bb8"
+    Call a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:17:5 written "stash" "bb8"
       Copy "_2"
   Block "bb4"
     Operation a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:12:9 written
@@ -89,7 +89,7 @@ Function a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_
       Destination "_9"
       Unary "Not"
         Copy "_3"
-    Branch a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:13:13 "bb5" "bb6"
+    Branch a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:13:13 written "bb5" "bb6"
       Copy "_9"
   Block "bb5"
     Sequenced a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:13:13 generated
@@ -132,11 +132,11 @@ Function a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_
   Block "bb8"
     Sequenced a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:17:5 generated
     ArgumentsEvaluated a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:18:5 generated
-    Call a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:18:5 "release_all" "bb9"
+    Call a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:18:5 written "release_all" "bb9"
   Block "bb9"
     Sequenced a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:18:5 generated
     ArgumentsEvaluated a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:19:14 generated
-    Call a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:19:14 "fetch" "bb10"
+    Call a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:19:14 written "fetch" "bb10"
       Destination "_14"
   Block "bb10"
     Operation a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:19:10 written
@@ -148,7 +148,7 @@ Function a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_
       Destination "_15"
       Unary "Not"
         Copy "_13"
-    Branch a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:20:9 "bb11" "bb12"
+    Branch a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:20:9 written "bb11" "bb12"
       Copy "_15"
   Block "bb11"
     Sequenced a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:20:9 generated
@@ -169,7 +169,7 @@ Function a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_
           Deref
     Sequenced a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:21:13 generated
     ArgumentsEvaluated a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:22:5 generated
-    Call a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:22:5 "free" "bb14"
+    Call a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:22:5 written "free" "bb14"
       Copy "_3"
   Block "bb14"
     Sequenced a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted.c:22:5 generated

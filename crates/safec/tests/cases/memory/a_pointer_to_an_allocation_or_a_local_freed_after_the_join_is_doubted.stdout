@@ -29,7 +29,7 @@ Function a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c
         Constant 7
     Sequenced a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:6:13 generated
     ArgumentsEvaluated a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:7:14 generated
-    Call a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:7:14 "malloc" "bb1"
+    Call a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:7:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -43,7 +43,7 @@ Function a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:8:9 "bb2" "bb3"
+    Branch a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:8:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:8:9 generated
@@ -58,10 +58,10 @@ Function a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c
     Goto "bb4"
   Block "bb4"
     ArgumentsEvaluated a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:12:9 generated
-    Call a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:12:9 "cond" "bb5"
+    Call a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:12:9 written "cond" "bb5"
       Destination "_6"
   Block "bb5"
-    Branch a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:12:9 "bb6" "bb7"
+    Branch a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:12:9 written "bb6" "bb7"
       Copy "_6"
   Block "bb6"
     Sequenced a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:12:9 generated
@@ -93,7 +93,7 @@ Function a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:17:5 generated
-    Call a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:17:5 "free" "bb9"
+    Call a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:17:5 written "free" "bb9"
       Copy "_2"
   Block "bb9"
     Sequenced a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:17:5 generated

@@ -32,7 +32,7 @@ Function a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted
       Use
         Constant 0
     ArgumentsEvaluated a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:5:16 generated
-    Call a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:5:16 "malloc" "bb1"
+    Call a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:5:16 written "malloc" "bb1"
       Destination "_2"
       Constant 8
   Block "bb1"
@@ -46,7 +46,7 @@ Function a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted
       Binary "Eq"
         Copy "_1"
         Constant 0
-    Branch a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:6:9 "bb2" "bb3"
+    Branch a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:6:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
     Sequenced a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:6:9 generated
@@ -86,13 +86,13 @@ Function a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted
       Binary "Lt"
         Copy "_7"
         Constant 2
-    Branch a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:12:12 "bb6" "bb7"
+    Branch a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:12:12 written "bb6" "bb7"
       Copy "_8"
   Block "bb6"
     Sequenced a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:12:12 generated
     StorageLive a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:13:9 generated "_9"
     ArgumentsEvaluated a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:13:18 generated
-    Call a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:13:18 "malloc" "bb8"
+    Call a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:13:18 written "malloc" "bb8"
       Destination "_10"
       Constant 4
   Block "bb7"
@@ -114,7 +114,7 @@ Function a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted
       Binary "Eq"
         Copy "_9"
         Constant 0
-    Branch a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:14:13 "bb9" "bb10"
+    Branch a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:14:13 written "bb9" "bb10"
       Copy "_11"
   Block "bb9"
     Sequenced a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:14:13 generated
@@ -145,7 +145,7 @@ Function a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted
       Binary "Eq"
         Copy "_7"
         Constant 1
-    Branch a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:18:13 "bb12" "bb13"
+    Branch a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:18:13 written "bb12" "bb13"
       Copy "_13"
   Block "bb12"
     Sequenced a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:18:13 generated
@@ -173,7 +173,7 @@ Function a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted
       Binary "Eq"
         Copy "_15"
         Constant 0
-    Branch a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:21:17 "bb15" "bb16"
+    Branch a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:21:17 written "bb15" "bb16"
       Copy "_16"
   Block "bb13"
     Sequenced a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:18:13 generated
@@ -189,7 +189,7 @@ Function a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted
         Copy "_4"
     Sequenced a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:26:9 generated
     ArgumentsEvaluated a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:27:9 generated
-    Call a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:27:9 "free" "bb18"
+    Call a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:27:9 written "free" "bb18"
       Copy "_9"
   Block "bb15"
     Sequenced a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back.c:21:17 generated

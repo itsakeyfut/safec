@@ -6,7 +6,7 @@ Function code_after_abort_is_not_asked.c:3:5 "f"
   Local "_1" "int *" parameter "p"
   Block "bb0" entry
     ArgumentsEvaluated code_after_abort_is_not_asked.c:4:5 generated
-    Call code_after_abort_is_not_asked.c:4:5 "abort" noreturn
+    Call code_after_abort_is_not_asked.c:4:5 written "abort" noreturn
   Block "bb1"
     Sequenced code_after_abort_is_not_asked.c:4:5 generated
     Operation code_after_abort_is_not_asked.c:5:5 written

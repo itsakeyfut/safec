@@ -15,7 +15,7 @@ Function a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:
   Local "_6" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:5:14 generated
-    Call a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:5:14 "malloc" "bb1"
+    Call a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:5:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
@@ -29,7 +29,7 @@ Function a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:
       Binary "Eq"
         Copy "_2"
         Constant 0
-    Branch a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:6:9 "bb2" "bb3"
+    Branch a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:6:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
     Sequenced a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:6:9 generated
@@ -43,12 +43,12 @@ Function a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:
     Sequenced a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:6:9 generated
     Goto "bb4"
   Block "bb4"
-    Branch a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:9:9 "bb5" "bb6"
+    Branch a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:9:9 written "bb5" "bb6"
       Copy "_1"
   Block "bb5"
     Sequenced a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:9:9 generated
     ArgumentsEvaluated a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:10:9 generated
-    Call a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:10:9 "free" "bb8"
+    Call a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:10:9 written "free" "bb8"
       Copy "_2"
   Block "bb6"
     Sequenced a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:9:9 generated
@@ -59,7 +59,7 @@ Function a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:
       Binary "Ne"
         Copy "_2"
         Constant 0
-    Branch a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:13:9 "bb9" "bb10"
+    Branch a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:13:9 written "bb9" "bb10"
       Copy "_6"
   Block "bb8"
     Sequenced a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:10:9 generated

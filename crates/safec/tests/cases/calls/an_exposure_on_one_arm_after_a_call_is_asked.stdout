@@ -47,12 +47,12 @@ Function an_exposure_on_one_arm_after_a_call_is_asked.c:6:5 "f"
       Address
         Place "_5"
     ArgumentsEvaluated an_exposure_on_one_arm_after_a_call_is_asked.c:12:5 generated
-    Call an_exposure_on_one_arm_after_a_call_is_asked.c:12:5 "stash" "bb1"
+    Call an_exposure_on_one_arm_after_a_call_is_asked.c:12:5 written "stash" "bb1"
       Copy "_7"
   Block "bb1"
     Sequenced an_exposure_on_one_arm_after_a_call_is_asked.c:12:5 generated
     ArgumentsEvaluated an_exposure_on_one_arm_after_a_call_is_asked.c:13:9 generated
-    Call an_exposure_on_one_arm_after_a_call_is_asked.c:13:9 "malloc" "bb2"
+    Call an_exposure_on_one_arm_after_a_call_is_asked.c:13:9 written "malloc" "bb2"
       Destination "_8"
       Constant 4
   Block "bb2"
@@ -70,7 +70,7 @@ Function an_exposure_on_one_arm_after_a_call_is_asked.c:6:5 "f"
       Binary "Eq"
         Copy "_4"
         Constant 0
-    Branch an_exposure_on_one_arm_after_a_call_is_asked.c:14:9 "bb3" "bb4"
+    Branch an_exposure_on_one_arm_after_a_call_is_asked.c:14:9 written "bb3" "bb4"
       Copy "_10"
   Block "bb3"
     Sequenced an_exposure_on_one_arm_after_a_call_is_asked.c:14:9 generated
@@ -95,7 +95,7 @@ Function an_exposure_on_one_arm_after_a_call_is_asked.c:6:5 "f"
         Copy "_4"
           Deref
     Sequenced an_exposure_on_one_arm_after_a_call_is_asked.c:17:5 generated
-    Call an_exposure_on_one_arm_after_a_call_is_asked.c:18:9 "release_all" "bb6"
+    Call an_exposure_on_one_arm_after_a_call_is_asked.c:18:9 written "release_all" "bb6"
       Destination "_12"
   Block "bb6"
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:18:26 written
@@ -112,7 +112,7 @@ Function an_exposure_on_one_arm_after_a_call_is_asked.c:6:5 "f"
       Binary "Add"
         Copy "_12"
         Copy "_13"
-    Branch an_exposure_on_one_arm_after_a_call_is_asked.c:18:39 "bb8" "bb9"
+    Branch an_exposure_on_one_arm_after_a_call_is_asked.c:18:39 written "bb8" "bb9"
       Copy "_1"
   Block "bb7"
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:18:9 written
