@@ -379,6 +379,13 @@ first has nothing to fix in their file, and the code is how they can tell
 without reading the message. The lexer's `SC0107` is the same refusal one stage
 earlier.
 
+`[*]` is the one refusal under `SC0207` that may be met in a program that is not
+C. C17 6.7.6.2 p4 allows it only at function prototype scope, and a definition's
+own parameters are at block scope; the parser refuses `[*]` where it meets it,
+before it has seen whether a body follows. So its words say where C allows it
+rather than that it is allowed there
+([#532](https://github.com/itsakeyfut/safec/issues/532)).
+
 A bit-field and an anonymous member were reported as "not read yet" under
 `SC0201` before `SC0207` existed, and moved to it when it did. That breaks the
 rule that a code, once assigned, never changes, and it is the one time a

@@ -13,6 +13,9 @@
 //! sibling of the issues that built this, and each adds to [`crate::ast`]
 //! rather than reshaping it. Until then each is refused as `SC0207`, valid C
 //! not read yet, rather than as `SC0201`, which says the program is not C.
+//! `[*]` is the exception: it is refused as `SC0207` before the parser knows
+//! whether it is at function prototype scope, the only place C allows it, so
+//! it may be met in a program that is not C (`docs/diagnostics.md`).
 //! This list is a summary: what is refused as `SC0207`, and where, is
 //! decided by `unread_keyword` and the checks that call
 //! `Parser::report_unread`.
@@ -1439,11 +1442,21 @@ impl Parser<'_> {
                     if self.check(TokenKind::Punct(Punct::Star))
                         && self.peek_at(1).kind == TokenKind::Punct(Punct::RightBracket)
                     {
-                        self.report_unread(
-                            Unread {
-                                what: "`[*]`",
-                                clause: "6.7.6.2",
-                            },
+                        // **Not `report_unread`, whose words say this is
+                        // valid here.** C17 6.7.6.2 p4 allows `[*]` only at
+                        // function prototype scope, and a definition's own
+                        // parameters are not there; this is met before the
+                        // parser has seen whether a body follows. So the
+                        // words say where C allows it, which holds at every
+                        // position, and `docs/diagnostics.md` records the
+                        // exception to `SC0207` (#532).
+                        self.report_noted(
+                            UNREAD,
+                            "`[*]` is not read yet",
+                            "allowed only at function prototype scope, and not read yet",
+                            "C17 6.7.6.2 p4 allows `[*]` only at function prototype scope, which a \
+                             definition's own parameters are not at; this compiler does not read \
+                             it anywhere yet",
                             diagnostics,
                         );
                         return None;
