@@ -750,6 +750,43 @@ fn both_rendering_paths_colour_the_header_the_same_way() {
     }
 }
 
+/// A severity that fails the compilation never shares a colour with one that
+/// does not, which is what `docs/diagnostics.md` promises under *Colour*
+/// rather than any palette (#217).
+///
+/// The roster is written out. A new severity is answered for in
+/// `severity_color`'s match and in `Severity::is_error`'s, but not here, so
+/// whoever adds one adds it to this list as well.
+///
+/// Mutation: give `Severity::Help` `Color::Red`, `Error`'s. This fails. Giving
+/// `Severity::Note` `Color::Yellow` does not, since both are on the side that
+/// does not fail and nothing is promised about telling those apart.
+#[test]
+fn a_severity_that_fails_never_shares_a_colour_with_one_that_does_not() {
+    let every = [
+        Severity::Help,
+        Severity::Note,
+        Severity::Warning,
+        Severity::Error,
+    ];
+    let (failing, other): (Vec<_>, Vec<_>) =
+        every.into_iter().partition(|severity| severity.is_error());
+    assert!(
+        !failing.is_empty() && !other.is_empty(),
+        "{failing:?} {other:?}"
+    );
+
+    for failing in &failing {
+        for other in &other {
+            assert_ne!(
+                severity_color(*failing),
+                severity_color(*other),
+                "{failing:?} and {other:?}"
+            );
+        }
+    }
+}
+
 /// A file is copied to be rendered only where its text would otherwise give a
 /// byte a second position, so an ordinary one is not.
 ///

@@ -548,6 +548,16 @@ the two happened, which is why it has two halves.
 about what the program meant, so it asks for a statement boundary rather than
 for the free to move. See [ADR-0022](adr/0022-say-where-c-sequences-one-evaluation-before-another.md).
 
+## Colour
+
+**Colour says whether the compilation failed, and nothing finer is promised.**
+A severity that fails it, `Severity::is_error`, never shares a colour with one
+that does not, so a reader scanning coloured output can tell a rejection from
+everything else before reading a word. Which colours those are is the
+renderer's to choose and may change, and two severities on the same side may
+share one, as a note and a help do. Colour is emitted only where `--color`
+asks for it, and the words always carry everything the colour does.
+
 ## Where this lives now
 
 Implemented in `crates/safec/src/diagnostics.rs`, with the terminal renderer in
