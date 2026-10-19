@@ -45,6 +45,11 @@ fn header(diagnostic: &Diagnostic) -> String {
     }
 }
 
+/// The colour a severity's header is drawn in.
+///
+/// What it promises is `docs/diagnostics.md`'s, under *Colour*: a severity
+/// that fails the compilation never shares a colour with one that does not.
+/// The palette itself is not promised (#217).
 fn severity_color(severity: Severity) -> Color {
     match severity {
         Severity::Error => Color::Red,
