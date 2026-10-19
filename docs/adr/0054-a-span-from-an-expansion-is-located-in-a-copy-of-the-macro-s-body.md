@@ -15,10 +15,13 @@ It is a safety question rather than a display one, because analyses reach conclu
 * **Containment.** `memory/report.rs::inside` takes a read strictly inside a call's span as ordered before the call (ADR-0043), and `driver/words.rs::unordered` asks whether a span lies inside a parameter's length.
 * **Identity.** Equal spans are taken for one event or one name. This is done by:
   * `memory/known.rs::noticed` and the pending-call tests beside it;
+  * `memory/parts.rs::same` and `read_key`;
+  * the calls key in `transfer.rs`;
+  * the `said` deduplication in `report.rs`;
   * the nullability fold in `nullability.rs`;
-  * `transfer.rs`'s returned-by test;
   * `sema.rs`'s searches for an identifier or a tag by its span;
   * the lowering's `locals: HashMap<Span, LocalId>`.
+* **Order.** `memory/parts.rs::earlier` orders two spans by file, then start, to decide which free a joined state names and which of two proofs stands at one caret.
 * **Text.** `snippet` gives names, numbers and what the memory check recognises as `free` or `malloc`.
 
 A first design, kept in [#544](https://github.com/itsakeyfut/safec/issues/544), located every token of an expansion where the macro was used. A prototype showed it silencing the memory check in three ways that the same program written out is reported for:
@@ -64,9 +67,15 @@ For a macro used inside another macro's body, `at` lies in the outer instance, s
 **A node across an expansion's edge.**
 
 * **A node that holds a whole expansion** is located in the outer file, as `N + 1` and `g(N)` are. Each endpoint that lies in an instance is lifted along the chain to the span of its use first, so `N + 1` runs from `N`'s use to `1`.
-* **A node that holds some of an expansion's tokens and not others** is refused, as valid C this compiler does not read yet. That is the shape the prototype silenced: `F(p)` with `#define F (x = *p) + release`. `Span::to` keeps its assertion that both spans are in one file, so a cut node that is not refused panics with "cannot join spans from different files" rather than being joined.
+* **A node that holds some of an expansion's tokens and not others** is refused, as valid C this compiler does not read yet. That is the shape the prototype silenced: `F(p)` with `#define F (x = *p) + release`.
 
-**Containment lifts.** `inside`, `unordered`'s test, and any comparison of the same kind lift both spans along their chains to the nearest file they share, and compare there. A read inside `g(N)`'s argument is then strictly inside the call, as it is written out. Two spans with no file in common are not inside each other. Identity tests do not lift, so each token stays itself.
+**Wholeness is decided on the tokens a production consumed, not on spans.** A parenthesised expression makes no node of its own, and a declarator's span starts at its declaration's specifiers. So a test on node spans would refuse `#define N (expr)`, the usual way to write a macro, as a cut. The parser knows the range of tokens each production consumed, parentheses included. An expansion's tokens are contiguous in that stream, so a production holds a whole expansion exactly when its range contains the expansion's range, lies inside it, or misses it.
+
+**Lifting and the wholeness test are one operation.** `SourceMap::lift(span, into)` moves a span along its chain to the span of the use in `into`, and it succeeds only where, at every level of the chain, the span's start is at the instance's first token or its end at the instance's last. A lift that is not at an edge panics with a message naming the cut. A test that answered "whole" for a cut therefore cannot reach a join: the lift it needs fails by name.
+
+Every join that can cross files goes through `lift`: the parser's joins, and the two joins the lowering makes outside the parser, the span over a definition's parameter lengths and a declarator's store span. `Span::to` keeps its assertion that both spans are in one file, and `Span::new` is never given offsets from two files, which the lowering's store span does today.
+
+**Containment and order lift.** `inside`, `unordered`'s test, `earlier`, and any comparison of the same kind lift both spans along their chains to the nearest file they share, and compare there. A read inside `g(N)`'s argument is then strictly inside the call, as it is written out, and a free from a macro used above a written free is the earlier one, as written out, rather than ordered by when its instance was registered. Two spans with no file in common are not inside each other. Identity tests do not lift, so each token stays itself.
 
 **`Origin` is unchanged.**
 
@@ -80,7 +89,8 @@ For a macro used inside another macro's body, `at` lies in the outer instance, s
 
 Nothing builds an instance yet, so nothing holds this decision today. It is unenforced until #546, which owes one case for each shape the prototype silenced. Each case is written out and as a macro, and the two must agree:
 
-* A call that cuts an expansion is refused, and the same call holding the whole expansion is reported as it is written out. Building the cut call by joining across files instead fails it.
+* A call that cuts an expansion is refused, and the same call holding the whole expansion is reported as it is written out. Making the wholeness test answer "whole" for the cut fails it, since the cut call is then the use-location design's span and the read inside it is skipped. So does testing only the end of the chain's innermost level, which `#define B release` inside `#define A (x = *p) + B` used as `A(p)` holds.
+* A parenthesised body used as a whole operand, `#define N (*p)`, is not refused. Deciding wholeness on node spans fails it.
 * `(x = *q) + (*slot = q, 0) + release_all()` from one expansion reports the use of `q`. Locating every token at the use fails it.
 * `int *a = malloc(4), *b = 0;` from one expansion, with `a` used after its free, reports it. Keying `locals` by the use fails it.
 * A read inside `g(N)` is taken as the call's argument. Comparing without lifting fails it.
@@ -93,7 +103,7 @@ The prototype that showed the silences is the starting point for these cases.
 
 * Good, because inside an expansion every analysis sees what it would see written out, the standard every finding here is measured against.
 * Good, because the identity tests, `Origin`, `Span`'s size and every artifact that prints a position are unchanged.
-* Good, because a mistake in the cut rule is a refusal or a named panic, never a join.
+* Good, because a mistake in the cut rule is a refusal or a named panic, never a join, since lifting is what checks the edge.
 * Bad, because a macro whose body is not a whole operand where it is used, such as a function name and an operator with no right operand, is refused although it is C.
 * Bad, because every expansion is a file in the source map, so a file with many expansions holds many small copies.
 * Bad, because containment has to lift, and a comparison written as plain offsets is right for written-out code and wrong for a macro. The cases above are what catch one.

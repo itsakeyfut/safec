@@ -91,7 +91,8 @@ impl fmt::Display for FileName {
 /// a file they share first.
 ///
 /// [`Span::new`] and the accessors below pin the shape, and the decision keeps
-/// it, so callers are unchanged.
+/// it. What changes is how spans from two files are joined, which goes through
+/// the source map's lift rather than [`Span::to`] alone.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Span {
     file: FileId,
