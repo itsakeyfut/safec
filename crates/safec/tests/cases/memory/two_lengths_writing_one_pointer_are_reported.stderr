@@ -1,0 +1,12 @@
+error[SC0409]: this writes `p`, which another parameter's length writes too
+   ╭─[ two_lengths_writing_one_pointer_are_reported.c:1:41 ]
+   │
+ 1 │ int f(int *p, int a[(p = 0, 1)], int b[(p = 0, 2)]) {
+   │                      ──┬──              ──┬──  
+   │                        ╰─────────────────────── written here
+   │                                           │    
+   │                                           ╰──── written here as well
+───╯
+  = note: C17 6.5 p2 makes this undefined wherever both are evaluated: a parameter's declarator is not a full declarator (6.7.6 p3), so nothing orders one parameter's length against another's
+  = note: this check belongs to safety level 1
+  = help: write it in the body instead, where every parameter's length has already been evaluated

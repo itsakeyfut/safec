@@ -1,0 +1,35 @@
+Target "x86_64-pc-windows-msvc"
+Function two_lengths_writing_one_pointer_are_reported.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "p"
+  Local "_2" "int *" parameter "a"
+  Local "_3" "int *" parameter "b"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Block "bb0" entry
+    Operation two_lengths_writing_one_pointer_are_reported.c:1:22 written
+      Destination "_1"
+      Use
+        Constant 0
+    Operation two_lengths_writing_one_pointer_are_reported.c:1:22 written
+      Destination "_4"
+      Use
+        Copy "_1"
+    Operation two_lengths_writing_one_pointer_are_reported.c:1:41 written
+      Destination "_1"
+      Use
+        Constant 0
+    Operation two_lengths_writing_one_pointer_are_reported.c:1:41 written
+      Destination "_5"
+      Use
+        Copy "_1"
+    UnsequencedAccess two_lengths_writing_one_pointer_are_reported.c:1:22 written "_1" Lengths
+      Written two_lengths_writing_one_pointer_are_reported.c:1:22
+      WrittenAgain two_lengths_writing_one_pointer_are_reported.c:1:41
+    Sequenced two_lengths_writing_one_pointer_are_reported.c:1:41 generated
+    Operation two_lengths_writing_one_pointer_are_reported.c:2:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced two_lengths_writing_one_pointer_are_reported.c:2:12 generated
+    Return

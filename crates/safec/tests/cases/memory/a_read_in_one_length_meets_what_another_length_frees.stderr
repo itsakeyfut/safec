@@ -11,3 +11,15 @@ error[SC0402]: this may use `q` after it was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: free it in the body instead, where every parameter's length has already been evaluated
+error[SC0409]: this reads `q`, which another parameter's length writes
+   ╭─[ a_read_in_one_length_meets_what_another_length_frees.c:3:50 ]
+   │
+ 3 │ int f(int * _Nonnull p, int * _Nonnull q, int b[*q], int a[(q = p, free(p), 1)]) {
+   │                                                  ┬          ──┬──  
+   │                                                  ╰───────────────── read here
+   │                                                               │    
+   │                                                               ╰──── written here
+───╯
+  = note: C17 6.5 p2 makes this undefined wherever both are evaluated: a parameter's declarator is not a full declarator (6.7.6 p3), so nothing orders one parameter's length against another's
+  = note: this check belongs to safety level 1
+  = help: write it in the body instead, where every parameter's length has already been evaluated

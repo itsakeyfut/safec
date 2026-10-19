@@ -67,7 +67,7 @@ a pointer that may be null passed to a parameter declared `_Nonnull`,
 `SC0406` is a pointer to an allocation that may have been freed, handed back by
 a `return`, `SC0407` is the same pointer handed to a call, `SC0408` is a
 pointer that may be null handed back by a function that promised it is not, and
-`SC0409` is a pointer one operand writes and another reads or writes, whether they are two arguments of a call or two operands of an operator. They are
+`SC0409` is a pointer one operand writes and another reads or writes, whether they are two arguments of a call, two operands of an operator, or two parameters' lengths. They are
 the first codes in this compiler that say something about what a program does
 rather than about how it is written.
 
