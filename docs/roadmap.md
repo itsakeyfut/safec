@@ -257,7 +257,8 @@ Everything the subset left out. See [frontend.md](frontend.md), Stages 2 and 4.
 - the rest of the preprocessor: function-like macros, `#` and `##`, `#if` with a
   full constant expression, conditional compilation
 - `typedef`, `enum`, `union`
-- function pointers
+- compiling a function pointer, which already parses and type-checks
+  ([frontend.md](frontend.md), Stage 1)
 - variadic functions
 - broader compatibility, potentially C11 or C17
 
