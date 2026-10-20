@@ -4328,6 +4328,10 @@ cases! {
         // have `Parser::join` lift with `lift_start` and `lift_end`, which
         // panic on a cut. It panics.
         a_construct_that_cuts_an_include_is_refused: ["--emit", "ast"],
+        // The end's counterpart: `int b` then a header of `= 1; int c;`, so
+        // the declaration ends partway through it. Mutation: word the end's
+        // label as the start's. The label is wrong.
+        a_construct_ending_partway_through_an_include_is_refused: ["--emit", "ast"],
         // `a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it`
         // with `release_all()` included as `memset`'s argument: it runs
         // before `memset`, as written out, so it cannot free what `memset`
@@ -4339,6 +4343,12 @@ cases! {
         // climb's nodes from their operands' spans, as `Parser::joined` did.
         // The assignment ends at `1`, cuts the header, and is refused.
         a_parenthesised_included_operand_is_not_refused: ["--emit", "ast"],
+        // The same with the included `(p)` starting the node: a member
+        // access, a comma and an assignment, each beginning at the header's
+        // `(`. Mutation: start any one of the three from its left operand's
+        // span rather than from the token its production began at. It starts
+        // at `p`, partway through the header, and is refused.
+        a_parenthesised_included_operand_that_starts_a_node_is_not_refused: ["--emit", "ast"],
         // `int` then an `#include` of `*a` then `= 0;`: every node the parser
         // builds holds the header whole, and the lowering's store of `a`
         // starts at `a`, which is partway through it. Mutation: have the

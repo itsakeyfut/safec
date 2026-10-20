@@ -1063,9 +1063,13 @@ mod tests {
         let (mut map, main, _, _) = chain("join_none", "#include \"b.h\"\nint y;");
         let elsewhere = map.add_virtual("other.c", "int q;\n");
 
-        assert!(
-            map.join(Span::new(main, 0, 1), Span::new(elsewhere, 0, 3))
-                .is_err()
+        assert_eq!(
+            map.join(Span::new(main, 0, 1), Span::new(elsewhere, 0, 3)),
+            Err(Cut {
+                span: Span::new(main, 0, 1),
+                instance: main,
+                edge: Edge::Start,
+            })
         );
     }
 

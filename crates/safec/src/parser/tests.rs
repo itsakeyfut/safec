@@ -1685,7 +1685,7 @@ fn a_parameter_declared_as_an_array_or_a_function_is_a_pointer() {
 /// shares no file and is a cut by `SourceMap::join`. Every join the parser
 /// makes goes through `Parser::join`, and a site written with `Span::to`
 /// instead panics on a cut inside the construct it builds. These two programs
-/// reach all 24 sites, counted by marking `join` `#[track_caller]` for one run
+/// reach all 27 sites, counted by marking `join` `#[track_caller]` for one run
 /// and printing its caller's line, so cutting them everywhere asks each one:
 /// the corpus asks two. A site added later is asked only if a program here
 /// reaches it.
@@ -1695,7 +1695,7 @@ fn a_parameter_declared_as_an_array_or_a_function_is_a_pointer() {
 /// without reporting it. The cut before a `;` that ends a declaration is read.
 #[test]
 fn a_program_cut_into_two_files_at_any_token_is_refused_where_a_node_holds_both_sides() {
-    let text = "struct S { int a, c; int b[2]; };
+    let text = "struct S { int a, c; int b[1 + 1]; };
 int g(int n, int v[n], int *p);
 __attribute__((annotate(\"safec_unchecked\"))) void h(void) {}
 int f(int *p, struct S *s) {
