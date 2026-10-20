@@ -366,8 +366,8 @@ impl SourceFile {
 #[derive(Debug, Default)]
 pub struct SourceMap {
     files: Vec<Arc<SourceFile>>,
-    /// Per file, the first and last token of an instance's own scan, once
-    /// whoever lexed it has said. See [`SourceMap::set_extent`].
+    /// Per file, the first and last thing of an instance the parser is
+    /// handed, once the preprocessor has said. See [`SourceMap::set_extent`].
     extents: Vec<Option<(Span, Span)>>,
 }
 
@@ -416,17 +416,17 @@ impl SourceMap {
         id
     }
 
-    /// Record the first and last token of an instance's own scan.
+    /// Record the first and last thing of an instance the parser is handed.
     ///
-    /// Recorded by whoever lexed it, since an instance is registered before
-    /// it is lexed and its text need not begin or end with a token: a header
-    /// can open with a comment. Asked rather than worked out from the text,
-    /// because working it out would be a second copy of the lexer's rules for
-    /// what is not a token, and a copy that disagreed would let a lift take a
-    /// cut for a whole instance. A directive is a token here and the end of
-    /// the file is not, so an included file whose first line is an `#include`
-    /// begins at that directive, and what the directive includes lifts
-    /// through it.
+    /// Recorded by the preprocessor, which hands it over, since an instance
+    /// is registered before it is read and its text need not begin or end
+    /// with what reaches the parser: a header can open with a comment, or a
+    /// line that hands nothing over. Asked rather than worked out from the
+    /// text, because working it out would be a second copy of the lexer's and
+    /// the preprocessor's rules, and a copy that disagreed would let a lift
+    /// take a cut for a whole instance. An instance nested in this one counts
+    /// as its use, so an included file whose first line is an `#include`
+    /// begins at that directive, and what it includes lifts through it.
     ///
     /// # Panics
     ///

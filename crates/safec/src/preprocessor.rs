@@ -124,20 +124,23 @@ fn read_includes(
     diagnostics: &mut DiagnosticSink,
     spliced: &mut Vec<Token>,
 ) {
-    // Each frame says whether it is an inclusion, which `include` pushed onto
-    // `open` and whose end pops it. Said by the frame rather than by its place
-    // above the input's, so that a frame of another kind, a macro's expansion,
-    // cannot pop a file that is still being read: one did, in a prototype, and
-    // the cycle it hid was refused as too many inclusions instead.
-    let mut frames = vec![(tokens.to_vec(), 0, false)];
-    while let Some((tokens, cursor, inclusion)) = frames.last_mut() {
-        let next = tokens.get(*cursor).copied();
-        *cursor += 1;
+    let mut frames = vec![Frame {
+        tokens: tokens.to_vec(),
+        cursor: 0,
+        inclusion: None,
+        extent: None,
+    }];
+    while let Some(frame) = frames.last_mut() {
+        let next = frame.tokens.get(frame.cursor).copied();
+        frame.cursor += 1;
         let Some(token) = next else {
-            if *inclusion {
+            let Some(frame) = frames.pop() else { break };
+            if let Some((file, _)) = frame.inclusion {
                 reading.open.pop();
+                if let Some((first, last)) = frame.extent {
+                    sources.set_extent(file, first, last);
+                }
             }
-            frames.pop();
             continue;
         };
         match token.kind {
@@ -152,10 +155,15 @@ fn read_includes(
                             token.span.start() + quote,
                             token.span.start() + quote + name.len() as u32 + 2,
                         );
-                        if let Some(included) =
+                        if let Some((file, included)) =
                             include(token.span, quoted, name, sources, reading, diagnostics)
                         {
-                            frames.push((included, 0, true));
+                            frames.push(Frame {
+                                tokens: included,
+                                cursor: 0,
+                                inclusion: Some((file, token.span)),
+                                extent: None,
+                            });
                         }
                     }
                     IncludeForm::Spliced => diagnostics.report(
@@ -212,14 +220,54 @@ fn read_includes(
                     ),
                 }
             }
-            _ => spliced.push(token),
+            _ => {
+                emitted(&mut frames, token.span);
+                spliced.push(token);
+            }
         }
     }
 }
 
+/// One file being read: its tokens, how far they have been read, and, for an
+/// inclusion, which file it is, the `#include` it was read for, and the
+/// first and last thing of its own the parser has been handed so far.
+///
+/// The inclusion is said by the frame rather than by its place above the
+/// input's, so that a frame of another kind, a macro's expansion, cannot pop
+/// a file that is still being read: one did, in a prototype, and the cycle it
+/// hid was refused as too many inclusions instead.
+struct Frame {
+    tokens: Vec<Token>,
+    cursor: usize,
+    inclusion: Option<(FileId, Span)>,
+    extent: Option<(Span, Span)>,
+}
+
+/// Note that `token` reached the parser, at every level of the frames open.
+///
+/// The innermost frame handed over `token` itself, and each frame below it
+/// handed over the `#include` it read the one above for. So an inclusion's
+/// extent is what of it the parser reads, an included file standing as its
+/// directive: a directive that hands nothing over, `#define` or an
+/// `#include` of an empty file, is not in it. Taken from the scan instead,
+/// such a line was the first token of a header whose code a node holds
+/// whole, and its lift would have refused C. Found by review. See
+/// `SourceMap::set_extent`.
+fn emitted(frames: &mut [Frame], token: Span) {
+    let mut here = token;
+    for frame in frames.iter_mut().rev() {
+        let first = frame.extent.map_or(here, |(first, _)| first);
+        frame.extent = Some((first, here));
+        let Some((_, directive)) = frame.inclusion else {
+            break;
+        };
+        here = directive;
+    }
+}
+
 /// Read the file `name` names, relative to the file the directive is in, and
-/// give back its tokens, with it pushed onto the files being read; or report
-/// why not, and give back nothing.
+/// give back the file and its tokens, with it pushed onto the files being
+/// read; or report why not, and give back nothing.
 ///
 /// `directive` is the whole line and `quoted` the name with its quotes, which
 /// is where a report about the file is put.
@@ -230,7 +278,7 @@ fn include(
     sources: &mut SourceMap,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
-) -> Option<Vec<Token>> {
+) -> Option<(FileId, Vec<Token>)> {
     let unreadable = |note: String| {
         Diagnostic::error("cannot read the included file")
             .with_code(UNREADABLE_INCLUSION)
@@ -340,17 +388,8 @@ fn include(
 
     reading.inclusions += 1;
     let tokens = lex(file, &sources.file_owned(file), diagnostics);
-    // Its own scan, directives included, so a span lifted out of it can be
-    // told whether it starts or ends where the inclusion does. A file with no
-    // token has nothing to lift. See `SourceMap::set_extent`.
-    let mut scanned = tokens.iter().filter(|token| !token.is_eof());
-    if let (Some(first), Some(last)) = (scanned.next(), scanned.next_back()) {
-        sources.set_extent(file, first.span, last.span);
-    } else if let Some(only) = tokens.iter().find(|token| !token.is_eof()) {
-        sources.set_extent(file, only.span, only.span);
-    }
     reading.open.push((real, file));
-    Some(tokens)
+    Some((file, tokens))
 }
 
 /// What an `#include` is spelled as, which decides what is done with it.
@@ -704,8 +743,8 @@ mod tests {
     /// header opens with a comment, so the file's first byte is not its first
     /// token.
     ///
-    /// Mutation: drop the `set_extent` call in `include`. The lift panics,
-    /// since the inclusion has no extent.
+    /// Mutation: drop the `set_extent` call in `read_includes`. The lift
+    /// panics, since the inclusion has no extent.
     #[test]
     fn a_span_at_the_start_of_an_included_file_lifts_to_its_include() {
         let directory = std::env::temp_dir().join(format!("safec_extent_{}", std::process::id()));
@@ -724,6 +763,53 @@ mod tests {
         let int = preprocessed.tokens()[0].span;
         assert_eq!((int.start(), int.end()), (8, 11));
         assert_eq!(sources.lift_start(int, main), Span::new(main, 0, 14));
+    }
+
+    /// An inclusion's extent is what of it the parser reads: a first line that
+    /// hands nothing over is not its start, and a nested inclusion that does
+    /// stands as its `#include`.
+    ///
+    /// `a.h` opens with an `#include` of an empty file and then `int z;`, so
+    /// a node holding all of `a.h` starts at `int`; `b.h` opens with an
+    /// `#include` of `c.h`, which holds `int w;`, so `c.h`'s `int` lifts
+    /// through `b.h`'s directive.
+    ///
+    /// Mutation: take the extent from the inclusion's own scan, directives
+    /// included. `a.h` then starts at the `#include` of the empty file, and
+    /// the first lift panics.
+    #[test]
+    fn an_inclusion_starts_at_the_first_thing_the_parser_reads_of_it() {
+        let directory = std::env::temp_dir().join(format!("safec_reads_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&directory);
+        fs::create_dir_all(&directory).unwrap();
+        fs::write(
+            directory.join("main.c"),
+            "#include \"a.h\"\n#include \"b.h\"\n",
+        )
+        .unwrap();
+        fs::write(directory.join("a.h"), "#include \"empty.h\"\nint z;\n").unwrap();
+        fs::write(directory.join("empty.h"), "").unwrap();
+        fs::write(directory.join("b.h"), "#include \"c.h\"\n").unwrap();
+        fs::write(directory.join("c.h"), "int w;\n").unwrap();
+
+        let mut sources = SourceMap::new();
+        let main = sources.load(directory.join("main.c")).unwrap();
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(main, &sources.file_owned(main), &mut diagnostics);
+        let preprocessed = preprocess(main, &tokens, &mut sources, &mut diagnostics);
+        let _ = fs::remove_dir_all(&directory);
+        assert!(!diagnostics.has_errors(), "{:?}", diagnostics.diagnostics());
+
+        let read = preprocessed.tokens();
+        assert_eq!(
+            sources.lift_start(read[0].span, main),
+            Span::new(main, 0, 14)
+        );
+        assert_eq!(sources.lift_end(read[2].span, main), Span::new(main, 0, 14));
+        assert_eq!(
+            sources.lift_start(read[3].span, main),
+            Span::new(main, 15, 29)
+        );
     }
 
     /// An included file's own includes are found beside it, not beside the
