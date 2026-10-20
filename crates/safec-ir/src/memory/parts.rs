@@ -9,7 +9,7 @@
 use std::collections::BTreeSet;
 
 use crate::ir::Place;
-use crate::source::Span;
+use crate::source::{SourceMap, Span};
 
 use super::LostReason;
 
@@ -103,9 +103,9 @@ impl Freeing {
     /// The earlier span, because that is which free the diagnostic names, and
     /// the **conjunction** of the flags, because a path that reached here with
     /// the order still open is a path on which this is not a proof.
-    pub(super) fn joined(self, other: Self) -> Self {
+    pub(super) fn joined(self, other: Self, sources: &SourceMap) -> Self {
         Freeing {
-            at: earlier(self.at, other.at),
+            at: earlier(sources, self.at, other.at),
             sequenced: self.sequenced && other.sequenced,
         }
     }
@@ -190,7 +190,10 @@ pub(super) enum SiteState {
 
 impl SiteState {
     /// The two together, which is `Unknown` unless they agree.
-    pub(super) fn joined(self, other: Self) -> Self {
+    ///
+    /// `sources` for which free a joined state names, the earlier one by
+    /// where the code is. See [`earlier`].
+    pub(super) fn joined(self, other: Self, sources: &SourceMap) -> Self {
         match (self, other) {
             (Self::Unheld, other) | (other, Self::Unheld) => other,
             (Self::Live(here), Self::Live(there)) => Self::Live(same(here, there)),
@@ -205,7 +208,7 @@ impl SiteState {
                 },
             ) => Self::Freed {
                 made: same(here, there),
-                freed: from_here.joined(from_there),
+                freed: from_here.joined(from_there, sources),
             },
             // Live on both sides as far as this check saw, and reachable on
             // at least one. See ADR-0047.
@@ -300,8 +303,14 @@ pub(super) fn same(here: Option<Span>, there: Option<Span>) -> Option<Span> {
 /// A total order over the pair, so a value carrying one can only move one way
 /// and the walk ends. The file is the first half because a span names its
 /// own file and two of them need not share one.
-pub(super) fn earlier(here: Span, there: Span) -> Span {
-    if (here.file().index(), here.start()) <= (there.file().index(), there.start()) {
+///
+/// **By where the code is, across an instance.** A free in an included file
+/// whose `#include` is above a free written in the including file is the
+/// earlier one, as written out, though its file was registered later: the
+/// order reads each span's chain from its root. See
+/// [`SourceMap::position`] and ADR-0054.
+pub(super) fn earlier(sources: &SourceMap, here: Span, there: Span) -> Span {
+    if sources.position(here) <= sources.position(there) {
         here
     } else {
         there
@@ -699,7 +708,7 @@ impl Held {
     /// is that [`Held::none`] is the identity for three of these fields and the
     /// zero for the fourth, so building a value up from nothing cleared a proof
     /// every time.
-    pub(super) fn joined(&mut self, other: &Held) {
+    pub(super) fn joined(&mut self, other: &Held, sources: &SourceMap) {
         // Every field named, never `..`, in this method and in its neighbour
         // alike: a field added to this struct is `error[E0027]` in both and has
         // to say what it means in each. ADR-0024 is why there are two places
@@ -745,7 +754,7 @@ impl Held {
         // joining it the way its neighbours join would report a proved double
         // free on `if (c) { free(p); } free(p);`. See ADR-0020.
         *freed = match (*freed, other.freed) {
-            (Some(here), Some(there)) => Some(here.joined(there)),
+            (Some(here), Some(there)) => Some(here.joined(there, sources)),
             _ => None,
         };
         for (here, there) in writes_to.iter_mut().zip(&other.writes_to) {
@@ -998,8 +1007,82 @@ pub(super) struct Realloced {
 
 #[cfg(test)]
 mod tests {
-    use super::{Freeing, SiteState};
-    use crate::source::{SourceMap, Span};
+    use super::{Freeing, SiteState, earlier};
+    use crate::memory::report::inside;
+    use crate::source::{FileId, SourceMap, Span};
+
+    /// `main.c`, `x = 0;` then `#include "a.h"` then `y = 1;`, and `a.h`,
+    /// `int z;`, included at that directive with its extent recorded. Written
+    /// to a directory named by `tag`, so tests can run at once.
+    fn included(tag: &str) -> (SourceMap, FileId, FileId) {
+        let directory =
+            std::env::temp_dir().join(format!("safec_parts_{tag}_{}", std::process::id()));
+        std::fs::create_dir_all(&directory).unwrap();
+        std::fs::write(directory.join("a.h"), "int z;").unwrap();
+        let mut sources = SourceMap::new();
+        let main = sources.add_virtual("main.c", "x = 0;\n#include \"a.h\"\ny = 1;\n");
+        let a = sources
+            .include(directory.join("a.h"), Span::new(main, 7, 21))
+            .unwrap();
+        std::fs::remove_dir_all(&directory).unwrap();
+        sources.set_extent(a, Span::new(a, 0, 3), Span::new(a, 5, 6));
+        (sources, main, a)
+    }
+
+    /// A read in an included file is inside a call that holds its
+    /// `#include`, as it is written out, and the equal-span rule still holds
+    /// of the spans themselves. See ADR-0043 and ADR-0054.
+    ///
+    /// Mutation: compare in `inside` without locating. The first assertion
+    /// fails.
+    #[test]
+    fn a_read_in_an_included_file_is_inside_the_call_that_holds_its_include() {
+        let (sources, main, a) = included("inside");
+        let call = Span::new(main, 0, 28);
+
+        assert!(inside(&sources, Span::new(a, 4, 5), call));
+        assert!(!inside(&sources, Span::new(a, 4, 5), Span::new(main, 0, 6)));
+        assert!(!inside(&sources, call, call));
+    }
+
+    /// A span that locates to exactly the outer one is not inside it, so a
+    /// call that is exactly an instance's use takes no read in the instance
+    /// for its own, and the read is reported. See ADR-0043.
+    ///
+    /// Mutation: ask equality of the spans before locating them. The read in
+    /// `a.h` is then inside the call that is its `#include`.
+    #[test]
+    fn a_span_located_to_exactly_the_outer_one_is_not_inside_it() {
+        let (sources, main, a) = included("located_equal");
+
+        assert!(!inside(
+            &sources,
+            Span::new(a, 4, 5),
+            Span::new(main, 7, 21)
+        ));
+    }
+
+    /// A free in an included file whose `#include` is above a free written
+    /// in the including file is the earlier, though its file was registered
+    /// later.
+    ///
+    /// Mutation: order by file index first, as `earlier` did. The first
+    /// assertion fails.
+    #[test]
+    fn a_free_in_an_included_file_above_a_written_one_is_the_earlier() {
+        let (sources, main, a) = included("earlier");
+        let included_free = Span::new(a, 4, 5);
+        let written_free = Span::new(main, 22, 23);
+
+        assert_eq!(
+            earlier(&sources, written_free, included_free),
+            included_free
+        );
+        assert_eq!(
+            earlier(&sources, Span::new(main, 0, 1), included_free),
+            Span::new(main, 0, 1)
+        );
+    }
 
     /// `SiteState::Unheld` joined with any state, from either side, is that
     /// state.
@@ -1028,8 +1111,8 @@ mod tests {
             SiteState::Reachable,
             SiteState::Unheld,
         ] {
-            assert!(SiteState::Unheld.joined(state) == state);
-            assert!(state.joined(SiteState::Unheld) == state);
+            assert!(SiteState::Unheld.joined(state, &sources) == state);
+            assert!(state.joined(SiteState::Unheld, &sources) == state);
         }
     }
 }

@@ -1717,13 +1717,13 @@ fn a_labelled_diagnostic_reaches_the_source_map_the_driver_loaded() {
     assert!(report.contains("not part of any token"), "{report}");
 }
 
-/// A free is about a parameter's length only where the length's file is the
-/// free's: offsets in two files say nothing about each other, and one unit
-/// will hold several files once `#include` lands.
+/// A free is about a parameter's length only where the two are located in a
+/// file they share: offsets in two unrelated files say nothing about each
+/// other.
 ///
-/// Mutation: drop the file comparison from `unordered`'s containment. The
-/// free in the second file is then read as inside the first file's length,
-/// and this fails.
+/// Mutation: have `SourceMap::within` compare offsets without asking for a
+/// shared file. The free in the second file is then read as inside the first
+/// file's length, and this fails.
 #[test]
 fn a_free_in_another_file_is_not_inside_a_parameter_s_length() {
     use super::words::{Unordered, unordered};
@@ -1737,6 +1737,7 @@ fn a_free_in_another_file_is_not_inside_a_parameter_s_length() {
     // assertion below is about the file and not about the offsets.
     assert_eq!(
         unordered(
+            &sources,
             Some(Span::new(first, 13, 20)),
             Span::new(first, 0, 3),
             &[length]
@@ -1745,10 +1746,44 @@ fn a_free_in_another_file_is_not_inside_a_parameter_s_length() {
     );
     assert_eq!(
         unordered(
+            &sources,
             Some(Span::new(second, 13, 20)),
             Span::new(second, 0, 3),
             &[length]
         ),
         Unordered::InTheBody,
+    );
+}
+
+/// A free in an included file is inside the length that holds its
+/// `#include`, as it would be written out. See ADR-0054.
+///
+/// Mutation: have `unordered` compare offsets in one file, as it did. The
+/// free is in the included file and the length in the including one, so it
+/// is read as in the body.
+#[test]
+fn a_free_in_an_included_file_is_inside_the_length_that_holds_its_include() {
+    use super::words::{Unordered, unordered};
+
+    let directory = std::env::temp_dir().join(format!("safec_length_{}", std::process::id()));
+    fs::create_dir_all(&directory).unwrap();
+    fs::write(directory.join("free.h"), "(free(p), 1)").unwrap();
+    let mut sources = SourceMap::new();
+    let main = sources.add_virtual("main.c", "int f(int a[\n#include \"free.h\"\n]);\n");
+    let header = sources
+        .include(directory.join("free.h"), Span::new(main, 13, 30))
+        .unwrap();
+    fs::remove_dir_all(&directory).unwrap();
+    sources.set_extent(header, Span::new(header, 0, 1), Span::new(header, 11, 12));
+    let length = Span::new(main, 12, 31);
+
+    assert_eq!(
+        unordered(
+            &sources,
+            Some(Span::new(header, 1, 8)),
+            Span::new(main, 0, 3),
+            &[length]
+        ),
+        Unordered::AcrossLengths,
     );
 }

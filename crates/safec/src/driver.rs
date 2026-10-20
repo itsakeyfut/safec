@@ -625,7 +625,7 @@ fn lowered(
         let lengths = parameter_lengths(&analysed.ast);
         for finding in memory::findings(sources, &unit) {
             let name = written_name(&unit, sources, finding.function, finding.local);
-            if let Some(diagnostic) = memory_finding(&finding, name, &lengths) {
+            if let Some(diagnostic) = memory_finding(sources, &finding, name, &lengths) {
                 let concluded = Concluded {
                     function: finding.function,
                     conclusion: finding.conclusion,

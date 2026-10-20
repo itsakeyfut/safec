@@ -361,6 +361,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 // Before the transfer, which is what the element does: the
                 // question is what was true where it runs.
                 used(
+                    sources,
                     &mut findings,
                     &mut said,
                     dereferenced_in_element(element),
@@ -386,7 +387,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                     element,
                     Element::Sequenced { .. } | Element::ArgumentsEvaluated { .. }
                 ) {
-                    after_a_call(&mut findings, &mut said, &known, func);
+                    after_a_call(sources, &mut findings, &mut said, &known, func);
                 }
                 // Wherever the walk reaches it, and asking nothing of `known`:
                 // the call it stands before is undefined on every execution
@@ -423,6 +424,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
             // allocation into a freed one: the question is what was true when
             // the call was reached.
             used(
+                sources,
                 &mut findings,
                 &mut said,
                 dereferenced_in_terminator(&block.terminator),
@@ -457,7 +459,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 id,
             );
             if matches!(block.terminator, Terminator::Return) {
-                after_a_call(&mut findings, &mut said, &known, func);
+                after_a_call(sources, &mut findings, &mut said, &known, func);
             }
         }
     }

@@ -8,7 +8,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::ir::{LocalId, Operand, Place};
-use crate::source::Span;
+use crate::source::{SourceMap, Span};
 
 use super::parts::{Held, PendingRead, Reached, Read, ReadKey, Realloced, SiteState, read_key};
 use super::{LostReason, derefs, inside, named};
@@ -831,7 +831,12 @@ impl Known {
     /// `(keep(a) != 0) + release_all()` was refused. An event's routes are
     /// its own whether or not the site was exposed already, so a second route
     /// to a site the own call exposed is still told.
-    pub(super) fn noticed(&mut self, by: Option<Span>, routes: &BTreeSet<usize>) {
+    pub(super) fn noticed(
+        &mut self,
+        sources: &SourceMap,
+        by: Option<Span>,
+        routes: &BTreeSet<usize>,
+    ) {
         // **And whether a call already pending may run between this and the
         // read.** It may unless the read belongs to it or to `by`, or it is
         // in `by`'s arguments: C17 6.5.2.2 p10 orders a call's arguments
@@ -840,17 +845,17 @@ impl Known {
         let calls: Vec<Span> = self.calls.values().copied().collect();
         if calls
             .iter()
-            .any(|&call| by != Some(call) && !by.is_some_and(|by| inside(call, by)))
+            .any(|&call| by != Some(call) && !by.is_some_and(|by| inside(sources, call, by)))
         {
             self.exposed_after_call.extend(routes);
         }
         for entry in self.pending.values_mut() {
-            let own_by = by.is_some_and(|by| entry.at == by || inside(entry.at, by));
+            let own_by = by.is_some_and(|by| entry.at == by || inside(sources, entry.at, by));
             if !own_by && entry.sites.iter().any(|site| routes.contains(site)) {
                 let freer = calls.iter().any(|&call| {
                     by != Some(call)
-                        && !(entry.at == call || inside(entry.at, call))
-                        && !by.is_some_and(|by| inside(call, by))
+                        && !(entry.at == call || inside(sources, entry.at, call))
+                        && !by.is_some_and(|by| inside(sources, call, by))
                 });
                 if freer {
                     entry.after_call = true;
@@ -861,7 +866,7 @@ impl Known {
             // Its own if it is the pointer the call was handed, whose span is
             // the call's, or a dereference written in its arguments, whose
             // span is inside it. See ADR-0043 for why inside means that.
-            let own = by.is_some_and(|by| entry.at == by || inside(entry.at, by));
+            let own = by.is_some_and(|by| entry.at == by || inside(sources, entry.at, by));
             if own {
                 continue;
             }
@@ -1097,10 +1102,15 @@ impl Known {
     ///
     /// `by` is the call exposing them, or `None` for anything else, and says
     /// which pending reads are told. See [`Self::noticed`].
-    pub(super) fn expose(&mut self, sites: impl IntoIterator<Item = usize>, by: Option<Span>) {
+    pub(super) fn expose(
+        &mut self,
+        sources: &SourceMap,
+        sites: impl IntoIterator<Item = usize>,
+        by: Option<Span>,
+    ) {
         let sites: Vec<usize> = sites.into_iter().collect();
         let routes = self.closure(sites.clone());
-        self.noticed(by, &routes);
+        self.noticed(sources, by, &routes);
         for site in sites {
             self.exposed[site] = true;
         }

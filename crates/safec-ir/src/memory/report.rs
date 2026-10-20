@@ -10,7 +10,7 @@ use crate::ir::{
     BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
 };
 use crate::nullability::NullAtTerminators;
-use crate::source::Span;
+use crate::source::{SourceMap, Span};
 
 use super::built::named;
 use super::known::Known;
@@ -90,6 +90,7 @@ fn pending_local(read: Read, place: &Place) -> Option<LocalId> {
 /// following, and a dereference hands an empty iterator. That asymmetry is the
 /// design rather than an accident, and [`used`] says why.
 fn verdict(
+    sources: &SourceMap,
     kind: Kind,
     reached: impl IntoIterator<Item = Reached>,
     known: &Known,
@@ -138,7 +139,7 @@ fn verdict(
                 several |= any_freed;
                 any_freed = true;
                 earliest = Some(match earliest {
-                    Some(already) => already.joined(freed),
+                    Some(already) => already.joined(freed, sources),
                     None => freed,
                 });
                 continue;
@@ -167,7 +168,7 @@ fn verdict(
                 several |= any_freed;
                 any_freed = true;
                 earliest = Some(match earliest {
-                    Some(already) => already.joined(before),
+                    Some(already) => already.joined(before, sources),
                     None => before,
                 });
             }
@@ -356,7 +357,7 @@ pub(super) fn reported(
     let inside = interior(&reached, offset, known);
 
     let mut found = Vec::new();
-    if let Some(verdict) = verdict(Kind::DoubleFree, reached, known) {
+    if let Some(verdict) = verdict(analysis.sources, Kind::DoubleFree, reached, known) {
         found.push(finding(Kind::DoubleFree, verdict));
     }
     if let Some(verdict) = inside {
@@ -547,6 +548,7 @@ fn established_null(argument: &Operand, null: &NullAtTerminators, block: BlockId
 ///
 /// [`Element::Evaluate`]: crate::ir::Element::Evaluate
 pub(super) fn used(
+    sources: &SourceMap,
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place, usize)>,
     at: Option<(Span, Vec<&Place>)>,
@@ -585,24 +587,29 @@ pub(super) fn used(
         // it names one: below it the pointer gone through was loaded from
         // memory, and `free(*pp); return **pp;` is about what `pp`'s
         // allocation held rather than about `pp`.
-        let Some((verdict, local)) =
-            verdict(Kind::UseAfterFree, known.reached_by(place.local), known)
-                .map(|verdict| (verdict, Some(place.local)))
-                .or_else(|| {
-                    (1..derefs(place)).find_map(|depth| {
-                        verdict(
-                            Kind::UseAfterFree,
-                            known.reached_below(place.local, depth),
-                            known,
-                        )
-                        .map(|verdict| (verdict, None))
-                    })
-                })
-        else {
+        let Some((verdict, local)) = verdict(
+            sources,
+            Kind::UseAfterFree,
+            known.reached_by(place.local),
+            known,
+        )
+        .map(|verdict| (verdict, Some(place.local)))
+        .or_else(|| {
+            (1..derefs(place)).find_map(|depth| {
+                verdict(
+                    sources,
+                    Kind::UseAfterFree,
+                    known.reached_below(place.local, depth),
+                    known,
+                )
+                .map(|verdict| (verdict, None))
+            })
+        }) else {
             continue;
         };
 
         say(
+            sources,
             findings,
             said,
             place,
@@ -677,10 +684,16 @@ pub(super) fn returned(
         return;
     }
 
-    let Some(verdict) = verdict(Kind::ReturnAfterFree, known.handed_reached(source), known) else {
+    let Some(verdict) = verdict(
+        analysis.sources,
+        Kind::ReturnAfterFree,
+        known.handed_reached(source),
+        known,
+    ) else {
         return;
     };
     say(
+        analysis.sources,
         findings,
         said,
         source,
@@ -746,12 +759,17 @@ pub(super) fn handed(
     // freed pointer passed, which says more than what `tab` holds behind it.
     let mut silent: Vec<&Place> = Vec::new();
     for place in handed_places(analysis, function, *callee, arguments) {
-        let Some(verdict) = verdict(Kind::ArgumentAfterFree, known.handed_reached(place), known)
-        else {
+        let Some(verdict) = verdict(
+            analysis.sources,
+            Kind::ArgumentAfterFree,
+            known.handed_reached(place),
+            known,
+        ) else {
             silent.push(place);
             continue;
         };
         say(
+            analysis.sources,
             findings,
             said,
             place,
@@ -776,11 +794,16 @@ pub(super) fn handed(
     // forwards as the pointer is, because only allocations already freed are
     // asked, and those are reported here. See ADR-0042.
     for place in silent {
-        let Some(verdict) = verdict(Kind::FreedBehindArgument, known.handed_below(place), known)
-        else {
+        let Some(verdict) = verdict(
+            analysis.sources,
+            Kind::FreedBehindArgument,
+            known.handed_below(place),
+            known,
+        ) else {
             continue;
         };
         say(
+            analysis.sources,
             findings,
             said,
             &Place {
@@ -912,6 +935,7 @@ pub(super) fn handed_places<'a>(
 /// replacing, and `a_proof_replaces_the_suspicion_at_one_caret` puts a double
 /// free in front of the pair so that the two indices differ.
 pub(super) fn say(
+    sources: &SourceMap,
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place, usize)>,
     place: &Place,
@@ -928,7 +952,7 @@ pub(super) fn say(
     };
 
     let index = said[standing].2;
-    if supersedes(&findings[index], &finding) {
+    if supersedes(sources, &findings[index], &finding) {
         findings[index] = finding;
     }
 }
@@ -1108,7 +1132,7 @@ pub(super) fn used_before(
         // skipped here and kept for whatever else in the expression may free:
         // `strlen(strcpy(s, t)) + (free(s), 0)` still carries `strcpy`'s
         // argument to the free. See ADR-0043.
-        if inside(read.at, origin.span()) {
+        if inside(analysis.sources, read.at, origin.span()) {
             continue;
         }
         let both: Vec<usize> = read
@@ -1140,6 +1164,7 @@ pub(super) fn used_before(
         }
 
         say(
+            analysis.sources,
             findings,
             said,
             place,
@@ -1190,6 +1215,7 @@ pub(super) fn used_before(
 /// `freed here`, and [`say`] keeps it over this one, which names no free.
 /// See ADR-0042.
 pub(super) fn after_a_call(
+    sources: &SourceMap,
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place, usize)>,
     known: &Known,
@@ -1209,6 +1235,7 @@ pub(super) fn after_a_call(
             made = if index == 0 { from } else { same(made, from) };
         }
         say(
+            sources,
             findings,
             said,
             place,
@@ -1243,11 +1270,25 @@ pub(super) fn after_a_call(
 /// buys is the direction of a mistake: were a call and a sibling operand ever
 /// given one span, the sibling is reported rather than skipped. See ADR-0043,
 /// and `docs/c-family.md` for what this asks of another frontend.
-pub(super) fn inside(inner: Span, outer: Span) -> bool {
-    inner != outer
-        && inner.file() == outer.file()
-        && inner.start() >= outer.start()
-        && inner.end() <= outer.end()
+///
+/// **Located, across an instance.** A read in an included file, or later in a
+/// macro's expansion, is inside the call that holds its use, as it would be
+/// written out: both spans are compared in the nearest file they share, and
+/// two with none in common are not inside each other. Equality is asked there
+/// too, after locating, so a span that locates to exactly the outer one is not
+/// inside it. That is the rule above in the direction it chose: were a call
+/// ever exactly an instance's use, a read in the instance is reported rather
+/// than taken for the call's own. Found by review. See ADR-0054.
+pub(super) fn inside(sources: &SourceMap, inner: Span, outer: Span) -> bool {
+    let Some(file) = sources.shared(inner, outer) else {
+        return false;
+    };
+    match (sources.locate(inner, file), sources.locate(outer, file)) {
+        (Some(inner), Some(outer)) => {
+            inner != outer && outer.start() <= inner.start() && inner.end() <= outer.end()
+        }
+        _ => false,
+    }
 }
 
 /// Whether a report at a caret replaces the one already standing there.
@@ -1298,7 +1339,7 @@ pub(super) fn inside(inner: Span, outer: Span) -> bool {
 /// cannot arise say so rather than falling through, because a fallthrough in
 /// this check was once reached by "proved" and by "gave up" at once and
 /// reported the second as the first.
-fn supersedes(standing: &Finding, new: &Finding) -> bool {
+fn supersedes(sources: &SourceMap, standing: &Finding, new: &Finding) -> bool {
     match (standing.conclusion, new.conclusion) {
         // First, because a wildcard below would absorb them. [`verdict`]
         // answers `None` where there is nothing to report, so no `Finding`
@@ -1314,7 +1355,7 @@ fn supersedes(standing: &Finding, new: &Finding) -> bool {
         // free: the interior-free proof, which names none, is pushed rather
         // than said.
         (Conclusion::Unsafe, Conclusion::Unsafe) => match (standing.freed, new.freed) {
-            (Some(standing), Some(new)) => earlier(standing, new) != standing,
+            (Some(standing), Some(new)) => earlier(sources, standing, new) != standing,
             (None, _) | (_, None) => unreachable!("a proof standing at a caret named no free"),
         },
         (Conclusion::Unknown, Conclusion::Unknown) => match (standing.freed, new.freed) {

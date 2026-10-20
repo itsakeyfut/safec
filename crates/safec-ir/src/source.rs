@@ -366,6 +366,9 @@ impl SourceFile {
 #[derive(Debug, Default)]
 pub struct SourceMap {
     files: Vec<Arc<SourceFile>>,
+    /// Per file, the first and last thing of an instance the parser is
+    /// handed, once the preprocessor has said. See [`SourceMap::set_extent`].
+    extents: Vec<Option<(Span, Span)>>,
 }
 
 impl SourceMap {
@@ -385,7 +388,19 @@ impl SourceMap {
     ///
     /// A new file on every call, a second inclusion of the same path
     /// included. See [`FileName::Inclusion`].
+    ///
+    /// # Panics
+    ///
+    /// If `at` is not in a file already in the map. Every walk along a chain
+    /// of uses, [`SourceMap::locate`] and the lifts among them, ends because
+    /// each use is in a file registered before the instance it is the use
+    /// of; a use in the file being added, or a later one, would be a chain
+    /// with no root, and the walk would not end. Found by review.
     pub fn include(&mut self, path: impl AsRef<Path>, at: Span) -> io::Result<FileId> {
+        assert!(
+            at.file().index() < self.files.len(),
+            "an inclusion's use {at:?} is in no file already registered, so its chain would have no root"
+        );
         let path = path.as_ref();
         let contents = fs::read_to_string(path)?;
         Ok(self.add(
@@ -409,7 +424,164 @@ impl SourceMap {
     fn add(&mut self, name: FileName, contents: String) -> FileId {
         let id = FileId(self.files.len() as u32);
         self.files.push(Arc::new(SourceFile::new(name, contents)));
+        self.extents.push(None);
         id
+    }
+
+    /// Record the first and last thing of an instance the parser is handed.
+    ///
+    /// Recorded by the preprocessor, which hands it over, since an instance
+    /// is registered before it is read and its text need not begin or end
+    /// with what reaches the parser: a header can open with a comment, or a
+    /// line that hands nothing over. Asked rather than worked out from the
+    /// text, because working it out would be a second copy of the lexer's and
+    /// the preprocessor's rules, and a copy that disagreed would let a lift
+    /// take a cut for a whole instance. An instance nested in this one counts
+    /// as its use, so an included file whose first line is an `#include`
+    /// begins at that directive, and what it includes lifts through it.
+    ///
+    /// # Panics
+    ///
+    /// If `file` is not an instance, or either span is not in it.
+    pub fn set_extent(&mut self, file: FileId, first: Span, last: Span) {
+        assert!(
+            self.at(file).is_some(),
+            "only an instance has an extent, and {file:?} is not one"
+        );
+        assert!(
+            first.file() == file && last.file() == file,
+            "the extent of {file:?} is in another file: {first:?}, {last:?}"
+        );
+        self.extents[file.index()] = Some((first, last));
+    }
+
+    /// Where an instance was used, or `None` for a file that is not one.
+    ///
+    /// The one place a kind of instance answers for its use, so a second
+    /// kind is an arm here and nothing else. See ADR-0054.
+    pub fn at(&self, file: FileId) -> Option<Span> {
+        match self.file(file).name() {
+            FileName::Inclusion { at, .. } => Some(*at),
+            FileName::Real(_) | FileName::Virtual(_) => None,
+        }
+    }
+
+    /// `span` lifted to its use in `into`, checking at every level of the
+    /// chain that it starts where its instance's first token does.
+    ///
+    /// For a join: the start of what this returns is where a node holding
+    /// `span` at its start begins in `into`. On a contiguous token stream the
+    /// check is exactly that the node holds the whole instance at its start,
+    /// so a node that cuts one cannot be joined. See ADR-0054.
+    ///
+    /// # Panics
+    ///
+    /// Where `span` does not start at its instance's first token at some
+    /// level, naming the cut, or where the chain ends before `into`.
+    pub fn lift_start(&self, span: Span, into: FileId) -> Span {
+        self.lift(
+            span,
+            into,
+            |span, (first, _)| span.start() == first.start(),
+            "start",
+        )
+    }
+
+    /// `span` lifted to its use in `into`, checking at every level of the
+    /// chain that it ends where its instance's last token does. The end's
+    /// counterpart of [`SourceMap::lift_start`].
+    ///
+    /// # Panics
+    ///
+    /// Where `span` does not end at its instance's last token at some level,
+    /// naming the cut, or where the chain ends before `into`.
+    pub fn lift_end(&self, span: Span, into: FileId) -> Span {
+        self.lift(
+            span,
+            into,
+            |span, (_, last)| span.end() == last.end(),
+            "end",
+        )
+    }
+
+    fn lift(
+        &self,
+        mut span: Span,
+        into: FileId,
+        whole: impl Fn(Span, (Span, Span)) -> bool,
+        side: &str,
+    ) -> Span {
+        while span.file() != into {
+            let file = span.file();
+            let Some(at) = self.at(file) else {
+                panic!("{span:?} cannot be lifted into {into:?}: {file:?} is not an instance");
+            };
+            let Some(extent) = self.extents[file.index()] else {
+                panic!("{file:?} has no recorded extent, so {span:?} cannot be lifted out of it");
+            };
+            assert!(
+                whole(span, extent),
+                "{span:?} cuts {file:?}: its {side} is not its instance's, which is {extent:?}"
+            );
+            span = at;
+        }
+        span
+    }
+
+    /// `span` moved along its chain to its use in `into`, any span at all, or
+    /// `None` where the chain never reaches `into`.
+    ///
+    /// For a comparison, which asks where something is and not whether a node
+    /// may hold it, so an interior span is located as well as an edge.
+    pub fn locate(&self, mut span: Span, into: FileId) -> Option<Span> {
+        while span.file() != into {
+            span = self.at(span.file())?;
+        }
+        Some(span)
+    }
+
+    /// The nearest file both spans' chains reach, or `None`.
+    pub fn shared(&self, a: Span, b: Span) -> Option<FileId> {
+        let mut here = Some(a);
+        while let Some(span) = here {
+            if self.locate(b, span.file()).is_some() {
+                return Some(span.file());
+            }
+            here = self.at(span.file());
+        }
+        None
+    }
+
+    /// Whether `inner` lies within `outer`, `outer` itself included, where
+    /// both are located in the nearest file they share; `false` where they
+    /// share none.
+    pub fn within(&self, outer: Span, inner: Span) -> bool {
+        let Some(file) = self.shared(outer, inner) else {
+            return false;
+        };
+        match (self.locate(outer, file), self.locate(inner, file)) {
+            (Some(outer), Some(inner)) => {
+                outer.start() <= inner.start() && inner.end() <= outer.end()
+            }
+            _ => false,
+        }
+    }
+
+    /// `span`'s chain from its root down, `(file index, start)` at each level,
+    /// the outermost first: the key a total order by where code is reads.
+    ///
+    /// Two spans compare at the nearest file they share, a tie there is
+    /// settled one level in, and two with no file in common compare by their
+    /// roots, which is the order by file index there was before instances.
+    pub fn position(&self, span: Span) -> Vec<(usize, u32)> {
+        let mut chain = vec![(span.file().index(), span.start())];
+        let mut here = span;
+        while let Some(at) = self.at(here.file()) {
+            chain.push((at.file().index(), at.start()));
+            here = at;
+        }
+        chain.reverse();
+        chain
     }
 
     /// The file a handle refers to.
@@ -681,6 +853,156 @@ mod tests {
         assert_eq!(map.file(id).contents(), "int main(void) { return 0; }");
 
         fs::remove_file(&path).unwrap();
+    }
+
+    /// `main.c`, written in memory, includes `outer`, which includes `b.h`:
+    /// a chain of two instances with each extent recorded, as the
+    /// preprocessor records it. `outer` is written to a directory of its own
+    /// named by `tag`, so tests can run at once.
+    ///
+    /// `outer`'s text holds `#include "b.h"` and the `at` of `b.h` is that
+    /// directive; `b.h` is ` int z;`, whose tokens are at 1, 5 and 6.
+    fn chain(tag: &str, outer: &str) -> (SourceMap, FileId, FileId, FileId) {
+        let directory =
+            std::env::temp_dir().join(format!("safec_chain_{tag}_{}", std::process::id()));
+        fs::create_dir_all(&directory).unwrap();
+        fs::write(directory.join("a.h"), outer).unwrap();
+        fs::write(directory.join("b.h"), " int z;").unwrap();
+
+        let mut map = SourceMap::new();
+        let main = map.add_virtual("main.c", "x = 0;\n#include \"a.h\"\ny = 1;\n");
+        let a = map
+            .include(directory.join("a.h"), Span::new(main, 7, 21))
+            .unwrap();
+        let directive = outer.find('#').unwrap() as u32;
+        let b = map
+            .include(
+                directory.join("b.h"),
+                Span::new(a, directive, directive + 14),
+            )
+            .unwrap();
+        fs::remove_dir_all(&directory).unwrap();
+
+        // The first and last token of each, as a scan would find them.
+        let tokens: Vec<(u32, u32)> = if outer.starts_with('#') {
+            vec![(0, 14), (15, 18), (19, 20), (20, 21)]
+        } else {
+            vec![(0, 3), (4, 5), (5, 6), (7, 21)]
+        };
+        let (first, last) = (tokens[0], tokens[tokens.len() - 1]);
+        map.set_extent(
+            a,
+            Span::new(a, first.0, first.1),
+            Span::new(a, last.0, last.1),
+        );
+        map.set_extent(b, Span::new(b, 1, 4), Span::new(b, 6, 7));
+        (map, main, a, b)
+    }
+
+    /// `int z;`'s `int` starts `b.h`, whose directive starts `a.h`, so the
+    /// start of a node holding `b.h` whole is the `#include` of `a.h`.
+    #[test]
+    fn a_span_at_the_first_token_of_every_level_lifts_its_start() {
+        let (map, main, _, b) = chain("start", "#include \"b.h\"\nint y;");
+        assert_eq!(
+            map.lift_start(Span::new(b, 1, 4), main),
+            Span::new(main, 7, 21)
+        );
+    }
+
+    /// `b.h` is whole at its own level, and its `#include` is not where
+    /// `a.h` starts, so a node starting at `int` cuts `a.h`.
+    ///
+    /// Mutation: check only the innermost level. The start lifts.
+    #[test]
+    #[should_panic(expected = "cuts FileId(1): its start is not its instance's")]
+    fn a_span_whole_in_its_own_instance_but_not_in_the_next_does_not_lift_its_start() {
+        let (map, main, _, b) = chain("cut_start", "int w;\n#include \"b.h\"");
+        map.lift_start(Span::new(b, 1, 4), main);
+    }
+
+    /// The end's counterpart: `b.h`'s `;` ends it, and its `#include` ends
+    /// `a.h`.
+    #[test]
+    fn a_span_at_the_last_token_of_every_level_lifts_its_end() {
+        let (map, main, _, b) = chain("end", "int w;\n#include \"b.h\"");
+        assert_eq!(
+            map.lift_end(Span::new(b, 6, 7), main),
+            Span::new(main, 7, 21)
+        );
+    }
+
+    /// Mutation: check only the innermost level. The end lifts.
+    #[test]
+    #[should_panic(expected = "cuts FileId(1): its end is not its instance's")]
+    fn a_span_whole_in_its_own_instance_but_not_in_the_next_does_not_lift_its_end() {
+        let (map, main, _, b) = chain("cut_end", "#include \"b.h\"\nint y;");
+        map.lift_end(Span::new(b, 6, 7), main);
+    }
+
+    /// An interior span is located as an edge is, and a span already in the
+    /// file asked for is itself.
+    ///
+    /// Mutation: have `locate` return the span unchanged. The first two
+    /// assertions fail.
+    #[test]
+    fn locating_moves_any_span_to_its_use_and_leaves_one_already_there() {
+        let (mut map, main, a, b) = chain("locate", "#include \"b.h\"\nint y;");
+        let z = Span::new(b, 5, 6);
+
+        assert_eq!(map.locate(z, main), Some(Span::new(main, 7, 21)));
+        assert_eq!(map.locate(z, a), Some(Span::new(a, 0, 14)));
+        assert_eq!(
+            map.locate(Span::new(main, 0, 1), main),
+            Some(Span::new(main, 0, 1))
+        );
+        let elsewhere = map.add_virtual("other.c", "int q;\n");
+        assert_eq!(map.locate(z, elsewhere), None);
+    }
+
+    /// A span in `b.h` is within a span of `main.c` that holds the
+    /// `#include` of `a.h`, and not within one that does not; a span in a
+    /// file the chain never reaches is within nothing.
+    ///
+    /// Mutation: compare without locating. The first assertion fails.
+    #[test]
+    fn a_span_in_an_instance_is_within_what_holds_its_use() {
+        let (mut map, main, _, b) = chain("within", "#include \"b.h\"\nint y;");
+        let z = Span::new(b, 5, 6);
+
+        assert!(map.within(Span::new(main, 0, 28), z));
+        assert!(!map.within(Span::new(main, 0, 6), z));
+        let elsewhere = map.add_virtual("other.c", "int q;\n");
+        assert!(!map.within(Span::new(elsewhere, 0, 6), z));
+    }
+
+    /// The order a span's chain gives is the order of the code: `b.h`'s span
+    /// is after `x = 0;` and before `y = 1;`, though `b.h` was registered
+    /// after both.
+    ///
+    /// Mutation: read the chain innermost first rather than from its root.
+    /// The second assertion fails.
+    #[test]
+    fn a_span_in_an_instance_is_ordered_where_its_use_is() {
+        let (map, main, _, b) = chain("order", "#include \"b.h\"\nint y;");
+        let z = map.position(Span::new(b, 5, 6));
+
+        assert!(map.position(Span::new(main, 0, 1)) < z);
+        assert!(z < map.position(Span::new(main, 22, 23)));
+    }
+
+    /// A use in a file not yet registered would give a chain with no root,
+    /// which every walk along uses would follow for ever.
+    ///
+    /// Mutation: drop the assertion in `include`. The inclusion is added, and
+    /// this does not panic.
+    #[test]
+    #[should_panic(expected = "is in no file already registered")]
+    fn an_inclusion_whose_use_is_in_no_registered_file_is_refused() {
+        let mut map = SourceMap::new();
+        let main = map.add_virtual("main.c", "#include \"a.h\"\n");
+        let later = FileId(main.0 + 1);
+        let _ = map.include(std::env::temp_dir(), Span::new(later, 0, 1));
     }
 
     /// Two inclusions of one header are two files (ADR-0054), so a span in
