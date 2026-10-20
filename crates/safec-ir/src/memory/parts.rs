@@ -1045,6 +1045,23 @@ mod tests {
         assert!(!inside(&sources, call, call));
     }
 
+    /// A span that locates to exactly the outer one is not inside it, so a
+    /// call that is exactly an instance's use takes no read in the instance
+    /// for its own, and the read is reported. See ADR-0043.
+    ///
+    /// Mutation: ask equality of the spans before locating them. The read in
+    /// `a.h` is then inside the call that is its `#include`.
+    #[test]
+    fn a_span_located_to_exactly_the_outer_one_is_not_inside_it() {
+        let (sources, main, a) = included("located_equal");
+
+        assert!(!inside(
+            &sources,
+            Span::new(a, 4, 5),
+            Span::new(main, 7, 21)
+        ));
+    }
+
     /// A free in an included file whose `#include` is above a free written
     /// in the including file is the earlier, though its file was registered
     /// later.

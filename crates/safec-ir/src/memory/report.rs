@@ -1274,10 +1274,21 @@ pub(super) fn after_a_call(
 /// **Located, across an instance.** A read in an included file, or later in a
 /// macro's expansion, is inside the call that holds its use, as it would be
 /// written out: both spans are compared in the nearest file they share, and
-/// two with none in common are not inside each other. Equality is still asked
-/// of the spans themselves, so a token stays itself. See ADR-0054.
+/// two with none in common are not inside each other. Equality is asked there
+/// too, after locating, so a span that locates to exactly the outer one is not
+/// inside it. That is the rule above in the direction it chose: were a call
+/// ever exactly an instance's use, a read in the instance is reported rather
+/// than taken for the call's own. Found by review. See ADR-0054.
 pub(super) fn inside(sources: &SourceMap, inner: Span, outer: Span) -> bool {
-    inner != outer && sources.within(outer, inner)
+    let Some(file) = sources.shared(inner, outer) else {
+        return false;
+    };
+    match (sources.locate(inner, file), sources.locate(outer, file)) {
+        (Some(inner), Some(outer)) => {
+            inner != outer && outer.start() <= inner.start() && inner.end() <= outer.end()
+        }
+        _ => false,
+    }
 }
 
 /// Whether a report at a caret replaces the one already standing there.
