@@ -4532,9 +4532,10 @@ cases! {
         a_reserved_guard_is_read_once: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
         // `#ifndef __SIZE_TYPE__` above `#define __SIZE_TYPE__ char` is the
         // fallback for a name `clang` and `gcc` predefine, not a guard.
-        // Mutation: take any list as a guard's. The first is read, and `char`
-        // declared where every build has `unsigned long`. Mutation: take a
-        // name `clang` predefines as a guard. `__NO_INLINE__` is read.
+        // Mutation: take a name `clang` predefines as a guard. `__SIZE_TYPE__`
+        // and `__NO_INLINE__` are read, and `char` stands where every build
+        // has `unsigned long`. Mutation: take any list as a guard's.
+        // `_Size_fallback`, which no target predefines, is read.
         a_compiler_s_fallback_is_not_a_guard: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
         // `clang` predefines `__x86_64__` for MSVC and `cl.exe` does not, so
         // the double free `cl.exe` builds is in the `#else`. Mutation: answer
