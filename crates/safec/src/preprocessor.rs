@@ -290,7 +290,29 @@ fn read_includes(
                     );
                     continue;
                 };
-                if let Some(form) = conditional_form(&text) {
+                let form = conditional_form(&text);
+                // A splice joins the line below to this one before any
+                // directive is read (C17 5.1.1.2 p1, phase 2), and the lexer
+                // read that line on its own, as a directive where it begins
+                // with `#`. So it is refused wherever a directive is read at
+                // all, a skipped group's included: there `#define X \` above
+                // `#else` ended a group C does not end, and the code after it
+                // was compiled where C has none. Found by review.
+                if self::spliced(&text) && (skipping || form.is_some()) {
+                    let message = if form.is_some() {
+                        "a line splice or a trigraph in a conditional directive is not read yet"
+                    } else {
+                        "a line splice or a trigraph in a directive in a skipped group is not \
+                         read yet"
+                    };
+                    diagnostics.report(
+                        refused(&text, token.span, UNSUPPORTED_SPLICE, message).with_note(
+                            "C can join the line below to this one, and it would be read on \
+                             its own instead",
+                        ),
+                    );
+                }
+                if let Some(form) = form {
                     if let Some(frame) = frames.last_mut() {
                         conditional(form, &text, token.span, frame, reading, diagnostics);
                     }
@@ -902,6 +924,16 @@ fn conditional(
     act(form, text, directive, frame, reading, diagnostics);
 }
 
+/// Whether C reserves `name` for the implementation in every use: one that
+/// begins with `__`, or with `_` and a capital letter (C17 7.1.3 p1).
+fn reserved(name: &str) -> bool {
+    let mut characters = name.chars();
+    characters.next() == Some('_')
+        && characters
+            .next()
+            .is_some_and(|second| second == '_' || second.is_ascii_uppercase())
+}
+
 /// Act on a conditional directive that is not inside a skipped group's own
 /// nested conditional: open a level, choose a group, or close one.
 fn act(
@@ -913,23 +945,9 @@ fn act(
     diagnostics: &mut DiagnosticSink,
 ) {
     let at = hash(text, directive);
-    // A splice joins the line below to this one, and the lexer compiled it
-    // as code: refused, and acted on as far as the line goes.
+    // A spliced line is refused by the frame loop, and acted on here as far
+    // as the line goes.
     let spliced = spliced(text);
-    if spliced {
-        diagnostics.report(
-            refused(
-                text,
-                directive,
-                UNSUPPORTED_SPLICE,
-                "a line splice or a trigraph in a conditional directive is not read yet",
-            )
-            .with_note(
-                "C can join the line below to this one, and it would be compiled as code \
-                 instead",
-            ),
-        );
-    }
     let ignored = |extra: Option<(u32, u32)>, diagnostics: &mut DiagnosticSink, what: &str| {
         // Not on a spliced line, whose `\` is no token and is reported.
         if let Some((start, end)) = extra.filter(|_| !spliced) {
@@ -984,6 +1002,33 @@ fn act(
         } => {
             let what = if negated { "#ifndef" } else { "#ifdef" };
             match name {
+                // A name C reserves for the implementation, which may have
+                // defined it (C17 7.1.3 p1), and which this cannot answer:
+                // no predefined macro exists here, so `__STDC_VERSION__` was
+                // not defined, and the group a compiler builds was skipped.
+                // A double free under `#ifdef __STDC_VERSION__` was analysed
+                // away. Found by review. A name the source defines is
+                // answered, so an include guard named `_FOO_H` is read from
+                // its second inclusion on; one the implementation defines
+                // without reserving it, `unix` in a GNU mode, is not caught.
+                Named::Read(name) if reserved(name) && !reading.macros.contains_key(name) => {
+                    diagnostics.report(
+                        refused(
+                            text,
+                            directive,
+                            UNSUPPORTED_DIRECTIVE,
+                            &format!(
+                                "this `{what}` asks about a name the implementation may define"
+                            ),
+                        )
+                        .with_note(format!(
+                            "`{name}` is reserved for the implementation (C17 7.1.3), and \
+                             predefined macros are not read yet, so none of this conditional's \
+                             groups is compiled"
+                        )),
+                    );
+                    open(frame, what, None);
+                }
                 Named::Read(name) => {
                     ignored(extra, diagnostics, what);
                     open(

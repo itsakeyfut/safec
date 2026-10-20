@@ -4500,6 +4500,16 @@ cases! {
         // Mutation: drop the check for an `#else` before an `#elif`. It is
         // reported as an `#elif` not read yet instead, `SC0104`.
         an_elif_after_else_is_refused: ["--emit", "ast"],
+        // `#ifdef __STDC_VERSION__` above a second free: every compiler
+        // defines it and builds the double free. A reserved name the source
+        // defines, `__MINE`, is read, and so is one C does not reserve,
+        // `_lower`. Mutation: answer a reserved name as any other. It exits 0,
+        // the free analysed away.
+        an_ifdef_of_a_name_the_implementation_may_define_is_refused: ["--emit", "safety-ir", "--target", "x86_64-unknown-linux-gnu"],
+        // `#define X \` in a skipped group joins `#else` to itself, so C
+        // skips `p = malloc(4);` and builds a double free. Mutation: ask of a
+        // splice only in a conditional the frame acts on. It exits 0.
+        a_directive_in_a_skipped_group_ending_in_a_splice_is_refused: ["--emit", "safety-ir", "--target", "x86_64-unknown-linux-gnu"],
         // Each directive is obeyed, with a warning for what follows it, and
         // a comment after one is no token. Mutation: make the warning an
         // error. It exits 1.

@@ -1,0 +1,8 @@
+error[SC0107]: a line splice or a trigraph in a directive in a skipped group is not read yet
+   ╭─[ a_directive_in_a_skipped_group_ending_in_a_splice_is_refused.c:7:1 ]
+   │
+ 7 │ #define X \
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: C can join the line below to this one, and it would be read on its own instead
