@@ -1,0 +1,5 @@
+Declaration win32_is_defined_for_msvc.c:2:1 "win" "int"
+Function win32_is_defined_for_msvc.c:13:1 "main" "int (void)"
+  Compound win32_is_defined_for_msvc.c:13:16
+    Return win32_is_defined_for_msvc.c:13:18
+      Number win32_is_defined_for_msvc.c:13:25 "0"

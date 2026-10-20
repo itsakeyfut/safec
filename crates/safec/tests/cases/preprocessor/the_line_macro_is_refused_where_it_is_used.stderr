@@ -1,0 +1,8 @@
+error[SC0104]: `__LINE__` is not read yet
+   ╭─[ the_line_macro_is_refused_where_it_is_used.c:2:12 ]
+   │
+ 2 │ int line = __LINE__;
+   │            ────┬───  
+   │                ╰───── used here
+───╯
+  = note: its value is the place or the time it is used, which this does not write yet

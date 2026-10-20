@@ -307,7 +307,13 @@ pub fn compile(options: &Options) -> Compiled {
         let scanned = lex(file, &source, &mut diagnostics);
         // Run whatever is emitted, so a directive is reported under
         // `--emit tokens` as it was when the lexer reported it.
-        let tokens = preprocess(file, &scanned, &mut sources, &mut diagnostics);
+        let tokens = preprocess(
+            file,
+            &scanned,
+            options.target,
+            &mut sources,
+            &mut diagnostics,
+        );
 
         // Every input appends to one artifact, and every line names its file,
         // so `--emit tokens a.c b.c` reads as one dump rather than needing two

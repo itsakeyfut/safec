@@ -15,7 +15,13 @@ fn parsed(text: &str) -> Parsed {
     let file = sources.add_virtual("test.c", text);
     let mut diagnostics = DiagnosticSink::new();
     let tokens = lex(file, sources.file(file), &mut diagnostics);
-    let tokens = preprocess(file, &tokens, &mut sources, &mut diagnostics);
+    let tokens = preprocess(
+        file,
+        &tokens,
+        safec_ir::target::Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+        &mut sources,
+        &mut diagnostics,
+    );
     let ast = parse(&tokens, &sources, &mut diagnostics);
 
     Parsed {
@@ -356,7 +362,13 @@ fn no_tokens_at_all_parse_to_nothing() {
     let mut sources = SourceMap::new();
     let file = sources.add_virtual("t.c", "");
     let mut diagnostics = DiagnosticSink::new();
-    let tokens = preprocess(file, &[], &mut sources, &mut diagnostics);
+    let tokens = preprocess(
+        file,
+        &[],
+        safec_ir::target::Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+        &mut sources,
+        &mut diagnostics,
+    );
 
     let ast = parse(&tokens, &sources, &mut diagnostics);
 
@@ -1713,7 +1725,13 @@ int f(int *p, struct S *s) {
     let mut scanned = DiagnosticSink::new();
     let tokens = lex(first, sources.file(first), &mut scanned);
     let mut whole = DiagnosticSink::new();
-    let preprocessed = preprocess(first, &tokens, &mut sources, &mut whole);
+    let preprocessed = preprocess(
+        first,
+        &tokens,
+        safec_ir::target::Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+        &mut sources,
+        &mut whole,
+    );
     let ast = parse(&preprocessed, &sources, &mut whole);
     assert!(
         scanned.diagnostics().is_empty() && whole.diagnostics().is_empty(),
@@ -1768,7 +1786,14 @@ int f(int *p, struct S *s) {
             })
             .collect();
         let mut diagnostics = DiagnosticSink::new();
-        let split = preprocess(first, &split, &mut sources, &mut diagnostics);
+        let split = preprocess(
+            first,
+            &split,
+            safec_ir::target::Target::from_triple("x86_64-unknown-linux-gnu")
+                .expect("a known triple"),
+            &mut sources,
+            &mut diagnostics,
+        );
         parse(&split, &sources, &mut diagnostics);
 
         let codes: Vec<String> = diagnostics
@@ -1802,7 +1827,14 @@ int f(int *p, struct S *s) {
             })
             .collect();
         let mut diagnostics = DiagnosticSink::new();
-        let split = preprocess(first, &split, &mut sources, &mut diagnostics);
+        let split = preprocess(
+            first,
+            &split,
+            safec_ir::target::Target::from_triple("x86_64-unknown-linux-gnu")
+                .expect("a known triple"),
+            &mut sources,
+            &mut diagnostics,
+        );
         parse(&split, &sources, &mut diagnostics);
     }
 }

@@ -61,7 +61,13 @@ fn compiled(text: &str, must_check: bool) -> Lowered {
     let mut diagnostics = DiagnosticSink::new();
 
     let tokens = lex(file, sources.file(file), &mut diagnostics);
-    let tokens = preprocess(file, &tokens, &mut sources, &mut diagnostics);
+    let tokens = preprocess(
+        file,
+        &tokens,
+        safec_ir::target::Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+        &mut sources,
+        &mut diagnostics,
+    );
     let mut ast = parse(&tokens, &sources, &mut diagnostics);
     assert!(!diagnostics.has_errors(), "the input did not parse");
 

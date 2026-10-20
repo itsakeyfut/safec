@@ -292,6 +292,17 @@ fn the_strictest_safety_level_denies_unknown_in_the_sink() {
     assert!(compile(&options).diagnostics.policy().deny_unknown());
 }
 
+/// The files a run read from a path: its inputs, here, where nothing is
+/// included. Not every file in the map, which also holds each input's
+/// predefined macros, in a file of their own.
+fn read(sources: &SourceMap) -> Vec<&safec_ir::source::SourceFile> {
+    sources
+        .files()
+        .map(|(_, file)| file)
+        .filter(|file| matches!(file.name(), FileName::Real(_)))
+        .collect()
+}
+
 #[test]
 fn every_input_is_read_in_the_order_it_was_given() {
     let first = TempFile::new("safec_driver_order_a.c", "int a;\n");
@@ -302,11 +313,9 @@ fn every_input_is_read_in_the_order_it_was_given() {
         second.path().to_path_buf(),
     ]));
 
-    assert_eq!(compiled.sources.len(), 2);
-    let contents: Vec<_> = compiled
-        .sources
-        .files()
-        .map(|(_, file)| file.contents().to_owned())
+    let contents: Vec<_> = read(&compiled.sources)
+        .iter()
+        .map(|file| file.contents().to_owned())
         .collect();
     assert_eq!(contents, ["int a;\n", "int b;\n"]);
 }
@@ -320,7 +329,7 @@ fn the_same_input_twice_is_read_once() {
 
     let compiled = compile(&options(vec![path.clone(), path]));
 
-    assert_eq!(compiled.sources.len(), 1);
+    assert_eq!(read(&compiled.sources).len(), 1);
 }
 
 /// The rule is component equality, which is what `Path` compares, and not
@@ -344,7 +353,7 @@ fn two_spellings_are_one_input_only_when_their_components_match() {
         directory.join(".").join(name),
     ]));
 
-    assert_eq!(matching.sources.len(), 1);
+    assert_eq!(read(&matching.sources).len(), 1);
 
     let differing = compile(&options(vec![
         PathBuf::from("safec_driver_spelling_relative.c"),

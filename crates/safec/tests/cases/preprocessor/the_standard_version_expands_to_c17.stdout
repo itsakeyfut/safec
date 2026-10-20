@@ -1,0 +1,6 @@
+Declaration the_standard_version_expands_to_c17.c:1:1 "v" "int"
+  Number <built-in>:2:26 "201710L"
+Function the_standard_version_expands_to_c17.c:3:1 "main" "int (void)"
+  Compound the_standard_version_expands_to_c17.c:3:16
+    Return the_standard_version_expands_to_c17.c:3:18
+      Number the_standard_version_expands_to_c17.c:3:25 "0"

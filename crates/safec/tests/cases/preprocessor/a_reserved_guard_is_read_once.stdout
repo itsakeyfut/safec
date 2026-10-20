@@ -1,0 +1,13 @@
+Declaration a_reserved_guard_is_read_once.h:3:1 "struct S"
+  Field a_reserved_guard_is_read_once.h:3:12 "x" "int"
+Function a_reserved_guard_is_read_once.c:4:1 "main" "int (void)"
+  Compound a_reserved_guard_is_read_once.c:4:16
+    Declaration a_reserved_guard_is_read_once.c:4:18 "s" "struct S"
+    Expression a_reserved_guard_is_read_once.c:4:30
+      Assign a_reserved_guard_is_read_once.c:4:30 "="
+        Member a_reserved_guard_is_read_once.c:4:30 "." "x"
+          Identifier a_reserved_guard_is_read_once.c:4:30 "s"
+        Number a_reserved_guard_is_read_once.c:4:36 "0"
+    Return a_reserved_guard_is_read_once.c:4:39
+      Member a_reserved_guard_is_read_once.c:4:46 "." "x"
+        Identifier a_reserved_guard_is_read_once.c:4:46 "s"
