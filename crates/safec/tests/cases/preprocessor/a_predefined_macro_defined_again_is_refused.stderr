@@ -1,0 +1,36 @@
+error[SC0117]: `__STDC_VERSION__` is defined by the implementation
+   ╭─[ a_predefined_macro_defined_again_is_refused.c:1:9 ]
+   │
+ 1 │ #define __STDC_VERSION__ 1
+   │         ────────┬───────  
+   │                 ╰───────── defined again here
+   │
+   ├─[ <built-in>:2:1 ]
+   │
+ 2 │ #define __STDC_VERSION__ 201710L
+   │ ────────────────┬───────────────  
+   │                 ╰───────────────── predefined here
+───╯
+  = note: C17 6.10.8 p2 says it shall not be the subject of a `#define` or an `#undef`
+error[SC0117]: `__STDC_HOSTED__` is defined by the implementation
+   ╭─[ a_predefined_macro_defined_again_is_refused.c:2:8 ]
+   │
+ 2 │ #undef __STDC_HOSTED__
+   │        ───────┬───────  
+   │               ╰───────── undefined here
+   │
+   ├─[ <built-in>:3:1 ]
+   │
+ 3 │ #define __STDC_HOSTED__ 1
+   │ ────────────┬────────────  
+   │             ╰────────────── predefined here
+───╯
+  = note: C17 6.10.8 p2 says it shall not be the subject of a `#define` or an `#undef`
+error[SC0117]: `__FILE__` is defined by the implementation
+   ╭─[ a_predefined_macro_defined_again_is_refused.c:3:8 ]
+   │
+ 3 │ #undef __FILE__
+   │        ────┬───  
+   │            ╰───── undefined here
+───╯
+  = note: C17 6.10.8 p2 says it shall not be the subject of a `#define` or an `#undef`

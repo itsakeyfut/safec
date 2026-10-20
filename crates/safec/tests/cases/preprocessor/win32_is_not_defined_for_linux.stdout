@@ -1,0 +1,6 @@
+Declaration win32_is_not_defined_for_linux.c:4:1 "other" "int"
+Declaration win32_is_not_defined_for_linux.c:7:1 "linux_only" "int"
+Function win32_is_not_defined_for_linux.c:10:1 "main" "int (void)"
+  Compound win32_is_not_defined_for_linux.c:10:16
+    Return win32_is_not_defined_for_linux.c:10:18
+      Number win32_is_not_defined_for_linux.c:10:25 "0"

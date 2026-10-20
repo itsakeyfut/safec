@@ -1,0 +1,4 @@
+Function a_target_s_name_may_be_defined_again.c:5:1 "main" "int (void)"
+  Compound a_target_s_name_may_be_defined_again.c:5:16
+    Return a_target_s_name_may_be_defined_again.c:5:18
+      Number a_target_s_name_may_be_defined_again.c:5:25 "0"

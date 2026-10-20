@@ -25,6 +25,7 @@ use crate::driver::{Access, reason};
 use crate::lexer::{UNSUPPORTED_SPLICE, lex};
 use crate::token::{Punct, Token, TokenKind};
 use safec_ir::source::{Cut, Edge, FileId, FileName, SourceMap, Span};
+use safec_ir::target::Target;
 
 // `SC01xx` with the lexer's, because the topic is the same: what a line of the
 // source is before the grammar reads it. `SC0104` was the lexer's until the
@@ -49,6 +50,8 @@ const REDEFINED: Code = Code::new("SC0114");
 const UNBALANCED: Code = Code::new("SC0115");
 /// Tokens after a conditional directive's name, or after `#else` or `#endif`.
 const EXTRA_TOKENS: Code = Code::new("SC0116");
+/// A `#define` or an `#undef` of a name the implementation predefines.
+const PREDEFINED_AGAIN: Code = Code::new("SC0117");
 
 /// How many files may be being read at once, the input among them.
 ///
@@ -99,6 +102,8 @@ struct Reading {
     /// Every object-like macro defined so far, by name.
     macros: HashMap<String, Macro>,
     expansions: usize,
+    /// What the input is compiled for, which decides what is predefined.
+    target: Target,
     /// Every expansion this input has made.
     expansions_in_all: usize,
     /// How many expansions of each name are open, and of all names: what the
@@ -118,6 +123,20 @@ struct Macro {
     /// Its replacement list's tokens, each with whether whitespace came
     /// before it: what two definitions are compared by (C17 6.10.3 p1).
     tokens: Vec<(String, bool)>,
+    origin: Origin,
+}
+
+/// What defined a macro.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Origin {
+    /// A `#define` in the source.
+    Written,
+    /// The implementation, in `<built-in>`: see [`predefined`].
+    Predefined,
+    /// The implementation, with a value that is the place or the time it is
+    /// used: one of [`DYNAMIC`], which `#ifdef` answers and nothing expands
+    /// yet.
+    Dynamic,
 }
 
 /// How a refusal of `cut` says what was cut: the thing, as the reader wrote
@@ -173,10 +192,12 @@ impl Preprocessed {
 /// other directive.
 ///
 /// The end-of-file token is the input's own: an included file's is dropped,
-/// since the parser reads the first one it meets as the end.
+/// since the parser reads the first one it meets as the end. The macros
+/// `target` predefines are defined before the input is read.
 pub fn preprocess(
     file: FileId,
     tokens: &[Token],
+    target: Target,
     sources: &mut SourceMap,
     diagnostics: &mut DiagnosticSink,
 ) -> Preprocessed {
@@ -185,12 +206,56 @@ pub fn preprocess(
         inclusions: 0,
         macros: HashMap::new(),
         expansions: 0,
+        target,
         expansions_in_all: 0,
         open_macros: HashMap::new(),
         open_expansions: 0,
     };
     if let Some(path) = path_of(sources.file(file).name()) {
         reading.open.push((canonical(path), file));
+    }
+    // Ordinary `#define` lines in a file of their own, so an expansion of one
+    // is placed like any other (ADR-0054) and a label in it names
+    // `<built-in>`.
+    let text = predefined(target);
+    let built_in = sources.add_virtual("built-in", text);
+    let mut at = 0;
+    for line in text.split_inclusive('\n') {
+        let directive = line.trim_end_matches('\n');
+        let span = Span::new(built_in, at, at + directive.len() as u32);
+        let MacroForm::Define {
+            name,
+            name_at,
+            body,
+        } = macro_form(directive)
+        else {
+            panic!("a predefined line that is not a `#define`: {directive}");
+        };
+        let origin = Origin::Predefined;
+        define(
+            directive,
+            span,
+            name,
+            name_at,
+            body,
+            origin,
+            sources,
+            &mut reading,
+            diagnostics,
+        );
+        at += line.len() as u32;
+    }
+    let nowhere = Span::new(built_in, 0, 0);
+    for name in DYNAMIC {
+        reading.macros.insert(
+            name.to_owned(),
+            Macro {
+                spelled: nowhere,
+                defined: nowhere,
+                tokens: Vec::new(),
+                origin: Origin::Dynamic,
+            },
+        );
     }
 
     let mut spliced = Vec::with_capacity(tokens.len());
@@ -400,13 +465,32 @@ fn read_includes(
                             name,
                             name_at,
                             body,
+                            Origin::Written,
                             sources,
                             reading,
                             diagnostics,
                         ),
-                        MacroForm::Undef { name } => {
-                            reading.macros.remove(name);
-                        }
+                        MacroForm::Undef { name } => match reading.macros.get(name) {
+                            Some(earlier)
+                                if earlier.origin != Origin::Written && standard(name) =>
+                            {
+                                // The name is the last thing on the line,
+                                // since an `#undef` with more is not read.
+                                let start = token.span.start() + text.trim_end().len() as u32
+                                    - name.len() as u32;
+                                let named =
+                                    Span::new(token.span.file(), start, start + name.len() as u32);
+                                diagnostics.report(predefined_again(
+                                    name,
+                                    named,
+                                    "undefined here",
+                                    earlier,
+                                ));
+                            }
+                            _ => {
+                                reading.macros.remove(name);
+                            }
+                        },
                         MacroForm::Unread { directive } => diagnostics.report(
                             refused(
                                 &text,
@@ -522,7 +606,20 @@ fn expansion(
     diagnostics: &mut DiagnosticSink,
 ) -> Option<Frame> {
     let name = sources.snippet(token.span);
-    let spelled = reading.macros.get(name)?.spelled;
+    let defined = reading.macros.get(name)?;
+    if defined.origin == Origin::Dynamic {
+        diagnostics.report(
+            Diagnostic::error(format!("`{name}` is not read yet"))
+                .with_code(UNSUPPORTED_DIRECTIVE)
+                .with_label(Label::primary(token.span, "used here"))
+                .with_note(
+                    "its value is the place or the time it is used, which this does not write \
+                     yet",
+                ),
+        );
+        return None;
+    }
+    let spelled = defined.spelled;
     if reading.open_macros.get(name).is_some_and(|open| *open > 0) {
         return None;
     }
@@ -599,6 +696,7 @@ fn define(
     name: &str,
     name_at: u32,
     body: (u32, u32),
+    origin: Origin,
     sources: &mut SourceMap,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
@@ -643,7 +741,9 @@ fn define(
     }
 
     if let Some(earlier) = reading.macros.get(name) {
-        if earlier.tokens != tokens {
+        if earlier.origin != Origin::Written && standard(name) {
+            diagnostics.report(predefined_again(name, named, "defined again here", earlier));
+        } else if earlier.tokens != tokens {
             diagnostics.report(
                 Diagnostic::error(format!("`{name}` is defined again differently"))
                     .with_code(REDEFINED)
@@ -660,8 +760,267 @@ fn define(
             spelled,
             defined: directive,
             tokens,
+            origin,
         },
     );
+}
+
+/// The report for a `#define` or an `#undef`, `what` at `at`, of `name`, one C17
+/// 6.10.8 lists, which the implementation defined as `earlier`. Not of a
+/// target's names, `__linux__` among them, which 6.10.8 p2 does not cover and
+/// `clang` accepts a definition of; asking of every predefined name refused
+/// that. Found by review.
+fn predefined_again(name: &str, at: Span, what: &str, earlier: &Macro) -> Diagnostic {
+    let report = Diagnostic::error(format!("`{name}` is defined by the implementation"))
+        .with_code(PREDEFINED_AGAIN)
+        .with_label(Label::primary(at, what))
+        .with_note("C17 6.10.8 p2 says it shall not be the subject of a `#define` or an `#undef`");
+    // A dynamic macro has no line in `<built-in>` to point at.
+    if earlier.origin == Origin::Predefined {
+        report.with_label(Label::secondary(earlier.defined, "predefined here"))
+    } else {
+        report
+    }
+}
+
+/// The names C17 6.10.8.1 requires whose value is the place or the time of
+/// their use, which `#ifdef` answers and nothing expands yet.
+const DYNAMIC: [&str; 4] = ["__FILE__", "__LINE__", "__DATE__", "__TIME__"];
+
+/// The `#define` lines `target` predefines: what C17 6.10.8.1 requires and
+/// what every compiler for the triple agrees on, and nothing that names a
+/// compiler. See ADR-0055.
+///
+/// Each value was measured with `clang 20.1.6 --target=<triple> -std=c17
+/// -dM -E` on an empty file. A name is here only where the other compilers
+/// for the triple are documented to define it too, `gcc` for Linux and
+/// Darwin and `cl.exe` for MSVC; where they are not, it is in [`unsettled`]
+/// instead. `wasm32-unknown-unknown` has `clang` alone.
+fn predefined(target: Target) -> &'static str {
+    match target.triple() {
+        "aarch64-apple-darwin" => {
+            "#define __STDC__ 1\n\
+            #define __STDC_VERSION__ 201710L\n\
+            #define __STDC_HOSTED__ 1\n\
+            #define __CHAR_BIT__ 8\n\
+            #define __SIZEOF_INT__ 4\n\
+            #define __SIZEOF_LONG__ 8\n\
+            #define __SIZEOF_POINTER__ 8\n\
+            #define __LP64__ 1\n\
+            #define _LP64 1\n\
+            #define __ORDER_LITTLE_ENDIAN__ 1234\n\
+            #define __ORDER_BIG_ENDIAN__ 4321\n\
+            #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__\n\
+            #define __APPLE__ 1\n\
+            #define __MACH__ 1\n\
+            #define __aarch64__ 1\n"
+        }
+        "aarch64-unknown-linux-gnu" => {
+            "#define __STDC__ 1\n\
+            #define __STDC_VERSION__ 201710L\n\
+            #define __STDC_HOSTED__ 1\n\
+            #define __CHAR_BIT__ 8\n\
+            #define __CHAR_UNSIGNED__ 1\n\
+            #define __SIZEOF_INT__ 4\n\
+            #define __SIZEOF_LONG__ 8\n\
+            #define __SIZEOF_POINTER__ 8\n\
+            #define __LP64__ 1\n\
+            #define _LP64 1\n\
+            #define __ORDER_LITTLE_ENDIAN__ 1234\n\
+            #define __ORDER_BIG_ENDIAN__ 4321\n\
+            #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__\n\
+            #define __linux__ 1\n\
+            #define __linux 1\n\
+            #define __unix__ 1\n\
+            #define __unix 1\n\
+            #define __gnu_linux__ 1\n\
+            #define __ELF__ 1\n\
+            #define __aarch64__ 1\n"
+        }
+        "armv7-unknown-linux-gnueabihf" => {
+            "#define __STDC__ 1\n\
+            #define __STDC_VERSION__ 201710L\n\
+            #define __STDC_HOSTED__ 1\n\
+            #define __CHAR_BIT__ 8\n\
+            #define __CHAR_UNSIGNED__ 1\n\
+            #define __SIZEOF_INT__ 4\n\
+            #define __SIZEOF_LONG__ 4\n\
+            #define __SIZEOF_POINTER__ 4\n\
+            #define __ORDER_LITTLE_ENDIAN__ 1234\n\
+            #define __ORDER_BIG_ENDIAN__ 4321\n\
+            #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__\n\
+            #define __linux__ 1\n\
+            #define __linux 1\n\
+            #define __unix__ 1\n\
+            #define __unix 1\n\
+            #define __gnu_linux__ 1\n\
+            #define __ELF__ 1\n\
+            #define __arm__ 1\n"
+        }
+        "i686-unknown-linux-gnu" => {
+            "#define __STDC__ 1\n\
+            #define __STDC_VERSION__ 201710L\n\
+            #define __STDC_HOSTED__ 1\n\
+            #define __CHAR_BIT__ 8\n\
+            #define __SIZEOF_INT__ 4\n\
+            #define __SIZEOF_LONG__ 4\n\
+            #define __SIZEOF_POINTER__ 4\n\
+            #define __ORDER_LITTLE_ENDIAN__ 1234\n\
+            #define __ORDER_BIG_ENDIAN__ 4321\n\
+            #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__\n\
+            #define __linux__ 1\n\
+            #define __linux 1\n\
+            #define __unix__ 1\n\
+            #define __unix 1\n\
+            #define __gnu_linux__ 1\n\
+            #define __ELF__ 1\n\
+            #define __i386__ 1\n\
+            #define __i386 1\n"
+        }
+        "wasm32-unknown-unknown" => {
+            "#define __STDC__ 1\n\
+            #define __STDC_VERSION__ 201710L\n\
+            #define __STDC_HOSTED__ 1\n\
+            #define __CHAR_BIT__ 8\n\
+            #define __SIZEOF_INT__ 4\n\
+            #define __SIZEOF_LONG__ 4\n\
+            #define __SIZEOF_POINTER__ 4\n\
+            #define __ILP32__ 1\n\
+            #define _ILP32 1\n\
+            #define __ORDER_LITTLE_ENDIAN__ 1234\n\
+            #define __ORDER_BIG_ENDIAN__ 4321\n\
+            #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__\n\
+            #define __LITTLE_ENDIAN__ 1\n\
+            #define __wasm__ 1\n\
+            #define __wasm32__ 1\n"
+        }
+        "x86_64-apple-darwin" => {
+            "#define __STDC__ 1\n\
+            #define __STDC_VERSION__ 201710L\n\
+            #define __STDC_HOSTED__ 1\n\
+            #define __CHAR_BIT__ 8\n\
+            #define __SIZEOF_INT__ 4\n\
+            #define __SIZEOF_LONG__ 8\n\
+            #define __SIZEOF_POINTER__ 8\n\
+            #define __LP64__ 1\n\
+            #define _LP64 1\n\
+            #define __ORDER_LITTLE_ENDIAN__ 1234\n\
+            #define __ORDER_BIG_ENDIAN__ 4321\n\
+            #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__\n\
+            #define __APPLE__ 1\n\
+            #define __MACH__ 1\n\
+            #define __x86_64__ 1\n\
+            #define __x86_64 1\n\
+            #define __amd64__ 1\n\
+            #define __amd64 1\n"
+        }
+        "x86_64-pc-windows-msvc" => {
+            "#define __STDC_HOSTED__ 1\n\
+            #define _WIN32 1\n\
+            #define _WIN64 1\n\
+            #define _M_X64 100\n\
+            #define _M_AMD64 100\n"
+        }
+        "x86_64-unknown-linux-gnu" => {
+            "#define __STDC__ 1\n\
+            #define __STDC_VERSION__ 201710L\n\
+            #define __STDC_HOSTED__ 1\n\
+            #define __CHAR_BIT__ 8\n\
+            #define __SIZEOF_INT__ 4\n\
+            #define __SIZEOF_LONG__ 8\n\
+            #define __SIZEOF_POINTER__ 8\n\
+            #define __LP64__ 1\n\
+            #define _LP64 1\n\
+            #define __ORDER_LITTLE_ENDIAN__ 1234\n\
+            #define __ORDER_BIG_ENDIAN__ 4321\n\
+            #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__\n\
+            #define __linux__ 1\n\
+            #define __linux 1\n\
+            #define __unix__ 1\n\
+            #define __unix 1\n\
+            #define __gnu_linux__ 1\n\
+            #define __ELF__ 1\n\
+            #define __x86_64__ 1\n\
+            #define __x86_64 1\n\
+            #define __amd64__ 1\n\
+            #define __amd64 1\n"
+        }
+        triple => panic!("no predefined macros are written for {triple}"),
+    }
+}
+
+/// The names one compiler for `target` predefines and another does not,
+/// which `#ifdef` refuses rather than answers. See ADR-0055.
+///
+/// For MSVC, `clang` defines the GNU names, `__x86_64__` and
+/// `__SIZEOF_LONG__` among them, which `cl.exe`'s documentation does not
+/// list, and `cl.exe` defines `__STDC__` and `__STDC_VERSION__` only under an
+/// option. Elsewhere, `clang` defines `__LITTLE_ENDIAN__` and, on a 32-bit
+/// target, `__ILP32__`, which `gcc`'s documentation does not name, and on
+/// Darwin `__arm64__`, which no `gcc` for Darwin was measured for. Answered
+/// from `clang`'s list, `#ifdef __x86_64__` took a group `cl.exe` skips, and a
+/// double free in that group was analysed away. Found by review. On Linux,
+/// `linux` and `unix`, and `i386` on `i686`, are what `clang` and `gcc`
+/// define in their default GNU modes and not under `-std=c17`, which is a
+/// disagreement of the same kind, measured with `clang 20.1.6` without
+/// `-std`. Answered as undefined, a double free under `#ifdef unix` was
+/// analysed away. Found by review.
+fn unsettled(target: Target) -> &'static [&'static str] {
+    match target.triple() {
+        "aarch64-apple-darwin" => &["__LITTLE_ENDIAN__", "__arm64__", "__arm64"],
+        "aarch64-unknown-linux-gnu" => &["__LITTLE_ENDIAN__", "linux", "unix"],
+        "armv7-unknown-linux-gnueabihf" => {
+            &["__ILP32__", "_ILP32", "__LITTLE_ENDIAN__", "linux", "unix"]
+        }
+        "i686-unknown-linux-gnu" => &[
+            "__ILP32__",
+            "_ILP32",
+            "__LITTLE_ENDIAN__",
+            "i386",
+            "linux",
+            "unix",
+        ],
+        "wasm32-unknown-unknown" => &[],
+        "x86_64-apple-darwin" => &["__LITTLE_ENDIAN__"],
+        "x86_64-pc-windows-msvc" => &[
+            "__STDC__",
+            "__STDC_VERSION__",
+            "__CHAR_BIT__",
+            "__SIZEOF_INT__",
+            "__SIZEOF_LONG__",
+            "__SIZEOF_POINTER__",
+            "__ORDER_LITTLE_ENDIAN__",
+            "__ORDER_BIG_ENDIAN__",
+            "__BYTE_ORDER__",
+            "__LITTLE_ENDIAN__",
+            "__x86_64__",
+            "__x86_64",
+            "__amd64__",
+            "__amd64",
+        ],
+        "x86_64-unknown-linux-gnu" => &["__LITTLE_ENDIAN__", "linux", "unix"],
+        triple => panic!("no predefined macros are written for {triple}"),
+    }
+}
+
+/// Whether `name` is predefined or unsettled for some target, which makes
+/// whether this one predefines it a fact about this one rather than a
+/// question it cannot answer. See ADR-0055.
+fn known(name: &str) -> bool {
+    DYNAMIC.contains(&name)
+        || Target::ALL.iter().any(|target| {
+            unsettled(*target).contains(&name)
+                || predefined(*target)
+                    .lines()
+                    .any(|line| line.split(' ').nth(1) == Some(name))
+        })
+}
+
+/// Whether C17 6.10.8 names `name`, which 6.10.8 p2 forbids a `#define` or
+/// an `#undef` of. Every other predefined name may be defined again the same
+/// way, or undefined, as `clang` accepts.
+fn standard(name: &str) -> bool {
+    DYNAMIC.contains(&name) || matches!(name, "__STDC__" | "__STDC_VERSION__" | "__STDC_HOSTED__")
 }
 
 /// What a directive that is not an `#include` is, where it is a macro's.
@@ -968,6 +1327,7 @@ fn reserved(name: &str) -> bool {
 
 /// Act on a conditional directive that is not inside a skipped group's own
 /// nested conditional: open a level, choose a group, or close one.
+#[allow(clippy::too_many_arguments)]
 fn act(
     form: ConditionalForm,
     text: &str,
@@ -1053,18 +1413,26 @@ fn act(
         } => {
             let what = if negated { "#ifndef" } else { "#ifdef" };
             match name {
-                // A name C reserves for the implementation, which may have
-                // defined it (C17 7.1.3 p1), and which this cannot answer:
-                // no predefined macro exists here, so `__STDC_VERSION__` was
-                // not defined, and the group a compiler builds was skipped.
-                // A double free under `#ifdef __STDC_VERSION__` was analysed
-                // away. Found by review. A name the source defines first is
-                // answered. An include guard named `_FOO_H` is refused at
-                // every inclusion, since the `#define` inside it is in a
-                // group this does not compile. A name the implementation
-                // defines without reserving it, `unix` in a GNU mode, is not
-                // caught.
-                Named::Read(name) if reserved(name) && !reading.macros.contains_key(name) => {
+                // A name C reserves for the implementation (C17 7.1.3 p1)
+                // that no target here predefines, such as `__GNUC__`, or that
+                // one compiler for this target predefines and another does
+                // not, such as `__x86_64__` for MSVC: its answer depends on
+                // the compiler that builds the file rather than on the
+                // target, so this cannot give one. Answered as
+                // undefined, the group a compiler builds was skipped, and a
+                // double free under it analysed away. Found by review. A name
+                // the source defines first is answered, and an include guard
+                // so named is not: where a compiler predefines its name, every
+                // macro the header defines is missing from that build, and a
+                // later `#ifdef` of one chose a group it does not. Found by
+                // review. `unix`, which a GNU mode defines and `-std=c17` does
+                // not, is unsettled the same way, reserved or not. See
+                // ADR-0055.
+                Named::Read(name)
+                    if !reading.macros.contains_key(name)
+                        && (unsettled(reading.target).contains(&name)
+                            || (reserved(name) && !known(name))) =>
+                {
                     diagnostics.report(
                         refused(
                             text,
@@ -1074,11 +1442,19 @@ fn act(
                                 "this `{what}` asks about a name the implementation may define"
                             ),
                         )
-                        .with_note(format!(
-                            "`{name}` is reserved for the implementation (C17 7.1.3), and \
-                             predefined macros are not read yet, so none of this conditional's \
-                             groups is compiled"
-                        )),
+                        .with_note(if reserved(name) {
+                            format!(
+                                "`{name}` is reserved for the implementation (C17 7.1.3), and \
+                                 whether it is defined depends on the compiler, so none of this \
+                                 conditional's groups is compiled"
+                            )
+                        } else {
+                            format!(
+                                "`{name}` is defined in some modes a compiler builds for this \
+                                 target and not in others, so none of this conditional's groups \
+                                 is compiled"
+                            )
+                        }),
                     );
                     open(frame, what, None);
                 }
@@ -1644,7 +2020,13 @@ mod tests {
         let file = sources.add_virtual("t.c", "#include \"a.h\"\n");
         let mut diagnostics = DiagnosticSink::new();
         let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
-        preprocess(file, &tokens, &mut sources, &mut diagnostics);
+        preprocess(
+            file,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &mut sources,
+            &mut diagnostics,
+        );
 
         let [refused] = diagnostics.diagnostics() else {
             panic!("{:?}", diagnostics.diagnostics());
@@ -1677,7 +2059,13 @@ mod tests {
         let file = sources.load(directory.join("main.c")).unwrap();
         let mut diagnostics = DiagnosticSink::new();
         let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
-        preprocess(file, &tokens, &mut sources, &mut diagnostics);
+        preprocess(
+            file,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &mut sources,
+            &mut diagnostics,
+        );
         let _ = fs::remove_dir_all(&directory);
 
         diagnostics
@@ -1785,7 +2173,13 @@ mod tests {
         let main = sources.load(directory.join("main.c")).unwrap();
         let mut diagnostics = DiagnosticSink::new();
         let tokens = lex(main, &sources.file_owned(main), &mut diagnostics);
-        let preprocessed = preprocess(main, &tokens, &mut sources, &mut diagnostics);
+        let preprocessed = preprocess(
+            main,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &mut sources,
+            &mut diagnostics,
+        );
         let _ = fs::remove_dir_all(&directory);
 
         let int = preprocessed.tokens()[0].span;
@@ -1824,7 +2218,13 @@ mod tests {
         let main = sources.load(directory.join("main.c")).unwrap();
         let mut diagnostics = DiagnosticSink::new();
         let tokens = lex(main, &sources.file_owned(main), &mut diagnostics);
-        let preprocessed = preprocess(main, &tokens, &mut sources, &mut diagnostics);
+        let preprocessed = preprocess(
+            main,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &mut sources,
+            &mut diagnostics,
+        );
         let _ = fs::remove_dir_all(&directory);
         assert!(!diagnostics.has_errors(), "{:?}", diagnostics.diagnostics());
 
@@ -1880,7 +2280,13 @@ mod tests {
             let file = sources.add_virtual("t.c", text);
             let mut diagnostics = DiagnosticSink::new();
             let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
-            let preprocessed = preprocess(file, &tokens, &mut sources, &mut diagnostics);
+            let preprocessed = preprocess(
+                file,
+                &tokens,
+                Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+                &mut sources,
+                &mut diagnostics,
+            );
 
             assert!(diagnostics.has_errors(), "{text:?} was not refused");
             assert!(
@@ -1912,7 +2318,13 @@ mod tests {
         let file = sources.add_virtual("t.c", text);
         let mut diagnostics = DiagnosticSink::new();
         let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
-        preprocess(file, &tokens, &mut sources, &mut diagnostics);
+        preprocess(
+            file,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &mut sources,
+            &mut diagnostics,
+        );
 
         let codes: Vec<String> = diagnostics
             .diagnostics()
@@ -1938,7 +2350,13 @@ mod tests {
         let file = sources.add_virtual("t.c", text);
         let mut diagnostics = DiagnosticSink::new();
         let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
-        preprocess(file, &tokens, &mut sources, &mut diagnostics);
+        preprocess(
+            file,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &mut sources,
+            &mut diagnostics,
+        );
 
         assert!(
             !diagnostics.has_errors(),
@@ -1966,7 +2384,13 @@ mod tests {
         let file = sources.add_virtual("t.c", text);
         let mut diagnostics = DiagnosticSink::new();
         let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
-        preprocess(file, &tokens, &mut sources, &mut diagnostics);
+        preprocess(
+            file,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &mut sources,
+            &mut diagnostics,
+        );
 
         let codes: Vec<String> = diagnostics
             .diagnostics()
@@ -2069,7 +2493,13 @@ mod tests {
         let file = sources.add_virtual("t.c", text);
         let mut diagnostics = DiagnosticSink::new();
         let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
-        let handed = preprocess(file, &tokens, &mut sources, &mut diagnostics);
+        let handed = preprocess(
+            file,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &mut sources,
+            &mut diagnostics,
+        );
 
         let spelled: Vec<&str> = handed
             .tokens()
@@ -2080,6 +2510,89 @@ mod tests {
         assert_eq!(spelled, ["int", "d", ";", "int", "f", ";"]);
     }
 
+    /// What `target` predefines `name` as, read from its list.
+    fn value(triple: &str, name: &str) -> Option<&'static str> {
+        let target = Target::from_triple(triple).expect("a known triple");
+        predefined(target).lines().find_map(|line| {
+            let mut words = line.splitn(3, ' ');
+            (words.nth(1) == Some(name)).then(|| words.next().unwrap_or(""))
+        })
+    }
+
+    /// Two targets' answers, written out as `clang 20.1.6` measured them and
+    /// the other compilers' documentation agrees, rather than read back from
+    /// the lists, which would hold for any values.
+    ///
+    /// Mutation: change any of these values in a list, or give one target
+    /// another's list, or move a name between a list and [`unsettled`]. One
+    /// assertion fails.
+    #[test]
+    fn every_target_predefines_what_its_compilers_agree_on() {
+        let msvc = "x86_64-pc-windows-msvc";
+        let arm = "aarch64-unknown-linux-gnu";
+        assert_eq!(value(msvc, "_WIN32"), Some("1"));
+        assert_eq!(value(msvc, "_WIN64"), Some("1"));
+        assert_eq!(value(msvc, "__STDC__"), None);
+        assert_eq!(value(msvc, "__SIZEOF_LONG__"), None);
+        assert_eq!(value(msvc, "__STDC_HOSTED__"), Some("1"));
+        assert_eq!(value(msvc, "__CHAR_UNSIGNED__"), None);
+        assert_eq!(value(msvc, "_M_X64"), Some("100"));
+        assert_eq!(value(arm, "_WIN32"), None);
+        assert_eq!(value(arm, "__STDC__"), Some("1"));
+        assert_eq!(value(arm, "__STDC_VERSION__"), Some("201710L"));
+        assert_eq!(value(arm, "__SIZEOF_LONG__"), Some("8"));
+        assert_eq!(value(arm, "__CHAR_UNSIGNED__"), Some("1"));
+        assert_eq!(value(arm, "__aarch64__"), Some("1"));
+        assert_eq!(value(arm, "__linux__"), Some("1"));
+        assert_eq!(value(arm, "__LITTLE_ENDIAN__"), None);
+
+        let unsettled = |triple| unsettled(Target::from_triple(triple).expect("a known triple"));
+        assert!(unsettled(msvc).contains(&"__x86_64__"));
+        assert!(unsettled(msvc).contains(&"__SIZEOF_LONG__"));
+        assert!(unsettled(msvc).contains(&"__STDC__"));
+        assert!(unsettled(msvc).contains(&"__STDC_VERSION__"));
+        assert!(!unsettled(msvc).contains(&"_WIN32"));
+        assert!(unsettled(arm).contains(&"__LITTLE_ENDIAN__"));
+        assert!(!unsettled(arm).contains(&"__aarch64__"));
+        assert!(unsettled(arm).contains(&"unix"));
+        assert!(!unsettled(msvc).contains(&"unix"));
+    }
+
+    /// Every target has a list, and every line of it is a `#define` this
+    /// reads, with no report.
+    ///
+    /// Mutation: drop a target's arm. It panics, naming the triple.
+    #[test]
+    fn every_target_has_a_list_of_defines() {
+        for target in Target::ALL {
+            let mut sources = SourceMap::new();
+            let file = sources.add_virtual("t.c", "");
+            let mut diagnostics = DiagnosticSink::new();
+            let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+            preprocess(file, &tokens, *target, &mut sources, &mut diagnostics);
+            assert!(
+                diagnostics.diagnostics().is_empty(),
+                "{}: {:?}",
+                target.triple(),
+                diagnostics.diagnostics()
+            );
+        }
+    }
+
+    /// A name some target predefines is known everywhere, and a compiler's
+    /// name nowhere.
+    ///
+    /// Mutation: ask only the run's own target. `_WIN32` is not known.
+    #[test]
+    fn a_name_some_target_predefines_is_known() {
+        assert!(known("_WIN32"));
+        assert!(known("__linux__"));
+        assert!(known("__ILP32__"));
+        assert!(known("__LINE__"));
+        assert!(!known("__GNUC__"));
+        assert!(!known("_MSC_VER"));
+    }
+
     /// The code moved from the lexer with the report, and is the handle a
     /// reader kept, so it is asserted by itself here as the lexer's are there.
     #[test]
@@ -2088,7 +2601,13 @@ mod tests {
         let file = sources.add_virtual("t.c", "#pragma pack(4)\n");
         let mut diagnostics = DiagnosticSink::new();
         let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
-        preprocess(file, &tokens, &mut sources, &mut diagnostics);
+        preprocess(
+            file,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &mut sources,
+            &mut diagnostics,
+        );
 
         let codes: Vec<String> = diagnostics
             .diagnostics()

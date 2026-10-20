@@ -1,0 +1,8 @@
+error[SC0104]: this `#ifdef` asks about a name the implementation may define
+   ╭─[ a_gnu_mode_s_name_is_refused_for_linux.c:6:1 ]
+   │
+ 6 │ #ifdef unix
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: `unix` is defined in some modes a compiler builds for this target and not in others, so none of this conditional's groups is compiled

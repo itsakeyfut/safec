@@ -133,12 +133,19 @@ is `SC0104`, and none of its groups is compiled: compiling one would compile
 code under a condition nobody evaluated. Its `#endif` still closes it. Inside a
 group that is skipped, a directive is read only for its name (C17 6.10.1 p6),
 so an `#if` there is counted and not refused, and a header whose include guard
-holds one is read. No predefined macro exists yet, so an `#ifdef` or `#ifndef`
-of a name C reserves for the implementation (C17 7.1.3), one beginning with
-`__` or with `_` and a capital letter, is refused unless the source defines it:
-answering it as undefined skipped the group every compiler builds. A name an
-implementation defines without reserving it, `unix` in a GNU mode, is not
-caught. Tokens after a conditional's name, or after `#else` or `#endif`, are a
+holds one is read. The macros predefined are what C17 6.10.8.1 requires and
+what every compiler for the target agrees on, such as `_WIN32`, or
+`__SIZEOF_LONG__` where `gcc` and `clang` both build for it; a name no
+compiler for the target defines is answered as undefined, and one they
+disagree on, such as `__x86_64__` for MSVC, is refused. ADR-0055 is the
+decision. Any other name C reserves for the
+implementation (C17 7.1.3), one beginning with `__` or with `_` and a capital
+letter, such as `__GNUC__`, is refused unless the source defines it, because
+its answer depends on the compiler that builds the file; an include guard so
+named is refused too. `__FILE__`, `__LINE__`, `__DATE__` and
+`__TIME__` are defined, and refused where they are used. `linux` and `unix`,
+which a GNU mode defines on Linux and `-std=c17` does not, are refused there
+too. Tokens after a conditional's name, or after `#else` or `#endif`, are a
 warning, `SC0116`, and the directive is obeyed:
 
 | Written | This compiler | `clang -std=c17` | `clang -pedantic-errors` |
@@ -146,7 +153,8 @@ warning, `SC0116`, and the directive is obeyed:
 | `#if 0` / `int f(void);` / `#endif` | `error[SC0104]` at the `#if`, the group not compiled | accepts | accepts |
 | `#ifdef U` / `#elif 1` / ... / `#endif` | `error[SC0104]` at the `#elif` | accepts | accepts |
 | `#ifdef U` / `#endif FOO` | `warning[SC0116]` at `FOO` | warns | refuses |
-| `#ifdef __STDC_VERSION__` / `int f(void);` / `#endif` | `error[SC0104]` at the `#ifdef` | declares `f` | declares `f` |
+| `#ifdef __GNUC__` / `int f(void);` / `#endif` | `error[SC0104]` at the `#ifdef` | declares `f` | declares `f` |
+| `int l = __LINE__;` | `error[SC0104]` at `__LINE__` | the line's number | the line's number |
 
 Five more are where the *parser* stopped, and belong here for the same reason.
 

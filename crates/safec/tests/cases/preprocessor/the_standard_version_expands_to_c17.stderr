@@ -1,0 +1,14 @@
+error[SC0305]: this compiler has no type for a suffixed constant
+   ╭─[ the_standard_version_expands_to_c17.c:1:9 ]
+   │
+ 1 │ int v = __STDC_VERSION__;
+   │         ────────┬───────  
+   │                 ╰───────── `__STDC_VERSION__` expanded here
+   │
+   ├─[ <built-in>:2:26 ]
+   │
+ 2 │ #define __STDC_VERSION__ 201710L
+   │                          ───┬───  
+   │                             ╰───── this suffix asks for `unsigned int`, `long` or `long long`
+───╯
+  = note: C17 6.4.4.1 p5 gives a suffixed constant a type from a list this compiler has only `int` from, and the suffix decides what arithmetic on it means: C computes `-6 / 3u` as an unsigned division
