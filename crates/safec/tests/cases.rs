@@ -4376,8 +4376,9 @@ cases! {
         // have `Parser::join` panic on a cut. It panics.
         a_call_that_cuts_an_expansion_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same call holding the whole expansion, `G(p)` with `#define G
-        // release`, is checked as written out. Mutation: have `inside`
-        // compare without locating. The read is taken for another operand.
+        // release`, is joined at the use and checked as written out.
+        // Mutation: have `SourceMap::join` answer a cut for any two spans in
+        // different files. It is refused.
         a_call_holding_a_whole_expansion_is_checked_as_written: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `#define N (*p)`, the usual way to write one. Mutation: join the
         // climb from its operands' spans. `N + 1` starts at `*`, partway
@@ -4388,8 +4389,9 @@ cases! {
         // design ADR-0054 rejected. The use of `q` is not reported.
         a_store_and_a_call_from_one_expansion_are_checked_as_written: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // ADR-0054's third: two declarators from one expansion are two
-        // locals, and `a` used after its free is reported. Mutation: key the
-        // lowering's locals by the use. The two collide.
+        // locals, and `a` used after its free is reported. Mutation: give
+        // every token of an expansion its use's span. The two names collide
+        // in the lowering's locals.
         two_declarators_from_one_expansion_are_two_locals: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // ADR-0054's read inside `g(N)`: an expanded call as an argument runs
         // before the call around it. Mutation: have `inside` compare without
