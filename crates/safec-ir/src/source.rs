@@ -538,6 +538,15 @@ impl SourceMap {
         }
     }
 
+    /// The name of the macro `file` is an expansion of, as it was written at
+    /// the use, or `None` for a file that is not an expansion.
+    pub fn macro_name(&self, file: FileId) -> Option<&str> {
+        match self.file(file).name() {
+            FileName::Expansion { at, .. } => Some(self.snippet(*at)),
+            FileName::Real(_) | FileName::Virtual(_) | FileName::Inclusion { .. } => None,
+        }
+    }
+
     /// `span` where its text is written: a span in an expansion is moved to
     /// the same offset in its replacement list's `#define`, through every
     /// level, and any other span is itself.

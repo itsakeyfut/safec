@@ -33,13 +33,14 @@ use crate::ast::{
 };
 use crate::ast::{Nullability, Specifier, TypeId, UnOp as AstUnOp, spell_type};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
+use crate::preprocessor::cut_words;
 use crate::sema::{DOES_NOT_RETURN, Resolution};
 use crate::types::Types;
 use safec_ir::ir::{
     Between, BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin,
     Parameter, Place, Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
-use safec_ir::source::{Edge, SourceMap, Span};
+use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
 
 /// Something the frontend accepted and this stage cannot express.
@@ -969,15 +970,14 @@ impl Lowering<'_> {
         match self.sources.join(from, to) {
             Ok(span) => Some(span),
             Err(cut) => {
-                let label = match cut.edge {
-                    Edge::Start => "begins partway through an included file",
-                    Edge::End => "ends partway through an included file",
-                };
+                // No "included here": the parser already accepted the
+                // construct, and the reader is told where the cut is.
+                let (what, label, _) = cut_words(self.sources, cut);
                 diagnostics.report(
-                    Diagnostic::error("cannot compile this `#include` where it is yet")
+                    Diagnostic::error(format!("cannot compile {what} where it is yet"))
                         .with_code(LOWERING)
                         .with_label(Label::primary(cut.span, label))
-                        .with_note("safec reads an included file only where everything it builds over the file holds all of it or none of it"),
+                        .with_note("safec reads an included file or a macro's expansion only where everything it builds over it holds all of it or none of it"),
                 );
                 None
             }

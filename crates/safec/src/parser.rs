@@ -34,8 +34,9 @@ use crate::ast::{
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::preprocessor::Preprocessed;
+use crate::preprocessor::cut_words;
 use crate::token::{Annotation, Keyword, Punct, Token, TokenKind};
-use safec_ir::source::{Edge, SourceMap, Span};
+use safec_ir::source::{SourceMap, Span};
 
 /// Something was expected and something else was there.
 ///
@@ -2576,18 +2577,15 @@ impl Parser<'_> {
             Ok(span) => return span,
             Err(cut) => cut,
         };
-        let label = match cut.edge {
-            Edge::Start => "begins partway through an included file",
-            Edge::End => "ends partway through an included file",
-        };
         // Not "this construct cuts the file": the span here may be one this
         // compiler builds for itself, a declarator's from its specifiers, and
         // cut a file that every C construct holds whole (#555).
-        let mut diagnostic = Diagnostic::error("this `#include` is not read where it is yet")
+        let (what, label, included) = cut_words(self.sources, cut);
+        let mut diagnostic = Diagnostic::error(format!("{what} is not read where it is yet"))
             .with_code(UNREAD)
             .with_label(Label::primary(cut.span, label))
-            .with_note("safec reads an included file only where everything it builds over the file holds all of it or none of it");
-        if let Some(at) = self.sources.at(cut.instance) {
+            .with_note("safec reads an included file or a macro's expansion only where everything it builds over it holds all of it or none of it");
+        if let Some(at) = included {
             diagnostic = diagnostic.with_label(Label::secondary(at, "included here"));
         }
         self.report_built(cut.span, diagnostic, diagnostics);

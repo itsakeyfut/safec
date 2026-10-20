@@ -99,7 +99,7 @@ visible rather than inferred from a diagnostic.
 6.4.6 p3 makes `<:` `:>` `<%` `%>` `%:` `%:%:` the punctuators `[` `]` `{`
 `}` `#` `##` "in all aspects of the language", so `token.rs::DIGRAPHS` scans
 each to that punctuator and nothing after the lexer can tell them apart:
-`%:define` is a directive and `SC0104`, as `#define` is.
+`%:pragma` is a directive and `SC0104`, as `#pragma` is.
 
 The trigraphs of 5.2.1.1 and the splice of 5.1.1.2 p1 phase 2 happen before
 any token exists. A splice the lexer does not perform compiles a different
@@ -723,7 +723,7 @@ where this compiler's own later stages would add more:
 | Written | This compiler | `clang` |
 |---|---|---|
 | `int main(void) { int x = @; return x }` | `error[SC0103]` at the `@` | two syntax errors, and no lexical one |
-| `#define N 4` and a use of `N` | `error[SC0104]` at the directive | compiles it |
+| `#pragma pack(4)` and a function after it | `error[SC0104]` at the directive | compiles it |
 | `void g(void) { return 1; }`, with `--emit llvm-ir` | `error[SC0308]` at the `1`, where the backend's `SC0801` followed it before #354 | one error |
 
 Both were measured against the built compiler and against

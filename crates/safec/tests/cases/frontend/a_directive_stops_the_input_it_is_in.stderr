@@ -1,9 +1,9 @@
 error[SC0104]: preprocessor directives are not supported yet
    ╭─[ a_directive_stops_the_input_it_is_in.c:1:1 ]
    │
- 1 │ #define N 4
+ 1 │ #pragma pack(4)
    │ ┬  
    │ ╰── directive begins here
 ───╯
-  = note: `#include "..."` is read, and `#define`, `#ifdef` and `#ifndef` come next
+  = note: `#include "..."` and an object-like `#define` are read, and `#ifdef` and `#ifndef` come next
   = note: the line is one token and is not compiled

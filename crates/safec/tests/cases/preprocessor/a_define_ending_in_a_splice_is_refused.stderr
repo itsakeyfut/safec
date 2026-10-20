@@ -1,0 +1,8 @@
+error[SC0107]: a line splice or a trigraph in a `#define` is not read yet
+   ╭─[ a_define_ending_in_a_splice_is_refused.c:1:1 ]
+   │
+ 1 │ #define BODY 1 + \
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: C can join the line below to this one, and it would be compiled as code instead

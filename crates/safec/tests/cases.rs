@@ -4214,11 +4214,11 @@ cases! {
         // of its own, `<:` becoming `[` then `:`, and this fails. Mutation:
         // drop the digraph table; `<%` is `<` then `%`.
         digraphs_are_the_punctuators_they_stand_for: ["--emit", "ast"],
-        // `%:` at the start of a line is `#`, so `%:define` is a directive
-        // and `SC0104`, as the `#define` beside it is, and `%:%:` is `##`,
+        // `%:` at the start of a line is `#`, so `%:pragma` is a directive
+        // and `SC0104`, as the `#pragma` beside it is, and `%:%:` is `##`,
         // which begins no directive at the start of a line or in the
         // middle of one. Mutation: ask the directive test of `#` alone; the
-        // first report goes and `%:define` is read as tokens. Mutation: let
+        // first report goes and `%:pragma` is read as tokens. Mutation: let
         // the test take `##` too; the `%:%: x` line becomes a directive.
         // Mutation: point the label at one byte; the caret under `%:`
         // narrows to `%`.
@@ -4343,6 +4343,61 @@ cases! {
         // climb's nodes from their operands' spans, as `Parser::joined` did.
         // The assignment ends at `1`, cuts the header, and is refused.
         a_parenthesised_included_operand_is_not_refused: ["--emit", "ast"],
+        // Object-like macros (#546), each in a file of its own. Every case
+        // whose program can be written out was run beside its written-out
+        // twin, and the two give the same errors and exit code.
+        //
+        // Mutation: expand nothing. `N` is a name nothing declares.
+        a_macro_compiles_to_the_program_its_body_writes: ["--emit", "ast"],
+        // Mutation: add no label at the use; or place labels without
+        // `SourceMap::written`. The `expanded here` goes, or the header names
+        // `<expansion>`.
+        a_diagnostic_in_an_expansion_shows_the_body_and_the_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `#define x x + 1`: the `x` in the body is not replaced again
+        // (C17 6.10.3.4 p2). Mutation: drop the open-expansion check in
+        // `expansion`. It expands until the bound refuses it as `SC0113`.
+        a_macro_that_names_itself_is_expanded_once: ["--emit", "ast"],
+        // Mutation: read `F(` as an object-like macro, or let `##` and `#`
+        // through. A report goes.
+        a_function_like_macro_and_stringizing_are_not_read_yet: ["--emit", "ast"],
+        // Mutation: read a `#define` whatever its line ends in. The body's
+        // second line is compiled as code.
+        a_define_ending_in_a_splice_is_refused: ["--emit", "ast"],
+        // The same tokens with different spacing inside them and a comment.
+        // Mutation: compare the replacement lists' text. The comment makes
+        // them differ, and it is refused.
+        a_macro_defined_again_the_same_is_accepted: ["--emit", "ast"],
+        // Mutation: accept any second definition. Both reports go.
+        a_macro_defined_again_differently_is_refused: ["--emit", "ast"],
+        // Mutation: drop `#undef`. The parameter is read as `4`.
+        an_undefined_macro_is_an_identifier_again: ["--emit", "ast"],
+        // ADR-0054's cut: `F(p)` with `#define F (x = *p) + release` starts
+        // its call at `release`, partway through the expansion. Mutation:
+        // have `Parser::join` panic on a cut. It panics.
+        a_call_that_cuts_an_expansion_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same call holding the whole expansion, `G(p)` with `#define G
+        // release`, is checked as written out. Mutation: have `inside`
+        // compare without locating. The read is taken for another operand.
+        a_call_holding_a_whole_expansion_is_checked_as_written: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `#define N (*p)`, the usual way to write one. Mutation: join the
+        // climb from its operands' spans. `N + 1` starts at `*`, partway
+        // through the expansion, and is refused.
+        a_parenthesised_macro_body_is_not_refused: ["--emit", "ast"],
+        // ADR-0054's first silence: a store and a call from one expansion.
+        // Mutation: give every token of an expansion its use's span, the
+        // design ADR-0054 rejected. The use of `q` is not reported.
+        a_store_and_a_call_from_one_expansion_are_checked_as_written: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // ADR-0054's third: two declarators from one expansion are two
+        // locals, and `a` used after its free is reported. Mutation: key the
+        // lowering's locals by the use. The two collide.
+        two_declarators_from_one_expansion_are_two_locals: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // ADR-0054's read inside `g(N)`: an expanded call as an argument runs
+        // before the call around it. Mutation: have `inside` compare without
+        // locating. This reports.
+        a_call_in_an_expanded_argument_is_not_asked_about_the_call_around_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // ADR-0054's free from a macro in a parameter's length. Mutation:
+        // have `unordered` compare in one file. It is worded as the body's.
+        a_free_from_a_macro_in_a_parameter_s_length_is_worded_as_a_length_s: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same with the included `(p)` starting the node: a member
         // access, a comma and an assignment, each beginning at the header's
         // `(`. Mutation: start any one of the three from its left operand's

@@ -1,0 +1,12 @@
+error[SC0207]: this use of `F` is not read where it is yet
+   ╭─[ a_call_that_cuts_an_expansion_is_refused.c:3:22 ]
+   │
+ 3 │ #define F (x = *p) + release
+   │                      ───┬───  
+   │                         ╰───── begins partway through `F`'s expansion
+   │ 
+ 9 │     int y = F(p);
+   │             ┬  
+   │             ╰── `F` expanded here
+───╯
+  = note: safec reads an included file or a macro's expansion only where everything it builds over it holds all of it or none of it

@@ -1,0 +1,4 @@
+Function a_macro_compiles_to_the_program_its_body_writes.c:3:1 "main" "int (void)"
+  Compound a_macro_compiles_to_the_program_its_body_writes.c:3:16
+    Return a_macro_compiles_to_the_program_its_body_writes.c:3:18
+      Number a_macro_compiles_to_the_program_its_body_writes.c:1:11 "4"

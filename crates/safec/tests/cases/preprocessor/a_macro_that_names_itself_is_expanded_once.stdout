@@ -1,0 +1,7 @@
+Function a_macro_that_names_itself_is_expanded_once.c:1:1 "f" "int (int)"
+  Parameter a_macro_that_names_itself_is_expanded_once.c:1:7 "x" "int"
+  Compound a_macro_that_names_itself_is_expanded_once.c:1:14
+    Return a_macro_that_names_itself_is_expanded_once.c:3:5
+      Binary a_macro_that_names_itself_is_expanded_once.c:2:11 "+"
+        Identifier a_macro_that_names_itself_is_expanded_once.c:2:11 "x"
+        Number a_macro_that_names_itself_is_expanded_once.c:2:15 "1"

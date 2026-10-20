@@ -5,4 +5,4 @@ error[SC0304]: cannot compile this `#include` where it is yet
    │  ┬  
    │  ╰── begins partway through an included file
 ───╯
-  = note: safec reads an included file only where everything it builds over the file holds all of it or none of it
+  = note: safec reads an included file or a macro's expansion only where everything it builds over it holds all of it or none of it

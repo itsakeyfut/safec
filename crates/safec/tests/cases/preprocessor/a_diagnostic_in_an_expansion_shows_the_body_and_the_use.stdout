@@ -1,0 +1,19 @@
+Target "x86_64-pc-windows-msvc"
+Function a_diagnostic_in_an_expansion_shows_the_body_and_the_use.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_diagnostic_in_an_expansion_shows_the_body_and_the_use.c:4:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int *" parameter _Nonnull "p"
+  Block "bb0" entry
+    ArgumentsEvaluated a_diagnostic_in_an_expansion_shows_the_body_and_the_use.c:2:17 generated
+    Call a_diagnostic_in_an_expansion_shows_the_body_and_the_use.c:2:17 written "free" "bb1"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_diagnostic_in_an_expansion_shows_the_body_and_the_use.c:2:17 generated
+    ArgumentsEvaluated a_diagnostic_in_an_expansion_shows_the_body_and_the_use.c:2:17 generated
+    Call a_diagnostic_in_an_expansion_shows_the_body_and_the_use.c:2:17 written "free" "bb2"
+      Copy "_1"
+  Block "bb2"
+    Sequenced a_diagnostic_in_an_expansion_shows_the_body_and_the_use.c:2:17 generated
+    Return

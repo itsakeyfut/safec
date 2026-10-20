@@ -1,0 +1,114 @@
+Target "x86_64-pc-windows-msvc"
+Function two_declarators_from_one_expansion_are_two_locals.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function two_declarators_from_one_expansion_are_two_locals.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function two_declarators_from_one_expansion_are_two_locals.c:5:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *" "a"
+  Local "_2" "void *"
+  Local "_3" "int *" "b"
+  Local "_4" "int"
+  Local "_5" "void *"
+  Local "_6" "int *"
+  Local "_7" "int"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation two_declarators_from_one_expansion_are_two_locals.c:5:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated two_declarators_from_one_expansion_are_two_locals.c:3:23 generated
+    Call two_declarators_from_one_expansion_are_two_locals.c:3:23 written "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation two_declarators_from_one_expansion_are_two_locals.c:3:19 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced two_declarators_from_one_expansion_are_two_locals.c:3:23 generated
+    Operation two_declarators_from_one_expansion_are_two_locals.c:3:35 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced two_declarators_from_one_expansion_are_two_locals.c:3:39 generated
+    Operation two_declarators_from_one_expansion_are_two_locals.c:7:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_1"
+    Branch two_declarators_from_one_expansion_are_two_locals.c:7:9 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced two_declarators_from_one_expansion_are_two_locals.c:7:9 generated
+    Operation two_declarators_from_one_expansion_are_two_locals.c:7:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced two_declarators_from_one_expansion_are_two_locals.c:7:20 generated
+    Return
+  Block "bb3"
+    Sequenced two_declarators_from_one_expansion_are_two_locals.c:7:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated two_declarators_from_one_expansion_are_two_locals.c:8:5 generated
+    Call two_declarators_from_one_expansion_are_two_locals.c:8:5 written "free" "bb5"
+      Copy "_1"
+  Block "bb5"
+    Sequenced two_declarators_from_one_expansion_are_two_locals.c:8:5 generated
+    ArgumentsEvaluated two_declarators_from_one_expansion_are_two_locals.c:9:9 generated
+    Call two_declarators_from_one_expansion_are_two_locals.c:9:9 written "malloc" "bb6"
+      Destination "_5"
+      Constant 4
+  Block "bb6"
+    Operation two_declarators_from_one_expansion_are_two_locals.c:9:5 written
+      Destination "_3"
+      Use
+        Copy "_5"
+    Operation two_declarators_from_one_expansion_are_two_locals.c:9:5 written
+      Destination "_6"
+      Use
+        Copy "_3"
+    Sequenced two_declarators_from_one_expansion_are_two_locals.c:9:5 generated
+    Operation two_declarators_from_one_expansion_are_two_locals.c:10:9 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_3"
+    Branch two_declarators_from_one_expansion_are_two_locals.c:10:9 written "bb7" "bb8"
+      Copy "_7"
+  Block "bb7"
+    Sequenced two_declarators_from_one_expansion_are_two_locals.c:10:9 generated
+    Operation two_declarators_from_one_expansion_are_two_locals.c:10:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced two_declarators_from_one_expansion_are_two_locals.c:10:20 generated
+    Return
+  Block "bb8"
+    Sequenced two_declarators_from_one_expansion_are_two_locals.c:10:9 generated
+    Goto "bb9"
+  Block "bb9"
+    Operation two_declarators_from_one_expansion_are_two_locals.c:11:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Operation two_declarators_from_one_expansion_are_two_locals.c:11:5 written
+      Destination "_8"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced two_declarators_from_one_expansion_are_two_locals.c:11:5 generated
+    ArgumentsEvaluated two_declarators_from_one_expansion_are_two_locals.c:12:5 generated
+    Call two_declarators_from_one_expansion_are_two_locals.c:12:5 written "free" "bb10"
+      Copy "_3"
+  Block "bb10"
+    Sequenced two_declarators_from_one_expansion_are_two_locals.c:12:5 generated
+    Operation two_declarators_from_one_expansion_are_two_locals.c:13:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced two_declarators_from_one_expansion_are_two_locals.c:13:12 generated
+    Return

@@ -1,3 +1,3 @@
-#define N 4
+#pragma pack(4)
 
 int main(void) { return N; }
