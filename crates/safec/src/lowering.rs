@@ -956,24 +956,15 @@ impl Lowering<'_> {
         Some((returns, lowered))
     }
 
-    /// Refuse a parameter declared as an array this stage cannot take,
-    /// naming the part of its length nothing typed where that is the reason.
-    ///
-    /// One refusal for both doors, each asking its own question first: a
-    /// function's own prototype, through [`Self::signature`], which lowers
-    /// the parameter and so asks [`Self::adjusted_without_loss`]; and a
-    /// prototype inside the type of a file-scope object, through
-    /// [`Self::prototypes_lose_nothing`], which lowers nothing and so asks
-    /// only [`Self::lengths_typed_throughout`] (#448).
     /// The span from `from`'s start to `to`'s end, through the one join
     /// across instances, or nothing, with the function refused.
     ///
-    /// A span the lowering builds over parts of a node the parser built,
-    /// a definition's lengths or a declarator's store, is one the parser never
+    /// A span the lowering builds over parts of nodes the parser built, a
+    /// definition's lengths or a declarator's store, is one the parser never
     /// joined, so it can cut an included file where every node the parser
-    /// made held it whole: `int a = ` then an `#include` of `1 + 2, b = 3`
-    /// joins the store of `a` to the end of `1 + 2`. Refused rather than
-    /// panicked on, since the program is C. See ADR-0054.
+    /// made held it whole: `int` then an `#include` of `*a` then `= 0;` starts
+    /// the store of `a` at `a`, partway through the header. Refused rather
+    /// than panicked on, since the program is C. See ADR-0054.
     fn joined(&self, from: Span, to: Span, diagnostics: &mut DiagnosticSink) -> Option<Span> {
         match self.sources.join(from, to) {
             Ok(span) => Some(span),
@@ -992,6 +983,15 @@ impl Lowering<'_> {
         }
     }
 
+    /// Refuse a parameter declared as an array this stage cannot take,
+    /// naming the part of its length nothing typed where that is the reason.
+    ///
+    /// One refusal for both doors, each asking its own question first: a
+    /// function's own prototype, through [`Self::signature`], which lowers
+    /// the parameter and so asks [`Self::adjusted_without_loss`]; and a
+    /// prototype inside the type of a file-scope object, through
+    /// [`Self::prototypes_lose_nothing`], which lowers nothing and so asks
+    /// only [`Self::lengths_typed_throughout`] (#448).
     fn refuse_parameter(&self, parameter: &Declaration, diagnostics: &mut DiagnosticSink) {
         let at = parameter.name.unwrap_or(parameter.span);
         // The note claims nothing about the program, because a length nobody

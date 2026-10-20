@@ -4355,6 +4355,15 @@ cases! {
         // Mutation: sort findings by file index, as `memory::findings` did.
         // The header's are listed last.
         an_included_free_is_listed_where_its_include_is: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same for the nullability check's findings. Mutation: sort them
+        // by file index, as `nullability::findings` did. The header's is
+        // listed last.
+        an_included_null_dereference_is_listed_where_its_include_is: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And for what a hatch concludes, in its dump: the included double
+        // free is above the written one. Mutation: sort the dump's
+        // conclusions by file index, as `dump_hatches` did. The header's is
+        // dumped last.
+        an_included_conclusion_is_dumped_where_its_include_is: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: do not pop a file off the stack when its inclusion ends.
         // The second inclusion is refused as one that includes itself.
         a_header_included_twice_is_read_twice: ["--emit", "ast"],

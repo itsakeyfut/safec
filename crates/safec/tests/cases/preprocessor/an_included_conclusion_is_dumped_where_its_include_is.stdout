@@ -1,0 +1,4 @@
+Hatch an_included_conclusion_is_dumped_where_its_include_is.c:4:6 "h"
+  Conclusion an_included_conclusion_is_dumped_where_its_include_is.h:2:1 "SC0401" "unsafe" "this frees `p`, which was freed already"
+  Conclusion an_included_conclusion_is_dumped_where_its_include_is.c:6:5 "SC0401" "unknown" "this frees `q`, which may have been freed already"
+  Conclusion an_included_conclusion_is_dumped_where_its_include_is.c:7:5 "SC0401" "unsafe" "this frees `q`, which was freed already"

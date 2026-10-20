@@ -1,0 +1,23 @@
+Target "x86_64-pc-windows-msvc"
+Function an_included_null_dereference_is_listed_where_its_include_is.h:1:5 "g"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "p"
+  Block "bb0" entry
+    Operation an_included_null_dereference_is_listed_where_its_include_is.h:2:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced an_included_null_dereference_is_listed_where_its_include_is.h:2:12 generated
+    Return
+Function an_included_null_dereference_is_listed_where_its_include_is.c:3:5 "k"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "q"
+  Block "bb0" entry
+    Operation an_included_null_dereference_is_listed_where_its_include_is.c:4:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced an_included_null_dereference_is_listed_where_its_include_is.c:4:12 generated
+    Return
