@@ -1,6 +1,6 @@
 void free(void *p);
-#define KILL (q = p, free(p), 1)
+#define KILL (free(p), 1)
 
-int f(int * _Nonnull p, int * _Nonnull q, int b[*q], int a[KILL]) {
+int f(int * _Nonnull p, int a[*p + KILL]) {
     return 0;
 }

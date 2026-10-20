@@ -5,29 +5,19 @@ Function a_free_from_a_macro_in_a_parameter_s_length_is_worded_as_a_length_s.c:1
 Function a_free_from_a_macro_in_a_parameter_s_length_is_worded_as_a_length_s.c:4:5 "f"
   Local "_0" "int" return
   Local "_1" "int *" parameter _Nonnull "p"
-  Local "_2" "int *" parameter _Nonnull "q"
-  Local "_3" "int *" parameter "b"
-  Local "_4" "int *" parameter "a"
-  Local "_5" "int *"
+  Local "_2" "int *" parameter "a"
+  Local "_3" "int"
   Block "bb0" entry
-    Operation a_free_from_a_macro_in_a_parameter_s_length_is_worded_as_a_length_s.c:2:15 written
-      Destination "_2"
-      Use
-        Copy "_1"
-    Operation a_free_from_a_macro_in_a_parameter_s_length_is_worded_as_a_length_s.c:2:15 written
-      Destination "_5"
-      Use
-        Copy "_2"
-    Call a_free_from_a_macro_in_a_parameter_s_length_is_worded_as_a_length_s.c:2:22 written "free" "bb1"
+    Call a_free_from_a_macro_in_a_parameter_s_length_is_worded_as_a_length_s.c:2:15 written "free" "bb1"
       Copy "_1"
   Block "bb1"
-    UnsequencedAccess a_free_from_a_macro_in_a_parameter_s_length_is_worded_as_a_length_s.c:4:43 written "_2" Lengths
-      Written a_free_from_a_macro_in_a_parameter_s_length_is_worded_as_a_length_s.c:2:15
-      Read a_free_from_a_macro_in_a_parameter_s_length_is_worded_as_a_length_s.c:4:50
-    Evaluate a_free_from_a_macro_in_a_parameter_s_length_is_worded_as_a_length_s.c:4:49 written
-      Place "_2"
-        Deref
-    Sequenced a_free_from_a_macro_in_a_parameter_s_length_is_worded_as_a_length_s.c:2:15 generated
+    Operation a_free_from_a_macro_in_a_parameter_s_length_is_worded_as_a_length_s.c:4:31 written
+      Destination "_3"
+      Binary "Add"
+        Copy "_1"
+          Deref
+        Constant 1
+    Sequenced a_free_from_a_macro_in_a_parameter_s_length_is_worded_as_a_length_s.c:4:31 generated
     Operation a_free_from_a_macro_in_a_parameter_s_length_is_worded_as_a_length_s.c:5:5 written
       Destination "_0"
       Use
