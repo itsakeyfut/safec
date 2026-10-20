@@ -1,0 +1,5 @@
+Function an_undefined_macro_is_an_identifier_again.c:1:1 "f" "int (int)"
+  Parameter an_undefined_macro_is_an_identifier_again.c:1:7 "N" "int"
+  Compound an_undefined_macro_is_an_identifier_again.c:1:14
+    Return an_undefined_macro_is_an_identifier_again.c:4:5
+      Identifier an_undefined_macro_is_an_identifier_again.c:4:12 "N"

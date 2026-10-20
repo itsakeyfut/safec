@@ -1,0 +1,46 @@
+error[SC0402]: this uses `q`, which may have been freed
+   ╭─[ a_store_and_a_call_from_one_expansion_are_checked_as_written.c:3:12 ]
+   │
+ 3 │ #define E (x = *q) + (*slot = q, 0) + release_all()
+   │            ───┬──  
+   │               ╰──── used here, where it may have been freed before
+   │ 
+ 6 │     int *q = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+   │ 
+ 9 │     int y = E;
+   │             ┬  
+   │             ╰── `E` expanded here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0402]: this uses `slot`, which may have been freed
+   ╭─[ a_store_and_a_call_from_one_expansion_are_checked_as_written.c:3:23 ]
+   │
+ 3 │ #define E (x = *q) + (*slot = q, 0) + release_all()
+   │                       ────┬────  
+   │                           ╰────── used here, where it may have been freed before
+   │ 
+ 9 │     int y = E;
+   │             ┬  
+   │             ╰── `E` expanded here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0403]: this may dereference `slot` while it is null
+   ╭─[ a_store_and_a_call_from_one_expansion_are_checked_as_written.c:3:23 ]
+   │
+ 3 │ #define E (x = *q) + (*slot = q, 0) + release_all()
+   │                       ────┬────  
+   │                           ╰────── this check cannot say this is not null
+   │ 
+ 9 │     int y = E;
+   │             ┬  
+   │             ╰── `E` expanded here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

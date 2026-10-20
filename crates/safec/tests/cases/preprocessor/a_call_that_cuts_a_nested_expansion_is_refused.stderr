@@ -1,0 +1,12 @@
+error[SC0207]: this use of `A` is not read where it is yet
+    ╭─[ a_call_that_cuts_a_nested_expansion_is_refused.c:4:22 ]
+    │
+  4 │ #define A (x = *p) + B
+    │                      ┬  
+    │                      ╰── begins partway through `A`'s expansion
+    │ 
+ 10 │     int y = A(p);
+    │             ┬  
+    │             ╰── `A` expanded here
+────╯
+  = note: safec reads an included file or a macro's expansion only where everything it builds over it holds all of it or none of it

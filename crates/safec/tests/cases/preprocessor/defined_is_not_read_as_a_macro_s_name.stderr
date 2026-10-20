@@ -1,0 +1,8 @@
+error[SC0104]: `defined` is not read as a macro's name
+   ╭─[ defined_is_not_read_as_a_macro_s_name.c:1:1 ]
+   │
+ 1 │ #define defined 1
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: C17 6.10.8 p2 says it shall not be the subject of a `#define` or an `#undef`

@@ -1,15 +1,20 @@
 //! Directives, read between the lexer and the parser.
 //!
-//! What it reads is `#include "file"`: the tokens of the file it names, itself
-//! preprocessed, take the directive's place. Every other directive is refused
-//! as `SC0104`, `#include <file>` among them, which needs a search path and a
-//! system header this compiler cannot read yet anyway.
+//! What it reads is `#include "file"`, whose file's tokens, themselves
+//! preprocessed, take the directive's place; and object-like `#define` and
+//! `#undef`, whose macros' names are replaced by their replacement lists,
+//! rescanned (C17 6.10.3). Every other directive is refused as `SC0104`,
+//! `#include <file>` among them, which needs a search path and a system header
+//! this compiler cannot read yet anyway, and so are function-like macros, `#`
+//! and `##`.
 //!
-//! Each inclusion is a file of its own in the source map, so a diagnostic in a
-//! header names the header and two inclusions of one header never share a
-//! span. See ADR-0054. The translation unit is preprocessed whole before it is
+//! Each inclusion and each expansion is a file of its own in the source map,
+//! so a diagnostic in a header names the header, one in an expansion is shown
+//! at its `#define` and its use, and two of either never share a span. See
+//! ADR-0054. The translation unit is preprocessed whole before it is
 //! parsed, for the reason that record gives.
 
+use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -17,8 +22,8 @@ use std::path::{Path, PathBuf};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::driver::{Access, reason};
 use crate::lexer::{UNSUPPORTED_SPLICE, lex};
-use crate::token::{Token, TokenKind};
-use safec_ir::source::{FileId, FileName, SourceMap, Span};
+use crate::token::{Punct, Token, TokenKind};
+use safec_ir::source::{Cut, Edge, FileId, FileName, SourceMap, Span};
 
 // `SC01xx` with the lexer's, because the topic is the same: what a line of the
 // source is before the grammar reads it. `SC0104` was the lexer's until the
@@ -32,6 +37,10 @@ const RECURSIVE_INCLUSION: Code = Code::new("SC0110");
 const TOO_DEEP: Code = Code::new("SC0111");
 /// An `#include` past [`MAX_INCLUSIONS`].
 const TOO_MANY: Code = Code::new("SC0112");
+/// A macro expanded past [`MAX_EXPANSIONS`].
+const TOO_MANY_EXPANSIONS: Code = Code::new("SC0113");
+/// A macro defined a second time with a different replacement list.
+const REDEFINED: Code = Code::new("SC0114");
 
 /// How many files may be being read at once, the input among them.
 ///
@@ -50,12 +59,79 @@ const MAX_DEPTH: usize = 200;
 /// real header, and `#ifndef` is not read yet. Found by review.
 const MAX_INCLUSIONS: usize = 4096;
 
-/// The files being read, and how many have been included so far.
+/// How many expansions one use of a macro, written outside any expansion,
+/// may make with everything it expands to.
+///
+/// The rule that a macro is not expanded inside its own expansion ends every
+/// chain, so this bounds a tree: a macro whose body uses the next one twice,
+/// sixteen deep, is 131,071 expansions, each a file of its own. Past it the
+/// next is refused, once. Counted per use and not per input, because a file
+/// that uses a macro on each of 65,537 lines asks nothing unusual of C, and
+/// counting them all refused it. Found by review.
+const MAX_EXPANSIONS: usize = 65536;
+
+/// How many expansions one input may make in all.
+///
+/// [`MAX_EXPANSIONS`] bounds one use's tree, and a file can hold many uses:
+/// with the count starting again at each, forty uses of a tree just under the
+/// bound took over 600 MB, each expansion a file of its own, and printed
+/// nothing before it was stopped. Found by review. This sits above the most a
+/// file that uses a macro once on each of its lines needs at the bound, and
+/// past it the next expansion is refused, once.
+const MAX_EXPANSIONS_IN_ALL: usize = 2 * MAX_EXPANSIONS;
+
+/// The files being read, the macros defined, and how many inclusions and
+/// expansions there have been so far.
 struct Reading {
     /// Outermost first, each by its canonical path, so a cycle is found
     /// whatever spelling reached it.
     open: Vec<(PathBuf, FileId)>,
     inclusions: usize,
+    /// Every object-like macro defined so far, by name.
+    macros: HashMap<String, Macro>,
+    expansions: usize,
+    /// Every expansion this input has made.
+    expansions_in_all: usize,
+    /// How many expansions of each name are open, and of all names: what the
+    /// rule that a macro is not expanded inside itself asks of, kept as a
+    /// count rather than found by walking the frames, which made a chain of
+    /// distinct macros cost the square of its depth. Found by review.
+    open_macros: HashMap<String, usize>,
+    open_expansions: usize,
+}
+
+/// An object-like macro.
+struct Macro {
+    /// Its replacement list, in its `#define`: what each expansion holds.
+    spelled: Span,
+    /// The `#define`, for the note on a redefinition.
+    defined: Span,
+    /// Its replacement list's tokens, each with whether whitespace came
+    /// before it: what two definitions are compared by (C17 6.10.3 p1).
+    tokens: Vec<(String, bool)>,
+}
+
+/// How a refusal of `cut` says what was cut: the thing, as the reader wrote
+/// it, the label at the cut, and where to say it was included, which is only
+/// for an inclusion, since the renderer says where an expansion came from by
+/// itself.
+pub(crate) fn cut_words(sources: &SourceMap, cut: Cut) -> (String, String, Option<Span>) {
+    let edge = match cut.edge {
+        Edge::Start => "begins",
+        Edge::End => "ends",
+    };
+    match sources.macro_name(cut.instance) {
+        Some(name) => (
+            format!("this use of `{name}`"),
+            format!("{edge} partway through `{name}`'s expansion"),
+            None,
+        ),
+        None => (
+            "this `#include`".to_owned(),
+            format!("{edge} partway through an included file"),
+            sources.at(cut.instance),
+        ),
+    }
 }
 
 /// The tokens the parser reads: one input's, every `#include` spliced in, and
@@ -66,8 +142,9 @@ struct Reading {
 /// parses without preprocessing does not compile, where it used to hand the
 /// parser every directive to be dropped without a word: seven test helpers
 /// did, and after `#ifdef` that would compile both of its groups. No directive
-/// is in one because `read_includes` splices each it meets or reports it,
-/// and pushes neither.
+/// is in one because `read_includes` reads each it meets, splicing an
+/// `#include`, recording a macro or reporting what it does not read, and
+/// pushes none of them.
 ///
 /// Mutation: drop the `preprocess` call from any caller of `parse`. It is
 /// `E0308`; building one by hand outside this module is `E0603`.
@@ -82,8 +159,9 @@ impl Preprocessed {
     }
 }
 
-/// Splice every `#include "file"` in `tokens`, the scan of `file`, and report
-/// every directive that is not one.
+/// Splice every `#include "file"` in `tokens`, the scan of `file`, record
+/// every `#define` and `#undef` and expand what they define, and report every
+/// other directive.
 ///
 /// The end-of-file token is the input's own: an included file's is dropped,
 /// since the parser reads the first one it meets as the end.
@@ -96,6 +174,11 @@ pub fn preprocess(
     let mut reading = Reading {
         open: Vec::new(),
         inclusions: 0,
+        macros: HashMap::new(),
+        expansions: 0,
+        expansions_in_all: 0,
+        open_macros: HashMap::new(),
+        open_expansions: 0,
     };
     if let Some(path) = path_of(sources.file(file).name()) {
         reading.open.push((canonical(path), file));
@@ -107,11 +190,12 @@ pub fn preprocess(
     Preprocessed(spliced)
 }
 
-/// Append `tokens` to `spliced`, an `#include "file"` replaced by that file's,
-/// and no end of file.
+/// Append `tokens` to `spliced`, an `#include "file"` replaced by that file's
+/// and a macro's name by its expansion, rescanned, and no end of file.
 ///
 /// One frame per file being read, the input's at the bottom, each holding its
-/// tokens and how far they have been read. A stack of its own rather than the
+/// tokens and how far they have been read; an inclusion and an expansion are
+/// each a frame. A stack of its own rather than the
 /// native one: recursing once per file overflowed the main thread's stack on
 /// a chain of 160 headers, well inside [`MAX_DEPTH`], and where it overflowed
 /// moved whenever a frame grew. Found by review. The reading ends because a
@@ -127,7 +211,7 @@ fn read_includes(
     let mut frames = vec![Frame {
         tokens: tokens.to_vec(),
         cursor: 0,
-        inclusion: None,
+        instance: None,
         extent: None,
     }];
     while let Some(frame) = frames.last_mut() {
@@ -135,10 +219,23 @@ fn read_includes(
         frame.cursor += 1;
         let Some(token) = next else {
             let Some(frame) = frames.pop() else { break };
-            if let Some((file, _)) = frame.inclusion {
-                reading.open.pop();
+            if let Some(instance) = frame.instance {
+                match &instance {
+                    Instance::Inclusion { .. } => {
+                        reading.open.pop();
+                    }
+                    Instance::Expansion { name, .. } => {
+                        reading.open_expansions -= 1;
+                        if let Some(open) = reading.open_macros.get_mut(name) {
+                            *open -= 1;
+                        }
+                    }
+                }
                 if let Some((first, last)) = frame.extent {
-                    sources.set_extent(file, first, last);
+                    sources.set_extent(instance.file(), first, last);
+                    // What the frame below was handed in its place, now that
+                    // it handed over anything at all.
+                    emitted(&mut frames, instance.used());
                 }
             }
             continue;
@@ -147,7 +244,32 @@ fn read_includes(
             TokenKind::Eof => {}
             TokenKind::Directive => {
                 // Owned, because reading the file it names adds to the map.
-                let text = sources.snippet(token.span).to_owned();
+                let raw = sources.snippet(token.span).to_owned();
+                // A splice in a comment is a comment going on past the line:
+                // C splices lines before it reads comments (C17 5.1.1.2 p1,
+                // phases 2 and 3), so `// \` carries the comment, and not
+                // code, onto the line below. Asked of the line before its
+                // comments are made spaces, which takes the splice with them
+                // and read `#include "a.h" // \` as an include. Found by
+                // review, after it had been blessed.
+                let blank =
+                    blanked(&raw).filter(|text| self::spliced(text) || !self::spliced(&raw));
+                let Some(text) = blank else {
+                    let text = raw;
+                    diagnostics.report(
+                        refused(
+                            &text,
+                            token.span,
+                            UNSUPPORTED_DIRECTIVE,
+                            "a comment that goes on past a directive's line is not read yet",
+                        )
+                        .with_note(
+                            "C makes the comment one space, so the directive goes on after \
+                             it ends, and the lines inside it are not code",
+                        ),
+                    );
+                    continue;
+                };
                 match include_form(&text) {
                     IncludeForm::Quoted { name, quote } => {
                         let quoted = Span::new(
@@ -161,7 +283,10 @@ fn read_includes(
                             frames.push(Frame {
                                 tokens: included,
                                 cursor: 0,
-                                inclusion: Some((file, token.span)),
+                                instance: Some(Instance::Inclusion {
+                                    file,
+                                    directive: token.span,
+                                }),
                                 extent: None,
                             });
                         }
@@ -199,25 +324,107 @@ fn read_includes(
                              after it on its line",
                         ),
                     ),
-                    IncludeForm::Other => diagnostics.report(
-                        refused(
+                    IncludeForm::Other => match macro_form(&text) {
+                        MacroForm::Define {
+                            name,
+                            name_at,
+                            body,
+                        } => define(
                             &text,
                             token.span,
-                            UNSUPPORTED_DIRECTIVE,
-                            "preprocessor directives are not supported yet",
-                        )
-                        // Which directives, rather than which stage.
-                        // `docs/frontend.md` puts the preprocessor in its
-                        // Stage 3 and `docs/roadmap.md` pulls four of them
-                        // forward, so a stage number is both a number the
-                        // reader does not have and one that stopped being
-                        // the whole answer.
-                        .with_note(
-                            "`#include \"...\"` is read, and `#define`, `#ifdef` and \
-                                 `#ifndef` come next",
-                        )
-                        .with_note("the line is one token and is not compiled"),
-                    ),
+                            name,
+                            name_at,
+                            body,
+                            sources,
+                            reading,
+                            diagnostics,
+                        ),
+                        MacroForm::Undef { name } => {
+                            reading.macros.remove(name);
+                        }
+                        MacroForm::Unread { directive } => diagnostics.report(
+                            refused(
+                                &text,
+                                token.span,
+                                UNSUPPORTED_DIRECTIVE,
+                                &format!("this `{directive}` is not read yet"),
+                            )
+                            .with_note(if directive == "#undef" {
+                                "an `#undef` is read when its name is ASCII letters, digits \
+                                 and `_`, with nothing after it"
+                            } else {
+                                "a `#define` is read when its name is ASCII letters, digits \
+                                 and `_`, followed by a space, `(` or the end of the line"
+                            }),
+                        ),
+                        MacroForm::Defined => diagnostics.report(
+                            refused(
+                                &text,
+                                token.span,
+                                UNSUPPORTED_DIRECTIVE,
+                                "`defined` is not read as a macro's name",
+                            )
+                            .with_note(
+                                "C17 6.10.8 p2 says it shall not be the subject of a `#define` \
+                                 or an `#undef`",
+                            ),
+                        ),
+                        MacroForm::FunctionLike => diagnostics.report(
+                            refused(
+                                &text,
+                                token.span,
+                                UNSUPPORTED_DIRECTIVE,
+                                "function-like macros are not read yet",
+                            )
+                            .with_note("only an object-like `#define` is read yet"),
+                        ),
+                        MacroForm::Spliced => diagnostics.report(
+                            refused(
+                                &text,
+                                token.span,
+                                UNSUPPORTED_SPLICE,
+                                "a line splice or a trigraph in a `#define` is not read yet",
+                            )
+                            .with_note(
+                                "C can join the line below to this one, and it would be \
+                                 compiled as code instead",
+                            ),
+                        ),
+                        MacroForm::Other => diagnostics.report(
+                            refused(
+                                &text,
+                                token.span,
+                                UNSUPPORTED_DIRECTIVE,
+                                "preprocessor directives are not supported yet",
+                            )
+                            // Which directives, rather than which stage.
+                            // `docs/frontend.md` puts the preprocessor in its
+                            // Stage 3 and `docs/roadmap.md` pulls four of them
+                            // forward, so a stage number is both a number the
+                            // reader does not have and one that stopped being
+                            // the whole answer.
+                            .with_note(
+                                "`#include \"...\"` and an object-like `#define` are read, and \
+                             `#ifdef` and `#ifndef` come next",
+                            )
+                            .with_note("the line is one token and is not compiled"),
+                        ),
+                    },
+                }
+            }
+            // An annotation's spelling too: `_Nonnull` is an identifier while
+            // preprocessing, and `#define _Nonnull` with nothing after it is
+            // how a header makes the annotation vanish for a compiler without
+            // it. Left unexpanded, the promise C no longer makes was kept and
+            // a dereference written out as `SC0403` passed in silence. Found
+            // by review.
+            TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Annotation(_) => {
+                match expansion(token, sources, reading, diagnostics) {
+                    Some(frame) => frames.push(frame),
+                    None => {
+                        emitted(&mut frames, token.span);
+                        spliced.push(token);
+                    }
                 }
             }
             _ => {
@@ -226,6 +433,315 @@ fn read_includes(
             }
         }
     }
+}
+
+/// The frame `token` expands to, if it names a macro, or `None` where it is
+/// left as it is.
+///
+/// A keyword or an annotation is a name here too, since preprocessing knows
+/// only identifiers (C17 6.4 p1), so `#define int long` and `#define
+/// _Nonnull` are macros. A name is left as it is
+/// where an expansion of it is open, which is the rule that a macro is not
+/// replaced inside its own replacement (6.10.3.4 p2): an object-like macro's
+/// rescan reads only its replacement list, so the open expansions are
+/// exactly the replacements in progress.
+///
+/// Mutation: drop the open-expansion check. `#define X X + 1` expands for
+/// ever, and the bound refuses it.
+fn expansion(
+    token: Token,
+    sources: &mut SourceMap,
+    reading: &mut Reading,
+    diagnostics: &mut DiagnosticSink,
+) -> Option<Frame> {
+    let name = sources.snippet(token.span);
+    let spelled = reading.macros.get(name)?.spelled;
+    if reading.open_macros.get(name).is_some_and(|open| *open > 0) {
+        return None;
+    }
+    let name = name.to_owned();
+
+    // A use written outside any expansion starts a tree of its own.
+    if reading.open_expansions == 0 {
+        reading.expansions = 0;
+    }
+    if reading.expansions_in_all >= MAX_EXPANSIONS_IN_ALL {
+        if reading.expansions_in_all == MAX_EXPANSIONS_IN_ALL {
+            reading.expansions_in_all += 1;
+            diagnostics.report(
+                Diagnostic::error("this input expands too many macros")
+                    .with_code(TOO_MANY_EXPANSIONS)
+                    .with_label(Label::primary(token.span, "expanded here"))
+                    .with_note(format!(
+                        "{MAX_EXPANSIONS_IN_ALL} expansions have already been read for it in all"
+                    )),
+            );
+        }
+        return None;
+    }
+    // Once, at the first past the bound, as `SC0112` is said.
+    if reading.expansions >= MAX_EXPANSIONS {
+        if reading.expansions == MAX_EXPANSIONS {
+            reading.expansions += 1;
+            diagnostics.report(
+                Diagnostic::error("this use expands too many macros")
+                    .with_code(TOO_MANY_EXPANSIONS)
+                    .with_label(Label::primary(token.span, "expanded here"))
+                    .with_note(format!(
+                        "{MAX_EXPANSIONS} expansions have already been read for the use \
+                         this is in"
+                    )),
+            );
+        }
+        return None;
+    }
+    reading.expansions += 1;
+    reading.expansions_in_all += 1;
+    *reading.open_macros.entry(name.clone()).or_insert(0) += 1;
+    reading.open_expansions += 1;
+
+    let file = sources.expand(spelled, token.span);
+    // Lexed here, where it is used, so a character no token can begin is
+    // reported at each use, which is where C makes it an error.
+    let tokens = lex(file, &sources.file_owned(file), diagnostics);
+    Some(Frame {
+        tokens,
+        cursor: 0,
+        instance: Some(Instance::Expansion {
+            file,
+            at: token.span,
+            name,
+        }),
+        extent: None,
+    })
+}
+
+/// Record `#define name body`, or refuse it.
+///
+/// The body is scanned once, through a source map of its own, for two
+/// things: an `#` or `##`, which this does not read, and its tokens, which a
+/// second definition of the name is compared by. A second definition the same
+/// is accepted, as C17 6.10.3 p2 requires, which a header with a `#define`
+/// included twice needs; a different one is refused.
+#[allow(clippy::too_many_arguments)]
+fn define(
+    text: &str,
+    directive: Span,
+    name: &str,
+    name_at: u32,
+    body: (u32, u32),
+    sources: &mut SourceMap,
+    reading: &mut Reading,
+    diagnostics: &mut DiagnosticSink,
+) {
+    let file = directive.file();
+    let spelled = Span::new(file, directive.start() + body.0, directive.start() + body.1);
+    let named = Span::new(
+        file,
+        directive.start() + name_at,
+        directive.start() + name_at + name.len() as u32,
+    );
+
+    let mut scratch = SourceMap::new();
+    let scanned = scratch.add_virtual("replacement list", sources.snippet(spelled));
+    let scan = lex(scanned, scratch.file(scanned), &mut DiagnosticSink::new());
+    let operator = scan.iter().any(|token| {
+        matches!(
+            token.kind,
+            TokenKind::Punct(Punct::Hash | Punct::HashHash) | TokenKind::Directive
+        )
+    });
+    if operator {
+        diagnostics.report(
+            refused(
+                text,
+                directive,
+                UNSUPPORTED_DIRECTIVE,
+                "`#` and `##` in a `#define` are not read yet",
+            )
+            .with_note("only a replacement list without them is read yet"),
+        );
+        return;
+    }
+    let mut tokens = Vec::new();
+    let mut end = 0;
+    for token in scan.iter().filter(|token| !token.is_eof()) {
+        tokens.push((
+            scratch.snippet(token.span).to_owned(),
+            !tokens.is_empty() && token.span.start() > end,
+        ));
+        end = token.span.end();
+    }
+
+    if let Some(earlier) = reading.macros.get(name) {
+        if earlier.tokens != tokens {
+            diagnostics.report(
+                Diagnostic::error(format!("`{name}` is defined again differently"))
+                    .with_code(REDEFINED)
+                    .with_label(Label::primary(named, "defined again here"))
+                    .with_label(Label::secondary(earlier.defined, "defined here first"))
+                    .with_note("a macro may be defined again only with the same replacement list"),
+            );
+        }
+        return;
+    }
+    reading.macros.insert(
+        name.to_owned(),
+        Macro {
+            spelled,
+            defined: directive,
+            tokens,
+        },
+    );
+}
+
+/// What a directive that is not an `#include` is, where it is a macro's.
+#[derive(Debug, PartialEq, Eq)]
+enum MacroForm<'a> {
+    /// `#define name body`, with the offsets of the name and of the body's
+    /// start and end in the directive's text.
+    Define {
+        name: &'a str,
+        name_at: u32,
+        body: (u32, u32),
+    },
+    /// `#undef name`.
+    Undef { name: &'a str },
+    /// `#define name(`, a function-like macro.
+    FunctionLike,
+    /// `#define defined` or `#undef defined`.
+    Defined,
+    /// A `#define` or an `#undef` whose name is not one this reads, such as
+    /// one with a `$` in it, or an `#undef` with more after its name.
+    Unread { directive: &'static str },
+    /// A `#define` on a line that ends in a splice or holds a trigraph, for
+    /// the reason [`IncludeForm::Spliced`] gives.
+    Spliced,
+    /// Anything else.
+    Other,
+}
+
+/// Read a `#define` or an `#undef`.
+fn macro_form(text: &str) -> MacroForm<'_> {
+    let blank = [' ', '\t', '\u{b}', '\u{c}', '\r'];
+    let identifier = |c: char| c.is_ascii_alphanumeric() || c == '_';
+
+    let Some(rest) = text.strip_prefix('#').or_else(|| text.strip_prefix("%:")) else {
+        return MacroForm::Other;
+    };
+    let rest = rest.trim_start_matches(blank);
+    let (define, rest) = if let Some(rest) = rest.strip_prefix("define") {
+        (true, rest)
+    } else if let Some(rest) = rest.strip_prefix("undef") {
+        (false, rest)
+    } else {
+        return MacroForm::Other;
+    };
+    // `#defined` is a directive of another name.
+    if rest.starts_with(identifier) {
+        return MacroForm::Other;
+    }
+    let rest = rest.trim_start_matches(blank);
+    let length = rest.len() - rest.trim_start_matches(identifier).len();
+    let name = &rest[..length];
+    if name.is_empty() || name.starts_with(|c: char| c.is_ascii_digit()) {
+        return MacroForm::Unread {
+            directive: if define { "#define" } else { "#undef" },
+        };
+    }
+    if name == "defined" {
+        return MacroForm::Defined;
+    }
+    // What follows the name has to be where the name ends: a blank, the end,
+    // or, for `#define`, the `(` of a function-like macro. Anything else is
+    // a character this does not take for part of a name, `$` or a letter
+    // outside ASCII among them, and reading the name as ending before it read
+    // `#undef A$B` as `#undef A`, undefining a macro nobody named. Found by
+    // review. C17 6.10.3 p3 asks for whitespace between an object-like
+    // macro's name and its replacement list anyway.
+    let after = &rest[length..];
+    if !define {
+        if after.trim_matches(blank).is_empty() {
+            return MacroForm::Undef { name };
+        }
+        return MacroForm::Unread {
+            directive: "#undef",
+        };
+    }
+    if spliced(text) {
+        return MacroForm::Spliced;
+    }
+    if after.starts_with('(') {
+        return MacroForm::FunctionLike;
+    }
+    if !(after.is_empty() || after.starts_with(blank)) {
+        return MacroForm::Unread {
+            directive: "#define",
+        };
+    }
+    let name_at = (text.len() - rest.len()) as u32;
+    let body = after.trim_start_matches(blank);
+    let start = text.len() - body.len();
+    let end = start + body.trim_end_matches(blank).len();
+    MacroForm::Define {
+        name,
+        name_at,
+        body: (start as u32, end as u32),
+    }
+}
+
+/// `text`, a directive's line, with each comment in it made spaces of the
+/// same length, or `None` where a block comment in it does not end on it.
+///
+/// C makes a comment one space before directives are read (C17 5.1.1.2 p1,
+/// phase 3), so a comment between `#` and `define`, or after a name, is
+/// whitespace like any other; the same length keeps every offset into the
+/// line where it was, so spans taken from the result are spans of the line.
+/// A string or character literal is passed over, since `/*` in one opens
+/// nothing. A comment that does not end on the line is refused rather than
+/// read: the lexer ends a directive at its newline, so the lines inside the
+/// comment would be compiled as code, and `#define X /*` above a null test
+/// left the test to be believed where C has none. Found by review.
+fn blanked(text: &str) -> Option<String> {
+    let mut bytes = text.as_bytes().to_vec();
+    let mut at = 0;
+    let mut quote = None;
+    while at < bytes.len() {
+        match (quote, bytes[at]) {
+            // An escape in a literal, whose next byte closes nothing.
+            (Some(_), b'\\') if at + 1 < bytes.len() => {
+                at += 2;
+                continue;
+            }
+            (Some(open), byte) if byte == open => quote = None,
+            (Some(_), _) => {}
+            (None, b'"' | b'\'') => quote = Some(bytes[at]),
+            (None, b'/') if bytes.get(at + 1) == Some(&b'/') => {
+                bytes[at..].fill(b' ');
+                break;
+            }
+            (None, b'/') if bytes.get(at + 1) == Some(&b'*') => {
+                let end = text[at + 2..].find("*/")? + at + 4;
+                bytes[at..end].fill(b' ');
+                at = end;
+                continue;
+            }
+            (None, _) => {}
+        }
+        at += 1;
+    }
+    Some(String::from_utf8(bytes).expect("only whole comments are made spaces"))
+}
+
+/// Whether a directive's line ends in a splice or holds a trigraph, either of
+/// which changes what the line is before a directive is found (C17 5.1.1.2
+/// p1, phases 1 and 2), and which the lexer does not perform in a directive.
+fn spliced(text: &str) -> bool {
+    let trigraph = text
+        .as_bytes()
+        .windows(3)
+        .any(|three| three[..2] == *b"??" && b"=()/'<>!-".contains(&three[2]));
+    text.trim_end_matches([' ', '\t', '\r']).ends_with('\\') || trigraph
 }
 
 /// One file being read: its tokens, how far they have been read, and, for an
@@ -239,29 +755,58 @@ fn read_includes(
 struct Frame {
     tokens: Vec<Token>,
     cursor: usize,
-    inclusion: Option<(FileId, Span)>,
+    instance: Option<Instance>,
     extent: Option<(Span, Span)>,
 }
 
-/// Note that `token` reached the parser, at every level of the frames open.
+/// What a frame above the input's is.
+enum Instance {
+    /// An inclusion: its file, and the `#include` it was read for.
+    Inclusion { file: FileId, directive: Span },
+    /// An expansion: its file, the name it was used as, and that name, which
+    /// is what keeps it from being expanded again inside itself.
+    Expansion {
+        file: FileId,
+        at: Span,
+        name: String,
+    },
+}
+
+impl Instance {
+    fn file(&self) -> FileId {
+        match self {
+            Self::Inclusion { file, .. } | Self::Expansion { file, .. } => *file,
+        }
+    }
+
+    /// What the frame below was handed in its place.
+    fn used(&self) -> Span {
+        match self {
+            Self::Inclusion { directive, .. } => *directive,
+            Self::Expansion { at, .. } => *at,
+        }
+    }
+}
+
+/// Note that the innermost open frame handed `token` to the parser.
 ///
-/// The innermost frame handed over `token` itself, and each frame below it
-/// handed over the `#include` it read the one above for. So an inclusion's
+/// Each frame below it is handed the `#include` or the name the one above
+/// was read for, once that one ends and if it handed over anything, which is
+/// when the frame loop calls this again with that use. So an inclusion's
 /// extent is what of it the parser reads, an included file standing as its
 /// directive: a directive that hands nothing over, `#define` or an
 /// `#include` of an empty file, is not in it. Taken from the scan instead,
 /// such a line was the first token of a header whose code a node holds
 /// whole, and its lift would have refused C. Found by review. See
 /// `SourceMap::set_extent`.
+///
+/// Only the innermost frame, rather than every frame below it at each token:
+/// that was a walk as deep as the open expansions for every token, and a
+/// chain of distinct macros 32000 deep took 40 s. Found by review.
 fn emitted(frames: &mut [Frame], token: Span) {
-    let mut here = token;
-    for frame in frames.iter_mut().rev() {
-        let first = frame.extent.map_or(here, |(first, _)| first);
-        frame.extent = Some((first, here));
-        let Some((_, directive)) = frame.inclusion else {
-            break;
-        };
-        here = directive;
+    if let Some(frame) = frames.last_mut() {
+        let first = frame.extent.map_or(token, |(first, _)| first);
+        frame.extent = Some((first, token));
     }
 }
 
@@ -346,6 +891,9 @@ fn include(
                 "`{}` is the input, so reading it here would never end",
                 path.display()
             )),
+            FileName::Expansion { .. } => {
+                unreachable!("an expansion is never on the stack of files being read")
+            }
         };
         diagnostics.report(refusal);
         return None;
@@ -464,11 +1012,7 @@ fn include_form(text: &str) -> IncludeForm<'_> {
         }
     }
 
-    let trigraph = text
-        .as_bytes()
-        .windows(3)
-        .any(|three| three[..2] == *b"??" && b"=()/'<>!-".contains(&three[2]));
-    if text.trim_end_matches([' ', '\t', '\r']).ends_with('\\') || trigraph {
+    if spliced(text) {
         return IncludeForm::Spliced;
     }
 
@@ -501,7 +1045,9 @@ fn refused(text: &str, directive: Span, code: Code, message: &str) -> Diagnostic
 fn path_of(name: &FileName) -> Option<&Path> {
     match name {
         FileName::Real(path) | FileName::Inclusion { path, .. } => Some(path),
-        FileName::Virtual(_) => None,
+        // No `#include` is ever in one, since a replacement list holds no
+        // directive, so nothing is resolved from it.
+        FileName::Virtual(_) | FileName::Expansion { .. } => None,
     }
 }
 
@@ -839,11 +1385,14 @@ mod tests {
     #[test]
     fn no_directive_is_left_in_what_is_preprocessed() {
         for text in [
-            "#define X 1\n",
+            "#pragma pack(4)\n",
             "#include <a.h>\n",
             "#include X\n",
             "#include \"a.h\" // \\\nint x;\n",
             "#include \"a.h\"\n",
+            "#define F(x) x\n",
+            "#define G a ## b\n",
+            "#define H \\\nint x;\n",
         ] {
             let mut sources = SourceMap::new();
             let file = sources.add_virtual("t.c", text);
@@ -862,12 +1411,96 @@ mod tests {
         }
     }
 
+    /// A macro whose body uses the next one twice, sixteen deep, is refused
+    /// once its use's expansions pass the bound for one use, and said once.
+    /// 131,071 expansions, under the bound for the input, so only the bound
+    /// for one use is asked.
+    ///
+    /// Mutation: drop the bound for one use. Every expansion is read and
+    /// nothing is reported. Mutation: report every expansion past it. More
+    /// than one is.
+    #[test]
+    fn a_tree_of_expansions_past_the_bound_is_refused_once() {
+        let mut text = String::from("#define M0 1\n");
+        for at in 1..=16 {
+            text.push_str(&format!("#define M{at} M{} M{}\n", at - 1, at - 1));
+        }
+        text.push_str("int x = M16;\n");
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", text);
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        preprocess(file, &tokens, &mut sources, &mut diagnostics);
+
+        let codes: Vec<String> = diagnostics
+            .diagnostics()
+            .iter()
+            .filter_map(|diagnostic| diagnostic.code())
+            .map(|code| code.to_string())
+            .collect();
+        assert_eq!(codes, ["SC0113"]);
+    }
+
+    /// The bound is per use: a macro used once on each of more lines than
+    /// the bound allows expansions is read, since each use is a tree of one.
+    ///
+    /// Mutation: count every expansion in the input. The last use is
+    /// refused as `SC0113`.
+    #[test]
+    fn a_macro_used_on_many_lines_is_not_bounded_as_one_tree() {
+        let mut text = String::from("#define ONE 1\n");
+        for at in 0..=MAX_EXPANSIONS {
+            text.push_str(&format!("int v{at} = ONE;\n"));
+        }
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", text);
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        preprocess(file, &tokens, &mut sources, &mut diagnostics);
+
+        assert!(
+            !diagnostics.has_errors(),
+            "{:?}",
+            diagnostics.diagnostics().first()
+        );
+    }
+
+    /// Many uses of trees under the bound for one use are refused once
+    /// their expansions pass the bound for the input.
+    ///
+    /// Mutation: drop the bound for the input. Every use is read and
+    /// nothing is reported.
+    #[test]
+    fn many_uses_of_large_trees_are_refused_once_past_the_bound_for_the_input() {
+        let mut text = String::from("#define M0 1\n");
+        for at in 1..=12 {
+            text.push_str(&format!("#define M{at} (M{} + M{})\n", at - 1, at - 1));
+        }
+        let uses = MAX_EXPANSIONS_IN_ALL / ((1 << 13) - 1) + 1;
+        for at in 0..uses {
+            text.push_str(&format!("int v{at} = M12;\n"));
+        }
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", text);
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        preprocess(file, &tokens, &mut sources, &mut diagnostics);
+
+        let codes: Vec<String> = diagnostics
+            .diagnostics()
+            .iter()
+            .filter_map(|diagnostic| diagnostic.code())
+            .map(|code| code.to_string())
+            .collect();
+        assert_eq!(codes, ["SC0113"]);
+    }
+
     /// The code moved from the lexer with the report, and is the handle a
     /// reader kept, so it is asserted by itself here as the lexer's are there.
     #[test]
     fn a_directive_that_is_not_read_keeps_the_code_it_was_assigned() {
         let mut sources = SourceMap::new();
-        let file = sources.add_virtual("t.c", "#define X 1\n");
+        let file = sources.add_virtual("t.c", "#pragma pack(4)\n");
         let mut diagnostics = DiagnosticSink::new();
         let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
         preprocess(file, &tokens, &mut sources, &mut diagnostics);

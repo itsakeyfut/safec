@@ -1,0 +1,17 @@
+error[SC0402]: this may use `p` after it was freed
+   ╭─[ a_free_from_a_macro_in_a_parameter_s_length_is_worded_as_a_length_s.c:4:31 ]
+   │
+ 2 │ #define KILL (free(p), 1)
+   │               ───┬───  
+   │                  ╰───── freed here
+   │ 
+ 4 │ int f(int * _Nonnull p, int a[*p + KILL]) {
+   │                               ────┬──┬─  
+   │                                   ╰────── used here, perhaps after the free
+   │                                      │   
+   │                                      ╰─── `KILL` expanded here
+───╯
+  = note: C17 6.5.2.2 p10 leaves a call indeterminately sequenced with the rest of its expression, and this check found nothing here that orders the free before this
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: free it in the body instead, where every parameter's length has already been evaluated

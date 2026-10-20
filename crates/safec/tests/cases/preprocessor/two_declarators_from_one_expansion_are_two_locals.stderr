@@ -1,0 +1,21 @@
+error[SC0402]: this uses `a` after it was freed
+    ╭─[ two_declarators_from_one_expansion_are_two_locals.c:11:5 ]
+    │
+  3 │ #define DECL int *a = malloc(4), *b = 0;
+    │                       ────┬────  
+    │                           ╰────── allocated here
+    │ 
+  6 │     DECL
+    │     ──┬─  
+    │       ╰─── `DECL` expanded here
+    │ 
+  8 │     free(a);
+    │     ───┬───  
+    │        ╰───── freed here
+    │ 
+ 11 │     *a = 1;
+    │     ───┬──  
+    │        ╰──── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here

@@ -26,7 +26,7 @@ use unicode_width::UnicodeWidthChar as _;
 use crate::diagnostics::{Certainty, Diagnostic, DiagnosticSink, Label, Remedy, Severity};
 use crate::options::ColorMode;
 use safec_ir::print::{is_obeyed, shown};
-use safec_ir::source::{FileId, SourceFile, SourceMap, Span};
+use safec_ir::source::{FileId, FileName, SourceFile, SourceMap, Span};
 
 /// How `ariadne` names a region: a file, and a byte range within it.
 ///
@@ -171,6 +171,7 @@ impl Renderer {
         diagnostic: &Diagnostic,
         out: &mut impl io::Write,
     ) -> io::Result<()> {
+        let diagnostic = &written(sources, diagnostic);
         self.write_one(
             &mut SourceMapCache::new(sources, std::slice::from_ref(diagnostic)),
             diagnostic,
@@ -187,8 +188,13 @@ impl Renderer {
         sink: &DiagnosticSink,
         out: &mut impl io::Write,
     ) -> io::Result<()> {
-        let mut cache = SourceMapCache::new(sources, sink.diagnostics());
-        for diagnostic in sink.diagnostics() {
+        let diagnostics: Vec<Diagnostic> = sink
+            .diagnostics()
+            .iter()
+            .map(|diagnostic| written(sources, diagnostic))
+            .collect();
+        let mut cache = SourceMapCache::new(sources, &diagnostics);
+        for diagnostic in &diagnostics {
             self.write_one(&mut cache, diagnostic, out)?;
         }
         Ok(())
@@ -577,6 +583,43 @@ struct SourceMapCache<'a> {
     /// Indexed the same way: whether a label of a diagnostic in this call sits
     /// at the end of that file, once clamped, which is what [`echoed`] is told.
     ends: Vec<bool>,
+}
+
+/// `diagnostic` with every label placed where its text is written, and a
+/// label at each use of a macro a label is in.
+///
+/// A label in an expansion is moved to its replacement list in the
+/// `#define`, through every level, by [`SourceMap::written`], so the header
+/// names a file that exists and the line quoted holds the text. Each use
+/// along its chain gets a label of its own, "`N` expanded here", itself
+/// written, so the reader sees both where the code is and where it came from
+/// (ADR-0054). Done before anything else here reads a label, so the cache's
+/// question of which files a label ends sees the spans that are drawn.
+fn written(sources: &SourceMap, diagnostic: &Diagnostic) -> Diagnostic {
+    let mut written = diagnostic.clone();
+    let mut uses: Vec<Label> = Vec::new();
+    for label in &mut written.labels {
+        let mut file = label.span.file();
+        // Asked only of a file the map has: a label naming one it does not is
+        // reported as such further on, and is left as it is here.
+        while let Some(FileName::Expansion { at, .. }) =
+            (file.index() < sources.len()).then(|| sources.file(file).name())
+        {
+            let expanded = Label::secondary(
+                sources.written(*at),
+                format!("`{}` expanded here", sources.snippet(*at)),
+            );
+            if !uses.contains(&expanded) {
+                uses.push(expanded);
+            }
+            file = at.file();
+        }
+        if label.span.file().index() < sources.len() {
+            label.span = sources.written(label.span);
+        }
+    }
+    written.labels.extend(uses);
+    written
 }
 
 impl<'a> SourceMapCache<'a> {

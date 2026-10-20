@@ -1,0 +1,8 @@
+Function a_parenthesised_macro_body_is_not_refused.c:3:1 "f" "int (int *)"
+  Parameter a_parenthesised_macro_body_is_not_refused.c:3:7 "p" "int *" _Nonnull
+  Compound a_parenthesised_macro_body_is_not_refused.c:3:25
+    Return a_parenthesised_macro_body_is_not_refused.c:4:5
+      Binary a_parenthesised_macro_body_is_not_refused.c:4:12 "+"
+        Unary a_parenthesised_macro_body_is_not_refused.c:1:12 "*"
+          Identifier a_parenthesised_macro_body_is_not_refused.c:1:13 "p"
+        Number a_parenthesised_macro_body_is_not_refused.c:4:16 "1"

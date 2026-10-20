@@ -99,7 +99,7 @@ visible rather than inferred from a diagnostic.
 6.4.6 p3 makes `<:` `:>` `<%` `%>` `%:` `%:%:` the punctuators `[` `]` `{`
 `}` `#` `##` "in all aspects of the language", so `token.rs::DIGRAPHS` scans
 each to that punctuator and nothing after the lexer can tell them apart:
-`%:define` is a directive and `SC0104`, as `#define` is.
+`%:pragma` is a directive and `SC0104`, as `#pragma` is.
 
 The trigraphs of 5.2.1.1 and the splice of 5.1.1.2 p1 phase 2 happen before
 any token exists. A splice the lexer does not perform compiles a different
@@ -136,6 +136,7 @@ Five more are where the *parser* stopped, and belong here for the same reason.
 | `struct S { struct { int a; }; };` | `error[SC0207]` at the inner `struct` | accepts | accepts |
 | a header of `int a;` and `int`, included, then `b;` | `error[SC0207]` at the header's second `int` | accepts | accepts |
 | `int`, then a header of `a, b` included, then `;` | `error[SC0207]` at the header's `a` | accepts | accepts |
+| `#define N 2 + 3`, then `N * 4` | `error[SC0207]` in `N`'s expansion | accepts | accepts |
 
 **Each is C and is not implemented.** The two with a header are C because an
 included file's tokens replace the directive (C17 6.10.2, translation phase 4),
@@ -143,7 +144,9 @@ whatever construct they fall in. The first cuts the header, so a declaration
 holds only part of it, and ADR-0054 refuses such a node rather than joining it.
 The second cuts no construct: each declarator's span starts at the shared
 specifiers, which is this compiler's span and not C's, and #555 builds those
-from the construct instead. C17 6.7.2.1 p9 makes a bit-field valid
+from the construct instead. The macro is the same rule: `N * 4` reads `3 * 4`
+as one operand, so the multiplication holds part of `N`'s expansion, and
+ADR-0054 refuses a node that cuts one. C17 6.7.2.1 p9 makes a bit-field valid
 and p13 an anonymous member, and neither is read yet. 6.7.9 p11 lets a scalar's initializer be a
 single expression "optionally enclosed in braces", so it is valid with no
 designator and no nested list in it; unwrapping the braces is only correct
@@ -723,7 +726,7 @@ where this compiler's own later stages would add more:
 | Written | This compiler | `clang` |
 |---|---|---|
 | `int main(void) { int x = @; return x }` | `error[SC0103]` at the `@` | two syntax errors, and no lexical one |
-| `#define N 4` and a use of `N` | `error[SC0104]` at the directive | compiles it |
+| `#pragma pack(4)` and a function after it | `error[SC0104]` at the directive | compiles it |
 | `void g(void) { return 1; }`, with `--emit llvm-ir` | `error[SC0308]` at the `1`, where the backend's `SC0801` followed it before #354 | one error |
 
 Both were measured against the built compiler and against

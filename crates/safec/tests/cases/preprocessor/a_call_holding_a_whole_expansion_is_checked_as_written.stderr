@@ -1,0 +1,14 @@
+error[SC0402]: this uses `p`, which may have been freed
+   ╭─[ a_call_holding_a_whole_expansion_is_checked_as_written.c:9:14 ]
+   │
+ 6 │     int *p = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+   │ 
+ 9 │     int y = (x = *p) + G(p);
+   │              ───┬──  
+   │                 ╰──── used here, where it may have been freed before
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

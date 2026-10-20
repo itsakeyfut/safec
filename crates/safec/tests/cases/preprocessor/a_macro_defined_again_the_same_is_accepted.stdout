@@ -1,0 +1,6 @@
+Function a_macro_defined_again_the_same_is_accepted.c:4:1 "main" "int (void)"
+  Compound a_macro_defined_again_the_same_is_accepted.c:4:16
+    Return a_macro_defined_again_the_same_is_accepted.c:4:18
+      Binary a_macro_defined_again_the_same_is_accepted.c:1:11 "+"
+        Number a_macro_defined_again_the_same_is_accepted.c:1:11 "1"
+        Number a_macro_defined_again_the_same_is_accepted.c:1:27 "3"

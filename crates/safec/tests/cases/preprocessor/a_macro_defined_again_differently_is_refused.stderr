@@ -1,0 +1,22 @@
+error[SC0114]: `N` is defined again differently
+   ╭─[ a_macro_defined_again_differently_is_refused.c:2:9 ]
+   │
+ 1 │ #define N 4
+   │ ─────┬─────  
+   │      ╰─────── defined here first
+ 2 │ #define N 5
+   │         ┬  
+   │         ╰── defined again here
+───╯
+  = note: a macro may be defined again only with the same replacement list
+error[SC0114]: `M` is defined again differently
+   ╭─[ a_macro_defined_again_differently_is_refused.c:4:9 ]
+   │
+ 3 │ #define M 1+2
+   │ ──────┬──────  
+   │       ╰──────── defined here first
+ 4 │ #define M 1 + 2
+   │         ┬  
+   │         ╰── defined again here
+───╯
+  = note: a macro may be defined again only with the same replacement list

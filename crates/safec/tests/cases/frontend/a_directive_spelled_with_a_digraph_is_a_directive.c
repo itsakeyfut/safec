@@ -1,4 +1,4 @@
-%:define N 3
-#define M 4
+%:pragma pack(4)
+#pragma pack(4)
 int x %:%: y;
 %:%: x
