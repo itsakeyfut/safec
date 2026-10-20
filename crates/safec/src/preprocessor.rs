@@ -322,7 +322,13 @@ fn read_includes(
                     },
                 }
             }
-            TokenKind::Identifier | TokenKind::Keyword(_) => {
+            // An annotation's spelling too: `_Nonnull` is an identifier while
+            // preprocessing, and `#define _Nonnull` with nothing after it is
+            // how a header makes the annotation vanish for a compiler without
+            // it. Left unexpanded, the promise C no longer makes was kept and
+            // a dereference written out as `SC0403` passed in silence. Found
+            // by review.
+            TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Annotation(_) => {
                 match expansion(token, &frames, sources, reading, diagnostics) {
                     Some(frame) => frames.push(frame),
                     None => {
@@ -342,8 +348,9 @@ fn read_includes(
 /// The frame `token` expands to, if it names a macro, or `None` where it is
 /// left as it is.
 ///
-/// A keyword is a name here too, since preprocessing knows only identifiers
-/// (C17 6.4 p1), so `#define int long` is a macro. A name is left as it is
+/// A keyword or an annotation is a name here too, since preprocessing knows
+/// only identifiers (C17 6.4 p1), so `#define int long` and `#define
+/// _Nonnull` are macros. A name is left as it is
 /// where an expansion of it is open, which is the rule that a macro is not
 /// replaced inside its own replacement (6.10.3.4 p2): an object-like macro's
 /// rescan reads only its replacement list, so the open expansions are

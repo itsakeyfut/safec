@@ -1,0 +1,24 @@
+Target "x86_64-pc-windows-msvc"
+Function a_macro_that_removes_an_annotation_removes_its_promise.c:3:16 "g" declared
+  Local "_0" "int *" return
+Function a_macro_that_removes_an_annotation_removes_its_promise.c:5:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" "p"
+  Local "_2" "int *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_macro_that_removes_an_annotation_removes_its_promise.c:6:14 generated
+    Call a_macro_that_removes_an_annotation_removes_its_promise.c:6:14 written "g" "bb1"
+      Destination "_2"
+  Block "bb1"
+    Operation a_macro_that_removes_an_annotation_removes_its_promise.c:6:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_macro_that_removes_an_annotation_removes_its_promise.c:6:14 generated
+    Operation a_macro_that_removes_an_annotation_removes_its_promise.c:7:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_macro_that_removes_an_annotation_removes_its_promise.c:7:12 generated
+    Return

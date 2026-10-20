@@ -4349,6 +4349,11 @@ cases! {
         //
         // Mutation: expand nothing. `N` is a name nothing declares.
         a_macro_compiles_to_the_program_its_body_writes: ["--emit", "ast"],
+        // `#define _Nonnull` with nothing after it, the portability idiom: the
+        // declaration then promises nothing, and the dereference is the
+        // `SC0403` it is written out. Mutation: offer only identifiers and
+        // keywords for expansion. The annotation is kept and this exits 0.
+        a_macro_that_removes_an_annotation_removes_its_promise: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: add no label at the use; or place labels without
         // `SourceMap::written`. The `expanded here` goes, or the header names
         // `<expansion>`.
