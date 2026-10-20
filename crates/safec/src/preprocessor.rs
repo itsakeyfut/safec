@@ -340,6 +340,15 @@ fn include(
 
     reading.inclusions += 1;
     let tokens = lex(file, &sources.file_owned(file), diagnostics);
+    // Its own scan, directives included, so a span lifted out of it can be
+    // told whether it starts or ends where the inclusion does. A file with no
+    // token has nothing to lift. See `SourceMap::set_extent`.
+    let mut scanned = tokens.iter().filter(|token| !token.is_eof());
+    if let (Some(first), Some(last)) = (scanned.next(), scanned.next_back()) {
+        sources.set_extent(file, first.span, last.span);
+    } else if let Some(only) = tokens.iter().find(|token| !token.is_eof()) {
+        sources.set_extent(file, only.span, only.span);
+    }
     reading.open.push((real, file));
     Some(tokens)
 }
@@ -688,6 +697,33 @@ mod tests {
         let files = [("main.c".to_owned(), format!("#include \"{device}\"\n"))];
 
         assert_eq!(reported("device", &files), ["SC0109"]);
+    }
+
+    /// The preprocessor records each inclusion's first and last token, so a
+    /// span at the start of an included file lifts to its `#include`. The
+    /// header opens with a comment, so the file's first byte is not its first
+    /// token.
+    ///
+    /// Mutation: drop the `set_extent` call in `include`. The lift panics,
+    /// since the inclusion has no extent.
+    #[test]
+    fn a_span_at_the_start_of_an_included_file_lifts_to_its_include() {
+        let directory = std::env::temp_dir().join(format!("safec_extent_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&directory);
+        fs::create_dir_all(&directory).unwrap();
+        fs::write(directory.join("main.c"), "#include \"a.h\"\n").unwrap();
+        fs::write(directory.join("a.h"), "/* c */ int z;\n").unwrap();
+
+        let mut sources = SourceMap::new();
+        let main = sources.load(directory.join("main.c")).unwrap();
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(main, &sources.file_owned(main), &mut diagnostics);
+        let preprocessed = preprocess(main, &tokens, &mut sources, &mut diagnostics);
+        let _ = fs::remove_dir_all(&directory);
+
+        let int = preprocessed.tokens()[0].span;
+        assert_eq!((int.start(), int.end()), (8, 11));
+        assert_eq!(sources.lift_start(int, main), Span::new(main, 0, 14));
     }
 
     /// An included file's own includes are found beside it, not beside the
