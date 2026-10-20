@@ -1796,15 +1796,18 @@ fn an_expression_deeper_than_the_parser_nests_still_lowers() {
     assert_eq!(operations, terms + 1);
 }
 
-/// A conflict between two parameters' lengths is placed across every length
-/// it was asked over, from the first to the last, as a call's is placed on
-/// the call: there is no node that holds the lengths, so their extent is the
-/// nearest thing to one (#529). Nothing else reads the end of an origin, and
-/// the artifact prints only its start.
+/// A conflict between two parameters' lengths is placed across every
+/// parameter with a length it was asked over, from the first to the last, as
+/// a call's is placed on the call: there is no node that holds the lengths,
+/// so the parameters holding them are the nearest thing to one (#529). The
+/// parameters rather than the lengths, because a length's node leaves out the
+/// brackets and parentheses it was written in, and a span from it could start
+/// partway through an included parameter. Nothing else reads the end of an
+/// origin, and the artifact prints only its start.
 ///
-/// Mutation: give `conflicts` the first length's span alone. This fails.
+/// Mutation: give `conflicts` the first parameter's span alone. This fails.
 #[test]
-fn a_conflict_between_lengths_spans_every_length() {
+fn a_conflict_between_lengths_spans_every_parameter_with_a_length() {
     let lowered =
         lowered("int f(int *p, int a[(p = 0, 1)], int b[(p = 0, 2)]) {\n    return 0;\n}\n");
     assert_eq!(codes(&lowered), Vec::<String>::new());
@@ -1822,5 +1825,5 @@ fn a_conflict_between_lengths_spans_every_length() {
             _ => None,
         })
         .collect();
-    assert_eq!(origins, ["p = 0, 1)], int b[(p = 0, 2"]);
+    assert_eq!(origins, ["int a[(p = 0, 1)], int b[(p = 0, 2)]"]);
 }

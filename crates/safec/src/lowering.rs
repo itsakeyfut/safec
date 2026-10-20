@@ -1365,6 +1365,7 @@ impl Lowering<'_> {
         // then checks `*p` against the `p` before the write C may run first.
         let mut held = Vec::new();
         let mut walked = Vec::new();
+        let mut declared = Vec::new();
         for parameter in parameters {
             let Type::Array {
                 length: Some(length),
@@ -1381,13 +1382,16 @@ impl Lowering<'_> {
             let value = self.walk(builder, length, false, diagnostics)?;
             held.push((value, span));
             walked.push(length);
+            declared.push(parameter.span);
         }
-        if let (Some(first), Some(last)) = (walked.first(), walked.last()) {
-            let at = self.joined(
-                self.ast.expr(*first).span(),
-                self.ast.expr(*last).span(),
-                diagnostics,
-            )?;
+        // From the first such parameter to the last, spans the parser joined,
+        // rather than from the first length's node to the last's: a length's
+        // node leaves out the brackets and any parenthesis it was written in,
+        // so `int b[*q]` included as a parameter starts its length at `*q`,
+        // partway through the header, and refused C that cuts nothing. Found
+        // by review.
+        if let (Some(&first), Some(&last)) = (declared.first(), declared.last()) {
+            let at = self.joined(first, last, diagnostics)?;
             let each: Vec<_> = walked
                 .iter()
                 .map(|&length| self.accesses(length, false))

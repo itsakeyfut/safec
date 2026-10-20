@@ -24,7 +24,7 @@ Function a_pointer_one_length_reads_and_another_writes_is_reported.c:3:5 "f"
       Destination "_5"
       Use
         Copy "_1"
-    UnsequencedAccess a_pointer_one_length_reads_and_another_writes_is_reported.c:3:21 written "_1" Lengths
+    UnsequencedAccess a_pointer_one_length_reads_and_another_writes_is_reported.c:3:15 written "_1" Lengths
       Written a_pointer_one_length_reads_and_another_writes_is_reported.c:3:38
       Read a_pointer_one_length_reads_and_another_writes_is_reported.c:3:23
     Sequenced a_pointer_one_length_reads_and_another_writes_is_reported.c:3:38 generated

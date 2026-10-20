@@ -1,0 +1,33 @@
+error[SC0402]: this may use `q` after it was freed
+   ╭─[ a_parameter_with_a_length_from_an_include_is_checked_as_written.c:5:21 ]
+   │
+ 5 │     , int a[(q = p, free(p), 1)]) {
+   │                     ───┬───  
+   │                        ╰───── freed here
+   │
+   ├─[ a_parameter_with_a_length_from_an_include_is_checked_as_written.h:1:7 ]
+   │
+ 1 │ int b[*q]
+   │       ─┬  
+   │        ╰── used here, perhaps after the free
+───╯
+  = note: C17 6.7.6 p3 puts a sequence point at the end of a full declarator, and a parameter's declarator is not one, so nothing orders one parameter's length against another's, and this check found nothing here that orders the free before this
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: free it in the body instead, where every parameter's length has already been evaluated
+error[SC0409]: this reads `q`, which another parameter's length writes
+   ╭─[ a_parameter_with_a_length_from_an_include_is_checked_as_written.c:5:14 ]
+   │
+ 5 │     , int a[(q = p, free(p), 1)]) {
+   │              ──┬──  
+   │                ╰──── written here
+   │
+   ├─[ a_parameter_with_a_length_from_an_include_is_checked_as_written.h:1:8 ]
+   │
+ 1 │ int b[*q]
+   │        ┬  
+   │        ╰── read here
+───╯
+  = note: C17 6.5 p2 makes this undefined wherever both are evaluated: a parameter's declarator is not a full declarator (6.7.6 p3), so nothing orders one parameter's length against another's
+  = note: this check belongs to safety level 1
+  = help: write it in the body instead, where every parameter's length has already been evaluated

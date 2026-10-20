@@ -4344,6 +4344,12 @@ cases! {
         // starts at `a`, which is partway through it. Mutation: have the
         // lowering's join `expect` a span. It panics.
         a_store_whose_name_is_partway_through_an_include_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `a_read_in_one_length_meets_what_another_length_frees` with `int
+        // b[*q]` included as a parameter: the same `SC0402` and `SC0409`.
+        // Mutation: join the lengths' span from the first length's node to
+        // the last's, as the lowering did. The node starts at `*q`, partway
+        // through the header, and the function is refused as `SC0304`.
+        a_parameter_with_a_length_from_an_include_is_checked_as_written: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A double free in a header included above a double free written
         // out: the header's findings come first, as its `#include` does.
         // Mutation: sort findings by file index, as `memory::findings` did.
