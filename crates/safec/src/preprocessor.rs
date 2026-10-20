@@ -59,12 +59,15 @@ const MAX_DEPTH: usize = 200;
 /// real header, and `#ifndef` is not read yet. Found by review.
 const MAX_INCLUSIONS: usize = 4096;
 
-/// How many expansions one input may make in all.
+/// How many expansions one use of a macro, written outside any expansion,
+/// may make with everything it expands to.
 ///
 /// The rule that a macro is not expanded inside its own expansion ends every
 /// chain, so this bounds a tree: a macro whose body uses the next one twice,
 /// sixteen deep, is 65,536 expansions, each a file of its own. Past it the
-/// next is refused, once, as [`MAX_INCLUSIONS`] refuses an inclusion.
+/// next is refused, once. Counted per use and not per input, because a file
+/// that uses a macro on each of 65,537 lines asks nothing unusual of C, and
+/// counting them all refused it. Found by review.
 const MAX_EXPANSIONS: usize = 65536;
 
 /// The files being read, the macros defined, and how many inclusions and
@@ -424,6 +427,13 @@ fn expansion(
     }
     let name = name.to_owned();
 
+    // A use written outside any expansion starts a tree of its own.
+    if !frames
+        .iter()
+        .any(|frame| matches!(frame.instance, Some(Instance::Expansion { .. })))
+    {
+        reading.expansions = 0;
+    }
     // Once, at the first past the bound, as `SC0112` is said.
     if reading.expansions >= MAX_EXPANSIONS {
         if reading.expansions == MAX_EXPANSIONS {
@@ -1378,6 +1388,30 @@ mod tests {
             .map(|code| code.to_string())
             .collect();
         assert_eq!(codes, ["SC0113"]);
+    }
+
+    /// The bound is per use: a macro used once on each of more lines than
+    /// the bound allows expansions is read, since each use is a tree of one.
+    ///
+    /// Mutation: count every expansion in the input. The last use is
+    /// refused as `SC0113`.
+    #[test]
+    fn a_macro_used_on_many_lines_is_not_bounded_as_one_tree() {
+        let mut text = String::from("#define ONE 1\n");
+        for at in 0..=MAX_EXPANSIONS {
+            text.push_str(&format!("int v{at} = ONE;\n"));
+        }
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", text);
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        preprocess(file, &tokens, &mut sources, &mut diagnostics);
+
+        assert!(
+            !diagnostics.has_errors(),
+            "{:?}",
+            diagnostics.diagnostics().first()
+        );
     }
 
     /// The code moved from the lexer with the report, and is the handle a
