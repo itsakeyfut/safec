@@ -134,9 +134,11 @@ code under a condition nobody evaluated. Its `#endif` still closes it. Inside a
 group that is skipped, a directive is read only for its name (C17 6.10.1 p6),
 so an `#if` there is counted and not refused, and a header whose include guard
 holds one is read. The macros predefined are what C17 6.10.8.1 requires and
-what every compiler for the target says of it, such as `_WIN32` or
-`__SIZEOF_LONG__`, and a name another target predefines is answered as
-undefined; ADR-0055 is the decision. Any other name C reserves for the
+what every compiler for the target agrees on, such as `_WIN32`, or
+`__SIZEOF_LONG__` where `gcc` and `clang` both build for it; a name no
+compiler for the target defines is answered as undefined, and one they
+disagree on, such as `__x86_64__` for MSVC, is refused. ADR-0055 is the
+decision. Any other name C reserves for the
 implementation (C17 7.1.3), one beginning with `__` or with `_` and a capital
 letter, such as `__GNUC__`, is refused unless the source defines it or it is an
 include guard's `#ifndef` followed by its `#define`, because its answer depends

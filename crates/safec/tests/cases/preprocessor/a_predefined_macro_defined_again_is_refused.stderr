@@ -12,19 +12,19 @@ error[SC0117]: `__STDC_VERSION__` is defined by the implementation
    │                 ╰───────────────── predefined here
 ───╯
   = note: C17 6.10.8 p2 says it shall not be the subject of a `#define` or an `#undef`
-error[SC0117]: `__linux__` is defined by the implementation
-    ╭─[ a_predefined_macro_defined_again_is_refused.c:2:1 ]
-    │
-  2 │ #undef __linux__
-    │ ┬  
-    │ ╰── defined again here
-    │
-    ├─[ <built-in>:14:1 ]
-    │
- 14 │ #define __linux__ 1
-    │ ─────────┬─────────  
-    │          ╰─────────── predefined here
-────╯
+error[SC0117]: `__STDC_HOSTED__` is defined by the implementation
+   ╭─[ a_predefined_macro_defined_again_is_refused.c:2:1 ]
+   │
+ 2 │ #undef __STDC_HOSTED__
+   │ ┬  
+   │ ╰── defined again here
+   │
+   ├─[ <built-in>:3:1 ]
+   │
+ 3 │ #define __STDC_HOSTED__ 1
+   │ ────────────┬────────────  
+   │             ╰────────────── predefined here
+───╯
   = note: C17 6.10.8 p2 says it shall not be the subject of a `#define` or an `#undef`
 error[SC0117]: `__FILE__` is defined by the implementation
    ╭─[ a_predefined_macro_defined_again_is_refused.c:3:1 ]

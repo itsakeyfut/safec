@@ -4510,11 +4510,11 @@ cases! {
         // skips `p = malloc(4);` and builds a double free. Mutation: ask of a
         // splice only in a conditional the frame acts on. It exits 0.
         a_directive_in_a_skipped_group_ending_in_a_splice_is_refused: ["--emit", "safety-ir", "--target", "x86_64-unknown-linux-gnu"],
-        // The same program for two targets (#559): `_WIN32` and `__STDC__`
-        // answer differently, and `__linux__` is answered rather than refused
-        // where no target predefines it. Mutation: predefine nothing. `_WIN32`
-        // is refused. Mutation: read one target's list for every target. One
-        // of the two takes the other group.
+        // The same program for two targets (#559): `_WIN32` answers
+        // differently, and `__linux__` is answered rather than refused where
+        // no compiler for the target predefines it. Mutation: predefine
+        // nothing. `_WIN32` is refused. Mutation: read one target's list for
+        // every target. One of the two takes the other group.
         win32_is_defined_for_msvc: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         win32_is_not_defined_for_linux: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
         // `201710L` reaches the parser, which refuses its suffix as it would
@@ -4525,9 +4525,23 @@ cases! {
         // __STDC_VERSION__` is reported. Mutation: predefine nothing. The
         // `#ifdef` is refused and nothing is analysed.
         a_double_free_under_a_predefined_name_is_found: ["--emit", "safety-ir", "--target", "x86_64-unknown-linux-gnu"],
-        // `#ifndef _FOO_H` followed by `#define _FOO_H`, included twice.
-        // Mutation: drop the guard idiom. Both inclusions are refused.
+        // `#ifndef _FOO_H` followed by `#define _FOO_H`, and `_BAR_H` defined
+        // as `1`, included twice. Mutation: drop the guard idiom. Both
+        // inclusions are refused. Mutation: take only an empty list as a
+        // guard. `_BAR_H` is refused.
         a_reserved_guard_is_read_once: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
+        // `#ifndef __SIZE_TYPE__` above `#define __SIZE_TYPE__ char` is the
+        // fallback for a name `clang` and `gcc` predefine, not a guard.
+        // Mutation: take any list as a guard's. The first is read, and `char`
+        // declared where every build has `unsigned long`. Mutation: take a
+        // name `clang` predefines as a guard. `__NO_INLINE__` is read.
+        a_compiler_s_fallback_is_not_a_guard: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
+        // `clang` predefines `__x86_64__` for MSVC and `cl.exe` does not, so
+        // the double free `cl.exe` builds is in the `#else`. Mutation: answer
+        // a name the target's compilers disagree on from the lists. It is
+        // undefined, and the double free is reported where the `#ifdef`
+        // should have been refused.
+        a_name_its_compilers_disagree_on_is_refused_for_msvc: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: take the idiom whatever name the next `#define` defines.
         // It exits 0.
         a_reserved_name_followed_by_another_define_is_refused: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
@@ -4535,9 +4549,13 @@ cases! {
         // expand a dynamic macro as its empty list. `int line = ;` is
         // reported as a syntax error instead.
         the_line_macro_is_refused_where_it_is_used: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
-        // C17 6.10.8 p2. Mutation: let a `#define` or `#undef` of a
-        // predefined name through. Nothing is reported.
+        // C17 6.10.8 p2, for the names it lists. Mutation: let a `#define`
+        // or `#undef` of a predefined name through. Nothing is reported.
         a_predefined_macro_defined_again_is_refused: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
+        // A target's names are not 6.10.8's: defined again the same, or
+        // undefined, as `clang` accepts. Mutation: refuse a `#define` or an
+        // `#undef` of every predefined name. Two are reported.
+        a_target_s_name_may_be_defined_again: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
         // `#ifndef A\u00e9` asks about `A\u00e9`, which nothing can define
         // here, and C builds the double free under it. Mutation: let a name
         // end at a `\`. It is `#ifndef A`, the free is skipped, and it exits

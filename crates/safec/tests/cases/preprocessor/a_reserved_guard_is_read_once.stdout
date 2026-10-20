@@ -1,5 +1,7 @@
 Declaration a_reserved_guard_is_read_once.h:3:1 "struct S"
   Field a_reserved_guard_is_read_once.h:3:12 "x" "int"
+Declaration a_reserved_guard_is_read_once.h:7:1 "struct T"
+  Field a_reserved_guard_is_read_once.h:7:12 "y" "int"
 Function a_reserved_guard_is_read_once.c:4:1 "main" "int (void)"
   Compound a_reserved_guard_is_read_once.c:4:16
     Declaration a_reserved_guard_is_read_once.c:4:18 "s" "struct S"

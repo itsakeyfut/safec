@@ -102,6 +102,8 @@ struct Reading {
     /// Every object-like macro defined so far, by name.
     macros: HashMap<String, Macro>,
     expansions: usize,
+    /// What the input is compiled for, which decides what is predefined.
+    target: Target,
     /// Every expansion this input has made.
     expansions_in_all: usize,
     /// How many expansions of each name are open, and of all names: what the
@@ -204,6 +206,7 @@ pub fn preprocess(
         inclusions: 0,
         macros: HashMap::new(),
         expansions: 0,
+        target,
         expansions_in_all: 0,
         open_macros: HashMap::new(),
         open_expansions: 0,
@@ -492,7 +495,9 @@ fn read_includes(
                             diagnostics,
                         ),
                         MacroForm::Undef { name } => match reading.macros.get(name) {
-                            Some(earlier) if earlier.origin != Origin::Written => {
+                            Some(earlier)
+                                if earlier.origin != Origin::Written && standard(name) =>
+                            {
                                 diagnostics.report(predefined_again(
                                     name,
                                     hash(&text, token.span),
@@ -753,7 +758,7 @@ fn define(
     }
 
     if let Some(earlier) = reading.macros.get(name) {
-        if earlier.origin != Origin::Written {
+        if earlier.origin != Origin::Written && standard(name) {
             diagnostics.report(predefined_again(name, named, earlier));
         } else if earlier.tokens != tokens {
             diagnostics.report(
@@ -777,8 +782,11 @@ fn define(
     );
 }
 
-/// The report for a `#define` or an `#undef`, at `at`, of `name`, which the
-/// implementation defined as `earlier`.
+/// The report for a `#define` or an `#undef`, at `at`, of `name`, one C17
+/// 6.10.8 lists, which the implementation defined as `earlier`. Not of a
+/// target's names, `__linux__` among them, which 6.10.8 p2 does not cover and
+/// `clang` accepts a definition of; asking of every predefined name refused
+/// that. Found by review.
 fn predefined_again(name: &str, at: Span, earlier: &Macro) -> Diagnostic {
     let report = Diagnostic::error(format!("`{name}` is defined by the implementation"))
         .with_code(PREDEFINED_AGAIN)
@@ -797,12 +805,14 @@ fn predefined_again(name: &str, at: Span, earlier: &Macro) -> Diagnostic {
 const DYNAMIC: [&str; 4] = ["__FILE__", "__LINE__", "__DATE__", "__TIME__"];
 
 /// The `#define` lines `target` predefines: what C17 6.10.8.1 requires and
-/// what every compiler for the triple says of it, and nothing that names a
+/// what every compiler for the triple agrees on, and nothing that names a
 /// compiler. See ADR-0055.
 ///
 /// Each value was measured with `clang 20.1.6 --target=<triple> -std=c17
-/// -dM -E` on an empty file, and a name `clang` leaves out for a triple is
-/// left out here: `__STDC__` for `x86_64-pc-windows-msvc`.
+/// -dM -E` on an empty file. A name is here only where the other compilers
+/// for the triple are documented to define it too, `gcc` for Linux and
+/// Darwin and `cl.exe` for MSVC; where they are not, it is in [`unsettled`]
+/// instead. `wasm32-unknown-unknown` has `clang` alone.
 fn predefined(target: Target) -> &'static str {
     match target.triple() {
         "aarch64-apple-darwin" => {
@@ -818,12 +828,9 @@ fn predefined(target: Target) -> &'static str {
             #define __ORDER_LITTLE_ENDIAN__ 1234\n\
             #define __ORDER_BIG_ENDIAN__ 4321\n\
             #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__\n\
-            #define __LITTLE_ENDIAN__ 1\n\
             #define __APPLE__ 1\n\
             #define __MACH__ 1\n\
-            #define __aarch64__ 1\n\
-            #define __arm64__ 1\n\
-            #define __arm64 1\n"
+            #define __aarch64__ 1\n"
         }
         "aarch64-unknown-linux-gnu" => {
             "#define __STDC__ 1\n\
@@ -839,7 +846,6 @@ fn predefined(target: Target) -> &'static str {
             #define __ORDER_LITTLE_ENDIAN__ 1234\n\
             #define __ORDER_BIG_ENDIAN__ 4321\n\
             #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__\n\
-            #define __LITTLE_ENDIAN__ 1\n\
             #define __linux__ 1\n\
             #define __linux 1\n\
             #define __unix__ 1\n\
@@ -857,12 +863,9 @@ fn predefined(target: Target) -> &'static str {
             #define __SIZEOF_INT__ 4\n\
             #define __SIZEOF_LONG__ 4\n\
             #define __SIZEOF_POINTER__ 4\n\
-            #define __ILP32__ 1\n\
-            #define _ILP32 1\n\
             #define __ORDER_LITTLE_ENDIAN__ 1234\n\
             #define __ORDER_BIG_ENDIAN__ 4321\n\
             #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__\n\
-            #define __LITTLE_ENDIAN__ 1\n\
             #define __linux__ 1\n\
             #define __linux 1\n\
             #define __unix__ 1\n\
@@ -879,12 +882,9 @@ fn predefined(target: Target) -> &'static str {
             #define __SIZEOF_INT__ 4\n\
             #define __SIZEOF_LONG__ 4\n\
             #define __SIZEOF_POINTER__ 4\n\
-            #define __ILP32__ 1\n\
-            #define _ILP32 1\n\
             #define __ORDER_LITTLE_ENDIAN__ 1234\n\
             #define __ORDER_BIG_ENDIAN__ 4321\n\
             #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__\n\
-            #define __LITTLE_ENDIAN__ 1\n\
             #define __linux__ 1\n\
             #define __linux 1\n\
             #define __unix__ 1\n\
@@ -924,7 +924,6 @@ fn predefined(target: Target) -> &'static str {
             #define __ORDER_LITTLE_ENDIAN__ 1234\n\
             #define __ORDER_BIG_ENDIAN__ 4321\n\
             #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__\n\
-            #define __LITTLE_ENDIAN__ 1\n\
             #define __APPLE__ 1\n\
             #define __MACH__ 1\n\
             #define __x86_64__ 1\n\
@@ -933,22 +932,9 @@ fn predefined(target: Target) -> &'static str {
             #define __amd64 1\n"
         }
         "x86_64-pc-windows-msvc" => {
-            "#define __STDC_VERSION__ 201710L\n\
-            #define __STDC_HOSTED__ 1\n\
-            #define __CHAR_BIT__ 8\n\
-            #define __SIZEOF_INT__ 4\n\
-            #define __SIZEOF_LONG__ 4\n\
-            #define __SIZEOF_POINTER__ 8\n\
-            #define __ORDER_LITTLE_ENDIAN__ 1234\n\
-            #define __ORDER_BIG_ENDIAN__ 4321\n\
-            #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__\n\
-            #define __LITTLE_ENDIAN__ 1\n\
+            "#define __STDC_HOSTED__ 1\n\
             #define _WIN32 1\n\
             #define _WIN64 1\n\
-            #define __x86_64__ 1\n\
-            #define __x86_64 1\n\
-            #define __amd64__ 1\n\
-            #define __amd64 1\n\
             #define _M_X64 100\n\
             #define _M_AMD64 100\n"
         }
@@ -965,7 +951,6 @@ fn predefined(target: Target) -> &'static str {
             #define __ORDER_LITTLE_ENDIAN__ 1234\n\
             #define __ORDER_BIG_ENDIAN__ 4321\n\
             #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__\n\
-            #define __LITTLE_ENDIAN__ 1\n\
             #define __linux__ 1\n\
             #define __linux 1\n\
             #define __unix__ 1\n\
@@ -981,21 +966,80 @@ fn predefined(target: Target) -> &'static str {
     }
 }
 
-/// Whether some target predefines `name`, which makes whether this one does
-/// a fact about this one rather than a question it cannot answer. See
-/// ADR-0055.
+/// The names one compiler for `target` predefines and another does not,
+/// which `#ifdef` refuses rather than answers. See ADR-0055.
+///
+/// For MSVC, `clang` defines the GNU names, `__x86_64__` and
+/// `__SIZEOF_LONG__` among them, which `cl.exe`'s documentation does not
+/// list, and `cl.exe` defines `__STDC__` and `__STDC_VERSION__` only under an
+/// option. Elsewhere, `clang` defines `__LITTLE_ENDIAN__` and, on a 32-bit
+/// target, `__ILP32__`, which `gcc`'s documentation does not name, and on
+/// Darwin `__arm64__`, which no `gcc` for Darwin was measured for. Answered
+/// from `clang`'s list, `#ifdef __x86_64__` took a group `cl.exe` skips, and a
+/// double free in that group was analysed away. Found by review.
+fn unsettled(target: Target) -> &'static [&'static str] {
+    match target.triple() {
+        "aarch64-apple-darwin" => &["__LITTLE_ENDIAN__", "__arm64__", "__arm64"],
+        "aarch64-unknown-linux-gnu" => &["__LITTLE_ENDIAN__"],
+        "armv7-unknown-linux-gnueabihf" => &["__ILP32__", "_ILP32", "__LITTLE_ENDIAN__"],
+        "i686-unknown-linux-gnu" => &["__ILP32__", "_ILP32", "__LITTLE_ENDIAN__"],
+        "wasm32-unknown-unknown" => &[],
+        "x86_64-apple-darwin" => &["__LITTLE_ENDIAN__"],
+        "x86_64-pc-windows-msvc" => &[
+            "__STDC__",
+            "__STDC_VERSION__",
+            "__CHAR_BIT__",
+            "__SIZEOF_INT__",
+            "__SIZEOF_LONG__",
+            "__SIZEOF_POINTER__",
+            "__ORDER_LITTLE_ENDIAN__",
+            "__ORDER_BIG_ENDIAN__",
+            "__BYTE_ORDER__",
+            "__LITTLE_ENDIAN__",
+            "__x86_64__",
+            "__x86_64",
+            "__amd64__",
+            "__amd64",
+        ],
+        "x86_64-unknown-linux-gnu" => &["__LITTLE_ENDIAN__"],
+        triple => panic!("no predefined macros are written for {triple}"),
+    }
+}
+
+/// Every name C reserves that `clang 20.1.6` predefines for some row of
+/// `Target::ALL`, one per line, sorted: what the include-guard idiom does not
+/// take, since a header's `#ifndef __SIZE_TYPE__` above a `#define` of it is
+/// the fallback for a name the compiler predefines, not a guard. Measured
+/// with `clang --target=<triple> -std=c17 -dM -E` on an empty file for each
+/// row, keeping the names that begin with `__` or with `_` and a capital.
+const CLANG_RESERVED: &str = include_str!("preprocessor/clang-reserved-names.txt");
+
+/// Whether `name` is predefined or unsettled for some target, which makes
+/// whether this one predefines it a fact about this one rather than a
+/// question it cannot answer. See ADR-0055.
 fn known(name: &str) -> bool {
     DYNAMIC.contains(&name)
         || Target::ALL.iter().any(|target| {
-            predefined(*target)
-                .lines()
-                .any(|line| line.split(' ').nth(1) == Some(name))
+            unsettled(*target).contains(&name)
+                || predefined(*target)
+                    .lines()
+                    .any(|line| line.split(' ').nth(1) == Some(name))
         })
 }
 
+/// Whether C17 6.10.8 names `name`, which 6.10.8 p2 forbids a `#define` or
+/// an `#undef` of. Every other predefined name may be defined again the same
+/// way, or undefined, as `clang` accepts.
+fn standard(name: &str) -> bool {
+    DYNAMIC.contains(&name) || matches!(name, "__STDC__" | "__STDC_VERSION__" | "__STDC_HOSTED__")
+}
+
 /// Whether `form` is `#ifndef N` and `next`, the token after it, is a
-/// `#define N`: the include-guard idiom, which answers `N` from the source
-/// alone. See ADR-0055.
+/// `#define N` with an empty list or `1`: the include-guard idiom, which
+/// answers `N` from the source alone. Not where `clang` predefines `N`, whose
+/// `#ifndef` and `#define` are a fallback for the compiler's value rather
+/// than a guard: `#define __SIZE_TYPE__ char` there declared a `char` where
+/// every build has an `unsigned long`. Found by review. See ADR-0055.
 fn guards(form: &ConditionalForm, next: Token, sources: &SourceMap) -> bool {
     let ConditionalForm::Ifdef {
         negated: true,
@@ -1008,9 +1052,15 @@ fn guards(form: &ConditionalForm, next: Token, sources: &SourceMap) -> bool {
     if next.kind != TokenKind::Directive {
         return false;
     }
-    blanked(sources.snippet(next.span)).is_some_and(
-        |text| matches!(macro_form(&text), MacroForm::Define { name, .. } if name == *guarded),
-    )
+    if CLANG_RESERVED.lines().any(|name| name == *guarded) {
+        return false;
+    }
+    blanked(sources.snippet(next.span)).is_some_and(|text| match macro_form(&text) {
+        MacroForm::Define { name, body, .. } => {
+            name == *guarded && matches!(&text[body.0 as usize..body.1 as usize], "" | "1")
+        }
+        _ => false,
+    })
 }
 
 /// What a directive that is not an `#include` is, where it is a macro's.
@@ -1409,9 +1459,11 @@ fn act(
             let what = if negated { "#ifndef" } else { "#ifdef" };
             match name {
                 // A name C reserves for the implementation (C17 7.1.3 p1)
-                // that no target here predefines, such as `__GNUC__`, whose
-                // answer depends on the compiler that builds the file rather
-                // than on the target, so this cannot give one. Answered as
+                // that no target here predefines, such as `__GNUC__`, or that
+                // one compiler for this target predefines and another does
+                // not, such as `__x86_64__` for MSVC: its answer depends on
+                // the compiler that builds the file rather than on the
+                // target, so this cannot give one. Answered as
                 // undefined, the group a compiler builds was skipped, and a
                 // double free under it analysed away. Found by review. A name
                 // the source defines first is answered, and so is the
@@ -1421,7 +1473,7 @@ fn act(
                 Named::Read(name)
                     if reserved(name)
                         && !reading.macros.contains_key(name)
-                        && !known(name)
+                        && (unsettled(reading.target).contains(&name) || !known(name))
                         && !guard =>
                 {
                     diagnostics.report(
@@ -2502,19 +2554,22 @@ mod tests {
         })
     }
 
-    /// Two targets' answers, written out as `clang 20.1.6` measured them
-    /// rather than read back from the lists, which would hold for any values.
+    /// Two targets' answers, written out as `clang 20.1.6` measured them and
+    /// the other compilers' documentation agrees, rather than read back from
+    /// the lists, which would hold for any values.
     ///
     /// Mutation: change any of these values in a list, or give one target
-    /// another's list. One assertion fails.
+    /// another's list, or move a name between a list and [`unsettled`]. One
+    /// assertion fails.
     #[test]
-    fn every_target_predefines_what_clang_says() {
+    fn every_target_predefines_what_its_compilers_agree_on() {
         let msvc = "x86_64-pc-windows-msvc";
         let arm = "aarch64-unknown-linux-gnu";
         assert_eq!(value(msvc, "_WIN32"), Some("1"));
         assert_eq!(value(msvc, "_WIN64"), Some("1"));
         assert_eq!(value(msvc, "__STDC__"), None);
-        assert_eq!(value(msvc, "__SIZEOF_LONG__"), Some("4"));
+        assert_eq!(value(msvc, "__SIZEOF_LONG__"), None);
+        assert_eq!(value(msvc, "__STDC_HOSTED__"), Some("1"));
         assert_eq!(value(msvc, "__CHAR_UNSIGNED__"), None);
         assert_eq!(value(msvc, "_M_X64"), Some("100"));
         assert_eq!(value(arm, "_WIN32"), None);
@@ -2524,6 +2579,16 @@ mod tests {
         assert_eq!(value(arm, "__CHAR_UNSIGNED__"), Some("1"));
         assert_eq!(value(arm, "__aarch64__"), Some("1"));
         assert_eq!(value(arm, "__linux__"), Some("1"));
+        assert_eq!(value(arm, "__LITTLE_ENDIAN__"), None);
+
+        let unsettled = |triple| unsettled(Target::from_triple(triple).expect("a known triple"));
+        assert!(unsettled(msvc).contains(&"__x86_64__"));
+        assert!(unsettled(msvc).contains(&"__SIZEOF_LONG__"));
+        assert!(unsettled(msvc).contains(&"__STDC__"));
+        assert!(unsettled(msvc).contains(&"__STDC_VERSION__"));
+        assert!(!unsettled(msvc).contains(&"_WIN32"));
+        assert!(unsettled(arm).contains(&"__LITTLE_ENDIAN__"));
+        assert!(!unsettled(arm).contains(&"__aarch64__"));
     }
 
     /// Every target has a list, and every line of it is a `#define` this
@@ -2555,6 +2620,7 @@ mod tests {
     fn a_name_some_target_predefines_is_known() {
         assert!(known("_WIN32"));
         assert!(known("__linux__"));
+        assert!(known("__ILP32__"));
         assert!(known("__LINE__"));
         assert!(!known("__GNUC__"));
         assert!(!known("_MSC_VER"));
