@@ -4339,6 +4339,11 @@ cases! {
         // climb's nodes from their operands' spans, as `Parser::joined` did.
         // The assignment ends at `1`, cuts the header, and is refused.
         a_parenthesised_included_operand_is_not_refused: ["--emit", "ast"],
+        // `int` then an `#include` of `*a` then `= 0;`: every node the parser
+        // builds holds the header whole, and the lowering's store of `a`
+        // starts at `a`, which is partway through it. Mutation: have the
+        // lowering's join `expect` a span. It panics.
+        a_store_whose_name_is_partway_through_an_include_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A double free in a header included above a double free written
         // out: the header's findings come first, as its `#include` does.
         // Mutation: sort findings by file index, as `memory::findings` did.

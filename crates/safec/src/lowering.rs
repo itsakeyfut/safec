@@ -39,7 +39,7 @@ use safec_ir::ir::{
     Between, BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin,
     Parameter, Place, Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
-use safec_ir::source::{SourceMap, Span};
+use safec_ir::source::{Edge, SourceMap, Span};
 use safec_ir::target::Target;
 
 /// Something the frontend accepted and this stage cannot express.
@@ -978,13 +978,14 @@ impl Lowering<'_> {
         match self.sources.join(from, to) {
             Ok(span) => Some(span),
             Err(cut) => {
+                let label = match cut.edge {
+                    Edge::Start => "begins partway through an included file",
+                    Edge::End => "ends partway through an included file",
+                };
                 diagnostics.report(
                     Diagnostic::error("cannot compile a construct that cuts an `#include` yet")
                         .with_code(LOWERING)
-                        .with_label(Label::primary(
-                            cut.span,
-                            "the included file goes on past what this needs",
-                        )),
+                        .with_label(Label::primary(cut.span, label)),
                 );
                 None
             }
