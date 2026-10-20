@@ -1,0 +1,8 @@
+error[SC0109]: cannot read the included file
+   ╭─[ an_include_that_names_no_file_is_refused.c:1:10 ]
+   │
+ 1 │ #include "missing.h"
+   │          ─────┬─────  
+   │               ╰─────── included here
+───╯
+  = note: `missing.h` was looked for at `missing.h`: nothing exists at this path

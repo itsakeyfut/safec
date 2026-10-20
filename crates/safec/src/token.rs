@@ -77,8 +77,8 @@ pub enum TokenKind {
     /// Not preprocessed, and not broken into the tokens the line is written
     /// with: a directive is not C, and its pieces make a parser produce an
     /// avalanche of errors about a line it was never meant to read. Kept rather
-    /// than dropped so that every byte still has a place, and so that stage 3
-    /// has the span when there is a preprocessor to hand it to.
+    /// than dropped so that every byte still has a place, and so that the
+    /// preprocessor has the line to read.
     Directive,
     /// A run of characters that can begin no token at all.
     ///

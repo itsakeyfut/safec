@@ -68,6 +68,18 @@ pub enum FileName {
     Real(PathBuf),
     /// A file with no path, named for the reader.
     Virtual(String),
+    /// A file read because an `#include` named it, one of these per inclusion.
+    ///
+    /// An instance in ADR-0054's sense: two inclusions of one header are two
+    /// files, never one, so no span from the first can equal one from the
+    /// second.
+    Inclusion {
+        /// The file as it was resolved: the including file's directory joined
+        /// to what the directive spelled.
+        path: PathBuf,
+        /// The directive, in the including file.
+        at: Span,
+    },
 }
 
 impl fmt::Display for FileName {
@@ -75,6 +87,9 @@ impl fmt::Display for FileName {
         match self {
             Self::Real(path) => write!(f, "{}", path.display()),
             Self::Virtual(name) => write!(f, "<{name}>"),
+            // The path alone, so a diagnostic in a header names the header.
+            // Where it was included from is `at`'s to say, not the name's.
+            Self::Inclusion { path, .. } => write!(f, "{}", path.display()),
         }
     }
 }
@@ -366,6 +381,22 @@ impl SourceMap {
         Ok(self.add(FileName::Real(path.to_path_buf()), contents))
     }
 
+    /// Read a file an `#include` at `at` names, and add it as an inclusion.
+    ///
+    /// A new file on every call, a second inclusion of the same path
+    /// included. See [`FileName::Inclusion`].
+    pub fn include(&mut self, path: impl AsRef<Path>, at: Span) -> io::Result<FileId> {
+        let path = path.as_ref();
+        let contents = fs::read_to_string(path)?;
+        Ok(self.add(
+            FileName::Inclusion {
+                path: path.to_path_buf(),
+                at,
+            },
+            contents,
+        ))
+    }
+
     /// Add a file that is not on disk.
     ///
     /// For test inputs today. Later for the buffers the Clang adapter hands
@@ -615,6 +646,14 @@ mod tests {
             FileName::Virtual("expansion".to_owned()).to_string(),
             "<expansion>"
         );
+        assert_eq!(
+            FileName::Inclusion {
+                path: PathBuf::from("src/list.h"),
+                at: Span::at(FileId(0), 0),
+            }
+            .to_string(),
+            "src/list.h"
+        );
     }
 
     /// The `12:5` half of the same header.
@@ -640,6 +679,39 @@ mod tests {
 
         assert_eq!(map.file(id).name(), &FileName::Real(path.clone()));
         assert_eq!(map.file(id).contents(), "int main(void) { return 0; }");
+
+        fs::remove_file(&path).unwrap();
+    }
+
+    /// Two inclusions of one header are two files (ADR-0054), so a span in
+    /// one never equals a span in the other, and each remembers its own
+    /// directive.
+    ///
+    /// Mutation: have `include` return the id of a file already holding the
+    /// same path. Both assertions fail.
+    #[test]
+    fn including_one_file_twice_adds_two_files() {
+        let path = std::env::temp_dir().join("safec_including_one_file_twice.h");
+        fs::write(&path, "int f(void);").unwrap();
+
+        let mut map = SourceMap::new();
+        let main = map.add_virtual(
+            "main.c",
+            "#include \"a.h\"
+#include \"a.h\"
+",
+        );
+        let first = map.include(&path, Span::new(main, 0, 14)).unwrap();
+        let second = map.include(&path, Span::new(main, 15, 29)).unwrap();
+
+        assert_ne!(first, second);
+        assert_eq!(
+            map.file(second).name(),
+            &FileName::Inclusion {
+                path: path.clone(),
+                at: Span::new(main, 15, 29)
+            }
+        );
 
         fs::remove_file(&path).unwrap();
     }

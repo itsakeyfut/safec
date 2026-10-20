@@ -39,6 +39,7 @@ use crate::lexer::lex;
 use crate::lowering::lower;
 use crate::options::{EmitKind, Options};
 use crate::parser::parse;
+use crate::preprocessor::preprocess;
 use crate::safety::SafetyLevel;
 use crate::sema::{Resolution, resolve};
 use crate::token::Token;
@@ -291,25 +292,32 @@ pub fn compile(options: &Options) -> Compiled {
     };
     for &file in &loaded {
         // `file_owned` rather than `file`: the scan holds its text for longer
-        // than a statement, and adds to the map while doing so once `#include`
-        // lands. See ADR-0005.
+        // than a statement, and `#include` adds to the map while it does. See
+        // ADR-0005.
         let source = sources.file_owned(file);
 
         // Taken before the scan rather than before the parse, so that it
         // answers "was this input read whole" rather than "did it parse". A
-        // directive is the case that separates the two: the lexer reports it,
-        // says in its own note that the line is not compiled, and hands the
-        // parser a token it skips without complaint, so a gate placed after
-        // the scan is open on a file whose declarations were dropped. Every
-        // macro name in it is then a name nothing declares.
+        // directive is the case that separates the two: the preprocessor
+        // reports one it does not read, says in its own note that the line is
+        // not compiled, and hands the parser a token it skips without
+        // complaint, so a gate placed after the scan is open on a file whose
+        // declarations were dropped. Every macro name in it is then a name
+        // nothing declares. An included file that cannot be read is the same
+        // case again.
         let read_whole = diagnostics.error_count();
-        let tokens = lex(file, &source, &mut diagnostics);
+        let scanned = lex(file, &source, &mut diagnostics);
+        // Run whatever is emitted, so a directive is reported under
+        // `--emit tokens` as it was when the lexer reported it.
+        let tokens = preprocess(file, &scanned, &mut sources, &mut diagnostics);
 
         // Every input appends to one artifact, and every line names its file,
         // so `--emit tokens a.c b.c` reads as one dump rather than needing two
         // destinations.
         match &mut artifact {
-            Emitted::Tokens(out) => dump_tokens(&source, &tokens, out),
+            // The input's own scan: an included file's tokens are what the
+            // parser reads, and are not this input's.
+            Emitted::Tokens(out) => dump_tokens(&source, &scanned, out),
             Emitted::Ast(out) => {
                 let Some(analysed) = analysed(
                     &sources,
@@ -393,6 +401,38 @@ pub fn compile(options: &Options) -> Compiled {
                     named: stem(sources.file(file).name()),
                     text,
                 });
+            }
+        }
+    }
+
+    // An included file is an input the command line did not name, so the
+    // check above, made before anything is read, cannot see it: `-o ok.h`
+    // wrote the dump over the header the run had just read. Found by review.
+    // Asked by canonical path, because an include is spelled from the
+    // directory of the file that includes it and `-o` from where safec runs.
+    // A destination that does not exist yet is no file anything read.
+    if let Some(path) = destination(options) {
+        if let Ok(written) = fs::canonicalize(&path) {
+            let included = sources.files().any(|(_, file)| match file.name() {
+                FileName::Inclusion { path: read, .. } => {
+                    fs::canonicalize(read).is_ok_and(|read| read == written)
+                }
+                FileName::Real(_) | FileName::Virtual(_) => false,
+            });
+            if included {
+                diagnostics.report(
+                    Diagnostic::error(format!(
+                        "`--emit {}` would write over `{}`, which an `#include` read",
+                        options.emit.spelling(),
+                        path.display()
+                    ))
+                    .with_note("give it a name that no input includes"),
+                );
+                return Compiled {
+                    sources,
+                    diagnostics,
+                    artifact: None,
+                };
             }
         }
     }
@@ -486,10 +526,10 @@ struct Analysed {
 /// The first gate is this input read whole. `has_errors` answers for the whole
 /// run, so a count taken either side of the work on one file is what says
 /// whether that file came through it. A directive is the case that separates
-/// "read whole" from "parsed": the lexer reports it, says in its own note that
-/// the line is not compiled, and hands the parser a token it skips without
-/// complaint, so a gate placed after the scan is open on a file whose
-/// declarations were dropped.
+/// "read whole" from "parsed": the preprocessor reports one it does not read,
+/// says in its own note that the line is not compiled, and hands the parser a
+/// token it skips without complaint, so a gate placed after the scan is open on
+/// a file whose declarations were dropped.
 ///
 /// The second is the parse. What the parser says about a token stream with a
 /// hole in it is a second diagnostic about the first one's problem, and the
@@ -930,7 +970,9 @@ fn finish(artifact: &mut Emitted, options: &Options, diagnostics: &mut Diagnosti
 /// test builds one.
 fn stem(name: &FileName) -> String {
     match name {
-        FileName::Real(path) => path
+        // An inclusion is never an input, so nothing names an artifact after
+        // one, and it answers as the file on disk it is.
+        FileName::Real(path) | FileName::Inclusion { path, .. } => path
             .file_stem()
             .unwrap_or(path.as_os_str())
             .to_string_lossy()
@@ -980,7 +1022,7 @@ fn load_failure(path: &Path, error: &io::Error) -> Diagnostic {
 /// Which way a path was being used when it failed, so that a note can say
 /// what safec wanted from it.
 #[derive(Clone, Copy)]
-enum Access {
+pub(crate) enum Access {
     Read,
     Write,
 }
@@ -999,7 +1041,7 @@ enum Access {
 /// hosts: `a.c/x.c` with `a.c` a file is `NotFound` on Windows, measured, and
 /// `NotADirectory` on Linux, read from `std`'s mapping of `ENOTDIR` rather than
 /// run. Both are fairly called missing.
-fn reason(path: &Path, error: &io::Error, access: Access) -> String {
+pub(crate) fn reason(path: &Path, error: &io::Error, access: Access) -> String {
     // The path is asked before the error, because the error does not say this
     // the same way everywhere: Windows reports a directory as
     // `PermissionDenied`, for reading and for creating alike, and naming the

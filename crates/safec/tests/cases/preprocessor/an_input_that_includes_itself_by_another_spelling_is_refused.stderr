@@ -1,0 +1,8 @@
+error[SC0110]: this `#include` would read a file that is already being read
+   ╭─[ an_input_that_includes_itself_by_another_spelling_is_refused.c:1:10 ]
+   │
+ 1 │ #include "./an_input_that_includes_itself_by_another_spelling_is_refused.c"
+   │          ─────────────────────────────────┬────────────────────────────────  
+   │                                           ╰────────────────────────────────── already being read
+───╯
+  = note: `./an_input_that_includes_itself_by_another_spelling_is_refused.c` is the input, so reading it here would never end

@@ -1,0 +1,14 @@
+error[SC0110]: this `#include` would read a file that is already being read
+   ╭─[ a_header_that_includes_itself_is_refused.c:1:1 ]
+   │
+ 1 │ #include "a_header_that_includes_itself_is_refused.h"
+   │ ──────────────────────────┬──────────────────────────  
+   │                           ╰──────────────────────────── where it began to be read
+   │
+   ├─[ a_header_that_includes_itself_is_refused.h:1:10 ]
+   │
+ 1 │ #include "a_header_that_includes_itself_is_refused.h"
+   │          ──────────────────────┬─────────────────────  
+   │                                ╰─────────────────────── already being read
+───╯
+  = note: `a_header_that_includes_itself_is_refused.h` has not finished, so reading it here would never end

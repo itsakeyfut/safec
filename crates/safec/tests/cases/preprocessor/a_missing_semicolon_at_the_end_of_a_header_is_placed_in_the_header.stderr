@@ -1,0 +1,7 @@
+error[SC0201]: expected `;`
+   ╭─[ a_missing_semicolon_at_the_end_of_a_header_is_placed_in_the_header.h:1:6 ]
+   │
+ 1 │ int x
+   │      │ 
+   │      ╰─ `;` is missing here
+───╯

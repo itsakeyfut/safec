@@ -1,0 +1,5 @@
+Error an_include_inside_a_function_body_is_refused.c:1:1
+Function an_include_inside_a_function_body_is_refused.c:5:1 "other" "int (void)"
+  Compound an_include_inside_a_function_body_is_refused.c:5:17
+    Return an_include_inside_a_function_body_is_refused.c:5:19
+      Number an_include_inside_a_function_body_is_refused.c:5:26 "1"

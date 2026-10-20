@@ -1,7 +1,8 @@
 //! C programs, and the output the compiler is expected to produce for them.
 //!
 //! A case is a `.c` file in a group's directory under `cases/` and up to three
-//! expected-output files beside it. Adding one is those files and a line in the table below; no Rust
+//! expected-output files beside it, and a `.h` of the same name where the `.c`
+//! includes one. Adding one is those files and a line in the table below; no Rust
 //! is written for it, which is the point. There were two fixtures here for as
 //! long as adding a third meant writing a test.
 //!
@@ -4279,6 +4280,74 @@ cases! {
         while_statement: ["--emit", "ast"],
     }
 
+    "preprocessor" => {
+        // `#include "file"`, each with a `.h` of its own name beside it where
+        // it includes one. The directives the preprocessor refuses are in
+        // `frontend`, where they were refused before it existed:
+        // `unsupported_directive` for `#include <...>`, and
+        // `a_directive_stops_the_input_it_is_in` for `#define`.
+        //
+        // Mutation: splice nothing in place of the directive. `twice` is a
+        // name nothing declares.
+        a_function_declared_in_an_included_header_is_called: ["--emit", "ast"],
+        // Mutation: display an inclusion as any name but its path. The
+        // header line stops naming the `.h`.
+        a_diagnostic_in_an_included_file_names_that_file: ["--emit", "ast"],
+        // Mutation: do not push the included file on the stack of those being
+        // read. The header is read until the bound on inclusions refuses it,
+        // as `SC0112` rather than `SC0110`.
+        a_header_that_includes_itself_is_refused: ["--emit", "ast"],
+        // Mutation: do not put the input on that stack. It is read once more
+        // as an inclusion, and the report points at that directive rather
+        // than saying it is the input.
+        an_input_that_includes_itself_is_refused: ["--emit", "ast"],
+        // The input includes a header that includes the input. Mutation: ask
+        // only the innermost file being read rather than all of them. The
+        // two are read in turn until the depth bound refuses the next, so the
+        // report is `SC0111` rather than `SC0110`.
+        a_file_that_includes_itself_through_another_is_refused: ["--emit", "ast"],
+        // `./` before its own name. Mutation: compare the paths as they were
+        // resolved rather than canonicalized. It is read once more as an
+        // inclusion before the cycle is seen.
+        an_input_that_includes_itself_by_another_spelling_is_refused: ["--emit", "ast"],
+        // Mutation: drop the note. What was looked for, and why it was not
+        // read, goes with it.
+        an_include_that_names_no_file_is_refused: ["--emit", "ast"],
+        // A Latin-1 byte in a comment, which is ordinary in the code this
+        // compiler is for. Mutation: answer every failure with `reason`. The
+        // note gives the standard library's words for a decoding failure
+        // under a label saying they are the operating system's.
+        an_included_file_that_is_not_utf_8_is_refused: ["--emit", "ast"],
+        // A body whose braces are in one file and whose statement is in
+        // another, so no join the parser makes crosses a file. Mutation: have
+        // `Parser::in_one_file` return the item. The function compiles.
+        an_include_inside_a_function_body_is_refused: ["--emit", "ast"],
+        // `int` in the header and `x;` after it, so the declaration's own
+        // join crosses a file. Mutation: have `join` in `parser.rs` call
+        // `Span::to` unchecked. It panics.
+        a_construct_that_crosses_an_include_is_refused: ["--emit", "ast"],
+        // Mutation: do not pop a file off the stack when its inclusion ends.
+        // The second inclusion is refused as one that includes itself.
+        a_header_included_twice_is_read_twice: ["--emit", "ast"],
+        // `-o` naming the header the input includes. Mutation: ask only the
+        // inputs the command line named. The dump is written over the header
+        // and the run succeeds.
+        an_output_that_names_an_included_file_is_refused: [
+            "--emit", "ast", "-o", "an_output_that_names_an_included_file_is_refused.h"
+        ],
+        // C joins the line below to the comment after the name, so the null
+        // test is not code. Mutation: read the include whatever its line ends
+        // in. The null test is compiled and the program checks as safe, which
+        // in C it is not.
+        an_include_whose_line_ends_in_a_splice_is_refused: ["--emit", "safety-ir"],
+        // Mutation: report a missing token at the token that is there, as
+        // every other expectation is. The caret goes under `int main`, in the
+        // `.c`, where nothing is missing.
+        a_missing_semicolon_at_the_end_of_a_header_is_placed_in_the_header: ["--emit", "ast"],
+        // Mutation: write the note's path with no escaping on the way out.
+        // The escape sequence reaches the terminal.
+        an_included_path_with_a_control_character_is_shown_escaped: ["--emit", "ast"],
+    }
     "codegen" => {
         // The `--emit llvm-ir` cases, kept together because what each is for is
         // only visible beside the others. `every_operator` is the one that
@@ -4551,7 +4620,8 @@ fn every_way_to_be_stray_is_reported() {
 /// What under `root` belongs to no case of `cases` in the group it is in,
 /// sorted.
 fn strays(root: &Path, cases: &[(&str, &str)]) -> Vec<String> {
-    const EXPECTED: [&str; 4] = ["c", "stdout", "stderr", "exit"];
+    // The input, the header it may include, and the three streams.
+    const EXPECTED: [&str; 5] = ["c", "h", "stdout", "stderr", "exit"];
 
     let mut strays: Vec<String> = Vec::new();
     for entry in std::fs::read_dir(root).expect("the cases directory is in the repository") {
@@ -4642,10 +4712,15 @@ fn run_case(group: &str, name: &str, args: &[&str]) {
     // `a_path_that_names_nothing_is_reported_in_this_compiler_s_words` is the
     // one whose absence is what it tests. Run from the group's directory,
     // that case met a missing file too.
-    let source = group_dir(group).join(&input);
-    if source.exists() {
-        std::fs::copy(&source, dir.join(&input))
-            .unwrap_or_else(|error| panic!("case `{name}`: its input cannot be read: {error}"));
+    //
+    // The header goes with it, so that `#include "{name}.h"` finds it beside
+    // the input the way it would beside any other.
+    for file in [input.clone(), format!("{name}.h")] {
+        let source = group_dir(group).join(&file);
+        if source.exists() {
+            std::fs::copy(&source, dir.join(&file))
+                .unwrap_or_else(|error| panic!("case `{name}`: `{file}` cannot be read: {error}"));
+        }
     }
 
     let mut command = Command::new(env!("CARGO_BIN_EXE_safec"));

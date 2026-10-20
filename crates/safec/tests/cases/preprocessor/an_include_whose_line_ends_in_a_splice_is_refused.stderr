@@ -1,0 +1,8 @@
+error[SC0107]: a line splice or a trigraph in an `#include` is not read yet
+   ╭─[ an_include_whose_line_ends_in_a_splice_is_refused.c:2:1 ]
+   │
+ 2 │ #include "an_include_whose_line_ends_in_a_splice_is_refused.h" // \
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: C can join the line below to this one, and it would be compiled as code instead
