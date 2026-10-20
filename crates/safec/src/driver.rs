@@ -299,9 +299,8 @@ pub fn compile(options: &Options) -> Compiled {
         // answers "was this input read whole" rather than "did it parse". A
         // directive is the case that separates the two: the preprocessor
         // reports one it does not read, says in its own note that the line is
-        // not compiled, and hands the parser a token it skips without
-        // complaint, so a gate placed after the scan is open on a file whose
-        // declarations were dropped. Every macro name in it is then a name
+        // not compiled, and hands the parser nothing of it, so a gate placed
+        // after the scan is open on a file whose declarations were dropped. Every macro name in it is then a name
         // nothing declares. An included file that cannot be read is the same
         // case again.
         let read_whole = diagnostics.error_count();
@@ -526,9 +525,9 @@ struct Analysed {
 /// run, so a count taken either side of the work on one file is what says
 /// whether that file came through it. A directive is the case that separates
 /// "read whole" from "parsed": the preprocessor reports one it does not read,
-/// says in its own note that the line is not compiled, and hands the parser a
-/// token it skips without complaint, so a gate placed after the scan is open on
-/// a file whose declarations were dropped.
+/// says in its own note that the line is not compiled, and hands the parser
+/// nothing of it, so a gate placed after the scan is open on a file whose
+/// declarations were dropped.
 ///
 /// The second is the parse. What the parser says about a token stream with a
 /// hole in it is a second diagnostic about the first one's problem, and the

@@ -707,6 +707,39 @@ mod tests {
         assert_eq!(reported("nested", &files), Vec::<String>::new());
     }
 
+    /// No directive is left in what the parser is handed, whichever way it
+    /// was refused: what `Preprocessed` promises, asked of every arm.
+    ///
+    /// Through the driver nothing would notice, since a reported directive
+    /// closes the gate before the parse and the parser's assertion is never
+    /// reached. Found by review. Mutation: have any one arm of
+    /// `read_includes` push the directive it reports. Its row fails.
+    #[test]
+    fn no_directive_is_left_in_what_is_preprocessed() {
+        for text in [
+            "#define X 1\n",
+            "#include <a.h>\n",
+            "#include X\n",
+            "#include \"a.h\" // \\\nint x;\n",
+            "#include \"a.h\"\n",
+        ] {
+            let mut sources = SourceMap::new();
+            let file = sources.add_virtual("t.c", text);
+            let mut diagnostics = DiagnosticSink::new();
+            let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+            let preprocessed = preprocess(file, &tokens, &mut sources, &mut diagnostics);
+
+            assert!(diagnostics.has_errors(), "{text:?} was not refused");
+            assert!(
+                preprocessed
+                    .tokens()
+                    .iter()
+                    .all(|token| token.kind != TokenKind::Directive),
+                "{text:?}"
+            );
+        }
+    }
+
     /// The code moved from the lexer with the report, and is the handle a
     /// reader kept, so it is asserted by itself here as the lexer's are there.
     #[test]
