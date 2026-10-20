@@ -64,7 +64,7 @@ const MAX_INCLUSIONS: usize = 4096;
 ///
 /// The rule that a macro is not expanded inside its own expansion ends every
 /// chain, so this bounds a tree: a macro whose body uses the next one twice,
-/// sixteen deep, is 65,536 expansions, each a file of its own. Past it the
+/// sixteen deep, is 131,071 expansions, each a file of its own. Past it the
 /// next is refused, once. Counted per use and not per input, because a file
 /// that uses a macro on each of 65,537 lines asks nothing unusual of C, and
 /// counting them all refused it. Found by review.
@@ -142,8 +142,9 @@ pub(crate) fn cut_words(sources: &SourceMap, cut: Cut) -> (String, String, Optio
 /// parses without preprocessing does not compile, where it used to hand the
 /// parser every directive to be dropped without a word: seven test helpers
 /// did, and after `#ifdef` that would compile both of its groups. No directive
-/// is in one because `read_includes` splices each it meets or reports it,
-/// and pushes neither.
+/// is in one because `read_includes` reads each it meets, splicing an
+/// `#include`, recording a macro or reporting what it does not read, and
+/// pushes none of them.
 ///
 /// Mutation: drop the `preprocess` call from any caller of `parse`. It is
 /// `E0308`; building one by hand outside this module is `E0603`.
@@ -158,8 +159,9 @@ impl Preprocessed {
     }
 }
 
-/// Splice every `#include "file"` in `tokens`, the scan of `file`, and report
-/// every directive that is not one.
+/// Splice every `#include "file"` in `tokens`, the scan of `file`, record
+/// every `#define` and `#undef` and expand what they define, and report every
+/// other directive.
 ///
 /// The end-of-file token is the input's own: an included file's is dropped,
 /// since the parser reads the first one it meets as the end.
@@ -188,11 +190,12 @@ pub fn preprocess(
     Preprocessed(spliced)
 }
 
-/// Append `tokens` to `spliced`, an `#include "file"` replaced by that file's,
-/// and no end of file.
+/// Append `tokens` to `spliced`, an `#include "file"` replaced by that file's
+/// and a macro's name by its expansion, rescanned, and no end of file.
 ///
 /// One frame per file being read, the input's at the bottom, each holding its
-/// tokens and how far they have been read. A stack of its own rather than the
+/// tokens and how far they have been read; an inclusion and an expansion are
+/// each a frame. A stack of its own rather than the
 /// native one: recursing once per file overflowed the main thread's stack on
 /// a chain of 160 headers, well inside [`MAX_DEPTH`], and where it overflowed
 /// moved whenever a frame grew. Found by review. The reading ends because a
@@ -230,6 +233,9 @@ fn read_includes(
                 }
                 if let Some((first, last)) = frame.extent {
                     sources.set_extent(instance.file(), first, last);
+                    // What the frame below was handed in its place, now that
+                    // it handed over anything at all.
+                    emitted(&mut frames, instance.used());
                 }
             }
             continue;
@@ -343,10 +349,13 @@ fn read_includes(
                                 UNSUPPORTED_DIRECTIVE,
                                 &format!("this `{directive}` is not read yet"),
                             )
-                            .with_note(
-                                "a macro's name is read when it is ASCII letters, digits and \
-                                 `_`, followed by a space or the end of the line",
-                            ),
+                            .with_note(if directive == "#undef" {
+                                "an `#undef` is read when its name is ASCII letters, digits \
+                                 and `_`, with nothing after it"
+                            } else {
+                                "a `#define` is read when its name is ASCII letters, digits \
+                                 and `_`, followed by a space, `(` or the end of the line"
+                            }),
                         ),
                         MacroForm::Defined => diagnostics.report(
                             refused(
@@ -779,26 +788,25 @@ impl Instance {
     }
 }
 
-/// Note that `token` reached the parser, at every level of the frames open.
+/// Note that the innermost open frame handed `token` to the parser.
 ///
-/// The innermost frame handed over `token` itself, and each frame below it
-/// handed over the `#include` it read the one above for, or the name it
-/// expanded. So an inclusion's
+/// Each frame below it is handed the `#include` or the name the one above
+/// was read for, once that one ends and if it handed over anything, which is
+/// when the frame loop calls this again with that use. So an inclusion's
 /// extent is what of it the parser reads, an included file standing as its
 /// directive: a directive that hands nothing over, `#define` or an
 /// `#include` of an empty file, is not in it. Taken from the scan instead,
 /// such a line was the first token of a header whose code a node holds
 /// whole, and its lift would have refused C. Found by review. See
 /// `SourceMap::set_extent`.
+///
+/// Only the innermost frame, rather than every frame below it at each token:
+/// that was a walk as deep as the open expansions for every token, and a
+/// chain of distinct macros 32000 deep took 40 s. Found by review.
 fn emitted(frames: &mut [Frame], token: Span) {
-    let mut here = token;
-    for frame in frames.iter_mut().rev() {
-        let first = frame.extent.map_or(here, |(first, _)| first);
-        frame.extent = Some((first, here));
-        let Some(instance) = &frame.instance else {
-            break;
-        };
-        here = instance.used();
+    if let Some(frame) = frames.last_mut() {
+        let first = frame.extent.map_or(token, |(first, _)| first);
+        frame.extent = Some((first, token));
     }
 }
 
@@ -1403,18 +1411,21 @@ mod tests {
         }
     }
 
-    /// A macro whose body uses the next one twice, seventeen deep, is
-    /// refused once its expansions pass the bound, and said once.
+    /// A macro whose body uses the next one twice, sixteen deep, is refused
+    /// once its use's expansions pass the bound for one use, and said once.
+    /// 131,071 expansions, under the bound for the input, so only the bound
+    /// for one use is asked.
     ///
-    /// Mutation: drop the bound. Every expansion is read and nothing is
-    /// reported. Mutation: report every expansion past it. More than one is.
+    /// Mutation: drop the bound for one use. Every expansion is read and
+    /// nothing is reported. Mutation: report every expansion past it. More
+    /// than one is.
     #[test]
     fn a_tree_of_expansions_past_the_bound_is_refused_once() {
         let mut text = String::from("#define M0 1\n");
-        for at in 1..=17 {
+        for at in 1..=16 {
             text.push_str(&format!("#define M{at} M{} M{}\n", at - 1, at - 1));
         }
-        text.push_str("int x = M17;\n");
+        text.push_str("int x = M16;\n");
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", text);
         let mut diagnostics = DiagnosticSink::new();

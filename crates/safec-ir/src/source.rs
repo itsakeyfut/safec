@@ -548,8 +548,9 @@ impl SourceMap {
     }
 
     /// `span` where its text is written: a span in an expansion is moved to
-    /// the same offset in its replacement list's `#define`, through every
-    /// level, and any other span is itself.
+    /// the same offset in its replacement list's `#define`, and any other span
+    /// is itself. One step, because a replacement list is always written in a
+    /// file a `#define` is in, never in another expansion.
     ///
     /// What a report and a dump place a span at, so a reader is pointed at a
     /// file that exists and a line that holds the text. An expansion's text is
@@ -557,7 +558,7 @@ impl SourceMap {
     /// offset from the other's start. An inclusion is a file on disk, and is
     /// written where it is.
     pub fn written(&self, mut span: Span) -> Span {
-        while let FileName::Expansion { spelled, .. } = self.file(span.file()).name() {
+        if let FileName::Expansion { spelled, .. } = self.file(span.file()).name() {
             span = Span::new(
                 spelled.file(),
                 spelled.start() + span.start(),
@@ -1093,10 +1094,11 @@ mod tests {
     }
 
     /// A span in an expansion is written in its macro's `#define`, at the
-    /// same offset, through every level; a span anywhere else is itself.
+    /// same offset, even where the expansion is nested in another; a span
+    /// anywhere else is itself.
     ///
-    /// Mutation: stop after one level. The span in `B`'s expansion is left in
-    /// `A`'s.
+    /// Mutation: place the span by its expansion's `at` rather than its
+    /// `spelled`. `B`'s span lands on `A`'s body.
     #[test]
     fn a_span_in_an_expansion_is_written_in_its_define() {
         let (map, main, a, b) = expansions();

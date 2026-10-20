@@ -4368,9 +4368,10 @@ cases! {
         // Mutation: read a `#define` whatever its line ends in. The body's
         // second line is compiled as code.
         a_define_ending_in_a_splice_is_refused: ["--emit", "ast"],
-        // The same tokens with different spacing inside them and a comment.
-        // Mutation: compare the replacement lists' text. The comment makes
-        // them differ, and it is refused.
+        // The same tokens, a comment between two of them in one and a space in
+        // the other, which C counts as the same whitespace. Mutation: compare
+        // the replacement lists' text. The comment makes them differ, and it
+        // is refused.
         a_macro_defined_again_the_same_is_accepted: ["--emit", "ast"],
         // Mutation: accept any second definition. Both reports go.
         a_macro_defined_again_differently_is_refused: ["--emit", "ast"],
@@ -4394,6 +4395,12 @@ cases! {
         // its call at `release`, partway through the expansion. Mutation:
         // have `Parser::join` panic on a cut. It panics.
         a_call_that_cuts_an_expansion_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // ADR-0054's nested cut: `#define B release` inside `#define A (x =
+        // *p) + B`, used as `A(p)`. The call's callee is the whole of `B`'s
+        // expansion and the end of `A`'s, so only the outer level is cut.
+        // Mutation: check a lift's edge at the innermost level only. It is
+        // joined.
+        a_call_that_cuts_a_nested_expansion_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same call holding the whole expansion, `G(p)` with `#define G
         // release`, is joined at the use and checked as written out.
         // Mutation: have `SourceMap::join` answer a cut for any two spans in

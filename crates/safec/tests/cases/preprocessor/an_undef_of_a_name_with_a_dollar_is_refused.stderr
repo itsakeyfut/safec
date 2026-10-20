@@ -5,4 +5,4 @@ error[SC0104]: this `#undef` is not read yet
    │ ┬  
    │ ╰── directive begins here
 ───╯
-  = note: a macro's name is read when it is ASCII letters, digits and `_`, followed by a space or the end of the line
+  = note: an `#undef` is read when its name is ASCII letters, digits and `_`, with nothing after it
