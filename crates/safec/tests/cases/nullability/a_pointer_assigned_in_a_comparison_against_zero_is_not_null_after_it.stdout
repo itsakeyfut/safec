@@ -15,15 +15,15 @@ Function a_pointer_assigned_in_a_comparison_against_zero_is_not_null_after_it.c:
       Destination "_3"
       Use
         Copy "_2"
-    Operation a_pointer_assigned_in_a_comparison_against_zero_is_not_null_after_it.c:3:10 written
+    Operation a_pointer_assigned_in_a_comparison_against_zero_is_not_null_after_it.c:3:9 written
       Destination "_4"
       Binary "Ne"
         Copy "_3"
         Constant 0
-    Branch a_pointer_assigned_in_a_comparison_against_zero_is_not_null_after_it.c:3:10 written "bb1" "bb2"
+    Branch a_pointer_assigned_in_a_comparison_against_zero_is_not_null_after_it.c:3:9 written "bb1" "bb2"
       Copy "_4"
   Block "bb1"
-    Sequenced a_pointer_assigned_in_a_comparison_against_zero_is_not_null_after_it.c:3:10 generated
+    Sequenced a_pointer_assigned_in_a_comparison_against_zero_is_not_null_after_it.c:3:9 generated
     Operation a_pointer_assigned_in_a_comparison_against_zero_is_not_null_after_it.c:4:16 written
       Destination "_5"
       Binary "Add"
@@ -38,7 +38,7 @@ Function a_pointer_assigned_in_a_comparison_against_zero_is_not_null_after_it.c:
     Sequenced a_pointer_assigned_in_a_comparison_against_zero_is_not_null_after_it.c:4:16 generated
     Return
   Block "bb2"
-    Sequenced a_pointer_assigned_in_a_comparison_against_zero_is_not_null_after_it.c:3:10 generated
+    Sequenced a_pointer_assigned_in_a_comparison_against_zero_is_not_null_after_it.c:3:9 generated
     Goto "bb3"
   Block "bb3"
     Operation a_pointer_assigned_in_a_comparison_against_zero_is_not_null_after_it.c:6:5 written

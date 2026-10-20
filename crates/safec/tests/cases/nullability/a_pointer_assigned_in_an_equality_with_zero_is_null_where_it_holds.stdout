@@ -14,15 +14,15 @@ Function a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:1:
       Destination "_3"
       Use
         Copy "_2"
-    Operation a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:3:10 written
+    Operation a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:3:9 written
       Destination "_4"
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:3:10 written "bb1" "bb2"
+    Branch a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:3:9 written "bb1" "bb2"
       Copy "_4"
   Block "bb1"
-    Sequenced a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:3:10 generated
+    Sequenced a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:3:9 generated
     Operation a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:4:9 written
       Destination "_0"
       Use
@@ -31,7 +31,7 @@ Function a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:1:
     Sequenced a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:4:16 generated
     Return
   Block "bb2"
-    Sequenced a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:3:10 generated
+    Sequenced a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:3:9 generated
     Goto "bb3"
   Block "bb3"
     Operation a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:6:5 written

@@ -88,7 +88,7 @@ Function a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_jo
         Copy "_7"
     Goto "bb5"
   Block "bb9"
-    Operation a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join.c:11:13 written
+    Operation a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join.c:11:12 written
       Destination "_8"
       Binary "Add"
         Copy "_5"
@@ -97,5 +97,5 @@ Function a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_jo
       Destination "_0"
       Use
         Copy "_8"
-    Sequenced a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join.c:11:13 generated
+    Sequenced a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join.c:11:12 generated
     Return

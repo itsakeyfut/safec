@@ -2,10 +2,10 @@ error[SC0402]: this may use `p` after it was freed
    ╭─[ a_free_and_a_use_in_one_parameter_length_keep_the_call_s_note.c:3:31 ]
    │
  3 │ int f(int * _Nonnull p, int a[*p + (free(p), 1)]) {
-   │                               ────────┬┬──────  
-   │                                       ╰───────── used here, perhaps after the free
-   │                                        │        
-   │                                        ╰──────── freed here
+   │                               ────────┬┬───────  
+   │                                       ╰────────── used here, perhaps after the free
+   │                                        │         
+   │                                        ╰───────── freed here
 ───╯
   = note: C17 6.5.2.2 p10 leaves a call indeterminately sequenced with the rest of its expression, and this check found nothing here that orders the free before this
   = note: this check belongs to safety level 1

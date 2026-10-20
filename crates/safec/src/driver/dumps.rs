@@ -53,10 +53,7 @@ pub(super) fn dump_hatches(
             .iter()
             .filter(|concluded| concluded.function == id)
             .collect();
-        inside.sort_by_key(|concluded| {
-            let at = caret(&concluded.diagnostic);
-            (at.file().index(), at.start())
-        });
+        inside.sort_by_key(|concluded| sources.position(caret(&concluded.diagnostic)));
 
         for concluded in inside {
             dump_node(sources, "Conclusion", caret(&concluded.diagnostic), 1, out);

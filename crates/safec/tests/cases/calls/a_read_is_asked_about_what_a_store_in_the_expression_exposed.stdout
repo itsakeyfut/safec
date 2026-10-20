@@ -104,7 +104,7 @@ Function a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:4:5 "f"
       Use
         Copy "_1"
           Deref
-    Operation a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:16:10 written
+    Operation a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:16:9 written
       Destination "_12"
       Binary "Add"
         Copy "_10"
@@ -112,7 +112,7 @@ Function a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:4:5 "f"
     Call a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:16:36 written "release_all" "bb8"
       Destination "_13"
   Block "bb8"
-    Operation a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:16:10 written
+    Operation a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:16:9 written
       Destination "_14"
       Binary "Add"
         Copy "_12"

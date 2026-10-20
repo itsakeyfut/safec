@@ -1,0 +1,34 @@
+Target "x86_64-pc-windows-msvc"
+Function an_included_free_is_listed_where_its_include_is.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function an_included_free_is_listed_where_its_include_is.h:1:6 "h"
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+  Block "bb0" entry
+    ArgumentsEvaluated an_included_free_is_listed_where_its_include_is.h:2:5 generated
+    Call an_included_free_is_listed_where_its_include_is.h:2:5 written "free" "bb1"
+      Copy "_1"
+  Block "bb1"
+    Sequenced an_included_free_is_listed_where_its_include_is.h:2:5 generated
+    ArgumentsEvaluated an_included_free_is_listed_where_its_include_is.h:3:5 generated
+    Call an_included_free_is_listed_where_its_include_is.h:3:5 written "free" "bb2"
+      Copy "_1"
+  Block "bb2"
+    Sequenced an_included_free_is_listed_where_its_include_is.h:3:5 generated
+    Return
+Function an_included_free_is_listed_where_its_include_is.c:4:6 "k"
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "q"
+  Block "bb0" entry
+    ArgumentsEvaluated an_included_free_is_listed_where_its_include_is.c:5:5 generated
+    Call an_included_free_is_listed_where_its_include_is.c:5:5 written "free" "bb1"
+      Copy "_1"
+  Block "bb1"
+    Sequenced an_included_free_is_listed_where_its_include_is.c:5:5 generated
+    ArgumentsEvaluated an_included_free_is_listed_where_its_include_is.c:6:5 generated
+    Call an_included_free_is_listed_where_its_include_is.c:6:5 written "free" "bb2"
+      Copy "_1"
+  Block "bb2"
+    Sequenced an_included_free_is_listed_where_its_include_is.c:6:5 generated
+    Return

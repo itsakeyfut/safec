@@ -1,0 +1,8 @@
+Function a_function_body_made_of_an_include_between_its_braces_is_read.c:1:1 "main" "int (void)"
+  Compound a_function_body_made_of_an_include_between_its_braces_is_read.c:1:16
+    Return a_function_body_made_of_an_include_between_its_braces_is_read.h:1:1
+      Number a_function_body_made_of_an_include_between_its_braces_is_read.h:1:8 "0"
+Function a_function_body_made_of_an_include_between_its_braces_is_read.c:5:1 "other" "int (void)"
+  Compound a_function_body_made_of_an_include_between_its_braces_is_read.c:5:17
+    Return a_function_body_made_of_an_include_between_its_braces_is_read.c:5:19
+      Number a_function_body_made_of_an_include_between_its_braces_is_read.c:5:26 "1"

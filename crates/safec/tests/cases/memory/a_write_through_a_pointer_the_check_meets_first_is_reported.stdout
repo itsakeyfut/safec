@@ -36,7 +36,7 @@ Function a_write_through_a_pointer_the_check_meets_first_is_reported.c:3:5 "f"
     Call a_write_through_a_pointer_the_check_meets_first_is_reported.c:5:25 written "free" "bb2"
       Copy "_1"
   Block "bb2"
-    Operation a_write_through_a_pointer_the_check_meets_first_is_reported.c:5:14 written
+    Operation a_write_through_a_pointer_the_check_meets_first_is_reported.c:5:13 written
       Destination "_5"
       Binary "Add"
         Copy "_4"
@@ -45,7 +45,7 @@ Function a_write_through_a_pointer_the_check_meets_first_is_reported.c:3:5 "f"
       Destination "_3"
       Use
         Copy "_5"
-    Sequenced a_write_through_a_pointer_the_check_meets_first_is_reported.c:5:14 generated
+    Sequenced a_write_through_a_pointer_the_check_meets_first_is_reported.c:5:13 generated
     Operation a_write_through_a_pointer_the_check_meets_first_is_reported.c:6:5 written
       Destination "_0"
       Use

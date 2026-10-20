@@ -30,7 +30,7 @@ Function every_binary_operator_takes_what_c_allows.c:2:1 "f" "int (int *, int *,
     Expression every_binary_operator_takes_what_c_allows.c:7:5
       Assign every_binary_operator_takes_what_c_allows.c:7:5 "="
         Identifier every_binary_operator_takes_what_c_allows.c:7:5 "r"
-        Binary every_binary_operator_takes_what_c_allows.c:7:10 "^"
+        Binary every_binary_operator_takes_what_c_allows.c:7:9 "^"
           Binary every_binary_operator_takes_what_c_allows.c:7:10 "&"
             Identifier every_binary_operator_takes_what_c_allows.c:7:10 "n"
             Number every_binary_operator_takes_what_c_allows.c:7:14 "3"

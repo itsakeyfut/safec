@@ -1,0 +1,6 @@
+Declaration a_construct_that_cuts_an_include_is_refused.h:1:1 "a" "int"
+Declaration a_construct_that_cuts_an_include_is_refused.h:2:1 "b" "int"
+Function a_construct_that_cuts_an_include_is_refused.c:4:1 "main" "int (void)"
+  Compound a_construct_that_cuts_an_include_is_refused.c:4:16
+    Return a_construct_that_cuts_an_include_is_refused.c:4:18
+      Number a_construct_that_cuts_an_include_is_refused.c:4:25 "0"

@@ -94,11 +94,11 @@ error[SC0309]: a declaration at file scope cannot have an array length that is n
 ────╯
   = note: a variably modified type is allowed only at block scope or in a prototype (C17 6.7.6.2 p2)
 error[SC0309]: a declaration at file scope cannot have an array length that is not a constant
-    ╭─[ an_array_length_at_file_scope_has_a_value.c:14:9 ]
+    ╭─[ an_array_length_at_file_scope_has_a_value.c:14:8 ]
     │
  14 │ int m2[(1 << 31) + n];
-    │         ──────┬─────  
-    │               ╰─────── this is not a constant
+    │        ──────┬──────  
+    │              ╰──────── this is not a constant
 ────╯
   = note: a variably modified type is allowed only at block scope or in a prototype (C17 6.7.6.2 p2)
 error[SC0309]: a declaration at file scope cannot have an array length that is not a constant

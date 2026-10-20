@@ -145,7 +145,7 @@ Function a_read_before_a_call_and_an_exposure_is_asked.c:6:5 "f"
     Call a_read_before_a_call_and_an_exposure_is_asked.c:23:22 written "release_all" "bb10"
       Destination "_16"
   Block "bb10"
-    Operation a_read_before_a_call_and_an_exposure_is_asked.c:23:10 written
+    Operation a_read_before_a_call_and_an_exposure_is_asked.c:23:9 written
       Destination "_17"
       Binary "Add"
         Copy "_15"
@@ -158,7 +158,7 @@ Function a_read_before_a_call_and_an_exposure_is_asked.c:6:5 "f"
       Destination "_18"
       Use
         Copy "_5"
-    Operation a_read_before_a_call_and_an_exposure_is_asked.c:23:10 written
+    Operation a_read_before_a_call_and_an_exposure_is_asked.c:23:9 written
       Destination "_19"
       Binary "Add"
         Copy "_17"

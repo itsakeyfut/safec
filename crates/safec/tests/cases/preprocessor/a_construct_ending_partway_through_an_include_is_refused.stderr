@@ -1,0 +1,14 @@
+error[SC0207]: this `#include` is not read where it is yet
+   ╭─[ a_construct_ending_partway_through_an_include_is_refused.c:2:1 ]
+   │
+ 2 │ #include "a_construct_ending_partway_through_an_include_is_refused.h"
+   │ ──────────────────────────────────┬──────────────────────────────────  
+   │                                   ╰──────────────────────────────────── included here
+   │
+   ├─[ a_construct_ending_partway_through_an_include_is_refused.h:1:3 ]
+   │
+ 1 │ = 1; int c;
+   │   ┬  
+   │   ╰── ends partway through an included file
+───╯
+  = note: safec reads an included file only where everything it builds over the file holds all of it or none of it

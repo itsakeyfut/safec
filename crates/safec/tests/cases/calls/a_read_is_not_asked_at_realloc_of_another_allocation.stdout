@@ -154,7 +154,7 @@ Function a_read_is_not_asked_at_realloc_of_another_allocation.c:4:5 "f"
       Binary "Ne"
         Copy "_16"
         Constant 0
-    Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:22:10 written
+    Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:22:9 written
       Destination "_18"
       Binary "Add"
         Copy "_15"

@@ -1,0 +1,14 @@
+error[SC0207]: this `#include` is not read where it is yet
+   ╭─[ a_construct_that_cuts_an_include_is_refused.c:1:1 ]
+   │
+ 1 │ #include "a_construct_that_cuts_an_include_is_refused.h"
+   │ ────────────────────────────┬───────────────────────────  
+   │                             ╰───────────────────────────── included here
+   │
+   ├─[ a_construct_that_cuts_an_include_is_refused.h:2:1 ]
+   │
+ 2 │ int
+   │ ─┬─  
+   │  ╰─── begins partway through an included file
+───╯
+  = note: safec reads an included file only where everything it builds over the file holds all of it or none of it

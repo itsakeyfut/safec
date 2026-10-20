@@ -76,7 +76,7 @@ Function a_pointer_handed_to_a_call_before_realloc_is_reported.c:5:5 "main"
       Binary "Ne"
         Copy "_6"
         Constant 0
-    Operation a_pointer_handed_to_a_call_before_realloc_is_reported.c:10:13 written
+    Operation a_pointer_handed_to_a_call_before_realloc_is_reported.c:10:12 written
       Destination "_8"
       Binary "Add"
         Copy "_5"
@@ -85,5 +85,5 @@ Function a_pointer_handed_to_a_call_before_realloc_is_reported.c:5:5 "main"
       Destination "_0"
       Use
         Copy "_8"
-    Sequenced a_pointer_handed_to_a_call_before_realloc_is_reported.c:10:13 generated
+    Sequenced a_pointer_handed_to_a_call_before_realloc_is_reported.c:10:12 generated
     Return

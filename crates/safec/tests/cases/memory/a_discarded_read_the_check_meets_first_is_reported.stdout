@@ -28,7 +28,7 @@ Function a_discarded_read_the_check_meets_first_is_reported.c:3:5 "f"
     Call a_discarded_read_the_check_meets_first_is_reported.c:5:24 written "free" "bb2"
       Copy "_1"
   Block "bb2"
-    Operation a_discarded_read_the_check_meets_first_is_reported.c:5:14 written
+    Operation a_discarded_read_the_check_meets_first_is_reported.c:5:13 written
       Destination "_4"
       Binary "Add"
         Constant 1
@@ -37,7 +37,7 @@ Function a_discarded_read_the_check_meets_first_is_reported.c:3:5 "f"
       Destination "_3"
       Use
         Copy "_4"
-    Sequenced a_discarded_read_the_check_meets_first_is_reported.c:5:14 generated
+    Sequenced a_discarded_read_the_check_meets_first_is_reported.c:5:13 generated
     Operation a_discarded_read_the_check_meets_first_is_reported.c:6:5 written
       Destination "_0"
       Use

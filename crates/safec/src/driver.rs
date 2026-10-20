@@ -550,7 +550,7 @@ fn analysed(
         return None;
     }
 
-    let mut ast = parse(tokens, diagnostics);
+    let mut ast = parse(tokens, sources, diagnostics);
     if diagnostics.error_count() != read_whole {
         return Some(Analysed { ast, typed: None });
     }
@@ -638,7 +638,7 @@ fn lowered(
         // walk over one lattice is what makes the double free and the use after
         // free one check, and whether a pointer can be null is answered by a
         // lattice that shares nothing with theirs.
-        for finding in nullability::findings(&unit) {
+        for finding in nullability::findings(sources, &unit) {
             let name = written_name(&unit, sources, finding.function, finding.local);
             if let Some(diagnostic) = nullability_finding(&finding, name) {
                 let concluded = Concluded {

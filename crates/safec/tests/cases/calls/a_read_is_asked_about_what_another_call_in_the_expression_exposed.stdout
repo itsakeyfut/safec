@@ -89,7 +89,7 @@ Function a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:5:5
       Binary "Ne"
         Copy "_8"
         Constant 0
-    Operation a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:13:10 written
+    Operation a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:13:9 written
       Destination "_10"
       Binary "Add"
         Copy "_7"
@@ -97,7 +97,7 @@ Function a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:5:5
     Call a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:13:47 written "release_all" "bb6"
       Destination "_11"
   Block "bb6"
-    Operation a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:13:10 written
+    Operation a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:13:9 written
       Destination "_12"
       Binary "Add"
         Copy "_10"

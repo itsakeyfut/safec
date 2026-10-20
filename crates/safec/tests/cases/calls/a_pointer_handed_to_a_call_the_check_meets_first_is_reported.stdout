@@ -66,7 +66,7 @@ Function a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:5:5 "mai
     Call a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:10:38 written "free" "bb6"
       Copy "_1"
   Block "bb6"
-    Operation a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:10:13 written
+    Operation a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:10:12 written
       Destination "_6"
       Binary "Add"
         Copy "_5"
@@ -75,5 +75,5 @@ Function a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:5:5 "mai
       Destination "_0"
       Use
         Copy "_6"
-    Sequenced a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:10:13 generated
+    Sequenced a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:10:12 generated
     Return

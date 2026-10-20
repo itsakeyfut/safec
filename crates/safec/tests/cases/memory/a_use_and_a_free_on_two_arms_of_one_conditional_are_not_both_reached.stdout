@@ -27,7 +27,7 @@ Function a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:
     Branch a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:14 written "bb3" "bb4"
       Copy "_1"
   Block "bb2"
-    Operation a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:14 written
+    Operation a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:13 written
       Destination "_6"
       Binary "Add"
         Copy "_5"
@@ -36,7 +36,7 @@ Function a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:
       Destination "_4"
       Use
         Copy "_6"
-    Sequenced a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:14 generated
+    Sequenced a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:13 generated
     Operation a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:6:5 written
       Destination "_0"
       Use

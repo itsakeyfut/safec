@@ -91,7 +91,7 @@ Function a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_o
         Copy "_2"
     Call a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:15:26 written "release_all" "bb8"
   Block "bb8"
-    Operation a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:15:13 written
+    Operation a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:15:12 written
       Destination "_10"
       Binary "Add"
         Copy "_9"
@@ -100,5 +100,5 @@ Function a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_o
       Destination "_0"
       Use
         Copy "_10"
-    Sequenced a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:15:13 generated
+    Sequenced a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:15:12 generated
     Return

@@ -1,0 +1,8 @@
+error[SC0304]: cannot compile this `#include` where it is yet
+   ╭─[ a_store_whose_name_is_partway_through_an_include_is_refused.h:1:2 ]
+   │
+ 1 │ *a
+   │  ┬  
+   │  ╰── begins partway through an included file
+───╯
+  = note: safec reads an included file only where everything it builds over the file holds all of it or none of it

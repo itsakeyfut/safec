@@ -30,7 +30,7 @@ Function a_free_already_sequenced_is_the_one_a_later_free_keeps.c:3:5 "f"
     Call a_free_already_sequenced_is_the_one_a_later_free_keeps.c:6:14 written "free" "bb3"
       Copy "_1"
   Block "bb3"
-    Operation a_free_already_sequenced_is_the_one_a_later_free_keeps.c:6:14 written
+    Operation a_free_already_sequenced_is_the_one_a_later_free_keeps.c:6:13 written
       Destination "_4"
       Binary "Add"
         Constant 0
@@ -40,7 +40,7 @@ Function a_free_already_sequenced_is_the_one_a_later_free_keeps.c:3:5 "f"
       Destination "_3"
       Use
         Copy "_4"
-    Sequenced a_free_already_sequenced_is_the_one_a_later_free_keeps.c:6:14 generated
+    Sequenced a_free_already_sequenced_is_the_one_a_later_free_keeps.c:6:13 generated
     Operation a_free_already_sequenced_is_the_one_a_later_free_keeps.c:7:5 written
       Destination "_0"
       Use

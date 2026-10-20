@@ -39,7 +39,7 @@ use safec_ir::ir::{
     Between, BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin,
     Parameter, Place, Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
-use safec_ir::source::{SourceMap, Span};
+use safec_ir::source::{Edge, SourceMap, Span};
 use safec_ir::target::Target;
 
 /// Something the frontend accepted and this stage cannot express.
@@ -956,6 +956,34 @@ impl Lowering<'_> {
         Some((returns, lowered))
     }
 
+    /// The span from `from`'s start to `to`'s end, through the one join
+    /// across instances, or nothing, with the function refused.
+    ///
+    /// A span the lowering builds over parts of nodes the parser built, a
+    /// definition's lengths or a declarator's store, is one the parser never
+    /// joined, so it can cut an included file where every node the parser
+    /// made held it whole: `int` then an `#include` of `*a` then `= 0;` starts
+    /// the store of `a` at `a`, partway through the header. Refused rather
+    /// than panicked on, since the program is C. See ADR-0054.
+    fn joined(&self, from: Span, to: Span, diagnostics: &mut DiagnosticSink) -> Option<Span> {
+        match self.sources.join(from, to) {
+            Ok(span) => Some(span),
+            Err(cut) => {
+                let label = match cut.edge {
+                    Edge::Start => "begins partway through an included file",
+                    Edge::End => "ends partway through an included file",
+                };
+                diagnostics.report(
+                    Diagnostic::error("cannot compile this `#include` where it is yet")
+                        .with_code(LOWERING)
+                        .with_label(Label::primary(cut.span, label))
+                        .with_note("safec reads an included file only where everything it builds over the file holds all of it or none of it"),
+                );
+                None
+            }
+        }
+    }
+
     /// Refuse a parameter declared as an array this stage cannot take,
     /// naming the part of its length nothing typed where that is the reason.
     ///
@@ -1338,6 +1366,7 @@ impl Lowering<'_> {
         // then checks `*p` against the `p` before the write C may run first.
         let mut held = Vec::new();
         let mut walked = Vec::new();
+        let mut declared = Vec::new();
         for parameter in parameters {
             let Type::Array {
                 length: Some(length),
@@ -1354,9 +1383,16 @@ impl Lowering<'_> {
             let value = self.walk(builder, length, false, diagnostics)?;
             held.push((value, span));
             walked.push(length);
+            declared.push(parameter.span);
         }
-        if let (Some(first), Some(last)) = (walked.first(), walked.last()) {
-            let at = self.ast.expr(*first).span().to(self.ast.expr(*last).span());
+        // From the first such parameter to the last, spans the parser joined,
+        // rather than from the first length's node to the last's: a length's
+        // node leaves out the brackets and any parenthesis it was written in,
+        // so `int b[*q]` included as a parameter starts its length at `*q`,
+        // partway through the header, and refused C that cuts nothing. Found
+        // by review.
+        if let (Some(&first), Some(&last)) = (declared.first(), declared.last()) {
+            let at = self.joined(first, last, diagnostics)?;
             let each: Vec<_> = walked
                 .iter()
                 .map(|&length| self.accesses(length, false))
@@ -1656,11 +1692,7 @@ impl Lowering<'_> {
                             builder.push(Operation {
                                 place: Place::local(local),
                                 value: Rvalue::Use(operand),
-                                origin: Origin::Written(Span::new(
-                                    name.file(),
-                                    name.start(),
-                                    span.end(),
-                                )),
+                                origin: Origin::Written(self.joined(name, span, diagnostics)?),
                             });
                             // One per declarator that has an initializer:
                             // `int a = f(), b = g();` is two full expressions
