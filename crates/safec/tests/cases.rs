@@ -4460,6 +4460,50 @@ cases! {
         // Mutation: do not pop a file off the stack when its inclusion ends.
         // The second inclusion is refused as one that includes itself.
         a_header_included_twice_is_read_twice: ["--emit", "ast"],
+        // `#ifdef`, `#ifndef` and `#else` (#547), nested, the chosen groups
+        // defining what `main` calls. Mutation: take the other group of an
+        // `#ifdef`; or read `#ifndef` as `#ifdef`. `chosen` or `also` is
+        // undeclared.
+        ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined: ["--emit", "ast"],
+        // Mutation: take an `#ifndef`'s group whatever is defined. The
+        // second inclusion defines `struct S` again, `SC0312`.
+        a_header_with_an_include_guard_included_twice_declares_once: ["--emit", "ast"],
+        // Mutation: count no conditional opened in a skipped group. The inner
+        // `#endif` closes the outer one, and `struct S broken` is compiled.
+        a_nested_endif_in_a_skipped_group_closes_only_its_own: ["--emit", "ast"],
+        // Read only for their names (C17 6.10.1 p6): `#elif` after `#else`,
+        // `#include <...>`, `#pragma` and a function-like macro, each refused
+        // outside a skipped group, pass. Mutation: read directives in a
+        // skipped group. They are reported.
+        a_directive_in_a_skipped_group_is_not_read: ["--emit", "ast"],
+        // Mutation: report nothing still open when a frame ends. It exits 0.
+        an_unterminated_conditional_is_refused_at_its_directive: ["--emit", "ast"],
+        // An `#ifndef` left open in a header, and an `#endif` for it in the
+        // includer: a conditional is the file's it begins in (C17 6.10 p1).
+        // Mutation: keep one stack of conditionals for every frame. Neither
+        // is reported.
+        a_conditional_does_not_go_on_across_a_header: ["--emit", "ast"],
+        // Mutation: drop the check for an open conditional at `#else`,
+        // `#endif` or `#elif`. One of the three goes unreported.
+        an_endif_or_else_with_nothing_open_is_refused: ["--emit", "ast"],
+        // Mutation: take a second `#else` as the first is taken. Its group is
+        // compiled, and `main` is defined twice.
+        a_second_else_is_refused: ["--emit", "ast"],
+        // Mutation: read an `#ifdef` with no name as one naming nothing
+        // defined. Its group is skipped and nothing is reported.
+        an_ifdef_with_no_name_is_refused: ["--emit", "ast"],
+        // Each directive is obeyed, with a warning for what follows it, and
+        // a comment after one is no token. Mutation: make the warning an
+        // error. It exits 1.
+        tokens_after_endif_are_a_warning: ["--emit", "ast"],
+        // None of the groups of a refused `#if` is compiled, and its `#endif`
+        // is matched. Mutation: compile the group after `#if`. `main` is
+        // defined twice. Mutation: open no level at `#if`. The `#endif` closes
+        // no conditional.
+        if_and_elif_are_not_read_yet: ["--emit", "ast"],
+        // C joins the empty line below to the `#ifndef`'s.
+        // Mutation: read a conditional whatever its line ends in. It exits 0.
+        a_conditional_ending_in_a_splice_is_refused: ["--emit", "ast"],
         // `-o` naming the header the input includes. Mutation: ask only the
         // inputs the command line named. The dump is written over the header
         // and the run succeeds.

@@ -1,0 +1,12 @@
+error[SC0115]: this conditional already has an `#else`
+   ╭─[ a_second_else_is_refused.c:4:1 ]
+   │
+ 2 │ #else
+   │ ┬  
+   │ ╰── first `#else` here
+   │ 
+ 4 │ #else
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: the group after this one is not compiled

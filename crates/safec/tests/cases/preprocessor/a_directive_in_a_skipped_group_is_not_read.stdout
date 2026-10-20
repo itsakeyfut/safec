@@ -1,0 +1,4 @@
+Function a_directive_in_a_skipped_group_is_not_read.c:12:1 "main" "int (void)"
+  Compound a_directive_in_a_skipped_group_is_not_read.c:12:16
+    Return a_directive_in_a_skipped_group_is_not_read.c:12:18
+      Number a_directive_in_a_skipped_group_is_not_read.c:12:25 "0"

@@ -1,0 +1,4 @@
+Function a_nested_endif_in_a_skipped_group_closes_only_its_own.c:7:1 "main" "int (void)"
+  Compound a_nested_endif_in_a_skipped_group_closes_only_its_own.c:7:16
+    Return a_nested_endif_in_a_skipped_group_closes_only_its_own.c:7:18
+      Number a_nested_endif_in_a_skipped_group_closes_only_its_own.c:7:25 "0"

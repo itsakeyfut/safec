@@ -1,0 +1,8 @@
+error[SC0115]: `#ifndef` is not closed in this file
+   ╭─[ an_unterminated_conditional_is_refused_at_its_directive.c:1:1 ]
+   │
+ 1 │ #ifndef A
+   │ ┬  
+   │ ╰── opened here
+───╯
+  = note: a conditional ends with an `#endif` in the file it begins in

@@ -5,7 +5,7 @@ error[SC0104]: preprocessor directives are not supported yet
    │ ─┬  
    │  ╰── directive begins here
 ───╯
-  = note: `#include "..."` and an object-like `#define` are read, and `#ifdef` and `#ifndef` come next
+  = note: `#include "..."`, an object-like `#define` and `#undef`, `#ifdef`, `#ifndef`, `#else` and `#endif` are read
   = note: the line is one token and is not compiled
 error[SC0104]: preprocessor directives are not supported yet
    ╭─[ a_directive_spelled_with_a_digraph_is_a_directive.c:2:1 ]
@@ -14,5 +14,5 @@ error[SC0104]: preprocessor directives are not supported yet
    │ ┬  
    │ ╰── directive begins here
 ───╯
-  = note: `#include "..."` and an object-like `#define` are read, and `#ifdef` and `#ifndef` come next
+  = note: `#include "..."`, an object-like `#define` and `#undef`, `#ifdef`, `#ifndef`, `#else` and `#endif` are read
   = note: the line is one token and is not compiled

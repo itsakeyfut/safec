@@ -1,0 +1,16 @@
+Function ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined.c:4:1 "chosen" "int (void)"
+  Compound ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined.c:4:18
+    Return ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined.c:4:20
+      Number ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined.c:4:27 "0"
+Function ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined.c:14:1 "also" "int (void)"
+  Compound ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined.c:14:16
+    Return ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined.c:14:18
+      Number ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined.c:14:25 "4"
+Function ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined.c:17:1 "main" "int (void)"
+  Compound ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined.c:17:16
+    Return ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined.c:17:18
+      Binary ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined.c:17:25 "+"
+        Call ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined.c:17:25
+          Identifier ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined.c:17:25 "chosen"
+        Call ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined.c:17:36
+          Identifier ifdef_and_ifndef_select_a_group_by_whether_the_name_is_defined.c:17:36 "also"
