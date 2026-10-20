@@ -398,8 +398,7 @@ fn read_includes(
                 if let Some(form) = form {
                     let guard = frames
                         .last()
-                        .and_then(|frame| frame.tokens.get(frame.cursor))
-                        .is_some_and(|next| guards(&form, *next, sources));
+                        .is_some_and(|frame| guards(&form, frame, sources));
                     if let Some(frame) = frames.last_mut() {
                         let refused = false;
                         conditional(
@@ -983,13 +982,27 @@ fn predefined(target: Target) -> &'static str {
 /// target, `__ILP32__`, which `gcc`'s documentation does not name, and on
 /// Darwin `__arm64__`, which no `gcc` for Darwin was measured for. Answered
 /// from `clang`'s list, `#ifdef __x86_64__` took a group `cl.exe` skips, and a
-/// double free in that group was analysed away. Found by review.
+/// double free in that group was analysed away. Found by review. On Linux,
+/// `linux` and `unix`, and `i386` on `i686`, are what `clang` and `gcc`
+/// define in their default GNU modes and not under `-std=c17`, which is a
+/// disagreement of the same kind, measured with `clang 20.1.6` without
+/// `-std`. Answered as undefined, a double free under `#ifdef unix` was
+/// analysed away. Found by review.
 fn unsettled(target: Target) -> &'static [&'static str] {
     match target.triple() {
         "aarch64-apple-darwin" => &["__LITTLE_ENDIAN__", "__arm64__", "__arm64"],
-        "aarch64-unknown-linux-gnu" => &["__LITTLE_ENDIAN__"],
-        "armv7-unknown-linux-gnueabihf" => &["__ILP32__", "_ILP32", "__LITTLE_ENDIAN__"],
-        "i686-unknown-linux-gnu" => &["__ILP32__", "_ILP32", "__LITTLE_ENDIAN__"],
+        "aarch64-unknown-linux-gnu" => &["__LITTLE_ENDIAN__", "linux", "unix"],
+        "armv7-unknown-linux-gnueabihf" => {
+            &["__ILP32__", "_ILP32", "__LITTLE_ENDIAN__", "linux", "unix"]
+        }
+        "i686-unknown-linux-gnu" => &[
+            "__ILP32__",
+            "_ILP32",
+            "__LITTLE_ENDIAN__",
+            "i386",
+            "linux",
+            "unix",
+        ],
         "wasm32-unknown-unknown" => &[],
         "x86_64-apple-darwin" => &["__LITTLE_ENDIAN__"],
         "x86_64-pc-windows-msvc" => &[
@@ -1008,7 +1021,7 @@ fn unsettled(target: Target) -> &'static [&'static str] {
             "__amd64__",
             "__amd64",
         ],
-        "x86_64-unknown-linux-gnu" => &["__LITTLE_ENDIAN__"],
+        "x86_64-unknown-linux-gnu" => &["__LITTLE_ENDIAN__", "linux", "unix"],
         triple => panic!("no predefined macros are written for {triple}"),
     }
 }
@@ -1041,13 +1054,22 @@ fn standard(name: &str) -> bool {
     DYNAMIC.contains(&name) || matches!(name, "__STDC__" | "__STDC_VERSION__" | "__STDC_HOSTED__")
 }
 
-/// Whether `form` is `#ifndef N` and `next`, the token after it, is a
-/// `#define N` with an empty list or `1`: the include-guard idiom, which
-/// answers `N` from the source alone. Not where `clang` predefines `N`, whose
-/// `#ifndef` and `#define` are a fallback for the compiler's value rather
-/// than a guard: `#define __SIZE_TYPE__ char` there declared a `char` where
-/// every build has an `unsigned long`. Found by review. See ADR-0055.
-fn guards(form: &ConditionalForm, next: Token, sources: &SourceMap) -> bool {
+/// Whether `form`, the directive `frame` has just read, is an include
+/// guard: `#ifndef N` as the file's first token, a `#define N` with an empty
+/// list or `1` next, and an `#endif` closing it as the file's last, with no
+/// `#else` or `#elif` of its own. Such a guard answers `N` from the source
+/// alone. See ADR-0055.
+///
+/// The whole file, because where a compiler does predefine `N` all it
+/// changes is whether a header is read at all. `#ifndef _MT` above a
+/// `#define _MT 1` and an `#else` inside a function was taken for a guard,
+/// and the double free in its `#else`, which `cl.exe` compiles, since it
+/// predefines `_MT`, was analysed away. Found by review. Not where `clang`
+/// predefines `N` either, whose `#ifndef` and `#define` are a fallback for
+/// the compiler's value rather than a guard: `#define __SIZE_TYPE__ char`
+/// there declared a `char` where every build has an `unsigned long`. Found
+/// by review.
+fn guards(form: &ConditionalForm, frame: &Frame, sources: &SourceMap) -> bool {
     let ConditionalForm::Ifdef {
         negated: true,
         name: Named::Read(guarded),
@@ -1056,18 +1078,47 @@ fn guards(form: &ConditionalForm, next: Token, sources: &SourceMap) -> bool {
     else {
         return false;
     };
-    if next.kind != TokenKind::Directive {
+    // The `#ifndef` is the frame's first token, which the loop has stepped
+    // past.
+    if frame.cursor != 1 || CLANG_RESERVED.lines().any(|name| name == *guarded) {
         return false;
     }
-    if CLANG_RESERVED.lines().any(|name| name == *guarded) {
+    let read = |token: &Token| {
+        (token.kind == TokenKind::Directive)
+            .then(|| blanked(sources.snippet(token.span)))
+            .flatten()
+    };
+    let defines = frame
+        .tokens
+        .get(1)
+        .and_then(read)
+        .is_some_and(|text| match macro_form(&text) {
+            MacroForm::Define { name, body, .. } => {
+                name == *guarded && matches!(&text[body.0 as usize..body.1 as usize], "" | "1")
+            }
+            _ => false,
+        });
+    if !defines {
         return false;
     }
-    blanked(sources.snippet(next.span)).is_some_and(|text| match macro_form(&text) {
-        MacroForm::Define { name, body, .. } => {
-            name == *guarded && matches!(&text[body.0 as usize..body.1 as usize], "" | "1")
+    let mut depth = 0;
+    for (at, token) in frame.tokens.iter().enumerate().skip(2) {
+        let Some(text) = read(token) else {
+            continue;
+        };
+        match conditional_form(&text) {
+            Some(ConditionalForm::If | ConditionalForm::Ifdef { .. }) => depth += 1,
+            Some(ConditionalForm::Endif { .. }) if depth > 0 => depth -= 1,
+            Some(ConditionalForm::Endif { .. }) => {
+                return frame.tokens[at + 1..].iter().all(|token| token.is_eof());
+            }
+            Some(ConditionalForm::Else { .. } | ConditionalForm::Elif) if depth == 0 => {
+                return false;
+            }
+            _ => {}
         }
-        _ => false,
-    })
+    }
+    false
 }
 
 /// What a directive that is not an `#include` is, where it is a macro's.
@@ -1474,14 +1525,14 @@ fn act(
                 // undefined, the group a compiler builds was skipped, and a
                 // double free under it analysed away. Found by review. A name
                 // the source defines first is answered, and so is the
-                // include-guard idiom. A name an implementation defines
-                // without reserving it, `unix` in a GNU mode, is not caught.
-                // See ADR-0055.
+                // include-guard idiom. `unix`, which a GNU mode defines and
+                // `-std=c17` does not, is unsettled the same way, reserved or
+                // not. See ADR-0055.
                 Named::Read(name)
-                    if reserved(name)
-                        && !reading.macros.contains_key(name)
-                        && (unsettled(reading.target).contains(&name) || !known(name))
-                        && !guard =>
+                    if !reading.macros.contains_key(name)
+                        && !guard
+                        && (unsettled(reading.target).contains(&name)
+                            || (reserved(name) && !known(name))) =>
                 {
                     diagnostics.report(
                         refused(
@@ -1492,11 +1543,19 @@ fn act(
                                 "this `{what}` asks about a name the implementation may define"
                             ),
                         )
-                        .with_note(format!(
-                            "`{name}` is reserved for the implementation (C17 7.1.3), and \
-                             whether it is defined depends on the compiler, so none of this \
-                             conditional's groups is compiled"
-                        )),
+                        .with_note(if reserved(name) {
+                            format!(
+                                "`{name}` is reserved for the implementation (C17 7.1.3), and \
+                                 whether it is defined depends on the compiler, so none of this \
+                                 conditional's groups is compiled"
+                            )
+                        } else {
+                            format!(
+                                "`{name}` is defined in some modes a compiler builds for this \
+                                 target and not in others, so none of this conditional's groups \
+                                 is compiled"
+                            )
+                        }),
                     );
                     open(frame, what, None);
                 }
@@ -2596,6 +2655,8 @@ mod tests {
         assert!(!unsettled(msvc).contains(&"_WIN32"));
         assert!(unsettled(arm).contains(&"__LITTLE_ENDIAN__"));
         assert!(!unsettled(arm).contains(&"__aarch64__"));
+        assert!(unsettled(arm).contains(&"unix"));
+        assert!(!unsettled(msvc).contains(&"unix"));
     }
 
     /// Every target has a list, and every line of it is a `#define` this

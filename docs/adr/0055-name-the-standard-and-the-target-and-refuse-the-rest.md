@@ -35,6 +35,7 @@ The compilers taken to build for a triple are `gcc` and `clang` for Linux and Da
   * For MSVC, `clang` defines the GNU names, `__x86_64__` and `__SIZEOF_LONG__` among them, which `cl.exe` does not. `cl.exe` defines `__STDC__` and `__STDC_VERSION__` only under an option.
   * Elsewhere, `clang` defines `__LITTLE_ENDIAN__`, and on a 32-bit target `__ILP32__`. Neither is named in `gcc`'s documentation.
   * On Darwin, `__arm64__` is unsettled, because no `gcc` for Darwin was measured.
+  * On Linux, `linux` and `unix`, and `i386` on `i686`, are unsettled though C does not reserve them, because `gcc` and `clang` define them in their default GNU modes and not under `-std=c17`. A mode is as much a part of the build as a compiler is.
 * **Undefined:** the name is in the union, but no compiler for this triple defines it. `__linux__` for MSVC is one, and `_WIN32` for Linux is another.
 
 A reserved name outside the union is refused, as #547 refused it, unless the source defines it.
@@ -44,7 +45,15 @@ A first version took every value from `clang`'s list for the triple. Review foun
 * `cl.exe` does not define `__x86_64__`, so `#ifdef __x86_64__` took a group `cl.exe` skips, and a double free in that group was analysed away.
 * Answering a name in the union as undefined, wherever this target's list leaves it out, answers wrongly for any compiler that does define it.
 
-**The include-guard idiom is read.** `#ifndef N` followed directly by `#define N`, with an empty list or `1`, answers `N` from the source alone, so a header guarded by `_FOO_H` or `_STDIO_H` is read. This does not apply where `clang` predefines `N` for some target. There, the pair is a fallback for the compiler's value rather than a guard: `#define __SIZE_TYPE__ char` declared a `char` where every build has an `unsigned long`. What is left is a name only `gcc` predefines, with a fallback of an empty list or `1`. Nothing measured here does that.
+**The include-guard idiom is read.** It answers `N` from the source alone, so a header guarded by `_FOO_H` or `_STDIO_H` is read. Its shape is strict:
+
+* `#ifndef N` is the file's first token.
+* A `#define N` with an empty list or `1` follows directly.
+* An `#endif` closing it is the file's last token, with no `#else` or `#elif` of its own.
+
+The whole file is required because, where a compiler does predefine `N`, all that changes is whether the header is read at all. A first version took the pair anywhere. Review found `#ifndef _MT` above `#define _MT 1` and an `#else` inside a function. `cl.exe` predefines `_MT`, and `clang` does not, so the double free `cl.exe` compiles in the `#else` was analysed away.
+
+The idiom does not apply where `clang` predefines `N` for some target. There, the pair is a fallback for the compiler's value rather than a guard: `#define __SIZE_TYPE__ char` declared a `char` where every build has an `unsigned long`.
 
 `__FILE__`, `__LINE__`, `__DATE__` and `__TIME__` are defined, so `#ifdef` answers them. Using one in code is refused as `SC0104`, because what it expands to is the place and time of the use, and that is not written yet.
 
@@ -60,7 +69,8 @@ Held by tests in `crates/safec/src/preprocessor.rs` and corpus cases in `crates/
 * `a_name_its_compilers_disagree_on_is_refused_for_msvc` puts the double free `cl.exe` builds under `#else` of `#ifdef __x86_64__`. If unsettled names are answered from the lists, it is reported as a double free rather than refused.
 * `every_target_predefines_what_its_compilers_agree_on` writes two targets' values, and their unsettled names, out rather than walking the lists. Changing a value, or moving a name between the classes, fails it.
 * `a_name_some_target_predefines_is_known` fails if only the run's own target is asked.
-* `a_reserved_guard_is_read_once` holds that a guard is read, with an empty list or `1`. `a_reserved_name_followed_by_another_define_is_refused` holds that the `#define` must name the guard. `a_compiler_s_fallback_is_not_a_guard` holds the two exclusions: a list that is not empty or `1`, and a name `clang` predefines.
+* `a_reserved_guard_is_read_once` holds that a guard is read, with an empty list or `1`. `a_reserved_name_followed_by_another_define_is_refused` holds that the `#define` must name the guard. `a_compiler_s_fallback_is_not_a_guard` and `a_name_clang_predefines_is_not_a_guard` hold the two exclusions: a list that is not empty or `1`, and a name `clang` predefines. `a_guard_inside_a_function_is_not_a_guard`, `a_guard_with_an_else_is_not_a_guard` and `a_guard_with_code_after_it_is_not_a_guard` hold the whole-file shape.
+* `a_gnu_mode_s_name_is_refused_for_linux` fails if `unix` is answered as undefined on Linux.
 * `a_predefined_macro_defined_again_is_refused` and `a_target_s_name_may_be_defined_again` hold `SC0117` to the names 6.10.8 lists.
 
 ### Consequences
