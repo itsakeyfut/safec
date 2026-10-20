@@ -184,6 +184,44 @@ impl Span {
     }
 }
 
+/// Which end of a span a lift moves, and checks against its instance's.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Edge {
+    /// The start, which has to be where the instance's first token is.
+    Start,
+    /// The end, which has to be where the instance's last token is.
+    End,
+}
+
+/// Where a join would hold some of an instance's tokens and not others.
+///
+/// What [`SourceMap::join`] answers instead of a span. ADR-0054 refuses such
+/// a node rather than joining it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Cut {
+    /// The end that does not reach its instance's edge, at the level of the
+    /// chain where it does not.
+    pub span: Span,
+    /// The instance it cuts.
+    pub instance: FileId,
+    /// Which end.
+    pub edge: Edge,
+}
+
+impl fmt::Display for Cut {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let edge = match self.edge {
+            Edge::Start => "start",
+            Edge::End => "end",
+        };
+        write!(
+            f,
+            "{:?} cuts {:?}: its {edge} is not its instance's",
+            self.span, self.instance
+        )
+    }
+}
+
 /// A position as a reader would give it: 1-based line and column.
 ///
 /// The column counts characters rather than bytes, so that a line holding
@@ -479,12 +517,8 @@ impl SourceMap {
     /// Where `span` does not start at its instance's first token at some
     /// level, naming the cut, or where the chain ends before `into`.
     pub fn lift_start(&self, span: Span, into: FileId) -> Span {
-        self.lift(
-            span,
-            into,
-            |span, (first, _)| span.start() == first.start(),
-            "start",
-        )
+        self.lifted(span, into, Edge::Start)
+            .unwrap_or_else(|cut| panic!("{cut}"))
     }
 
     /// `span` lifted to its use in `into`, checking at every level of the
@@ -496,36 +530,65 @@ impl SourceMap {
     /// Where `span` does not end at its instance's last token at some level,
     /// naming the cut, or where the chain ends before `into`.
     pub fn lift_end(&self, span: Span, into: FileId) -> Span {
-        self.lift(
-            span,
-            into,
-            |span, (_, last)| span.end() == last.end(),
-            "end",
-        )
+        self.lifted(span, into, Edge::End)
+            .unwrap_or_else(|cut| panic!("{cut}"))
     }
 
-    fn lift(
-        &self,
-        mut span: Span,
-        into: FileId,
-        whole: impl Fn(Span, (Span, Span)) -> bool,
-        side: &str,
-    ) -> Span {
+    /// The span from `from`'s start to `to`'s end, in the nearest file both
+    /// reach, or where it cuts an instance.
+    ///
+    /// The one join across instances, for every node a parser builds and
+    /// every span built after it: `from` is lifted by its start and `to` by
+    /// its end, each checked at every level as [`SourceMap::lift_start`] and
+    /// [`SourceMap::lift_end`] check, so a join holds every instance it
+    /// touches whole or is not made. A cut is answered rather than panicked
+    /// on, because a construct that cuts an instance is C, and refusing it is
+    /// the caller's to say. See ADR-0054.
+    ///
+    /// Two spans with no file in common, which no translation unit holds,
+    /// are a cut of `from`'s file.
+    pub fn join(&self, from: Span, to: Span) -> Result<Span, Cut> {
+        let Some(file) = self.shared(from, to) else {
+            return Err(Cut {
+                span: from,
+                instance: from.file(),
+                edge: Edge::Start,
+            });
+        };
+        let start = self.lifted(from, file, Edge::Start)?;
+        let end = self.lifted(to, file, Edge::End)?;
+        // `from`'s start and `to`'s end, not the smallest span covering both:
+        // a declarator's store runs from its name to the end of a span that
+        // starts earlier, at the specifiers.
+        Ok(Span::new(file, start.start(), end.end()))
+    }
+
+    /// `span` lifted into `into` by one edge, or the first level it cuts.
+    fn lifted(&self, mut span: Span, into: FileId, edge: Edge) -> Result<Span, Cut> {
         while span.file() != into {
             let file = span.file();
             let Some(at) = self.at(file) else {
                 panic!("{span:?} cannot be lifted into {into:?}: {file:?} is not an instance");
             };
-            let Some(extent) = self.extents[file.index()] else {
+            // An instance with nothing the parser read has no extent, and no
+            // span in it can be joined, so this is a defect in the caller.
+            let Some((first, last)) = self.extents[file.index()] else {
                 panic!("{file:?} has no recorded extent, so {span:?} cannot be lifted out of it");
             };
-            assert!(
-                whole(span, extent),
-                "{span:?} cuts {file:?}: its {side} is not its instance's, which is {extent:?}"
-            );
+            let whole = match edge {
+                Edge::Start => span.start() == first.start(),
+                Edge::End => span.end() == last.end(),
+            };
+            if !whole {
+                return Err(Cut {
+                    span,
+                    instance: file,
+                    edge,
+                });
+            }
             span = at;
         }
-        span
+        Ok(span)
     }
 
     /// `span` moved along its chain to its use in `into`, any span at all, or
@@ -938,6 +1001,72 @@ mod tests {
     fn a_span_whole_in_its_own_instance_but_not_in_the_next_does_not_lift_its_end() {
         let (map, main, _, b) = chain("cut_end", "#include \"b.h\"\nint y;");
         map.lift_end(Span::new(b, 6, 7), main);
+    }
+
+    /// A join holding an inclusion whole is made where its `#include` is,
+    /// from `from`'s start to `to`'s end: `b.h` starts `a.h` in the first
+    /// chain and ends it in the second.
+    #[test]
+    fn a_join_holding_an_instance_whole_is_made_at_its_use() {
+        let (map, main, _, b) = chain("join", "#include \"b.h\"\nint y;");
+        assert_eq!(
+            map.join(Span::new(b, 1, 4), Span::new(main, 22, 23)),
+            Ok(Span::new(main, 7, 23))
+        );
+
+        let (map, main, _, b) = chain("join_last", "int w;\n#include \"b.h\"");
+        assert_eq!(
+            map.join(Span::new(main, 0, 1), Span::new(b, 6, 7)),
+            Ok(Span::new(main, 0, 21))
+        );
+    }
+
+    /// A join whose start is partway through an instance names the cut,
+    /// rather than panicking or joining.
+    ///
+    /// Mutation: have `join` lift without checking the edge. It answers a
+    /// span.
+    #[test]
+    fn a_join_starting_partway_through_an_instance_is_a_cut() {
+        let (map, main, _, b) = chain("join_start", "#include \"b.h\"\nint y;");
+
+        assert_eq!(
+            map.join(Span::new(b, 5, 6), Span::new(main, 22, 23)),
+            Err(Cut {
+                span: Span::new(b, 5, 6),
+                instance: b,
+                edge: Edge::Start,
+            })
+        );
+    }
+
+    /// The end's counterpart, at the outer level: `b.h` ends at its `;`, and
+    /// its `#include` is not where `a.h` ends, which is `int y;`.
+    #[test]
+    fn a_join_ending_partway_through_an_instance_is_a_cut() {
+        let (map, main, a, b) = chain("join_end", "#include \"b.h\"\nint y;");
+
+        assert_eq!(
+            map.join(Span::new(main, 0, 1), Span::new(b, 6, 7)),
+            Err(Cut {
+                span: Span::new(a, 0, 14),
+                instance: a,
+                edge: Edge::End,
+            })
+        );
+    }
+
+    /// Two spans no chain relates are a cut, never a span made of offsets
+    /// from two files.
+    #[test]
+    fn a_join_of_spans_that_share_no_file_is_a_cut() {
+        let (mut map, main, _, _) = chain("join_none", "#include \"b.h\"\nint y;");
+        let elsewhere = map.add_virtual("other.c", "int q;\n");
+
+        assert!(
+            map.join(Span::new(main, 0, 1), Span::new(elsewhere, 0, 3))
+                .is_err()
+        );
     }
 
     /// An interior span is located as an edge is, and a span already in the
