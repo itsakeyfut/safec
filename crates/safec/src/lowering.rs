@@ -974,9 +974,10 @@ impl Lowering<'_> {
                     Edge::End => "ends partway through an included file",
                 };
                 diagnostics.report(
-                    Diagnostic::error("cannot compile a construct that cuts an `#include` yet")
+                    Diagnostic::error("cannot compile this `#include` where it is yet")
                         .with_code(LOWERING)
-                        .with_label(Label::primary(cut.span, label)),
+                        .with_label(Label::primary(cut.span, label))
+                        .with_note("safec reads an included file only where everything it builds over the file holds all of it or none of it"),
                 );
                 None
             }

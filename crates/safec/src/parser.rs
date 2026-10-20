@@ -2580,14 +2580,13 @@ impl Parser<'_> {
             Edge::Start => "begins partway through an included file",
             Edge::End => "ends partway through an included file",
         };
-        let mut diagnostic =
-            Diagnostic::error("a construct that cuts an `#include` is not read yet")
-                .with_code(UNREAD)
-                .with_label(Label::primary(cut.span, label))
-                .with_note(
-                    "a construct is read when it holds every token of an included file or none \
-                     of them",
-                );
+        // Not "this construct cuts the file": the span here may be one this
+        // compiler builds for itself, a declarator's from its specifiers, and
+        // cut a file that every C construct holds whole (#555).
+        let mut diagnostic = Diagnostic::error("this `#include` is not read where it is yet")
+            .with_code(UNREAD)
+            .with_label(Label::primary(cut.span, label))
+            .with_note("safec reads an included file only where everything it builds over the file holds all of it or none of it");
         if let Some(at) = self.sources.at(cut.instance) {
             diagnostic = diagnostic.with_label(Label::secondary(at, "included here"));
         }
