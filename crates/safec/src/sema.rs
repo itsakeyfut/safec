@@ -1617,6 +1617,7 @@ mod tests {
     use super::*;
     use crate::lexer::lex;
     use crate::parser::parse;
+    use crate::preprocessor::preprocess;
     use safec_ir::source::FileId;
 
     struct Resolved {
@@ -1633,6 +1634,7 @@ mod tests {
         let file = sources.add_virtual("test.c", text);
         let mut diagnostics = DiagnosticSink::new();
         let tokens = lex(file, sources.file(file), &mut diagnostics);
+        let tokens = preprocess(file, &tokens, &mut sources, &mut diagnostics);
         let ast = parse(&tokens, &mut diagnostics);
         assert!(
             !diagnostics.has_errors(),

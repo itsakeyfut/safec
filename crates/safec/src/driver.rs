@@ -39,10 +39,9 @@ use crate::lexer::lex;
 use crate::lowering::lower;
 use crate::options::{EmitKind, Options};
 use crate::parser::parse;
-use crate::preprocessor::preprocess;
+use crate::preprocessor::{Preprocessed, preprocess};
 use crate::safety::SafetyLevel;
 use crate::sema::{Resolution, resolve};
-use crate::token::Token;
 use crate::types::{Types, check};
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::{FuncId, LocalId, TranslationUnit};
@@ -543,7 +542,7 @@ struct Analysed {
 /// `int x` by an `SC0304` calling the program this compiler's gap.
 fn analysed(
     sources: &SourceMap,
-    tokens: &[Token],
+    tokens: &Preprocessed,
     read_whole: usize,
     int_range: Integer,
     diagnostics: &mut DiagnosticSink,
@@ -577,7 +576,7 @@ fn analysed(
 /// answered by neither.
 fn lowered(
     sources: &SourceMap,
-    tokens: &[Token],
+    tokens: &Preprocessed,
     read_whole: usize,
     options: &Options,
     diagnostics: &mut DiagnosticSink,

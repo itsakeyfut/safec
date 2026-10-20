@@ -1,5 +1,6 @@
 use super::*;
 use crate::lexer::lex;
+use crate::preprocessor::preprocess;
 use safec_ir::source::SourceMap;
 
 struct Parsed {
@@ -14,6 +15,7 @@ fn parsed(text: &str) -> Parsed {
     let file = sources.add_virtual("test.c", text);
     let mut diagnostics = DiagnosticSink::new();
     let tokens = lex(file, sources.file(file), &mut diagnostics);
+    let tokens = preprocess(file, &tokens, &mut sources, &mut diagnostics);
     let ast = parse(&tokens, &mut diagnostics);
 
     Parsed {
@@ -346,13 +348,17 @@ fn no_malformed_input_makes_the_parser_report_twice_at_one_place_or_hang() {
 /// The parser stops rather than reading past the end.
 ///
 /// `lex` always ends its stream with `Eof`, so an empty slice does not
-/// arrive through the driver. It arrives here, and the answer is an empty
-/// tree rather than a panic.
+/// arrive through the driver. It arrives here, through the preprocessor,
+/// which passes it on empty, and the answer is an empty tree rather than a
+/// panic.
 #[test]
 fn no_tokens_at_all_parse_to_nothing() {
+    let mut sources = SourceMap::new();
+    let file = sources.add_virtual("t.c", "");
     let mut diagnostics = DiagnosticSink::new();
+    let tokens = preprocess(file, &[], &mut sources, &mut diagnostics);
 
-    let ast = parse(&[], &mut diagnostics);
+    let ast = parse(&tokens, &mut diagnostics);
 
     assert!(ast.items().is_empty());
     assert_eq!(diagnostics.diagnostics().len(), 0);
@@ -374,14 +380,15 @@ fn a_file_the_lexer_could_not_read_still_parses_to_a_tree() {
 ///
 /// The lexer keeps the line whole and the preprocessor reports it, and
 /// `TokenKind::Directive` says that is so a parser is not made to answer for a
-/// line that is not C.
-/// Keeping the line whole only turns an avalanche into one error, and one
-/// is still one too many: this parser stops reading an item at the first
-/// thing in it that it cannot read, so a `#include` at the top of a real file
-/// left the function under it unparsed.
+/// line that is not C. Keeping the line whole only turns an avalanche into one
+/// error, and one is still one too many: this parser stops reading an item at
+/// the first thing in it that it cannot read, so a `#include` at the top of a
+/// real file left the function under it unparsed. So what a directive costs
+/// through the helper is exactly the preprocessor's report, as through the
+/// driver.
 ///
-/// Mutation: drop the filter in `parse`. The tree becomes a single error
-/// node and the parser adds a report of its own, and this fails on both.
+/// Mutation: have `read_includes` push the directive it reports. The
+/// assertion in `parse` panics here, naming the stage.
 #[test]
 fn a_directive_is_not_something_the_grammar_reads() {
     let parsed = parsed(
@@ -390,14 +397,15 @@ int main(void) { return 0; }
 ",
     );
 
-    // Not preprocessed here, so nothing has reported the line, and what must
-    // not be there is a report of the parser's.
-    assert_eq!(
-        parsed.diagnostics.diagnostics().len(),
-        0,
-        "{:?}",
-        parsed.diagnostics.diagnostics()
-    );
+    // The preprocessor's report stands. What must not be there is a second.
+    let codes: Vec<String> = parsed
+        .diagnostics
+        .diagnostics()
+        .iter()
+        .filter_map(|diagnostic| diagnostic.code())
+        .map(|code| code.to_string())
+        .collect();
+    assert_eq!(codes, ["SC0104"], "{:?}", parsed.diagnostics.diagnostics());
     let [Item::Function(_)] = parsed.ast.items() else {
         panic!("{:?}", parsed.ast.items());
     };
@@ -1705,7 +1713,10 @@ int f(int *p, struct S *s) {
     let mut scanned = DiagnosticSink::new();
     let tokens = lex(first, sources.file(first), &mut scanned);
     let mut whole = DiagnosticSink::new();
-    let ast = parse(&tokens, &mut whole);
+    let ast = parse(
+        &preprocess(first, &tokens, &mut sources, &mut whole),
+        &mut whole,
+    );
     assert!(
         scanned.diagnostics().is_empty() && whole.diagnostics().is_empty(),
         "{:?} {:?}",
@@ -1748,6 +1759,7 @@ int f(int *p, struct S *s) {
             })
             .collect();
         let mut diagnostics = DiagnosticSink::new();
+        let split = preprocess(first, &split, &mut sources, &mut diagnostics);
         parse(&split, &mut diagnostics);
 
         let codes: Vec<String> = diagnostics
@@ -1780,6 +1792,8 @@ int f(int *p, struct S *s) {
                 },
             })
             .collect();
-        parse(&split, &mut DiagnosticSink::new());
+        let mut diagnostics = DiagnosticSink::new();
+        let split = preprocess(first, &split, &mut sources, &mut diagnostics);
+        parse(&split, &mut diagnostics);
     }
 }

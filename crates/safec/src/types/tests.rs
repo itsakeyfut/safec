@@ -2,6 +2,7 @@ use super::*;
 use crate::ast::spell_type;
 use crate::lexer::lex;
 use crate::parser::parse;
+use crate::preprocessor::preprocess;
 use crate::sema::resolve;
 use safec_ir::target::Target;
 
@@ -18,6 +19,7 @@ fn checked(text: &str) -> Checked {
     let file = sources.add_virtual("t.c", text);
     let mut diagnostics = DiagnosticSink::new();
     let tokens = lex(file, sources.file(file), &mut diagnostics);
+    let tokens = preprocess(file, &tokens, &mut sources, &mut diagnostics);
     let mut ast = parse(&tokens, &mut diagnostics);
     assert!(
         !diagnostics.has_errors(),
