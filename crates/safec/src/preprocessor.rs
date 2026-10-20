@@ -1007,10 +1007,12 @@ fn act(
                 // no predefined macro exists here, so `__STDC_VERSION__` was
                 // not defined, and the group a compiler builds was skipped.
                 // A double free under `#ifdef __STDC_VERSION__` was analysed
-                // away. Found by review. A name the source defines is
-                // answered, so an include guard named `_FOO_H` is read from
-                // its second inclusion on; one the implementation defines
-                // without reserving it, `unix` in a GNU mode, is not caught.
+                // away. Found by review. A name the source defines first is
+                // answered. An include guard named `_FOO_H` is refused at
+                // every inclusion, since the `#define` inside it is in a
+                // group this does not compile. A name the implementation
+                // defines without reserving it, `unix` in a GNU mode, is not
+                // caught.
                 Named::Read(name) if reserved(name) && !reading.macros.contains_key(name) => {
                     diagnostics.report(
                         refused(
