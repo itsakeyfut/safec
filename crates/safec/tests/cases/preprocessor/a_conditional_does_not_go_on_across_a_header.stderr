@@ -1,0 +1,16 @@
+error[SC0115]: `#ifndef` is not closed in this file
+   ╭─[ a_conditional_does_not_go_on_across_a_header.h:1:1 ]
+   │
+ 1 │ #ifndef U
+   │ ┬  
+   │ ╰── opened here
+───╯
+  = note: a conditional ends with an `#endif` in the file it begins in
+error[SC0115]: this `#endif` closes no conditional
+   ╭─[ a_conditional_does_not_go_on_across_a_header.c:2:1 ]
+   │
+ 2 │ #endif
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: no `#if`, `#ifdef` or `#ifndef` is open in this file

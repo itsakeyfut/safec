@@ -1,0 +1,16 @@
+error[SC0115]: `#ifdef` names no macro
+   ╭─[ an_ifdef_with_no_name_is_refused.c:1:1 ]
+   │
+ 1 │ #ifdef
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: `#ifdef` takes one name, and none of this conditional's groups is compiled
+error[SC0115]: `#ifndef` names no macro
+   ╭─[ an_ifdef_with_no_name_is_refused.c:4:1 ]
+   │
+ 4 │ #ifndef 1
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: `#ifndef` takes one name, and none of this conditional's groups is compiled

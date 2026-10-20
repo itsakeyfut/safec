@@ -1,0 +1,2 @@
+#ifndef U
+int x;

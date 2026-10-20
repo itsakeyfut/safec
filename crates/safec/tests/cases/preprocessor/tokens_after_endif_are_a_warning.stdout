@@ -1,0 +1,4 @@
+Function tokens_after_endif_are_a_warning.c:3:1 "main" "int (void)"
+  Compound tokens_after_endif_are_a_warning.c:3:16
+    Return tokens_after_endif_are_a_warning.c:3:18
+      Number tokens_after_endif_are_a_warning.c:3:25 "0"

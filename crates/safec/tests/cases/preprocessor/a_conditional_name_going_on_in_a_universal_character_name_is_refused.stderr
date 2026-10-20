@@ -1,0 +1,8 @@
+error[SC0104]: this `#ifndef` is not read yet
+   ╭─[ a_conditional_name_going_on_in_a_universal_character_name_is_refused.c:7:1 ]
+   │
+ 7 │ #ifndef A\u00e9
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: an `#ifndef` is read when its name is ASCII letters, digits and `_`, and none of this conditional's groups is compiled

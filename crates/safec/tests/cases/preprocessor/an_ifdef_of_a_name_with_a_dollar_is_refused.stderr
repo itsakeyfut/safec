@@ -1,0 +1,8 @@
+error[SC0104]: this `#ifdef` is not read yet
+   ╭─[ an_ifdef_of_a_name_with_a_dollar_is_refused.c:1:1 ]
+   │
+ 1 │ #ifdef A$B
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: an `#ifdef` is read when its name is ASCII letters, digits and `_`, and none of this conditional's groups is compiled

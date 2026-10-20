@@ -1,0 +1,10 @@
+error[SC0115]: an `#elif` after this conditional's `#else`
+   ╭─[ an_elif_after_else_is_refused.c:3:1 ]
+   │
+ 2 │ #else
+   │ ┬  
+   │ ╰── `#else` here
+ 3 │ #elif 1
+   │ ┬  
+   │ ╰── directive begins here
+───╯

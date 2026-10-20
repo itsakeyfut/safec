@@ -1,0 +1,16 @@
+error[SC0104]: `#if` is not read yet
+   ╭─[ if_and_elif_are_not_read_yet.c:1:1 ]
+   │
+ 1 │ #if 1
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: only `#ifdef` and `#ifndef` are read yet, and none of this conditional's groups is compiled
+error[SC0104]: `#elif` is not read yet
+   ╭─[ if_and_elif_are_not_read_yet.c:3:1 ]
+   │
+ 3 │ #elif 2
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: only `#ifdef` and `#ifndef` are read yet, and none of this conditional's groups from here is compiled

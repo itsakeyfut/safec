@@ -1,0 +1,24 @@
+warning[SC0116]: tokens after `#ifdef` are ignored
+   ╭─[ tokens_after_endif_are_a_warning.c:1:10 ]
+   │
+ 1 │ #ifdef U junk
+   │          ──┬─  
+   │            ╰─── ignored
+───╯
+  = note: a comment there says the same without a warning
+warning[SC0116]: tokens after `#else` are ignored
+   ╭─[ tokens_after_endif_are_a_warning.c:2:7 ]
+   │
+ 2 │ #else junk
+   │       ──┬─  
+   │         ╰─── ignored
+───╯
+  = note: a comment there says the same without a warning
+warning[SC0116]: tokens after `#endif` are ignored
+   ╭─[ tokens_after_endif_are_a_warning.c:4:8 ]
+   │
+ 4 │ #endif U
+   │        ┬  
+   │        ╰── ignored
+───╯
+  = note: a comment there says the same without a warning

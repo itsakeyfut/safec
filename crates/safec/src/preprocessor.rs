@@ -1,12 +1,13 @@
 //! Directives, read between the lexer and the parser.
 //!
 //! What it reads is `#include "file"`, whose file's tokens, themselves
-//! preprocessed, take the directive's place; and object-like `#define` and
+//! preprocessed, take the directive's place; object-like `#define` and
 //! `#undef`, whose macros' names are replaced by their replacement lists,
-//! rescanned (C17 6.10.3). Every other directive is refused as `SC0104`,
-//! `#include <file>` among them, which needs a search path and a system header
-//! this compiler cannot read yet anyway, and so are function-like macros, `#`
-//! and `##`.
+//! rescanned (C17 6.10.3); and `#ifdef`, `#ifndef`, `#else` and `#endif`,
+//! which choose the groups that are compiled (6.10.1). Every other directive
+//! is refused as `SC0104`, `#include <file>` among them, which needs a search
+//! path and a system header this compiler cannot read yet anyway, and so are
+//! function-like macros, `#`, `##`, `#if` and `#elif`.
 //!
 //! Each inclusion and each expansion is a file of its own in the source map,
 //! so a diagnostic in a header names the header, one in an expansion is shown
@@ -41,6 +42,13 @@ const TOO_MANY: Code = Code::new("SC0112");
 const TOO_MANY_EXPANSIONS: Code = Code::new("SC0113");
 /// A macro defined a second time with a different replacement list.
 const REDEFINED: Code = Code::new("SC0114");
+/// A conditional written wrong: one not closed in its file, an `#else`,
+/// `#elif` or `#endif` with none open, a second `#else`, or an `#ifdef` with
+/// no name. One code, because the fix is the same each time: a directive to
+/// add, move or remove.
+const UNBALANCED: Code = Code::new("SC0115");
+/// Tokens after a conditional directive's name, or after `#else` or `#endif`.
+const EXTRA_TOKENS: Code = Code::new("SC0116");
 
 /// How many files may be being read at once, the input among them.
 ///
@@ -55,8 +63,9 @@ const MAX_DEPTH: usize = 200;
 /// [`MAX_DEPTH`] bounds a chain, not a tree: a header that includes the next
 /// one twice, fifteen deep, is 65,536 inclusions, each a file of its own
 /// (ADR-0054), and every two levels more took four times as long, measured,
-/// with nothing printed until it ended. An include guard would stop that in a
-/// real header, and `#ifndef` is not read yet. Found by review.
+/// with nothing printed until it ended. An include guard stops that in a real
+/// header, since a second reading skips the `#include`s inside it, and this
+/// bounds a header that has none. Found by review.
 const MAX_INCLUSIONS: usize = 4096;
 
 /// How many expansions one use of a macro, written outside any expansion,
@@ -213,12 +222,22 @@ fn read_includes(
         cursor: 0,
         instance: None,
         extent: None,
+        conditionals: Vec::new(),
+        skipped_depth: 0,
     }];
     while let Some(frame) = frames.last_mut() {
         let next = frame.tokens.get(frame.cursor).copied();
         frame.cursor += 1;
         let Some(token) = next else {
             let Some(frame) = frames.pop() else { break };
+            for open in &frame.conditionals {
+                diagnostics.report(
+                    Diagnostic::error(format!("`{}` is not closed in this file", open.directive))
+                        .with_code(UNBALANCED)
+                        .with_label(Label::primary(open.opened, "opened here"))
+                        .with_note("a conditional ends with an `#endif` in the file it begins in"),
+                );
+            }
             if let Some(instance) = frame.instance {
                 match &instance {
                     Instance::Inclusion { .. } => {
@@ -240,6 +259,7 @@ fn read_includes(
             }
             continue;
         };
+        let skipping = frames.last().is_some_and(Frame::skipping);
         match token.kind {
             TokenKind::Eof => {}
             TokenKind::Directive => {
@@ -268,8 +288,51 @@ fn read_includes(
                              it ends, and the lines inside it are not code",
                         ),
                     );
+                    // A conditional refused here still opens or ends its
+                    // level, as `conditional` says a refused one does: left
+                    // out, its `#endif` was reported as closing nothing, a
+                    // caret on a directive that was right. Found by review.
+                    if let (Some(form), Some(frame)) = (conditional_form(&text), frames.last_mut())
+                    {
+                        conditional(form, &text, token.span, frame, reading, diagnostics, true);
+                    }
                     continue;
                 };
+                let form = conditional_form(&text);
+                // A splice joins the line below to this one before any
+                // directive is read (C17 5.1.1.2 p1, phase 2), and the lexer
+                // read that line on its own, as a directive where it begins
+                // with `#`. So it is refused wherever a directive is read at
+                // all, a skipped group's included: there `#define X \` above
+                // `#else` ended a group C does not end, and the code after it
+                // was compiled where C has none. Found by review.
+                if self::spliced(&text) && (skipping || form.is_some()) {
+                    let message = if form.is_some() {
+                        "a line splice or a trigraph in a conditional directive is not read yet"
+                    } else {
+                        "a line splice or a trigraph in a directive in a skipped group is not \
+                         read yet"
+                    };
+                    diagnostics.report(
+                        refused(&text, token.span, UNSUPPORTED_SPLICE, message).with_note(
+                            "C can join the line below to this one, and it would be read on \
+                             its own instead",
+                        ),
+                    );
+                }
+                if let Some(form) = form {
+                    if let Some(frame) = frames.last_mut() {
+                        conditional(form, &text, token.span, frame, reading, diagnostics, false);
+                    }
+                    continue;
+                }
+                // A group that is skipped has its directives read only as far
+                // as their names, to count the conditionals in it, and the
+                // rest ignored (C17 6.10.1 p6): `#include <stdio.h>` or a
+                // function-like `#define` there is not reported.
+                if skipping {
+                    continue;
+                }
                 match include_form(&text) {
                     IncludeForm::Quoted { name, quote } => {
                         let quoted = Span::new(
@@ -288,6 +351,8 @@ fn read_includes(
                                     directive: token.span,
                                 }),
                                 extent: None,
+                                conditionals: Vec::new(),
+                                skipped_depth: 0,
                             });
                         }
                     }
@@ -404,14 +469,16 @@ fn read_includes(
                             // reader does not have and one that stopped being
                             // the whole answer.
                             .with_note(
-                                "`#include \"...\"` and an object-like `#define` are read, and \
-                             `#ifdef` and `#ifndef` come next",
+                                "`#include \"...\"`, an object-like `#define` and `#undef`, \
+                                 `#ifdef`, `#ifndef`, `#else` and `#endif` are read",
                             )
                             .with_note("the line is one token and is not compiled"),
                         ),
                     },
                 }
             }
+            // Neither handed over nor expanded, so not in any extent either.
+            _ if skipping => {}
             // An annotation's spelling too: `_Nonnull` is an identifier while
             // preprocessing, and `#define _Nonnull` with nothing after it is
             // how a header makes the annotation vanish for a compiler without
@@ -513,6 +580,8 @@ fn expansion(
             name,
         }),
         extent: None,
+        conditionals: Vec::new(),
+        skipped_depth: 0,
     })
 }
 
@@ -744,6 +813,381 @@ fn spliced(text: &str) -> bool {
     text.trim_end_matches([' ', '\t', '\r']).ends_with('\\') || trigraph
 }
 
+/// A conditional directive, read as far as this reads one.
+#[derive(Debug, PartialEq, Eq)]
+enum ConditionalForm<'a> {
+    /// `#if`, refused: its expression is not read yet.
+    If,
+    /// `#ifdef name` or, `negated`, `#ifndef name`.
+    Ifdef {
+        negated: bool,
+        name: Named<'a>,
+        extra: Option<(u32, u32)>,
+    },
+    /// `#elif`, refused for the reason `#if` is.
+    Elif,
+    Else {
+        extra: Option<(u32, u32)>,
+    },
+    Endif {
+        extra: Option<(u32, u32)>,
+    },
+}
+
+/// The name an `#ifdef` or an `#ifndef` asks about.
+#[derive(Debug, PartialEq, Eq)]
+enum Named<'a> {
+    Read(&'a str),
+    /// None, or one beginning with a digit: C has no such directive.
+    Missing,
+    /// One this does not read, with a `$` or a letter outside ASCII in it,
+    /// for the reason [`MacroForm::Unread`] gives.
+    Unread,
+}
+
+/// Read `text`, a directive's line with its comments made spaces, as a
+/// conditional directive, or `None` where it is another directive.
+///
+/// `extra` is where in `text` tokens follow what the directive takes, which
+/// C's grammar does not allow and which is warned about and ignored.
+fn conditional_form(text: &str) -> Option<ConditionalForm<'_>> {
+    let blank = [' ', '\t', '\u{b}', '\u{c}', '\r'];
+    let identifier = |c: char| c.is_ascii_alphanumeric() || c == '_';
+    // A name ends at a blank, the end, or a character that is not part of
+    // any identifier, such as `(`; `$` or a letter outside ASCII would be,
+    // and so would a `\`, which begins a universal character name (C17
+    // 6.4.2.1). Ended there instead, `#ifndef A\u00e9` asked about `A`, and a
+    // double free under it was skipped. Found by review.
+    let ends = |rest: &str| {
+        !rest.starts_with(|c: char| identifier(c) || c == '$' || c == '\\' || !c.is_ascii())
+    };
+    // Where tokens go on after what the directive takes, if they do.
+    let extra = |rest: &str| {
+        let after = rest.trim_matches(blank);
+        (!after.is_empty()).then(|| {
+            let start = text.len() - rest.trim_start_matches(blank).len();
+            (start as u32, (start + after.len()) as u32)
+        })
+    };
+
+    let rest = text.strip_prefix('#').or_else(|| text.strip_prefix("%:"))?;
+    let rest = rest.trim_start_matches(blank);
+    let length = rest.len() - rest.trim_start_matches(identifier).len();
+    let (word, rest) = rest.split_at(length);
+    if !ends(rest) {
+        return None;
+    }
+    let negated = match word {
+        "if" => return Some(ConditionalForm::If),
+        "elif" => return Some(ConditionalForm::Elif),
+        "else" => return Some(ConditionalForm::Else { extra: extra(rest) }),
+        "endif" => return Some(ConditionalForm::Endif { extra: extra(rest) }),
+        "ifdef" => false,
+        "ifndef" => true,
+        _ => return None,
+    };
+    let rest = rest.trim_start_matches(blank);
+    let length = rest.len() - rest.trim_start_matches(identifier).len();
+    let (name, after) = rest.split_at(length);
+    let name = if name.is_empty() && !ends(rest) {
+        Named::Unread
+    } else if name.is_empty() || name.starts_with(|c: char| c.is_ascii_digit()) {
+        Named::Missing
+    } else if !ends(after) {
+        Named::Unread
+    } else {
+        Named::Read(name)
+    };
+    Some(ConditionalForm::Ifdef {
+        negated,
+        name,
+        extra: extra(after),
+    })
+}
+
+/// Act on a conditional directive in `frame`, the frame of the file it is
+/// written in.
+///
+/// A refused one, `#if`, `#elif` or an `#ifdef` this cannot read, still opens
+/// or ends a level, so its `#endif` is matched rather than reported, and none
+/// of its groups from there is compiled: compiling one would compile code
+/// under a condition nobody evaluated. The refusal is an error, so nothing
+/// past it is believed either way. `already_refused` is a line refused for
+/// something else, which only keeps the level.
+#[allow(clippy::too_many_arguments)]
+fn conditional(
+    form: ConditionalForm,
+    text: &str,
+    directive: Span,
+    frame: &mut Frame,
+    reading: &Reading,
+    diagnostics: &mut DiagnosticSink,
+    already_refused: bool,
+) {
+    let opens = matches!(form, ConditionalForm::If | ConditionalForm::Ifdef { .. });
+    // Inside a conditional opened in a skipped group, only the level counts.
+    if frame.skipped_depth > 0 || (opens && frame.skipping()) {
+        if opens {
+            frame.skipped_depth += 1;
+        } else if matches!(form, ConditionalForm::Endif { .. }) && frame.skipped_depth > 0 {
+            frame.skipped_depth -= 1;
+        } else if frame.skipped_depth == 0 {
+            // `#else`, `#elif` or `#endif` of the skipped conditional itself.
+            act(
+                form,
+                text,
+                directive,
+                frame,
+                reading,
+                diagnostics,
+                already_refused,
+            );
+        }
+        return;
+    }
+    act(
+        form,
+        text,
+        directive,
+        frame,
+        reading,
+        diagnostics,
+        already_refused,
+    );
+}
+
+/// Whether C reserves `name` for the implementation in every use: one that
+/// begins with `__`, or with `_` and a capital letter (C17 7.1.3 p1).
+fn reserved(name: &str) -> bool {
+    let mut characters = name.chars();
+    characters.next() == Some('_')
+        && characters
+            .next()
+            .is_some_and(|second| second == '_' || second.is_ascii_uppercase())
+}
+
+/// Act on a conditional directive that is not inside a skipped group's own
+/// nested conditional: open a level, choose a group, or close one.
+fn act(
+    form: ConditionalForm,
+    text: &str,
+    directive: Span,
+    frame: &mut Frame,
+    reading: &Reading,
+    diagnostics: &mut DiagnosticSink,
+    already_refused: bool,
+) {
+    let at = hash(text, directive);
+    // A spliced line is refused by the frame loop, and acted on here as far
+    // as the line goes.
+    let spliced = spliced(text);
+    let ignored = |extra: Option<(u32, u32)>, diagnostics: &mut DiagnosticSink, what: &str| {
+        // Not on a spliced line, whose `\` is no token and is reported.
+        if let Some((start, end)) = extra.filter(|_| !spliced) {
+            let span = Span::new(
+                directive.file(),
+                directive.start() + start,
+                directive.start() + end,
+            );
+            diagnostics.report(
+                Diagnostic::warning(format!("tokens after `{what}` are ignored"))
+                    .with_code(EXTRA_TOKENS)
+                    .with_label(Label::primary(span, "ignored"))
+                    .with_note("a comment there says the same without a warning"),
+            );
+        }
+    };
+    let open = |frame: &mut Frame, directive: &'static str, taking: Option<bool>| {
+        frame.conditionals.push(Conditional {
+            directive,
+            opened: at,
+            otherwise: None,
+            settled: taking.is_none_or(|taking| taking),
+            taking: taking.unwrap_or(false),
+        });
+    };
+    if already_refused {
+        match form {
+            ConditionalForm::If => open(frame, "#if", None),
+            ConditionalForm::Ifdef { negated, .. } => {
+                open(frame, if negated { "#ifndef" } else { "#ifdef" }, None)
+            }
+            ConditionalForm::Elif | ConditionalForm::Else { .. } => {
+                if let Some(conditional) = frame.conditionals.last_mut() {
+                    conditional.settled = true;
+                    conditional.taking = false;
+                }
+            }
+            ConditionalForm::Endif { .. } => {
+                frame.conditionals.pop();
+            }
+        }
+        return;
+    }
+    let unmatched = |diagnostics: &mut DiagnosticSink, message: &str| {
+        diagnostics.report(
+            refused(text, directive, UNBALANCED, message)
+                .with_note("no `#if`, `#ifdef` or `#ifndef` is open in this file"),
+        );
+    };
+    match form {
+        ConditionalForm::If => {
+            diagnostics.report(
+                refused(
+                    text,
+                    directive,
+                    UNSUPPORTED_DIRECTIVE,
+                    "`#if` is not read yet",
+                )
+                .with_note(
+                    "only `#ifdef` and `#ifndef` are read yet, and none of this conditional's \
+                     groups is compiled",
+                ),
+            );
+            open(frame, "#if", None);
+        }
+        ConditionalForm::Ifdef {
+            negated,
+            name,
+            extra,
+        } => {
+            let what = if negated { "#ifndef" } else { "#ifdef" };
+            match name {
+                // A name C reserves for the implementation, which may have
+                // defined it (C17 7.1.3 p1), and which this cannot answer:
+                // no predefined macro exists here, so `__STDC_VERSION__` was
+                // not defined, and the group a compiler builds was skipped.
+                // A double free under `#ifdef __STDC_VERSION__` was analysed
+                // away. Found by review. A name the source defines first is
+                // answered. An include guard named `_FOO_H` is refused at
+                // every inclusion, since the `#define` inside it is in a
+                // group this does not compile. A name the implementation
+                // defines without reserving it, `unix` in a GNU mode, is not
+                // caught.
+                Named::Read(name) if reserved(name) && !reading.macros.contains_key(name) => {
+                    diagnostics.report(
+                        refused(
+                            text,
+                            directive,
+                            UNSUPPORTED_DIRECTIVE,
+                            &format!(
+                                "this `{what}` asks about a name the implementation may define"
+                            ),
+                        )
+                        .with_note(format!(
+                            "`{name}` is reserved for the implementation (C17 7.1.3), and \
+                             predefined macros are not read yet, so none of this conditional's \
+                             groups is compiled"
+                        )),
+                    );
+                    open(frame, what, None);
+                }
+                Named::Read(name) => {
+                    ignored(extra, diagnostics, what);
+                    open(
+                        frame,
+                        what,
+                        Some(reading.macros.contains_key(name) != negated),
+                    );
+                }
+                Named::Missing => {
+                    diagnostics.report(
+                        refused(
+                            text,
+                            directive,
+                            UNBALANCED,
+                            &format!("`{what}` names no macro"),
+                        )
+                        .with_note(format!(
+                            "`{what}` takes one name, and none of this conditional's groups \
+                                 is compiled"
+                        )),
+                    );
+                    open(frame, what, None);
+                }
+                Named::Unread => {
+                    diagnostics.report(
+                        refused(
+                            text,
+                            directive,
+                            UNSUPPORTED_DIRECTIVE,
+                            &format!("this `{what}` is not read yet"),
+                        )
+                        .with_note(format!(
+                            "an `{what}` is read when its name is ASCII letters, digits and `_`, \
+                             and none of this conditional's groups is compiled"
+                        )),
+                    );
+                    open(frame, what, None);
+                }
+            }
+        }
+        ConditionalForm::Elif => {
+            let Some(conditional) = frame.conditionals.last_mut() else {
+                unmatched(diagnostics, "this `#elif` belongs to no conditional");
+                return;
+            };
+            if let Some(otherwise) = conditional.otherwise {
+                diagnostics.report(
+                    refused(
+                        text,
+                        directive,
+                        UNBALANCED,
+                        "an `#elif` after this conditional's `#else`",
+                    )
+                    .with_label(Label::secondary(otherwise, "`#else` here")),
+                );
+            } else {
+                diagnostics.report(
+                    refused(
+                        text,
+                        directive,
+                        UNSUPPORTED_DIRECTIVE,
+                        "`#elif` is not read yet",
+                    )
+                    .with_note(
+                        "only `#ifdef` and `#ifndef` are read yet, and none of this \
+                             conditional's groups from here is compiled",
+                    ),
+                );
+            }
+            conditional.settled = true;
+            conditional.taking = false;
+        }
+        ConditionalForm::Else { extra } => {
+            let Some(conditional) = frame.conditionals.last_mut() else {
+                unmatched(diagnostics, "this `#else` belongs to no conditional");
+                return;
+            };
+            ignored(extra, diagnostics, "#else");
+            if let Some(otherwise) = conditional.otherwise {
+                diagnostics.report(
+                    refused(
+                        text,
+                        directive,
+                        UNBALANCED,
+                        "this conditional already has an `#else`",
+                    )
+                    .with_label(Label::secondary(otherwise, "first `#else` here"))
+                    .with_note("the group after this one is not compiled"),
+                );
+                conditional.taking = false;
+                return;
+            }
+            conditional.otherwise = Some(at);
+            conditional.taking = !conditional.settled;
+            conditional.settled = true;
+        }
+        ConditionalForm::Endif { extra } => {
+            if frame.conditionals.pop().is_none() {
+                unmatched(diagnostics, "this `#endif` closes no conditional");
+                return;
+            }
+            ignored(extra, diagnostics, "#endif");
+        }
+    }
+}
+
 /// One file being read: its tokens, how far they have been read, and, for an
 /// inclusion, which file it is, the `#include` it was read for, and the
 /// first and last thing of its own the parser has been handed so far.
@@ -752,11 +1196,44 @@ fn spliced(text: &str) -> bool {
 /// input's, so that a frame of another kind, a macro's expansion, cannot pop
 /// a file that is still being read: one did, in a prototype, and the cycle it
 /// hid was refused as too many inclusions instead.
+///
+/// Each frame holds the conditionals open in its own file, because each
+/// source file is a preprocessing file of its own (C17 6.10 p1) and an
+/// if-section cannot begin in a header and end in its includer. An
+/// expansion's frame never holds a directive, so its stack stays empty.
 struct Frame {
     tokens: Vec<Token>,
     cursor: usize,
     instance: Option<Instance>,
     extent: Option<(Span, Span)>,
+    conditionals: Vec<Conditional>,
+    /// Conditionals opened inside a skipped group, which are counted and not
+    /// read (C17 6.10.1 p6).
+    skipped_depth: usize,
+}
+
+impl Frame {
+    /// Whether the group being read is skipped.
+    fn skipping(&self) -> bool {
+        self.conditionals
+            .last()
+            .is_some_and(|conditional| !conditional.taking)
+    }
+}
+
+/// One open `#if`, `#ifdef` or `#ifndef` in the file a frame reads.
+struct Conditional {
+    /// `#if`, `#ifdef` or `#ifndef`, for the report of one never closed.
+    directive: &'static str,
+    /// The `#` that opened it, where one never closed is reported.
+    opened: Span,
+    /// Its `#else`, where a second one is reported.
+    otherwise: Option<Span>,
+    /// Whether a group of it has been compiled or it was refused, either of
+    /// which skips every later group.
+    settled: bool,
+    /// Whether the group being read is compiled.
+    taking: bool,
 }
 
 /// What a frame above the input's is.
@@ -1027,18 +1504,23 @@ fn include_form(text: &str) -> IncludeForm<'_> {
 /// The `#`, not the line. A caret under a long macro definition is a wall, and
 /// the line is quoted above it anyway.
 fn refused(text: &str, directive: Span, code: Code, message: &str) -> Diagnostic {
-    // Two bytes where the `#` is written `%:`.
-    let hash = if text.starts_with("%:") { 2 } else { 1 };
     Diagnostic::error(message)
         .with_code(code)
         .with_label(Label::primary(
-            Span::new(
-                directive.file(),
-                directive.start(),
-                directive.start() + hash,
-            ),
+            hash(text, directive),
             "directive begins here",
         ))
+}
+
+/// The `#` that begins `directive`, whose text is `text`.
+fn hash(text: &str, directive: Span) -> Span {
+    // Two bytes where the `#` is written `%:`.
+    let hash = if text.starts_with("%:") { 2 } else { 1 };
+    Span::new(
+        directive.file(),
+        directive.start(),
+        directive.start() + hash,
+    )
 }
 
 /// The path a file was read from, if it was read from one.
@@ -1493,6 +1975,109 @@ mod tests {
             .map(|code| code.to_string())
             .collect();
         assert_eq!(codes, ["SC0113"]);
+    }
+
+    /// Each conditional directive is read by its name, a name that only
+    /// begins with one is not one, and what follows is where it is.
+    ///
+    /// Mutation: drop the check that the directive's name ends where a name
+    /// does. `#if$` is an `#if`. Mutation: start `extra` before the blanks
+    /// in front of it. Its offsets move.
+    #[test]
+    fn a_conditional_directive_is_read_by_its_name() {
+        use ConditionalForm::*;
+        assert_eq!(conditional_form("#if 1"), Some(If));
+        assert_eq!(conditional_form("%:elif X"), Some(Elif));
+        assert_eq!(conditional_form("#  else"), Some(Else { extra: None }));
+        assert_eq!(conditional_form("#endif     "), Some(Endif { extra: None }));
+        assert_eq!(
+            conditional_form("#endif X  "),
+            Some(Endif {
+                extra: Some((7, 8))
+            })
+        );
+        assert_eq!(
+            conditional_form("#ifdef A"),
+            Some(Ifdef {
+                negated: false,
+                name: Named::Read("A"),
+                extra: None
+            })
+        );
+        assert_eq!(
+            conditional_form("#ifndef A B"),
+            Some(Ifdef {
+                negated: true,
+                name: Named::Read("A"),
+                extra: Some((10, 11))
+            })
+        );
+        assert_eq!(
+            conditional_form("#ifdef"),
+            Some(Ifdef {
+                negated: false,
+                name: Named::Missing,
+                extra: None
+            })
+        );
+        assert_eq!(
+            conditional_form("#ifdef 1"),
+            Some(Ifdef {
+                negated: false,
+                name: Named::Missing,
+                extra: None
+            })
+        );
+        assert_eq!(
+            conditional_form("#ifdef A$B"),
+            Some(Ifdef {
+                negated: false,
+                name: Named::Unread,
+                extra: Some((8, 10))
+            })
+        );
+        assert_eq!(
+            conditional_form("#ifdef A\\u00e9"),
+            Some(Ifdef {
+                negated: false,
+                name: Named::Unread,
+                extra: Some((8, 14))
+            })
+        );
+        assert_eq!(conditional_form("#ifdefine X"), None);
+        assert_eq!(conditional_form("#if$"), None);
+        assert_eq!(conditional_form("#include \"a.h\""), None);
+        let blank = blanked("#endif /* U */").unwrap();
+        assert_eq!(conditional_form(&blank), Some(Endif { extra: None }));
+    }
+
+    /// No group of a refused `#if`, `#elif` or `#ifdef`, and no group after
+    /// a second `#else`, is handed to the parser.
+    ///
+    /// Asked of the tokens rather than of a run, because any error before the
+    /// parser stops the input there, so a run cannot show which group was
+    /// handed over. Mutation: compile the group after a refused `#if`. `a`
+    /// is handed over. Mutation: take a second `#else` as the first is
+    /// taken. `e` is. Mutation: take the group of an `#ifdef` whose name is
+    /// not read. `g` is.
+    #[test]
+    fn no_group_of_a_refused_or_doubled_conditional_is_handed_over() {
+        let text = "#if 1\nint a;\n#elif 2\nint b;\n#else\nint c;\n#endif\n\
+                    #ifdef U\n#else\nint d;\n#else\nint e;\n#endif\nint f;\n\
+                    #ifdef A$B\nint g;\n#endif\n";
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", text);
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        let handed = preprocess(file, &tokens, &mut sources, &mut diagnostics);
+
+        let spelled: Vec<&str> = handed
+            .tokens()
+            .iter()
+            .filter(|token| !token.is_eof())
+            .map(|token| sources.snippet(token.span))
+            .collect();
+        assert_eq!(spelled, ["int", "d", ";", "int", "f", ";"]);
     }
 
     /// The code moved from the lexer with the report, and is the handle a
