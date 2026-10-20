@@ -70,6 +70,16 @@ const MAX_INCLUSIONS: usize = 4096;
 /// counting them all refused it. Found by review.
 const MAX_EXPANSIONS: usize = 65536;
 
+/// How many expansions one input may make in all.
+///
+/// [`MAX_EXPANSIONS`] bounds one use's tree, and a file can hold many uses:
+/// with the count starting again at each, forty uses of a tree just under the
+/// bound took over 600 MB, each expansion a file of its own, and printed
+/// nothing before it was stopped. Found by review. This sits above the most a
+/// file that uses a macro once on each of its lines needs at the bound, and
+/// past it the next expansion is refused, once.
+const MAX_EXPANSIONS_IN_ALL: usize = 2 * MAX_EXPANSIONS;
+
 /// The files being read, the macros defined, and how many inclusions and
 /// expansions there have been so far.
 struct Reading {
@@ -80,6 +90,14 @@ struct Reading {
     /// Every object-like macro defined so far, by name.
     macros: HashMap<String, Macro>,
     expansions: usize,
+    /// Every expansion this input has made.
+    expansions_in_all: usize,
+    /// How many expansions of each name are open, and of all names: what the
+    /// rule that a macro is not expanded inside itself asks of, kept as a
+    /// count rather than found by walking the frames, which made a chain of
+    /// distinct macros cost the square of its depth. Found by review.
+    open_macros: HashMap<String, usize>,
+    open_expansions: usize,
 }
 
 /// An object-like macro.
@@ -156,6 +174,9 @@ pub fn preprocess(
         inclusions: 0,
         macros: HashMap::new(),
         expansions: 0,
+        expansions_in_all: 0,
+        open_macros: HashMap::new(),
+        open_expansions: 0,
     };
     if let Some(path) = path_of(sources.file(file).name()) {
         reading.open.push((canonical(path), file));
@@ -196,8 +217,16 @@ fn read_includes(
         let Some(token) = next else {
             let Some(frame) = frames.pop() else { break };
             if let Some(instance) = frame.instance {
-                if let Instance::Inclusion { .. } = instance {
-                    reading.open.pop();
+                match &instance {
+                    Instance::Inclusion { .. } => {
+                        reading.open.pop();
+                    }
+                    Instance::Expansion { name, .. } => {
+                        reading.open_expansions -= 1;
+                        if let Some(open) = reading.open_macros.get_mut(name) {
+                            *open -= 1;
+                        }
+                    }
                 }
                 if let Some((first, last)) = frame.extent {
                     sources.set_extent(instance.file(), first, last);
@@ -381,7 +410,7 @@ fn read_includes(
             // a dereference written out as `SC0403` passed in silence. Found
             // by review.
             TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Annotation(_) => {
-                match expansion(token, &frames, sources, reading, diagnostics) {
+                match expansion(token, sources, reading, diagnostics) {
                     Some(frame) => frames.push(frame),
                     None => {
                         emitted(&mut frames, token.span);
@@ -412,44 +441,55 @@ fn read_includes(
 /// ever, and the bound refuses it.
 fn expansion(
     token: Token,
-    frames: &[Frame],
     sources: &mut SourceMap,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) -> Option<Frame> {
     let name = sources.snippet(token.span);
     let spelled = reading.macros.get(name)?.spelled;
-    let open = frames.iter().any(|frame| {
-        matches!(&frame.instance, Some(Instance::Expansion { name: open, .. }) if open == name)
-    });
-    if open {
+    if reading.open_macros.get(name).is_some_and(|open| *open > 0) {
         return None;
     }
     let name = name.to_owned();
 
     // A use written outside any expansion starts a tree of its own.
-    if !frames
-        .iter()
-        .any(|frame| matches!(frame.instance, Some(Instance::Expansion { .. })))
-    {
+    if reading.open_expansions == 0 {
         reading.expansions = 0;
+    }
+    if reading.expansions_in_all >= MAX_EXPANSIONS_IN_ALL {
+        if reading.expansions_in_all == MAX_EXPANSIONS_IN_ALL {
+            reading.expansions_in_all += 1;
+            diagnostics.report(
+                Diagnostic::error("this input expands too many macros")
+                    .with_code(TOO_MANY_EXPANSIONS)
+                    .with_label(Label::primary(token.span, "expanded here"))
+                    .with_note(format!(
+                        "{MAX_EXPANSIONS_IN_ALL} expansions have already been read for it in all"
+                    )),
+            );
+        }
+        return None;
     }
     // Once, at the first past the bound, as `SC0112` is said.
     if reading.expansions >= MAX_EXPANSIONS {
         if reading.expansions == MAX_EXPANSIONS {
             reading.expansions += 1;
             diagnostics.report(
-                Diagnostic::error("this input expands too many macros")
+                Diagnostic::error("this use expands too many macros")
                     .with_code(TOO_MANY_EXPANSIONS)
                     .with_label(Label::primary(token.span, "expanded here"))
                     .with_note(format!(
-                        "{MAX_EXPANSIONS} expansions have already been read for it"
+                        "{MAX_EXPANSIONS} expansions have already been read for the use \
+                         this is in"
                     )),
             );
         }
         return None;
     }
     reading.expansions += 1;
+    reading.expansions_in_all += 1;
+    *reading.open_macros.entry(name.clone()).or_insert(0) += 1;
+    reading.open_expansions += 1;
 
     let file = sources.expand(spelled, token.span);
     // Lexed here, where it is used, so a character no token can begin is
@@ -1412,6 +1452,36 @@ mod tests {
             "{:?}",
             diagnostics.diagnostics().first()
         );
+    }
+
+    /// Many uses of trees under the bound for one use are refused once
+    /// their expansions pass the bound for the input.
+    ///
+    /// Mutation: drop the bound for the input. Every use is read and
+    /// nothing is reported.
+    #[test]
+    fn many_uses_of_large_trees_are_refused_once_past_the_bound_for_the_input() {
+        let mut text = String::from("#define M0 1\n");
+        for at in 1..=12 {
+            text.push_str(&format!("#define M{at} (M{} + M{})\n", at - 1, at - 1));
+        }
+        let uses = MAX_EXPANSIONS_IN_ALL / ((1 << 13) - 1) + 1;
+        for at in 0..uses {
+            text.push_str(&format!("int v{at} = M12;\n"));
+        }
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", text);
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        preprocess(file, &tokens, &mut sources, &mut diagnostics);
+
+        let codes: Vec<String> = diagnostics
+            .diagnostics()
+            .iter()
+            .filter_map(|diagnostic| diagnostic.code())
+            .map(|code| code.to_string())
+            .collect();
+        assert_eq!(codes, ["SC0113"]);
     }
 
     /// The code moved from the lexer with the report, and is the handle a
