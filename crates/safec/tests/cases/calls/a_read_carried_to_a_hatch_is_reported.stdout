@@ -71,7 +71,7 @@ Function a_read_carried_to_a_hatch_is_reported.c:7:5 "main"
         Copy "_1"
     Call a_read_carried_to_a_hatch_is_reported.c:14:26 written "nothing" "bb5"
   Block "bb5"
-    Operation a_read_carried_to_a_hatch_is_reported.c:14:13 written
+    Operation a_read_carried_to_a_hatch_is_reported.c:14:12 written
       Destination "_7"
       Binary "Add"
         Copy "_6"
@@ -80,5 +80,5 @@ Function a_read_carried_to_a_hatch_is_reported.c:7:5 "main"
       Destination "_0"
       Use
         Copy "_7"
-    Sequenced a_read_carried_to_a_hatch_is_reported.c:14:13 generated
+    Sequenced a_read_carried_to_a_hatch_is_reported.c:14:12 generated
     Return

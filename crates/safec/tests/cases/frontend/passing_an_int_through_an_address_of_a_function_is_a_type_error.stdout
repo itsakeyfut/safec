@@ -4,7 +4,7 @@ Function passing_an_int_through_an_address_of_a_function_is_a_type_error.c:3:1 "
   Parameter passing_an_int_through_an_address_of_a_function_is_a_type_error.c:3:7 "x" "int"
   Compound passing_an_int_through_an_address_of_a_function_is_a_type_error.c:3:14
     Return passing_an_int_through_an_address_of_a_function_is_a_type_error.c:4:5
-      Call passing_an_int_through_an_address_of_a_function_is_a_type_error.c:4:13
+      Call passing_an_int_through_an_address_of_a_function_is_a_type_error.c:4:12
         Unary passing_an_int_through_an_address_of_a_function_is_a_type_error.c:4:13 "&"
           Identifier passing_an_int_through_an_address_of_a_function_is_a_type_error.c:4:14 "g"
         Identifier passing_an_int_through_an_address_of_a_function_is_a_type_error.c:4:17 "x"

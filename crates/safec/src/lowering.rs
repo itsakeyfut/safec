@@ -965,6 +965,32 @@ impl Lowering<'_> {
     /// prototype inside the type of a file-scope object, through
     /// [`Self::prototypes_lose_nothing`], which lowers nothing and so asks
     /// only [`Self::lengths_typed_throughout`] (#448).
+    /// The span from `from`'s start to `to`'s end, through the one join
+    /// across instances, or nothing, with the function refused.
+    ///
+    /// A span the lowering builds over parts of a node the parser built,
+    /// a definition's lengths or a declarator's store, is one the parser never
+    /// joined, so it can cut an included file where every node the parser
+    /// made held it whole: `int a = ` then an `#include` of `1 + 2, b = 3`
+    /// joins the store of `a` to the end of `1 + 2`. Refused rather than
+    /// panicked on, since the program is C. See ADR-0054.
+    fn joined(&self, from: Span, to: Span, diagnostics: &mut DiagnosticSink) -> Option<Span> {
+        match self.sources.join(from, to) {
+            Ok(span) => Some(span),
+            Err(cut) => {
+                diagnostics.report(
+                    Diagnostic::error("cannot compile a construct that cuts an `#include` yet")
+                        .with_code(LOWERING)
+                        .with_label(Label::primary(
+                            cut.span,
+                            "the included file goes on past what this needs",
+                        )),
+                );
+                None
+            }
+        }
+    }
+
     fn refuse_parameter(&self, parameter: &Declaration, diagnostics: &mut DiagnosticSink) {
         let at = parameter.name.unwrap_or(parameter.span);
         // The note claims nothing about the program, because a length nobody
@@ -1356,7 +1382,11 @@ impl Lowering<'_> {
             walked.push(length);
         }
         if let (Some(first), Some(last)) = (walked.first(), walked.last()) {
-            let at = self.ast.expr(*first).span().to(self.ast.expr(*last).span());
+            let at = self.joined(
+                self.ast.expr(*first).span(),
+                self.ast.expr(*last).span(),
+                diagnostics,
+            )?;
             let each: Vec<_> = walked
                 .iter()
                 .map(|&length| self.accesses(length, false))
@@ -1656,11 +1686,7 @@ impl Lowering<'_> {
                             builder.push(Operation {
                                 place: Place::local(local),
                                 value: Rvalue::Use(operand),
-                                origin: Origin::Written(Span::new(
-                                    name.file(),
-                                    name.start(),
-                                    span.end(),
-                                )),
+                                origin: Origin::Written(self.joined(name, span, diagnostics)?),
                             });
                             // One per declarator that has an initializer:
                             // `int a = f(), b = g();` is two full expressions

@@ -1,0 +1,12 @@
+Function a_parenthesised_included_operand_is_not_refused.c:1:1 "f" "int (int)"
+  Parameter a_parenthesised_included_operand_is_not_refused.c:1:7 "x" "int"
+  Compound a_parenthesised_included_operand_is_not_refused.c:1:14
+    Declaration a_parenthesised_included_operand_is_not_refused.c:2:5 "y" "int"
+    Expression a_parenthesised_included_operand_is_not_refused.c:3:5
+      Assign a_parenthesised_included_operand_is_not_refused.c:3:5 "="
+        Identifier a_parenthesised_included_operand_is_not_refused.c:3:5 "y"
+        Binary a_parenthesised_included_operand_is_not_refused.h:1:2 "+"
+          Identifier a_parenthesised_included_operand_is_not_refused.h:1:2 "x"
+          Number a_parenthesised_included_operand_is_not_refused.h:1:6 "1"
+    Return a_parenthesised_included_operand_is_not_refused.c:6:5
+      Identifier a_parenthesised_included_operand_is_not_refused.c:6:12 "y"

@@ -132,7 +132,7 @@ Function a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_
       Copy "_9"
   Block "bb9"
     Sequenced a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:17:5 generated
-    Operation a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:18:15 written
+    Operation a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:18:14 written
       Destination "_15"
       Binary "Add"
         Copy "_2"
@@ -143,7 +143,7 @@ Function a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_
       Use
         Copy "_15"
           Deref
-    Sequenced a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:18:15 generated
+    Sequenced a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:18:14 generated
     Operation a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds.c:19:9 written
       Destination "_16"
       Binary "Eq"

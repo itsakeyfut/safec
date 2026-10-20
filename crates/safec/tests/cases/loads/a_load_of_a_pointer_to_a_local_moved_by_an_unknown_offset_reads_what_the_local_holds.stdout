@@ -99,7 +99,7 @@ Function a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_th
       Copy "_7"
   Block "bb5"
     Sequenced a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:13:5 generated
-    Operation a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:14:15 written
+    Operation a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:14:14 written
       Destination "_13"
       Binary "Add"
         Copy "_5"
@@ -110,7 +110,7 @@ Function a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_th
       Use
         Copy "_13"
           Deref
-    Sequenced a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:14:15 generated
+    Sequenced a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:14:14 generated
     Operation a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:15:9 written
       Destination "_14"
       Binary "Eq"

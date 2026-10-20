@@ -1635,7 +1635,7 @@ mod tests {
         let mut diagnostics = DiagnosticSink::new();
         let tokens = lex(file, sources.file(file), &mut diagnostics);
         let tokens = preprocess(file, &tokens, &mut sources, &mut diagnostics);
-        let ast = parse(&tokens, &mut diagnostics);
+        let ast = parse(&tokens, &sources, &mut diagnostics);
         assert!(
             !diagnostics.has_errors(),
             "the input did not parse: {:?}",

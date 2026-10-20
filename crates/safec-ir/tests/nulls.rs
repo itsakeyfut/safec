@@ -92,9 +92,13 @@ fn goto(to: BlockId, elements: Vec<Element>) -> Block {
 }
 
 /// What the check concluded about one function, in span order.
-fn concluded(mut unit: TranslationUnit, function: Function) -> Vec<nullability::Finding> {
+fn concluded(
+    map: &SourceMap,
+    mut unit: TranslationUnit,
+    function: Function,
+) -> Vec<nullability::Finding> {
     unit.push_function(function);
-    nullability::findings(&unit)
+    nullability::findings(map, &unit)
 }
 
 /// A comparison this check cannot reach past a store through a pointer is a
@@ -117,7 +121,7 @@ fn concluded(mut unit: TranslationUnit, function: Function) -> Vec<nullability::
 /// with one finding where it expects two.
 #[test]
 fn a_comparison_behind_a_store_through_a_pointer_refines_nothing() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
@@ -166,7 +170,7 @@ fn a_comparison_behind_a_store_through_a_pointer_refines_nothing() {
     function.fill_block(untaken, goto(after, vec![]));
     function.fill_block(after, returns());
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     assert_eq!(found.len(), 2, "{found:?}");
     // The store through `q`, which nothing has said anything about.
@@ -208,7 +212,7 @@ fn a_comparison_behind_a_store_through_a_pointer_refines_nothing() {
 /// which is right: one refusal, two ways of reaching it.
 #[test]
 fn a_comparison_above_a_store_to_the_pointer_it_tested_refines_nothing() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
@@ -260,7 +264,7 @@ fn a_comparison_above_a_store_to_the_pointer_it_tested_refines_nothing() {
     function.fill_block(untaken, goto(after, vec![]));
     function.fill_block(after, returns());
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     // The write through `p` on the taken arm. Nothing established what `q`
     // held, so nothing is established about `p` where it is written through.
@@ -297,7 +301,7 @@ fn a_comparison_above_a_store_to_the_pointer_it_tested_refines_nothing() {
 /// findings where it expects one.
 #[test]
 fn a_comparison_above_a_storage_boundary_refines_nothing() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
     let (mut unit, mut function, int) = a_unit(&names, &[]);
     let pointer = unit.push_type(Ty::Pointer(int));
     let p = function.push_local(pointer);
@@ -344,7 +348,7 @@ fn a_comparison_above_a_storage_boundary_refines_nothing() {
     function.fill_block(untaken, goto(after, vec![]));
     function.fill_block(after, returns());
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
@@ -376,7 +380,7 @@ fn a_comparison_above_a_storage_boundary_refines_nothing() {
 /// unproven, and this fails with two findings where it expects one.
 #[test]
 fn a_marker_between_a_comparison_and_its_branch_is_stepped_over() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
@@ -424,7 +428,7 @@ fn a_marker_between_a_comparison_and_its_branch_is_stepped_over() {
     function.fill_block(untaken, goto(after, vec![write_through(p, names.at[3])]));
     function.fill_block(after, returns());
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     // Only the arm the comparison proved `p` null on. The other arm's write is
     // through a pointer this check proved is not null, which is nothing to say.
@@ -451,7 +455,7 @@ fn a_marker_between_a_comparison_and_its_branch_is_stepped_over() {
 /// finding where it expects two.
 #[test]
 fn storage_beginning_or_ending_leaves_a_pointer_holding_nothing_known() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
     let (mut unit, mut function, int) = a_unit(&names, &[]);
     let pointer = unit.push_type(Ty::Pointer(int));
 
@@ -490,7 +494,7 @@ fn storage_beginning_or_ending_leaves_a_pointer_holding_nothing_known() {
         },
     );
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     assert_eq!(found.len(), 2, "{found:?}");
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
@@ -521,7 +525,7 @@ fn storage_beginning_or_ending_leaves_a_pointer_holding_nothing_known() {
 /// finding where it expects two.
 #[test]
 fn a_local_assigned_from_its_own_dereference_keeps_nothing() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
@@ -553,7 +557,7 @@ fn a_local_assigned_from_its_own_dereference_keeps_nothing() {
         },
     );
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     assert_eq!(found.len(), 2, "{found:?}");
     // The parameter, which nothing has said anything about.
@@ -589,7 +593,7 @@ fn a_local_assigned_from_its_own_dereference_keeps_nothing() {
 /// module's headline and the roadmap's own example.
 #[test]
 fn a_call_that_reads_a_pointer_and_writes_it_keeps_neither() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
@@ -628,7 +632,7 @@ fn a_call_that_reads_a_pointer_and_writes_it_keeps_neither() {
         },
     );
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     assert_eq!(found.len(), 2, "{found:?}");
     // The argument, read through the pointer that was there.
@@ -657,7 +661,7 @@ fn a_call_that_reads_a_pointer_and_writes_it_keeps_neither() {
 /// function's, and this fails with one where it expects two.
 #[test]
 fn two_functions_that_share_a_caret_are_asked_about_apart() {
-    let (_map, names) = sources();
+    let (map, names) = sources();
     let (mut unit, _, int) = a_unit(&names, &[]);
     let pointer = unit.push_type(Ty::Pointer(int));
 
@@ -678,7 +682,7 @@ fn two_functions_that_share_a_caret_are_asked_about_apart() {
         unit.push_function(function);
     }
 
-    let found = nullability::findings(&unit);
+    let found = nullability::findings(&map, &unit);
 
     let functions: Vec<_> = found.iter().map(|finding| finding.function).collect();
     assert_eq!(found.len(), 2, "{found:?}");
@@ -709,7 +713,7 @@ fn two_functions_that_share_a_caret_are_asked_about_apart() {
 /// expects one.
 #[test]
 fn a_pointer_selected_by_an_index_and_read_through_is_not_proved() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
@@ -748,7 +752,7 @@ fn a_pointer_selected_by_an_index_and_read_through_is_not_proved() {
         },
     );
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
@@ -770,7 +774,7 @@ fn a_pointer_selected_by_an_index_and_read_through_is_not_proved() {
 /// is doubted, and this fails with one finding where it expects none.
 #[test]
 fn an_index_after_a_dereference_reads_no_pointer_out_of_memory() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
@@ -808,7 +812,7 @@ fn an_index_after_a_dereference_reads_no_pointer_out_of_memory() {
         },
     );
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     assert!(found.is_empty(), "{found:?}");
 }
@@ -831,7 +835,7 @@ fn an_index_after_a_dereference_reads_no_pointer_out_of_memory() {
 /// `p` is not refined, and this fails with one finding where it expects none.
 #[test]
 fn a_write_to_another_local_between_a_comparison_and_its_branch_keeps_the_refinement() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
@@ -881,7 +885,7 @@ fn a_write_to_another_local_between_a_comparison_and_its_branch_keeps_the_refine
     function.fill_block(untaken, goto(after, vec![]));
     function.fill_block(after, returns());
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     assert!(found.is_empty(), "{found:?}");
 }
@@ -899,7 +903,7 @@ fn a_write_to_another_local_between_a_comparison_and_its_branch_keeps_the_refine
 /// finding where it expects none (#334).
 #[test]
 fn a_pointer_condition_written_just_above_its_branch_is_refined() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
@@ -936,7 +940,7 @@ fn a_pointer_condition_written_just_above_its_branch_is_refined() {
     function.fill_block(untaken, goto(after, vec![]));
     function.fill_block(after, returns());
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     assert!(found.is_empty(), "{found:?}");
 }
@@ -960,7 +964,7 @@ fn a_pointer_condition_written_just_above_its_branch_is_refined() {
 /// fails with one finding where it expects none.
 #[test]
 fn a_return_place_written_in_an_earlier_block_is_not_taken_for_the_end() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
@@ -986,7 +990,7 @@ fn a_return_place_written_in_an_earlier_block_is_not_taken_for_the_end() {
     );
     function.fill_block(ret, returns());
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     assert!(found.is_empty(), "{found:?}");
 }
@@ -1006,7 +1010,7 @@ fn a_return_place_written_in_an_earlier_block_is_not_taken_for_the_end() {
 /// fails with no finding where it expects one.
 #[test]
 fn a_copy_whose_source_is_overwritten_before_the_branch_refines_only_the_copy() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
@@ -1051,7 +1055,7 @@ fn a_copy_whose_source_is_overwritten_before_the_branch_refines_only_the_copy() 
     function.fill_block(untaken, goto(after, vec![]));
     function.fill_block(after, returns());
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
@@ -1074,7 +1078,7 @@ fn a_copy_whose_source_is_overwritten_before_the_branch_refines_only_the_copy() 
 /// taken arm, and this fails with one finding where it expects two.
 #[test]
 fn a_store_through_a_pointer_between_a_copy_and_its_branch_refines_only_the_copy() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
@@ -1115,7 +1119,7 @@ fn a_store_through_a_pointer_between_a_copy_and_its_branch_refines_only_the_copy
     function.fill_block(untaken, goto(after, vec![]));
     function.fill_block(after, returns());
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     let at: Vec<_> = found
         .iter()
@@ -1147,7 +1151,7 @@ fn a_store_through_a_pointer_between_a_copy_and_its_branch_refines_only_the_copy
 /// and this fails with no finding where it expects one.
 #[test]
 fn a_storage_boundary_between_a_copy_and_its_branch_refines_only_the_copy() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
@@ -1190,7 +1194,7 @@ fn a_storage_boundary_between_a_copy_and_its_branch_refines_only_the_copy() {
     function.fill_block(untaken, goto(after, vec![]));
     function.fill_block(after, returns());
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
@@ -1220,7 +1224,7 @@ fn a_storage_boundary_between_a_copy_and_its_branch_refines_only_the_copy() {
 /// reported for that row.
 #[test]
 fn a_copy_is_followed_no_further_than_the_write_it_copied() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
@@ -1296,7 +1300,7 @@ fn a_copy_is_followed_no_further_than_the_write_it_copied() {
         function.fill_block(after, returns());
 
         unit.push_function(function);
-        let found = nullability::findings(&unit);
+        let found = nullability::findings(&map, &unit);
 
         let last = found.last().map(|finding| (finding.at, finding.conclusion));
         assert_eq!(
@@ -1324,7 +1328,7 @@ fn a_copy_is_followed_no_further_than_the_write_it_copied() {
 /// finding where it expects one.
 #[test]
 fn a_storage_boundary_of_the_followed_local_ends_the_walk() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
@@ -1373,7 +1377,7 @@ fn a_storage_boundary_of_the_followed_local_ends_the_walk() {
     function.fill_block(untaken, goto(after, vec![]));
     function.fill_block(after, returns());
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
@@ -1400,7 +1404,7 @@ fn a_storage_boundary_of_the_followed_local_ends_the_walk() {
 /// fold, keeping the earlier one. The conclusion is `Unknown` and this fails.
 #[test]
 fn a_proof_and_a_suspicion_at_one_caret_report_the_proof() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
     let (mut unit, _, int) = a_unit(&names, &[]);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut function = Function::new(names.function, int, [pointer]);
@@ -1423,7 +1427,7 @@ fn a_proof_and_a_suspicion_at_one_caret_report_the_proof() {
         },
     );
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].at, names.at[0]);
@@ -1445,7 +1449,7 @@ fn a_proof_and_a_suspicion_at_one_caret_report_the_proof() {
 /// `nullability::findings`. The two fold into one and this fails.
 #[test]
 fn two_pointers_dereferenced_at_one_caret_are_each_reported() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
     let (mut unit, _, int) = a_unit(&names, &[]);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut function = Function::new(names.function, int, [pointer]);
@@ -1469,7 +1473,7 @@ fn two_pointers_dereferenced_at_one_caret_are_each_reported() {
         },
     );
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     let said: Vec<_> = found
         .iter()
@@ -1502,7 +1506,7 @@ fn two_pointers_dereferenced_at_one_caret_are_each_reported() {
 #[test]
 fn a_doubt_through_memory_beside_a_plain_one_at_one_caret_each_keep_their_remedy() {
     for through_memory_first in [false, true] {
-        let (_sources, names) = sources();
+        let (map, names) = sources();
         let (mut unit, _, int) = a_unit(&names, &[]);
         let pointer = unit.push_type(Ty::Pointer(int));
         let pointer_to_pointer = unit.push_type(Ty::Pointer(pointer));
@@ -1535,7 +1539,7 @@ fn a_doubt_through_memory_beside_a_plain_one_at_one_caret_each_keep_their_remedy
             },
         );
 
-        let found = concluded(unit, function);
+        let found = concluded(&map, unit, function);
 
         let mut said: Vec<_> = found
             .iter()
@@ -1578,7 +1582,7 @@ fn a_doubt_through_memory_beside_a_plain_one_at_one_caret_each_keep_their_remedy
 /// `nullability::report_arguments`; nothing is concluded and this fails.
 #[test]
 fn a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved() {
-    let (_sources, names) = sources();
+    let (map, names) = sources();
 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
@@ -1613,7 +1617,7 @@ fn a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved() {
     );
     function.fill_block(after, returns());
 
-    let found = concluded(unit, function);
+    let found = concluded(&map, unit, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].conclusion, Conclusion::Unknown);

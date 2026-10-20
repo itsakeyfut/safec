@@ -56,7 +56,7 @@ Function a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it.c:5:5 "mai
       Destination "_4"
       Copy "_1"
   Block "bb6"
-    Operation a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it.c:10:13 written
+    Operation a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it.c:10:12 written
       Destination "_5"
       Binary "Add"
         Constant 0
@@ -65,5 +65,5 @@ Function a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it.c:5:5 "mai
       Destination "_0"
       Use
         Copy "_5"
-    Sequenced a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it.c:10:13 generated
+    Sequenced a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it.c:10:12 generated
     Return

@@ -168,7 +168,7 @@ Function a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carr
       Use
         Copy "_3"
           Deref
-    Operation a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:23:10 written
+    Operation a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:23:9 written
       Destination "_17"
       Binary "Add"
         Copy "_15"
@@ -176,7 +176,7 @@ Function a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carr
     Call a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:23:40 written "release_all" "bb14"
       Destination "_18"
   Block "bb14"
-    Operation a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:23:10 written
+    Operation a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:23:9 written
       Destination "_19"
       Binary "Add"
         Copy "_17"

@@ -68,7 +68,7 @@ Function a_pointer_handed_to_a_call_before_an_opaque_call_is_reported.c:5:5 "mai
       Destination "_6"
       Copy "_1"
   Block "bb6"
-    Operation a_pointer_handed_to_a_call_before_an_opaque_call_is_reported.c:10:13 written
+    Operation a_pointer_handed_to_a_call_before_an_opaque_call_is_reported.c:10:12 written
       Destination "_7"
       Binary "Add"
         Copy "_5"
@@ -77,5 +77,5 @@ Function a_pointer_handed_to_a_call_before_an_opaque_call_is_reported.c:5:5 "mai
       Destination "_0"
       Use
         Copy "_7"
-    Sequenced a_pointer_handed_to_a_call_before_an_opaque_call_is_reported.c:10:13 generated
+    Sequenced a_pointer_handed_to_a_call_before_an_opaque_call_is_reported.c:10:12 generated
     Return

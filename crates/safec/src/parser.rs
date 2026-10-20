@@ -35,7 +35,7 @@ use crate::ast::{
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::preprocessor::Preprocessed;
 use crate::token::{Annotation, Keyword, Punct, Token, TokenKind};
-use safec_ir::source::Span;
+use safec_ir::source::{Edge, SourceMap, Span};
 
 /// Something was expected and something else was there.
 ///
@@ -542,30 +542,12 @@ fn infix(punct: Punct) -> Option<Infix> {
     Some(Infix { power, assoc, kind })
 }
 
-/// The span from `from` to `to`, or `from` where they are in different files.
-///
-/// Every join here is inside one item, and an item whose tokens are not all in
-/// one file is refused once it is read, by `Parser::in_one_file`. So a join
-/// across files is one in an item that is about to be refused, and answering
-/// `from` keeps it from panicking in `Span::to` before the refusal is reached.
-/// ADR-0054's lifts replace this when an item may hold an inclusion (#546).
-///
-/// Mutation: call `Span::to` unchecked.
-/// `a_construct_that_crosses_an_include_is_refused` panics.
-fn join(from: Span, to: Span) -> Span {
-    if from.file() == to.file() {
-        from.to(to)
-    } else {
-        from
-    }
-}
-
 /// Read a translation unit.
 ///
 /// Always returns a tree. A file the parser could not read produces one holding
 /// an error node, so that everything after this can walk a tree that is there
 /// rather than answer for its absence.
-pub fn parse(tokens: &Preprocessed, diagnostics: &mut DiagnosticSink) -> Ast {
+pub fn parse(tokens: &Preprocessed, sources: &SourceMap, diagnostics: &mut DiagnosticSink) -> Ast {
     let tokens = tokens.tokens();
     // A directive never reaches the grammar, and `Preprocessed` says why none
     // can: the preprocessor read each or reported it. Asserted rather than
@@ -590,6 +572,7 @@ pub fn parse(tokens: &Preprocessed, diagnostics: &mut DiagnosticSink) -> Ast {
 
     Parser {
         tokens,
+        sources,
         next_brace,
         at: 0,
         ast: Ast::new(),
@@ -604,6 +587,9 @@ pub fn parse(tokens: &Preprocessed, diagnostics: &mut DiagnosticSink) -> Ast {
 
 struct Parser<'a> {
     tokens: &'a [Token],
+    /// For joining across an instance, which needs its chain of uses. See
+    /// [`Parser::join`].
+    sources: &'a SourceMap,
     /// For each token, the index of the first `{`, `}` or end of file at or
     /// after it, which [`Parser::body_after_declarations`] reads instead of
     /// scanning. A scan from every `;` recovery met was quadratic in a file of
@@ -663,52 +649,13 @@ impl Parser<'_> {
             self.failed = false;
             let start = self.at;
             let item = self.item(diagnostics);
-            let item = if self.failed {
-                self.resync(start);
-                item
-            } else {
-                // Not before `resync`: what this refuses was read to its end,
-                // so the cursor is already past it, and a resync from `start`
-                // would look for an end beyond the one it has.
-                self.in_one_file(start, item, diagnostics)
-            };
             self.ast.push_item(item);
+            if self.failed {
+                self.resync(start);
+            }
         }
 
         self.ast
-    }
-
-    /// The item read from token `start` to the cursor, or an error in its
-    /// place if its tokens are not all in one file.
-    ///
-    /// An `#include` inside an item is C, and is refused until ADR-0054's
-    /// lifts are built (#546). Asked of the tokens rather than at each join,
-    /// because a join sees only the two ends it is handed: `g(` then
-    /// `#include "arg.h"` then `)` joins `g` with `)`, both in one file, and
-    /// the argument inside is in another, which the memory check's `inside`
-    /// in `safec-ir`, and every other comparison of two spans, would then
-    /// answer for spans that share no file. With every
-    /// item in one file, no span built from one, here or after the parse, is
-    /// in two.
-    ///
-    /// Mutation: return `item` unchanged.
-    /// `an_include_inside_a_function_body_is_refused` compiles the body.
-    fn in_one_file(&mut self, start: usize, item: Item, diagnostics: &mut DiagnosticSink) -> Item {
-        let first = self.tokens[start].span;
-        let Some(other) = self.tokens[start..self.at]
-            .iter()
-            .find(|token| token.span.file() != first.file())
-        else {
-            return item;
-        };
-
-        let diagnostic = Diagnostic::error("an item that crosses an `#include` is not read yet")
-            .with_code(UNREAD)
-            .with_label(Label::primary(other.span, "goes on in another file here"))
-            .with_label(Label::secondary(first, "the item begins here"))
-            .with_note("an item is read when every token of it is in one file");
-        self.report_built(other.span, diagnostic, diagnostics);
-        Item::Error { span: first }
     }
 
     /// Move the cursor to the end of the item that began at token `start`
@@ -880,7 +827,7 @@ impl Parser<'_> {
                     return Item::Error { span: first };
                 }
                 self.advance();
-                let span = join(start, self.previous().span);
+                let span = self.join(start, self.previous().span, diagnostics);
                 return Item::Declaration {
                     declarators: Vec::new(),
                     specified,
@@ -896,7 +843,7 @@ impl Parser<'_> {
                 return Item::Error { span: first };
             };
 
-            let span = join(start, self.previous().span);
+            let span = self.join(start, self.previous().span, diagnostics);
             return Item::Function(Function {
                 ty: declared.ty,
                 name: declared.name,
@@ -933,7 +880,7 @@ impl Parser<'_> {
             return Item::Error { span: start };
         }
 
-        let span = join(start, self.previous().span);
+        let span = self.join(start, self.previous().span, diagnostics);
         Item::Declaration {
             declarators,
             specified,
@@ -979,7 +926,7 @@ impl Parser<'_> {
             // Through `report_built`, so that it is the only report: this
             // returns before the `;` is read, and whatever is asked of it next
             // would otherwise be refused as well.
-            let specifiers = join(start, self.previous().span);
+            let specifiers = self.join(start, self.previous().span, diagnostics);
             let built = Diagnostic::error("this declaration declares nothing")
                 .with_code(NOTHING_DECLARED)
                 .with_label(Label::primary(specifiers, "no name and no tag"))
@@ -1065,7 +1012,7 @@ impl Parser<'_> {
                     // From the specifiers, which all of these share, through
                     // this one's initializer. `Declaration::span` says why they
                     // all begin at the same byte and what tells them apart.
-                    span: join(start, self.previous().span),
+                    span: self.join(start, self.previous().span, diagnostics),
                     // The pointer a function declared at file scope returns,
                     // the one place besides a parameter `apply` allows one.
                     nullability: returns,
@@ -1159,7 +1106,7 @@ impl Parser<'_> {
         self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
 
         Some(Attribute {
-            span: join(start, self.previous().span),
+            span: self.join(start, self.previous().span, diagnostics),
             name,
             argument,
         })
@@ -1313,7 +1260,7 @@ impl Parser<'_> {
                 name: Some(name),
                 ty,
                 written: ty,
-                span: join(start, self.previous().span),
+                span: self.join(start, self.previous().span, diagnostics),
                 nullability: return_nullability,
             });
             while self.eat(TokenKind::Punct(Punct::Comma)) {
@@ -1323,7 +1270,7 @@ impl Parser<'_> {
                     name: Some(name),
                     ty,
                     written: ty,
-                    span: join(start, self.previous().span),
+                    span: self.join(start, self.previous().span, diagnostics),
                     nullability: returns,
                 });
             }
@@ -1646,7 +1593,10 @@ impl Parser<'_> {
                 } else {
                     let start = self.peek().span;
                     let length = self.assignment(diagnostics);
-                    (Some(length), Some(join(start, self.previous().span)))
+                    (
+                        Some(length),
+                        Some(self.join(start, self.previous().span, diagnostics)),
+                    )
                 };
 
                 self.expect(TokenKind::Punct(Punct::RightBracket), "`]`", diagnostics)?;
@@ -1733,7 +1683,7 @@ impl Parser<'_> {
                 }
             };
 
-            let span = join(start, self.previous().span);
+            let span = self.join(start, self.previous().span, diagnostics);
             parameters.push(Declaration {
                 name,
                 ty,
@@ -1966,7 +1916,7 @@ impl Parser<'_> {
 
         self.expect(TokenKind::Punct(Punct::RightBrace), "`}`", diagnostics)?;
 
-        let span = join(start, self.previous().span);
+        let span = self.join(start, self.previous().span, diagnostics);
         Some(self.ast.push_stmt(Stmt::Compound { body, span }))
     }
 
@@ -1978,7 +1928,7 @@ impl Parser<'_> {
             Some(Specified::Named(declared)) => declared,
             Some(Specified::Tag(specified)) => {
                 self.advance();
-                let span = join(start, self.previous().span);
+                let span = self.join(start, self.previous().span, diagnostics);
                 return self.ast.push_stmt(Stmt::Declaration {
                     declarators: Vec::new(),
                     specified,
@@ -2000,7 +1950,7 @@ impl Parser<'_> {
             return self.ast.push_stmt(Stmt::Error { span: start });
         }
 
-        let span = join(start, self.previous().span);
+        let span = self.join(start, self.previous().span, diagnostics);
         self.ast.push_stmt(Stmt::Declaration {
             declarators,
             specified,
@@ -2039,7 +1989,7 @@ impl Parser<'_> {
                 return self.ast.push_stmt(Stmt::Error { span: start });
             }
 
-            let span = join(start, self.previous().span);
+            let span = self.join(start, self.previous().span, diagnostics);
             return self.ast.push_stmt(Stmt::Return { value, span });
         }
 
@@ -2095,7 +2045,7 @@ impl Parser<'_> {
             return self.ast.push_stmt(Stmt::Error { span: start });
         }
 
-        let span = join(start, self.previous().span);
+        let span = self.join(start, self.previous().span, diagnostics);
         self.ast.push_stmt(Stmt::Expression { value, span })
     }
 
@@ -2130,7 +2080,7 @@ impl Parser<'_> {
                     None
                 };
 
-                let span = join(start, parser.previous().span);
+                let span = parser.join(start, parser.previous().span, diagnostics);
                 parser.ast.push_stmt(Stmt::If {
                     condition,
                     then,
@@ -2156,7 +2106,7 @@ impl Parser<'_> {
                 parser.loops += 1;
                 let body = parser.statement(diagnostics);
                 parser.loops -= 1;
-                let span = join(start, parser.previous().span);
+                let span = parser.join(start, parser.previous().span, diagnostics);
                 parser.ast.push_stmt(Stmt::While {
                     condition,
                     body,
@@ -2224,7 +2174,7 @@ impl Parser<'_> {
                 parser.loops += 1;
                 let body = parser.statement(diagnostics);
                 parser.loops -= 1;
-                let span = join(start, parser.previous().span);
+                let span = parser.join(start, parser.previous().span, diagnostics);
                 parser.ast.push_stmt(Stmt::For {
                     start: first,
                     condition,
@@ -2308,6 +2258,12 @@ impl Parser<'_> {
     }
 
     fn climb(&mut self, min: u8, diagnostics: &mut DiagnosticSink) -> ExprId {
+        // The token the left operand starts at, which every node built here
+        // starts at too. From the tokens rather than the operand's span,
+        // because a parenthesis makes no node: `(x + 1)` as an included
+        // operand ends at its `)`, and a join from the node's `1` would cut
+        // the inclusion. See ADR-0054.
+        let first = self.peek().span;
         let mut lhs = self.unary(diagnostics);
 
         while !self.failed {
@@ -2336,12 +2292,12 @@ impl Parser<'_> {
             lhs = match operator.kind {
                 InfixKind::Binary(op) => {
                     let rhs = self.infix_from(next, diagnostics);
-                    let span = self.joined(lhs, rhs);
+                    let span = self.join(first, self.previous().span, diagnostics);
                     self.ast.push_expr(Expr::Binary { op, lhs, rhs, span })
                 }
                 InfixKind::Assign(op) => {
                     let value = self.infix_from(next, diagnostics);
-                    let span = self.joined(lhs, value);
+                    let span = self.join(first, self.previous().span, diagnostics);
                     self.ast.push_expr(Expr::Assign {
                         op,
                         place: lhs,
@@ -2351,7 +2307,7 @@ impl Parser<'_> {
                 }
                 InfixKind::Comma => {
                     let rhs = self.infix_from(next, diagnostics);
-                    let span = self.joined(lhs, rhs);
+                    let span = self.join(first, self.previous().span, diagnostics);
                     self.ast.push_expr(Expr::Comma { lhs, rhs, span })
                 }
                 InfixKind::Conditional => {
@@ -2368,7 +2324,7 @@ impl Parser<'_> {
                         self.ast.push_expr(Expr::Error { span })
                     } else {
                         let otherwise = self.infix_from(next, diagnostics);
-                        let span = self.joined(lhs, otherwise);
+                        let span = self.join(first, self.previous().span, diagnostics);
                         self.ast.push_expr(Expr::Conditional {
                             condition: lhs,
                             then,
@@ -2406,7 +2362,7 @@ impl Parser<'_> {
             diagnostics,
             |parser, diagnostics| {
                 let operand = parser.unary(diagnostics);
-                let span = join(start, parser.previous().span);
+                let span = parser.join(start, parser.previous().span, diagnostics);
                 parser.ast.push_expr(Expr::Unary { op, operand, span })
             },
             |parser, span| parser.ast.push_expr(Expr::Error { span }),
@@ -2417,6 +2373,8 @@ impl Parser<'_> {
     ///
     /// Casts and `sizeof` are not here yet.
     fn postfix(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
+        // The token the primary starts at, for the reason `climb` gives.
+        let first = self.peek().span;
         let mut base = self.primary(diagnostics);
 
         while !self.failed {
@@ -2429,11 +2387,11 @@ impl Parser<'_> {
             base = match punct {
                 Punct::LeftParen => {
                     self.spend();
-                    self.call(base, diagnostics)
+                    self.call(base, first, diagnostics)
                 }
                 Punct::LeftBracket => {
                     self.spend();
-                    self.subscript(base, diagnostics)
+                    self.subscript(base, first, diagnostics)
                 }
                 // C17 6.5.2.3 p1: `.` and `->` are followed by an identifier,
                 // which names a member and is looked up by nothing yet.
@@ -2446,7 +2404,7 @@ impl Parser<'_> {
                         let span = self.ast.expr(base).span();
                         return self.ast.push_expr(Expr::Error { span });
                     };
-                    let span = join(self.ast.expr(base).span(), member);
+                    let span = self.join(first, member, diagnostics);
                     self.ast.push_expr(Expr::Member {
                         base,
                         member,
@@ -2462,7 +2420,7 @@ impl Parser<'_> {
                         UnOp::PostDec
                     };
                     let end = self.advance().span;
-                    let span = join(self.ast.expr(base).span(), end);
+                    let span = self.join(first, end, diagnostics);
                     self.ast.push_expr(Expr::Unary {
                         op,
                         operand: base,
@@ -2481,8 +2439,7 @@ impl Parser<'_> {
     /// Each argument is an assignment-expression, which is the whole of what
     /// keeps a separator from being the comma operator: `f(a, b)` is two
     /// arguments and `f((a, b))` is one.
-    fn call(&mut self, callee: ExprId, diagnostics: &mut DiagnosticSink) -> ExprId {
-        let start = self.ast.expr(callee).span();
+    fn call(&mut self, callee: ExprId, start: Span, diagnostics: &mut DiagnosticSink) -> ExprId {
         self.advance();
 
         let mut arguments = Vec::new();
@@ -2501,7 +2458,7 @@ impl Parser<'_> {
             return self.ast.push_expr(Expr::Error { span: start });
         }
 
-        let span = join(start, self.previous().span);
+        let span = self.join(start, self.previous().span, diagnostics);
         self.ast.push_expr(Expr::Call {
             callee,
             arguments,
@@ -2510,8 +2467,7 @@ impl Parser<'_> {
     }
 
     /// `base[index]`, from the `[` that is there to the `]`.
-    fn subscript(&mut self, base: ExprId, diagnostics: &mut DiagnosticSink) -> ExprId {
-        let start = self.ast.expr(base).span();
+    fn subscript(&mut self, base: ExprId, start: Span, diagnostics: &mut DiagnosticSink) -> ExprId {
         self.advance();
 
         let index = self.expression(diagnostics);
@@ -2523,7 +2479,7 @@ impl Parser<'_> {
             return self.ast.push_expr(Expr::Error { span: start });
         }
 
-        let span = join(start, self.previous().span);
+        let span = self.join(start, self.previous().span, diagnostics);
         self.ast.push_expr(Expr::Subscript { base, index, span })
     }
 
@@ -2602,16 +2558,41 @@ impl Parser<'_> {
         self.ast.push_expr(Expr::Error { span })
     }
 
-    /// The smallest span covering two nodes.
+    /// The span from `from` to `to`, or, where it would cut an instance,
+    /// `from`, with the cut reported.
     ///
-    /// Through [`join`] rather than by building one from the two offsets.
-    /// Building one with `Span::new` takes its `FileId` from whichever side the
-    /// caller holds, so it resolves a cross-file join to that side in silence,
-    /// where `join` leaves the item holding it to be refused. Every span this
-    /// parser builds goes through [`join`] for this reason, which is also why
-    /// the parser holds no `FileId` of its own.
-    fn joined(&self, from: ExprId, to: ExprId) -> Span {
-        join(self.ast.expr(from).span(), self.ast.expr(to).span())
+    /// Every span this parser builds is made here, from the first and last
+    /// token of what it read, and through [`SourceMap::join`], which lifts
+    /// both ends into the nearest file they share and answers the cut where
+    /// one does not reach its instance's edge. So a node holding a whole
+    /// inclusion is joined where its `#include` is, and one holding part of
+    /// one is refused rather than joined. See ADR-0054. Answering `from`
+    /// keeps the item reading to its end, failed, and recovery takes over.
+    ///
+    /// Mutation: lift with `lift_start` and `lift_end`, which panic on a cut.
+    /// `a_construct_that_cuts_an_include_is_refused` panics.
+    fn join(&mut self, from: Span, to: Span, diagnostics: &mut DiagnosticSink) -> Span {
+        let cut = match self.sources.join(from, to) {
+            Ok(span) => return span,
+            Err(cut) => cut,
+        };
+        let label = match cut.edge {
+            Edge::Start => "begins partway through an included file",
+            Edge::End => "ends partway through an included file",
+        };
+        let mut diagnostic =
+            Diagnostic::error("a construct that cuts an `#include` is not read yet")
+                .with_code(UNREAD)
+                .with_label(Label::primary(cut.span, label))
+                .with_note(
+                    "a construct is read when it holds every token of an included file or none \
+                     of them",
+                );
+        if let Some(at) = self.sources.at(cut.instance) {
+            diagnostic = diagnostic.with_label(Label::secondary(at, "included here"));
+        }
+        self.report_built(cut.span, diagnostic, diagnostics);
+        from
     }
 
     /// Consume whatever token is there, and give it back.

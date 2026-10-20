@@ -107,7 +107,7 @@ Function a_call_on_the_first_arm_is_pending_after_the_join.c:6:5 "f"
       Destination "_14"
       Use
         Copy "_2"
-    Operation a_call_on_the_first_arm_is_pending_after_the_join.c:18:10 written
+    Operation a_call_on_the_first_arm_is_pending_after_the_join.c:18:9 written
       Destination "_15"
       Binary "Add"
         Copy "_12"
@@ -120,7 +120,7 @@ Function a_call_on_the_first_arm_is_pending_after_the_join.c:6:5 "f"
       Destination "_16"
       Use
         Copy "_5"
-    Operation a_call_on_the_first_arm_is_pending_after_the_join.c:18:10 written
+    Operation a_call_on_the_first_arm_is_pending_after_the_join.c:18:9 written
       Destination "_17"
       Binary "Add"
         Copy "_15"

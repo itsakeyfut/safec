@@ -431,18 +431,18 @@ Function a_condition_underlines_the_operand_that_decides.c:76:5 "conditional_com
       Destination "_0"
       Use
         Copy "_5"
-    Sequenced a_condition_underlines_the_operand_that_decides.c:82:13 generated
+    Sequenced a_condition_underlines_the_operand_that_decides.c:82:12 generated
     Return
   Block "bb7"
     Sequenced a_condition_underlines_the_operand_that_decides.c:82:13 generated
-    Operation a_condition_underlines_the_operand_that_decides.c:82:13 written
+    Operation a_condition_underlines_the_operand_that_decides.c:82:12 written
       Destination "_5"
       Use
         Constant 1
     Goto "bb6"
   Block "bb8"
     Sequenced a_condition_underlines_the_operand_that_decides.c:82:13 generated
-    Operation a_condition_underlines_the_operand_that_decides.c:82:13 written
+    Operation a_condition_underlines_the_operand_that_decides.c:82:12 written
       Destination "_5"
       Use
         Constant 2

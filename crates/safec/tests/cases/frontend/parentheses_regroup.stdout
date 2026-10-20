@@ -4,7 +4,7 @@ Function parentheses_regroup.c:1:1 "main" "int (void)"
     Declaration parentheses_regroup.c:1:25 "b" "int"
     Declaration parentheses_regroup.c:1:32 "c" "int"
     Return parentheses_regroup.c:1:39
-      Binary parentheses_regroup.c:1:47 "*"
+      Binary parentheses_regroup.c:1:46 "*"
         Binary parentheses_regroup.c:1:47 "+"
           Identifier parentheses_regroup.c:1:47 "a"
           Identifier parentheses_regroup.c:1:51 "b"

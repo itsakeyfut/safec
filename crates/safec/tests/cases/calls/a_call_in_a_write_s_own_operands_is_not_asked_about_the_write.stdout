@@ -130,7 +130,7 @@ Function a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:6:5 "f"
       Use
         Copy "_5"
           Deref
-    Operation a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:21:10 written
+    Operation a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:21:9 written
       Destination "_19"
       Binary "Add"
         Copy "_15"

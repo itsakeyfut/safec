@@ -44,7 +44,7 @@ use crate::ir::{
     Rvalue, Terminator, TranslationUnit, Ty, UnOp,
 };
 use crate::memory::{dereferenced_in_element, dereferenced_in_terminator};
-use crate::source::Span;
+use crate::source::{SourceMap, Span};
 
 /// What is known about whether a pointer is null.
 ///
@@ -1221,7 +1221,7 @@ fn report_return(
 /// into one finding; nothing here compares spans, and an argument no
 /// implementation reads is one a caller can get wrong without anything saying
 /// so.
-pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
+pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
     let mut findings = Vec::new();
 
     for func in unit.functions() {
@@ -1304,7 +1304,7 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
 
     // In the order a reader's eye goes rather than the order the walk reached
     // them, for the reason `crate::memory::findings` gives at its own sort.
-    findings.sort_by_key(|(finding, _)| (finding.at.file().index(), finding.at.start()));
+    findings.sort_by_key(|(finding, _)| sources.position(finding.at));
 
     // **One statement is one thing to say, however many elements it became.**
     // `*p = 1;` lowers to the write and a read of what it wrote, both carrying

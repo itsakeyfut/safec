@@ -133,7 +133,7 @@ Function a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:5
       Binary "Ne"
         Copy "_12"
         Constant 0
-    Operation a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:18:10 written
+    Operation a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:18:9 written
       Destination "_14"
       Binary "Add"
         Copy "_11"
@@ -141,7 +141,7 @@ Function a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:5
     Call a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:18:49 written "release_all" "bb10"
       Destination "_15"
   Block "bb10"
-    Operation a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:18:10 written
+    Operation a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:18:9 written
       Destination "_16"
       Binary "Add"
         Copy "_14"

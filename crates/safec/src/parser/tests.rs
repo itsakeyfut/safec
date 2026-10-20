@@ -16,7 +16,7 @@ fn parsed(text: &str) -> Parsed {
     let mut diagnostics = DiagnosticSink::new();
     let tokens = lex(file, sources.file(file), &mut diagnostics);
     let tokens = preprocess(file, &tokens, &mut sources, &mut diagnostics);
-    let ast = parse(&tokens, &mut diagnostics);
+    let ast = parse(&tokens, &sources, &mut diagnostics);
 
     Parsed {
         ast,
@@ -358,7 +358,7 @@ fn no_tokens_at_all_parse_to_nothing() {
     let mut diagnostics = DiagnosticSink::new();
     let tokens = preprocess(file, &[], &mut sources, &mut diagnostics);
 
-    let ast = parse(&tokens, &mut diagnostics);
+    let ast = parse(&tokens, &sources, &mut diagnostics);
 
     assert!(ast.items().is_empty());
     assert_eq!(diagnostics.diagnostics().len(), 0);
@@ -1678,23 +1678,23 @@ fn a_parameter_declared_as_an_array_or_a_function_is_a_pointer() {
 }
 
 /// A program cut in two at every token, the tokens after the cut placed in a
-/// second file, is refused where the cut falls inside an item and read where
-/// it falls between two, and never panics.
+/// second file, is refused where a node holds tokens on both sides of the cut
+/// and read where none does, and never panics.
 ///
-/// Every join the parser makes goes through `join`, and a site written with
-/// `Span::to` instead panics on a cut that falls inside the construct it
-/// builds. These two programs reach all 24 sites, counted by marking `join`
-/// `#[track_caller]` for one run and printing its caller's line, so cutting
-/// them everywhere asks each one:
+/// The second file is not an instance of the first, so a join across the cut
+/// shares no file and is a cut by `SourceMap::join`. Every join the parser
+/// makes goes through `Parser::join`, and a site written with `Span::to`
+/// instead panics on a cut inside the construct it builds. These two programs
+/// reach all 24 sites, counted by marking `join` `#[track_caller]` for one run
+/// and printing its caller's line, so cutting them everywhere asks each one:
 /// the corpus asks two. A site added later is asked only if a program here
 /// reaches it.
 ///
-/// Mutation: write any one site's join as `Span::to`, or have `join` call it
-/// unchecked. This panics. Mutation: have `Parser::in_one_file` look at every
-/// token but the item's last. The cut before a `;` that ends a declaration is
-/// read.
+/// Mutation: write any one site's join as `Span::to`, or have `SourceMap::join`
+/// call it unchecked. This panics. Mutation: have `Parser::join` answer a cut
+/// without reporting it. The cut before a `;` that ends a declaration is read.
 #[test]
-fn a_program_cut_into_two_files_at_any_token_is_refused_inside_an_item_and_never_panics() {
+fn a_program_cut_into_two_files_at_any_token_is_refused_where_a_node_holds_both_sides() {
     let text = "struct S { int a, c; int b[2]; };
 int g(int n, int v[n], int *p);
 __attribute__((annotate(\"safec_unchecked\"))) void h(void) {}
@@ -1713,10 +1713,8 @@ int f(int *p, struct S *s) {
     let mut scanned = DiagnosticSink::new();
     let tokens = lex(first, sources.file(first), &mut scanned);
     let mut whole = DiagnosticSink::new();
-    let ast = parse(
-        &preprocess(first, &tokens, &mut sources, &mut whole),
-        &mut whole,
-    );
+    let preprocessed = preprocess(first, &tokens, &mut sources, &mut whole);
+    let ast = parse(&preprocessed, &sources, &mut whole);
     assert!(
         scanned.diagnostics().is_empty() && whole.diagnostics().is_empty(),
         "{:?} {:?}",
@@ -1727,12 +1725,20 @@ int f(int *p, struct S *s) {
     // Where one item ends and the next begins, from the tokens: a `;` or a `}`
     // at brace depth 0, unless a `;` follows that `}`, as after a struct. An
     // item's span is no help, since a function's starts after its attribute.
+    //
+    // And between an attribute and the declaration it precedes, which no
+    // node holds both of: an item's span starts after its attribute, so a
+    // file boundary there cuts nothing, as an `#include` of a definition after
+    // `__attribute__((...))` cuts nothing.
     let mut between = vec![false; tokens.len()];
     let mut depth = 0usize;
+    let mut parens = 0usize;
     for at in 0..tokens.len() - 1 {
         match tokens[at].kind {
             TokenKind::Punct(Punct::LeftBrace) => depth += 1,
             TokenKind::Punct(Punct::RightBrace) => depth -= 1,
+            TokenKind::Punct(Punct::LeftParen) => parens += 1,
+            TokenKind::Punct(Punct::RightParen) => parens -= 1,
             _ => {}
         }
         between[at + 1] = depth == 0
@@ -1740,6 +1746,9 @@ int f(int *p, struct S *s) {
                 TokenKind::Punct(Punct::Semicolon) => true,
                 TokenKind::Punct(Punct::RightBrace) => {
                     tokens[at + 1].kind != TokenKind::Punct(Punct::Semicolon)
+                }
+                TokenKind::Punct(Punct::RightParen) => {
+                    parens == 0 && matches!(tokens[at + 1].kind, TokenKind::Keyword(_))
                 }
                 _ => false,
             };
@@ -1760,7 +1769,7 @@ int f(int *p, struct S *s) {
             .collect();
         let mut diagnostics = DiagnosticSink::new();
         let split = preprocess(first, &split, &mut sources, &mut diagnostics);
-        parse(&split, &mut diagnostics);
+        parse(&split, &sources, &mut diagnostics);
 
         let codes: Vec<String> = diagnostics
             .diagnostics()
@@ -1794,6 +1803,6 @@ int f(int *p, struct S *s) {
             .collect();
         let mut diagnostics = DiagnosticSink::new();
         let split = preprocess(first, &split, &mut sources, &mut diagnostics);
-        parse(&split, &mut diagnostics);
+        parse(&split, &sources, &mut diagnostics);
     }
 }

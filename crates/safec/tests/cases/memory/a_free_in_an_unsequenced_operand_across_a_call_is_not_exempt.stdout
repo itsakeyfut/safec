@@ -53,10 +53,10 @@ Function a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:4:5 "f"
       Binary "Add"
         Copy "_5"
         Constant 0
-    UnsequencedAccess a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:7:14 written "_1" Operands
+    UnsequencedAccess a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:7:13 written "_1" Operands
       Written a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:7:14
       Read a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:7:40
-    Operation a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:7:14 written
+    Operation a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:7:13 written
       Destination "_7"
       Binary "Add"
         Constant 1
@@ -65,7 +65,7 @@ Function a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:4:5 "f"
       Destination "_3"
       Use
         Copy "_7"
-    Sequenced a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:7:14 generated
+    Sequenced a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:7:13 generated
     Operation a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt.c:8:5 written
       Destination "_0"
       Use

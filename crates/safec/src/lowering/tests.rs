@@ -62,7 +62,7 @@ fn compiled(text: &str, must_check: bool) -> Lowered {
 
     let tokens = lex(file, sources.file(file), &mut diagnostics);
     let tokens = preprocess(file, &tokens, &mut sources, &mut diagnostics);
-    let mut ast = parse(&tokens, &mut diagnostics);
+    let mut ast = parse(&tokens, &sources, &mut diagnostics);
     assert!(!diagnostics.has_errors(), "the input did not parse");
 
     let resolution = resolve(&sources, &ast, &mut diagnostics);

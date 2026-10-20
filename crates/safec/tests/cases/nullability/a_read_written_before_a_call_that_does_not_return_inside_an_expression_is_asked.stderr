@@ -2,8 +2,8 @@ error[SC0402]: this uses `p`, which may have been freed
    ╭─[ a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:5:12 ]
    │
  5 │     return *p + (exit(1), 0);
-   │            ────────┬───────  
-   │                    ╰───────── used here, where it may have been freed before
+   │            ────────┬────────  
+   │                    ╰────────── used here, where it may have been freed before
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
@@ -22,8 +22,8 @@ error[SC0403]: this may dereference `p` while it is null
    ╭─[ a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:5:12 ]
    │
  5 │     return *p + (exit(1), 0);
-   │            ────────┬───────  
-   │                    ╰───────── this check cannot say this is not null
+   │            ────────┬────────  
+   │                    ╰────────── this check cannot say this is not null
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

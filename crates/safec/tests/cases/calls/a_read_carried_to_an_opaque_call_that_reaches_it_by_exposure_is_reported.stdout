@@ -39,7 +39,7 @@ Function a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reporte
         Copy "_2"
     Call a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:26 written "release_all" "bb4"
   Block "bb4"
-    Operation a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:13 written
+    Operation a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:12 written
       Destination "_5"
       Binary "Add"
         Copy "_4"
@@ -48,5 +48,5 @@ Function a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reporte
       Destination "_0"
       Use
         Copy "_5"
-    Sequenced a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:13 generated
+    Sequenced a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:12 generated
     Return

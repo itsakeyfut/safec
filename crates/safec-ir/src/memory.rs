@@ -473,7 +473,9 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
     // itself. `Terminator::successors` already says its order will change when
     // an unwinding call gains an edge, and this is what keeps that from moving
     // every expectation that holds two findings.
-    findings.sort_by_key(|finding| (finding.at.file().index(), finding.at.start()));
+    // By where the code is, so a finding in an included file sits where its
+    // `#include` is rather than after every finding in the file including it.
+    findings.sort_by_key(|finding| sources.position(finding.at));
 
     findings
 }

@@ -187,7 +187,7 @@ Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:10:5 "f
       Destination "_20"
       Use
         Copy "_4"
-    Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:28:10 written
+    Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:28:9 written
       Destination "_21"
       Binary "Add"
         Copy "_17"

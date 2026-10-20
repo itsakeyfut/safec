@@ -1,0 +1,24 @@
+error[SC0401]: this frees `p`, which was freed already
+   ╭─[ an_included_free_is_listed_where_its_include_is.h:3:5 ]
+   │
+ 2 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+ 3 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first
+error[SC0401]: this frees `q`, which was freed already
+   ╭─[ an_included_free_is_listed_where_its_include_is.c:6:5 ]
+   │
+ 5 │     free(q);
+   │     ───┬───  
+   │        ╰───── freed here
+ 6 │     free(q);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first

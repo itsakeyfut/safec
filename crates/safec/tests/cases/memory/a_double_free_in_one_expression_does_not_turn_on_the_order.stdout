@@ -28,7 +28,7 @@ Function a_double_free_in_one_expression_does_not_turn_on_the_order.c:3:5 "f"
     Call a_double_free_in_one_expression_does_not_turn_on_the_order.c:5:29 written "free" "bb3"
       Copy "_1"
   Block "bb3"
-    Operation a_double_free_in_one_expression_does_not_turn_on_the_order.c:5:14 written
+    Operation a_double_free_in_one_expression_does_not_turn_on_the_order.c:5:13 written
       Destination "_4"
       Binary "Add"
         Constant 0
@@ -37,7 +37,7 @@ Function a_double_free_in_one_expression_does_not_turn_on_the_order.c:3:5 "f"
       Destination "_3"
       Use
         Copy "_4"
-    Sequenced a_double_free_in_one_expression_does_not_turn_on_the_order.c:5:14 generated
+    Sequenced a_double_free_in_one_expression_does_not_turn_on_the_order.c:5:13 generated
     Operation a_double_free_in_one_expression_does_not_turn_on_the_order.c:6:5 written
       Destination "_0"
       Use

@@ -4319,13 +4319,31 @@ cases! {
         // under a label saying they are the operating system's.
         an_included_file_that_is_not_utf_8_is_refused: ["--emit", "ast"],
         // A body whose braces are in one file and whose statement is in
-        // another, so no join the parser makes crosses a file. Mutation: have
-        // `Parser::in_one_file` return the item. The function compiles.
-        an_include_inside_a_function_body_is_refused: ["--emit", "ast"],
-        // `int` in the header and `x;` after it, so the declaration's own
-        // join crosses a file. Mutation: have `join` in `parser.rs` call
-        // `Span::to` unchecked. It panics.
-        a_construct_that_crosses_an_include_is_refused: ["--emit", "ast"],
+        // another: the item holds the header whole, so it is read, as it is
+        // written out. Mutation: refuse an item whose tokens are in two
+        // files, as `Parser::in_one_file` did. It is refused.
+        a_function_body_made_of_an_include_between_its_braces_is_read: ["--emit", "ast"],
+        // `int a;` then `int` in the header and `b;` after the directive, so
+        // the second declaration starts partway through the header. Mutation:
+        // have `Parser::join` lift with `lift_start` and `lift_end`, which
+        // panic on a cut. It panics.
+        a_construct_that_cuts_an_include_is_refused: ["--emit", "ast"],
+        // `g(` then an `#include` of `*p` then `)`: the read is the call's
+        // own argument, ordered before it as written out, so a parameter the
+        // call cannot reach a free through is not doubted. Mutation: have
+        // `inside` compare without locating. The read is taken for another
+        // operand of the call and reported.
+        a_read_in_an_included_argument_is_ordered_before_the_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `y =` then an `#include` of `(x + 1)` then `;`: the assignment ends
+        // at the `)`, which is the header's last token. Mutation: join the
+        // climb's nodes from their operands' spans, as `Parser::joined` did.
+        // The assignment ends at `1`, cuts the header, and is refused.
+        a_parenthesised_included_operand_is_not_refused: ["--emit", "ast"],
+        // A double free in a header included above a double free written
+        // out: the header's findings come first, as its `#include` does.
+        // Mutation: sort findings by file index, as `memory::findings` did.
+        // The header's are listed last.
+        an_included_free_is_listed_where_its_include_is: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: do not pop a file off the stack when its inclusion ends.
         // The second inclusion is refused as one that includes itself.
         a_header_included_twice_is_read_twice: ["--emit", "ast"],
