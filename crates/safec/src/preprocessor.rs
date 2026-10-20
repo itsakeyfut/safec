@@ -346,6 +346,9 @@ fn include(
                 "`{}` is the input, so reading it here would never end",
                 path.display()
             )),
+            FileName::Expansion { .. } => {
+                unreachable!("an expansion is never on the stack of files being read")
+            }
         };
         diagnostics.report(refusal);
         return None;
@@ -501,7 +504,9 @@ fn refused(text: &str, directive: Span, code: Code, message: &str) -> Diagnostic
 fn path_of(name: &FileName) -> Option<&Path> {
     match name {
         FileName::Real(path) | FileName::Inclusion { path, .. } => Some(path),
-        FileName::Virtual(_) => None,
+        // No `#include` is ever in one, since a replacement list holds no
+        // directive, so nothing is resolved from it.
+        FileName::Virtual(_) | FileName::Expansion { .. } => None,
     }
 }
 

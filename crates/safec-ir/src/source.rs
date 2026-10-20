@@ -80,6 +80,19 @@ pub enum FileName {
         /// The directive, in the including file.
         at: Span,
     },
+    /// A macro's replacement text, one of these per expansion.
+    ///
+    /// An instance as an inclusion is (ADR-0054): two expansions of one macro
+    /// are two files, so a token from one never equals a token from the
+    /// other, and within one every comparison answers as it does for the body
+    /// written out.
+    Expansion {
+        /// The replacement list in its `#define`, whose text this file holds
+        /// byte for byte.
+        spelled: Span,
+        /// The macro's name where it was used.
+        at: Span,
+    },
 }
 
 impl fmt::Display for FileName {
@@ -90,6 +103,10 @@ impl fmt::Display for FileName {
             // The path alone, so a diagnostic in a header names the header.
             // Where it was included from is `at`'s to say, not the name's.
             Self::Inclusion { path, .. } => write!(f, "{}", path.display()),
+            // Never what a reader sees: a report and a dump place a span in an
+            // expansion where its text is written, through
+            // `SourceMap::written`, and that is a file with a name of its own.
+            Self::Expansion { .. } => write!(f, "<expansion>"),
         }
     }
 }
@@ -450,6 +467,23 @@ impl SourceMap {
         ))
     }
 
+    /// Add an expansion of the macro whose replacement list is at `spelled`,
+    /// used at `at`: a file of its own holding that text. See
+    /// [`FileName::Expansion`].
+    ///
+    /// # Panics
+    ///
+    /// If `at` is not in a file already in the map, for the reason
+    /// [`SourceMap::include`] gives.
+    pub fn expand(&mut self, spelled: Span, at: Span) -> FileId {
+        assert!(
+            at.file().index() < self.files.len(),
+            "an expansion's use {at:?} is in no file already registered, so its chain would have no root"
+        );
+        let text = self.snippet(spelled).to_owned();
+        self.add(FileName::Expansion { spelled, at }, text)
+    }
+
     /// Add a file that is not on disk.
     ///
     /// For test inputs today. Later for the buffers the Clang adapter hands
@@ -499,9 +533,29 @@ impl SourceMap {
     /// kind is an arm here and nothing else. See ADR-0054.
     pub fn at(&self, file: FileId) -> Option<Span> {
         match self.file(file).name() {
-            FileName::Inclusion { at, .. } => Some(*at),
+            FileName::Inclusion { at, .. } | FileName::Expansion { at, .. } => Some(*at),
             FileName::Real(_) | FileName::Virtual(_) => None,
         }
+    }
+
+    /// `span` where its text is written: a span in an expansion is moved to
+    /// the same offset in its replacement list's `#define`, through every
+    /// level, and any other span is itself.
+    ///
+    /// What a report and a dump place a span at, so a reader is pointed at a
+    /// file that exists and a line that holds the text. An expansion's text is
+    /// its replacement list byte for byte, so an offset in one is the same
+    /// offset from the other's start. An inclusion is a file on disk, and is
+    /// written where it is.
+    pub fn written(&self, mut span: Span) -> Span {
+        while let FileName::Expansion { spelled, .. } = self.file(span.file()).name() {
+            span = Span::new(
+                spelled.file(),
+                spelled.start() + span.start(),
+                spelled.start() + span.end(),
+            );
+        }
+        span
     }
 
     /// `span` lifted to its use in `into`, checking at every level of the
@@ -1001,6 +1055,46 @@ mod tests {
     fn a_span_whole_in_its_own_instance_but_not_in_the_next_does_not_lift_its_end() {
         let (map, main, _, b) = chain("cut_end", "#include \"b.h\"\nint y;");
         map.lift_end(Span::new(b, 6, 7), main);
+    }
+
+    /// `#define A B + 1` and `#define B 2`, with `A` used and its `B`
+    /// expanded in turn: a chain of two expansions, each holding its
+    /// replacement list's text.
+    fn expansions() -> (SourceMap, FileId, FileId, FileId) {
+        let mut map = SourceMap::new();
+        let main = map.add_virtual("m.c", "#define A B + 1\n#define B 2\nint x = A;\n");
+        let a = map.expand(Span::new(main, 10, 15), Span::new(main, 36, 37));
+        let b = map.expand(Span::new(main, 26, 27), Span::new(a, 0, 1));
+        (map, main, a, b)
+    }
+
+    /// An expansion holds its replacement list's text, and its use is where
+    /// its chain goes.
+    #[test]
+    fn an_expansion_holds_its_replacement_text_and_is_used_where_its_name_is() {
+        let (map, main, a, b) = expansions();
+
+        assert_eq!(map.file(a).contents(), "B + 1");
+        assert_eq!(map.file(b).contents(), "2");
+        assert_eq!(map.at(b), Some(Span::new(a, 0, 1)));
+        assert_eq!(
+            map.locate(Span::new(b, 0, 1), main),
+            Some(Span::new(main, 36, 37))
+        );
+    }
+
+    /// A span in an expansion is written in its macro's `#define`, at the
+    /// same offset, through every level; a span anywhere else is itself.
+    ///
+    /// Mutation: stop after one level. The span in `B`'s expansion is left in
+    /// `A`'s.
+    #[test]
+    fn a_span_in_an_expansion_is_written_in_its_define() {
+        let (map, main, a, b) = expansions();
+
+        assert_eq!(map.written(Span::new(a, 4, 5)), Span::new(main, 14, 15));
+        assert_eq!(map.written(Span::new(b, 0, 1)), Span::new(main, 26, 27));
+        assert_eq!(map.written(Span::new(main, 0, 7)), Span::new(main, 0, 7));
     }
 
     /// A join holding an inclusion whole is made where its `#include` is,

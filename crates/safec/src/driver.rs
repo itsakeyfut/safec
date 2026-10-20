@@ -415,7 +415,9 @@ pub fn compile(options: &Options) -> Compiled {
                 FileName::Inclusion { path: read, .. } => {
                     fs::canonicalize(read).is_ok_and(|read| read == written)
                 }
-                FileName::Real(_) | FileName::Virtual(_) => false,
+                // An expansion is read from its `#define`, which is a file
+                // this asks about in its own right.
+                FileName::Real(_) | FileName::Virtual(_) | FileName::Expansion { .. } => false,
             });
             if included {
                 diagnostics.report(
@@ -976,6 +978,8 @@ fn stem(name: &FileName) -> String {
             .to_string_lossy()
             .into_owned(),
         FileName::Virtual(named) => named.clone(),
+        // Never an input either, so this names nothing anybody sees.
+        FileName::Expansion { .. } => "expansion".to_owned(),
     }
 }
 
