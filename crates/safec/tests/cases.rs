@@ -4541,6 +4541,12 @@ cases! {
         // double free `cl.exe`, which predefines `_MT`, compiles in the
         // `#else`. Mutation: take the idiom anywhere in a file. It exits 0.
         a_guard_inside_a_function_is_not_a_guard: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An `#ifndef _MT` in a guard's shape after the file's first token:
+        // whether `f`, and the double free in it, is compiled is the
+        // compiler's to say, since `cl.exe` predefines `_MT`. Mutation: take
+        // the idiom after the file's first token. The double free is reported
+        // where the `#ifndef` should have been refused.
+        a_guard_after_code_is_not_a_guard: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: let a guard have an `#else`. It exits 0.
         a_guard_with_an_else_is_not_a_guard: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
         // Mutation: let code follow a guard's `#endif`. It exits 0.

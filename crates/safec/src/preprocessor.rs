@@ -1078,9 +1078,10 @@ fn guards(form: &ConditionalForm, frame: &Frame, sources: &SourceMap) -> bool {
     else {
         return false;
     };
-    // The `#ifndef` is the frame's first token, which the loop has stepped
-    // past.
-    if frame.cursor != 1 || CLANG_RESERVED.lines().any(|name| name == *guarded) {
+    // The loop has stepped past the `#ifndef`, which has to be the frame's
+    // first token.
+    let after = frame.cursor;
+    if after != 1 || CLANG_RESERVED.lines().any(|name| name == *guarded) {
         return false;
     }
     let read = |token: &Token| {
@@ -1088,21 +1089,22 @@ fn guards(form: &ConditionalForm, frame: &Frame, sources: &SourceMap) -> bool {
             .then(|| blanked(sources.snippet(token.span)))
             .flatten()
     };
-    let defines = frame
-        .tokens
-        .get(1)
-        .and_then(read)
-        .is_some_and(|text| match macro_form(&text) {
-            MacroForm::Define { name, body, .. } => {
-                name == *guarded && matches!(&text[body.0 as usize..body.1 as usize], "" | "1")
-            }
-            _ => false,
-        });
+    let defines =
+        frame
+            .tokens
+            .get(after)
+            .and_then(read)
+            .is_some_and(|text| match macro_form(&text) {
+                MacroForm::Define { name, body, .. } => {
+                    name == *guarded && matches!(&text[body.0 as usize..body.1 as usize], "" | "1")
+                }
+                _ => false,
+            });
     if !defines {
         return false;
     }
     let mut depth = 0;
-    for (at, token) in frame.tokens.iter().enumerate().skip(2) {
+    for (at, token) in frame.tokens.iter().enumerate().skip(after + 1) {
         let Some(text) = read(token) else {
             continue;
         };
