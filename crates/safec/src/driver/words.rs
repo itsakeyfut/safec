@@ -11,7 +11,7 @@ use safec_ir::analysis::Conclusion;
 use safec_ir::ir::{Between, Promise};
 use safec_ir::memory::{self, Kind, LostReason, Unproven};
 use safec_ir::nullability::{self, Asked};
-use safec_ir::source::Span;
+use safec_ir::source::{SourceMap, Span};
 
 /// A value freed where it may already have been freed.
 ///
@@ -187,15 +187,18 @@ pub(super) enum Unordered {
 /// outside every length is [`Unordered::InTheBody`], which is also the answer
 /// for a finding that names no free, where none of the three is read.
 ///
-/// Spans rather than the finding, so the rule can be asked about two files,
-/// which no translation unit holds yet.
-pub(super) fn unordered(freed: Option<Span>, at: Span, lengths: &[Span]) -> Unordered {
-    // The file as well as the offsets: a span names its own file, and two
-    // files' offsets say nothing about each other. No unit spans two files
-    // until `#include` lands, which is why the guard is a unit test.
-    let within = |outer: Span, inner: Span| {
-        outer.file() == inner.file() && outer.start() <= inner.start() && inner.end() <= outer.end()
-    };
+/// Spans rather than the finding, so the rule can be asked about two files.
+pub(super) fn unordered(
+    sources: &SourceMap,
+    freed: Option<Span>,
+    at: Span,
+    lengths: &[Span],
+) -> Unordered {
+    // Located, not compared as offsets: a span names its own file, and a free
+    // in an included file is inside the length that holds its `#include`, as
+    // it would be written out. Two spans with no file in common are not inside
+    // each other. See ADR-0054.
+    let within = |outer: Span, inner: Span| sources.within(outer, inner);
     let Some(freed) = freed else {
         return Unordered::InTheBody;
     };
@@ -260,11 +263,12 @@ fn said(name: Option<&str>, unnamed: &str, named: impl FnOnce(&str) -> String) -
 /// `lengths` is every parameter length a definition evaluates on entry, for
 /// [`unordered`].
 pub(super) fn memory_finding(
+    sources: &SourceMap,
     finding: &memory::Finding,
     name: Option<&str>,
     lengths: &[Span],
 ) -> Option<Diagnostic> {
-    let unordered = unordered(finding.freed, finding.at, lengths);
+    let unordered = unordered(sources, finding.freed, finding.at, lengths);
     // Nowhere in a declarator can a statement be written, whichever clause
     // left the two unordered there.
     let unsequenced_remedy = match unordered {
@@ -620,7 +624,7 @@ pub(super) fn memory_finding(
             // `Between::Lengths`, whose remedy this already is. `self::`
             // because the local `unordered` above answers about the free,
             // which this finding has none of.
-            let remedy = match self::unordered(Some(written), finding.at, lengths) {
+            let remedy = match self::unordered(sources, Some(written), finding.at, lengths) {
                 Unordered::InTheBody => in_a_statement,
                 Unordered::InOneLength | Unordered::AcrossLengths => WRITE_IN_BODY_REMEDY,
             };

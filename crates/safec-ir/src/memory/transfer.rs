@@ -832,6 +832,7 @@ impl Analysis for Allocations<'_> {
         // this costs is that a pointer parameter read after any call this
         // check cannot read is unproven too. See ADR-0040.
         known.expose(
+            self.sources,
             self.exposed_parameters.iter().map(|local| local.index()),
             None,
         );
@@ -924,7 +925,7 @@ impl Analysis for Allocations<'_> {
         }
 
         for (here, there) in points_to.iter_mut().zip(&from.points_to) {
-            here.joined(there);
+            here.joined(there, self.sources);
         }
 
         // **A site nothing on one side can still name takes the other side's
@@ -934,7 +935,7 @@ impl Analysis for Allocations<'_> {
         // freed there is about no execution's next use of it, and joining it
         // in made the other arm's live `p` unproven. See ADR-0048.
         for (here, there) in state.iter_mut().zip(&from.state) {
-            *here = here.joined(*there);
+            *here = here.joined(*there, self.sources);
         }
 
         // A local whose address escaped on one arm has escaped where the arms
@@ -1203,7 +1204,7 @@ impl Analysis for Allocations<'_> {
                     // exposure. See ADR-0042.
                     if !targets.is_empty() {
                         let routes = value.closure(carried.clone());
-                        value.noticed(Some(operation.origin.span()), &routes);
+                        value.noticed(self.sources, Some(operation.origin.span()), &routes);
                     }
                     // **A pointer that holds a site may also hold what this
                     // check cannot name**: a pointer read out of memory, which
@@ -1260,10 +1261,14 @@ impl Analysis for Allocations<'_> {
                         value.landed_where_unknown_code_points(&carried, &locals);
                     }
                     if unplaced {
-                        value.expose(carried, Some(operation.origin.span()));
+                        value.expose(self.sources, carried, Some(operation.origin.span()));
                     } else {
                         if unnamed {
-                            value.expose(carried.clone(), Some(operation.origin.span()));
+                            value.expose(
+                                self.sources,
+                                carried.clone(),
+                                Some(operation.origin.span()),
+                            );
                         }
                         for container in &containers {
                             for &site in &carried {
@@ -1313,7 +1318,7 @@ impl Analysis for Allocations<'_> {
                             .any(|container| reachable.contains(container))
                         {
                             let routes = value.closure(carried.clone());
-                            value.noticed(Some(operation.origin.span()), &routes);
+                            value.noticed(self.sources, Some(operation.origin.span()), &routes);
                         }
                     }
                 }
@@ -1534,7 +1539,7 @@ impl Analysis for Allocations<'_> {
                         // What the local holds is reachable to every call from
                         // here, as an exposure is. See ADR-0042.
                         let routes = value.closure(value.sites_of(taken.local).collect());
-                        value.noticed(Some(operation.origin.span()), &routes);
+                        value.noticed(self.sources, Some(operation.origin.span()), &routes);
                     }
                 }
 
@@ -1553,7 +1558,7 @@ impl Analysis for Allocations<'_> {
                 // See ADR-0042.
                 if value.escaped[destination.index()] {
                     let routes = value.closure(value.sites_of(destination).collect());
-                    value.noticed(Some(operation.origin.span()), &routes);
+                    value.noticed(self.sources, Some(operation.origin.span()), &routes);
                 }
             }
             // Storage beginning or ending says nothing about what the local
@@ -2042,7 +2047,7 @@ impl Analysis for Allocations<'_> {
                 // What a pointer it was handed may be, read out of memory, as
                 // for an opaque call. See ADR-0040.
                 let reach = self.reach(function, handed, sites(), value);
-                value.expose(reach, Some(origin.span()));
+                value.expose(self.sources, reach, Some(origin.span()));
                 value.replaced(|_| true);
             }
             Callee::Opaque => {
@@ -2084,7 +2089,7 @@ impl Analysis for Allocations<'_> {
                 // What it can reach includes what an argument read out of
                 // memory may be, which `reach` says. See ADR-0039.
                 let reach = self.reach(function, handed, sites(), value);
-                value.expose(reach, Some(origin.span()));
+                value.expose(self.sources, reach, Some(origin.span()));
                 value.unproved_exposed();
                 // Pending from here, and not at its own exposure above, which
                 // `Known::noticed` leaves out by `by` anyway. See ADR-0042.
@@ -2429,7 +2434,7 @@ impl Analysis for Allocations<'_> {
                 }
                 // **And what it returns is exposed**: the callee had the pointer,
                 // and may have kept it where the next call can reach it.
-                value.expose([site], Some(origin.span()));
+                value.expose(self.sources, [site], Some(origin.span()));
             }
             Callee::Frees
             | Callee::Allocates
