@@ -4486,8 +4486,9 @@ cases! {
         // Mutation: drop the check for an open conditional at `#else`,
         // `#endif` or `#elif`. One of the three goes unreported.
         an_endif_or_else_with_nothing_open_is_refused: ["--emit", "ast"],
-        // Mutation: take a second `#else` as the first is taken. Its group is
-        // compiled, and `main` is defined twice.
+        // Mutation: drop the check for a second `#else`. Nothing is reported.
+        // Which group is handed over is asked of the tokens, in
+        // `no_group_of_a_refused_or_doubled_conditional_is_handed_over`.
         a_second_else_is_refused: ["--emit", "ast"],
         // Mutation: read an `#ifdef` with no name as one naming nothing
         // defined. Its group is skipped and nothing is reported.
@@ -4496,10 +4497,10 @@ cases! {
         // a comment after one is no token. Mutation: make the warning an
         // error. It exits 1.
         tokens_after_endif_are_a_warning: ["--emit", "ast"],
-        // None of the groups of a refused `#if` is compiled, and its `#endif`
-        // is matched. Mutation: compile the group after `#if`. `main` is
-        // defined twice. Mutation: open no level at `#if`. The `#endif` closes
-        // no conditional.
+        // A refused `#if`'s `#endif` is matched. Mutation: open no level at
+        // `#if`. The `#endif` closes no conditional. That none of its groups
+        // is handed over is asked of the tokens, in
+        // `no_group_of_a_refused_or_doubled_conditional_is_handed_over`.
         if_and_elif_are_not_read_yet: ["--emit", "ast"],
         // C joins the empty line below to the `#ifndef`'s.
         // Mutation: read a conditional whatever its line ends in. It exits 0.

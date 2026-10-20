@@ -1882,9 +1882,9 @@ mod tests {
     /// Each conditional directive is read by its name, a name that only
     /// begins with one is not one, and what follows is where it is.
     ///
-    /// Mutation: read the directive's name as a prefix. `#ifdefine X` is an
-    /// `#ifdef`. Mutation: count a comment made spaces as extra. `#endif`
-    /// with a comment after it has some.
+    /// Mutation: drop the check that the directive's name ends where a name
+    /// does. `#if$` is an `#if`. Mutation: start `extra` before the blanks
+    /// in front of it. Its offsets move.
     #[test]
     fn a_conditional_directive_is_read_by_its_name() {
         use ConditionalForm::*;
@@ -1943,6 +1943,33 @@ mod tests {
         assert_eq!(conditional_form("#include \"a.h\""), None);
         let blank = blanked("#endif /* U */").unwrap();
         assert_eq!(conditional_form(&blank), Some(Endif { extra: None }));
+    }
+
+    /// No group of a refused `#if` or `#elif`, and no group after a second
+    /// `#else`, is handed to the parser.
+    ///
+    /// Asked of the tokens rather than of a run, because any error before the
+    /// parser stops the input there, so a run cannot show which group was
+    /// handed over. Mutation: compile the group after a refused `#if`. `a`
+    /// is handed over. Mutation: take a second `#else` as the first is
+    /// taken. `e` is.
+    #[test]
+    fn no_group_of_a_refused_or_doubled_conditional_is_handed_over() {
+        let text = "#if 1\nint a;\n#elif 2\nint b;\n#else\nint c;\n#endif\n\
+                    #ifdef U\n#else\nint d;\n#else\nint e;\n#endif\nint f;\n";
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", text);
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        let handed = preprocess(file, &tokens, &mut sources, &mut diagnostics);
+
+        let spelled: Vec<&str> = handed
+            .tokens()
+            .iter()
+            .filter(|token| !token.is_eof())
+            .map(|token| sources.snippet(token.span))
+            .collect();
+        assert_eq!(spelled, ["int", "d", ";", "int", "f", ";"]);
     }
 
     /// The code moved from the lexer with the report, and is the handle a
