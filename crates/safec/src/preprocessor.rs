@@ -288,6 +288,14 @@ fn read_includes(
                              it ends, and the lines inside it are not code",
                         ),
                     );
+                    // A conditional refused here still opens or ends its
+                    // level, as `conditional` says a refused one does: left
+                    // out, its `#endif` was reported as closing nothing, a
+                    // caret on a directive that was right. Found by review.
+                    if let (Some(form), Some(frame)) = (conditional_form(&text), frames.last_mut())
+                    {
+                        conditional(form, &text, token.span, frame, reading, diagnostics, true);
+                    }
                     continue;
                 };
                 let form = conditional_form(&text);
@@ -314,7 +322,7 @@ fn read_includes(
                 }
                 if let Some(form) = form {
                     if let Some(frame) = frames.last_mut() {
-                        conditional(form, &text, token.span, frame, reading, diagnostics);
+                        conditional(form, &text, token.span, frame, reading, diagnostics, false);
                     }
                     continue;
                 }
@@ -846,8 +854,13 @@ fn conditional_form(text: &str) -> Option<ConditionalForm<'_>> {
     let blank = [' ', '\t', '\u{b}', '\u{c}', '\r'];
     let identifier = |c: char| c.is_ascii_alphanumeric() || c == '_';
     // A name ends at a blank, the end, or a character that is not part of
-    // any identifier, such as `(`; `$` or a letter outside ASCII would be.
-    let ends = |rest: &str| !rest.starts_with(|c: char| identifier(c) || c == '$' || !c.is_ascii());
+    // any identifier, such as `(`; `$` or a letter outside ASCII would be,
+    // and so would a `\`, which begins a universal character name (C17
+    // 6.4.2.1). Ended there instead, `#ifndef A\u00e9` asked about `A`, and a
+    // double free under it was skipped. Found by review.
+    let ends = |rest: &str| {
+        !rest.starts_with(|c: char| identifier(c) || c == '$' || c == '\\' || !c.is_ascii())
+    };
     // Where tokens go on after what the directive takes, if they do.
     let extra = |rest: &str| {
         let after = rest.trim_matches(blank);
@@ -899,7 +912,9 @@ fn conditional_form(text: &str) -> Option<ConditionalForm<'_>> {
 /// or ends a level, so its `#endif` is matched rather than reported, and none
 /// of its groups from there is compiled: compiling one would compile code
 /// under a condition nobody evaluated. The refusal is an error, so nothing
-/// past it is believed either way.
+/// past it is believed either way. `already_refused` is a line refused for
+/// something else, which only keeps the level.
+#[allow(clippy::too_many_arguments)]
 fn conditional(
     form: ConditionalForm,
     text: &str,
@@ -907,6 +922,7 @@ fn conditional(
     frame: &mut Frame,
     reading: &Reading,
     diagnostics: &mut DiagnosticSink,
+    already_refused: bool,
 ) {
     let opens = matches!(form, ConditionalForm::If | ConditionalForm::Ifdef { .. });
     // Inside a conditional opened in a skipped group, only the level counts.
@@ -917,11 +933,27 @@ fn conditional(
             frame.skipped_depth -= 1;
         } else if frame.skipped_depth == 0 {
             // `#else`, `#elif` or `#endif` of the skipped conditional itself.
-            act(form, text, directive, frame, reading, diagnostics);
+            act(
+                form,
+                text,
+                directive,
+                frame,
+                reading,
+                diagnostics,
+                already_refused,
+            );
         }
         return;
     }
-    act(form, text, directive, frame, reading, diagnostics);
+    act(
+        form,
+        text,
+        directive,
+        frame,
+        reading,
+        diagnostics,
+        already_refused,
+    );
 }
 
 /// Whether C reserves `name` for the implementation in every use: one that
@@ -943,6 +975,7 @@ fn act(
     frame: &mut Frame,
     reading: &Reading,
     diagnostics: &mut DiagnosticSink,
+    already_refused: bool,
 ) {
     let at = hash(text, directive);
     // A spliced line is refused by the frame loop, and acted on here as far
@@ -973,6 +1006,24 @@ fn act(
             taking: taking.unwrap_or(false),
         });
     };
+    if already_refused {
+        match form {
+            ConditionalForm::If => open(frame, "#if", None),
+            ConditionalForm::Ifdef { negated, .. } => {
+                open(frame, if negated { "#ifndef" } else { "#ifdef" }, None)
+            }
+            ConditionalForm::Elif | ConditionalForm::Else { .. } => {
+                if let Some(conditional) = frame.conditionals.last_mut() {
+                    conditional.settled = true;
+                    conditional.taking = false;
+                }
+            }
+            ConditionalForm::Endif { .. } => {
+                frame.conditionals.pop();
+            }
+        }
+        return;
+    }
     let unmatched = |diagnostics: &mut DiagnosticSink, message: &str| {
         diagnostics.report(
             refused(text, directive, UNBALANCED, message)
@@ -1983,6 +2034,14 @@ mod tests {
                 negated: false,
                 name: Named::Unread,
                 extra: Some((8, 10))
+            })
+        );
+        assert_eq!(
+            conditional_form("#ifdef A\\u00e9"),
+            Some(Ifdef {
+                negated: false,
+                name: Named::Unread,
+                extra: Some((8, 14))
             })
         );
         assert_eq!(conditional_form("#ifdefine X"), None);

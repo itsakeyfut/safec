@@ -4510,6 +4510,15 @@ cases! {
         // skips `p = malloc(4);` and builds a double free. Mutation: ask of a
         // splice only in a conditional the frame acts on. It exits 0.
         a_directive_in_a_skipped_group_ending_in_a_splice_is_refused: ["--emit", "safety-ir", "--target", "x86_64-unknown-linux-gnu"],
+        // `#ifndef A\u00e9` asks about `A\u00e9`, which nothing can define
+        // here, and C builds the double free under it. Mutation: let a name
+        // end at a `\`. It is `#ifndef A`, the free is skipped, and it exits
+        // 0 with a warning.
+        a_conditional_name_going_on_in_a_universal_character_name_is_refused: ["--emit", "safety-ir", "--target", "x86_64-unknown-linux-gnu"],
+        // An `#ifndef` refused for a comment past its line still opens its
+        // level, so its `#else` and `#endif` are not reported. Mutation: keep
+        // no level for a line refused for its comment. Both are.
+        a_conditional_refused_for_its_comment_keeps_its_level: ["--emit", "ast"],
         // Each directive is obeyed, with a warning for what follows it, and
         // a comment after one is no token. Mutation: make the warning an
         // error. It exits 1.

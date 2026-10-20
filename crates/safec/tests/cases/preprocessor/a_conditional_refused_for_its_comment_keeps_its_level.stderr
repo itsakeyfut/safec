@@ -1,0 +1,8 @@
+error[SC0104]: a comment that goes on past a directive's line is not read yet
+   ╭─[ a_conditional_refused_for_its_comment_keeps_its_level.c:1:1 ]
+   │
+ 1 │ #ifndef G /* the guard
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: C makes the comment one space, so the directive goes on after it ends, and the lines inside it are not code
