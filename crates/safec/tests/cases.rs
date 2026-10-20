@@ -4376,6 +4376,20 @@ cases! {
         a_macro_defined_again_differently_is_refused: ["--emit", "ast"],
         // Mutation: drop `#undef`. The parameter is read as `4`.
         an_undefined_macro_is_an_identifier_again: ["--emit", "ast"],
+        // A block comment that goes on past the `#define`'s line, holding a
+        // null test: in C the test is part of the comment. Mutation: read a
+        // directive with an open comment as if it ended at its newline. The
+        // test is compiled, and the dereference is not reported.
+        a_comment_past_a_define_line_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: take the name as ending at the first character that is
+        // not part of one. `#undef A$B` undefines `A`, and `A` is the global.
+        an_undef_of_a_name_with_a_dollar_is_refused: ["--emit", "ast"],
+        // A comment is whitespace in a directive: between `#` and `define`,
+        // after `define`, and between a name and its list. Mutation: read
+        // the line without making its comments spaces. Two are refused.
+        a_comment_in_a_define_line_is_whitespace: ["--emit", "ast"],
+        // Mutation: drop the test for `defined`. It is read as a macro.
+        defined_is_not_read_as_a_macro_s_name: ["--emit", "ast"],
         // ADR-0054's cut: `F(p)` with `#define F (x = *p) + release` starts
         // its call at `release`, partway through the expansion. Mutation:
         // have `Parser::join` panic on a cut. It panics.

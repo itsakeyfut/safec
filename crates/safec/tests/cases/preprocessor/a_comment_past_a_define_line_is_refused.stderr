@@ -1,0 +1,8 @@
+error[SC0104]: a comment that goes on past a directive's line is not read yet
+   ╭─[ a_comment_past_a_define_line_is_refused.c:5:1 ]
+   │
+ 5 │ #define CHECKED /* the caller has checked p, so this went:
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: C makes the comment one space, so the directive goes on after it ends, and the lines inside it are not code

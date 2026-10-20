@@ -206,7 +206,32 @@ fn read_includes(
             TokenKind::Eof => {}
             TokenKind::Directive => {
                 // Owned, because reading the file it names adds to the map.
-                let text = sources.snippet(token.span).to_owned();
+                let raw = sources.snippet(token.span).to_owned();
+                // A splice in a comment is a comment going on past the line:
+                // C splices lines before it reads comments (C17 5.1.1.2 p1,
+                // phases 2 and 3), so `// \` carries the comment, and not
+                // code, onto the line below. Asked of the line before its
+                // comments are made spaces, which takes the splice with them
+                // and read `#include "a.h" // \` as an include. Found by
+                // review, after it had been blessed.
+                let blank =
+                    blanked(&raw).filter(|text| self::spliced(text) || !self::spliced(&raw));
+                let Some(text) = blank else {
+                    let text = raw;
+                    diagnostics.report(
+                        refused(
+                            &text,
+                            token.span,
+                            UNSUPPORTED_DIRECTIVE,
+                            "a comment that goes on past a directive's line is not read yet",
+                        )
+                        .with_note(
+                            "C makes the comment one space, so the directive goes on after \
+                             it ends, and the lines inside it are not code",
+                        ),
+                    );
+                    continue;
+                };
                 match include_form(&text) {
                     IncludeForm::Quoted { name, quote } => {
                         let quoted = Span::new(
@@ -279,6 +304,30 @@ fn read_includes(
                         MacroForm::Undef { name } => {
                             reading.macros.remove(name);
                         }
+                        MacroForm::Unread { directive } => diagnostics.report(
+                            refused(
+                                &text,
+                                token.span,
+                                UNSUPPORTED_DIRECTIVE,
+                                &format!("this `{directive}` is not read yet"),
+                            )
+                            .with_note(
+                                "a macro's name is read when it is ASCII letters, digits and \
+                                 `_`, followed by a space or the end of the line",
+                            ),
+                        ),
+                        MacroForm::Defined => diagnostics.report(
+                            refused(
+                                &text,
+                                token.span,
+                                UNSUPPORTED_DIRECTIVE,
+                                "`defined` is not read as a macro's name",
+                            )
+                            .with_note(
+                                "C17 6.10.8 p2 says it shall not be the subject of a `#define` \
+                                 or an `#undef`",
+                            ),
+                        ),
                         MacroForm::FunctionLike => diagnostics.report(
                             refused(
                                 &text,
@@ -449,7 +498,7 @@ fn define(
                 text,
                 directive,
                 UNSUPPORTED_DIRECTIVE,
-                "`#` and `##` in a macro are not read yet",
+                "`#` and `##` in a `#define` are not read yet",
             )
             .with_note("only a replacement list without them is read yet"),
         );
@@ -501,6 +550,11 @@ enum MacroForm<'a> {
     Undef { name: &'a str },
     /// `#define name(`, a function-like macro.
     FunctionLike,
+    /// `#define defined` or `#undef defined`.
+    Defined,
+    /// A `#define` or an `#undef` whose name is not one this reads, such as
+    /// one with a `$` in it, or an `#undef` with more after its name.
+    Unread { directive: &'static str },
     /// A `#define` on a line that ends in a splice or holds a trigraph, for
     /// the reason [`IncludeForm::Spliced`] gives.
     Spliced,
@@ -532,17 +586,39 @@ fn macro_form(text: &str) -> MacroForm<'_> {
     let length = rest.len() - rest.trim_start_matches(identifier).len();
     let name = &rest[..length];
     if name.is_empty() || name.starts_with(|c: char| c.is_ascii_digit()) {
-        return MacroForm::Other;
+        return MacroForm::Unread {
+            directive: if define { "#define" } else { "#undef" },
+        };
     }
+    if name == "defined" {
+        return MacroForm::Defined;
+    }
+    // What follows the name has to be where the name ends: a blank, the end,
+    // or, for `#define`, the `(` of a function-like macro. Anything else is
+    // a character this does not take for part of a name, `$` or a letter
+    // outside ASCII among them, and reading the name as ending before it read
+    // `#undef A$B` as `#undef A`, undefining a macro nobody named. Found by
+    // review. C17 6.10.3 p3 asks for whitespace between an object-like
+    // macro's name and its replacement list anyway.
+    let after = &rest[length..];
     if !define {
-        return MacroForm::Undef { name };
+        if after.trim_matches(blank).is_empty() {
+            return MacroForm::Undef { name };
+        }
+        return MacroForm::Unread {
+            directive: "#undef",
+        };
     }
     if spliced(text) {
         return MacroForm::Spliced;
     }
-    let after = &rest[length..];
     if after.starts_with('(') {
         return MacroForm::FunctionLike;
+    }
+    if !(after.is_empty() || after.starts_with(blank)) {
+        return MacroForm::Unread {
+            directive: "#define",
+        };
     }
     let name_at = (text.len() - rest.len()) as u32;
     let body = after.trim_start_matches(blank);
@@ -553,6 +629,49 @@ fn macro_form(text: &str) -> MacroForm<'_> {
         name_at,
         body: (start as u32, end as u32),
     }
+}
+
+/// `text`, a directive's line, with each comment in it made spaces of the
+/// same length, or `None` where a block comment in it does not end on it.
+///
+/// C makes a comment one space before directives are read (C17 5.1.1.2 p1,
+/// phase 3), so a comment between `#` and `define`, or after a name, is
+/// whitespace like any other; the same length keeps every offset into the
+/// line where it was, so spans taken from the result are spans of the line.
+/// A string or character literal is passed over, since `/*` in one opens
+/// nothing. A comment that does not end on the line is refused rather than
+/// read: the lexer ends a directive at its newline, so the lines inside the
+/// comment would be compiled as code, and `#define X /*` above a null test
+/// left the test to be believed where C has none. Found by review.
+fn blanked(text: &str) -> Option<String> {
+    let mut bytes = text.as_bytes().to_vec();
+    let mut at = 0;
+    let mut quote = None;
+    while at < bytes.len() {
+        match (quote, bytes[at]) {
+            // An escape in a literal, whose next byte closes nothing.
+            (Some(_), b'\\') if at + 1 < bytes.len() => {
+                at += 2;
+                continue;
+            }
+            (Some(open), byte) if byte == open => quote = None,
+            (Some(_), _) => {}
+            (None, b'"' | b'\'') => quote = Some(bytes[at]),
+            (None, b'/') if bytes.get(at + 1) == Some(&b'/') => {
+                bytes[at..].fill(b' ');
+                break;
+            }
+            (None, b'/') if bytes.get(at + 1) == Some(&b'*') => {
+                let end = text[at + 2..].find("*/")? + at + 4;
+                bytes[at..end].fill(b' ');
+                at = end;
+                continue;
+            }
+            (None, _) => {}
+        }
+        at += 1;
+    }
+    Some(String::from_utf8(bytes).expect("only whole comments are made spaces"))
 }
 
 /// Whether a directive's line ends in a splice or holds a trigraph, either of

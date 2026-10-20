@@ -1,0 +1,8 @@
+error[SC0104]: this `#undef` is not read yet
+   ╭─[ an_undef_of_a_name_with_a_dollar_is_refused.c:3:1 ]
+   │
+ 3 │ #undef A$B
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: a macro's name is read when it is ASCII letters, digits and `_`, followed by a space or the end of the line
