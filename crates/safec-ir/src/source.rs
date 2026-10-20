@@ -968,7 +968,8 @@ mod tests {
     /// is after `x = 0;` and before `y = 1;`, though `b.h` was registered
     /// after both.
     ///
-    /// Mutation: order by file index first. The second assertion fails.
+    /// Mutation: read the chain innermost first rather than from its root.
+    /// The second assertion fails.
     #[test]
     fn a_span_in_an_instance_is_ordered_where_its_use_is() {
         let (map, main, _, b) = chain("order", "#include \"b.h\"\nint y;");
