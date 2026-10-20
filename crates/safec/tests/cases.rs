@@ -4328,12 +4328,12 @@ cases! {
         // have `Parser::join` lift with `lift_start` and `lift_end`, which
         // panic on a cut. It panics.
         a_construct_that_cuts_an_include_is_refused: ["--emit", "ast"],
-        // `g(` then an `#include` of `*p` then `)`: the read is the call's
-        // own argument, ordered before it as written out, so a parameter the
-        // call cannot reach a free through is not doubted. Mutation: have
-        // `inside` compare without locating. The read is taken for another
-        // operand of the call and reported.
-        a_read_in_an_included_argument_is_ordered_before_the_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it`
+        // with `release_all()` included as `memset`'s argument: it runs
+        // before `memset`, as written out, so it cannot free what `memset`
+        // exposes. Mutation: have `inside` compare without locating. The
+        // included call is not inside `memset`'s span, and this reports.
+        a_call_in_an_included_argument_is_not_asked_about_the_call_around_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `y =` then an `#include` of `(x + 1)` then `;`: the assignment ends
         // at the `)`, which is the header's last token. Mutation: join the
         // climb's nodes from their operands' spans, as `Parser::joined` did.
