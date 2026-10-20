@@ -140,9 +140,9 @@ compiler for the target defines is answered as undefined, and one they
 disagree on, such as `__x86_64__` for MSVC, is refused. ADR-0055 is the
 decision. Any other name C reserves for the
 implementation (C17 7.1.3), one beginning with `__` or with `_` and a capital
-letter, such as `__GNUC__`, is refused unless the source defines it or it is an
-include guard wrapping a whole file, because its answer depends on the
-compiler that builds the file. `__FILE__`, `__LINE__`, `__DATE__` and
+letter, such as `__GNUC__`, is refused unless the source defines it, because
+its answer depends on the compiler that builds the file; an include guard so
+named is refused too. `__FILE__`, `__LINE__`, `__DATE__` and
 `__TIME__` are defined, and refused where they are used. `linux` and `unix`,
 which a GNU mode defines on Linux and `-std=c17` does not, are refused there
 too. Tokens after a conditional's name, or after `#else` or `#endif`, are a

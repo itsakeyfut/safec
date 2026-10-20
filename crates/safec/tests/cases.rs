@@ -4525,32 +4525,12 @@ cases! {
         // __STDC_VERSION__` is reported. Mutation: predefine nothing. The
         // `#ifdef` is refused and nothing is analysed.
         a_double_free_under_a_predefined_name_is_found: ["--emit", "safety-ir", "--target", "x86_64-unknown-linux-gnu"],
-        // A header guarded by `#ifndef _FOO_H` and an empty `#define`,
-        // included twice from an input guarded by `_MAIN_C` defined as `1`.
-        // Mutation: drop the guard idiom. Every guard is refused. Mutation:
-        // take only an empty list as a guard. `_MAIN_C` is refused.
-        a_reserved_guard_is_read_once: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
-        // A file in a guard's shape whose `#define` gives a value, `char`:
-        // a fallback, not a guard. Mutation: take any list as a guard's. It
-        // exits 0.
-        a_compiler_s_fallback_is_not_a_guard: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
-        // The same shape for `__NO_INLINE__`, which `clang` predefines.
-        // Mutation: take a name `clang` predefines as a guard. It exits 0.
-        a_name_clang_predefines_is_not_a_guard: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
-        // `#ifndef _MT` and `#define _MT 1` inside a function, with the
-        // double free `cl.exe`, which predefines `_MT`, compiles in the
-        // `#else`. Mutation: take the idiom anywhere in a file. It exits 0.
-        a_guard_inside_a_function_is_not_a_guard: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // An `#ifndef _MT` in a guard's shape after the file's first token:
-        // whether `f`, and the double free in it, is compiled is the
-        // compiler's to say, since `cl.exe` predefines `_MT`. Mutation: take
-        // the idiom after the file's first token. The double free is reported
-        // where the `#ifndef` should have been refused.
-        a_guard_after_code_is_not_a_guard: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: let a guard have an `#else`. It exits 0.
-        a_guard_with_an_else_is_not_a_guard: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
-        // Mutation: let code follow a guard's `#endif`. It exits 0.
-        a_guard_with_code_after_it_is_not_a_guard: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
+        // A header guarded by `_MT`, which `cl.exe` predefines and `clang`
+        // does not, defining a macro the input's `#ifndef` asks about: a
+        // `cl.exe` build skips the header and compiles the double free.
+        // Mutation: read `#ifndef N` followed by `#define N` as a guard,
+        // whatever `N` is. It exits 0.
+        a_reserved_guard_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `unix` is defined by `gcc` and `clang` in their default GNU modes
         // and not under `-std=c17`. Mutation: leave it out of Linux's
         // unsettled names. It is answered as undefined, and the double free
@@ -4562,9 +4542,6 @@ cases! {
         // undefined, and the double free is reported where the `#ifdef`
         // should have been refused.
         a_name_its_compilers_disagree_on_is_refused_for_msvc: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: take the idiom whatever name the next `#define` defines.
-        // It exits 0.
-        a_reserved_name_followed_by_another_define_is_refused: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
         // `#ifdef __LINE__` is answered, and the use is refused. Mutation:
         // expand a dynamic macro as its empty list. `int line = ;` is
         // reported as a syntax error instead.

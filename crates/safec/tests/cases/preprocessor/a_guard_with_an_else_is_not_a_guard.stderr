@@ -1,8 +1,0 @@
-error[SC0104]: this `#ifndef` asks about a name the implementation may define
-   ╭─[ a_guard_with_an_else_is_not_a_guard.c:1:1 ]
-   │
- 1 │ #ifndef _C_GUARD
-   │ ┬  
-   │ ╰── directive begins here
-───╯
-  = note: `_C_GUARD` is reserved for the implementation (C17 7.1.3), and whether it is defined depends on the compiler, so none of this conditional's groups is compiled

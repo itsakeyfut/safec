@@ -45,15 +45,13 @@ A first version took every value from `clang`'s list for the triple. Review foun
 * `cl.exe` does not define `__x86_64__`, so `#ifdef __x86_64__` took a group `cl.exe` skips, and a double free in that group was analysed away.
 * Answering a name in the union as undefined, wherever this target's list leaves it out, answers wrongly for any compiler that does define it.
 
-**The include-guard idiom is read.** It answers `N` from the source alone, so a header guarded by `_FOO_H` or `_STDIO_H` is read. Its shape is strict:
+**An include guard named with a reserved name is refused**, as any other `#ifndef` of one is. A guard such as `_FOO_H` therefore stops its header at every inclusion. Three versions that read the guard idiom were each found by review to let a verdict through:
 
-* `#ifndef N` is the file's first token.
-* A `#define N` with an empty list or `1` follows directly.
-* An `#endif` closing it is the file's last token, with no `#else` or `#elif` of its own.
+* The pair taken anywhere passed `#ifndef _MT` inside a function. `cl.exe` predefines `_MT`, so the double free it compiles in the `#else` was analysed away.
+* The pair taken as a fallback passed `#define __SIZE_TYPE__ char`.
+* The pair taken only around a whole file passed a header that defines a macro another file's `#ifdef` asks about. A compiler that predefines the guard's name skips the whole header, so that macro is undefined in its build, and the double free under that `#ifdef` was analysed away.
 
-The whole file is required because, where a compiler does predefine `N`, all that changes is whether the header is read at all. A first version took the pair anywhere. Review found `#ifndef _MT` above `#define _MT 1` and an `#else` inside a function. `cl.exe` predefines `_MT`, and `clang` does not, so the double free `cl.exe` compiles in the `#else` was analysed away.
-
-The idiom does not apply where `clang` predefines `N` for some target. There, the pair is a fallback for the compiler's value rather than a guard: `#define __SIZE_TYPE__ char` declared a `char` where every build has an `unsigned long`.
+Whether a header is read decides more than its own declarations. Reading the idiom safely means treating every macro a guarded header defines or undefines as unknown to later conditionals. That is left to [#561](https://github.com/itsakeyfut/safec/issues/561).
 
 `__FILE__`, `__LINE__`, `__DATE__` and `__TIME__` are defined, so `#ifdef` answers them. Using one in code is refused as `SC0104`, because what it expands to is the place and time of the use, and that is not written yet.
 
@@ -69,7 +67,7 @@ Held by tests in `crates/safec/src/preprocessor.rs` and corpus cases in `crates/
 * `a_name_its_compilers_disagree_on_is_refused_for_msvc` puts the double free `cl.exe` builds under `#else` of `#ifdef __x86_64__`. If unsettled names are answered from the lists, it is reported as a double free rather than refused.
 * `every_target_predefines_what_its_compilers_agree_on` writes two targets' values, and their unsettled names, out rather than walking the lists. Changing a value, or moving a name between the classes, fails it.
 * `a_name_some_target_predefines_is_known` fails if only the run's own target is asked.
-* `a_reserved_guard_is_read_once` holds that a guard is read, with an empty list or `1`. `a_reserved_name_followed_by_another_define_is_refused` holds that the `#define` must name the guard. `a_compiler_s_fallback_is_not_a_guard` and `a_name_clang_predefines_is_not_a_guard` hold the two exclusions: a list that is not empty or `1`, and a name `clang` predefines. `a_guard_inside_a_function_is_not_a_guard`, `a_guard_after_code_is_not_a_guard`, `a_guard_with_an_else_is_not_a_guard` and `a_guard_with_code_after_it_is_not_a_guard` hold the whole-file shape.
+* `a_reserved_guard_is_refused` is the third of those programs. Reading `#ifndef N` followed by `#define N` as a guard makes it exit 0.
 * `a_gnu_mode_s_name_is_refused_for_linux` fails if `unix` is answered as undefined on Linux.
 * `a_predefined_macro_defined_again_is_refused` and `a_target_s_name_may_be_defined_again` hold `SC0117` to the names 6.10.8 lists.
 
@@ -77,7 +75,7 @@ Held by tests in `crates/safec/src/preprocessor.rs` and corpus cases in `crates/
 
 * Good, because a header that selects on the platform is read, and it is read the way every compiler for that platform reads it.
 * Good, because a header that selects on the compiler is refused where safec cannot know the answer. The refusal is visible, where the alternative is silent.
-* Bad, because a header that tests `__GNUC__` or `_MSC_VER` before anything else is refused, even when it would be read correctly under any answer.
+* Bad, because a header that tests `__GNUC__` or `_MSC_VER` before anything else is refused, even when it would be read correctly under any answer, and so is a header guarded by a reserved name such as `_FOO_H`.
 * Bad, because the values are a measurement of one `clang` release, and the other compilers' side is their documentation, not a run. `gcc`'s operating system and architecture names, `__linux__` and `__x86_64__` among them, are taken as shared with `clang` without being measured here. A target added to `Target::ALL` needs its lists measured too.
 * Bad, because a header that tests `__x86_64__` to choose code for MSVC is refused, even though `_M_X64` would have answered.
 * What would reverse this: a way to say which compiler builds the file, such as a `--compiler` option. With one, the compiler's identity macros become facts as well.
@@ -103,6 +101,6 @@ Held by tests in `crates/safec/src/preprocessor.rs` and corpus cases in `crates/
 ## More Information
 
 * [#547](https://github.com/itsakeyfut/safec/issues/547) added the refusal of reserved names, and its review found the double free described above.
-* `clang 20.1.6 --target=<triple> -std=c17 -dM -E` was run on an empty file for each row of `Target::ALL`, on 2026-10-20. The reserved names it printed are in `crates/safec/src/preprocessor/clang-reserved-names.txt`.
+* `clang 20.1.6 --target=<triple> -std=c17 -dM -E` was run on an empty file for each row of `Target::ALL`, on 2026-10-20.
 * `cl.exe`'s side is <https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros>. `gcc`'s side is <https://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html> and <https://gcc.gnu.org/onlinedocs/cpp/Standard-Predefined-Macros.html>. All three were read on 2026-10-20.
 * [ADR-0013](./0013-the-translation-unit-carries-the-target-and-answers-what-a-type-is-worth.md) is the same stance applied to what a type is worth.

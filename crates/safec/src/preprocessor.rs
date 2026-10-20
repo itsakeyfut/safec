@@ -359,17 +359,7 @@ fn read_includes(
                     // caret on a directive that was right. Found by review.
                     if let (Some(form), Some(frame)) = (conditional_form(&text), frames.last_mut())
                     {
-                        let (refused, guard) = (true, false);
-                        conditional(
-                            form,
-                            &text,
-                            token.span,
-                            frame,
-                            reading,
-                            diagnostics,
-                            refused,
-                            guard,
-                        );
+                        conditional(form, &text, token.span, frame, reading, diagnostics, true);
                     }
                     continue;
                 };
@@ -396,21 +386,8 @@ fn read_includes(
                     );
                 }
                 if let Some(form) = form {
-                    let guard = frames
-                        .last()
-                        .is_some_and(|frame| guards(&form, frame, sources));
                     if let Some(frame) = frames.last_mut() {
-                        let refused = false;
-                        conditional(
-                            form,
-                            &text,
-                            token.span,
-                            frame,
-                            reading,
-                            diagnostics,
-                            refused,
-                            guard,
-                        );
+                        conditional(form, &text, token.span, frame, reading, diagnostics, false);
                     }
                     continue;
                 }
@@ -1026,14 +1003,6 @@ fn unsettled(target: Target) -> &'static [&'static str] {
     }
 }
 
-/// Every name C reserves that `clang 20.1.6` predefines for some row of
-/// `Target::ALL`, one per line, sorted: what the include-guard idiom does not
-/// take, since a header's `#ifndef __SIZE_TYPE__` above a `#define` of it is
-/// the fallback for a name the compiler predefines, not a guard. Measured
-/// with `clang --target=<triple> -std=c17 -dM -E` on an empty file for each
-/// row, keeping the names that begin with `__` or with `_` and a capital.
-const CLANG_RESERVED: &str = include_str!("preprocessor/clang-reserved-names.txt");
-
 /// Whether `name` is predefined or unsettled for some target, which makes
 /// whether this one predefines it a fact about this one rather than a
 /// question it cannot answer. See ADR-0055.
@@ -1052,75 +1021,6 @@ fn known(name: &str) -> bool {
 /// way, or undefined, as `clang` accepts.
 fn standard(name: &str) -> bool {
     DYNAMIC.contains(&name) || matches!(name, "__STDC__" | "__STDC_VERSION__" | "__STDC_HOSTED__")
-}
-
-/// Whether `form`, the directive `frame` has just read, is an include
-/// guard: `#ifndef N` as the file's first token, a `#define N` with an empty
-/// list or `1` next, and an `#endif` closing it as the file's last, with no
-/// `#else` or `#elif` of its own. Such a guard answers `N` from the source
-/// alone. See ADR-0055.
-///
-/// The whole file, because where a compiler does predefine `N` all it
-/// changes is whether a header is read at all. `#ifndef _MT` above a
-/// `#define _MT 1` and an `#else` inside a function was taken for a guard,
-/// and the double free in its `#else`, which `cl.exe` compiles, since it
-/// predefines `_MT`, was analysed away. Found by review. Not where `clang`
-/// predefines `N` either, whose `#ifndef` and `#define` are a fallback for
-/// the compiler's value rather than a guard: `#define __SIZE_TYPE__ char`
-/// there declared a `char` where every build has an `unsigned long`. Found
-/// by review.
-fn guards(form: &ConditionalForm, frame: &Frame, sources: &SourceMap) -> bool {
-    let ConditionalForm::Ifdef {
-        negated: true,
-        name: Named::Read(guarded),
-        ..
-    } = form
-    else {
-        return false;
-    };
-    // The loop has stepped past the `#ifndef`, which has to be the frame's
-    // first token.
-    let after = frame.cursor;
-    if after != 1 || CLANG_RESERVED.lines().any(|name| name == *guarded) {
-        return false;
-    }
-    let read = |token: &Token| {
-        (token.kind == TokenKind::Directive)
-            .then(|| blanked(sources.snippet(token.span)))
-            .flatten()
-    };
-    let defines =
-        frame
-            .tokens
-            .get(after)
-            .and_then(read)
-            .is_some_and(|text| match macro_form(&text) {
-                MacroForm::Define { name, body, .. } => {
-                    name == *guarded && matches!(&text[body.0 as usize..body.1 as usize], "" | "1")
-                }
-                _ => false,
-            });
-    if !defines {
-        return false;
-    }
-    let mut depth = 0;
-    for (at, token) in frame.tokens.iter().enumerate().skip(after + 1) {
-        let Some(text) = read(token) else {
-            continue;
-        };
-        match conditional_form(&text) {
-            Some(ConditionalForm::If | ConditionalForm::Ifdef { .. }) => depth += 1,
-            Some(ConditionalForm::Endif { .. }) if depth > 0 => depth -= 1,
-            Some(ConditionalForm::Endif { .. }) => {
-                return frame.tokens[at + 1..].iter().all(|token| token.is_eof());
-            }
-            Some(ConditionalForm::Else { .. } | ConditionalForm::Elif) if depth == 0 => {
-                return false;
-            }
-            _ => {}
-        }
-    }
-    false
 }
 
 /// What a directive that is not an `#include` is, where it is a macro's.
@@ -1372,8 +1272,7 @@ fn conditional_form(text: &str) -> Option<ConditionalForm<'_>> {
 /// of its groups from there is compiled: compiling one would compile code
 /// under a condition nobody evaluated. The refusal is an error, so nothing
 /// past it is believed either way. `already_refused` is a line refused for
-/// something else, which only keeps the level, and `guard` says the
-/// directive is the include-guard idiom [`guards`] reads.
+/// something else, which only keeps the level.
 #[allow(clippy::too_many_arguments)]
 fn conditional(
     form: ConditionalForm,
@@ -1383,7 +1282,6 @@ fn conditional(
     reading: &Reading,
     diagnostics: &mut DiagnosticSink,
     already_refused: bool,
-    guard: bool,
 ) {
     let opens = matches!(form, ConditionalForm::If | ConditionalForm::Ifdef { .. });
     // Inside a conditional opened in a skipped group, only the level counts.
@@ -1402,7 +1300,6 @@ fn conditional(
                 reading,
                 diagnostics,
                 already_refused,
-                guard,
             );
         }
         return;
@@ -1415,7 +1312,6 @@ fn conditional(
         reading,
         diagnostics,
         already_refused,
-        guard,
     );
 }
 
@@ -1440,7 +1336,6 @@ fn act(
     reading: &Reading,
     diagnostics: &mut DiagnosticSink,
     already_refused: bool,
-    guard: bool,
 ) {
     let at = hash(text, directive);
     // A spliced line is refused by the frame loop, and acted on here as far
@@ -1526,13 +1421,15 @@ fn act(
                 // target, so this cannot give one. Answered as
                 // undefined, the group a compiler builds was skipped, and a
                 // double free under it analysed away. Found by review. A name
-                // the source defines first is answered, and so is the
-                // include-guard idiom. `unix`, which a GNU mode defines and
-                // `-std=c17` does not, is unsettled the same way, reserved or
-                // not. See ADR-0055.
+                // the source defines first is answered, and an include guard
+                // so named is not: where a compiler predefines its name, every
+                // macro the header defines is missing from that build, and a
+                // later `#ifdef` of one chose a group it does not. Found by
+                // review. `unix`, which a GNU mode defines and `-std=c17` does
+                // not, is unsettled the same way, reserved or not. See
+                // ADR-0055.
                 Named::Read(name)
                     if !reading.macros.contains_key(name)
-                        && !guard
                         && (unsettled(reading.target).contains(&name)
                             || (reserved(name) && !known(name))) =>
                 {

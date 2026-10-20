@@ -1,7 +1,7 @@
 error[SC0104]: this `#ifndef` asks about a name the implementation may define
-   ╭─[ a_guard_inside_a_function_is_not_a_guard.c:6:1 ]
+   ╭─[ a_reserved_guard_is_refused.h:1:1 ]
    │
- 6 │ #ifndef _MT
+ 1 │ #ifndef _MT
    │ ┬  
    │ ╰── directive begins here
 ───╯
