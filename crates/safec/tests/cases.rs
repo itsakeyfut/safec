@@ -4493,6 +4493,13 @@ cases! {
         // Mutation: read an `#ifdef` with no name as one naming nothing
         // defined. Its group is skipped and nothing is reported.
         an_ifdef_with_no_name_is_refused: ["--emit", "ast"],
+        // `$` may be part of a name where extended characters are read, so it
+        // is C not read yet, `SC0104`, rather than a name missing. Mutation:
+        // drop the report. It exits 0.
+        an_ifdef_of_a_name_with_a_dollar_is_refused: ["--emit", "ast"],
+        // Mutation: drop the check for an `#else` before an `#elif`. It is
+        // reported as an `#elif` not read yet instead, `SC0104`.
+        an_elif_after_else_is_refused: ["--emit", "ast"],
         // Each directive is obeyed, with a warning for what follows it, and
         // a comment after one is no token. Mutation: make the warning an
         // error. It exits 1.

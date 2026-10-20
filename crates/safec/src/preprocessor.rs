@@ -1945,18 +1945,20 @@ mod tests {
         assert_eq!(conditional_form(&blank), Some(Endif { extra: None }));
     }
 
-    /// No group of a refused `#if` or `#elif`, and no group after a second
-    /// `#else`, is handed to the parser.
+    /// No group of a refused `#if`, `#elif` or `#ifdef`, and no group after
+    /// a second `#else`, is handed to the parser.
     ///
     /// Asked of the tokens rather than of a run, because any error before the
     /// parser stops the input there, so a run cannot show which group was
     /// handed over. Mutation: compile the group after a refused `#if`. `a`
     /// is handed over. Mutation: take a second `#else` as the first is
-    /// taken. `e` is.
+    /// taken. `e` is. Mutation: take the group of an `#ifdef` whose name is
+    /// not read. `g` is.
     #[test]
     fn no_group_of_a_refused_or_doubled_conditional_is_handed_over() {
         let text = "#if 1\nint a;\n#elif 2\nint b;\n#else\nint c;\n#endif\n\
-                    #ifdef U\n#else\nint d;\n#else\nint e;\n#endif\nint f;\n";
+                    #ifdef U\n#else\nint d;\n#else\nint e;\n#endif\nint f;\n\
+                    #ifdef A$B\nint g;\n#endif\n";
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", text);
         let mut diagnostics = DiagnosticSink::new();
