@@ -388,7 +388,19 @@ impl SourceMap {
     ///
     /// A new file on every call, a second inclusion of the same path
     /// included. See [`FileName::Inclusion`].
+    ///
+    /// # Panics
+    ///
+    /// If `at` is not in a file already in the map. Every walk along a chain
+    /// of uses, [`SourceMap::locate`] and the lifts among them, ends because
+    /// each use is in a file registered before the instance it is the use
+    /// of; a use in the file being added, or a later one, would be a chain
+    /// with no root, and the walk would not end. Found by review.
     pub fn include(&mut self, path: impl AsRef<Path>, at: Span) -> io::Result<FileId> {
+        assert!(
+            at.file().index() < self.files.len(),
+            "an inclusion's use {at:?} is in no file already registered, so its chain would have no root"
+        );
         let path = path.as_ref();
         let contents = fs::read_to_string(path)?;
         Ok(self.add(
@@ -977,6 +989,20 @@ mod tests {
 
         assert!(map.position(Span::new(main, 0, 1)) < z);
         assert!(z < map.position(Span::new(main, 22, 23)));
+    }
+
+    /// A use in a file not yet registered would give a chain with no root,
+    /// which every walk along uses would follow for ever.
+    ///
+    /// Mutation: drop the assertion in `include`. The inclusion is added, and
+    /// this does not panic.
+    #[test]
+    #[should_panic(expected = "is in no file already registered")]
+    fn an_inclusion_whose_use_is_in_no_registered_file_is_refused() {
+        let mut map = SourceMap::new();
+        let main = map.add_virtual("main.c", "#include \"a.h\"\n");
+        let later = FileId(main.0 + 1);
+        let _ = map.include(std::env::temp_dir(), Span::new(later, 0, 1));
     }
 
     /// Two inclusions of one header are two files (ADR-0054), so a span in
