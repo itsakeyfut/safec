@@ -58,6 +58,30 @@ struct Reading {
     inclusions: usize,
 }
 
+/// The tokens the parser reads: one input's, every `#include` spliced in, and
+/// no directive among them.
+///
+/// Only [`preprocess`] builds one, since the field is private, and
+/// [`crate::parser::parse`] takes nothing else. So a caller that lexes and
+/// parses without preprocessing does not compile, where it used to hand the
+/// parser every directive to be dropped without a word: seven test helpers
+/// did, and after `#ifdef` that would compile both of its groups. No directive
+/// is in one because `read_includes` splices each it meets or reports it,
+/// and pushes neither.
+///
+/// Mutation: drop the `preprocess` call from any caller of `parse`. It is
+/// `E0308`; building one by hand outside this module is `E0603`.
+#[derive(Debug)]
+pub struct Preprocessed(Vec<Token>);
+
+impl Preprocessed {
+    /// The tokens, in order, ending in the input's end of file where the
+    /// scan had one.
+    pub fn tokens(&self) -> &[Token] {
+        &self.0
+    }
+}
+
 /// Splice every `#include "file"` in `tokens`, the scan of `file`, and report
 /// every directive that is not one.
 ///
@@ -68,7 +92,7 @@ pub fn preprocess(
     tokens: &[Token],
     sources: &mut SourceMap,
     diagnostics: &mut DiagnosticSink,
-) -> Vec<Token> {
+) -> Preprocessed {
     let mut reading = Reading {
         open: Vec::new(),
         inclusions: 0,
@@ -80,7 +104,7 @@ pub fn preprocess(
     let mut spliced = Vec::with_capacity(tokens.len());
     read_includes(tokens, sources, &mut reading, diagnostics, &mut spliced);
     spliced.extend(tokens.iter().copied().filter(|token| token.is_eof()));
-    spliced
+    Preprocessed(spliced)
 }
 
 /// Append `tokens` to `spliced`, an `#include "file"` replaced by that file's,
@@ -681,6 +705,39 @@ mod tests {
         .map(|(path, contents)| (path.to_owned(), contents.to_owned()));
 
         assert_eq!(reported("nested", &files), Vec::<String>::new());
+    }
+
+    /// No directive is left in what the parser is handed, whichever way it
+    /// was refused: what `Preprocessed` promises, asked of every arm.
+    ///
+    /// Through the driver nothing would notice, since a reported directive
+    /// closes the gate before the parse and the parser's assertion is never
+    /// reached. Found by review. Mutation: have any one arm of
+    /// `read_includes` push the directive it reports. Its row fails.
+    #[test]
+    fn no_directive_is_left_in_what_is_preprocessed() {
+        for text in [
+            "#define X 1\n",
+            "#include <a.h>\n",
+            "#include X\n",
+            "#include \"a.h\" // \\\nint x;\n",
+            "#include \"a.h\"\n",
+        ] {
+            let mut sources = SourceMap::new();
+            let file = sources.add_virtual("t.c", text);
+            let mut diagnostics = DiagnosticSink::new();
+            let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+            let preprocessed = preprocess(file, &tokens, &mut sources, &mut diagnostics);
+
+            assert!(diagnostics.has_errors(), "{text:?} was not refused");
+            assert!(
+                preprocessed
+                    .tokens()
+                    .iter()
+                    .all(|token| token.kind != TokenKind::Directive),
+                "{text:?}"
+            );
+        }
     }
 
     /// The code moved from the lexer with the report, and is the handle a
