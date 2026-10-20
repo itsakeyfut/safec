@@ -498,9 +498,16 @@ fn read_includes(
                             Some(earlier)
                                 if earlier.origin != Origin::Written && standard(name) =>
                             {
+                                // The name is the last thing on the line,
+                                // since an `#undef` with more is not read.
+                                let start = token.span.start() + text.trim_end().len() as u32
+                                    - name.len() as u32;
+                                let named =
+                                    Span::new(token.span.file(), start, start + name.len() as u32);
                                 diagnostics.report(predefined_again(
                                     name,
-                                    hash(&text, token.span),
+                                    named,
+                                    "undefined here",
                                     earlier,
                                 ));
                             }
@@ -759,7 +766,7 @@ fn define(
 
     if let Some(earlier) = reading.macros.get(name) {
         if earlier.origin != Origin::Written && standard(name) {
-            diagnostics.report(predefined_again(name, named, earlier));
+            diagnostics.report(predefined_again(name, named, "defined again here", earlier));
         } else if earlier.tokens != tokens {
             diagnostics.report(
                 Diagnostic::error(format!("`{name}` is defined again differently"))
@@ -782,15 +789,15 @@ fn define(
     );
 }
 
-/// The report for a `#define` or an `#undef`, at `at`, of `name`, one C17
+/// The report for a `#define` or an `#undef`, `what` at `at`, of `name`, one C17
 /// 6.10.8 lists, which the implementation defined as `earlier`. Not of a
 /// target's names, `__linux__` among them, which 6.10.8 p2 does not cover and
 /// `clang` accepts a definition of; asking of every predefined name refused
 /// that. Found by review.
-fn predefined_again(name: &str, at: Span, earlier: &Macro) -> Diagnostic {
+fn predefined_again(name: &str, at: Span, what: &str, earlier: &Macro) -> Diagnostic {
     let report = Diagnostic::error(format!("`{name}` is defined by the implementation"))
         .with_code(PREDEFINED_AGAIN)
-        .with_label(Label::primary(at, "defined again here"))
+        .with_label(Label::primary(at, what))
         .with_note("C17 6.10.8 p2 says it shall not be the subject of a `#define` or an `#undef`");
     // A dynamic macro has no line in `<built-in>` to point at.
     if earlier.origin == Origin::Predefined {

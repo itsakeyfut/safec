@@ -60,7 +60,7 @@ Held by tests in `crates/safec/src/preprocessor.rs` and corpus cases in `crates/
 * `a_name_its_compilers_disagree_on_is_refused_for_msvc` puts the double free `cl.exe` builds under `#else` of `#ifdef __x86_64__`. If unsettled names are answered from the lists, it is reported as a double free rather than refused.
 * `every_target_predefines_what_its_compilers_agree_on` writes two targets' values, and their unsettled names, out rather than walking the lists. Changing a value, or moving a name between the classes, fails it.
 * `a_name_some_target_predefines_is_known` fails if only the run's own target is asked.
-* `a_reserved_guard_is_read_once`, `a_reserved_name_followed_by_another_define_is_refused` and `a_compiler_s_fallback_is_not_a_guard` hold the include-guard idiom from three sides: a list that is not empty or `1`, and a name `clang` predefines.
+* `a_reserved_guard_is_read_once` holds that a guard is read, with an empty list or `1`. `a_reserved_name_followed_by_another_define_is_refused` holds that the `#define` must name the guard. `a_compiler_s_fallback_is_not_a_guard` holds the two exclusions: a list that is not empty or `1`, and a name `clang` predefines.
 * `a_predefined_macro_defined_again_is_refused` and `a_target_s_name_may_be_defined_again` hold `SC0117` to the names 6.10.8 lists.
 
 ### Consequences
