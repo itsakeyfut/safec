@@ -912,3 +912,27 @@ fn which_files_end_in_a_label_is_asked_of_every_label_in_the_call() {
         [true]
     );
 }
+
+/// A label in a macro's expansion is drawn where its text is written, in the
+/// `#define`, and each use along its chain is drawn as where it was expanded.
+/// See ADR-0054.
+///
+/// Mutation: place labels without `SourceMap::written`. The header names the
+/// expansion, which no editor can open. Mutation: add no label at the uses.
+/// Neither `expanded here` is drawn.
+#[test]
+fn a_label_in_an_expansion_is_drawn_in_its_define_and_at_each_use() {
+    let mut sources = SourceMap::new();
+    let main = sources.add_virtual("m.c", "#define A B + 1\n#define B 2\nint x = A;\n");
+    let a = sources.expand(Span::new(main, 10, 15), Span::new(main, 36, 37));
+    let b = sources.expand(Span::new(main, 26, 27), Span::new(a, 0, 1));
+    let diagnostic =
+        Diagnostic::error("about the 2").with_label(Label::primary(Span::new(b, 0, 1), "this"));
+
+    let rendered = render(&sources, &diagnostic);
+
+    assert!(rendered.contains("<m.c>:2:11"), "{rendered}");
+    assert!(!rendered.contains("<expansion>"), "{rendered}");
+    assert!(rendered.contains("`A` expanded here"), "{rendered}");
+    assert!(rendered.contains("`B` expanded here"), "{rendered}");
+}

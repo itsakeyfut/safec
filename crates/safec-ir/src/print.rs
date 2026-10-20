@@ -155,6 +155,9 @@ pub const DEEPEST_INDENT: usize = 32;
 /// `u16` holds. The smallest `.c` file reaching it is 96 KB of `i[i][i]...`,
 /// 32764 subscripts, which `clang` parses.
 pub fn dump_node(sources: &SourceMap, kind: &str, span: Span, depth: usize, out: &mut String) {
+    // Where its text is written, as a report places it: a span in a macro's
+    // expansion is dumped at its `#define`. See `SourceMap::written`.
+    let span = sources.written(span);
     let file = sources.file(span.file());
     let at = file.line_col(span.start());
 
