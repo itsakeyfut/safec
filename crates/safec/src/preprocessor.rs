@@ -1721,12 +1721,14 @@ fn include(
             Diagnostic::error("this input includes too many files")
                 .with_code(TOO_MANY)
                 .with_label(Label::primary(quoted, "included here"))
-                // A header with an include guard is read once. One whose
-                // guard is named with a reserved name is refused at its
-                // `#ifndef`, so it adds nothing to the tree either.
+                // Counted where a header is opened, before its guard is
+                // asked, so a guarded header included again counts too. Said
+                // so, since a note blaming a missing guard was false for a
+                // file that includes one guarded header 4097 times. Found by
+                // review.
                 .with_note(format!(
-                    "{MAX_INCLUSIONS} inclusions have already been read for it, and a header \
-                     without an include guard is read again each time it is included"
+                    "{MAX_INCLUSIONS} inclusions have already been read for it, each `#include` \
+                     counted whether or not the header's include guard then skips it"
                 )),
         );
         return None;
@@ -2153,28 +2155,32 @@ mod tests {
         assert_eq!(reported("wide", &files), ["SC0112"]);
     }
 
-    /// The refusal says why a tree of headers grows, in words that are
-    /// true: a header with a guard is read once.
+    /// The refusal says what is counted, in words true of a header with an
+    /// include guard included past the bound, which is counted each time
+    /// though its guard skips it.
     ///
     /// Mutation: restore the note's old wording, that include guards are not
     /// read. This fails.
     #[test]
-    fn too_many_inclusions_says_a_header_without_a_guard_is_read_again() {
-        let levels = 13;
-        let mut files = vec![("main.c".to_owned(), "#include \"0.h\"\n".to_owned())];
-        for at in 0..levels {
-            let next = format!("#include \"{}.h\"\n", at + 1);
-            files.push((format!("{at}.h"), next.repeat(2)));
-        }
-        files.push((format!("{levels}.h"), "int z;\n".to_owned()));
+    fn too_many_inclusions_says_a_guarded_header_counts_each_time() {
+        let files = [
+            (
+                "g.h".to_owned(),
+                "#ifndef G_H\n#define G_H\nint z;\n#endif\n".to_owned(),
+            ),
+            (
+                "main.c".to_owned(),
+                "#include \"g.h\"\n".repeat(MAX_INCLUSIONS + 1),
+            ),
+        ];
 
-        let diagnostics = diagnosed("wide_note", &files);
+        let diagnostics = diagnosed("guarded_note", &files);
         let notes = diagnostics.diagnostics()[0].notes();
         assert_eq!(
             notes,
             [format!(
-                "{MAX_INCLUSIONS} inclusions have already been read for it, and a header \
-                 without an include guard is read again each time it is included"
+                "{MAX_INCLUSIONS} inclusions have already been read for it, each `#include` \
+                 counted whether or not the header's include guard then skips it"
             )]
         );
     }
