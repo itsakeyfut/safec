@@ -143,8 +143,9 @@ mod tests {
         assert!(!here.union_with(&there));
     }
 
-    /// Mutation: leave out the clearing of the lowest bit, or the word's
-    /// offset. This fails, or does not stop.
+    /// Mutation: leave out the word's offset. This fails. Leave out the
+    /// clearing of the lowest bit, and it never stops: it ran out of memory
+    /// after most of a minute.
     #[test]
     fn the_ones_are_every_index_in_the_set_in_order() {
         let mut bits = Bits::new(131);
@@ -158,6 +159,8 @@ mod tests {
 
     /// Two sets built apart compare equal when they hold the same indices,
     /// which is what the solver's fixed point is read from.
+    ///
+    /// Mutation: make `remove` leave the bit. This fails.
     #[test]
     fn two_sets_of_the_same_indices_are_equal_and_one_apart_are_not() {
         let mut here = Bits::new(70);
