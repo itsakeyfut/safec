@@ -1,0 +1,7 @@
+Declaration cplusplus_is_never_defined.c:4:1 "f" "int (void)"
+Declaration cplusplus_is_never_defined.c:9:1 "c_only" "int (void)"
+Function cplusplus_is_never_defined.c:12:1 "main" "int (void)"
+  Compound cplusplus_is_never_defined.c:12:16
+    Return cplusplus_is_never_defined.c:12:18
+      Call cplusplus_is_never_defined.c:12:25
+        Identifier cplusplus_is_never_defined.c:12:25 "c_only"
