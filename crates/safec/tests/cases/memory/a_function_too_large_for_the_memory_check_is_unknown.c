@@ -100,6 +100,56 @@ int f(int c) {
     int *p97 = malloc(4);
     int *p98 = malloc(4);
     int *p99 = malloc(4);
+    int *p100 = malloc(4);
+    int *p101 = malloc(4);
+    int *p102 = malloc(4);
+    int *p103 = malloc(4);
+    int *p104 = malloc(4);
+    int *p105 = malloc(4);
+    int *p106 = malloc(4);
+    int *p107 = malloc(4);
+    int *p108 = malloc(4);
+    int *p109 = malloc(4);
+    int *p110 = malloc(4);
+    int *p111 = malloc(4);
+    int *p112 = malloc(4);
+    int *p113 = malloc(4);
+    int *p114 = malloc(4);
+    int *p115 = malloc(4);
+    int *p116 = malloc(4);
+    int *p117 = malloc(4);
+    int *p118 = malloc(4);
+    int *p119 = malloc(4);
+    int *p120 = malloc(4);
+    int *p121 = malloc(4);
+    int *p122 = malloc(4);
+    int *p123 = malloc(4);
+    int *p124 = malloc(4);
+    int *p125 = malloc(4);
+    int *p126 = malloc(4);
+    int *p127 = malloc(4);
+    int *p128 = malloc(4);
+    int *p129 = malloc(4);
+    int *p130 = malloc(4);
+    int *p131 = malloc(4);
+    int *p132 = malloc(4);
+    int *p133 = malloc(4);
+    int *p134 = malloc(4);
+    int *p135 = malloc(4);
+    int *p136 = malloc(4);
+    int *p137 = malloc(4);
+    int *p138 = malloc(4);
+    int *p139 = malloc(4);
+    int *p140 = malloc(4);
+    int *p141 = malloc(4);
+    int *p142 = malloc(4);
+    int *p143 = malloc(4);
+    int *p144 = malloc(4);
+    int *p145 = malloc(4);
+    int *p146 = malloc(4);
+    int *p147 = malloc(4);
+    int *p148 = malloc(4);
+    int *p149 = malloc(4);
     int **q0 = &p1;
     int **q1 = &p2;
     int **q2 = &p3;
@@ -199,7 +249,57 @@ int f(int c) {
     int **q96 = &p97;
     int **q97 = &p98;
     int **q98 = &p99;
-    int **q99 = &p0;
+    int **q99 = &p100;
+    int **q100 = &p101;
+    int **q101 = &p102;
+    int **q102 = &p103;
+    int **q103 = &p104;
+    int **q104 = &p105;
+    int **q105 = &p106;
+    int **q106 = &p107;
+    int **q107 = &p108;
+    int **q108 = &p109;
+    int **q109 = &p110;
+    int **q110 = &p111;
+    int **q111 = &p112;
+    int **q112 = &p113;
+    int **q113 = &p114;
+    int **q114 = &p115;
+    int **q115 = &p116;
+    int **q116 = &p117;
+    int **q117 = &p118;
+    int **q118 = &p119;
+    int **q119 = &p120;
+    int **q120 = &p121;
+    int **q121 = &p122;
+    int **q122 = &p123;
+    int **q123 = &p124;
+    int **q124 = &p125;
+    int **q125 = &p126;
+    int **q126 = &p127;
+    int **q127 = &p128;
+    int **q128 = &p129;
+    int **q129 = &p130;
+    int **q130 = &p131;
+    int **q131 = &p132;
+    int **q132 = &p133;
+    int **q133 = &p134;
+    int **q134 = &p135;
+    int **q135 = &p136;
+    int **q136 = &p137;
+    int **q137 = &p138;
+    int **q138 = &p139;
+    int **q139 = &p140;
+    int **q140 = &p141;
+    int **q141 = &p142;
+    int **q142 = &p143;
+    int **q143 = &p144;
+    int **q144 = &p145;
+    int **q145 = &p146;
+    int **q146 = &p147;
+    int **q147 = &p148;
+    int **q148 = &p149;
+    int **q149 = &p0;
     while (c) { *q0 = p0; c = c - 1; }
     while (c) { *q1 = p1; c = c - 1; }
     while (c) { *q2 = p2; c = c - 1; }
@@ -300,5 +400,55 @@ int f(int c) {
     while (c) { *q97 = p97; c = c - 1; }
     while (c) { *q98 = p98; c = c - 1; }
     while (c) { *q99 = p99; c = c - 1; }
+    while (c) { *q100 = p100; c = c - 1; }
+    while (c) { *q101 = p101; c = c - 1; }
+    while (c) { *q102 = p102; c = c - 1; }
+    while (c) { *q103 = p103; c = c - 1; }
+    while (c) { *q104 = p104; c = c - 1; }
+    while (c) { *q105 = p105; c = c - 1; }
+    while (c) { *q106 = p106; c = c - 1; }
+    while (c) { *q107 = p107; c = c - 1; }
+    while (c) { *q108 = p108; c = c - 1; }
+    while (c) { *q109 = p109; c = c - 1; }
+    while (c) { *q110 = p110; c = c - 1; }
+    while (c) { *q111 = p111; c = c - 1; }
+    while (c) { *q112 = p112; c = c - 1; }
+    while (c) { *q113 = p113; c = c - 1; }
+    while (c) { *q114 = p114; c = c - 1; }
+    while (c) { *q115 = p115; c = c - 1; }
+    while (c) { *q116 = p116; c = c - 1; }
+    while (c) { *q117 = p117; c = c - 1; }
+    while (c) { *q118 = p118; c = c - 1; }
+    while (c) { *q119 = p119; c = c - 1; }
+    while (c) { *q120 = p120; c = c - 1; }
+    while (c) { *q121 = p121; c = c - 1; }
+    while (c) { *q122 = p122; c = c - 1; }
+    while (c) { *q123 = p123; c = c - 1; }
+    while (c) { *q124 = p124; c = c - 1; }
+    while (c) { *q125 = p125; c = c - 1; }
+    while (c) { *q126 = p126; c = c - 1; }
+    while (c) { *q127 = p127; c = c - 1; }
+    while (c) { *q128 = p128; c = c - 1; }
+    while (c) { *q129 = p129; c = c - 1; }
+    while (c) { *q130 = p130; c = c - 1; }
+    while (c) { *q131 = p131; c = c - 1; }
+    while (c) { *q132 = p132; c = c - 1; }
+    while (c) { *q133 = p133; c = c - 1; }
+    while (c) { *q134 = p134; c = c - 1; }
+    while (c) { *q135 = p135; c = c - 1; }
+    while (c) { *q136 = p136; c = c - 1; }
+    while (c) { *q137 = p137; c = c - 1; }
+    while (c) { *q138 = p138; c = c - 1; }
+    while (c) { *q139 = p139; c = c - 1; }
+    while (c) { *q140 = p140; c = c - 1; }
+    while (c) { *q141 = p141; c = c - 1; }
+    while (c) { *q142 = p142; c = c - 1; }
+    while (c) { *q143 = p143; c = c - 1; }
+    while (c) { *q144 = p144; c = c - 1; }
+    while (c) { *q145 = p145; c = c - 1; }
+    while (c) { *q146 = p146; c = c - 1; }
+    while (c) { *q147 = p147; c = c - 1; }
+    while (c) { *q148 = p148; c = c - 1; }
+    while (c) { *q149 = p149; c = c - 1; }
     return 0;
 }

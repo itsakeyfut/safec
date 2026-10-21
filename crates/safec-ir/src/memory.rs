@@ -146,22 +146,25 @@ pub enum Kind {
 /// that product. The value's size is bounded by [`MAX_CELLS`], and the walks
 /// are not: a chain of copies in one loop takes a walk per link, so seven
 /// blocks of 804 locals took 2,800 walks and a minute and a quarter with
-/// nothing printed, under a third of the size bound. About 130 million a
-/// second were measured, so this is around eight seconds.
-const MAX_WORK: usize = 1 << 30;
+/// nothing printed, under a third of the size bound. Between 450 and 610
+/// million a second were measured on three shapes once the tables were packed
+/// (#479), against about 130 million before, so this is around eight seconds.
+///
+/// A `u64` because the bound is past what a 32-bit `usize` holds.
+const MAX_WORK: u64 = 1 << 32;
 
 /// How many `blocks * locals * locals` this check reads in one function,
-/// about 1.3 GB.
+/// about 1 GB.
 ///
 /// The value holds square tables in the locals for every block and every
-/// edge, so its time and memory grow as that product: about ten bytes a unit
-/// on every shape measured, a temporary counting as a local. A loop per write
-/// over 100 allocating locals is 198 million units, 1.9 GB and two seconds;
-/// over 200 it is 1.57 billion, 9.9 GB and forty seconds, with nothing
-/// printed while it ran. Past this the function is concluded `Unknown` rather
-/// than read, a report rather than a hang. Packing the tables, #479, is what
-/// raises it.
-const MAX_CELLS: usize = 1 << 27;
+/// edge, so its time and memory grow as that product, a temporary counting as
+/// a local. A bit a unit since #479 packed the tables, and about 1.7 to 2.2
+/// bytes a unit measured once what is linear in the locals is counted, where
+/// it was ten before. A loop per write over 150 allocating locals is 665
+/// million units, 1.2 GB and two seconds; over 200 it is 1.57 billion, 2.7 GB
+/// and four, with nothing printed while it ran. Past this the function is
+/// concluded `Unknown` rather than read, a report rather than a hang.
+const MAX_CELLS: usize = 1 << 29;
 
 /// One thing this check concluded, and where.
 ///
@@ -350,7 +353,7 @@ fn findings_within(
     sources: &SourceMap,
     unit: &TranslationUnit,
     max_cells: usize,
-    max_work: usize,
+    max_work: u64,
 ) -> Vec<Finding> {
     let mut findings = Vec::new();
 
@@ -406,7 +409,8 @@ fn findings_within(
         };
         analysis.opaque_results = analysis.opaque_results_of(function);
         let cfg = Cfg::of(function);
-        let max_walks = max_work / locals.saturating_mul(locals).max(1);
+        let square = (locals as u64).saturating_mul(locals as u64).max(1);
+        let max_walks = usize::try_from(max_work / square).unwrap_or(usize::MAX);
         let Some(solution) = solve_within(&analysis, function, &cfg, max_walks) else {
             findings.push(Finding {
                 function: func,
@@ -764,9 +768,9 @@ mod tests {
     ///
     /// Mutation: change either constant. This fails.
     #[test]
-    fn the_bounds_are_two_to_the_twenty_seventh_and_thirtieth() {
-        assert_eq!(MAX_CELLS, 134_217_728);
-        assert_eq!(MAX_WORK, 1_073_741_824);
+    fn the_bounds_are_two_to_the_twenty_ninth_and_thirty_second() {
+        assert_eq!(MAX_CELLS, 536_870_912);
+        assert_eq!(MAX_WORK, 4_294_967_296);
     }
 
     /// Past the work bound, a function is one `Unknown` finding at its name.
