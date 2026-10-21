@@ -5,7 +5,7 @@ error[SC0410]: `f` is too large for the memory check to read yet
    │     ┬  
    │     ╰── nothing about this function's memory is proved
 ───╯
-  = note: the check holds about blocks × locals × locals facts, 665129104 here, and reads at most 536870912
+  = note: the check would hold about 1312555152 bytes for this function, and holds at most 1073741824
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: split the function into smaller ones

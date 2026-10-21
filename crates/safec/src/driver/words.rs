@@ -744,10 +744,10 @@ pub(super) fn memory_finding(
     if let Some(made) = finding.made {
         diagnostic = diagnostic.with_label(Label::secondary(made, "allocated here"));
     }
-    if let Kind::TooLarge { cells, max } = finding.kind {
+    if let Kind::TooLarge { bytes, max } = finding.kind {
         diagnostic = diagnostic.with_note(format!(
-            "the check holds about blocks × locals × locals facts, {cells} here, and reads at \
-             most {max}"
+            "the check would hold about {bytes} bytes for this function, and holds at most \
+             {max}"
         ));
     }
     if let Kind::TooLong { walks } = finding.kind {
