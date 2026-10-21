@@ -12,6 +12,12 @@ repository.workspace = true
 name = "safec"
 path = "src/main.rs"
 
+# A measurement that asserts nothing and prints a table: its own `main`,
+# since the built-in bench harness needs a nightly compiler.
+[[bench]]
+name = "growth"
+harness = false
+
 [dependencies]
 safec-ir = { path = "../safec-ir" }
 safec-llvm = { path = "../safec-llvm" }

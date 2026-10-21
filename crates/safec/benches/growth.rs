@@ -1,7 +1,7 @@
 //! How the memory check's time grows with the function it reads.
 //!
-//! `cargo run --release --example growth` writes three shapes of function at
-//! 50, 100 and 200 allocating locals, checks each with `--emit safety-ir`,
+//! `cargo bench --bench growth` writes four shapes of function at 50, 100
+//! and 200 allocating locals, checks each with `--emit safety-ir`,
 //! and prints how long the check took. Every shape gives each local
 //! `int *pK = malloc(4);` and a pointer to the next one, `int **qK = &p(K+1);`,
 //! and writes through those pointers inside a loop:
@@ -20,8 +20,9 @@
 //! **It asserts nothing.** A time is a property of the machine it was taken
 //! on, so this is a measurement to repeat rather than a test, and the guard on
 //! the walk count is a test of its own in `crates/safec-ir/tests/written.rs`.
-//! It is an example rather than a script so that every build of the examples
-//! compiles it against the driver it measures.
+//! It is a bench rather than a script so that every build of all targets,
+//! the gate's `clippy` and `msrv` steps among them, compiles it against the
+//! driver it measures.
 
 use std::ffi::OsString;
 use std::fmt::Write as _;
