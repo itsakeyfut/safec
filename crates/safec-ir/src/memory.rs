@@ -45,6 +45,7 @@
 //! [the safety model]: https://github.com/itsakeyfut/safec/blob/main/docs/safety-model.md
 //! [`LocalId`]: crate::ir::LocalId
 
+mod bits;
 mod built;
 mod known;
 mod parts;

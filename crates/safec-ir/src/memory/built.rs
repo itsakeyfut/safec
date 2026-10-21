@@ -128,7 +128,7 @@ pub(super) fn built_from(
         // arithmetic leaves it, [`Held::moved_by_arithmetic`]'s to decide.
         // Found by review. See ADR-0019 and ADR-0045.
         for target in locals {
-            reached.writes_to[target] = true;
+            reached.writes_to.set(target);
         }
         // And lost where the load would be. See ADR-0045.
         if value.stale_below(load.local, derefs(load)) {

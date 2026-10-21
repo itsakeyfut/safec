@@ -12,6 +12,7 @@ use crate::ir::Place;
 use crate::source::{SourceMap, Span};
 
 use super::LostReason;
+use super::bits::Bits;
 
 /// What this check can read in a callee's name.
 ///
@@ -388,24 +389,17 @@ pub(super) enum Reached {
 pub(super) struct Held {
     /// A bit per site. A site is a local, so this is square in the locals.
     ///
-    /// `Vec<bool>` rather than a packed bitset: this crate takes no
-    /// dependencies, and a byte per pair is what an ordinary function costs.
-    ///
-    /// **It is square in the locals and there are two of these**, so the value
-    /// is `blocks * locals * (2 * locals + 72)` bytes, where 72 is
-    /// `size_of::<Held>()` measured rather than counted, and the lowering makes
-    /// about two and a half locals per line of C. A 489-line function costs
-    /// around 2.8 GB and six seconds, against 1.5 GB and three before
-    /// [`Held::writes_to`] was added; the field beside it costs about one per
-    /// cent more. A packed bitset is the answer when a third square field
-    /// arrives or when somebody hits this on real code.
-    ///
-    /// **The third square field has arrived**: [`Known::inside`](super::known::Known::inside). Measured on
-    /// a 456-line function with 150 allocations, release build, peak memory
-    /// went from 485 MB to 711 MB and time from 0.49 s to 0.71 s. The bitset is
-    /// #479's; the number is here so that it is a decision rather than a
-    /// discovery. See ADR-0039.
-    pub(super) sites: Vec<bool>,
+    /// **One of four tables square in the locals**, with [`Held::writes_to`],
+    /// [`Known::inside`](super::known::Known::inside) and
+    /// [`Known::inside_locals`](super::known::Known::inside_locals), and the
+    /// value holds one for every block and edge. So they are [`Bits`], a bit a
+    /// pair, where a `Vec<bool>` spent a byte. Measured on a loop per write
+    /// over 100 allocating locals, 401 blocks of 702 locals, release build:
+    /// peak memory went from 2,025 MB to 427 MB and time from 2.29 s to
+    /// 0.72 s once all four were packed. What is left is mostly linear in the
+    /// locals for every block, so it is near two bytes a pair rather than the
+    /// half of one the four tables take. See ADR-0039.
+    pub(super) sites: Bits,
     /// Whether this local may hold an allocation this check can no longer
     /// name.
     ///
@@ -441,7 +435,7 @@ pub(super) struct Held {
     /// Two things set it: taking an address, `pp = &p;`, and a call this check
     /// cannot read, whose result may be any local whose address escaped. See
     /// ADR-0039.
-    pub(super) writes_to: Vec<bool>,
+    pub(super) writes_to: Bits,
     /// Whether a write through this local may land somewhere [`writes_to`]
     /// does not name.
     ///
@@ -464,9 +458,8 @@ pub(super) struct Held {
     ///
     /// **One answer for the whole set rather than one per site**, because
     /// arithmetic applies its offset to the whole may-set at once: a row per
-    /// site would answer the same thing in every column. It also keeps this
-    /// struct at two square tables, which is the condition [`Held::sites`]
-    /// names for reaching for a packed bitset.
+    /// site would answer the same thing in every column, and a row per site
+    /// would be one more table square in the locals.
     ///
     /// [`Held::hold`] takes it as an argument, so that a new producer of a site
     /// cannot be written without answering where in it the value points. See
@@ -578,16 +571,16 @@ impl Held {
     /// the sites. See `Allocations::touching` and
     /// `Allocations::holds_something_unnameable`, which ask it.
     pub(super) fn may_be_a_locals_address(&self) -> bool {
-        self.writes_to.iter().any(|&edge| edge)
+        self.writes_to.any()
     }
 
     /// A local holding nothing, in a function with this many sites.
     pub(super) fn none(sites: usize) -> Self {
         Held {
-            sites: vec![false; sites],
+            sites: Bits::new(sites),
             lost: false,
             freed: None,
-            writes_to: vec![false; sites],
+            writes_to: Bits::new(sites),
             writes_elsewhere: true,
             // Nothing held, so nothing to be off the start of. `Unknown` here
             // would be a warning about an offset nobody wrote, on every path
@@ -620,7 +613,7 @@ impl Held {
     /// returned at `Unknown`, and the join makes the whole `Unknown`, which is
     /// the answer that cannot claim more than both said.
     pub(super) fn hold(&mut self, site: usize, offset: Offset) {
-        self.sites[site] = true;
+        self.sites.set(site);
         self.offset = self.offset.joined(offset);
     }
 
@@ -637,11 +630,7 @@ impl Held {
         if self.writes_elsewhere {
             return None;
         }
-        let mut targets = self
-            .writes_to
-            .iter()
-            .enumerate()
-            .filter_map(|(target, &edge)| edge.then_some(target));
+        let mut targets = self.writes_to.ones();
         match (targets.next(), targets.next()) {
             (Some(target), None) => Some(target),
             _ => None,
@@ -650,10 +639,7 @@ impl Held {
 
     /// Every site held, in order.
     pub(super) fn sites(&self) -> impl Iterator<Item = usize> + '_ {
-        self.sites
-            .iter()
-            .enumerate()
-            .filter_map(|(site, held)| held.then_some(site))
+        self.sites.ones()
     }
 
     /// Hold nothing, and hold nothing unnameable either.
@@ -682,7 +668,7 @@ impl Held {
             from_caller,
             returned_by,
         } = self;
-        sites.fill(false);
+        sites.clear_all();
         *from_caller = false;
         *returned_by = None;
         *lost = false;
@@ -692,7 +678,7 @@ impl Held {
         *unreplaced_read = false;
         *lost_read = false;
         *freed = None;
-        writes_to.fill(false);
+        writes_to.clear_all();
         // What a local is given ends the claim that this check knew where a
         // write through it landed, along with the set that claim was about.
         *writes_elsewhere = true;
@@ -744,9 +730,7 @@ impl Held {
         // union below leaves one target and only this says the set is not
         // all of it. See ADR-0028.
         *writes_elsewhere = *writes_elsewhere || other.writes_elsewhere;
-        for (here, there) in sites.iter_mut().zip(&other.sites) {
-            *here = *here || *there;
-        }
+        sites.union_with(&other.sites);
         *lost = *lost || other.lost;
         // **An intersection, where every other field here is a union.** The
         // rest of this struct holds may-facts, which grow where paths meet.
@@ -757,9 +741,7 @@ impl Held {
             (Some(here), Some(there)) => Some(here.joined(there, sources)),
             _ => None,
         };
-        for (here, there) in writes_to.iter_mut().zip(&other.writes_to) {
-            *here = *here || *there;
-        }
+        writes_to.union_with(&other.writes_to);
     }
 
     /// Also hold everything that one holds, where a value is being built from
@@ -828,13 +810,9 @@ impl Held {
         // flag beside it are decided again by both callers that build a value
         // out of operands, through [`Held::moved_by_arithmetic`]. See
         // ADR-0019.
-        for (here, there) in sites.iter_mut().zip(&other.sites) {
-            *here = *here || *there;
-        }
+        sites.union_with(&other.sites);
         *lost = *lost || other.lost;
-        for (here, there) in writes_to.iter_mut().zip(&other.writes_to) {
-            *here = *here || *there;
-        }
+        writes_to.union_with(&other.writes_to);
         *writes_elsewhere = *writes_elsewhere || other.writes_elsewhere;
     }
 
@@ -846,8 +824,8 @@ impl Held {
     /// reaching nothing with nothing to say, and a read through it would be a
     /// silence.
     pub(super) fn lose(&mut self, site: usize) {
-        if self.sites[site] {
-            self.sites[site] = false;
+        if self.sites.get(site) {
+            self.sites.remove(site);
             self.lost = true;
         }
     }
@@ -885,7 +863,7 @@ impl Held {
     /// element, and the `NonZero` drop has to be asked again.
     pub(super) fn moved_by_arithmetic(&mut self) {
         if !matches!(self.offset, Offset::Unknown) {
-            self.writes_to.fill(false);
+            self.writes_to.clear_all();
         }
         self.writes_elsewhere = true;
     }
