@@ -1,0 +1,10 @@
+error[SC0401]: this frees `r`, which this check stopped following
+    ╭─[ a_free_of_a_pointer_that_may_hold_the_address_of_a_local_past_the_sixty_fourth_is_unproven.c:80:5 ]
+    │
+ 80 │     free(r);
+    │     ───┬───  
+    │        ╰───── this may be the address of a local
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check could not rule out that this holds a local's address, which free must never be handed; if it is always what an allocation function returned, nothing here says the program is wrong

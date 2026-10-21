@@ -113,13 +113,14 @@ mod tests {
         Bits::new(70).get(70);
     }
 
-    /// Mutation: index the word by `index % 64`, or the bit by `index / 64`.
-    /// This fails.
+    /// Mutation: index the word by `index % 64`, or the bit by `index / 64`,
+    /// or have `any` read only the first word. This fails.
     #[test]
     fn a_set_index_is_read_back_and_its_neighbours_across_a_word_are_not() {
         let mut bits = Bits::new(130);
         bits.set(64);
         assert!(bits.get(64));
+        assert!(bits.any());
         assert!(!bits.get(63));
         assert!(!bits.get(65));
         assert!(!bits.get(0));
