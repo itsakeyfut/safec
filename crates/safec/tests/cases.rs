@@ -56,8 +56,8 @@ cases! {
         // met by a program that proves it, one that leaves it unproven, and one
         // that does neither.
         a_value_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A loop per write over 150 allocating locals: 665 million of the
-        // check's `blocks * locals * locals`, past its bound, so it is one
+        // A loop per write over 150 allocating locals: about 1.3 GB by the
+        // check's estimate of what it would hold, past its bound, so it is one
         // `Unknown` at the name and not read (#572). `hatches` because the
         // function's IR is thousands of lines. Mutation: drop the guard. The
         // check runs for seconds and about 1.2 GB, and the expected `.stderr`

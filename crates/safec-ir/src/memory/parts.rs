@@ -396,9 +396,9 @@ pub(super) struct Held {
     /// pair, where a `Vec<bool>` spent a byte. Measured on a loop per write
     /// over 100 allocating locals, 401 blocks of 702 locals, release build:
     /// peak memory went from 2,025 MB to 427 MB and time from 2.29 s to
-    /// 0.72 s once all four were packed. What is left is mostly linear in the
-    /// locals for every block, so it is near two bytes a pair rather than the
-    /// half of one the four tables take. See ADR-0039.
+    /// 0.72 s once all four were packed. Most of what is left is linear in the
+    /// locals for every block, which is what `memory::LINEAR` counts. See
+    /// ADR-0039.
     pub(super) sites: Bits,
     /// Whether this local may hold an allocation this check can no longer
     /// name.

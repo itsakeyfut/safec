@@ -7,8 +7,8 @@
 /// hold a bit per local for every local, and as `Vec<bool>` they spent a byte
 /// on each. Hand-written because this crate takes no dependencies
 /// (ADR-0011), and dense rather than a sorted list of indices so that its size
-/// is set by the locals alone, which is what lets the check's bound on
-/// `blocks * locals * locals` bound its memory.
+/// is set by the locals alone, which is what lets the check's estimate of
+/// its own size in `memory::per_block` hold for every function.
 ///
 /// **An index at or past `len` panics**, as indexing the `Vec<bool>` did. The
 /// last word has room past `len`, and answering `false` there would be a site

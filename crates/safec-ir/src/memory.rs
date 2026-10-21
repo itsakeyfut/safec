@@ -710,8 +710,8 @@ mod tests {
     use crate::ir::{Block, Function, Terminator, Ty};
     use crate::target::Target;
 
-    /// A unit holding one function of ten locals and three blocks: 300 of
-    /// `blocks * locals * locals`.
+    /// A unit holding one function of ten locals and three blocks: 31,020 by
+    /// [`per_block`].
     fn ten_by_three() -> (SourceMap, TranslationUnit) {
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", "f");
