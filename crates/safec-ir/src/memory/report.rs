@@ -220,6 +220,9 @@ fn verdict(
         // Never asked: it is built from its element in `memory.rs`, not out of
         // a verdict, and it is about no free. See ADR-0052.
         Kind::UnsequencedAccess { .. } => true,
+        // Never asked: it is built before any value exists, and it is about
+        // no free.
+        Kind::TooLarge { .. } => true,
     };
 
     match earliest {

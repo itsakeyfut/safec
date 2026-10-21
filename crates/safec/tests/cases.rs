@@ -56,6 +56,16 @@ cases! {
         // met by a program that proves it, one that leaves it unproven, and one
         // that does neither.
         a_value_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A loop per write over 100 allocating locals: 198 million of the
+        // check's `blocks * locals * locals`, past its bound, so it is one
+        // `Unknown` at the name and not read (#572). `hatches` because the
+        // function's IR is thousands of lines. Mutation: drop the guard. The
+        // check runs for seconds and about 2 GB, and the expected `.stderr`
+        // no longer matches.
+        a_function_too_large_for_the_memory_check_is_unknown: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
+        // The same under `--allow-unknown`: a warning, and it builds. Mutation:
+        // conclude it `Unsafe`. It is still an error.
+        a_function_too_large_for_the_memory_check_is_a_warning_under_allow_unknown: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_value_freed_through_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_parameter_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same function with its only caller in view, passing null. See
