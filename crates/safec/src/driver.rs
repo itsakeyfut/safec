@@ -638,6 +638,7 @@ fn lowered(
                     function: finding.function,
                     conclusion: finding.conclusion,
                     diagnostic,
+                    unread: unread(&finding),
                 };
                 route(&unit, concluded, &mut hatched, diagnostics);
             }
@@ -653,6 +654,7 @@ fn lowered(
                     function: finding.function,
                     conclusion: finding.conclusion,
                     diagnostic,
+                    unread: false,
                 };
                 route(&unit, concluded, &mut hatched, diagnostics);
             }
@@ -710,6 +712,15 @@ fn parameter_lengths(ast: &Ast) -> Vec<Span> {
     lengths
 }
 
+/// Whether the memory check left `finding`'s function unread, as far as
+/// [`route`] goes.
+fn unread(finding: &memory::Finding) -> bool {
+    matches!(
+        finding.kind,
+        memory::Kind::TooLarge { .. } | memory::Kind::TooLong { .. }
+    )
+}
+
 /// What a check concluded, as a diagnostic, and the function it was concluded
 /// in.
 ///
@@ -720,6 +731,9 @@ struct Concluded {
     function: FuncId,
     conclusion: Conclusion,
     diagnostic: Diagnostic,
+    /// Whether the check did not read the function at all, which says
+    /// nothing about whether it holds a defect the check would have proved.
+    unread: bool,
 }
 
 /// A conclusion drawn inside a hatch, kept for `--emit hatches`.
@@ -745,8 +759,13 @@ fn route(
     diagnostics: &mut DiagnosticSink,
 ) {
     let in_a_hatch = unit.function(concluded.function).hatch();
+    // A function the check did not read is reported inside a hatch too: it
+    // stands in for every conclusion the check would have drawn there, the
+    // proved ones a hatch reports among them. Listed only, a double free in a
+    // hatch past the memory check's bound built with nothing printed, where
+    // below it the same free was an error. Found by review.
     let reported = match concluded.conclusion {
-        Conclusion::Unknown => !in_a_hatch,
+        Conclusion::Unknown => !in_a_hatch || concluded.unread,
         Conclusion::Safe | Conclusion::Unsafe => true,
     };
 

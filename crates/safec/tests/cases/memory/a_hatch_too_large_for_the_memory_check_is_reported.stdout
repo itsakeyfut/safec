@@ -1,0 +1,2 @@
+Hatch a_hatch_too_large_for_the_memory_check_is_reported.c:3:50 "f"
+  Conclusion a_hatch_too_large_for_the_memory_check_is_reported.c:3:50 "SC0410" "unknown" "`f` is too large for the memory check to read yet"

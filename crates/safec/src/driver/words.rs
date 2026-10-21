@@ -88,6 +88,12 @@ const ARGUMENT_AFTER_FREE: Code = Code::new("SC0407");
 /// a statement of its own rather than to change the pointer. See ADR-0052.
 const UNSEQUENCED_ACCESS: Code = Code::new("SC0409");
 
+/// A function the memory check did not read because it is too large.
+///
+/// Not any of the codes above, which are each a class of program to fix: this
+/// is about this check, not the program, and the fix is a smaller function.
+const TOO_LARGE: Code = Code::new("SC0410");
+
 /// What to change where this check stopped following a pointer and cannot
 /// say why: `LostReason::Other`.
 ///
@@ -660,6 +666,22 @@ pub(super) fn memory_finding(
             "nothing",
             "nothing",
         ),
+        // Built only `Unknown`, at the function's name, before anything about
+        // the function was read; `Unsafe` is written out beside it so that the
+        // row has nothing to fall into.
+        (
+            Kind::TooLarge { .. } | Kind::TooLong { .. },
+            Conclusion::Unknown | Conclusion::Unsafe,
+            _,
+        ) => (
+            TOO_LARGE,
+            format!(
+                "`{}` is too large for the memory check to read yet",
+                sources.snippet(finding.at)
+            ),
+            "nothing about this function's memory is proved",
+            "split the function into smaller ones",
+        ),
         // Neither check answers this and `Diagnostic::concluded` gives `None`
         // for it, so none of the four is read. Written out rather than `_` so
         // that a fourth conclusion has to be answered for here.
@@ -721,6 +743,18 @@ pub(super) fn memory_finding(
     }
     if let Some(made) = finding.made {
         diagnostic = diagnostic.with_label(Label::secondary(made, "allocated here"));
+    }
+    if let Kind::TooLarge { cells, max } = finding.kind {
+        diagnostic = diagnostic.with_note(format!(
+            "the check holds about blocks × locals × locals facts, {cells} here, and reads at \
+             most {max}"
+        ));
+    }
+    if let Kind::TooLong { walks } = finding.kind {
+        diagnostic = diagnostic.with_note(format!(
+            "the check walked this function's blocks {walks} times without settling, the \
+             most it walks one of this many locals"
+        ));
     }
     // **What C says is wrong, because the caret alone does not.** The read
     // and the write are both in plain sight and look ordered left to right,
