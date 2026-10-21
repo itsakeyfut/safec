@@ -1721,9 +1721,12 @@ fn include(
             Diagnostic::error("this input includes too many files")
                 .with_code(TOO_MANY)
                 .with_label(Label::primary(quoted, "included here"))
+                // A header with an include guard is read once. One whose
+                // guard is named with a reserved name is refused at its
+                // `#ifndef`, so it adds nothing to the tree either.
                 .with_note(format!(
-                    "{MAX_INCLUSIONS} inclusions have already been read for it, and \
-                     include guards are not read yet"
+                    "{MAX_INCLUSIONS} inclusions have already been read for it, and a header \
+                     without an include guard is read again each time it is included"
                 )),
         );
         return None;
@@ -2055,6 +2058,17 @@ mod tests {
     /// The codes reported for `main.c` in a directory of its own holding
     /// `files`, each a path under it and what it holds.
     fn reported(name: &str, files: &[(String, String)]) -> Vec<String> {
+        diagnosed(name, files)
+            .diagnostics()
+            .iter()
+            .filter_map(|diagnostic| diagnostic.code())
+            .map(|code| code.to_string())
+            .collect()
+    }
+
+    /// Everything reported for the files, `main.c` among them, written to a
+    /// directory of their own.
+    fn diagnosed(name: &str, files: &[(String, String)]) -> DiagnosticSink {
         let directory = std::env::temp_dir().join(format!("safec_{name}_{}", std::process::id()));
         let _ = fs::remove_dir_all(&directory);
         for (path, contents) in files {
@@ -2075,13 +2089,7 @@ mod tests {
             &mut diagnostics,
         );
         let _ = fs::remove_dir_all(&directory);
-
         diagnostics
-            .diagnostics()
-            .iter()
-            .filter_map(|diagnostic| diagnostic.code())
-            .map(|code| code.to_string())
-            .collect()
     }
 
     /// A chain of different files, each including the next, is refused past
@@ -2143,6 +2151,32 @@ mod tests {
         files.push((format!("{levels}.h"), "int z;\n".to_owned()));
 
         assert_eq!(reported("wide", &files), ["SC0112"]);
+    }
+
+    /// The refusal says why a tree of headers grows, in words that are
+    /// true: a header with a guard is read once.
+    ///
+    /// Mutation: restore the note's old wording, that include guards are not
+    /// read. This fails.
+    #[test]
+    fn too_many_inclusions_says_a_header_without_a_guard_is_read_again() {
+        let levels = 13;
+        let mut files = vec![("main.c".to_owned(), "#include \"0.h\"\n".to_owned())];
+        for at in 0..levels {
+            let next = format!("#include \"{}.h\"\n", at + 1);
+            files.push((format!("{at}.h"), next.repeat(2)));
+        }
+        files.push((format!("{levels}.h"), "int z;\n".to_owned()));
+
+        let diagnostics = diagnosed("wide_note", &files);
+        let notes = diagnostics.diagnostics()[0].notes();
+        assert_eq!(
+            notes,
+            [format!(
+                "{MAX_INCLUSIONS} inclusions have already been read for it, and a header \
+                 without an include guard is read again each time it is included"
+            )]
+        );
     }
 
     /// A device is refused before it is opened, since opening one can wait
