@@ -1796,3 +1796,85 @@ fn a_free_in_an_included_file_is_inside_the_length_that_holds_its_include() {
         Unordered::AcrossLengths,
     );
 }
+
+/// A function the memory check gave up on part of the way is reported in its
+/// own words, under the code a function too large to read has, and inside a
+/// hatch too.
+///
+/// A unit test, because a function past the work bound takes seconds before
+/// it is given up on, and a corpus case would run that in every test run.
+mod too_long {
+    use super::super::words::memory_finding;
+    use super::*;
+    use safec_ir::analysis::Conclusion;
+    use safec_ir::ir::{Function, TranslationUnit, Ty};
+    use safec_ir::memory::{Finding, Kind};
+    use safec_ir::source::SourceMap;
+
+    fn a_finding(sources: &mut SourceMap, unit: &mut TranslationUnit, hatched: bool) -> Finding {
+        let file = sources.add_virtual("t.c", "f");
+        let int = unit.push_type(Ty::Int);
+        let function = Function::new(Span::new(file, 0, 1), int, []);
+        let function = if hatched {
+            function.hatched()
+        } else {
+            function
+        };
+        Finding {
+            function: unit.push_function(function),
+            kind: Kind::TooLong { walks: 417 },
+            conclusion: Conclusion::Unknown,
+            at: Span::new(file, 0, 1),
+            local: None,
+            freed: None,
+            made: None,
+            unproven: None,
+        }
+    }
+
+    /// Mutation: drop the note for `TooLong`. This fails.
+    #[test]
+    fn says_how_many_walks_it_was_given() {
+        let mut sources = SourceMap::new();
+        let mut unit =
+            TranslationUnit::new(Target::from_triple("x86_64-pc-windows-msvc").expect("known"));
+        let finding = a_finding(&mut sources, &mut unit, false);
+        let diagnostic = memory_finding(&sources, &finding, None, &[]).expect("a diagnostic");
+
+        assert_eq!(
+            diagnostic.code().map(|code| code.to_string()).as_deref(),
+            Some("SC0410")
+        );
+        assert!(
+            diagnostic
+                .notes()
+                .iter()
+                .any(|note| note.contains("417 times")),
+            "{:?}",
+            diagnostic.notes()
+        );
+    }
+
+    /// Mutation: leave `TooLong` out of what `route` reports inside a hatch.
+    /// It is listed only, and nothing is reported.
+    #[test]
+    fn is_reported_inside_a_hatch() {
+        let mut sources = SourceMap::new();
+        let mut unit =
+            TranslationUnit::new(Target::from_triple("x86_64-pc-windows-msvc").expect("known"));
+        let finding = a_finding(&mut sources, &mut unit, true);
+        let diagnostic = memory_finding(&sources, &finding, None, &[]).expect("a diagnostic");
+        let concluded = Concluded {
+            function: finding.function,
+            conclusion: finding.conclusion,
+            diagnostic,
+            unread: unread(&finding),
+        };
+        let mut hatched = Vec::new();
+        let mut diagnostics = DiagnosticSink::new();
+        route(&unit, concluded, &mut hatched, &mut diagnostics);
+
+        assert_eq!(diagnostics.diagnostics().len(), 1);
+        assert_eq!(hatched.len(), 1);
+    }
+}

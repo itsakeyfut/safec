@@ -638,7 +638,7 @@ fn lowered(
                     function: finding.function,
                     conclusion: finding.conclusion,
                     diagnostic,
-                    unread: matches!(finding.kind, memory::Kind::TooLarge { .. }),
+                    unread: unread(&finding),
                 };
                 route(&unit, concluded, &mut hatched, diagnostics);
             }
@@ -710,6 +710,15 @@ fn parameter_lengths(ast: &Ast) -> Vec<Span> {
         }
     }
     lengths
+}
+
+/// Whether the memory check left `finding`'s function unread, as far as
+/// [`route`] goes.
+fn unread(finding: &memory::Finding) -> bool {
+    matches!(
+        finding.kind,
+        memory::Kind::TooLarge { .. } | memory::Kind::TooLong { .. }
+    )
 }
 
 /// What a check concluded, as a diagnostic, and the function it was concluded

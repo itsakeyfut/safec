@@ -53,7 +53,7 @@ mod transfer;
 
 use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
-use crate::dataflow::{Analysis, solve};
+use crate::dataflow::{Analysis, solve_within};
 use crate::ir::{
     Between, Element, FuncId, LocalId, Operand, Place, Rvalue, Terminator, TranslationUnit, Ty,
 };
@@ -130,7 +130,24 @@ pub enum Kind {
         /// The most this check reads.
         max: usize,
     },
+    /// A function this check gave up on part of the way, past `MAX_WORK`, so
+    /// nothing about its memory is proved. Always `Unknown`, at the
+    /// function's name.
+    TooLong {
+        /// The walks it was given before it gave up.
+        walks: usize,
+    },
 }
+
+/// How many `walks * locals * locals` this check does in one function.
+///
+/// A walk copies and compares a value square in the locals, so the work is
+/// that product. The value's size is bounded by [`MAX_CELLS`], and the walks
+/// are not: a chain of copies in one loop takes a walk per link, so seven
+/// blocks of 804 locals took 2,800 walks and a minute and a quarter with
+/// nothing printed, under a third of the size bound. About 130 million a
+/// second were measured, so this is around eight seconds.
+const MAX_WORK: usize = 1 << 30;
 
 /// How many `blocks * locals * locals` this check reads in one function,
 /// about 1.3 GB.
@@ -323,12 +340,17 @@ pub enum Unproven {
 /// decides which sites a call touches and having two answers to that is having
 /// one of them be wrong.
 pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
-    findings_within(sources, unit, MAX_CELLS)
+    findings_within(sources, unit, MAX_CELLS, MAX_WORK)
 }
 
-/// [`findings`], with the bound passed in, so that a test can ask for it on a
-/// function small enough to build.
-fn findings_within(sources: &SourceMap, unit: &TranslationUnit, max_cells: usize) -> Vec<Finding> {
+/// [`findings`], with the bounds passed in, so that a test can ask for them on
+/// a function small enough to build.
+fn findings_within(
+    sources: &SourceMap,
+    unit: &TranslationUnit,
+    max_cells: usize,
+    max_work: usize,
+) -> Vec<Finding> {
     let mut findings = Vec::new();
 
     for func in unit.functions() {
@@ -383,7 +405,20 @@ fn findings_within(sources: &SourceMap, unit: &TranslationUnit, max_cells: usize
         };
         analysis.opaque_results = analysis.opaque_results_of(function);
         let cfg = Cfg::of(function);
-        let solution = solve(&analysis, function, &cfg);
+        let max_walks = max_work / locals.saturating_mul(locals).max(1);
+        let Some(solution) = solve_within(&analysis, function, &cfg, max_walks) else {
+            findings.push(Finding {
+                function: func,
+                kind: Kind::TooLong { walks: max_walks },
+                conclusion: Conclusion::Unknown,
+                at: function.name,
+                local: None,
+                freed: None,
+                made: None,
+                unproven: None,
+            });
+            continue;
+        };
         // The other check's answer, asked at each block's terminator, which is
         // where a free is reached. A free of a pointer that check established
         // is null frees nothing, and `asked` is the one place that is applied.
@@ -696,7 +731,7 @@ mod tests {
     #[test]
     fn a_function_past_the_bound_is_one_unknown_finding() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, 299);
+        let findings = findings_within(&sources, &unit, 299, MAX_WORK);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(
             findings[0].kind,
@@ -715,7 +750,7 @@ mod tests {
     #[test]
     fn a_function_at_the_bound_is_read() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, 300);
+        let findings = findings_within(&sources, &unit, 300, MAX_WORK);
         assert!(
             findings
                 .iter()
@@ -724,11 +759,37 @@ mod tests {
         );
     }
 
-    /// The bound, written out, so that moving it is a decision a test sees.
+    /// The bounds, written out, so that moving one is a decision a test sees.
     ///
-    /// Mutation: change the constant. This fails.
+    /// Mutation: change either constant. This fails.
     #[test]
-    fn the_bound_is_two_to_the_twenty_seventh() {
+    fn the_bounds_are_two_to_the_twenty_seventh_and_thirtieth() {
         assert_eq!(MAX_CELLS, 134_217_728);
+        assert_eq!(MAX_WORK, 1_073_741_824);
+    }
+
+    /// Past the work bound, a function is one `Unknown` finding at its name.
+    /// Ten locals are 100 a walk, so a bound of 299 is two walks, and the
+    /// three blocks take three.
+    ///
+    /// Mutation: solve without the bound. No `TooLong` finding is made.
+    #[test]
+    fn a_function_past_the_work_bound_is_one_unknown_finding() {
+        let (sources, unit) = ten_by_three();
+        let findings = findings_within(&sources, &unit, MAX_CELLS, 299);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].kind, Kind::TooLong { walks: 2 });
+        assert_eq!(findings[0].conclusion, Conclusion::Unknown);
+        assert_eq!(sources.snippet(findings[0].at), "f");
+    }
+
+    /// At the work bound, three walks for three, the function is read.
+    ///
+    /// Mutation: give up at the bound rather than past it. This is refused.
+    #[test]
+    fn a_function_at_the_work_bound_is_read() {
+        let (sources, unit) = ten_by_three();
+        let findings = findings_within(&sources, &unit, MAX_CELLS, 300);
+        assert!(findings.is_empty(), "{findings:?}");
     }
 }

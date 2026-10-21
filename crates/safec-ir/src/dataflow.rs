@@ -371,6 +371,26 @@ impl<V> Solution<V> {
 /// only way a reserved id becomes a block, and outside the tests the only
 /// caller that reserves one is `safec`'s lowering.
 pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solution<A::Value> {
+    solve_within(analysis, function, cfg, usize::MAX).expect("no walk count is past `usize::MAX`")
+}
+
+/// [`solve`], giving up once the walks of every block together pass
+/// `max_walks`, which answers `None`.
+///
+/// A count of walks rather than a time, so that the same input gives up on
+/// every machine. For an analysis whose walk costs the same however far it
+/// has got, this bounds the time it takes: what each walk costs is the
+/// caller's to know, and the caller works the bound out from it. The memory
+/// check does; a chain of copies in one loop, seven blocks of 804 locals,
+/// took 2,800 walks and a minute and a quarter with nothing printed, and its
+/// value was a third of what that check bounds.
+pub fn solve_within<A: Analysis>(
+    analysis: &A,
+    function: &Function,
+    cfg: &Cfg,
+    max_walks: usize,
+) -> Option<Solution<A::Value>> {
+    let mut walks = 0usize;
     let mut values: Vec<Option<A::Value>> = (0..function.blocks().len()).map(|_| None).collect();
     values[function.entry().index()] = Some(analysis.on_entry());
 
@@ -443,6 +463,10 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
         };
 
         visits[block.index()] += 1;
+        walks += 1;
+        if walks > max_walks {
+            return None;
+        }
         assert!(
             visits[block.index()] <= budget,
             "the `{}` analysis did not converge. Either its lattice is taller \
@@ -566,5 +590,5 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
         }
     }
 
-    Solution { values }
+    Some(Solution { values })
 }

@@ -669,7 +669,11 @@ pub(super) fn memory_finding(
         // Built only `Unknown`, at the function's name, before anything about
         // the function was read; `Unsafe` is written out beside it so that the
         // row has nothing to fall into.
-        (Kind::TooLarge { .. }, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+        (
+            Kind::TooLarge { .. } | Kind::TooLong { .. },
+            Conclusion::Unknown | Conclusion::Unsafe,
+            _,
+        ) => (
             TOO_LARGE,
             format!(
                 "`{}` is too large for the memory check to read yet",
@@ -744,6 +748,12 @@ pub(super) fn memory_finding(
         diagnostic = diagnostic.with_note(format!(
             "the check holds about blocks × locals × locals facts, {cells} here, and reads at \
              most {max}"
+        ));
+    }
+    if let Kind::TooLong { walks } = finding.kind {
+        diagnostic = diagnostic.with_note(format!(
+            "the check walked this function's blocks {walks} times without settling, the \
+             most it walks one of this many locals"
         ));
     }
     // **What C says is wrong, because the caret alone does not.** The read

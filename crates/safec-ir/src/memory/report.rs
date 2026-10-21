@@ -222,7 +222,7 @@ fn verdict(
         Kind::UnsequencedAccess { .. } => true,
         // Never asked: it is built before any value exists, and it is about
         // no free.
-        Kind::TooLarge { .. } => true,
+        Kind::TooLarge { .. } | Kind::TooLong { .. } => true,
     };
 
     match earliest {
