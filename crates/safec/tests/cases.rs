@@ -4531,6 +4531,11 @@ cases! {
         // Mutation: read `#ifndef N` followed by `#define N` as a guard,
         // whatever `N` is. It exits 0.
         a_reserved_guard_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The `extern "C"` idiom: C forbids an implementation to predefine
+        // `__cplusplus` (C17 6.10.8 p3), so it is undefined in every build.
+        // Mutation: leave it to the rule for reserved names. Both `#ifdef`s
+        // and the `#ifndef` are refused.
+        cplusplus_is_never_defined: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
         // `unix` is defined by `gcc` and `clang` in their default GNU modes
         // and not under `-std=c17`. Mutation: leave it out of Linux's
         // unsettled names. It is answered as undefined, and the double free

@@ -143,7 +143,9 @@ implementation (C17 7.1.3), one beginning with `__` or with `_` and a capital
 letter, such as `__GNUC__`, is refused unless the source defines it, because
 its answer depends on the compiler that builds the file; an include guard so
 named is refused too. `__FILE__`, `__LINE__`, `__DATE__` and
-`__TIME__` are defined, and refused where they are used. `linux` and `unix`,
+`__TIME__` are defined, and refused where they are used. `__cplusplus`, which
+C17 6.10.8 p3 forbids a C implementation to predefine, is answered as
+undefined. `linux` and `unix`,
 which a GNU mode defines on Linux and `-std=c17` does not, are refused there
 too. Tokens after a conditional's name, or after `#else` or `#endif`, are a
 warning, `SC0116`, and the directive is obeyed:

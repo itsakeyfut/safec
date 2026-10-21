@@ -1003,11 +1003,19 @@ fn unsettled(target: Target) -> &'static [&'static str] {
     }
 }
 
-/// Whether `name` is predefined or unsettled for some target, which makes
-/// whether this one predefines it a fact about this one rather than a
-/// question it cannot answer. See ADR-0055.
+/// The reserved names no C implementation predefines, whatever the target:
+/// `__cplusplus`, which C17 6.10.8 p3 forbids one to predefine (checked
+/// against N1570, the C11 draft, whose 6.10.8 C17 keeps). Left to the rule
+/// for reserved names, `#ifdef __cplusplus`, around the `extern "C"` most
+/// headers wrap their declarations in, refused every such header.
+const NEVER: [&str; 1] = ["__cplusplus"];
+
+/// Whether `name` is predefined or unsettled for some target, or never
+/// predefined, which makes whether this one predefines it a fact about this
+/// one rather than a question it cannot answer. See ADR-0055.
 fn known(name: &str) -> bool {
     DYNAMIC.contains(&name)
+        || NEVER.contains(&name)
         || Target::ALL.iter().any(|target| {
             unsettled(*target).contains(&name)
                 || predefined(*target)
@@ -2590,6 +2598,7 @@ mod tests {
         assert!(known("__ILP32__"));
         assert!(known("__LINE__"));
         assert!(!known("__GNUC__"));
+        assert!(known("__cplusplus"));
         assert!(!known("_MSC_VER"));
     }
 
