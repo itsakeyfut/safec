@@ -1721,9 +1721,14 @@ fn include(
             Diagnostic::error("this input includes too many files")
                 .with_code(TOO_MANY)
                 .with_label(Label::primary(quoted, "included here"))
+                // Counted where a header is opened, before its guard is
+                // asked, so a guarded header included again counts too. Said
+                // so, since a note blaming a missing guard was false for a
+                // file that includes one guarded header 4097 times. Found by
+                // review.
                 .with_note(format!(
-                    "{MAX_INCLUSIONS} inclusions have already been read for it, and \
-                     include guards are not read yet"
+                    "{MAX_INCLUSIONS} inclusions have already been read for it, each `#include` \
+                     counted whether or not the header's include guard then skips it"
                 )),
         );
         return None;
@@ -2055,6 +2060,17 @@ mod tests {
     /// The codes reported for `main.c` in a directory of its own holding
     /// `files`, each a path under it and what it holds.
     fn reported(name: &str, files: &[(String, String)]) -> Vec<String> {
+        diagnosed(name, files)
+            .diagnostics()
+            .iter()
+            .filter_map(|diagnostic| diagnostic.code())
+            .map(|code| code.to_string())
+            .collect()
+    }
+
+    /// Everything reported for the files, `main.c` among them, written to a
+    /// directory of their own.
+    fn diagnosed(name: &str, files: &[(String, String)]) -> DiagnosticSink {
         let directory = std::env::temp_dir().join(format!("safec_{name}_{}", std::process::id()));
         let _ = fs::remove_dir_all(&directory);
         for (path, contents) in files {
@@ -2075,13 +2091,7 @@ mod tests {
             &mut diagnostics,
         );
         let _ = fs::remove_dir_all(&directory);
-
         diagnostics
-            .diagnostics()
-            .iter()
-            .filter_map(|diagnostic| diagnostic.code())
-            .map(|code| code.to_string())
-            .collect()
     }
 
     /// A chain of different files, each including the next, is refused past
@@ -2143,6 +2153,36 @@ mod tests {
         files.push((format!("{levels}.h"), "int z;\n".to_owned()));
 
         assert_eq!(reported("wide", &files), ["SC0112"]);
+    }
+
+    /// The refusal says what is counted, in words true of a header with an
+    /// include guard included past the bound, which is counted each time
+    /// though its guard skips it.
+    ///
+    /// Mutation: restore the note's old wording, that include guards are not
+    /// read. This fails.
+    #[test]
+    fn too_many_inclusions_says_a_guarded_header_counts_each_time() {
+        let files = [
+            (
+                "g.h".to_owned(),
+                "#ifndef G_H\n#define G_H\nint z;\n#endif\n".to_owned(),
+            ),
+            (
+                "main.c".to_owned(),
+                "#include \"g.h\"\n".repeat(MAX_INCLUSIONS + 1),
+            ),
+        ];
+
+        let diagnostics = diagnosed("guarded_note", &files);
+        let notes = diagnostics.diagnostics()[0].notes();
+        assert_eq!(
+            notes,
+            [format!(
+                "{MAX_INCLUSIONS} inclusions have already been read for it, each `#include` \
+                 counted whether or not the header's include guard then skips it"
+            )]
+        );
     }
 
     /// A device is refused before it is opened, since opening one can wait
