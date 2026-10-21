@@ -66,6 +66,12 @@ cases! {
         // The same under `--allow-unknown`: a warning, and it builds. Mutation:
         // conclude it `Unsafe`. It is still an error.
         a_function_too_large_for_the_memory_check_is_a_warning_under_allow_unknown: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // The same function as a hatch, with a double free the check proves
+        // below the bound. A hatch lists what was not proved, and this one was
+        // not read, so it is reported: listed only, the double free built in
+        // silence. See ADR-0038. Mutation: route it as any other `Unknown`.
+        // It exits 0.
+        a_hatch_too_large_for_the_memory_check_is_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
         a_value_freed_through_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_parameter_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same function with its only caller in view, passing null. See

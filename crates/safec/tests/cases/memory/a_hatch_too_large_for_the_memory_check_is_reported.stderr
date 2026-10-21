@@ -1,0 +1,11 @@
+error[SC0410]: `f` is too large for the memory check to read yet
+   ╭─[ a_hatch_too_large_for_the_memory_check_is_reported.c:3:50 ]
+   │
+ 3 │ __attribute__((annotate("safec_unchecked"))) int f(int c) {
+   │                                                  ┬  
+   │                                                  ╰── nothing about this function's memory is proved
+───╯
+  = note: the check holds about blocks × locals × locals facts, 200228864 here, and reads at most 134217728
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: split the function into smaller ones
