@@ -1,0 +1,50 @@
+Target "x86_64-pc-windows-msvc"
+Function a_declarator_list_from_a_header_is_read_as_written_out.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_declarator_list_from_a_header_is_read_as_written_out.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_declarator_list_from_a_header_is_read_as_written_out.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" "a"
+  Local "_2" "int *" "b"
+  Local "_3" "void *"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_declarator_list_from_a_header_is_read_as_written_out.c:8:9 generated
+    Call a_declarator_list_from_a_header_is_read_as_written_out.c:8:9 written "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_declarator_list_from_a_header_is_read_as_written_out.c:8:5 written
+      Destination "_1"
+      Use
+        Copy "_3"
+    Operation a_declarator_list_from_a_header_is_read_as_written_out.c:8:5 written
+      Destination "_4"
+      Use
+        Copy "_1"
+    Sequenced a_declarator_list_from_a_header_is_read_as_written_out.c:8:5 generated
+    Operation a_declarator_list_from_a_header_is_read_as_written_out.c:9:5 written
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_declarator_list_from_a_header_is_read_as_written_out.c:9:5 written
+      Destination "_5"
+      Use
+        Copy "_2"
+    Sequenced a_declarator_list_from_a_header_is_read_as_written_out.c:9:5 generated
+    ArgumentsEvaluated a_declarator_list_from_a_header_is_read_as_written_out.c:10:5 generated
+    Call a_declarator_list_from_a_header_is_read_as_written_out.c:10:5 written "free" "bb2"
+      Copy "_1"
+  Block "bb2"
+    Sequenced a_declarator_list_from_a_header_is_read_as_written_out.c:10:5 generated
+    Operation a_declarator_list_from_a_header_is_read_as_written_out.c:11:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_declarator_list_from_a_header_is_read_as_written_out.c:11:12 generated
+    Return

@@ -984,6 +984,43 @@ impl Lowering<'_> {
         }
     }
 
+    /// [`Self::joined`] where a cut is not an error, because the caller has a
+    /// span to fall back to: `None` where it would cut, reporting nothing.
+    fn try_joined(&self, from: Span, to: Span) -> Option<Span> {
+        self.sources.join(from, to).ok()
+    }
+
+    /// A declarator's store span: from its `name` through the end of
+    /// `declared`, its [`Declaration::span`], where that joins, and the
+    /// init-declarator's own span, `own`, where it would cut a header the
+    /// init-declarator holds whole.
+    ///
+    /// `int` then `#include` of `*a` then `= 0;` starts at the name `a`,
+    /// after the header's `*`, and `*a = 0` holds the header from its first
+    /// token. Only there, so that every other store keeps the position it
+    /// had (#555). `own` holds this declarator's tokens and no other's, so a
+    /// read in a sibling's initializer is never taken for this store's own
+    /// operand. Where both cut, refused as before.
+    ///
+    /// Mutation: fall back to the span from the declaration's specifiers. A
+    /// sibling's read before it falls inside this store, and
+    /// `a_sibling_declarators_read_beside_a_store_from_a_header_is_reported`
+    /// fails.
+    ///
+    /// [`Declaration::span`]: crate::ast::Declaration::span
+    fn store_span(
+        &self,
+        name: Span,
+        declared: Span,
+        own: Option<Span>,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<Span> {
+        match (self.try_joined(name, declared), own) {
+            (Some(span), _) | (None, Some(span)) => Some(span),
+            (None, None) => self.joined(name, declared, diagnostics),
+        }
+    }
+
     /// Refuse a parameter declared as an array this stage cannot take,
     /// naming the part of its length nothing typed where that is the reason.
     ///
@@ -1391,8 +1428,26 @@ impl Lowering<'_> {
         // so `int b[*q]` included as a parameter starts its length at `*q`,
         // partway through the header, and refused C that cuts nothing. Found
         // by review.
+        //
+        // **And over the whole parameter list where that would cut a
+        // header**: `int f(` then `#include` of `int n, int b[n]` then `, int
+        // a[n])` starts the first length's parameter partway through the
+        // header, and the list holds it whole. Only there, so that every other
+        // span over lengths stays what it was (#555). The list adds parameters
+        // and no reads, since a parameter's only expressions are its lengths.
+        //
+        // Mutation: drop the fallback.
+        // `a_parameter_with_a_length_from_a_header_is_read_as_written_out`
+        // is refused as `SC0304`.
         if let (Some(&first), Some(&last)) = (declared.first(), declared.last()) {
-            let at = self.joined(first, last, diagnostics)?;
+            let list = parameters
+                .first()
+                .zip(parameters.last())
+                .and_then(|(first, last)| self.try_joined(first.span, last.span));
+            let at = match (self.try_joined(first, last), list) {
+                (Some(at), _) | (None, Some(at)) => at,
+                (None, None) => self.joined(first, last, diagnostics)?,
+            };
             let each: Vec<_> = walked
                 .iter()
                 .map(|&length| self.accesses(length, false))
@@ -1692,7 +1747,12 @@ impl Lowering<'_> {
                             builder.push(Operation {
                                 place: Place::local(local),
                                 value: Rvalue::Use(operand),
-                                origin: Origin::Written(self.joined(name, span, diagnostics)?),
+                                origin: Origin::Written(self.store_span(
+                                    name,
+                                    span,
+                                    declarator.span,
+                                    diagnostics,
+                                )?),
                             });
                             // One per declarator that has an initializer:
                             // `int a = f(), b = g();` is two full expressions

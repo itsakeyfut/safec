@@ -1,0 +1,9 @@
+Target "x86_64-pc-windows-msvc"
+Function a_store_whose_declarator_starts_partway_through_an_include_is_refused.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_store_whose_declarator_starts_partway_through_an_include_is_refused.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_store_whose_declarator_starts_partway_through_an_include_is_refused.c:4:5 "f" declared
+  Local "_0" "int" return

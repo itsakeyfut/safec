@@ -4461,11 +4461,29 @@ cases! {
         // span rather than from the token its production began at. It starts
         // at `p`, partway through the header, and is refused.
         a_parenthesised_included_operand_that_starts_a_node_is_not_refused: ["--emit", "ast"],
-        // `int` then an `#include` of `*a` then `= 0;`: every node the parser
-        // builds holds the header whole, and the lowering's store of `a`
-        // starts at `a`, which is partway through it. Mutation: have the
-        // lowering's join `expect` a span. It panics.
-        a_store_whose_name_is_partway_through_an_include_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Spans this compiler builds for itself, falling back to the C
+        // construct's own tokens where they would cut a header, each read as
+        // its written-out twin is, with the same errors (#555). A declarator
+        // list, `int` then an `#include` of `*a, *b` then `;`. Mutation: drop
+        // `Parser::declaration_span`'s fallback. It is `SC0207`.
+        a_declarator_list_from_a_header_is_read_as_written_out: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A parameter with a length after one without, both from the header,
+        // so the first length starts partway through it. Mutation: drop the
+        // fallback to the whole parameter list. It is `SC0304`.
+        a_parameter_with_a_length_after_one_without_from_a_header_is_read_as_written_out: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `int` then an `#include` of `*a` then `= p;`: the store's name is
+        // partway through the header, and its init-declarator holds it whole.
+        // Mutation: drop `Lowering::store_span`'s fallback. It is `SC0304`.
+        a_store_whose_name_is_partway_through_an_include_is_read_as_written_out: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And where the init-declarator cuts too, `x, *a` from the header then
+        // `= 0;`, it is refused. Mutation: have the lowering's join `expect` a
+        // span. It panics.
+        a_store_whose_declarator_starts_partway_through_an_include_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The fallback holds this declarator and no other: `int y = *q,` then
+        // an `#include` of `*a` then `= 0;` after `free(q)` still reports the
+        // read of `q`. Mutation: fall back to the declaration's span, from
+        // its specifiers.
+        a_sibling_declarators_read_beside_a_store_from_a_header_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `a_read_in_one_length_meets_what_another_length_frees` with `int
         // b[*q]` included as a parameter: the same `SC0402` and `SC0409`.
         // Mutation: join the lengths' span from the first length's node to

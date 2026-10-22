@@ -224,6 +224,9 @@ struct Declared {
     start: Span,
     /// What the specifiers named, before any declarator derived from it.
     base: TypeId,
+    /// Where this declarator began, its first token after the specifiers,
+    /// which is where [`InitDeclarator::span`] starts.
+    declarator: Span,
     /// The span of the name this declarator wrote.
     name: Span,
     /// The type this declarator derived from `base`.
@@ -935,11 +938,13 @@ impl Parser<'_> {
             self.report_built(specifiers, built, diagnostics);
             return None;
         }
+        let declarator = self.peek().span;
         let (name, ty, returns) = self.named_declarator(start, base, declares, diagnostics)?;
 
         Some(Specified::Named(Declared {
             start,
             base,
+            declarator,
             name,
             ty,
             return_nullability: returns,
@@ -995,6 +1000,7 @@ impl Parser<'_> {
         let Declared {
             start,
             base,
+            mut declarator,
             mut name,
             mut ty,
             return_nullability: mut returns,
@@ -1004,21 +1010,21 @@ impl Parser<'_> {
 
         loop {
             let init = self.initializer(diagnostics)?;
+            let end = self.previous().span;
+            let own = self.try_join(declarator, end);
             declarators.push(InitDeclarator {
                 declaration: Declaration {
                     name: Some(name),
                     ty,
                     // Not a parameter, so nothing is adjusted.
                     written: ty,
-                    // From the specifiers, which all of these share, through
-                    // this one's initializer. `Declaration::span` says why they
-                    // all begin at the same byte and what tells them apart.
-                    span: self.join(start, self.previous().span, diagnostics),
+                    span: self.declaration_span(start, declarator, end, diagnostics),
                     // The pointer a function declared at file scope returns,
                     // the one place besides a parameter `apply` allows one.
                     nullability: returns,
                 },
                 init,
+                span: own,
             });
 
             if !self.eat(TokenKind::Punct(Punct::Comma)) {
@@ -1028,8 +1034,8 @@ impl Parser<'_> {
             // The `,` is eaten before anything else is read, so a round of this
             // loop always consumes a token and `spend`'s budget is not what
             // stops it going round forever.
-            let at = self.peek().span;
-            (name, ty, returns) = self.named_declarator(at, base, declares, diagnostics)?;
+            declarator = self.peek().span;
+            (name, ty, returns) = self.named_declarator(declarator, base, declares, diagnostics)?;
         }
     }
 
@@ -1252,26 +1258,29 @@ impl Parser<'_> {
             let Declared {
                 start,
                 base,
+                declarator,
                 name,
                 ty,
                 return_nullability,
                 declares,
             } = declared;
+            let end = self.previous().span;
             members.push(Declaration {
                 name: Some(name),
                 ty,
                 written: ty,
-                span: self.join(start, self.previous().span, diagnostics),
+                span: self.declaration_span(start, declarator, end, diagnostics),
                 nullability: return_nullability,
             });
             while self.eat(TokenKind::Punct(Punct::Comma)) {
                 let at = self.peek().span;
                 let (name, ty, returns) = self.named_declarator(at, base, declares, diagnostics)?;
+                let end = self.previous().span;
                 members.push(Declaration {
                     name: Some(name),
                     ty,
                     written: ty,
-                    span: self.join(start, self.previous().span, diagnostics),
+                    span: self.declaration_span(start, at, end, diagnostics),
                     nullability: returns,
                 });
             }
@@ -2559,6 +2568,35 @@ impl Parser<'_> {
         self.ast.push_expr(Expr::Error { span })
     }
 
+    /// A declarator's [`Declaration::span`]: from the specifiers at `start`
+    /// through `end` where that joins, and from the declarator's own first
+    /// token, `declarator`, where it would cut an included file or an
+    /// expansion that the declarator holds whole. Where both cut, refused as
+    /// the first, as before there was a fallback. `Declaration::span` says why
+    /// the fallback and not the declarator's span everywhere.
+    ///
+    /// Mutation: drop the fallback. A declarator list from a header is
+    /// refused as `SC0207`, and
+    /// `a_declarator_list_from_a_header_is_read_as_written_out` fails.
+    fn declaration_span(
+        &mut self,
+        start: Span,
+        declarator: Span,
+        end: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Span {
+        match (self.try_join(start, end), self.try_join(declarator, end)) {
+            (Some(span), _) | (None, Some(span)) => span,
+            (None, None) => self.join(start, end, diagnostics),
+        }
+    }
+
+    /// [`Parser::join`] where a cut is not an error, because the caller has a
+    /// span to fall back to: `None` where it would cut, reporting nothing.
+    fn try_join(&self, from: Span, to: Span) -> Option<Span> {
+        self.sources.join(from, to).ok()
+    }
+
     /// The span from `from` to `to`, or, where it would cut an instance,
     /// `from`, with the cut reported.
     ///
@@ -2578,8 +2616,8 @@ impl Parser<'_> {
             Err(cut) => cut,
         };
         // Not "this construct cuts the file": the span here may be one this
-        // compiler builds for itself, a declarator's from its specifiers, and
-        // cut a file that every C construct holds whole (#555).
+        // compiler builds for itself, and a declarator's falls back to its own
+        // tokens only through `declaration_span`.
         let (what, label, included) = cut_words(self.sources, cut);
         let mut diagnostic = Diagnostic::error(format!("{what} is not read where it is yet"))
             .with_code(UNREAD)

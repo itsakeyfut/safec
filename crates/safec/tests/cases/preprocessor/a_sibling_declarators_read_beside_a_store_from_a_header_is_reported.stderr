@@ -1,0 +1,25 @@
+error[SC0402]: this uses `q` after it was freed
+   ╭─[ a_sibling_declarators_read_beside_a_store_from_a_header_is_reported.c:7:9 ]
+   │
+ 5 │     int *q = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+ 6 │     free(q);
+   │     ───┬───  
+   │        ╰───── freed here
+ 7 │     int y = *q,
+   │         ───┬──  
+   │            ╰──── used here
+───╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0403]: this may dereference `q` while it is null
+   ╭─[ a_sibling_declarators_read_beside_a_store_from_a_header_is_reported.c:7:9 ]
+   │
+ 7 │     int y = *q,
+   │         ───┬──  
+   │            ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
