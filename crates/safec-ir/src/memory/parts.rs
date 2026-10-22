@@ -661,6 +661,14 @@ impl Held {
     /// `keep = 0;` after `keep` lost its allocation would still answer
     /// [`Reached::Lost`] for every read, and a null dereference belongs to an
     /// axis this check has none for.
+    ///
+    /// **The edges go too, and only a unit test says so**,
+    /// `clearing_a_local_leaves_it_no_site_and_no_edge`. An edge kept past
+    /// `pp = &q;` or `pp = 0;` names a local whose address escaped, and this
+    /// check doubts what such a local holds whatever is written into it. Six
+    /// programs printed the same with the edges kept: a write through `pp`
+    /// after `pp = &q;` read back through `p` or `q`, or `q` freed, and a free
+    /// of `pp` after `pp = 0;` or after it was given an allocation.
     pub(super) fn clear(&mut self) {
         // Every field named, never `..`: a field added here and missed is a
         // fact that survives an assignment, which is `..` letting a field walk
@@ -1000,6 +1008,21 @@ mod tests {
     use super::{Freeing, Held, SiteState, earlier};
     use crate::memory::report::inside;
     use crate::source::{FileId, SourceMap, Span};
+
+    /// What a local is given replaces every site and every edge it had.
+    ///
+    /// Mutation: have `clear` leave `writes_to`, or `sites`. This fails.
+    #[test]
+    fn clearing_a_local_leaves_it_no_site_and_no_edge() {
+        let mut held = Held::none(4);
+        held.sites.set(1);
+        held.writes_to.set(3);
+        held.writes_elsewhere = false;
+        held.clear();
+        assert!(held.sites().next().is_none());
+        assert!(!held.may_be_a_locals_address());
+        assert!(held.writes_elsewhere);
+    }
 
     /// One edge that is all of where a write lands is one certain local, and
     /// two edges, or one with a write that may land elsewhere, are none.
