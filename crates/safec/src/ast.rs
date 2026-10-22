@@ -279,9 +279,9 @@ pub struct InitDeclarator {
     ///
     /// What a span over this declarator falls back to where the span it is
     /// built from first would cut an included file or an expansion: a
-    /// declarator from a header, `int` then `#include` of `a, b`, cuts the
-    /// header from its specifiers and holds it whole from its own first
-    /// token. See [`Declaration::span`] and ADR-0054.
+    /// declarator from a header, `a` of `int` then `#include` of `a, b`, cuts
+    /// the header from its specifiers and holds it whole from its own first
+    /// token. `b`, the header's last token, holds it whole from them. See [`Declaration::span`] and ADR-0054.
     ///
     /// `None` where this span itself would cut one, `int` then `#include` of
     /// `x, *a` then `= 0;`, whose declarator starts partway through the

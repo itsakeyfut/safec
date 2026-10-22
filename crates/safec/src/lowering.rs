@@ -1440,7 +1440,7 @@ impl Lowering<'_> {
         // and no reads, since a parameter's only expressions are its lengths.
         //
         // Mutation: drop the fallback.
-        // `a_parameter_with_a_length_from_a_header_is_read_as_written_out`
+        // `a_parameter_with_a_length_after_one_without_from_a_header_is_read_as_written_out`
         // is refused as `SC0304`.
         if let (Some(&first), Some(&last)) = (declared.first(), declared.last()) {
             let list = parameters

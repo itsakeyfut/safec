@@ -1846,8 +1846,8 @@ int f(int *p, struct S *s) {
 /// own span is its own tokens, the name's `*` included.
 ///
 /// Mutation: have `Parser::declaration_span` fall back to the declarator's
-/// first token alone. The first
-/// assertion fails. Mutation: drop the fallback. It is `SC0207`.
+/// first token alone. The assertion on the spans fails. Mutation: drop the
+/// fallback. It is `SC0207`, and the assertion on the diagnostics fails.
 #[test]
 fn a_declarator_from_a_header_spans_its_own_tokens() {
     let directory = std::env::temp_dir().join(format!("safec_declarator_{}", std::process::id()));

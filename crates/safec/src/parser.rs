@@ -609,7 +609,9 @@ struct Parser<'a> {
     /// [`Parser::resync`] put the cursor, which is a position it does (#35).
     failed: bool,
     /// The token the item's error was reported at, which recovery does not
-    /// read again. Set by [`Parser::report_built`] with `failed`.
+    /// read again. Set by [`Parser::report_built`] with `failed`, and moved
+    /// back to the last token read by [`Parser::join`], whose cut is among
+    /// the tokens already consumed.
     reported: usize,
     /// How many more times any loop here may go round.
     ///
