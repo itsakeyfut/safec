@@ -579,10 +579,10 @@ fn read_includes(
                 }
             }
             // Reported here, where it is compiled, and not where it was
-            // scanned: a run no token can begin is a preprocessing token, and
-            // the arm above has already passed over one in a skipped group,
-            // where C ignores it (C17 6.10.1 p6). Handed on all the same, so
-            // the stream still accounts for its text.
+            // scanned: each character no token can begin is a preprocessing
+            // token, and the arm above has already passed over them in a
+            // skipped group, where C ignores them (C17 6.10.1 p6). Handed on
+            // all the same, so the stream still accounts for its text.
             TokenKind::Unknown => {
                 if let Some(diagnostic) =
                     unexpected_characters(token.span, sources.snippet(token.span))

@@ -343,10 +343,12 @@ impl<'a> Lexer<'a> {
     ///
     /// One token for the whole run, not one per character, and **no report
     /// here**: the preprocessor reports it where it compiles the token, with
-    /// [`unexpected_characters`]. Such a run is a preprocessing token (C17 6.4
-    /// p1), ignored in a group that is skipped (6.10.1 p6), and an error only
-    /// once phase 7 converts it, so `@class Foo;` under an `#ifdef` that is
-    /// not taken is valid C.
+    /// [`unexpected_characters`]. Each character of such a run is a
+    /// preprocessing token of its own (C17 6.4 p1 and p3), ignored in a group
+    /// that is skipped (6.10.1 p6) and an error only once phase 7 converts it,
+    /// so `@class Foo;` under an `#ifdef` that is not taken is valid C. One
+    /// token for the run is this scan's choice, and nothing reads the
+    /// difference until `#` and `##` are read.
     fn scan_unknown(&mut self) -> TokenKind {
         // Not into a splice, whose `\` is `SC0107`'s to report.
         while self.peek().is_some_and(is_stray) && splice(self.rest()).is_none() {

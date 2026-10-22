@@ -136,8 +136,10 @@ so an `#if` there is counted and not refused, and a header whose include guard
 holds one is read. The rest of a skipped group is not compiled either, so a
 character no token can begin, `@class` in an Objective-C block, is not reported
 there; a comment or a literal left open is, since the first changes which groups
-there are and the second is undefined in any group (C17 6.4 p3). The macros predefined are what C17 6.10.8.1 requires and
-what every compiler for the target agrees on, such as `_WIN32`, or
+there are and the second is undefined in any group (C17 6.4 p3). That second
+refusal is this compiler's alone: `This doesn't build.` or `''` in a skipped
+group passes clang 20 in silence and gcc 13 with at most a warning. The macros
+predefined are what C17 6.10.8.1 requires and what every compiler for the target agrees on, such as `_WIN32`, or
 `__SIZEOF_LONG__` where `gcc` and `clang` both build for it; a name no
 compiler for the target defines is answered as undefined, and one they
 disagree on, such as `__x86_64__` for MSVC, is refused. ADR-0055 is the
