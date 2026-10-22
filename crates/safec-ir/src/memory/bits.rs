@@ -113,6 +113,26 @@ mod tests {
         Bits::new(70).get(70);
     }
 
+    /// A union of two lengths is a bug in whoever built them, and panics
+    /// rather than reading the shorter one as the longer one's start.
+    ///
+    /// Mutation: drop the assertion. This does not panic.
+    #[test]
+    #[should_panic(expected = "a union of sets of two lengths")]
+    fn a_union_of_two_lengths_panics() {
+        Bits::new(70).union_with(&Bits::new(64));
+    }
+
+    /// Mutation: have `remove` flip the bit rather than clear it. Removing an
+    /// index that is not there sets it, and this fails.
+    #[test]
+    fn removing_an_index_not_in_the_set_leaves_it_out() {
+        let mut bits = Bits::new(70);
+        bits.remove(66);
+        assert!(!bits.get(66));
+        assert!(!bits.any());
+    }
+
     /// Mutation: index the word by `index % 64`, or the bit by `index / 64`,
     /// or have `any` read only the first word. This fails.
     #[test]
