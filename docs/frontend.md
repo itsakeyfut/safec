@@ -133,7 +133,10 @@ is `SC0104`, and none of its groups is compiled: compiling one would compile
 code under a condition nobody evaluated. Its `#endif` still closes it. Inside a
 group that is skipped, a directive is read only for its name (C17 6.10.1 p6),
 so an `#if` there is counted and not refused, and a header whose include guard
-holds one is read. The macros predefined are what C17 6.10.8.1 requires and
+holds one is read. The rest of a skipped group is not compiled either, so a
+character no token can begin, `@class` in an Objective-C block, is not reported
+there; a comment or a literal left open is, since the first changes which groups
+there are and the second is undefined in any group (C17 6.4 p3). The macros predefined are what C17 6.10.8.1 requires and
 what every compiler for the target agrees on, such as `_WIN32`, or
 `__SIZEOF_LONG__` where `gcc` and `clang` both build for it; a name no
 compiler for the target defines is answered as undefined, and one they
