@@ -1013,8 +1013,8 @@ mod tests {
     /// every mark about how it came by them.
     ///
     /// Mutation: have `clear` leave `writes_to`, `sites`, `offset`,
-    /// `lost_read`, `unreplaced_read` or `foreign`. This fails. The marks
-    /// beside those have corpus cases of their own.
+    /// `lost_read`, `unreplaced_read`, `foreign` or `freed`. This fails. The
+    /// marks beside those have corpus cases of their own.
     #[test]
     fn clearing_a_local_leaves_it_no_site_and_no_edge() {
         let mut held = Held::none(4);
@@ -1025,6 +1025,12 @@ mod tests {
         held.lost_read = true;
         held.unreplaced_read = true;
         held.foreign = true;
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "free(p);");
+        held.freed = Some(Freeing {
+            at: Span::new(file, 0, 7),
+            sequenced: true,
+        });
         held.clear();
         assert!(held.sites().next().is_none());
         assert!(!held.may_be_a_locals_address());
@@ -1033,6 +1039,7 @@ mod tests {
         assert!(!held.lost_read);
         assert!(!held.unreplaced_read);
         assert!(!held.foreign);
+        assert!(held.freed.is_none());
     }
 
     /// One edge that is all of where a write lands is one certain local, and
