@@ -4480,9 +4480,11 @@ cases! {
         // span. It panics.
         a_store_whose_declarator_starts_partway_through_an_include_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The fallback holds this declarator and no other: `int y = *q,` then
-        // an `#include` of `*a` then `= 0;` after `free(q)` still reports the
-        // read of `q`. Mutation: fall back to the declaration's span, from
-        // its specifiers.
+        // an `#include` of `*a` then `= 0;` after `free(q)` reports the read
+        // of `q`, and `a`'s store is placed at the directive. Mutation: fall
+        // back to the declaration's span, from its specifiers. The store is
+        // placed at `int` and this fails; the read is still reported, since
+        // `y`'s initializer is sequenced before `a`'s store.
         a_sibling_declarators_read_beside_a_store_from_a_header_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `a_read_in_one_length_meets_what_another_length_frees` with `int
         // b[*q]` included as a parameter: the same `SC0402` and `SC0409`.

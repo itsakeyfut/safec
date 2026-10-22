@@ -998,14 +998,17 @@ impl Lowering<'_> {
     /// `int` then `#include` of `*a` then `= 0;` starts at the name `a`,
     /// after the header's `*`, and `*a = 0` holds the header from its first
     /// token. Only there, so that every other store keeps the position it
-    /// had (#555). `own` holds this declarator's tokens and no other's, so a
-    /// read in a sibling's initializer is never taken for this store's own
-    /// operand. Where both cut, refused as before.
+    /// had (#555). `own` holds this declarator's tokens and no other's. A
+    /// sibling's read could not be taken for this store's operand even
+    /// through a wider span, since each initializer is a full expression
+    /// (C17 6.8 p4), sequenced before the next declarator, and that clears
+    /// what is pending, so the narrow span is about where the store is said
+    /// to be. Where both cut, refused as before.
     ///
-    /// Mutation: fall back to the span from the declaration's specifiers. A
-    /// sibling's read before it falls inside this store, and
+    /// Mutation: fall back to the span from the declaration's specifiers.
     /// `a_sibling_declarators_read_beside_a_store_from_a_header_is_reported`
-    /// fails.
+    /// fails on the store's printed position; its read of `q` is still
+    /// reported, measured.
     ///
     /// [`Declaration::span`]: crate::ast::Declaration::span
     fn store_span(
