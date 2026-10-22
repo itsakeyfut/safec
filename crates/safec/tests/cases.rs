@@ -3061,6 +3061,12 @@ cases! {
         // ask about every unproven or reachable site; that one reports.
         a_table_holding_a_pointer_a_call_may_have_freed_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What only the address reaches is exempt, and nothing more: `*h` is
+        // `&slot` or the box `a`, and `s` is held by `slot` and stored in `a`,
+        // so it is reached through this function's own memory too and is
+        // asked. Mutation: have `handed_below` read nothing through memory;
+        // this builds. See ADR-0042.
+        a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Through an address too, where what made it unproven may have freed
         // it: one path freed it, before or after its address was taken, or a
         // call was handed the pointer itself. See ADR-0047. Mutation: have
@@ -3213,11 +3219,13 @@ cases! {
         an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What an argument must be to hand a call a local, each part of
-        // `Held::certain_target` and the skip before it. Mutation: ignore
-        // `writes_elsewhere`; the first builds. Mutation: answer the first of
-        // several edges; the second builds. Mutation: let a place of
-        // dereferences hand its own edges; the third loses its second
-        // report. See ADR-0047.
+        // `Held::certain_target` and the skip before it. The first two print
+        // the same report with `writes_elsewhere` ignored or with the first
+        // of several edges answered alone, measured. Those two parts are
+        // guarded by `Held::certain_target`'s unit test, whose doc says why
+        // no program tells the second apart. Mutation: let a place of
+        // dereferences hand its own edges; the third loses its second report.
+        // See ADR-0047.
         a_single_address_read_out_of_memory_another_pointer_may_overwrite_is_asked_with_no_second_holder: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_argument_that_may_be_either_of_two_unrelated_locals_hands_neither_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_place_of_dereferences_handed_to_a_call_hands_no_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

@@ -626,6 +626,18 @@ impl Held {
     /// exempts a holder and so has to hold rather than may. A load out of
     /// memory that names one local is not certain, `writes_elsewhere` says
     /// so, and neither is a local that may be either of two. See ADR-0047.
+    ///
+    /// **No program tells "either of two" from "the first of them"**, so the
+    /// guard is the unit test `a_certain_target_is_one_edge_and_nothing_elsewhere`
+    /// and not a corpus case. The second edge names a local whose address
+    /// escaped, so the call may write into it whatever it reaches through the
+    /// first, and that local counts as live after the call however the
+    /// function goes on: it stays a holder of the first local's allocation
+    /// that nothing exempts. Six programs answered the same with the first
+    /// edge taken alone: `q = &a; if (c) q = &b; grow(q);` followed by a read
+    /// of `a` by address, by value or by `free`, with `b` read again or not,
+    /// handed to a call first, or a copy of `a`. A rule that stops counting
+    /// such a local as live is one to ask this again under.
     pub(super) fn certain_target(&self) -> Option<usize> {
         if self.writes_elsewhere {
             return None;
@@ -649,6 +661,14 @@ impl Held {
     /// `keep = 0;` after `keep` lost its allocation would still answer
     /// [`Reached::Lost`] for every read, and a null dereference belongs to an
     /// axis this check has none for.
+    ///
+    /// **The edges go too, and only a unit test says so**,
+    /// `clearing_a_local_leaves_it_no_site_and_no_edge`. An edge kept past
+    /// `pp = &q;` or `pp = 0;` names a local whose address escaped, and this
+    /// check doubts what such a local holds whatever is written into it. Six
+    /// programs printed the same with the edges kept: a write through `pp`
+    /// after `pp = &q;` read back through `p` or `q`, or `q` freed, and a free
+    /// of `pp` after `pp = 0;` or after it was given an allocation.
     pub(super) fn clear(&mut self) {
         // Every field named, never `..`: a field added here and missed is a
         // fact that survives an assignment, which is `..` letting a field walk
@@ -985,9 +1005,69 @@ pub(super) struct Realloced {
 
 #[cfg(test)]
 mod tests {
-    use super::{Freeing, SiteState, earlier};
+    use super::{Freeing, Held, Offset, SiteState, earlier};
     use crate::memory::report::inside;
     use crate::source::{FileId, SourceMap, Span};
+
+    /// What a local is given replaces every site and every edge it had, and
+    /// every mark about how it came by them.
+    ///
+    /// Mutation: have `clear` leave `writes_to`, `sites`, `offset`,
+    /// `lost_read`, `unreplaced_read`, `foreign` or `freed`. This fails. The
+    /// marks beside those have corpus cases of their own.
+    #[test]
+    fn clearing_a_local_leaves_it_no_site_and_no_edge() {
+        let mut held = Held::none(4);
+        held.sites.set(1);
+        held.writes_to.set(3);
+        held.writes_elsewhere = false;
+        held.offset = Offset::NonZero;
+        held.lost_read = true;
+        held.unreplaced_read = true;
+        held.foreign = true;
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "free(p);");
+        held.freed = Some(Freeing {
+            at: Span::new(file, 0, 7),
+            sequenced: true,
+        });
+        held.clear();
+        assert!(held.sites().next().is_none());
+        assert!(!held.may_be_a_locals_address());
+        assert!(held.writes_elsewhere);
+        assert_eq!(held.offset, Offset::Zero);
+        assert!(!held.lost_read);
+        assert!(!held.unreplaced_read);
+        assert!(!held.foreign);
+        assert!(held.freed.is_none());
+    }
+
+    /// One edge that is all of where a write lands is one certain local, and
+    /// two edges, one with a write that may land elsewhere, or none at all,
+    /// are none.
+    ///
+    /// Mutation: have `certain_target` take only the first edge. The second
+    /// assertion fails. Mutation: ignore `writes_elsewhere`. The third fails.
+    /// Mutation: answer some local for no edge at all. The fourth fails.
+    #[test]
+    fn a_certain_target_is_one_edge_and_nothing_elsewhere() {
+        let mut one = Held::none(4);
+        one.writes_to.set(2);
+        one.writes_elsewhere = false;
+        assert_eq!(one.certain_target(), Some(2));
+
+        let mut two = one.clone();
+        two.writes_to.set(3);
+        assert_eq!(two.certain_target(), None);
+
+        let mut elsewhere = one.clone();
+        elsewhere.writes_elsewhere = true;
+        assert_eq!(elsewhere.certain_target(), None);
+
+        let mut none = Held::none(4);
+        none.writes_elsewhere = false;
+        assert_eq!(none.certain_target(), None);
+    }
 
     /// `main.c`, `x = 0;` then `#include "a.h"` then `y = 1;`, and `a.h`,
     /// `int z;`, included at that directive with its extent recorded. Written
