@@ -9,9 +9,10 @@
 //! remember.
 //!
 //! [`TokenKind::Unknown`] is the rule at a character that can begin no token.
-//! It is reported and kept. Stopping at the first one is the same mistake the
-//! driver already refuses to make with the first unreadable path: the user pays
-//! for it by fixing one thing per run.
+//! It is kept, and reported by the preprocessor where it is compiled, so not
+//! in a group a conditional skips. Stopping at the first one is the same
+//! mistake the driver already refuses to make with the first unreadable path:
+//! the user pays for it by fixing one thing per run.
 //!
 //! A preprocessing directive is the rule at syntax that is not implemented yet.
 //! `#` is an ordinary punctuator, and a directive is a matter of what a later
@@ -64,6 +65,12 @@ pub(crate) const UNSUPPORTED_SPLICE: Code = Code::new("SC0107");
 const SPACED_SPLICE: Code = Code::new("SC0108");
 
 /// Scan `source` into tokens, reporting what it could not make sense of.
+///
+/// **Except a run no token can begin**, which is a [`TokenKind::Unknown`]
+/// token and no report: the preprocessor reports it where it compiles it,
+/// with `unexpected_characters`, since in a skipped group C ignores it. A
+/// caller that compiles what this returns without preprocessing it owes that
+/// report itself.
 ///
 /// Always returns a stream, and the stream always ends with [`TokenKind::Eof`].
 /// Whether the scan found anything wrong is not in the return value, because
