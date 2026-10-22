@@ -1,0 +1,16 @@
+error[SC0101]: unterminated block comment
+   ╭─[ an_unterminated_comment_in_a_skipped_group_is_reported.c:2:1 ]
+   │
+ 2 │ /* never closed
+   │ ─┬  
+   │  ╰── unclosed from here
+───╯
+  = note: the comment runs to the end of the file
+error[SC0115]: `#ifdef` is not closed in this file
+   ╭─[ an_unterminated_comment_in_a_skipped_group_is_reported.c:1:1 ]
+   │
+ 1 │ #ifdef U
+   │ ┬  
+   │ ╰── opened here
+───╯
+  = note: a conditional ends with an `#endif` in the file it begins in

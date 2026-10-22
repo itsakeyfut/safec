@@ -9,9 +9,10 @@
 //! remember.
 //!
 //! [`TokenKind::Unknown`] is the rule at a character that can begin no token.
-//! It is reported and kept. Stopping at the first one is the same mistake the
-//! driver already refuses to make with the first unreadable path: the user pays
-//! for it by fixing one thing per run.
+//! It is kept, and reported by the preprocessor where it is compiled, so not
+//! in a group a conditional skips. Stopping at the first one is the same
+//! mistake the driver already refuses to make with the first unreadable path:
+//! the user pays for it by fixing one thing per run.
 //!
 //! A preprocessing directive is the rule at syntax that is not implemented yet.
 //! `#` is an ordinary punctuator, and a directive is a matter of what a later
@@ -65,6 +66,12 @@ const SPACED_SPLICE: Code = Code::new("SC0108");
 
 /// Scan `source` into tokens, reporting what it could not make sense of.
 ///
+/// **Except a run no token can begin**, which is a [`TokenKind::Unknown`]
+/// token and no report: the preprocessor reports it where it compiles it,
+/// with `unexpected_characters`, since in a skipped group C ignores it. A
+/// caller that compiles what this returns without preprocessing it owes that
+/// report itself.
+///
 /// Always returns a stream, and the stream always ends with [`TokenKind::Eof`].
 /// Whether the scan found anything wrong is not in the return value, because
 /// the tokens are still worth having when it did.
@@ -83,6 +90,37 @@ pub fn lex(file: FileId, source: &SourceFile, diagnostics: &mut DiagnosticSink) 
         at_line_start: true,
     }
     .run(diagnostics)
+}
+
+/// `SC0103` for a [`TokenKind::Unknown`] token at `span`, whose text is
+/// `text`: what the preprocessor reports where it compiles one.
+///
+/// One diagnostic for the whole run, not one per character. A file that is
+/// not C at all would otherwise bury its own first line under thousands of
+/// identical reports.
+///
+/// **`None` for a trigraph**, which is an `Unknown` token too and which the
+/// scan has already refused as `SC0107` in every group, since a trigraph is
+/// valid C this compiler does not read yet rather than a character no token
+/// can begin. Reporting it again here said `SC0103` about `??-` beside that.
+pub(crate) fn unexpected_characters(span: Span, text: &str) -> Option<Diagnostic> {
+    if trigraph(text).is_some() {
+        return None;
+    }
+    let count = text.chars().count();
+    // The characters themselves are shown by the quoted source line, not
+    // spelled into the message: a message is not the place to put file
+    // content.
+    let message = if count == 1 {
+        "unexpected character".to_owned()
+    } else {
+        format!("{count} unexpected characters")
+    };
+    Some(
+        Diagnostic::error(message)
+            .with_code(UNEXPECTED_CHARACTERS)
+            .with_label(Label::primary(span, "not part of any token")),
+    )
 }
 
 struct Lexer<'a> {
@@ -165,7 +203,7 @@ impl<'a> Lexer<'a> {
             self.offset += spelled.len();
             return TokenKind::Punct(punct);
         }
-        self.scan_unknown(diagnostics)
+        self.scan_unknown()
     }
 
     /// An identifier, or the keyword or annotation it is spelled the same as.
@@ -310,32 +348,19 @@ impl<'a> Lexer<'a> {
 
     /// A run of characters that can begin no token.
     ///
-    /// One token and one diagnostic for the whole run, not one per character.
-    /// A file that is not C at all would otherwise bury its own first line
-    /// under thousands of identical reports.
-    fn scan_unknown(&mut self, diagnostics: &mut DiagnosticSink) -> TokenKind {
-        let start = self.offset;
+    /// One token for the whole run, not one per character, and **no report
+    /// here**: the preprocessor reports it where it compiles the token, with
+    /// [`unexpected_characters`]. Each character of such a run is a
+    /// preprocessing token of its own (C17 6.4 p1 and p3), ignored in a group
+    /// that is skipped (6.10.1 p6) and an error only once phase 7 converts it,
+    /// so `@class Foo;` under an `#ifdef` that is not taken is valid C. One
+    /// token for the run is this scan's choice, and nothing reads the
+    /// difference until `#` and `##` are read.
+    fn scan_unknown(&mut self) -> TokenKind {
         // Not into a splice, whose `\` is `SC0107`'s to report.
         while self.peek().is_some_and(is_stray) && splice(self.rest()).is_none() {
             self.bump();
         }
-
-        let span = self.span(start);
-        let count = self.text[start..self.offset].chars().count();
-        // The characters themselves are shown by the quoted source line, not
-        // spelled into the message: a message is not the place to put file
-        // content.
-        let message = if count == 1 {
-            "unexpected character".to_owned()
-        } else {
-            format!("{count} unexpected characters")
-        };
-
-        diagnostics.report(
-            Diagnostic::error(message)
-                .with_code(UNEXPECTED_CHARACTERS)
-                .with_label(Label::primary(span, "not part of any token")),
-        );
         TokenKind::Unknown
     }
 
@@ -693,7 +718,27 @@ mod tests {
         }
     }
 
+    /// `text` scanned, with what is reported where it is compiled: the
+    /// scan's own reports, and `SC0103` for each [`TokenKind::Unknown`]
+    /// token, as the preprocessor reports one outside a skipped group.
     fn scan(text: &str) -> Scan {
+        let mut scan = lexed(text);
+        for token in scan
+            .tokens
+            .iter()
+            .filter(|token| token.kind == TokenKind::Unknown)
+        {
+            if let Some(diagnostic) =
+                unexpected_characters(token.span, scan.sources.snippet(token.span))
+            {
+                scan.diagnostics.report(diagnostic);
+            }
+        }
+        scan
+    }
+
+    /// `text` scanned, with the scan's own reports only.
+    fn lexed(text: &str) -> Scan {
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("test.c", text);
         let mut diagnostics = DiagnosticSink::new();
@@ -705,6 +750,39 @@ mod tests {
             tokens,
             diagnostics,
         }
+    }
+
+    /// A trigraph is an `Unknown` token the scan has already refused, so it
+    /// is not said again as a character no token can begin.
+    ///
+    /// Mutation: have `unexpected_characters` answer for a trigraph too. Both
+    /// `SC0107` and `SC0103` are said about `??-`, and this fails.
+    #[test]
+    fn a_trigraph_is_refused_once() {
+        let scan = scan("int t = ??-1;");
+
+        let codes: Vec<_> = scan
+            .diagnostics
+            .diagnostics()
+            .iter()
+            .filter_map(|diagnostic| diagnostic.code())
+            .map(|code| code.to_string())
+            .collect();
+        assert_eq!(codes, ["SC0107"]);
+    }
+
+    /// A run no token can begin is one token and no report: the preprocessor
+    /// reports it where it compiles it, and not in a group it skips, where
+    /// C17 6.10.1 p6 ignores it.
+    ///
+    /// Mutation: have `scan_unknown` report the run again. This fails.
+    #[test]
+    fn a_run_no_token_can_begin_is_one_token_and_reported_by_nothing_here() {
+        let scan = lexed("@class Foo;");
+
+        assert_eq!(scan.kinds()[0], TokenKind::Unknown);
+        assert_eq!(scan.texts()[0], "@");
+        assert!(scan.diagnostics.is_empty(), "{:?}", scan.messages());
     }
 
     #[test]

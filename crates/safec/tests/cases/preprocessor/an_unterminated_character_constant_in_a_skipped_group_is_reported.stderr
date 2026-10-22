@@ -1,0 +1,8 @@
+error[SC0102]: unterminated character constant
+   ╭─[ an_unterminated_character_constant_in_a_skipped_group_is_reported.c:2:11 ]
+   │
+ 2 │ This doesn't build.
+   │           ┬  
+   │           ╰── unclosed from here
+───╯
+  = note: a character constant has to be closed on the line it opens on

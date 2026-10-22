@@ -1,0 +1,4 @@
+Function a_character_no_token_can_begin_in_a_skipped_group_is_not_reported.c:6:1 "main" "int (void)"
+  Compound a_character_no_token_can_begin_in_a_skipped_group_is_not_reported.c:6:16
+    Return a_character_no_token_can_begin_in_a_skipped_group_is_not_reported.c:6:18
+      Number a_character_no_token_can_begin_in_a_skipped_group_is_not_reported.c:6:25 "0"

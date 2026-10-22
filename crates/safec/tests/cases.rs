@@ -4505,6 +4505,21 @@ cases! {
         // outside a skipped group, pass. Mutation: read directives in a
         // skipped group. They are reported.
         a_directive_in_a_skipped_group_is_not_read: ["--emit", "ast"],
+        // A run no token can begin is a preprocessing token, ignored where
+        // its group is skipped and an error only once it is compiled, so
+        // `@class` under an `#ifdef` not taken passes. Mutation: report an
+        // `Unknown` token before `read_includes` asks whether its group is
+        // skipped. It is `SC0103` and exits 1.
+        a_character_no_token_can_begin_in_a_skipped_group_is_not_reported: ["--emit", "ast"],
+        // What changes which groups there are is still reported there, and
+        // so is what C leaves undefined in any group (C17 6.4 p3): a comment
+        // left open swallows the `#endif`, and an apostrophe in prose opens
+        // a character constant that does not close. Mutation: have the scan
+        // stop reporting an unterminated comment; the first goes silent about
+        // it. Mutation: have it stop reporting an unterminated literal; the
+        // second exits 0.
+        an_unterminated_comment_in_a_skipped_group_is_reported: ["--emit", "ast"],
+        an_unterminated_character_constant_in_a_skipped_group_is_reported: ["--emit", "ast"],
         // Mutation: report nothing still open when a frame ends. It exits 0.
         an_unterminated_conditional_is_refused_at_its_directive: ["--emit", "ast"],
         // An `#ifndef` left open in a header, and an `#endif` for it in the
