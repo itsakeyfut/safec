@@ -56,11 +56,11 @@ cases! {
         // met by a program that proves it, one that leaves it unproven, and one
         // that does neither.
         a_value_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A loop per write over 100 allocating locals: 198 million of the
-        // check's `blocks * locals * locals`, past its bound, so it is one
+        // A loop per write over 150 allocating locals: about 1.3 GB by the
+        // check's estimate of what it would hold, past its bound, so it is one
         // `Unknown` at the name and not read (#572). `hatches` because the
         // function's IR is thousands of lines. Mutation: drop the guard. The
-        // check runs for seconds and about 2 GB, and the expected `.stderr`
+        // check runs for seconds and about 1.2 GB, and the expected `.stderr`
         // no longer matches.
         a_function_too_large_for_the_memory_check_is_unknown: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
         // The same under `--allow-unknown`: a warning, and it builds. Mutation:
@@ -833,6 +833,11 @@ cases! {
         // `a_free_after_one_that_may_have_freed_a_local_is_not_proved` is
         // proved a double free the path that took `&x` does not commit.
         a_free_of_a_pointer_that_may_hold_a_locals_address_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with seventy locals declared first, so that `x` is past the
+        // first word of every set the check holds: the cases above fit in one.
+        // `hatches` because the IR is long. Mutation: have `Bits::any` read only
+        // the first word. It exits 0 with nothing printed.
+        a_free_of_a_pointer_that_may_hold_the_address_of_a_local_past_the_sixty_fourth_is_unproven: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
         // Why a pointer was lost, where two reasons meet at one free: a local's
         // address on one path and what memory held on the other says the
         // first, since that path frees what C forbids whatever the other

@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::ir::{LocalId, Operand, Place};
 use crate::source::{SourceMap, Span};
 
+use super::bits::Bits;
 use super::parts::{Held, PendingRead, Reached, Read, ReadKey, Realloced, SiteState, read_key};
 use super::{LostReason, derefs, inside, named};
 
@@ -56,9 +57,9 @@ pub(super) struct Known {
     /// What lets a pointer stored in the heap stay proved until something
     /// that can reach the allocation holding it is handed to code this check
     /// cannot read: `*tab = p; log_line();` leaves `p` alone, because nothing
-    /// exposed `tab`. Square in the locals, which is [`Held::sites`]' condition
-    /// for a packed bitset. See ADR-0039.
-    pub(super) inside: Vec<Vec<bool>>,
+    /// exposed `tab`. Square in the locals, so a bit a pair, for the reason
+    /// [`Held::sites`] gives. See ADR-0039.
+    pub(super) inside: Vec<Bits>,
     /// Per site, the locals whose address a pointer stored in that allocation
     /// may hold: [`Self::inside`] for what is not a site.
     ///
@@ -69,7 +70,7 @@ pub(super) struct Known {
     /// a load out of the allocation carries the edges and a store two levels
     /// down lands in the local. A table of its own because a site and a local
     /// share an index. See ADR-0045.
-    pub(super) inside_locals: Vec<Vec<bool>>,
+    pub(super) inside_locals: Vec<Bits>,
     /// Per site, what a `realloc` that returned it was handed, until a branch
     /// on a pointer holding it says whether it succeeded. See [`Realloced`]
     /// and ADR-0039.
@@ -260,12 +261,7 @@ impl Known {
         // = &x; free(p); return *q;` was a proved use after free that the
         // `else` path does not commit. Found by review of ADR-0048, whose
         // join opened a second way to it.
-        if self.points_to[local.index()]
-            .writes_to
-            .iter()
-            .any(|&edge| edge)
-            && !reached.is_empty()
-        {
+        if self.points_to[local.index()].writes_to.any() && !reached.is_empty() {
             reached.push(Reached::Partial);
         }
 
@@ -326,14 +322,7 @@ impl Known {
         let through_memory: BTreeSet<usize> = sites
             .iter()
             .copied()
-            .flat_map(|container| {
-                self.inside[container]
-                    .iter()
-                    .enumerate()
-                    .filter(|&(_, &in_it)| in_it)
-                    .map(|(site, _)| site)
-                    .collect::<Vec<_>>()
-            })
+            .flat_map(|container| self.inside[container].ones().collect::<Vec<_>>())
             .collect();
         let through_address: BTreeSet<usize> = locals
             .iter()
@@ -543,31 +532,12 @@ impl Known {
         let mut next_sites = BTreeSet::new();
         let mut next_locals = BTreeSet::new();
         for &container in sites {
-            next_sites.extend(
-                self.inside[container]
-                    .iter()
-                    .enumerate()
-                    .filter(|&(_, &in_it)| in_it)
-                    .map(|(site, _)| site),
-            );
-            next_locals.extend(
-                self.inside_locals[container]
-                    .iter()
-                    .enumerate()
-                    .filter(|&(_, &in_it)| in_it)
-                    .map(|(target, _)| target),
-            );
+            next_sites.extend(self.inside[container].ones());
+            next_locals.extend(self.inside_locals[container].ones());
         }
         for &held in locals {
             next_sites.extend(self.points_to[held].sites());
-            next_locals.extend(
-                self.points_to[held]
-                    .writes_to
-                    .iter()
-                    .enumerate()
-                    .filter(|&(_, &edge)| edge)
-                    .map(|(target, _)| target),
-            );
+            next_locals.extend(self.points_to[held].writes_to.ones());
         }
         (next_sites, next_locals)
     }
@@ -614,12 +584,7 @@ impl Known {
             // store there recorded: `*a = &x;` through a load `a` puts
             // `x` where `t = *b;` through another load may read it.
             for &site in &reached {
-                locals.extend(
-                    self.inside_locals[site]
-                        .iter()
-                        .enumerate()
-                        .filter_map(|(local, &in_it)| in_it.then_some(local)),
-                );
+                locals.extend(self.inside_locals[site].ones());
             }
             sites.extend(reached);
         }
@@ -777,8 +742,8 @@ impl Known {
         let mut closed: BTreeSet<usize> = sites.iter().copied().collect();
         let mut pending = sites;
         while let Some(site) = pending.pop() {
-            for (held, &in_it) in self.inside[site].iter().enumerate() {
-                if in_it && closed.insert(held) {
+            for held in self.inside[site].ones() {
+                if closed.insert(held) {
                     pending.push(held);
                 }
             }
@@ -807,10 +772,10 @@ impl Known {
     pub(super) fn landed_where_unknown_code_points(&mut self, carried: &[usize], locals: &[usize]) {
         for landing in self.reachable_now() {
             for &site in carried {
-                self.inside[landing][site] = true;
+                self.inside[landing].set(site);
             }
             for &local in locals {
-                self.inside_locals[landing][local] = true;
+                self.inside_locals[landing].set(local);
             }
         }
     }
@@ -887,7 +852,7 @@ impl Known {
     /// to not knowing is to do nothing.
     pub(super) fn written_through(&self, local: LocalId) -> Vec<usize> {
         (0..self.points_to.len())
-            .filter(|target| self.points_to[local.index()].writes_to[*target])
+            .filter(|target| self.points_to[local.index()].writes_to.get(*target))
             .collect()
     }
 
@@ -906,7 +871,7 @@ impl Known {
             }
             found.push(local);
             let held = &self.points_to[local];
-            todo.extend((0..held.writes_to.len()).filter(|&next| held.writes_to[next]));
+            todo.extend(held.writes_to.ones());
         }
         found
     }
@@ -988,7 +953,7 @@ impl Known {
         let gone = !matches!(state[site], SiteState::Live(_));
         for (other, held) in points_to.iter_mut().enumerate() {
             if other != site {
-                if gone && held.sites[site] {
+                if gone && held.sites.get(site) {
                     held.stale_read = true;
                 }
                 held.lose(site);
@@ -1010,7 +975,7 @@ impl Known {
         // call that may free it, which built where `main` refused it. Found by
         // review; `a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held`.
         for container in 0..inside.len() {
-            if gone && inside[container][site] {
+            if gone && inside[container].get(site) {
                 stale[container] = true;
             }
         }
@@ -1173,7 +1138,7 @@ impl Known {
                 continue;
             }
             for container in 0..self.inside.len() {
-                if self.inside[container][site] {
+                if self.inside[container].get(site) {
                     self.unreplaced[container] = true;
                 }
             }
@@ -1380,8 +1345,8 @@ impl Known {
             }
         }
         for contents in &self.inside {
-            for (site, &inside) in contents.iter().enumerate() {
-                held[site] |= inside;
+            for site in contents.ones() {
+                held[site] = true;
             }
         }
         // `exposed_after_call` can be all that holds a site at an edge: in
@@ -1421,7 +1386,7 @@ impl Known {
     /// ADR-0040.
     pub(super) fn stored(&self) -> Vec<usize> {
         (0..self.inside.len())
-            .filter(|&held| self.inside.iter().any(|row| row[held]))
+            .filter(|&held| self.inside.iter().any(|row| row.get(held)))
             .collect()
     }
 

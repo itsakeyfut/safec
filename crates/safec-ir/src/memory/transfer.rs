@@ -11,6 +11,7 @@ use crate::ir::{
 };
 use crate::source::{SourceMap, Span};
 
+use super::bits::Bits;
 use super::built::{built_from, named, replaced_by};
 use super::known::Known;
 use super::parts::{
@@ -225,7 +226,7 @@ impl Allocations<'_> {
             // &slot`. Not all of them, since the set is a lower bound.
             // See ADR-0045.
             for target in locals {
-                held.writes_to[target] = true;
+                held.writes_to.set(target);
                 held.writes_elsewhere = true;
             }
             // Read out of an allocation that may hold one that is gone.
@@ -289,7 +290,7 @@ impl Allocations<'_> {
             || self
                 .exposed_parameters
                 .iter()
-                .any(|parameter| held.sites[parameter.index()])
+                .any(|parameter| held.sites.get(parameter.index()))
             // Or what a call this check cannot read handed back: memory its
             // callee may still hold, and free at the next such call (#394).
             || held.sites().any(|site| self.opaque_results[site])
@@ -311,7 +312,7 @@ impl Allocations<'_> {
                     || self
                         .exposed_parameters
                         .iter()
-                        .any(|parameter| held.sites[parameter.index()])
+                        .any(|parameter| held.sites.get(parameter.index()))
             } else {
                 let depth = derefs(place);
                 depth > 0 && self.reads_caller_memory(place.local, depth, value)
@@ -363,12 +364,7 @@ impl Allocations<'_> {
         {
             return held
                 .sites()
-                .flat_map(|container| {
-                    known.inside[container]
-                        .iter()
-                        .enumerate()
-                        .filter_map(|(site, &in_it)| in_it.then_some(site))
-                })
+                .flat_map(|container| known.inside[container].ones())
                 .collect();
         }
         known.stored()
@@ -801,11 +797,11 @@ impl Analysis for Allocations<'_> {
             escaped: vec![false; self.locals],
             handed_away: vec![false; self.locals],
             exposed: vec![false; self.locals],
-            inside: vec![vec![false; self.locals]; self.locals],
+            inside: vec![Bits::new(self.locals); self.locals],
             stale: vec![false; self.locals],
             unreplaced: vec![false; self.locals],
             holds_lost: vec![false; self.locals],
-            inside_locals: vec![vec![false; self.locals]; self.locals],
+            inside_locals: vec![Bits::new(self.locals); self.locals],
             realloced: vec![None; self.locals],
             from_caller: vec![false; self.locals],
             // Nothing has been read yet, so there is nothing a free could be
@@ -907,9 +903,7 @@ impl Analysis for Allocations<'_> {
         // A local's address stored on one arm may be there where the arms
         // meet, as a site is. See ADR-0045.
         for (here, there) in inside_locals.iter_mut().zip(&from.inside_locals) {
-            for (here, there) in here.iter_mut().zip(there) {
-                *here = *here || *there;
-            }
+            here.union_with(there);
         }
         // Marked on one arm is marked where the arms meet. See ADR-0045.
         for (here, there) in stale.iter_mut().zip(&from.stale) {
@@ -959,9 +953,7 @@ impl Analysis for Allocations<'_> {
             *here = *here || *there;
         }
         for (row, other) in inside.iter_mut().zip(&from.inside) {
-            for (here, there) in row.iter_mut().zip(other) {
-                *here = *here || *there;
-            }
+            row.union_with(other);
         }
 
         // **A union, because a read on either arm is a read some execution
@@ -1252,12 +1244,7 @@ impl Analysis for Allocations<'_> {
                     if (unplaced || unnamed || handed_over)
                         && self.may_be_pointer(function, &operation.place)
                     {
-                        let locals: Vec<usize> = written
-                            .writes_to
-                            .iter()
-                            .enumerate()
-                            .filter_map(|(local, &edge)| edge.then_some(local))
-                            .collect();
+                        let locals: Vec<usize> = written.writes_to.ones().collect();
                         value.landed_where_unknown_code_points(&carried, &locals);
                     }
                     if unplaced {
@@ -1272,14 +1259,12 @@ impl Analysis for Allocations<'_> {
                         }
                         for container in &containers {
                             for &site in &carried {
-                                value.inside[*container][site] = true;
+                                value.inside[*container].set(site);
                             }
                             // And the locals whose address it carries, which
                             // are no site. See ADR-0045.
-                            for (target, &edge) in written.writes_to.iter().enumerate() {
-                                if edge {
-                                    value.inside_locals[*container][target] = true;
-                                }
+                            for target in written.writes_to.ones() {
+                                value.inside_locals[*container].set(target);
                             }
                             // **A load out of a marked allocation is one still
                             // when it is stored**, so the allocation it is
@@ -1515,7 +1500,9 @@ impl Analysis for Allocations<'_> {
                         // is what keeps an escaped local unproved; the edge
                         // dies with the destination and is what lets a write
                         // through it be followed. See ADR-0019.
-                        value.points_to[destination.index()].writes_to[taken.local.index()] = true;
+                        value.points_to[destination.index()]
+                            .writes_to
+                            .set(taken.local.index());
                         // **And the set is all of it, where the address is of
                         // the local itself.** `Held::clear` ran a line above,
                         // so this destination points at exactly this local,
@@ -1991,7 +1978,7 @@ impl Analysis for Allocations<'_> {
                                     held.hold(site, Offset::Unknown);
                                 }
                                 for &target in &copied_locals {
-                                    held.writes_to[target] = true;
+                                    held.writes_to.set(target);
                                 }
                                 held.loaded = true;
                                 held.lost = marked;
@@ -2021,12 +2008,12 @@ impl Analysis for Allocations<'_> {
                             }
                             for container in into {
                                 for &site in &copied {
-                                    value.inside[container][site] = true;
+                                    value.inside[container].set(site);
                                 }
                                 // And the locals whose address it copies.
                                 // See ADR-0045.
                                 for &target in &copied_locals {
-                                    value.inside_locals[container][target] = true;
+                                    value.inside_locals[container].set(target);
                                 }
                                 if marked {
                                     value.stale[container] = true;
@@ -2205,8 +2192,7 @@ impl Analysis for Allocations<'_> {
                     if !value.escaped[local] {
                         continue;
                     }
-                    let holds_an_address =
-                        value.points_to[local].writes_to.iter().any(|&edge| edge);
+                    let holds_an_address = value.points_to[local].writes_to.any();
                     let held = &mut value.points_to[local];
                     for &site in &stored {
                         if !(holds_an_address && deep[site]) {
@@ -2222,7 +2208,7 @@ impl Analysis for Allocations<'_> {
                 }
                 for &container in &stored {
                     for &site in &stored {
-                        value.inside[container][site] = true;
+                        value.inside[container].set(site);
                     }
                 }
                 // **What it wrote there it handed over**, as a callee's
@@ -2335,14 +2321,10 @@ impl Analysis for Allocations<'_> {
                     .filter(|&old| old != site)
                     .collect();
                 for old in old {
-                    for held in 0..value.inside.len() {
-                        if value.inside[old][held] {
-                            value.inside[site][held] = true;
-                        }
-                        if value.inside_locals[old][held] {
-                            value.inside_locals[site][held] = true;
-                        }
-                    }
+                    let (inside, inside_locals) =
+                        (value.inside[old].clone(), value.inside_locals[old].clone());
+                    value.inside[site].union_with(&inside);
+                    value.inside_locals[site].union_with(&inside_locals);
                     // And the mark with the row: what the old allocation may
                     // hold of a reborn site is what the new one holds after
                     // the copy. See ADR-0045.
@@ -2427,7 +2409,7 @@ impl Analysis for Allocations<'_> {
                 // a write through the result is followed into the locals it
                 // may land in. See ADR-0039.
                 for local in (0..value.escaped.len()).filter(|&local| value.escaped[local]) {
-                    value.points_to[site].writes_to[local] = true;
+                    value.points_to[site].writes_to.set(local);
                 }
                 if was_exposed {
                     value.state[site] = SiteState::Unknown;

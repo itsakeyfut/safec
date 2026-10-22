@@ -45,6 +45,7 @@
 //! [the safety model]: https://github.com/itsakeyfut/safec/blob/main/docs/safety-model.md
 //! [`LocalId`]: crate::ir::LocalId
 
+mod bits;
 mod built;
 mod known;
 mod parts;
@@ -121,13 +122,14 @@ pub enum Kind {
         /// Whether the two are a call's arguments or an operator's operands.
         between: Between,
     },
-    /// A function past the bound this check reads, `MAX_CELLS`, so it is not
+    /// A function past the bound this check reads, `MAX_BYTES`, so it is not
     /// read and nothing about its memory is proved. Always `Unknown`, at the
     /// function's name.
     TooLarge {
-        /// Its `blocks * locals * locals`.
-        cells: usize,
-        /// The most this check reads.
+        /// About how many bytes its value would take, `blocks * locals *
+        /// (locals + LINEAR)`.
+        bytes: usize,
+        /// The most this check holds.
         max: usize,
     },
     /// A function this check gave up on part of the way, past `MAX_WORK`, so
@@ -139,28 +141,51 @@ pub enum Kind {
     },
 }
 
-/// How many `walks * locals * locals` this check does in one function.
+/// About how many bytes one block's value takes for each local, beside the
+/// byte or so each pair of locals takes.
 ///
-/// A walk copies and compares a value square in the locals, so the work is
-/// that product. The value's size is bounded by [`MAX_CELLS`], and the walks
-/// are not: a chain of copies in one loop takes a walk per link, so seven
-/// blocks of 804 locals took 2,800 walks and a minute and a quarter with
-/// nothing printed, under a third of the size bound. About 130 million a
-/// second were measured, so this is around eight seconds.
-const MAX_WORK: usize = 1 << 30;
+/// **The value is square in the locals and linear in them too**, and the
+/// linear part is the larger until there are a thousand locals: every local
+/// has a [`Held`](parts::Held) and a row in each per-local table, each with
+/// its own allocation. Fitted to the peak memory of seven functions, from 12
+/// locals in 60,011 blocks to 1,402 locals in 801, release build: about one
+/// byte a pair and 1,000 a local, within a tenth on all but the smallest.
+/// Counting the pairs alone left a function of many blocks and few locals
+/// unbounded: one of 102 locals in 12,101 blocks took 1.3 GB at a quarter of
+/// that bound, and the bound let the same shape grow four times larger. Found
+/// by review.
+const LINEAR: usize = 1024;
 
-/// How many `blocks * locals * locals` this check reads in one function,
-/// about 1.3 GB.
+/// About how many bytes one block's value takes in a function of this many
+/// locals.
 ///
-/// The value holds square tables in the locals for every block and every
-/// edge, so its time and memory grow as that product: about ten bytes a unit
-/// on every shape measured, a temporary counting as a local. A loop per write
-/// over 100 allocating locals is 198 million units, 1.9 GB and two seconds;
-/// over 200 it is 1.57 billion, 9.9 GB and forty seconds, with nothing
-/// printed while it ran. Past this the function is concluded `Unknown` rather
-/// than read, a report rather than a hang. Packing the tables, #479, is what
-/// raises it.
-const MAX_CELLS: usize = 1 << 27;
+/// Mutation: leave out [`LINEAR`]. Both tests of a function past a bound fail.
+fn per_block(locals: usize) -> usize {
+    locals.saturating_mul(locals.saturating_add(LINEAR))
+}
+
+/// How many walks times [`per_block`] this check does in one function.
+///
+/// A walk copies and compares one block's value, so the work is that product.
+/// The value's size is bounded by [`MAX_BYTES`], and the walks are not: a
+/// chain of copies in one loop takes a walk per link, so seven blocks of 804
+/// locals took 2,800 walks and a minute and a quarter with nothing printed,
+/// under a third of the size bound. Between 540 million and a billion a
+/// second were measured on four functions once the tables were packed (#479), so
+/// this is four to eight seconds.
+///
+/// A `u64` because the bound is past what a 32-bit `usize` holds.
+const MAX_WORK: u64 = 1 << 32;
+
+/// About how many bytes this check holds for one function, about 1.1 GB.
+///
+/// The value holds one [`per_block`] for every block and every edge, so its
+/// memory grows as `blocks` times that, a temporary counting as a local. A
+/// loop per write over 150 allocating locals is 1.31 billion and 1.2 GB
+/// measured; over 200 it is 2.7 billion and 2.7 GB, with nothing printed
+/// while it ran. Past this the function is concluded `Unknown` rather than
+/// read, a report rather than a hang.
+const MAX_BYTES: usize = 1 << 30;
 
 /// One thing this check concluded, and where.
 ///
@@ -340,7 +365,7 @@ pub enum Unproven {
 /// decides which sites a call touches and having two answers to that is having
 /// one of them be wrong.
 pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
-    findings_within(sources, unit, MAX_CELLS, MAX_WORK)
+    findings_within(sources, unit, MAX_BYTES, MAX_WORK)
 }
 
 /// [`findings`], with the bounds passed in, so that a test can ask for them on
@@ -348,8 +373,8 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
 fn findings_within(
     sources: &SourceMap,
     unit: &TranslationUnit,
-    max_cells: usize,
-    max_work: usize,
+    max_bytes: usize,
+    max_work: u64,
 ) -> Vec<Finding> {
     let mut findings = Vec::new();
 
@@ -362,17 +387,13 @@ fn findings_within(
         }
 
         let locals = function.locals().len();
-        let cells = function
-            .blocks()
-            .len()
-            .saturating_mul(locals)
-            .saturating_mul(locals);
-        if cells > max_cells {
+        let bytes = function.blocks().len().saturating_mul(per_block(locals));
+        if bytes > max_bytes {
             findings.push(Finding {
                 function: func,
                 kind: Kind::TooLarge {
-                    cells,
-                    max: max_cells,
+                    bytes,
+                    max: max_bytes,
                 },
                 conclusion: Conclusion::Unknown,
                 at: function.name,
@@ -405,7 +426,8 @@ fn findings_within(
         };
         analysis.opaque_results = analysis.opaque_results_of(function);
         let cfg = Cfg::of(function);
-        let max_walks = max_work / locals.saturating_mul(locals).max(1);
+        let walk = u64::try_from(per_block(locals)).unwrap_or(u64::MAX).max(1);
+        let max_walks = usize::try_from(max_work / walk).unwrap_or(usize::MAX);
         let Some(solution) = solve_within(&analysis, function, &cfg, max_walks) else {
             findings.push(Finding {
                 function: func,
@@ -688,8 +710,8 @@ mod tests {
     use crate::ir::{Block, Function, Terminator, Ty};
     use crate::target::Target;
 
-    /// A unit holding one function of ten locals and three blocks: 300 of
-    /// `blocks * locals * locals`.
+    /// A unit holding one function of ten locals and three blocks: 31,020 by
+    /// [`per_block`].
     fn ten_by_three() -> (SourceMap, TranslationUnit) {
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", "f");
@@ -724,20 +746,21 @@ mod tests {
     }
 
     /// Past the bound, a function is one `Unknown` finding at its name and
-    /// is not read.
+    /// is not read. Ten locals are `10 * (10 + LINEAR)` a block, so three
+    /// blocks are 31,020.
     ///
     /// Mutation: drop the guard. The function is solved, and no `TooLarge`
     /// finding is made.
     #[test]
     fn a_function_past_the_bound_is_one_unknown_finding() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, 299, MAX_WORK);
+        let findings = findings_within(&sources, &unit, 31_019, MAX_WORK);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(
             findings[0].kind,
             Kind::TooLarge {
-                cells: 300,
-                max: 299
+                bytes: 31_020,
+                max: 31_019
             }
         );
         assert_eq!(findings[0].conclusion, Conclusion::Unknown);
@@ -750,7 +773,7 @@ mod tests {
     #[test]
     fn a_function_at_the_bound_is_read() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, 300, MAX_WORK);
+        let findings = findings_within(&sources, &unit, 31_020, MAX_WORK);
         assert!(
             findings
                 .iter()
@@ -763,20 +786,21 @@ mod tests {
     ///
     /// Mutation: change either constant. This fails.
     #[test]
-    fn the_bounds_are_two_to_the_twenty_seventh_and_thirtieth() {
-        assert_eq!(MAX_CELLS, 134_217_728);
-        assert_eq!(MAX_WORK, 1_073_741_824);
+    fn the_bounds_are_two_to_the_thirtieth_and_thirty_second_over_1024_a_local() {
+        assert_eq!(LINEAR, 1024);
+        assert_eq!(MAX_BYTES, 1_073_741_824);
+        assert_eq!(MAX_WORK, 4_294_967_296);
     }
 
     /// Past the work bound, a function is one `Unknown` finding at its name.
-    /// Ten locals are 100 a walk, so a bound of 299 is two walks, and the
-    /// three blocks take three.
+    /// Ten locals are 10,340 a walk, so a bound of 31,019 is two walks, and
+    /// the three blocks take three.
     ///
     /// Mutation: solve without the bound. No `TooLong` finding is made.
     #[test]
     fn a_function_past_the_work_bound_is_one_unknown_finding() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, MAX_CELLS, 299);
+        let findings = findings_within(&sources, &unit, MAX_BYTES, 31_019);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(findings[0].kind, Kind::TooLong { walks: 2 });
         assert_eq!(findings[0].conclusion, Conclusion::Unknown);
@@ -789,7 +813,7 @@ mod tests {
     #[test]
     fn a_function_at_the_work_bound_is_read() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, MAX_CELLS, 300);
+        let findings = findings_within(&sources, &unit, MAX_BYTES, 31_020);
         assert!(findings.is_empty(), "{findings:?}");
     }
 }
