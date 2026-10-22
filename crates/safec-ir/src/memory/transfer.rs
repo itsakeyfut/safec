@@ -287,6 +287,15 @@ impl Allocations<'_> {
         held.from_caller
             || value.marked_below(local, depth.max(1), &value.from_caller)
             || value.caller_through(local, depth)
+            // **Only for a local this check lost**, measured: an exposed
+            // parameter's site is marked `from_caller` where the function
+            // starts and nothing clears it, so `marked_below` answers for it
+            // first, except where `level_zero` refuses a lost local. A load
+            // through a lost local is doubted on its own, so no program shows
+            // this either: three that load through a parameter lost on one
+            // arm printed the same without it. The unit test
+            // `a_lost_local_holding_a_parameters_site_reads_caller_memory` is
+            // the guard.
             || self
                 .exposed_parameters
                 .iter()
@@ -2819,5 +2828,47 @@ mod tests {
         });
         assert!(at_read);
         assert!(at_write);
+    }
+}
+
+/// [`Allocations::reads_caller_memory`], asked of a value no program shows.
+#[cfg(test)]
+mod caller_memory {
+    use crate::dataflow::Analysis;
+    use crate::ir::{Function, TranslationUnit, Ty};
+    use crate::source::{SourceMap, Span};
+    use crate::target::Target;
+
+    /// A local this check lost that still holds a pointer parameter's site
+    /// reads the caller's memory, though the walk of its levels refuses it.
+    ///
+    /// Mutation: drop the test of `exposed_parameters` from
+    /// `reads_caller_memory`. This fails.
+    #[test]
+    fn a_lost_local_holding_a_parameters_site_reads_caller_memory() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "f");
+        let mut unit = TranslationUnit::new(
+            Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+        );
+        let int = unit.push_type(Ty::Int);
+        let ptr = unit.push_type(Ty::Pointer(int));
+        let ptr_ptr = unit.push_type(Ty::Pointer(ptr));
+        let mut function = Function::new(Span::new(file, 0, 1), int, [ptr_ptr]);
+        let pp = function.parameters().next().expect("the one parameter");
+        let block = function.reserve_block();
+        function.fill_block(
+            block,
+            crate::ir::Block {
+                elements: vec![],
+                terminator: crate::ir::Terminator::Return,
+            },
+        );
+        let func = unit.push_function(function);
+        let analysis = crate::memory::analysis(&sources, &unit, func);
+        let mut value = analysis.on_entry();
+        assert!(analysis.reads_caller_memory(pp, 1, &value));
+        value.points_to[pp.index()].lost = true;
+        assert!(analysis.reads_caller_memory(pp, 1, &value));
     }
 }
