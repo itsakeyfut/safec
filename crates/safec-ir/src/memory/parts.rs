@@ -1005,30 +1005,43 @@ pub(super) struct Realloced {
 
 #[cfg(test)]
 mod tests {
-    use super::{Freeing, Held, SiteState, earlier};
+    use super::{Freeing, Held, Offset, SiteState, earlier};
     use crate::memory::report::inside;
     use crate::source::{FileId, SourceMap, Span};
 
-    /// What a local is given replaces every site and every edge it had.
+    /// What a local is given replaces every site and every edge it had, and
+    /// every mark about how it came by them.
     ///
-    /// Mutation: have `clear` leave `writes_to`, or `sites`. This fails.
+    /// Mutation: have `clear` leave `writes_to`, `sites`, `offset`,
+    /// `lost_read`, `unreplaced_read` or `foreign`. This fails. The marks
+    /// beside those have corpus cases of their own.
     #[test]
     fn clearing_a_local_leaves_it_no_site_and_no_edge() {
         let mut held = Held::none(4);
         held.sites.set(1);
         held.writes_to.set(3);
         held.writes_elsewhere = false;
+        held.offset = Offset::NonZero;
+        held.lost_read = true;
+        held.unreplaced_read = true;
+        held.foreign = true;
         held.clear();
         assert!(held.sites().next().is_none());
         assert!(!held.may_be_a_locals_address());
         assert!(held.writes_elsewhere);
+        assert_eq!(held.offset, Offset::Zero);
+        assert!(!held.lost_read);
+        assert!(!held.unreplaced_read);
+        assert!(!held.foreign);
     }
 
     /// One edge that is all of where a write lands is one certain local, and
-    /// two edges, or one with a write that may land elsewhere, are none.
+    /// two edges, one with a write that may land elsewhere, or none at all,
+    /// are none.
     ///
     /// Mutation: have `certain_target` take only the first edge. The second
     /// assertion fails. Mutation: ignore `writes_elsewhere`. The third fails.
+    /// Mutation: answer some local for no edge at all. The fourth fails.
     #[test]
     fn a_certain_target_is_one_edge_and_nothing_elsewhere() {
         let mut one = Held::none(4);
@@ -1043,6 +1056,10 @@ mod tests {
         let mut elsewhere = one.clone();
         elsewhere.writes_elsewhere = true;
         assert_eq!(elsewhere.certain_target(), None);
+
+        let mut none = Held::none(4);
+        none.writes_elsewhere = false;
+        assert_eq!(none.certain_target(), None);
     }
 
     /// `main.c`, `x = 0;` then `#include "a.h"` then `y = 1;`, and `a.h`,
