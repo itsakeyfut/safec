@@ -22,7 +22,7 @@ use std::path::{Path, PathBuf};
 
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::driver::{Access, reason};
-use crate::lexer::{UNSUPPORTED_SPLICE, lex};
+use crate::lexer::{UNSUPPORTED_SPLICE, lex, unexpected_characters};
 use crate::token::{Punct, Token, TokenKind};
 use safec_ir::source::{Cut, Edge, FileId, FileName, SourceMap, Span};
 use safec_ir::target::Target;
@@ -578,6 +578,20 @@ fn read_includes(
                     }
                 }
             }
+            // Reported here, where it is compiled, and not where it was
+            // scanned: a run no token can begin is a preprocessing token, and
+            // the arm above has already passed over one in a skipped group,
+            // where C ignores it (C17 6.10.1 p6). Handed on all the same, so
+            // the stream still accounts for its text.
+            TokenKind::Unknown => {
+                if let Some(diagnostic) =
+                    unexpected_characters(token.span, sources.snippet(token.span))
+                {
+                    diagnostics.report(diagnostic);
+                }
+                emitted(&mut frames, token.span);
+                spliced.push(token);
+            }
             _ => {
                 emitted(&mut frames, token.span);
                 spliced.push(token);
@@ -666,7 +680,8 @@ fn expansion(
 
     let file = sources.expand(spelled, token.span);
     // Lexed here, where it is used, so a character no token can begin is
-    // reported at each use, which is where C makes it an error.
+    // reported at each use, which is where C makes it an error. That is
+    // `read_includes`' to do for every frame, this one included.
     let tokens = lex(file, &sources.file_owned(file), diagnostics);
     Some(Frame {
         tokens,

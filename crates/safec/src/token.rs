@@ -82,8 +82,9 @@ pub enum TokenKind {
     Directive,
     /// A run of characters that can begin no token at all.
     ///
-    /// Reported where it is found, and kept, so that the stream still accounts
-    /// for the text it came from.
+    /// Reported where the preprocessor compiles it, so not in a group it
+    /// skips, and kept, so that the stream still accounts for the text it
+    /// came from.
     Unknown,
     /// The end of the file.
     ///
