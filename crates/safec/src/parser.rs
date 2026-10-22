@@ -2588,7 +2588,16 @@ impl Parser<'_> {
         if let Some(at) = included {
             diagnostic = diagnostic.with_label(Label::secondary(at, "included here"));
         }
+        let first = !self.failed;
         self.report_built(cut.span, diagnostic, diagnostics);
+        // At the last token read, not the next: a cut is among the tokens
+        // this node already consumed, so recovery may end the item at its
+        // own `;`. Reported at the next token, a declaration whose cut is
+        // seen only once its `;` is read lost the item after it to recovery,
+        // which looked for a `;` past that one (#555).
+        if first {
+            self.reported = self.at.saturating_sub(1);
+        }
         from
     }
 
