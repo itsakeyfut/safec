@@ -368,6 +368,40 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
     findings_within(sources, unit, MAX_BYTES, MAX_WORK)
 }
 
+/// The analysis of one function, as [`findings`] solves it.
+///
+/// A function of its own so that a test can solve a function it built and
+/// read the value where a block starts, which is the one way to see a fact no
+/// report shows.
+fn analysis<'a>(
+    sources: &'a SourceMap,
+    unit: &'a TranslationUnit,
+    func: FuncId,
+) -> Allocations<'a> {
+    let function = unit.function(func);
+    let mut analysis = Allocations {
+        sources,
+        unit,
+        function: func,
+        locals: function.locals().len(),
+        parameters: function.parameters().collect(),
+        exposed_parameters: function
+            .parameters()
+            .filter(|_| sources.snippet(function.name) != "main")
+            // A `match` for `Allocations::is_pointer`'s reason: a kind of
+            // type added later is asked whether it is exposed.
+            .filter(|&local| match unit.ty(function.local(local)) {
+                Ty::Pointer(_) => true,
+                Ty::Int | Ty::Char | Ty::Void => false,
+            })
+            .collect(),
+        live_in: transfer::live_in(function),
+        opaque_results: Vec::new(),
+    };
+    analysis.opaque_results = analysis.opaque_results_of(function);
+    analysis
+}
+
 /// [`findings`], with the bounds passed in, so that a test can ask for them on
 /// a function small enough to build.
 fn findings_within(
@@ -405,26 +439,7 @@ fn findings_within(
             continue;
         }
 
-        let mut analysis = Allocations {
-            sources,
-            unit,
-            function: func,
-            locals: function.locals().len(),
-            parameters: function.parameters().collect(),
-            exposed_parameters: function
-                .parameters()
-                .filter(|_| sources.snippet(function.name) != "main")
-                // A `match` for `Allocations::is_pointer`'s reason: a kind of
-                // type added later is asked whether it is exposed.
-                .filter(|&local| match unit.ty(function.local(local)) {
-                    Ty::Pointer(_) => true,
-                    Ty::Int | Ty::Char | Ty::Void => false,
-                })
-                .collect(),
-            live_in: transfer::live_in(function),
-            opaque_results: Vec::new(),
-        };
-        analysis.opaque_results = analysis.opaque_results_of(function);
+        let analysis = analysis(sources, unit, func);
         let cfg = Cfg::of(function);
         let walk = u64::try_from(per_block(locals)).unwrap_or(u64::MAX).max(1);
         let max_walks = usize::try_from(max_work / walk).unwrap_or(usize::MAX);
@@ -707,7 +722,9 @@ fn projected(place: &Place) -> Vec<&Place> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::{Block, Function, Terminator, Ty};
+    use crate::ir::{
+        Block, BlockId, Function, Operation, Origin, Projection, Rvalue, Terminator, Ty,
+    };
     use crate::target::Target;
 
     /// A unit holding one function of ten locals and three blocks: 31,020 by
@@ -815,5 +832,246 @@ mod tests {
         let (sources, unit) = ten_by_three();
         let findings = findings_within(&sources, &unit, MAX_BYTES, 31_020);
         assert!(findings.is_empty(), "{findings:?}");
+    }
+    /// Where a local's address stored in memory can reach, as a test builds
+    /// it: `t = malloc(); *t = &x;`, then `then` from the block after.
+    ///
+    /// No report shows these facts: every local whose address is stored has
+    /// escaped, and this check doubts what such a local holds whatever is
+    /// written into it, so a program printed the same with each of them
+    /// dropped. So these tests read the value where a block starts instead.
+    struct Stored {
+        sources: SourceMap,
+        unit: TranslationUnit,
+        function: Function,
+        at: Span,
+        c: LocalId,
+        t: LocalId,
+        x: LocalId,
+        u: LocalId,
+        /// What `&x` is put in before it is stored, as the lowering does.
+        address: LocalId,
+        malloc: FuncId,
+        realloc: FuncId,
+        memcpy: FuncId,
+    }
+
+    impl Stored {
+        fn new() -> Self {
+            let mut sources = SourceMap::new();
+            let file = sources.add_virtual("t.c", "f malloc realloc memcpy");
+            let at = Span::new(file, 0, 1);
+            let mut unit = TranslationUnit::new(
+                Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+            );
+            let int = unit.push_type(Ty::Int);
+            let void = unit.push_type(Ty::Void);
+            let ptr = unit.push_type(Ty::Pointer(int));
+            let ptr_ptr = unit.push_type(Ty::Pointer(ptr));
+            let any = unit.push_type(Ty::Pointer(void));
+            let malloc =
+                unit.push_function(Function::declaration(Span::new(file, 2, 8), any, [int]));
+            let realloc = unit.push_function(Function::declaration(
+                Span::new(file, 9, 16),
+                any,
+                [any, int],
+            ));
+            let memcpy = unit.push_function(Function::declaration(
+                Span::new(file, 17, 23),
+                any,
+                [any, any, int],
+            ));
+            let mut function = Function::new(at, int, [int]);
+            let c = function.parameters().next().expect("the one parameter");
+            let t = function.push_local(ptr_ptr);
+            let x = function.push_local(ptr);
+            let u = function.push_local(ptr_ptr);
+            let address = function.push_local(ptr_ptr);
+            Stored {
+                sources,
+                unit,
+                function,
+                at,
+                c,
+                t,
+                x,
+                u,
+                address,
+                malloc,
+                realloc,
+                memcpy,
+            }
+        }
+
+        fn call(
+            &self,
+            callee: FuncId,
+            arguments: Vec<Operand>,
+            into: Option<LocalId>,
+            then: BlockId,
+        ) -> Block {
+            Block {
+                elements: vec![],
+                terminator: Terminator::Call {
+                    callee,
+                    arguments,
+                    destination: into.map(Place::local),
+                    then: Some(then),
+                    origin: Origin::Written(self.at),
+                },
+            }
+        }
+
+        /// `*t = &x;`, falling through to `then`.
+        fn store(&self, then: BlockId) -> Block {
+            Block {
+                elements: vec![
+                    Element::Assign(Operation {
+                        place: Place::local(self.address),
+                        value: Rvalue::Address(Place::local(self.x)),
+                        origin: Origin::Written(self.at),
+                    }),
+                    Element::Assign(Operation {
+                        place: Place {
+                            local: self.t,
+                            projection: vec![Projection::Deref],
+                        },
+                        value: Rvalue::Use(Operand::Copy(Place::local(self.address))),
+                        origin: Origin::Written(self.at),
+                    }),
+                ],
+                terminator: Terminator::Goto(then),
+            }
+        }
+
+        fn goto(then: BlockId) -> Block {
+            Block {
+                elements: vec![],
+                terminator: Terminator::Goto(then),
+            }
+        }
+
+        /// Whether `x`'s address may be in what `container` points at, where
+        /// `at` starts.
+        fn holds_the_address(mut self, at: BlockId, container: LocalId) -> bool {
+            self.function.fill_block(
+                at,
+                Block {
+                    elements: vec![],
+                    terminator: Terminator::Return,
+                },
+            );
+            let func = self.unit.push_function(self.function);
+            let analysis = analysis(&self.sources, &self.unit, func);
+            let function = self.unit.function(func);
+            let solution = crate::dataflow::solve(&analysis, function, &Cfg::of(function));
+            let known = solution.value(at).expect("the last block is reached");
+            known.inside_locals[container.index()].get(self.x.index())
+        }
+    }
+
+    /// A local's address stored on either arm is there where the arms meet.
+    ///
+    /// Mutation: have the join leave `inside_locals` as the first arm to
+    /// arrive had it. One of the two fails, whichever arm the walk takes first.
+    #[test]
+    fn a_locals_address_stored_on_either_arm_is_in_memory_where_they_meet() {
+        for store_on_then in [true, false] {
+            let mut built = Stored::new();
+            let blocks: Vec<_> = (0..5).map(|_| built.function.reserve_block()).collect();
+            let block = built.call(
+                built.malloc,
+                vec![Operand::Constant(8)],
+                Some(built.t),
+                blocks[1],
+            );
+            built.function.fill_block(blocks[0], block);
+            built.function.fill_block(
+                blocks[1],
+                Block {
+                    elements: vec![],
+                    terminator: Terminator::Branch {
+                        condition: Operand::Copy(Place::local(built.c)),
+                        then: blocks[2],
+                        otherwise: blocks[3],
+                        origin: Origin::Written(built.at),
+                    },
+                },
+            );
+            let (stores, skips) = if store_on_then {
+                (blocks[2], blocks[3])
+            } else {
+                (blocks[3], blocks[2])
+            };
+            let block = built.store(blocks[4]);
+            built.function.fill_block(stores, block);
+            built.function.fill_block(skips, Stored::goto(blocks[4]));
+            let t = built.t;
+            assert!(
+                built.holds_the_address(blocks[4], t),
+                "stored on the then arm: {store_on_then}"
+            );
+        }
+    }
+
+    /// What a `realloc` returns may hold every local's address the old
+    /// allocation held.
+    ///
+    /// Mutation: drop the union into the new site's `inside_locals`, or copy
+    /// the old site's `inside` row into it instead. This fails.
+    #[test]
+    fn a_locals_address_stored_in_an_allocation_is_in_what_realloc_returns() {
+        let mut built = Stored::new();
+        let blocks: Vec<_> = (0..4).map(|_| built.function.reserve_block()).collect();
+        let block = built.call(
+            built.malloc,
+            vec![Operand::Constant(8)],
+            Some(built.t),
+            blocks[1],
+        );
+        built.function.fill_block(blocks[0], block);
+        let block = built.store(blocks[2]);
+        built.function.fill_block(blocks[1], block);
+        let arguments = vec![Operand::Copy(Place::local(built.t)), Operand::Constant(16)];
+        let block = built.call(built.realloc, arguments, Some(built.u), blocks[3]);
+        built.function.fill_block(blocks[2], block);
+        let u = built.u;
+        assert!(built.holds_the_address(blocks[3], u));
+    }
+
+    /// What `memcpy` copies into may hold every local's address the source
+    /// held.
+    ///
+    /// Mutation: have the copy leave the destination's `inside_locals` alone.
+    /// This fails.
+    #[test]
+    fn a_locals_address_stored_in_an_allocation_is_in_what_memcpy_copies_it_into() {
+        let mut built = Stored::new();
+        let blocks: Vec<_> = (0..5).map(|_| built.function.reserve_block()).collect();
+        let block = built.call(
+            built.malloc,
+            vec![Operand::Constant(8)],
+            Some(built.t),
+            blocks[1],
+        );
+        built.function.fill_block(blocks[0], block);
+        let block = built.store(blocks[2]);
+        built.function.fill_block(blocks[1], block);
+        let block = built.call(
+            built.malloc,
+            vec![Operand::Constant(8)],
+            Some(built.u),
+            blocks[3],
+        );
+        built.function.fill_block(blocks[2], block);
+        let arguments = vec![
+            Operand::Copy(Place::local(built.u)),
+            Operand::Copy(Place::local(built.t)),
+            Operand::Constant(8),
+        ];
+        let block = built.call(built.memcpy, arguments, None, blocks[4]);
+        built.function.fill_block(blocks[3], block);
+        let u = built.u;
+        assert!(built.holds_the_address(blocks[4], u));
     }
 }
