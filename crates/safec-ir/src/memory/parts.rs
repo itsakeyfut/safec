@@ -626,6 +626,18 @@ impl Held {
     /// exempts a holder and so has to hold rather than may. A load out of
     /// memory that names one local is not certain, `writes_elsewhere` says
     /// so, and neither is a local that may be either of two. See ADR-0047.
+    ///
+    /// **No program tells "either of two" from "the first of them"**, so the
+    /// guard is the unit test `a_certain_target_is_one_edge_and_nothing_elsewhere`
+    /// and not a corpus case. The second edge names a local whose address
+    /// escaped, so the call may write into it whatever it reaches through the
+    /// first, and that local counts as live after the call however the
+    /// function goes on: it stays a holder of the first local's allocation
+    /// that nothing exempts. Six programs answered the same with the first
+    /// edge taken alone: `q = &a; if (c) q = &b; grow(q);` followed by a read
+    /// of `a` by address, by value or by `free`, with `b` read again or not,
+    /// handed to a call first, or a copy of `a`. A rule that stops counting
+    /// such a local as live is one to ask this again under.
     pub(super) fn certain_target(&self) -> Option<usize> {
         if self.writes_elsewhere {
             return None;
@@ -985,9 +997,30 @@ pub(super) struct Realloced {
 
 #[cfg(test)]
 mod tests {
-    use super::{Freeing, SiteState, earlier};
+    use super::{Freeing, Held, SiteState, earlier};
     use crate::memory::report::inside;
     use crate::source::{FileId, SourceMap, Span};
+
+    /// One edge that is all of where a write lands is one certain local, and
+    /// two edges, or one with a write that may land elsewhere, are none.
+    ///
+    /// Mutation: have `certain_target` take only the first edge. The second
+    /// assertion fails. Mutation: ignore `writes_elsewhere`. The third fails.
+    #[test]
+    fn a_certain_target_is_one_edge_and_nothing_elsewhere() {
+        let mut one = Held::none(4);
+        one.writes_to.set(2);
+        one.writes_elsewhere = false;
+        assert_eq!(one.certain_target(), Some(2));
+
+        let mut two = one.clone();
+        two.writes_to.set(3);
+        assert_eq!(two.certain_target(), None);
+
+        let mut elsewhere = one.clone();
+        elsewhere.writes_elsewhere = true;
+        assert_eq!(elsewhere.certain_target(), None);
+    }
 
     /// `main.c`, `x = 0;` then `#include "a.h"` then `y = 1;`, and `a.h`,
     /// `int z;`, included at that directive with its extent recorded. Written

@@ -3214,8 +3214,11 @@ cases! {
         an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What an argument must be to hand a call a local, each part of
         // `Held::certain_target` and the skip before it. Mutation: ignore
-        // `writes_elsewhere`; the first builds. Mutation: answer the first of
-        // several edges; the second builds. Mutation: let a place of
+        // `writes_elsewhere`; the first builds. The second is the same report
+        // with the first of several edges answered alone, because the other
+        // edge's local escaped and holds what the first does after the call;
+        // that part is guarded by `Held::certain_target`'s unit test, whose doc
+        // says why no program is. Mutation: let a place of
         // dereferences hand its own edges; the third loses its second
         // report. See ADR-0047.
         a_single_address_read_out_of_memory_another_pointer_may_overwrite_is_asked_with_no_second_holder: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
