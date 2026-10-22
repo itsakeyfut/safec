@@ -441,7 +441,12 @@ fn findings_within(
 
         let analysis = analysis(sources, unit, func);
         let cfg = Cfg::of(function);
-        let walk = u64::try_from(per_block(locals)).unwrap_or(u64::MAX).max(1);
+        // Never zero, so no clamp: `Function::with_parameters`, which every
+        // constructor goes through, makes the local for what the function
+        // returns, and locals are only ever added, so `per_block` is at least
+        // 1,025. A function with no locals would be a division by zero here,
+        // which panics and names itself.
+        let walk = u64::try_from(per_block(locals)).unwrap_or(u64::MAX);
         let max_walks = usize::try_from(max_work / walk).unwrap_or(usize::MAX);
         let Some(solution) = solve_within(&analysis, function, &cfg, max_walks) else {
             findings.push(Finding {
