@@ -3061,6 +3061,12 @@ cases! {
         // ask about every unproven or reachable site; that one reports.
         a_table_holding_a_pointer_a_call_may_have_freed_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What only the address reaches is exempt, and nothing more: `*h` is
+        // `&slot` or the box `a`, and `s` is held by `slot` and stored in `a`,
+        // so it is reached through this function's own memory too and is
+        // asked. Mutation: have `handed_below` read nothing through memory;
+        // this builds. See ADR-0042.
+        a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Through an address too, where what made it unproven may have freed
         // it: one path freed it, before or after its address was taken, or a
         // call was handed the pointer itself. See ADR-0047. Mutation: have

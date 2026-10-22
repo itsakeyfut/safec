@@ -1,0 +1,185 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:3:5 "use2" declared
+  Local "_0" "int" return
+  Local "_1" "int **" parameter "pp"
+Function a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:5:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int ***" "h"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int *" "s"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int *" "slot"
+  Local "_9" "int **" "a"
+  Local "_10" "void *"
+  Local "_11" "int"
+  Local "_12" "int *"
+  Local "_13" "int **"
+  Local "_14" "int **"
+  Local "_15" "int **"
+  Local "_16" "int **" "m"
+  Local "_17" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:6:16 generated
+    Call a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:6:16 written "malloc" "bb1"
+      Destination "_3"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:6:12 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:6:16 generated
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:7:9 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:7:9 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:7:9 generated
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:8:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:8:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:7:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:10:14 generated
+    Call a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:10:14 written "malloc" "bb5"
+      Destination "_6"
+      Constant 4
+  Block "bb5"
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:10:10 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:10:14 generated
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:11:9 written
+      Destination "_7"
+      Binary "Eq"
+        Copy "_5"
+        Constant 0
+    Branch a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:11:9 written "bb6" "bb7"
+      Copy "_7"
+  Block "bb6"
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:11:9 generated
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:12:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:12:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:11:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:14:10 written
+      Destination "_8"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:14:17 generated
+    ArgumentsEvaluated a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:15:15 generated
+    Call a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:15:15 written "malloc" "bb9"
+      Destination "_10"
+      Constant 8
+  Block "bb9"
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:15:11 written
+      Destination "_9"
+      Use
+        Copy "_10"
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:15:15 generated
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:16:9 written
+      Destination "_11"
+      Binary "Eq"
+        Copy "_9"
+        Constant 0
+    Branch a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:16:9 written "bb10" "bb11"
+      Copy "_11"
+  Block "bb10"
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:16:9 generated
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:17:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:17:16 generated
+    Return
+  Block "bb11"
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:16:9 generated
+    Goto "bb12"
+  Block "bb12"
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:19:5 written
+      Destination "_9"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:19:5 written
+      Destination "_12"
+      Use
+        Copy "_9"
+          Deref
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:19:5 generated
+    Branch a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:20:9 written "bb13" "bb14"
+      Copy "_1"
+  Block "bb13"
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:20:9 generated
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:21:14 written
+      Destination "_13"
+      Address
+        Place "_8"
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:21:9 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_13"
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:21:9 written
+      Destination "_14"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:21:9 generated
+    Goto "bb15"
+  Block "bb14"
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:20:9 generated
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:23:9 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_9"
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:23:9 written
+      Destination "_15"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:23:9 generated
+    Goto "bb15"
+  Block "bb15"
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:25:11 written
+      Destination "_16"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:25:15 generated
+    ArgumentsEvaluated a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:26:12 generated
+    Call a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:26:12 written "use2" "bb16"
+      Destination "_17"
+      Copy "_16"
+  Block "bb16"
+    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:26:5 written
+      Destination "_0"
+      Use
+        Copy "_17"
+    Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:26:12 generated
+    Return
