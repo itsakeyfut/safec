@@ -1412,6 +1412,12 @@ cases! {
         // `p` is null on that arm. Mutation: report on an ended path in the
         // replay. It is proved a null dereference.
         a_read_after_abort_on_the_null_arm_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*p += e` reads `*p` unsequenced against `e` (C17 6.5.16.2 p3), so
+        // the read may come before `exit` and is asked. Mutation: count a
+        // compound assignment's place as the plain store's in
+        // `Lowering::at_most_one_acts`. The comma keeps its marker, the path
+        // ends there, and the read is silent.
+        a_compound_assignment_reading_its_place_beside_exit_is_still_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `for` on zero is not entered, so what follows it is reached and
         // asked. Mutation: have the `for` site swap its arms where the
         // condition is a constant; the loop is entered and never left, and
