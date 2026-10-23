@@ -222,14 +222,19 @@ fn reachable(function: &Function, from: BlockId) -> Vec<bool> {
 /// (b): whether a path from the start of `target` to `read` passes an
 /// assignment of `local`. A `StorageLive` after it is not credited, which
 /// can only leave a read unreported.
+///
+/// `reach` is [`reachable`] for every block the function reaches, asked once
+/// per function rather than once per edge and assignment, which was cubic in
+/// the blocks and cost seconds at the size the memory check still reads.
 fn assigned_between(
     function: &Function,
     order: &[BlockId],
+    reach: &[Vec<bool>],
     target: BlockId,
     read: At,
     local: LocalId,
 ) -> bool {
-    let from_target = reachable(function, target);
+    let from_target = &reach[target.index()];
     order.iter().any(|&id| {
         let block = function.block(id);
         if !from_target[id.index()] {
@@ -245,7 +250,7 @@ fn assigned_between(
             let mut next = Vec::new();
             block.terminator.successors(&mut next);
             next.into_iter()
-                .any(|after| reachable(function, after)[read.0.index()])
+                .any(|after| reach[after.index()][read.0.index()])
         })
     })
 }
@@ -395,6 +400,12 @@ pub(super) fn findings(
         at_end[id.index()] = Some(value);
     }
 
+    let mut reach = vec![Vec::new(); function.blocks().len()];
+    if !doubted.is_empty() {
+        for &id in cfg.order() {
+            reach[id.index()] = reachable(function, id);
+        }
+    }
     for (local, at, read) in doubted {
         if !analysis.watched.get(local.index()) || said.contains(&(local, at)) {
             continue;
@@ -423,7 +434,7 @@ pub(super) fn findings(
             [(*then, true), (*otherwise, false)]
                 .into_iter()
                 .find(|&(target, _)| {
-                    !assigned_between(function, cfg.order(), target, read, local)
+                    !assigned_between(function, cfg.order(), &reach, target, read, local)
                         && reaches_certainly(unit, sources, function, target, read.0)
                 })
                 .map(|(_, taken)| (origin.span(), taken))

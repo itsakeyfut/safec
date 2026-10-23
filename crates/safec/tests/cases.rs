@@ -154,7 +154,8 @@ cases! {
         // `Known::expose`'s loops. It is reported.
         a_pointer_read_out_of_memory_memcpy_wrote_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written on one arm only, which is undefined on the other and not
-        // reported, as for a local (#582). Mutation: join the mark with `||`.
+        // reported: a slot is asked only for a proof. Mutation: join the mark
+        // with `||`.
         // It is reported.
         a_pointer_read_out_of_memory_written_on_one_arm_is_not_asked_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written through a pointer read out of memory, which this check

@@ -683,9 +683,9 @@ pub(super) fn memory_finding(
             "nothing about this function's memory is proved",
             "split the function into smaller ones",
         ),
-        // Only ever a proof: a read some paths assigned is not reported yet
-        // (#582). `Unknown` takes the same words so the match stays
-        // exhaustive without a second wording nothing produces.
+        // Only ever a proof: a read some paths assigned is the next arm's.
+        // `Unknown` takes the same words so the match stays exhaustive
+        // without a second wording nothing produces.
         (Kind::Unassigned, Conclusion::Unsafe | Conclusion::Unknown, _) => (
             UNASSIGNED,
             said(
