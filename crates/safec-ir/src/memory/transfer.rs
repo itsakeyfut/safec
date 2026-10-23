@@ -4,6 +4,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use crate::cfg::Cfg;
 use crate::dataflow::Analysis;
 use crate::ir::{
     BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place, Projection,
@@ -63,6 +64,10 @@ pub(super) struct Allocations<'a> {
     /// Per block, the locals read from its entry before they are written:
     /// what [`live_in`] answers, once per function. See ADR-0048.
     pub(super) live_in: Vec<Vec<bool>>,
+    /// The function's graph, for the walk
+    /// [`tested_against_null`](crate::nullability::tested_against_null)
+    /// makes back across a `Goto`.
+    pub(super) cfg: Cfg,
 }
 
 impl Allocations<'_> {
@@ -650,9 +655,9 @@ impl Allocations<'_> {
         else {
             return;
         };
-        let Some((local, on_then)) =
-            crate::nullability::tested_against_null(self.unit, function, block, condition)
-        else {
+        let Some((local, on_then)) = crate::nullability::tested_against_null(
+            self.unit, function, &self.cfg, block, condition,
+        ) else {
             return;
         };
         let held = &value.points_to[local.index()];

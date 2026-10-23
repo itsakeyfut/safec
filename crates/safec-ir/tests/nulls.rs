@@ -1623,3 +1623,118 @@ fn a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved() {
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
     assert_eq!(found[0].at, names.at[0]);
 }
+
+/// A comparison in the block before, which a `Goto` alone enters the branch
+/// from, refines the branch's arms; the same entered from a call's
+/// continuation refines nothing.
+///
+/// The `Goto` is the shape the right operand of `&&` leaves once #592 has
+/// threaded the left operand's edge past the join (#595). A call may write a
+/// local whose address escaped, which the walk's record of what changed does
+/// not see, so it is not crossed.
+///
+/// A branch two `Goto`s enter, only one of them past the comparison, is not
+/// refined either: the other way in is a path that compared nothing.
+///
+/// Mutation: stop `nullability::tested_against_null` at the top of the
+/// branching block. The `Goto` function's arms are both unproven and this
+/// fails with two findings where it expects one. Mutation: let the walk cross
+/// a call's continuation too, or into the first of several predecessors. That
+/// function's arms are refined and this fails with one finding where it
+/// expects two.
+#[test]
+fn a_comparison_before_a_goto_into_the_branch_refines_it_and_one_before_a_call_does_not() {
+    let (map, names) = sources();
+    for (through_a_call, two_ways_in) in [(false, false), (true, false), (false, true)] {
+        let mut unit = TranslationUnit::new(
+            Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+        );
+        let int = unit.push_type(Ty::Int);
+        let pointer = unit.push_type(Ty::Pointer(int));
+        let callee = unit.push_function(Function::declaration_with_parameters(
+            names.function,
+            int,
+            [],
+        ));
+        let mut function = Function::new(names.function, int, vec![pointer]);
+        let p = function.parameters().next().expect("a first parameter");
+        let condition = function.push_local(int);
+        let either = function.push_local(int);
+
+        let start = function.reserve_block();
+        let entry = function.reserve_block();
+        let other = function.reserve_block();
+        let branch = function.reserve_block();
+        let taken = function.reserve_block();
+        let untaken = function.reserve_block();
+        let after = function.reserve_block();
+
+        let compared = vec![Element::Assign(Operation {
+            place: Place::local(condition),
+            value: Rvalue::Binary {
+                op: BinOp::Ne,
+                lhs: Operand::Copy(Place::local(p)),
+                rhs: Operand::Constant(0),
+            },
+            origin: Origin::Written(names.at[0]),
+        })];
+        let into_branch = if through_a_call {
+            Terminator::Call {
+                callee,
+                arguments: vec![],
+                destination: None,
+                then: Some(branch),
+                origin: Origin::Written(names.at[2]),
+            }
+        } else {
+            Terminator::Goto(branch)
+        };
+        function.fill_block(
+            start,
+            Block {
+                elements: vec![],
+                terminator: if two_ways_in {
+                    Terminator::Branch {
+                        condition: Operand::Copy(Place::local(either)),
+                        then: other,
+                        otherwise: entry,
+                        origin: Origin::Written(names.at[0]),
+                    }
+                } else {
+                    Terminator::Goto(entry)
+                },
+            },
+        );
+        function.fill_block(
+            entry,
+            Block {
+                elements: compared,
+                terminator: into_branch,
+            },
+        );
+        function.fill_block(other, goto(branch, vec![]));
+        function.fill_block(
+            branch,
+            Block {
+                elements: vec![],
+                terminator: Terminator::Branch {
+                    condition: Operand::Copy(Place::local(condition)),
+                    then: taken,
+                    otherwise: untaken,
+                    origin: Origin::Written(names.at[2]),
+                },
+            },
+        );
+        function.fill_block(taken, goto(after, vec![write_through(p, names.at[1])]));
+        function.fill_block(untaken, goto(after, vec![write_through(p, names.at[3])]));
+        function.fill_block(after, returns());
+
+        let found = concluded(&map, unit, function);
+        let expected = if through_a_call || two_ways_in { 2 } else { 1 };
+        assert_eq!(
+            found.len(),
+            expected,
+            "through a call: {through_a_call}, two ways in: {two_ways_in}: {found:?}"
+        );
+    }
+}
