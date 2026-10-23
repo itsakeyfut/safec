@@ -125,7 +125,10 @@ use(p);` on `c`'s false edge. `if (key && (p = find(key)) != 0)`, a loop that
 runs at least once and a flag set beside the assignment are silent, since no
 edge before their read is one of those. The cost is an edge no execution
 takes, which this cannot tell from one that some does: `if (n >= 0) p = q;
-else if (n < 0) p = r; use(p);` is refused, and C defines it. A read no such
+else if (n < 0) p = r; use(p);` is refused, and C defines it, and so is
+`if (c || 1) p = q; use(p);`, since `||` is lowered as a second branch on its
+result. A path that ends in `abort`, `exit`, `_Exit` or `quick_exit` does not
+reach the read, inside a larger expression too. A read no such
 edge leads to stays silent, however many paths leave it unassigned. A local
 whose address is taken is never asked about.
 

@@ -33,10 +33,10 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
-    BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Place, Rvalue, Terminator,
-    TranslationUnit, Ty,
+    BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Operation, Place,
+    Rvalue, Terminator, TranslationUnit, Ty,
 };
-use crate::source::Span;
+use crate::source::{SourceMap, Span};
 
 use super::bits::Bits;
 use super::{Finding, Kind};
@@ -254,10 +254,35 @@ fn assigned_between(
 /// block: none ends first, at a `Return` or at a call that does not return,
 /// and none goes round a loop that never enters it. Entering the block runs
 /// the read, since a block's elements cannot branch.
-fn reaches_certainly(function: &Function, target: BlockId, read: BlockId) -> bool {
+///
+/// **A call to one of [`DOES_NOT_RETURN`] ends the path even where it keeps
+/// an edge**, which the lowering gives it inside a larger full expression:
+/// `ok = n > 0 ? 1 : (exit(2), 0);` before the read was refused, and C
+/// defines it. Mutation: read only `then`. Then
+/// `a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_read_in_silence`
+/// is refused.
+fn reaches_certainly(
+    unit: &TranslationUnit,
+    sources: &SourceMap,
+    function: &Function,
+    target: BlockId,
+    read: BlockId,
+) -> bool {
     // 0 unseen, 1 on the walk's stack, 2 done.
     let mut state = vec![0u8; function.blocks().len()];
-    fn walk(function: &Function, id: BlockId, read: BlockId, state: &mut [u8]) -> bool {
+    let ends_here = |callee: FuncId| {
+        let name = sources.snippet(unit.function(callee).name);
+        DOES_NOT_RETURN
+            .iter()
+            .any(|&(reserved, _)| reserved == name)
+    };
+    fn walk(
+        function: &Function,
+        id: BlockId,
+        read: BlockId,
+        state: &mut [u8],
+        ends_here: &dyn Fn(FuncId) -> bool,
+    ) -> bool {
         if id == read || state[id.index()] == 2 {
             return true;
         }
@@ -268,7 +293,7 @@ fn reaches_certainly(function: &Function, target: BlockId, read: BlockId) -> boo
         let terminator = &function.block(id).terminator;
         let ends = match terminator {
             Terminator::Return => true,
-            Terminator::Call { then, .. } => then.is_none(),
+            Terminator::Call { callee, then, .. } => then.is_none() || ends_here(*callee),
             Terminator::Goto(_) | Terminator::Branch { .. } | Terminator::Abnormal { .. } => false,
         };
         if ends {
@@ -278,11 +303,11 @@ fn reaches_certainly(function: &Function, target: BlockId, read: BlockId) -> boo
         terminator.successors(&mut next);
         let every = next
             .into_iter()
-            .all(|after| walk(function, after, read, state));
+            .all(|after| walk(function, after, read, state, ends_here));
         state[id.index()] = 2;
         every
     }
-    walk(function, target, read, &mut state)
+    walk(function, target, read, &mut state, &ends_here)
 }
 
 /// Every read of a watched pointer local that no path to it assigned, each a
@@ -290,6 +315,7 @@ fn reaches_certainly(function: &Function, target: BlockId, read: BlockId) -> boo
 /// leads to unassigned, each `Unknown`. See the module comment.
 pub(super) fn findings(
     unit: &TranslationUnit,
+    sources: &SourceMap,
     func: FuncId,
     function: &Function,
     findings: &mut Vec<Finding>,
@@ -398,7 +424,7 @@ pub(super) fn findings(
                 .into_iter()
                 .find(|&(target, _)| {
                     !assigned_between(function, cfg.order(), target, read, local)
-                        && reaches_certainly(function, target, read.0)
+                        && reaches_certainly(unit, sources, function, target, read.0)
                 })
                 .map(|(_, taken)| (origin.span(), taken))
         });

@@ -491,7 +491,7 @@ fn findings_within(
         // function the memory check read, since one past its bounds is not
         // read at all. Its own walk is not bounded here: one bit per local
         // only rises, so it settles within `locals + 1` visits a block.
-        assigned::findings(unit, func, function, &mut findings);
+        assigned::findings(unit, sources, func, function, &mut findings);
         // The other check's answer, asked at each block's terminator, which is
         // where a free is reached. A free of a pointer that check established
         // is null frees nothing, and `asked` is the one place that is applied.

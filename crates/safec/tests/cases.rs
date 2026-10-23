@@ -108,6 +108,15 @@ cases! {
         // lead to the read. Mutation: count a loop as reaching the read. It
         // is refused.
         a_pointer_read_after_an_arm_that_never_ends_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The unassigned path ends in `exit` inside a larger expression,
+        // where the lowering keeps the call's edge. Mutation: read only
+        // `then` in `reaches_certainly`. It is refused.
+        a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A cost**: `c || 1` is never false, but `||` is lowered as a
+        // second branch on its result, whose false edge leads to the read
+        // unassigned. It is refused, which clang does not do. It is here so
+        // the cost is seen, and fails if the pass over the edges is dropped.
+        a_pointer_assigned_under_a_test_with_a_constant_operand_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of what `malloc` returned before anything wrote
         // it, and written through on the arm a null test passes: a proof
         // (C17 7.22.3.4 p2 and Annex J.2). Mutation: leave a `malloc` site
