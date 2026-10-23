@@ -1235,12 +1235,12 @@ impl Function {
     /// on its own result. Built by hand, a block that branches on another
     /// local is left alone.
     ///
-    /// Repeated until nothing moves, which a chain of such blocks needs, and
-    /// at most once per block, which is what ends it whatever the shape: two
-    /// such blocks sending each other round would move an edge between them
-    /// on every pass. No C program builds one, since a loop's test computes
-    /// into its block before it branches, so the bound is never what stops
-    /// it on a program written here.
+    /// Repeated until nothing moves, which a chain of such blocks needs, for
+    /// at most as many passes as there are blocks, which is what ends it
+    /// whatever the shape: two such blocks sending each other round would
+    /// move an edge between them on every pass. No C program builds one,
+    /// since a loop's test computes into its block before it branches, so
+    /// the bound is never what stops it on a program written here.
     pub fn thread_rebranches(&mut self) {
         let blocks = self.defined_mut();
         for _ in 0..blocks.len() {

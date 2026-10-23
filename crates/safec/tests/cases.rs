@@ -1448,8 +1448,16 @@ cases! {
         // Three `== 0` turn the test over three times, so `p` is null where
         // it is written through, and that is proved. Mutation: let the last
         // `== 0` decide the polarity, `inverted = equal`, rather than each of
-        // them. It is silent.
+        // them. It is silent. An even count cannot tell which way a `== 0`
+        // turns, which the next case holds.
         a_null_test_through_three_comparisons_with_zero_is_read_with_its_polarity: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // One `== 0` around a null test turns it over, so `p` is not null in
+        // the body. Mutation: have `through_zero` answer `== 0` as `!= 0`. It
+        // is proved null.
+        a_null_test_through_one_comparison_with_zero_is_read_turned_over: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `0 == (p == 0)`, with the zero on the left. Mutation: have
+        // `zero_beside` read a zero on the right only. `SC0403`.
+        a_null_test_compared_with_zero_on_its_left_is_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // **The cost**: `|| 0` never reaches the body through its right
         // operand, but `0 != 0` is not folded, so the path where `p` is null
         // reaches it as far as this check can tell. It is here so the cost is
