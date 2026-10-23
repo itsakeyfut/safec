@@ -119,8 +119,13 @@ pub(crate) struct Nulls {
 /// it reaches may be evaluated before the call, so it is asked as now. At the
 /// next [`Element::Sequenced`] everything after is sequenced after the call,
 /// which never returns, so the path is [`Path::Ended`] and no execution is on
-/// it. Without this, `p != 0 || (abort(), 0); return *p;` joined the null
-/// arm into `*p` and doubted it (#590).
+/// it. Without this, `if (p == 0) { x = (abort(), 0); } return *p + x;`
+/// joined the null arm into `*p` and doubted it (#590).
+///
+/// **It trusts every marker to be a sequence point C gives**, in the
+/// direction that silences: a marker the lowering emits where C orders
+/// nothing ends a path ahead of a read C may evaluate before the call. A
+/// compound assignment's place was one (`Lowering::at_most_one_acts`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Path {
     /// An execution may be on it.
@@ -1600,9 +1605,13 @@ pub(crate) fn null_at_terminators(
         // zero is neither, so nothing about that program is the clause the
         // exemption rests on.
         for local in function.locals() {
-            // Nothing is established on a path no execution is on.
+            // **An ended path answers what it knew when it ended**, which is
+            // what its locals still hold. No execution is on it, so any answer
+            // is sound, and the memory check still walks it: answering
+            // nothing there withdrew the exemption from `free(p)` with `p`
+            // null below `(abort(), 0);` and reported a double free nobody
+            // runs. Found by review.
             null[id.index()][local.index()] = ordered
-                && known.path != Path::Ended
                 && analysis.is_pointer(function, local)
                 && analysis.known(&known.of, local) == Nullness::Null;
         }
