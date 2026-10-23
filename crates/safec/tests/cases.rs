@@ -62,13 +62,61 @@ cases! {
         // Mutation: treat every local as assigned where the function starts.
         // It builds.
         a_pointer_never_assigned_is_reported_where_a_null_test_reads_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Assigned on one arm only, which is undefined on the other and not
-        // reported yet: flags, `&&` and loops look the same here (#582).
-        // Mutation: join with `&&`. It is proved.
-        a_pointer_assigned_on_one_arm_only_is_not_asked_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Assigned on one arm only and freed after, which the other arm
+        // reaches unassigned: doubted, not proved, since the edge may be one
+        // no execution takes. Mutation: join with `&&`. It is proved.
+        a_pointer_assigned_on_one_arm_and_freed_after_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Assigned on both arms: nothing. Mutation: have an assignment leave
         // the bit as it was. It is proved.
         a_pointer_assigned_on_every_arm_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The body's program: `c`'s false edge leads to the read on every path
+        // and assigns `p` on none. Mutation: drop the pass over the edges. It
+        // builds.
+        a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The edge is the one a non-zero condition takes, and the label says so.
+        // Mutation: swap the edge's words. The label moves.
+        a_pointer_assigned_only_on_the_arm_a_true_test_skips_is_doubted_at_its_true_edge: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Every edge before the body either carries a path that assigned `p` or
+        // leads past the body. Mutation: drop (b) or (c) in
+        // `memory::assigned`. It is refused.
+        a_pointer_assigned_inside_a_logical_and_is_read_in_its_body_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The loop test's exit edge carries the later turns, which assigned `p`.
+        // Mutation: drop (a). It is refused.
+        a_pointer_assigned_in_a_loop_that_runs_once_is_read_after_it_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read under `i > 0`, after the turn that assigned it. No one clause
+        // holds it: drop (a) together with (b) or (c), or join with `&&`, and
+        // it is refused.
+        a_pointer_read_in_a_loop_only_after_its_first_turn_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The read is under `saved`, so `c`'s false edge does not lead to it
+        // on every path. Mutation: drop (c). It is refused.
+        a_pointer_assigned_beside_a_flag_is_read_under_it_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with a parameter tested twice. Mutation: drop (c). It is
+        // refused.
+        a_pointer_assigned_and_read_under_one_parameter_tested_twice_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The unassigned path ends in a call that does not return. Mutation:
+        // count such a call as going on. It is refused.
+        a_pointer_whose_unassigned_path_ends_in_abort_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Assigned under `c` and under `!c`: a path from `c`'s false edge
+        // assigns it. Mutation: drop (b). It is refused.
+        a_pointer_assigned_on_both_arms_of_a_test_and_its_negation_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **The cost**: `n < 0` cannot be false where `n >= 0` was, and C
+        // defines this, but its false edge leads to the read unassigned. It is
+        // refused, as clang's `-Wall` warns. It is here so the cost is seen,
+        // and fails if the pass over the edges is dropped.
+        a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The arm that does not assign it never ends, so its edge does not
+        // lead to the read. Mutation: count a loop as reaching the read. It
+        // is refused.
+        a_pointer_read_after_an_arm_that_never_ends_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The unassigned path ends in `exit` inside a larger expression,
+        // where the lowering keeps the call's edge. Mutation: read only
+        // `then` in `reaches_certainly`. It is refused.
+        a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A cost**: `c || 1` is never false, but `||` is lowered as a
+        // second branch on its result, whose false edge leads to the read
+        // unassigned. It is refused, which clang does not do. It is here so
+        // the cost is seen, and fails if the pass over the edges is dropped.
+        a_pointer_assigned_under_a_test_with_a_constant_operand_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of what `malloc` returned before anything wrote
         // it, and written through on the arm a null test passes: a proof
         // (C17 7.22.3.4 p2 and Annex J.2). Mutation: leave a `malloc` site
@@ -106,7 +154,8 @@ cases! {
         // `Known::expose`'s loops. It is reported.
         a_pointer_read_out_of_memory_memcpy_wrote_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written on one arm only, which is undefined on the other and not
-        // reported, as for a local (#582). Mutation: join the mark with `||`.
+        // reported: a slot is asked only for a proof. Mutation: join the mark
+        // with `||`.
         // It is reported.
         a_pointer_read_out_of_memory_written_on_one_arm_is_not_asked_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written through a pointer read out of memory, which this check

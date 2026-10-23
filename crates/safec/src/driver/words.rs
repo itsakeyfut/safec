@@ -683,9 +683,9 @@ pub(super) fn memory_finding(
             "nothing about this function's memory is proved",
             "split the function into smaller ones",
         ),
-        // Only ever a proof: a read some paths assigned is not reported yet
-        // (#582). `Unknown` takes the same words so the match stays
-        // exhaustive without a second wording nothing produces.
+        // Only ever a proof: a read some paths assigned is the next arm's.
+        // `Unknown` takes the same words so the match stays exhaustive
+        // without a second wording nothing produces.
         (Kind::Unassigned, Conclusion::Unsafe | Conclusion::Unknown, _) => (
             UNASSIGNED,
             said(
@@ -711,6 +711,18 @@ pub(super) fn memory_finding(
             ),
             "used here",
             "write the slot before reading it, or allocate with `calloc`",
+        ),
+        // Only ever `Unknown`, since the edge may be one no execution takes.
+        // `Unsafe` takes the same words so the match stays exhaustive.
+        (Kind::SometimesUnassigned { .. }, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            UNASSIGNED,
+            said(
+                name,
+                "this may read a pointer before anything was assigned to it",
+                |name| format!("`{name}` may be read before anything was assigned to it"),
+            ),
+            "read here",
+            "assign it on every path, `= 0` where it is declared if nothing else",
         ),
         // Neither check answers this and `Diagnostic::concluded` gives `None`
         // for it, so none of the four is read. Written out rather than `_` so
@@ -780,7 +792,18 @@ pub(super) fn memory_finding(
              {max}"
         ));
     }
-    if finding.kind == Kind::Unassigned {
+    if let Kind::SometimesUnassigned { edge, taken } = finding.kind {
+        let when = if taken {
+            "when this is true"
+        } else {
+            "when this is false"
+        };
+        diagnostic = diagnostic.with_label(Label::secondary(edge, when));
+    }
+    if matches!(
+        finding.kind,
+        Kind::Unassigned | Kind::SometimesUnassigned { .. }
+    ) {
         diagnostic = diagnostic.with_note(
             "C17 6.3.2.1 p2: reading a local whose address is never taken before it is \
              assigned is undefined, whatever the value is read for",

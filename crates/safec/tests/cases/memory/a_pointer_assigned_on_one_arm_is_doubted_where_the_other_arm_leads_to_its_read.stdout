@@ -1,0 +1,53 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:3:6 "abort" declared
+  Local "_0" "void" return
+Function a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:4:6 "find" declared
+  Local "_0" "int *" return
+  Local "_1" "int" parameter "k"
+Function a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:5:6 "next" declared
+  Local "_0" "int *" return
+Function a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:6:6 "use" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+Function a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:8:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" parameter "q"
+  Local "_3" "int *" "p"
+  Local "_4" "int *"
+  Block "bb0" entry
+    Branch a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:10:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:10:9 generated
+    Operation a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:11:9 written
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:11:9 written
+      Destination "_4"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:11:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:10:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:13:5 generated
+    Call a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:13:5 written "use" "bb4"
+      Copy "_3"
+  Block "bb4"
+    Sequenced a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:13:5 generated
+    Operation a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:14:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:14:12 generated
+    Return

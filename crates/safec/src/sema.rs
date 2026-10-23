@@ -28,6 +28,7 @@ use crate::ast::{
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::parser::{UNREAD_ANNOTATION, UNREAD_ATTRIBUTE_LABEL};
+use safec_ir::ir::DOES_NOT_RETURN;
 use safec_ir::source::{SourceMap, Span};
 
 /// A name used where nothing declares it.
@@ -69,35 +70,13 @@ const REDEFINED: Code = Code::new("SC0312");
 const CONFLICTING: Code = Code::new("SC0313");
 
 /// A definition of a name C reserves for the library, and that this compiler
-/// believes by name: one of [`DOES_NOT_RETURN`].
+/// believes by name: one of [`DOES_NOT_RETURN`], which lives with the IR so
+/// that the memory check reads the same list.
 ///
 /// Its own code rather than [`REDEFINED`]'s or [`CONFLICTING`]'s: nothing is
 /// given twice and nothing disagrees, the name is the fault, and the fix is a
 /// rename. See ADR-0051.
 const RESERVED_DEFINITION: Code = Code::new("SC0319");
-
-/// Four of the library functions C says do not return to their caller, with
-/// the clause that says so.
-///
-/// `abort` (C17 7.22.4.1), `exit` (7.22.4.4), `_Exit` (7.22.4.5) and
-/// `quick_exit` (7.22.4.7). `longjmp` (7.13.2.1) and `thrd_exit` (7.26.5.5)
-/// do not return either: the first takes a `jmp_buf`, which this frontend
-/// cannot declare, and the second belongs to the threads that
-/// `docs/roadmap.md` places in Phase 8.
-///
-/// **Believed by name because 7.1.3 reserves the name**: p1 reserves each for
-/// use as an identifier with external linkage, and p2 makes a program that
-/// defines one undefined. So the lowering gives a call to one no continuation,
-/// and names refuses a definition of one, wherever it is, rather than
-/// honouring it: a definition in another file of the run would otherwise be
-/// believed away in silence (#343). One list for both, so the names believed
-/// and the names refused cannot drift apart. See ADR-0051.
-pub(crate) const DOES_NOT_RETURN: &[(&str, &str)] = &[
-    ("abort", "7.22.4.1"),
-    ("exit", "7.22.4.4"),
-    ("_Exit", "7.22.4.5"),
-    ("quick_exit", "7.22.4.7"),
-];
 
 /// A member of a struct whose type a member cannot have, which C17 6.7.2.1 p3
 /// forbids: "A structure or union shall not contain a member with incomplete
