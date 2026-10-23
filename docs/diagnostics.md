@@ -122,14 +122,17 @@ check does not follow the condition a path took, and reporting it refused
 taken is never asked about.
 
 A pointer read out of an allocation `malloc` or `aligned_alloc` made, before
-anything wrote it, points at no object either (C17 7.22.3.4 p2), so a write, a
-read or a free through it is `SC0411` too, at the use: `int **box = malloc(8);
-int *t = *box; if (t != 0) { *t = 1; }`. Not at the load, and not at a
-comparison of `t`, which are undefined only where the type has a trap
-representation (6.2.6.1 p5). A write anywhere in the allocation ends it,
-whether by a store, `memcpy`, `memset` or a call it was handed, since this
-check keeps no offsets within one; and a slot written on some paths is not
-reported, as for a local.
+anything wrote it, is indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2), and Annex
+J.2 lists using it as undefined. A write, a read or a free through it is
+`SC0411` too, at the use: `int **box = malloc(8); int *t = *box; if (t != 0) {
+*t = 1; }`. Not at the load, a comparison of `t`, a call it is handed or a
+`return` of it: J.2 lists those too, but they reach no memory through it,
+which is the error level 1 owns. It is followed through copies between locals
+in one function, and no further: stored into memory and read back, or handed
+to a callee that writes through it, it is not reported. A write anywhere in
+the allocation ends it, whether by a store, `memcpy`, `memset` or a call it
+was handed, since this check keeps no offsets within one; and a slot written
+on some paths is not reported, as for a local.
 
 **`SC0319` refuses a name the checks believe.** A call to `abort`, `exit`,
 `_Exit` or `quick_exit` gets no continuation, because C says none returns, and
