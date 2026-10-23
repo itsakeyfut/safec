@@ -6,8 +6,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::dataflow::Analysis;
 use crate::ir::{
-    BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
-    TranslationUnit, Ty,
+    BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place, Projection,
+    Rvalue, Terminator, TranslationUnit, Ty,
 };
 use crate::source::{SourceMap, Span};
 
@@ -77,7 +77,14 @@ impl Allocations<'_> {
 
     /// What this check can read in the name of the function being called.
     pub(super) fn callee(&self, id: FuncId) -> Callee {
-        match self.sources.snippet(self.unit.function(id).name) {
+        let name = self.sources.snippet(self.unit.function(id).name);
+        if DOES_NOT_RETURN
+            .iter()
+            .any(|&(reserved, _)| reserved == name)
+        {
+            return Callee::Ends;
+        }
+        match name {
             "free" => Callee::Frees,
             "malloc" | "calloc" | "aligned_alloc" => Callee::Allocates,
             "realloc" => Callee::Reallocates,
@@ -463,7 +470,8 @@ impl Allocations<'_> {
                     | Callee::Allocates
                     | Callee::Reallocates
                     | Callee::ReturnsFirst
-                    | Callee::Copies => false,
+                    | Callee::Copies
+                    | Callee::Ends => false,
                 };
                 if handed_over && place.projection.is_empty() {
                     marks[place.local.index()] = true;
@@ -1672,6 +1680,9 @@ impl Analysis for Allocations<'_> {
         // allocation; it is written the same way in both places so that the
         // two readings of one rule cannot drift.
         let handed = match kind {
+            // **Touches nothing**: what it was handed was recorded above, and
+            // nothing after it runs. See `Callee::Ends`.
+            Callee::Ends => return,
             Callee::Reallocates => &arguments[..arguments.len().min(1)],
             Callee::Frees
             | Callee::Allocates
@@ -1821,6 +1832,9 @@ impl Analysis for Allocations<'_> {
         }
 
         match kind {
+            Callee::Ends => {
+                unreachable!("`Allocations::terminator` returns for it where `handed` is decided")
+            }
             Callee::Frees => {
                 let reached: Vec<usize> = sites().collect();
 
@@ -2318,6 +2332,9 @@ impl Analysis for Allocations<'_> {
         }
 
         match kind {
+            Callee::Ends => {
+                unreachable!("`Allocations::terminator` returns for it where `handed` is decided")
+            }
             // `free` returns nothing, and the C frontend gives it no
             // destination. A frontend that gives it one gives it a `void`
             // local, which holds none of this.
@@ -2373,6 +2390,9 @@ impl Analysis for Allocations<'_> {
         let made = match kind {
             Callee::Allocates | Callee::Reallocates => Some(origin.span()),
             Callee::Opaque | Callee::Frees | Callee::ReturnsFirst | Callee::Copies => None,
+            Callee::Ends => {
+                unreachable!("`Allocations::terminator` returns for it where `handed` is decided")
+            }
         };
         value.reborn(site, made);
         // **Its contents are indeterminate**, C17 7.22.3.4 p2 and 7.22.3.1
@@ -2387,6 +2407,9 @@ impl Analysis for Allocations<'_> {
         // may. Reborn with nothing in it, a table grown by `realloc` and then
         // handed to a call exposed nothing it held. See ADR-0039.
         match kind {
+            Callee::Ends => {
+                unreachable!("`Allocations::terminator` returns for it where `handed` is decided")
+            }
             Callee::Reallocates => {
                 let old: Vec<usize> = handed
                     .iter()
@@ -2446,6 +2469,9 @@ impl Analysis for Allocations<'_> {
         // what a widened set has to be, since widening one can make this check
         // say less. See ADR-0039.
         match kind {
+            Callee::Ends => {
+                unreachable!("`Allocations::terminator` returns for it where `handed` is decided")
+            }
             Callee::Opaque => {
                 // **What it returned may hold a pointer the callee kept**, the
                 // same fact as a parameter's memory from the other side of a

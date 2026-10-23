@@ -318,7 +318,11 @@ pub(super) fn reported(
     let arguments = match analysis.callee(*callee) {
         Callee::Frees => &arguments[..],
         Callee::Reallocates => &arguments[..arguments.len().min(1)],
-        Callee::Allocates | Callee::ReturnsFirst | Callee::Copies | Callee::Opaque => {
+        Callee::Allocates
+        | Callee::ReturnsFirst
+        | Callee::Copies
+        | Callee::Ends
+        | Callee::Opaque => {
             return Vec::new();
         }
     };
@@ -986,7 +990,9 @@ pub(super) fn handed_places<'a>(
     let arguments = match analysis.callee(callee) {
         Callee::Opaque | Callee::ReturnsFirst | Callee::Copies => arguments,
         Callee::Reallocates => &arguments[arguments.len().min(1)..],
-        Callee::Frees | Callee::Allocates => return Vec::new(),
+        // A call that does not return reads nothing it is handed after its
+        // arguments are evaluated, which `dereferenced_in_terminator` asks.
+        Callee::Frees | Callee::Allocates | Callee::Ends => return Vec::new(),
     };
 
     let mut asked: Vec<&Place> = Vec::new();
@@ -1172,6 +1178,8 @@ pub(super) fn used_before(
         // is a read this call has nothing to say about; the library functions
         // that return their first argument free nothing either.
         Callee::Allocates | Callee::ReturnsFirst | Callee::Copies => return,
+        // Frees nothing, and nothing after it runs.
+        Callee::Ends => return,
     };
 
     // The machine behind the paragraph above. Placed here because this is

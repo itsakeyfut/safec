@@ -1,23 +1,3 @@
-error[SC0402]: this uses `p`, which may have been freed
-   ╭─[ a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:5:12 ]
-   │
- 5 │     return *p + (exit(1), 0);
-   │            ────────┬────────  
-   │                    ╰────────── used here, where it may have been freed before
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0402]: this uses `q`, which may have been freed
-   ╭─[ a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:9:12 ]
-   │
- 9 │     return g((exit(1), 0), *q);
-   │            ─────────┬─────────  
-   │                     ╰─────────── used here, where it may have been freed before
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
 error[SC0403]: this may dereference `p` while it is null
    ╭─[ a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:5:12 ]
    │

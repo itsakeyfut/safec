@@ -66,6 +66,18 @@ pub(super) enum Callee {
     /// read inside the transfer, so that every reader of the callee answers
     /// for it. See ADR-0039.
     Copies,
+    /// One of [`DOES_NOT_RETURN`](crate::ir::DOES_NOT_RETURN): `abort`,
+    /// `exit`, `_Exit` and `quick_exit`, believed by name as the lowering and
+    /// the reserved-name check believe them (ADR-0051).
+    ///
+    /// **It touches nothing.** What it is handed is asked as an argument, so
+    /// `exit(*p)` reads `*p`, but it exposes, frees and returns nothing. The
+    /// lowering keeps its edge inside a larger full expression, and read as
+    /// [`Callee::Opaque`] that edge carried a call that may have freed
+    /// everything it could reach to code after it: `n > 0 || (abort(), 0);
+    /// use(p);` doubted `p` (#586). No execution continues past it, so the
+    /// value before it is the one that claims least beyond it.
+    Ends,
     /// Anything else. It may free what it was passed and this cannot tell.
     Opaque,
 }
