@@ -78,7 +78,7 @@ Function a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:10:5 "deep
       Binary "Ne"
         Copy "_5"
         Constant 0
-    Branch a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:13:9 written "bb3" "bb4"
+    Branch a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:13:9 written "bb5" "bb4"
       Copy "_6"
   Block "bb3"
     Branch a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:13:9 written "bb5" "bb6"

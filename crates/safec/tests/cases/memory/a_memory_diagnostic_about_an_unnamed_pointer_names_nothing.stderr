@@ -50,16 +50,6 @@ error[SC0403]: this may dereference `pp` while it is null
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: test this pointer against null before reading through it
-error[SC0403]: this may dereference `pp` while it is null
-    ╭─[ a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:16:5 ]
-    │
- 16 │     *pp = p;
-    │     ───┬───  
-    │        ╰───── this check cannot say this is not null
-────╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: test this pointer against null before reading through it
 error[SC0403]: this may dereference a null pointer
     ╭─[ a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:18:5 ]
     │

@@ -1,0 +1,9 @@
+error[SC0403]: this dereferences `p`, which is null
+   ╭─[ a_null_test_through_three_comparisons_with_zero_is_read_with_its_polarity.c:7:9 ]
+   │
+ 7 │         *p = 1;
+   │         ───┬──  
+   │            ╰──── this is null when it is read through
+───╯
+  = note: this check belongs to safety level 1
+  = help: give this pointer a value before reading through it, or do not read through it here

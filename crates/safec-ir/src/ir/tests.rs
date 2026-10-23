@@ -644,3 +644,150 @@ fn a_function_is_not_given_a_body_twice() {
     unit.fill_function(id, Function::new(at, int, []));
     unit.fill_function(id, Function::new(at, int, []));
 }
+
+/// A branch into an empty block that branches again on the same local is
+/// threaded; into a block that is not empty, or that branches on another
+/// local, it is left alone.
+///
+/// Mutation: drop the test that the second block has no elements in
+/// `Function::thread_rebranches`, or the test that it branches on the same
+/// local. The first branch is sent past a block it should not be, and this
+/// fails.
+#[test]
+fn a_branch_is_threaded_only_through_an_empty_rebranch_on_its_own_local() {
+    let (_sources, at) = spans();
+    let mut unit = TranslationUnit::new(a_target());
+    let int = unit.push_type(Ty::Int);
+
+    for (empty, same) in [(true, true), (false, true), (true, false)] {
+        let mut function = Function::new(at, int, []);
+        let tested = function.push_local(int);
+        let other = function.push_local(int);
+        let ends = |function: &mut Function| {
+            function.push_block(Block {
+                elements: Vec::new(),
+                terminator: Terminator::Return,
+            })
+        };
+        let (taken, skipped) = (ends(&mut function), ends(&mut function));
+        let elements = if empty {
+            Vec::new()
+        } else {
+            vec![Element::Sequenced {
+                origin: Origin::Generated(at),
+            }]
+        };
+        let rebranch = function.push_block(Block {
+            elements,
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(if same { tested } else { other })),
+                then: taken,
+                otherwise: skipped,
+                origin: Origin::Written(at),
+            },
+        });
+        let first = function.push_block(Block {
+            elements: Vec::new(),
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(tested)),
+                then: rebranch,
+                otherwise: skipped,
+                origin: Origin::Written(at),
+            },
+        });
+
+        function.thread_rebranches();
+
+        let mut successors = Vec::new();
+        function.block(first).terminator.successors(&mut successors);
+        let expected = if empty && same { taken } else { rebranch };
+        assert_eq!(
+            successors,
+            [expected, skipped],
+            "empty: {empty}, same: {same}"
+        );
+    }
+}
+
+/// A branch on a place read through a pointer is not threaded, on either
+/// side, and a chain of two empty re-branches is followed to its end.
+///
+/// Mutation: drop either test that a branch's place has no projection in
+/// `Function::thread_rebranches`, or return after its first pass. This
+/// fails.
+#[test]
+fn a_branch_is_threaded_along_a_chain_and_never_through_a_place_read_through_a_pointer() {
+    let (_sources, at) = spans();
+    let mut unit = TranslationUnit::new(a_target());
+    let int = unit.push_type(Ty::Int);
+    let branch = |tested: Place, then: BlockId, otherwise: BlockId| Block {
+        elements: Vec::new(),
+        terminator: Terminator::Branch {
+            condition: Operand::Copy(tested),
+            then,
+            otherwise,
+            origin: Origin::Written(at),
+        },
+    };
+    let read_through = |local: LocalId| Place {
+        local,
+        projection: vec![Projection::Deref],
+    };
+
+    // A projection on the first branch, then on the second.
+    for first_reads_through in [true, false] {
+        let mut function = Function::new(at, int, []);
+        let tested = function.push_local(int);
+        let ends = function.push_block(Block {
+            elements: Vec::new(),
+            terminator: Terminator::Return,
+        });
+        let second_place = if first_reads_through {
+            Place::local(tested)
+        } else {
+            read_through(tested)
+        };
+        let rebranch = function.push_block(branch(second_place, ends, ends));
+        let first_place = if first_reads_through {
+            read_through(tested)
+        } else {
+            Place::local(tested)
+        };
+        let first = function.push_block(branch(first_place, rebranch, ends));
+
+        function.thread_rebranches();
+
+        let mut successors = Vec::new();
+        function.block(first).terminator.successors(&mut successors);
+        assert_eq!(
+            successors,
+            [rebranch, ends],
+            "first reads through: {first_reads_through}"
+        );
+    }
+
+    // A chain: the first branch reaches the end only after two passes,
+    // since the second re-branch is pushed after the first is looked at.
+    let mut function = Function::new(at, int, []);
+    let tested = function.push_local(int);
+    let ends = function.push_block(Block {
+        elements: Vec::new(),
+        terminator: Terminator::Return,
+    });
+    let other = function.push_block(Block {
+        elements: Vec::new(),
+        terminator: Terminator::Return,
+    });
+    // Numbered first, so that one pass looks at it before `near` has moved.
+    let first = function.reserve_block();
+    let near = function.reserve_block();
+    let far = function.push_block(branch(Place::local(tested), ends, other));
+    function.fill_block(near, branch(Place::local(tested), far, other));
+    function.fill_block(first, branch(Place::local(tested), near, other));
+
+    function.thread_rebranches();
+
+    let mut successors = Vec::new();
+    function.block(first).terminator.successors(&mut successors);
+    assert_eq!(successors, [ends, other]);
+}

@@ -38,7 +38,7 @@ Function an_escaped_local_read_twice_in_one_or_is_reported_twice.c:3:5 "f"
         Copy "_1"
           Deref
         Constant 0
-    Branch an_escaped_local_read_twice_in_one_or_is_reported_twice.c:6:9 written "bb2" "bb3"
+    Branch an_escaped_local_read_twice_in_one_or_is_reported_twice.c:6:9 written "bb5" "bb3"
       Copy "_5"
   Block "bb2"
     Branch an_escaped_local_read_twice_in_one_or_is_reported_twice.c:6:9 written "bb5" "bb6"

@@ -35,7 +35,7 @@ Function a_freed_read_and_an_unproven_one_in_one_or_are_reported_apart.c:3:5 "f"
         Copy "_1"
           Deref
         Constant 0
-    Branch a_freed_read_and_an_unproven_one_in_one_or_are_reported_apart.c:7:9 written "bb3" "bb4"
+    Branch a_freed_read_and_an_unproven_one_in_one_or_are_reported_apart.c:7:9 written "bb5" "bb4"
       Copy "_4"
   Block "bb3"
     Branch a_freed_read_and_an_unproven_one_in_one_or_are_reported_apart.c:7:9 written "bb5" "bb6"

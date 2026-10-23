@@ -31,7 +31,7 @@ Function a_pointer_assigned_inside_a_logical_and_is_read_in_its_body_in_silence.
       Binary "Ne"
         Copy "_1"
         Constant 0
-    Branch a_pointer_assigned_inside_a_logical_and_is_read_in_its_body_in_silence.c:10:9 written "bb2" "bb1"
+    Branch a_pointer_assigned_inside_a_logical_and_is_read_in_its_body_in_silence.c:10:9 written "bb2" "bb5"
       Copy "_4"
   Block "bb1"
     Branch a_pointer_assigned_inside_a_logical_and_is_read_in_its_body_in_silence.c:10:9 written "bb4" "bb5"
