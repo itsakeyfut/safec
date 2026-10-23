@@ -114,12 +114,20 @@ is the decision.
 **`SC0411` is a pointer local read before anything was assigned to it.** C17
 6.3.2.1 p2 leaves reading a local whose address is never taken undefined
 while it is indeterminate, whatever the read is for, so `int *p; if (p != 0) {
-*p = 1; }` is reported at the comparison and at the write. It is always a
-proof, made where no path to the read assigns the local. A read some paths
-assigned is undefined on the others and is not reported yet (#582): this
-check does not follow the condition a path took, and reporting it refused
-`if (key && (p = find(key)) != 0)`, which C defines. A local whose address is
-taken is never asked about.
+*p = 1; }` is reported at the comparison and at the write. Where no path to
+the read assigns the local, it is a proof. A read some paths assigned is
+undefined on the others, and this check does not follow the condition a path
+took, so it is reported only after a branch edge that certainly leads to it
+unassigned: the local is unassigned on every path to the branch, no path from
+the edge to the read assigns it, and every path from the edge reaches the
+read. That is `Unknown`, with the branch labelled: `if (c) { p = q; }
+use(p);` on `c`'s false edge. `if (key && (p = find(key)) != 0)`, a loop that
+runs at least once and a flag set beside the assignment are silent, since no
+edge before their read is one of those. The cost is an edge no execution
+takes, which this cannot tell from one that some does: `if (n >= 0) p = q;
+else if (n < 0) p = r; use(p);` is refused, and C defines it. A read no such
+edge leads to stays silent, however many paths leave it unassigned. A local
+whose address is taken is never asked about.
 
 A pointer read out of an allocation `malloc` or `aligned_alloc` made, before
 anything wrote it, is indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2), and Annex
