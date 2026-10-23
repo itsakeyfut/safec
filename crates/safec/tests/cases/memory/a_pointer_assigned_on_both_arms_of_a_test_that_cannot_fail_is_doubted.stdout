@@ -1,0 +1,85 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:3:6 "abort" declared
+  Local "_0" "void" return
+Function a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:4:6 "find" declared
+  Local "_0" "int *" return
+  Local "_1" "int" parameter "k"
+Function a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:5:6 "next" declared
+  Local "_0" "int *" return
+Function a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:6:6 "use" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+Function a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:8:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "n"
+  Local "_2" "int *" parameter "q"
+  Local "_3" "int *" parameter "r"
+  Local "_4" "int *" "p"
+  Local "_5" "int"
+  Local "_6" "int *"
+  Local "_7" "int"
+  Local "_8" "int *"
+  Block "bb0" entry
+    Operation a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:10:9 written
+      Destination "_5"
+      Binary "Ge"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:10:9 written "bb1" "bb2"
+      Copy "_5"
+  Block "bb1"
+    Sequenced a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:10:9 generated
+    Operation a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:11:9 written
+      Destination "_4"
+      Use
+        Copy "_2"
+    Operation a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:11:9 written
+      Destination "_6"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:11:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:10:9 generated
+    Operation a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:12:16 written
+      Destination "_7"
+      Binary "Lt"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:12:16 written "bb4" "bb5"
+      Copy "_7"
+  Block "bb3"
+    ArgumentsEvaluated a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:15:5 generated
+    Call a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:15:5 written "use" "bb7"
+      Copy "_4"
+  Block "bb4"
+    Sequenced a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:12:16 generated
+    Operation a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:13:9 written
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:13:9 written
+      Destination "_8"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:13:9 generated
+    Goto "bb6"
+  Block "bb5"
+    Sequenced a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:12:16 generated
+    Goto "bb6"
+  Block "bb6"
+    Goto "bb3"
+  Block "bb7"
+    Sequenced a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:15:5 generated
+    Operation a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:16:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:16:12 generated
+    Return

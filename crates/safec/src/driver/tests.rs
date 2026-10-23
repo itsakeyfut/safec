@@ -1929,6 +1929,56 @@ mod unassigned {
         );
     }
 
+    /// The same code for a read some path assigned, in words of its own, and
+    /// the branch labelled with the edge that leads to it. Mutation: give it
+    /// another code, drop the note, or swap the edge's words. This fails.
+    #[test]
+    fn a_read_some_path_assigned_is_sc0411_in_its_own_words() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "if (c) use(p);");
+        let mut unit =
+            TranslationUnit::new(Target::from_triple("x86_64-pc-windows-msvc").expect("known"));
+        let int = unit.push_type(Ty::Int);
+        let function = unit.push_function(Function::new(Span::new(file, 0, 1), int, []));
+        let finding = Finding {
+            function,
+            kind: Kind::SometimesUnassigned {
+                edge: Span::new(file, 4, 5),
+                taken: false,
+            },
+            conclusion: Conclusion::Unknown,
+            at: Span::new(file, 7, 13),
+            local: None,
+            freed: None,
+            made: None,
+            unproven: None,
+        };
+        let diagnostic = memory_finding(&sources, &finding, Some("p"), &[]).expect("a diagnostic");
+        assert_eq!(
+            diagnostic.code().map(|code| code.to_string()).as_deref(),
+            Some("SC0411")
+        );
+        assert_eq!(
+            diagnostic.message(),
+            "`p` may be read before anything was assigned to it"
+        );
+        assert!(
+            diagnostic
+                .notes()
+                .iter()
+                .any(|note| note.starts_with("C17 6.3.2.1 p2")),
+            "{:?}",
+            diagnostic.notes()
+        );
+        let edges: Vec<&str> = diagnostic
+            .labels()
+            .iter()
+            .filter(|label| !label.is_primary())
+            .map(|label| label.message())
+            .collect();
+        assert_eq!(edges, ["when this is false"]);
+    }
+
     /// The same code for a pointer read out of memory nothing wrote, in
     /// words of its own. Mutation: give it another code, or drop the note.
     /// This fails.

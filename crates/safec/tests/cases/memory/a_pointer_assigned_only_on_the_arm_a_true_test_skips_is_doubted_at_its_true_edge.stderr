@@ -1,0 +1,15 @@
+error[SC0411]: `p` may be read before anything was assigned to it
+    ╭─[ a_pointer_assigned_only_on_the_arm_a_true_test_skips_is_doubted_at_its_true_edge.c:14:5 ]
+    │
+ 10 │     if (c) {
+    │         ┬  
+    │         ╰── when this is true
+    │ 
+ 14 │     use(p);
+    │     ───┬──  
+    │        ╰──── read here
+────╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else

@@ -225,7 +225,7 @@ fn verdict(
         Kind::TooLarge { .. } | Kind::TooLong { .. } => true,
         // Never asked: it is built by `memory::assigned` from where a local
         // was assigned, and it is about no free.
-        Kind::Unassigned => true,
+        Kind::Unassigned | Kind::SometimesUnassigned { .. } => true,
         // Never asked: it is said by `indeterminate`, about no free.
         Kind::IndeterminateLoad => true,
     };

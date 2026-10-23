@@ -136,9 +136,20 @@ pub enum Kind {
     },
     /// A pointer local read where no path to the read assigned it, which C17
     /// 6.3.2.1 p2 leaves undefined whatever the read is for. Always `Unsafe`;
-    /// a read some paths assigned is not one yet (#582), and a local whose
-    /// address is taken is never one. See `memory::assigned`.
+    /// a read some paths assigned is [`Kind::SometimesUnassigned`] or
+    /// nothing, and a local whose address is taken is never one. See
+    /// `memory::assigned`.
     Unassigned,
+    /// A pointer local read where some path assigned it, after a branch edge
+    /// that leads to the read on every path and assigns it on none. Always
+    /// `Unknown`, since no execution may take the edge. See
+    /// `memory::assigned`.
+    SometimesUnassigned {
+        /// The branch's controlling expression.
+        edge: Span,
+        /// Whether it is the edge a non-zero condition takes.
+        taken: bool,
+    },
     /// A pointer read out of an allocation `malloc` or `aligned_alloc` made
     /// and nothing wrote, on every path, and then dereferenced or freed. Its
     /// value is indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2), and Annex J.2
