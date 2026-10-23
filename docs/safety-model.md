@@ -323,6 +323,17 @@ has the reasoning and the measurement. Until the checks below level 5 are
 implemented, a run asked for it is refused as asking for more than it
 delivers, and what the default finds is reported beside that.
 
+**A `#pragma clang assume_nonnull` region will be read as a written
+`_Nonnull`**, once the preprocessor reads `#pragma` at all, which it does not
+yet. Inside one, a declaration's own single-level pointer that writes neither
+specifier is a promise, believed across the boundary as a written `_Nonnull`
+is, so a header written for level 5 need not annotate each pointer to build
+clean under `clang`. A pointer to a pointer is not covered, a written
+`_Nullable` wins, and a region not closed in the file it opened in is refused
+and promises nothing.
+[ADR-0056](adr/0056-a-pragma-clang-assume-nonnull-region-is-read-as-a-written-nonnull.md)
+has the reasoning and what `clang` was measured to do.
+
 The desired migration model is:
 
 ```text
