@@ -119,6 +119,9 @@ fn element_reads(element: &Element) -> Vec<(LocalId, Span)> {
             }
             place_reads(&operation.place, at, &mut reads);
         }
+        // Only a place read through reaches here: the lowering makes no
+        // `Evaluate` for a bare `p;` or the left of `(p, 1)`, so those reads
+        // are not seen.
         Element::Evaluate { place, origin } => {
             reads.push((place.local, origin.span()));
         }

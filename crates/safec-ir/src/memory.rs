@@ -467,8 +467,10 @@ fn findings_within(
             });
             continue;
         };
-        // A pointer local read before anything was assigned to it, inside the
-        // same bounds, since a function past them is not read at all.
+        // A pointer local read before anything was assigned to it, only in a
+        // function the memory check read, since one past its bounds is not
+        // read at all. Its own walk is not bounded here: one bit per local
+        // only rises, so it settles within `locals + 1` visits a block.
         assigned::findings(unit, func, function, &mut findings);
         // The other check's answer, asked at each block's terminator, which is
         // where a free is reached. A free of a pointer that check established
