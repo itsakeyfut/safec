@@ -45,6 +45,7 @@
 //! [the safety model]: https://github.com/itsakeyfut/safec/blob/main/docs/safety-model.md
 //! [`LocalId`]: crate::ir::LocalId
 
+mod assigned;
 mod bits;
 mod built;
 mod known;
@@ -132,6 +133,11 @@ pub enum Kind {
         /// The most this check holds.
         max: usize,
     },
+    /// A pointer local read where no path to the read assigned it, which C17
+    /// 6.3.2.1 p2 leaves undefined whatever the read is for. Always `Unsafe`;
+    /// a read some paths assigned is not one yet (#582), and a local whose
+    /// address is taken is never one. See `memory::assigned`.
+    Unassigned,
     /// A function this check gave up on part of the way, past `MAX_WORK`, so
     /// nothing about its memory is proved. Always `Unknown`, at the
     /// function's name.
@@ -461,6 +467,11 @@ fn findings_within(
             });
             continue;
         };
+        // A pointer local read before anything was assigned to it, only in a
+        // function the memory check read, since one past its bounds is not
+        // read at all. Its own walk is not bounded here: one bit per local
+        // only rises, so it settles within `locals + 1` visits a block.
+        assigned::findings(unit, func, function, &mut findings);
         // The other check's answer, asked at each block's terminator, which is
         // where a free is reached. A free of a pointer that check established
         // is null frees nothing, and `asked` is the one place that is applied.

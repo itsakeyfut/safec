@@ -1,0 +1,3 @@
+Hatch a_pointer_never_assigned_in_a_hatch_is_reported.c:4:50 "f"
+  Conclusion a_pointer_never_assigned_in_a_hatch_is_reported.c:6:9 "SC0411" "unsafe" "`p` is read before anything was assigned to it"
+  Conclusion a_pointer_never_assigned_in_a_hatch_is_reported.c:7:9 "SC0411" "unsafe" "`p` is read before anything was assigned to it"

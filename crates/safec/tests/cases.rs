@@ -56,6 +56,35 @@ cases! {
         // met by a program that proves it, one that leaves it unproven, and one
         // that does neither.
         a_value_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer local nothing assigned, read by a null test and written
+        // through on the arm it passes: a proof at each read (C17 6.3.2.1 p2),
+        // since no path assigns it.
+        // Mutation: treat every local as assigned where the function starts.
+        // It builds.
+        a_pointer_never_assigned_is_reported_where_a_null_test_reads_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Assigned on one arm only, which is undefined on the other and not
+        // reported yet: flags, `&&` and loops look the same here (#582).
+        // Mutation: join with `&&`. It is proved.
+        a_pointer_assigned_on_one_arm_only_is_not_asked_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Assigned on both arms: nothing. Mutation: have an assignment leave
+        // the bit as it was. It is proved.
+        a_pointer_assigned_on_every_arm_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Its address is taken, so a write through it may assign it and this
+        // check does not follow one. Mutation: drop the exclusion. It is
+        // reported.
+        a_pointer_a_call_fills_in_through_its_address_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Each turn begins a new `p` (C17 6.2.4 p6), so last turn's assignment
+        // is no assignment of this one. Mutation: have `StorageLive` leave the
+        // bit as it is. The turn before assigned it, and the free is believed.
+        a_pointer_declared_in_a_loop_is_unassigned_on_every_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `p = *p;` reads `p` before it writes it, in one element; `p = p + 1;`
+        // goes through a temporary and cannot tell the order apart. Mutation:
+        // take an element's write before its reads. It builds.
+        a_pointer_read_and_written_by_one_statement_is_read_first: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same proof inside a hatch, which reports what it proved (ADR-0038).
+        // Mutation: conclude it `Unknown` where no path assigns. It is listed and
+        // not reported.
+        a_pointer_never_assigned_in_a_hatch_is_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
         // A loop per write over 150 allocating locals: about 1.3 GB by the
         // check's estimate of what it would hold, past its bound, so it is one
         // `Unknown` at the name and not read (#572). `hatches` because the

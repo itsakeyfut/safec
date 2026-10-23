@@ -93,6 +93,7 @@ const UNSEQUENCED_ACCESS: Code = Code::new("SC0409");
 /// Not any of the codes above, which are each a class of program to fix: this
 /// is about this check, not the program, and the fix is a smaller function.
 const TOO_LARGE: Code = Code::new("SC0410");
+const UNASSIGNED: Code = Code::new("SC0411");
 
 /// What to change where this check stopped following a pointer and cannot
 /// say why: `LostReason::Other`.
@@ -682,6 +683,19 @@ pub(super) fn memory_finding(
             "nothing about this function's memory is proved",
             "split the function into smaller ones",
         ),
+        // Only ever a proof: a read some paths assigned is not reported yet
+        // (#582). `Unknown` takes the same words so the match stays
+        // exhaustive without a second wording nothing produces.
+        (Kind::Unassigned, Conclusion::Unsafe | Conclusion::Unknown, _) => (
+            UNASSIGNED,
+            said(
+                name,
+                "this reads a pointer before anything was assigned to it",
+                |name| format!("`{name}` is read before anything was assigned to it"),
+            ),
+            "read here",
+            "assign it where it is declared, `= 0` if nothing else",
+        ),
         // Neither check answers this and `Diagnostic::concluded` gives `None`
         // for it, so none of the four is read. Written out rather than `_` so
         // that a fourth conclusion has to be answered for here.
@@ -749,6 +763,12 @@ pub(super) fn memory_finding(
             "the check would hold about {bytes} bytes for this function, and holds at most \
              {max}"
         ));
+    }
+    if finding.kind == Kind::Unassigned {
+        diagnostic = diagnostic.with_note(
+            "C17 6.3.2.1 p2: reading a local whose address is never taken before it is \
+             assigned is undefined, whatever the value is read for",
+        );
     }
     if let Kind::TooLong { walks } = finding.kind {
         diagnostic = diagnostic.with_note(format!(
