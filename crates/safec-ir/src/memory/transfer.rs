@@ -268,6 +268,11 @@ impl Allocations<'_> {
             // **Read out of memory nothing wrote, certainly**: one
             // dereference through a pointer that names allocations and
             // nothing else, every one of them fresh. See `Held::fresh_read`.
+            // Mutation: drop the address clause, and
+            // `a_pointer_read_through_what_may_be_a_locals_address_is_not_reported`
+            // is reported. **The `lost` clause has no case**, measured: a
+            // local loses its sites where it is made lost, so the clause
+            // before it already answers.
             let through = &value.points_to[source.local.index()];
             held.fresh_read = source.projection.as_slice() == [Projection::Deref]
                 && through.sites().next().is_some()
@@ -2132,18 +2137,6 @@ impl Analysis for Allocations<'_> {
                 let reach = self.reach(function, handed, sites(), value);
                 value.expose(self.sources, reach, Some(origin.span()));
                 value.unproved_exposed();
-                // **And a pointer this check lost may name any allocation**,
-                // so a call handed one may have written any of them, as may
-                // one that can reach a lost value somebody exposed. The
-                // exposure above clears only what it names. See
-                // `Known::fresh`.
-                let lost = handed.iter().any(|argument| match argument {
-                    Operand::Copy(place) => value.points_to[place.local.index()].lost,
-                    Operand::Constant(_) => false,
-                });
-                if lost || value.lost_exposed {
-                    value.written_all();
-                }
                 // Pending from here, and not at its own exposure above, which
                 // `Known::noticed` leaves out by `by` anyway. See ADR-0042.
                 let span = origin.span();
@@ -2311,7 +2304,10 @@ impl Analysis for Allocations<'_> {
         };
         if !place.projection.is_empty() {
             // `*box = f();` writes an allocation this does not place. See
-            // `Known::fresh`.
+            // `Known::fresh`. **No C program reaches this**, measured: the
+            // lowering calls into a temporary and stores that, which the
+            // store transfer clears for. It is here for a frontend that
+            // does not.
             if derefs(place) > 0 {
                 value.written_all();
             }

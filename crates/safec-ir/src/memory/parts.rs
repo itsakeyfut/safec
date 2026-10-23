@@ -812,7 +812,10 @@ impl Held {
         // Arithmetic builds a new value, which is no longer exactly what a
         // `realloc` returned. See ADR-0039.
         *returned_by = None;
-        // Nor certainly what was read: not followed.
+        // Nor certainly what was read: not followed. **No case holds this**,
+        // measured: arithmetic builds on `Held::none`, and a store into a
+        // local through its address is into one whose address escaped,
+        // which the report does not ask.
         *fresh_read = false;
 
         // `*tab + 1` is built from a pointer read out of memory, and is one.

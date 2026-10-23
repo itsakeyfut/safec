@@ -106,6 +106,18 @@ cases! {
         // reported, as for a local (#582). Mutation: join the mark with `||`.
         // It is reported.
         a_pointer_read_out_of_memory_written_on_one_arm_is_not_asked_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written through a pointer read out of memory, which this check
+        // does not place. Mutation: have such a store clear no site. It is
+        // reported.
+        a_pointer_read_out_of_memory_a_loaded_pointer_wrote_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read through a pointer that may be `p`'s address, which holds a
+        // value. Mutation: drop the address clause in `read_through`. It is
+        // reported.
+        a_pointer_read_through_what_may_be_a_locals_address_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read out of fresh memory, and then handed by address to a call
+        // that may have written another pointer into it. Mutation: drop the
+        // `escaped` clause in `say_indeterminate`. It is reported.
+        a_pointer_read_out_of_fresh_memory_a_call_may_have_replaced_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Only compared, which is undefined only with a trap representation
         // (C17 6.2.6.1 p5), so it is not a proof. Mutation: ask the
         // operands of a comparison as `indeterminate` asks a dereference. It
