@@ -471,6 +471,7 @@ impl Allocations<'_> {
                     | Callee::Reallocates
                     | Callee::ReturnsFirst
                     | Callee::Copies
+                    // Returns nothing, so never reaches here from C.
                     | Callee::Ends => false,
                 };
                 if handed_over && place.projection.is_empty() {

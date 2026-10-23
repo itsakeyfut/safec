@@ -992,6 +992,8 @@ pub(super) fn handed_places<'a>(
         Callee::Reallocates => &arguments[arguments.len().min(1)..],
         // A call that does not return reads nothing it is handed after its
         // arguments are evaluated, which `dereferenced_in_terminator` asks.
+        // No C program reaches the difference: each of the four takes no
+        // pointer.
         Callee::Frees | Callee::Allocates | Callee::Ends => return Vec::new(),
     };
 
@@ -1178,7 +1180,10 @@ pub(super) fn used_before(
         // is a read this call has nothing to say about; the library functions
         // that return their first argument free nothing either.
         Callee::Allocates | Callee::ReturnsFirst | Callee::Copies => return,
-        // Frees nothing, and nothing after it runs.
+        // Frees nothing, and nothing after it runs. **No case tells this from
+        // `Callee::Opaque`'s answer**, measured: memory a pending read reaches
+        // is exposed only by an earlier call that may free it, which doubts
+        // the read first.
         Callee::Ends => return,
     };
 
