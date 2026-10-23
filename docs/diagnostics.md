@@ -139,10 +139,12 @@ J.2 lists using it as undefined. A write, a read or a free through it is
 *t = 1; }`. Not at the load, a comparison of `t`, a call it is handed or a
 `return` of it: J.2 lists those too, but they reach no memory through it,
 which is the error level 1 owns. It is followed through copies between locals
-in one function, and no further: stored into memory and read back, or handed
-to a callee that writes through it, it is not reported. A write anywhere in
-the allocation ends it, whether by a store, `memcpy`, `memset` or a call it
-was handed, since this check keeps no offsets within one; and a slot written
+in one function, and through fresh memory it is stored into and read back
+from, since storing an indeterminate pointer leaves the slot indeterminate.
+Handed to a callee that writes through it, it is not reported (#596). Any
+other write anywhere in the allocation ends it, whether by a store, `memcpy`,
+`memset` or a call it was handed, since this check keeps no offsets within
+one; and a slot written
 on some paths is not reported, as for a local.
 
 **`SC0319` refuses a name the checks believe.** A call to `abort`, `exit`,
