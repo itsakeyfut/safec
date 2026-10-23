@@ -15,7 +15,7 @@ Function a_pointer_assigned_under_a_test_with_a_constant_operand_is_doubted.c:3:
       Binary "Ne"
         Copy "_1"
         Constant 0
-    Branch a_pointer_assigned_under_a_test_with_a_constant_operand_is_doubted.c:5:9 written "bb1" "bb2"
+    Branch a_pointer_assigned_under_a_test_with_a_constant_operand_is_doubted.c:5:9 written "bb3" "bb2"
       Copy "_4"
   Block "bb1"
     Branch a_pointer_assigned_under_a_test_with_a_constant_operand_is_doubted.c:5:9 written "bb3" "bb4"

@@ -1364,7 +1364,11 @@ impl Lowering<'_> {
             builder.end(Terminator::Return);
         }
 
-        Some(builder.function)
+        // See `Function::thread_rebranches`. After the whole body, so that
+        // every block a branch may lead into is filled.
+        let mut function = builder.function;
+        function.thread_rebranches();
+        Some(function)
     }
 
     /// C17 6.9.1 p10: on entry to a definition, the length of each parameter

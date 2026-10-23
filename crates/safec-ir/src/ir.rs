@@ -1212,6 +1212,99 @@ impl Function {
         *slot = Some(block);
     }
 
+    /// Send each branch that leads into an empty re-branch on the same local
+    /// straight to where that second branch sends the same value.
+    ///
+    /// **The shape a condition's `&&` or `||` leaves**: the operand that
+    /// short-circuits jumps to a block whose only content is a branch on the
+    /// operator's result, which the first branch has just decided. Joined
+    /// there, the path that knows a pointer is not null and the path that
+    /// knows nothing meet before the second branch, and the second branch
+    /// cannot tell them apart: `if (p != 0 && q != 0) return *p;` doubted
+    /// `*p` (#592).
+    ///
+    /// **Sound because nothing can happen between the two**: the first branch
+    /// is its block's terminator and the second block has no elements, so the
+    /// local both read holds the same value at each, and the second goes the
+    /// way the first already went. Only a branch on a plain local, into a
+    /// block with no elements whose terminator is a branch on the same plain
+    /// local. The block passed over stays, for its other predecessors.
+    /// **The same local is held by no case**, measured: the lowering branches
+    /// on a temporary it computes in the same block, so an empty block that
+    /// branches again is only ever the operator's own join, on its own
+    /// result.
+    ///
+    /// Repeated until nothing moves, which a chain of such blocks needs, and
+    /// at most once per block, which is what ends it whatever the shape: two
+    /// such blocks sending each other round would move an edge between them
+    /// on every pass. No C program builds one, since a loop's test computes
+    /// into its block before it branches, so the bound is never what stops
+    /// it on a program written here.
+    pub fn thread_rebranches(&mut self) {
+        let blocks = self.defined_mut();
+        for _ in 0..blocks.len() {
+            let mut moved = false;
+            for index in 0..blocks.len() {
+                let Some(Block {
+                    terminator:
+                        Terminator::Branch {
+                            condition: Operand::Copy(tested),
+                            then,
+                            otherwise,
+                            ..
+                        },
+                    ..
+                }) = &blocks[index]
+                else {
+                    continue;
+                };
+                if !tested.projection.is_empty() {
+                    continue;
+                }
+                let local = tested.local;
+                let rebranch = |target: BlockId, taken: bool| match &blocks[target.index()] {
+                    Some(Block {
+                        elements,
+                        terminator:
+                            Terminator::Branch {
+                                condition: Operand::Copy(again),
+                                then,
+                                otherwise,
+                                ..
+                            },
+                    }) if elements.is_empty()
+                        && again.projection.is_empty()
+                        && again.local == local =>
+                    {
+                        Some(if taken { *then } else { *otherwise })
+                    }
+                    _ => None,
+                };
+                let (then, otherwise) = (*then, *otherwise);
+                let new_then = rebranch(then, true).unwrap_or(then);
+                let new_otherwise = rebranch(otherwise, false).unwrap_or(otherwise);
+                if new_then == then && new_otherwise == otherwise {
+                    continue;
+                }
+                if let Some(Block {
+                    terminator:
+                        Terminator::Branch {
+                            then, otherwise, ..
+                        },
+                    ..
+                }) = &mut blocks[index]
+                {
+                    *then = new_then;
+                    *otherwise = new_otherwise;
+                }
+                moved = true;
+            }
+            if !moved {
+                return;
+            }
+        }
+    }
+
     /// The type of the local `id` names.
     ///
     /// # Panics
