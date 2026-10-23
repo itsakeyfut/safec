@@ -1107,7 +1107,7 @@ impl Known {
     /// may have replaced: [`Held::fresh_read`](super::parts::Held::fresh_read),
     /// and not a local whose address escaped, since code this check cannot
     /// read may have written a determinate pointer into it since. The one
-    /// answer a copy of it and a store of it ask, as the report asks it too.
+    /// answer a copy of it, a store of it and the report ask.
     /// Unasked, `fill(&t); *h = t; u = *h; *u = 1;` with `fill` writing `t`
     /// proved `*u` undefined (#588), and so did `fill(&t); u = t;`.
     pub(super) fn reads_indeterminate(&self, local: usize) -> bool {
