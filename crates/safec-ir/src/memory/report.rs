@@ -992,8 +992,9 @@ pub(super) fn handed_places<'a>(
         Callee::Reallocates => &arguments[arguments.len().min(1)..],
         // A call that does not return reads nothing it is handed after its
         // arguments are evaluated, which `dereferenced_in_terminator` asks.
-        // No C program reaches the difference: each of the four takes no
-        // pointer.
+        // No C program reaches the difference: none of the four takes a
+        // pointer as the library declares it, and one redeclared to take one
+        // is undefined and believed all the same, as ADR-0051 believes it.
         Callee::Frees | Callee::Allocates | Callee::Ends => return Vec::new(),
     };
 

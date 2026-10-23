@@ -471,7 +471,9 @@ impl Allocations<'_> {
                     | Callee::Reallocates
                     | Callee::ReturnsFirst
                     | Callee::Copies
-                    // Returns nothing, so never reaches here from C.
+                    // Returns nothing as the library declares it. One redeclared
+                    // to return a pointer is undefined and believed all the
+                    // same, as ADR-0051 believes it.
                     | Callee::Ends => false,
                 };
                 if handed_over && place.projection.is_empty() {
@@ -1681,8 +1683,8 @@ impl Analysis for Allocations<'_> {
         // allocation; it is written the same way in both places so that the
         // two readings of one rule cannot drift.
         let handed = match kind {
-            // **Touches nothing**: what it was handed was recorded above, and
-            // nothing after it runs. See `Callee::Ends`.
+            // **Touches nothing**: what its arguments read was asked above,
+            // and nothing after it runs. See `Callee::Ends`.
             Callee::Ends => return,
             Callee::Reallocates => &arguments[..arguments.len().min(1)],
             Callee::Frees
