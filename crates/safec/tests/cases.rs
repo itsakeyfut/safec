@@ -1445,6 +1445,11 @@ cases! {
         // `!(p == 0)` is `p != 0` (C17 6.5.3.3 p5) through one more `== 0`.
         // Mutation: ignore the polarity a `== 0` adds. `SC0403`.
         a_negated_null_test_on_the_left_of_and_is_not_null_in_its_body: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Three `== 0` turn the test over three times, so `p` is null where
+        // it is written through, and that is proved. Mutation: let the last
+        // `== 0` decide the polarity, `inverted = equal`, rather than each of
+        // them. It is silent.
+        a_null_test_through_three_comparisons_with_zero_is_read_with_its_polarity: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // **The cost**: `|| 0` never reaches the body through its right
         // operand, but `0 != 0` is not folded, so the path where `p` is null
         // reaches it as far as this check can tell. It is here so the cost is

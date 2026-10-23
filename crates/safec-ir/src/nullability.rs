@@ -538,9 +538,11 @@ pub(crate) fn tested_against_null(
 
         // **An `int` compared with zero is followed to its own last write**,
         // in this block and before this one, with `changed` still recording
-        // everything between it and the branch. So `int c = p != 0; if (c)`
-        // in one block refines `p` as `if (p != 0)` does, and where `c` was
-        // written in another block the walk ends without an answer.
+        // everything between it and the branch, and where that write is in
+        // another block the walk ends without an answer. **Not a named
+        // `int`**, measured: `int c = p != 0; if (c)` lowers the declaration
+        // as a copy of a temporary, and a copy is a value this walk does not
+        // follow, so it refines nothing, as before.
         if let Some((through, equal)) = through_zero(unit, function, &operation.value) {
             asked = through;
             inverted ^= equal;

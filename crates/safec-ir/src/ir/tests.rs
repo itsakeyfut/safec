@@ -645,21 +645,24 @@ fn a_function_is_not_given_a_body_twice() {
     unit.fill_function(id, Function::new(at, int, []));
 }
 
-/// A branch into an empty block that branches again on the same local, and
-/// the same into a block that is not empty, threaded and left alone.
+/// A branch into an empty block that branches again on the same local is
+/// threaded; into a block that is not empty, or that branches on another
+/// local, it is left alone.
 ///
 /// Mutation: drop the test that the second block has no elements in
-/// `Function::thread_rebranches`. The second function's first branch is
-/// sent past a block that runs something, and this fails.
+/// `Function::thread_rebranches`, or the test that it branches on the same
+/// local. The first branch is sent past a block it should not be, and this
+/// fails.
 #[test]
 fn a_branch_is_threaded_only_through_an_empty_rebranch_on_its_own_local() {
     let (_sources, at) = spans();
     let mut unit = TranslationUnit::new(a_target());
     let int = unit.push_type(Ty::Int);
 
-    for empty in [true, false] {
+    for (empty, same) in [(true, true), (false, true), (true, false)] {
         let mut function = Function::new(at, int, []);
         let tested = function.push_local(int);
+        let other = function.push_local(int);
         let ends = |function: &mut Function| {
             function.push_block(Block {
                 elements: Vec::new(),
@@ -677,7 +680,7 @@ fn a_branch_is_threaded_only_through_an_empty_rebranch_on_its_own_local() {
         let rebranch = function.push_block(Block {
             elements,
             terminator: Terminator::Branch {
-                condition: Operand::Copy(Place::local(tested)),
+                condition: Operand::Copy(Place::local(if same { tested } else { other })),
                 then: taken,
                 otherwise: skipped,
                 origin: Origin::Written(at),
@@ -697,7 +700,11 @@ fn a_branch_is_threaded_only_through_an_empty_rebranch_on_its_own_local() {
 
         let mut successors = Vec::new();
         function.block(first).terminator.successors(&mut successors);
-        let expected = if empty { taken } else { rebranch };
-        assert_eq!(successors, [expected, skipped], "empty: {empty}");
+        let expected = if empty && same { taken } else { rebranch };
+        assert_eq!(
+            successors,
+            [expected, skipped],
+            "empty: {empty}, same: {same}"
+        );
     }
 }

@@ -1229,10 +1229,11 @@ impl Function {
     /// way the first already went. Only a branch on a plain local, into a
     /// block with no elements whose terminator is a branch on the same plain
     /// local. The block passed over stays, for its other predecessors.
-    /// **The same local is held by no case**, measured: the lowering branches
-    /// on a temporary it computes in the same block, so an empty block that
-    /// branches again is only ever the operator's own join, on its own
-    /// result.
+    /// **The same local is held by a unit test and by no C program**: the
+    /// lowering branches on a temporary it computes in the same block, so an
+    /// empty block that branches again is only ever the operator's own join,
+    /// on its own result. Built by hand, a block that branches on another
+    /// local is left alone.
     ///
     /// Repeated until nothing moves, which a chain of such blocks needs, and
     /// at most once per block, which is what ends it whatever the shape: two
