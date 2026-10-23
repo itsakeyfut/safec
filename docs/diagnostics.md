@@ -49,7 +49,7 @@ records why the prefix is this one and what was rejected.
 | `SC01xx` | lexical, what a character, a token or a directive is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105`, `SC0106`, `SC0107`, `SC0108`, `SC0109`, `SC0110`, `SC0111`, `SC0112`, `SC0113`, `SC0114`, `SC0115`, `SC0116`, `SC0117` |
 | `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203`, `SC0204`, `SC0205`, `SC0206`, `SC0207` |
 | `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305`, `SC0306`, `SC0307`, `SC0308`, `SC0309`, `SC0310`, `SC0311`, `SC0312`, `SC0313`, `SC0314`, `SC0315`, `SC0316`, `SC0317`, `SC0318`, `SC0319` |
-| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406`, `SC0407`, `SC0408`, `SC0409`, `SC0410` |
+| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406`, `SC0407`, `SC0408`, `SC0409`, `SC0410`, `SC0411` |
 | `SC05xx` | lifetime | none yet |
 | `SC06xx` | ownership | `SC0601` |
 | `SC07xx` | thread | none yet |
@@ -110,6 +110,16 @@ unsequenced; the words then name an operand of the same expression rather than
 an argument of the same call.
 [ADR-0052](adr/0052-an-argument-that-writes-a-pointer-another-argument-reads-is-reported-where-it-is-lowered.md)
 is the decision.
+
+**`SC0411` is a pointer local read before anything was assigned to it.** C17
+6.3.2.1 p2 leaves reading a local whose address is never taken undefined
+while it is indeterminate, whatever the read is for, so `int *p; if (p != 0) {
+*p = 1; }` is reported at the comparison and at the write. It is a proof where
+no path to the read assigns the local and `Unknown` where some do, which a
+program whose only assigning path is guarded by a flag pays: the check does not
+follow the flag. A local whose address is taken is never asked about. A pointer
+read out of an allocation nothing wrote is the same undefined read, and is not
+reported yet (#581).
 
 **`SC0319` refuses a name the checks believe.** A call to `abort`, `exit`,
 `_Exit` or `quick_exit` gets no continuation, because C says none returns, and
