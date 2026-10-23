@@ -1154,7 +1154,21 @@ impl Analysis for Allocations<'_> {
                 // Placed only for one dereference through a pointer that
                 // names exactly its sites; anything else may land in any
                 // allocation. See `Known::fresh`.
-                if derefs(&operation.place) > 0 {
+                //
+                // **Not a store of an indeterminate pointer**, which leaves
+                // the slot holding an indeterminate value, as it did: `*h =
+                // t; u = *h;` with `t` read out of fresh memory reads `u` as
+                // fresh too (#588). Mutation: clear for this store as for any
+                // other. Then
+                // `a_pointer_read_out_of_fresh_memory_stored_and_read_back_is_reported`
+                // is silent.
+                let indeterminate = match &operation.value {
+                    Rvalue::Use(Operand::Copy(source)) if source.projection.is_empty() => {
+                        value.points_to[source.local.index()].fresh_read
+                    }
+                    _ => false,
+                };
+                if derefs(&operation.place) > 0 && !indeterminate {
                     let held = &value.points_to[pointer];
                     if one_step && !(held.loaded || held.lost || held.foreign) {
                         for site in held.sites().collect::<Vec<_>>() {
