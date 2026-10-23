@@ -119,8 +119,17 @@ proof, made where no path to the read assigns the local. A read some paths
 assigned is undefined on the others and is not reported yet (#582): this
 check does not follow the condition a path took, and reporting it refused
 `if (key && (p = find(key)) != 0)`, which C defines. A local whose address is
-taken is never asked about. A pointer read out of an allocation nothing wrote
-is the same undefined read, and is not reported yet (#581).
+taken is never asked about.
+
+A pointer read out of an allocation `malloc` or `aligned_alloc` made, before
+anything wrote it, points at no object either (C17 7.22.3.4 p2), so a write, a
+read or a free through it is `SC0411` too, at the use: `int **box = malloc(8);
+int *t = *box; if (t != 0) { *t = 1; }`. Not at the load, and not at a
+comparison of `t`, which are undefined only where the type has a trap
+representation (6.2.6.1 p5). A write anywhere in the allocation ends it,
+whether by a store, `memcpy`, `memset` or a call it was handed, since this
+check keeps no offsets within one; and a slot written on some paths is not
+reported, as for a local.
 
 **`SC0319` refuses a name the checks believe.** A call to `abort`, `exit`,
 `_Exit` or `quick_exit` gets no continuation, because C says none returns, and
