@@ -1,0 +1,42 @@
+Target "x86_64-pc-windows-msvc"
+Function a_read_unordered_against_exit_after_a_store_exposed_it_is_not_doubted.c:1:6 "exit" declared
+  Local "_0" "void" return
+  Local "_1" "int" parameter "status"
+Function a_read_unordered_against_exit_after_a_store_exposed_it_is_not_doubted.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "a"
+  Local "_2" "int **" parameter "out"
+  Local "_3" "int *"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_read_unordered_against_exit_after_a_store_exposed_it_is_not_doubted.c:4:21 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_1"
+    Operation a_read_unordered_against_exit_after_a_store_exposed_it_is_not_doubted.c:4:21 written
+      Destination "_3"
+      Use
+        Copy "_2"
+          Deref
+    Operation a_read_unordered_against_exit_after_a_store_exposed_it_is_not_doubted.c:4:13 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_1"
+          Deref
+        Constant 0
+    Call a_read_unordered_against_exit_after_a_store_exposed_it_is_not_doubted.c:4:38 written "exit" "bb1"
+      Constant 1
+  Block "bb1"
+    Operation a_read_unordered_against_exit_after_a_store_exposed_it_is_not_doubted.c:4:12 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_4"
+        Constant 0
+    Operation a_read_unordered_against_exit_after_a_store_exposed_it_is_not_doubted.c:4:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_read_unordered_against_exit_after_a_store_exposed_it_is_not_doubted.c:4:12 generated
+    Return

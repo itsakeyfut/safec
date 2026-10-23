@@ -318,7 +318,11 @@ pub(super) fn reported(
     let arguments = match analysis.callee(*callee) {
         Callee::Frees => &arguments[..],
         Callee::Reallocates => &arguments[..arguments.len().min(1)],
-        Callee::Allocates | Callee::ReturnsFirst | Callee::Copies | Callee::Opaque => {
+        Callee::Allocates
+        | Callee::ReturnsFirst
+        | Callee::Copies
+        | Callee::Ends
+        | Callee::Opaque => {
             return Vec::new();
         }
     };
@@ -986,7 +990,12 @@ pub(super) fn handed_places<'a>(
     let arguments = match analysis.callee(callee) {
         Callee::Opaque | Callee::ReturnsFirst | Callee::Copies => arguments,
         Callee::Reallocates => &arguments[arguments.len().min(1)..],
-        Callee::Frees | Callee::Allocates => return Vec::new(),
+        // A call that does not return reads nothing it is handed after its
+        // arguments are evaluated, which `dereferenced_in_terminator` asks.
+        // No C program reaches the difference: none of the four takes a
+        // pointer as the library declares it, and one redeclared to take one
+        // is undefined and believed all the same, as ADR-0051 believes it.
+        Callee::Frees | Callee::Allocates | Callee::Ends => return Vec::new(),
     };
 
     let mut asked: Vec<&Place> = Vec::new();
@@ -1172,6 +1181,13 @@ pub(super) fn used_before(
         // is a read this call has nothing to say about; the library functions
         // that return their first argument free nothing either.
         Callee::Allocates | Callee::ReturnsFirst | Callee::Copies => return,
+        // Frees nothing, and nothing after it runs: a read unordered against
+        // it either ran before it or never ran. Answered as `Callee::Opaque`
+        // is, `(a[0] + (*out = a, 0)) + (exit(1), 0)` doubted `a[0]`, since
+        // the store exposed `a`. Mutation: answer `(false, true)`. Then
+        // `a_read_unordered_against_exit_after_a_store_exposed_it_is_not_doubted`
+        // reports `SC0402`.
+        Callee::Ends => return,
     };
 
     // The machine behind the paragraph above. Placed here because this is

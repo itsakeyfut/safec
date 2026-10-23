@@ -117,6 +117,24 @@ cases! {
         // unassigned. It is refused, which clang does not do. It is here so
         // the cost is seen, and fails if the pass over the edges is dropped.
         a_pointer_assigned_under_a_test_with_a_constant_operand_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `abort` inside a larger expression keeps its edge, and touches
+        // nothing on it. Mutation: read the four names as `Callee::Opaque`.
+        // `SC0407` at `use(p)`.
+        a_pointer_handed_on_after_abort_inside_an_expression_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What `exit` is handed is still read, and the replay in
+        // `memory::findings_within` is what reports it, not the transfer.
+        // Mutation: skip the replay's `used` at a terminator calling one of
+        // the four names. It is silent.
+        a_freed_pointer_read_as_the_argument_of_exit_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The memory check says nothing here; the nullability check still
+        // joins the path through `abort` and doubts `*p`, which is #590.
+        // Mutation: read the four names as `Callee::Opaque`. `SC0402` joins.
+        a_pointer_tested_before_abort_inside_an_expression_is_not_doubted_as_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A read unordered against `exit`, of memory a store in the same
+        // expression exposed: it ran before the call or never ran. Mutation:
+        // answer `Callee::Ends` in `used_before` as `Callee::Opaque` is.
+        // `SC0402` at `a[0]`.
+        a_read_unordered_against_exit_after_a_store_exposed_it_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of what `malloc` returned before anything wrote
         // it, and written through on the arm a null test passes: a proof
         // (C17 7.22.3.4 p2 and Annex J.2). Mutation: leave a `malloc` site
