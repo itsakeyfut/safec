@@ -69,6 +69,48 @@ cases! {
         // Assigned on both arms: nothing. Mutation: have an assignment leave
         // the bit as it was. It is proved.
         a_pointer_assigned_on_every_arm_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read out of what `malloc` returned before anything wrote
+        // it, and written through on the arm a null test passes: a proof
+        // (C17 7.22.3.4 p2). Mutation: leave a `malloc` site not fresh. It
+        // builds.
+        a_pointer_read_out_of_fresh_memory_is_reported_where_a_null_test_passes: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Freed, which frees no allocation, and reported once rather than
+        // beside a doubt. Mutation: drop the call to `freed_indeterminate`.
+        // Only the doubt is left.
+        a_pointer_read_out_of_fresh_memory_is_reported_where_it_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read through, as an operand rather than a write. Mutation: drop the
+        // call to `indeterminate` before `used` in the replay. It is silent.
+        a_pointer_read_out_of_fresh_memory_is_reported_where_it_is_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Copied first. Mutation: clear the mark on a plain copy. It is
+        // silent.
+        a_copy_of_a_pointer_read_out_of_fresh_memory_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read through a second pointer to the same allocation. Mutation:
+        // leave a `malloc` site not fresh, or drop the call to
+        // `indeterminate` before `used`. It is silent.
+        a_pointer_read_out_of_fresh_memory_through_an_alias_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `calloc`'s space is zero (C17 7.22.3.2 p2), so the null test is
+        // right. Mutation: let `calloc` leave its site fresh. It is reported.
+        a_pointer_read_out_of_memory_calloc_made_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written by a store first. Mutation: have a store through one
+        // dereference leave its sites fresh. It is reported.
+        a_pointer_read_out_of_memory_a_store_wrote_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Handed to a call this check cannot read first, which may have
+        // written it; the doubts are the ones that call already raises.
+        // Mutation: have an exposure leave its sites fresh. `SC0411` joins
+        // them.
+        a_pointer_read_out_of_memory_a_call_was_handed_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written by `memcpy` first, which exposes what it was handed.
+        // Mutation: have an exposure leave its sites fresh. It is reported.
+        a_pointer_read_out_of_memory_memcpy_wrote_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written on one arm only, which is undefined on the other and not
+        // reported, as for a local (#582). Mutation: join the mark with `||`.
+        // It is reported.
+        a_pointer_read_out_of_memory_written_on_one_arm_is_not_asked_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Only compared, which is undefined only with a trap representation
+        // (C17 6.2.6.1 p5), so it is not a proof. Mutation: ask the
+        // operands of a comparison as `indeterminate` asks a dereference. It
+        // is reported.
+        a_pointer_read_out_of_fresh_memory_and_only_compared_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Its address is taken, so a write through it may assign it and this
         // check does not follow one. Mutation: drop the exclusion. It is
         // reported.

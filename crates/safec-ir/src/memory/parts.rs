@@ -557,6 +557,13 @@ pub(super) struct Held {
     /// clears this, arithmetic included, and a join keeps it only where both
     /// arms agree. Found by review. See ADR-0039.
     pub(super) returned_by: Option<usize>,
+    /// Whether this was read, on every path, out of an allocation
+    /// [`Known::fresh`](super::known::Known::fresh) marks, so is
+    /// indeterminate and points at no object: a dereference of it, or a
+    /// free, is undefined (C17 7.22.3.4 p2). Copied with the value and kept
+    /// only where both paths agree. Arithmetic drops it, so `t + 1` is not
+    /// followed.
+    pub(super) fresh_read: bool,
 }
 
 impl Held {
@@ -594,6 +601,7 @@ impl Held {
             lost_read: false,
             from_caller: false,
             returned_by: None,
+            fresh_read: false,
         }
     }
 
@@ -687,8 +695,10 @@ impl Held {
             lost_read,
             from_caller,
             returned_by,
+            fresh_read,
         } = self;
         sites.clear_all();
+        *fresh_read = false;
         *from_caller = false;
         *returned_by = None;
         *lost = false;
@@ -733,10 +743,13 @@ impl Held {
             lost_read,
             from_caller,
             returned_by,
+            fresh_read,
         } = self;
         if *returned_by != other.returned_by {
             *returned_by = None;
         }
+        // A proof, so an intersection, as `freed` is.
+        *fresh_read = *fresh_read && other.fresh_read;
         *offset = offset.joined(other.offset);
         *from_caller = *from_caller || other.from_caller;
         *loaded = *loaded || other.loaded;
@@ -793,11 +806,14 @@ impl Held {
             lost_read,
             from_caller,
             returned_by,
+            fresh_read,
         } = self;
         *from_caller = *from_caller || other.from_caller;
         // Arithmetic builds a new value, which is no longer exactly what a
         // `realloc` returned. See ADR-0039.
         *returned_by = None;
+        // Nor certainly what was read: not followed.
+        *fresh_read = false;
 
         // `*tab + 1` is built from a pointer read out of memory, and is one.
         *loaded = *loaded || other.loaded;

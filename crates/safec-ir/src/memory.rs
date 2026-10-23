@@ -64,7 +64,8 @@ use crate::source::{SourceMap, Span};
 
 use built::named;
 use report::{
-    after_a_call, derefs, handed, handed_places, inside, reported, returned, used, used_before,
+    after_a_call, derefs, freed_indeterminate, handed, handed_places, indeterminate, inside,
+    reported, returned, used, used_before,
 };
 use transfer::Allocations;
 
@@ -138,6 +139,13 @@ pub enum Kind {
     /// a read some paths assigned is not one yet (#582), and a local whose
     /// address is taken is never one. See `memory::assigned`.
     Unassigned,
+    /// A pointer read out of an allocation `malloc` or `aligned_alloc` made
+    /// and nothing wrote, on every path, and then dereferenced or freed: it
+    /// points at no object, so either is undefined (C17 7.22.3.4 p2). Always
+    /// `Unsafe`, at the use rather than the read, since reading it is
+    /// undefined only with a trap representation (6.2.6.1 p5). See
+    /// `Known::fresh`.
+    IndeterminateLoad,
     /// A function this check gave up on part of the way, past `MAX_WORK`, so
     /// nothing about its memory is proved. Always `Unknown`, at the
     /// function's name.
@@ -497,6 +505,16 @@ fn findings_within(
 
             let block = function.block(id);
             for element in &block.elements {
+                // Before `used`, so that the proof stands at the caret and a
+                // doubt about the same place there does not replace it.
+                indeterminate(
+                    sources,
+                    &mut findings,
+                    &mut said,
+                    &analysis,
+                    dereferenced_in_element(element),
+                    &known,
+                );
                 // Before the transfer, which is what the element does: the
                 // question is what was true where it runs.
                 used(
@@ -559,6 +577,22 @@ fn findings_within(
                 analysis.element(function, element, &mut known);
             }
 
+            indeterminate(
+                sources,
+                &mut findings,
+                &mut said,
+                &analysis,
+                dereferenced_in_terminator(&block.terminator),
+                &known,
+            );
+            freed_indeterminate(
+                sources,
+                &mut findings,
+                &mut said,
+                &analysis,
+                &block.terminator,
+                &known,
+            );
             // Before the terminator's own transfer, which is what turns a live
             // allocation into a freed one: the question is what was true when
             // the call was reached.
@@ -581,7 +615,24 @@ fn findings_within(
                 &block.terminator,
                 &known,
             );
-            findings.extend(reported(&analysis, &block.terminator, &known, &null, id));
+            // **Not a doubt about a free already proved to free nothing**,
+            // which `freed_indeterminate` said above: the two would be one
+            // free reported twice, once as unknown.
+            let proved: Vec<(Span, LocalId)> = findings
+                .iter()
+                .filter(|finding| finding.kind == Kind::IndeterminateLoad)
+                .filter_map(|finding| finding.local.map(|local| (finding.at, local)))
+                .collect();
+            findings.extend(
+                reported(&analysis, &block.terminator, &known, &null, id)
+                    .into_iter()
+                    .filter(|finding| {
+                        finding.conclusion == Conclusion::Unsafe
+                            || !finding
+                                .local
+                                .is_some_and(|local| proved.contains(&(finding.at, local)))
+                    }),
+            );
             // After the free's own finding, which is the one whose caret is
             // here: what this adds are reports about carets further back, and a
             // reader meets them in the order the sort at the end puts them in

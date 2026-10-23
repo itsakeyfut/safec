@@ -106,6 +106,15 @@ pub(super) struct Known {
     /// this to mark every such allocation `stale`. Nothing clears it, as
     /// nothing clears `stale`. See ADR-0045.
     pub(super) holds_lost: Vec<bool>,
+    /// Per site, whether it is an allocation `malloc` or `aligned_alloc` made
+    /// and nothing has written since, on every path: its contents are
+    /// indeterminate (C17 7.22.3.4 p2). An intersection at a join, and
+    /// cleared only by [`Self::written`] and [`Self::written_all`], in the
+    /// direction that can only silence. A pointer read out of it is
+    /// [`Held::fresh_read`](super::parts::Held::fresh_read). Not "empty":
+    /// taking a fresh block's contents as empty is the unsound starting set
+    /// #579 met.
+    pub(super) fresh: Vec<bool>,
     /// Per site, whether what it contains may include a pointer a caller or
     /// a callee handed over: one [`Held::from_caller`] marks, stored here.
     ///
@@ -915,6 +924,9 @@ impl Known {
             // Kept, as `stale` is: the slots of the new allocation are not
             // told apart from the old one's.
             holds_lost: _,
+            // Not fresh, whatever it was: the caller says whether the new
+            // allocation is, since only it knows which function made it.
+            fresh,
             // Kept, as the entry and `stale` are: the slots of the new
             // allocation are not told apart from the old one's. No case
             // tells this from clearing it, measured: every other local
@@ -938,6 +950,7 @@ impl Known {
         // now belongs to a new allocation, and the branch that would have
         // settled the old fact is about another. See ADR-0039.
         realloced[site] = None;
+        fresh[site] = false;
         for fact in realloced.iter_mut() {
             if fact
                 .as_ref()
@@ -1078,12 +1091,27 @@ impl Known {
         self.noticed(sources, by, &routes);
         for site in sites {
             self.exposed[site] = true;
+            self.written(site);
         }
         // One closure, shared with what a pending read is told, so that the
         // two cannot disagree about what an exposed allocation reaches.
         for site in self.reachable_now() {
             self.exposed[site] = true;
+            self.written(site);
         }
+    }
+
+    /// Something may have written `site`, so its contents are no longer
+    /// known to be indeterminate. Exposed memory is written by whatever code
+    /// this check cannot read may do with it. See [`Self::fresh`].
+    pub(super) fn written(&mut self, site: usize) {
+        self.fresh[site] = false;
+    }
+
+    /// Something may have written any allocation: a write this check cannot
+    /// place, or a library call it reads only by name. See [`Self::fresh`].
+    pub(super) fn written_all(&mut self) {
+        self.fresh.fill(false);
     }
 
     /// Every exposed allocation still live is unproven, because the call being

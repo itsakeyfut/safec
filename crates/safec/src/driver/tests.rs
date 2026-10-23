@@ -1889,7 +1889,7 @@ mod unassigned {
     use safec_ir::memory::{Finding, Kind};
     use safec_ir::source::SourceMap;
 
-    fn said(conclusion: Conclusion) -> (String, String, Vec<String>) {
+    fn said(kind: Kind, conclusion: Conclusion) -> (String, String, Vec<String>) {
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", "f");
         let mut unit =
@@ -1898,7 +1898,7 @@ mod unassigned {
         let function = unit.push_function(Function::new(Span::new(file, 0, 1), int, []));
         let finding = Finding {
             function,
-            kind: Kind::Unassigned,
+            kind,
             conclusion,
             at: Span::new(file, 0, 1),
             local: None,
@@ -1920,11 +1920,28 @@ mod unassigned {
     /// Mutation: give it another code, or drop the note. This fails.
     #[test]
     fn is_sc0411_in_its_own_words() {
-        let (code, message, notes) = said(Conclusion::Unsafe);
+        let (code, message, notes) = said(Kind::Unassigned, Conclusion::Unsafe);
         assert_eq!(code, "SC0411");
         assert_eq!(message, "`p` is read before anything was assigned to it");
         assert!(
             notes.iter().any(|note| note.starts_with("C17 6.3.2.1 p2")),
+            "{notes:?}"
+        );
+    }
+
+    /// The same code for a pointer read out of memory nothing wrote, in
+    /// words of its own. Mutation: give it another code, or drop the note.
+    /// This fails.
+    #[test]
+    fn a_pointer_read_out_of_fresh_memory_is_sc0411_in_its_own_words() {
+        let (code, message, notes) = said(Kind::IndeterminateLoad, Conclusion::Unsafe);
+        assert_eq!(code, "SC0411");
+        assert_eq!(
+            message,
+            "`p` points at nothing, since it was read out of memory nothing wrote"
+        );
+        assert!(
+            notes.iter().any(|note| note.starts_with("C17 7.22.3.4 p2")),
             "{notes:?}"
         );
     }
