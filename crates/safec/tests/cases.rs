@@ -1408,6 +1408,10 @@ cases! {
         // path ends at the comma after it and does not reach `*p` (#590).
         // Mutation: never make a path `Path::Ending`. `SC0403` at `*p`.
         a_pointer_tested_null_on_an_arm_that_calls_abort_inside_an_expression_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*p` after the comma that follows `abort` is never evaluated, though
+        // `p` is null on that arm. Mutation: report on an ended path in the
+        // replay. It is proved a null dereference.
+        a_read_after_abort_on_the_null_arm_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `for` on zero is not entered, so what follows it is reached and
         // asked. Mutation: have the `for` site swap its arms where the
         // condition is a constant; the loop is entered and never left, and
