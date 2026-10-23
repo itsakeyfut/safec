@@ -135,6 +135,11 @@ cases! {
         // answer `Callee::Ends` in `used_before` as `Callee::Opaque` is.
         // `SC0402` at `a[0]`.
         a_read_unordered_against_exit_after_a_store_exposed_it_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `free(p)` with `p` null frees nothing (C17 7.22.3.3 p2), and on an
+        // arm that has passed `(abort(), 0);` the nullability check still
+        // answers what it knew there. Mutation: answer nothing established
+        // on an ended path in `null_at_terminators`. `SC0401`.
+        a_free_of_a_null_pointer_after_abort_on_its_arm_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of what `malloc` returned before anything wrote
         // it, and written through on the arm a null test passes: a proof
         // (C17 7.22.3.4 p2 and Annex J.2). Mutation: leave a `malloc` site
@@ -1401,8 +1406,27 @@ cases! {
         // A call inside a larger full expression keeps its edge, because a
         // read written before it is lowered after it. Mutation: drop the
         // `root` test where the call decides its continuation; both reads go
-        // silent.
+        // silent. And the nullability check ends that path only at the next
+        // sequence point: ending it at the call's edge instead silences both.
         a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The arm where `p` is null calls `abort` inside an expression, so the
+        // path ends at the comma after it and does not reach `*p` (#590).
+        // Mutation: never make a path `Path::Ending`. `SC0403` at `*p`.
+        a_pointer_tested_null_on_an_arm_that_calls_abort_inside_an_expression_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*p` after the comma that follows `abort` is never evaluated, though
+        // `p` is null on that arm. Mutation: report on an ended path in the
+        // replay. It is proved a null dereference.
+        a_read_after_abort_on_the_null_arm_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*p += e` reads `*p` unsequenced against `e` (C17 6.5.16.2 p3), so
+        // the read may come before `exit` and is asked. Mutation: count a
+        // compound assignment's place as the plain store's in
+        // `Lowering::at_most_one_acts`. The comma keeps its marker, the path
+        // ends there, and the read is silent.
+        a_compound_assignment_reading_its_place_beside_exit_is_still_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A condition read after the comma that follows `abort` is never
+        // evaluated: the terminator half of the replay's skip. Mutation: ask
+        // the terminator of an ended path. It is proved a null dereference.
+        a_condition_read_after_abort_on_the_null_arm_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `for` on zero is not entered, so what follows it is reached and
         // asked. Mutation: have the `for` site swap its arms where the
         // condition is a constant; the loop is entered and never left, and

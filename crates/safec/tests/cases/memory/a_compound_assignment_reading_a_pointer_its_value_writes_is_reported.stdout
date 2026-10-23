@@ -88,7 +88,6 @@ Function a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:
       Destination "_7"
       Use
         Copy "_1"
-    Sequenced a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:9:11 generated
     UnsequencedAccess a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:9:5 written "_1" Operands
       Written a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:9:11
       Read a_compound_assignment_reading_a_pointer_its_value_writes_is_reported.c:9:5

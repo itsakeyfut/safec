@@ -40,8 +40,8 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
-    BinOp, BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Promise,
-    Rvalue, Terminator, TranslationUnit, Ty, UnOp,
+    BinOp, BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place,
+    Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, UnOp,
 };
 use crate::memory::{dereferenced_in_element, dereferenced_in_terminator};
 use crate::source::{SourceMap, Span};
@@ -99,6 +99,44 @@ impl Nullness {
             Self::NonNull => None,
         }
     }
+}
+
+/// What the nullability check knows at one point: each local's [`Nullness`],
+/// and whether the path is still one an execution can be on.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct Nulls {
+    /// Per local.
+    pub(crate) of: Vec<Nullness>,
+    /// Whether this path has passed a call that does not return.
+    pub(crate) path: Path,
+}
+
+/// Whether a path has passed a call that does not return, and how far.
+///
+/// **A call to one of [`DOES_NOT_RETURN`] inside a larger full expression
+/// keeps its edge**, so that a read written before it and lowered after it is
+/// still asked (ADR-0051). Down that edge the path is [`Path::Ending`]: what
+/// it reaches may be evaluated before the call, so it is asked as now. At the
+/// next [`Element::Sequenced`] everything after is sequenced after the call,
+/// which never returns, so the path is [`Path::Ended`] and no execution is on
+/// it. Without this, `if (p == 0) { x = (abort(), 0); } return *p + x;`
+/// joined the null arm into `*p` and doubted it (#590).
+///
+/// **It trusts every marker to be a sequence point C gives**, in the
+/// direction that silences: a marker the lowering emits where C orders
+/// nothing ends a path ahead of a read C may evaluate before the call. A
+/// compound assignment's place was one (`Lowering::at_most_one_acts`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Path {
+    /// An execution may be on it.
+    Runs,
+    /// It has passed a call that does not return, and no sequence point since.
+    Ending,
+    /// No execution is on it. What its locals hold is never read: every
+    /// transfer leaves an ended value alone, a join takes nothing from one,
+    /// and nothing on one is reported. So two ended values that differ there
+    /// cannot keep the walk from settling, measured, and are not made equal.
+    Ended,
 }
 
 /// One dereference, one argument, or one `return`, this check concluded about,
@@ -233,6 +271,8 @@ impl Asked {
 /// count, read straight off the function, which is an answer the trait asks
 /// each analysis for rather than guessing one on its behalf.
 struct Nullability<'a> {
+    /// What a callee's name is read from, for [`DOES_NOT_RETURN`].
+    sources: &'a SourceMap,
     /// What a local's type is, so that a branch on an `int` is not read as a
     /// branch on a pointer.
     unit: &'a TranslationUnit,
@@ -728,7 +768,7 @@ impl Nullability<'_> {
 }
 
 impl Analysis for Nullability<'_> {
-    type Value = Vec<Nullness>;
+    type Value = Nulls;
 
     /// One step per local.
     ///
@@ -738,7 +778,8 @@ impl Analysis for Nullability<'_> {
     /// The transfers rebuild from the entry value on each visit rather than
     /// editing it, so nothing here lowers one.
     fn height(&self, function: &Function) -> usize {
-        function.locals().len()
+        // And two for the path, which rises from `Ended` to `Runs` once.
+        function.locals().len() + 2
     }
 
     /// Nothing known about anything, except a parameter declared `_Nonnull`.
@@ -759,16 +800,46 @@ impl Analysis for Nullability<'_> {
                 value[parameter.index()] = Nullness::NonNull;
             }
         }
-        value
+        Nulls {
+            of: value,
+            path: Path::Runs,
+        }
     }
 
+    /// An ended path contributes nothing, which is what makes it ended.
+    ///
+    /// **`Runs` with `Ending` is `Runs`**, which forgets the ending and is
+    /// only as loud as no ending at all. `Ending` there would end a path an
+    /// execution is on at its next sequence point. No case holds it: a block
+    /// reached both from before a call that does not return and from down its
+    /// edge, with no sequence point between, is a shape no C program built
+    /// here makes, since the call's own comma or full expression ends it first.
     fn join(&self, into: &mut Self::Value, from: &Self::Value) {
-        for (here, there) in into.iter_mut().zip(from) {
+        if from.path == Path::Ended {
+            return;
+        }
+        if into.path == Path::Ended {
+            *into = from.clone();
+            return;
+        }
+        for (here, there) in into.of.iter_mut().zip(&from.of) {
             *here = here.joined(*there);
+        }
+        if from.path == Path::Runs {
+            into.path = Path::Runs;
         }
     }
 
     fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
+        if value.path == Path::Ended {
+            return;
+        }
+        // See `Path`.
+        if matches!(element, Element::Sequenced { .. }) && value.path == Path::Ending {
+            value.path = Path::Ended;
+            return;
+        }
+        let value = &mut value.of;
         // Before the assignment below, for the reason `Self::terminator` gives
         // about a call's destination: a dereference is a fact about the value
         // the local held when it ran, and the assignment is what replaces that
@@ -819,6 +890,26 @@ impl Analysis for Nullability<'_> {
     }
 
     fn terminator(&self, _function: &Function, terminator: &Terminator, value: &mut Self::Value) {
+        if value.path == Path::Ended {
+            return;
+        }
+        // See `Path`. A call with no continuation has no edge for this to
+        // follow, so only the one the lowering kept is asked.
+        if let Terminator::Call {
+            callee,
+            then: Some(_),
+            ..
+        } = terminator
+        {
+            let name = self.sources.snippet(self.unit.function(*callee).name);
+            if DOES_NOT_RETURN
+                .iter()
+                .any(|&(reserved, _)| reserved == name)
+            {
+                value.path = Path::Ending;
+            }
+        }
+        let value = &mut value.of;
         // Before the destination is written, because the arguments are read
         // where the call is reached and the destination is written when it
         // returns.
@@ -880,6 +971,10 @@ impl Analysis for Nullability<'_> {
     ) {
         // Matched before the index is read, which is the rule the trait states:
         // a `Goto`'s one edge is index 0 as well.
+        if value.path == Path::Ended {
+            return;
+        }
+        let value = &mut value.of;
         let Terminator::Branch {
             condition: Operand::Copy(condition),
             ..
@@ -1233,6 +1328,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
         }
 
         let analysis = Nullability {
+            sources,
             unit,
             function,
             locals: function.locals().len(),
@@ -1257,13 +1353,17 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
             // is what copied the local into it.
             let mut returned_at = None;
             for element in &block.elements {
+                // Nothing on a path no execution is on is reported. See `Path`.
+                if known.path == Path::Ended {
+                    break;
+                }
                 // Before the transfer, which is what the element does: the
                 // question is what was true where it runs.
                 report(
                     &analysis,
                     &mut findings,
                     dereferenced_in_element(element),
-                    &known,
+                    &known.of,
                     func,
                 );
                 if let Element::Assign(operation) = element {
@@ -1283,19 +1383,22 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 analysis.element(function, element, &mut known);
             }
 
+            if known.path == Path::Ended {
+                continue;
+            }
             report(
                 &analysis,
                 &mut findings,
                 dereferenced_in_terminator(&block.terminator),
-                &known,
+                &known.of,
                 func,
             );
-            report_arguments(&analysis, &mut findings, &block.terminator, &known, func);
+            report_arguments(&analysis, &mut findings, &block.terminator, &known.of, func);
             report_return(
                 &analysis,
                 &mut findings,
                 &block.terminator,
-                &known,
+                &known.of,
                 returned_at,
                 func,
             );
@@ -1405,11 +1508,13 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
 /// would agree today and stop agreeing the day [`Analysis::element`] learns
 /// something new, with nothing failing when it does.
 pub(crate) fn null_at_terminators(
+    sources: &SourceMap,
     unit: &TranslationUnit,
     function: &Function,
     cfg: &Cfg,
 ) -> NullAtTerminators {
     let analysis = Nullability {
+        sources,
         unit,
         function,
         locals: function.locals().len(),
@@ -1500,9 +1605,15 @@ pub(crate) fn null_at_terminators(
         // zero is neither, so nothing about that program is the clause the
         // exemption rests on.
         for local in function.locals() {
+            // **An ended path answers what it knew when it ended**, which is
+            // what its locals still hold. No execution is on it, so any answer
+            // is sound, and the memory check still walks it: answering
+            // nothing there withdrew the exemption from `free(p)` with `p`
+            // null below `(abort(), 0);` and reported a double free nobody
+            // runs. Found by review.
             null[id.index()][local.index()] = ordered
                 && analysis.is_pointer(function, local)
-                && analysis.known(&known, local) == Nullness::Null;
+                && analysis.known(&known.of, local) == Nullness::Null;
         }
     }
 

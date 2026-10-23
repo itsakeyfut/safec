@@ -2178,8 +2178,17 @@ impl Lowering<'_> {
     /// C leaves it unordered against, which is a silence. See ADR-0022.
     fn at_most_one_acts(&self, id: ExprId) -> bool {
         let acting = match self.ast.expr(id) {
-            Expr::Assign { place, value, .. } => {
-                usize::from(!self.inert_place(*place)) + usize::from(!self.inert(*value))
+            // **A compound assignment reads its place**, C17 6.5.16.2 p3, so
+            // `*p += e` reads through `p` unsequenced against `e`, where `*p = e`
+            // only stores there after both. Counted as the plain store, `*p +=
+            // (exit(1), 0);` kept the comma's marker ahead of that read, and a
+            // check that ends a path at the marker after `exit` was silent
+            // about it (#590).
+            Expr::Assign {
+                op, place, value, ..
+            } => {
+                usize::from(op.is_some() || !self.inert_place(*place))
+                    + usize::from(!self.inert(*value))
             }
             Expr::Binary { lhs, rhs, .. } => {
                 usize::from(!self.inert(*lhs)) + usize::from(!self.inert(*rhs))
