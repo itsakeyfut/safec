@@ -1103,6 +1103,17 @@ impl Known {
         }
     }
 
+    /// Whether `local` holds a pointer read out of fresh memory that nothing
+    /// may have replaced: [`Held::fresh_read`](super::parts::Held::fresh_read),
+    /// and not a local whose address escaped, since code this check cannot
+    /// read may have written a determinate pointer into it since. The one
+    /// answer a copy of it and a store of it ask, as the report asks it too.
+    /// Unasked, `fill(&t); *h = t; u = *h; *u = 1;` with `fill` writing `t`
+    /// proved `*u` undefined (#588), and so did `fill(&t); u = t;`.
+    pub(super) fn reads_indeterminate(&self, local: usize) -> bool {
+        self.points_to[local].fresh_read && !self.escaped[local]
+    }
+
     /// Something may have written `site`, so its contents are no longer
     /// known to be indeterminate. Exposed memory is written by whatever code
     /// this check cannot read may do with it. See [`Self::fresh`].

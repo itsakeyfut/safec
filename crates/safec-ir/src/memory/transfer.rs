@@ -1164,7 +1164,7 @@ impl Analysis for Allocations<'_> {
                 // is silent.
                 let indeterminate = match &operation.value {
                     Rvalue::Use(Operand::Copy(source)) if source.projection.is_empty() => {
-                        value.points_to[source.local.index()].fresh_read
+                        value.reads_indeterminate(source.local.index())
                     }
                     _ => false,
                 };
@@ -1502,8 +1502,11 @@ impl Analysis for Allocations<'_> {
                     // this the allocation never leaves the temporary and the
                     // headline program is not an error at all.
                     Rvalue::Use(Operand::Copy(source)) if source.projection.is_empty() => {
+                        let indeterminate = value.reads_indeterminate(source.local.index());
                         value.points_to[destination.index()] =
                             value.points_to[source.local.index()].clone();
+                        // See `Known::reads_indeterminate`.
+                        value.points_to[destination.index()].fresh_read = indeterminate;
                     }
                     // **Arithmetic on a pointer is followed.** C17 6.5.6 p8
                     // keeps the result inside the object the operand points
