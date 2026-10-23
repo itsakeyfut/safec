@@ -47,6 +47,33 @@ use std::collections::HashMap;
 use crate::source::Span;
 use crate::target::{Integer, Target};
 
+/// Four of the library functions C says do not return to their caller, with
+/// the clause that says so.
+///
+/// `abort` (C17 7.22.4.1), `exit` (7.22.4.4), `_Exit` (7.22.4.5) and
+/// `quick_exit` (7.22.4.7). `longjmp` (7.13.2.1) and `thrd_exit` (7.26.5.5)
+/// do not return either: the first takes a `jmp_buf`, which this frontend
+/// cannot declare, and the second belongs to the threads that
+/// `docs/roadmap.md` places in Phase 8.
+///
+/// **Believed by name because 7.1.3 reserves the name**: p1 reserves each for
+/// use as an identifier with external linkage, and p2 makes a program that
+/// defines one undefined. So the lowering gives a call to one no continuation,
+/// and names refuses a definition of one, wherever it is, rather than
+/// honouring it: a definition in another file of the run would otherwise be
+/// believed away in silence (#343). One list for both, so the names believed
+/// and the names refused cannot drift apart. See ADR-0051.
+///
+/// **Here rather than in the frontend**, because the memory check asks it too:
+/// a call to one inside a larger full expression keeps its edge, and a path
+/// through that edge still ends at the call. See `memory::assigned`.
+pub const DOES_NOT_RETURN: &[(&str, &str)] = &[
+    ("abort", "7.22.4.1"),
+    ("exit", "7.22.4.4"),
+    ("_Exit", "7.22.4.5"),
+    ("quick_exit", "7.22.4.7"),
+];
+
 /// Which function, within one [`TranslationUnit`].
 ///
 /// An opaque id and not a name, which `docs/c-family.md` asks for and gives the

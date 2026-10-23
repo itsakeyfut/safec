@@ -34,8 +34,9 @@ use crate::ast::{
 use crate::ast::{Nullability, Specifier, TypeId, UnOp as AstUnOp, spell_type};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::preprocessor::cut_words;
-use crate::sema::{DOES_NOT_RETURN, Resolution};
+use crate::sema::Resolution;
 use crate::types::Types;
+use safec_ir::ir::DOES_NOT_RETURN;
 use safec_ir::ir::{
     Between, BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin,
     Parameter, Place, Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
