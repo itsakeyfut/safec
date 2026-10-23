@@ -1941,7 +1941,9 @@ mod unassigned {
             "`p` points at nothing, since it was read out of memory nothing wrote"
         );
         assert!(
-            notes.iter().any(|note| note.starts_with("C17 7.22.3.4 p2")),
+            notes
+                .iter()
+                .any(|note| note.starts_with("C17 7.22.3.1 p2 and 7.22.3.4 p2")),
             "{notes:?}"
         );
     }

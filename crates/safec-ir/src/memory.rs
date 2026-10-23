@@ -140,11 +140,12 @@ pub enum Kind {
     /// address is taken is never one. See `memory::assigned`.
     Unassigned,
     /// A pointer read out of an allocation `malloc` or `aligned_alloc` made
-    /// and nothing wrote, on every path, and then dereferenced or freed: it
-    /// points at no object, so either is undefined (C17 7.22.3.4 p2). Always
-    /// `Unsafe`, at the use rather than the read, since reading it is
-    /// undefined only with a trap representation (6.2.6.1 p5). See
-    /// `Known::fresh`.
+    /// and nothing wrote, on every path, and then dereferenced or freed. Its
+    /// value is indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2), and Annex J.2
+    /// lists using it as undefined. Always `Unsafe`, and only at a use that
+    /// reaches memory through it, which is the memory error level 1 owns: a
+    /// copy or a comparison of it is a use J.2 lists too, and is left out.
+    /// See `Known::fresh`.
     IndeterminateLoad,
     /// A function this check gave up on part of the way, past `MAX_WORK`, so
     /// nothing about its memory is proved. Always `Unknown`, at the

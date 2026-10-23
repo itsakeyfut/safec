@@ -2372,8 +2372,9 @@ impl Analysis for Allocations<'_> {
             Callee::Opaque | Callee::Frees | Callee::ReturnsFirst | Callee::Copies => None,
         };
         value.reborn(site, made);
-        // **Its contents are indeterminate**, C17 7.22.3.4 p2, for `malloc`
-        // and `aligned_alloc` alone: `calloc`'s are zero (7.22.3.2 p2) and
+        // **Its contents are indeterminate**, C17 7.22.3.4 p2 and 7.22.3.1
+        // p2, for `malloc` and `aligned_alloc` alone: `calloc`'s are zero
+        // bits (7.22.3.2 p2), which is a null pointer on every target here, and
         // `realloc`'s are the old object's (7.22.3.5 p2).
         if self.leaves_indeterminate(*callee) {
             value.fresh[site] = true;

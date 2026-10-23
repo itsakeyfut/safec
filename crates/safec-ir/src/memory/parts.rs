@@ -559,8 +559,9 @@ pub(super) struct Held {
     pub(super) returned_by: Option<usize>,
     /// Whether this was read, on every path, out of an allocation
     /// [`Known::fresh`](super::known::Known::fresh) marks, so is
-    /// indeterminate and points at no object: a dereference of it, or a
-    /// free, is undefined (C17 7.22.3.4 p2). Copied with the value and kept
+    /// indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2), and Annex J.2 lists a
+    /// use of it as undefined: a dereference of it, or a free, is reported.
+    /// Copied with the value and kept
     /// only where both paths agree. Arithmetic drops it, so `t + 1` is not
     /// followed.
     pub(super) fresh_read: bool,

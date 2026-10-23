@@ -788,7 +788,9 @@ pub(super) fn memory_finding(
     }
     if finding.kind == Kind::IndeterminateLoad {
         diagnostic = diagnostic.with_note(
-            "C17 7.22.3.4 p2: what `malloc` returns is indeterminate until something writes it",
+            "C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate \
+             indeterminate until something writes it, and Annex J.2 lists using that value as \
+             undefined",
         );
     }
     if let Kind::TooLong { walks } = finding.kind {

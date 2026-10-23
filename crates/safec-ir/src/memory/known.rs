@@ -108,7 +108,7 @@ pub(super) struct Known {
     pub(super) holds_lost: Vec<bool>,
     /// Per site, whether it is an allocation `malloc` or `aligned_alloc` made
     /// and nothing has written since, on every path: its contents are
-    /// indeterminate (C17 7.22.3.4 p2). An intersection at a join, and
+    /// indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2). An intersection at a join, and
     /// cleared only by [`Self::written`] and [`Self::written_all`], in the
     /// direction that can only silence. A pointer read out of it is
     /// [`Held::fresh_read`](super::parts::Held::fresh_read). Not "empty":

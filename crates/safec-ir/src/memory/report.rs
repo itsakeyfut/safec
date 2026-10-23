@@ -658,7 +658,8 @@ pub(super) fn indeterminate(
 }
 
 /// Report a `free` or a `realloc` of a pointer read out of memory nothing
-/// wrote, which frees no allocation (C17 7.22.3.3 p2).
+/// wrote, which is a use of an indeterminate value (C17 Annex J.2) and is
+/// not a pointer either may be handed (7.22.3.3 p2, 7.22.3.5 p3).
 pub(super) fn freed_indeterminate(
     sources: &SourceMap,
     findings: &mut Vec<Finding>,
