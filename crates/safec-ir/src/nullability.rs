@@ -406,8 +406,9 @@ impl Nullability<'_> {
 ///   copy with nothing, which doubted `if (q)` where `q != 0` was proved
 ///   (#334).
 /// - `if (p != 0)` writes the comparison to a temporary and hands a copy of
-///   that, so the comparison is an element of this block, above the
-///   terminator. Reaching it is what [`Analysis::edge`]'s block is for, and
+///   that, so the comparison is an element above the terminator, of this
+///   block or of the block before it where a lone `Goto` enters this one
+///   (#595). Reaching it is what [`Analysis::edge`]'s block is for, and
 ///   the walk below is for this shape alone. A comparison's result is an
 ///   `int`, which is how the two are told apart.
 ///
@@ -486,12 +487,13 @@ pub(crate) fn tested_against_null(
     // where it was computed (#595). One way in is no join, so that block's
     // end is this block's start and `changed` carries across. Not a call's
     // continuation, since a call may write a local whose address escaped,
-    // which `changed` does not see; not a block with any other entry; and
-    // not a block already walked.
+    // which `changed` does not see; not a block with any other entry, the
+    // entry block included. **It ends without a record of where it has
+    // been**: each step goes to a block whose `Goto` names the block the walk
+    // is in, and the first such names the branching block, which ends in a
+    // `Branch`, so no block is reached twice.
     let mut block = block;
-    let mut walked = vec![false; function.blocks().len()];
     loop {
-        walked[block.index()] = true;
         for element in function.block(block).elements.iter().rev() {
             // Every variant written out, and every field with it, for the
             // reason `Analysis::element` gives: an exhaustive match that
@@ -554,9 +556,9 @@ pub(crate) fn tested_against_null(
             }
 
             // **An `int` compared with zero is followed to its own last write**,
-            // in this block and before this one, with `changed` still recording
-            // everything between it and the branch, and where that write is in
-            // another block the walk ends without an answer. **Not a named
+            // earlier in the walk, with `changed` still recording everything
+            // between it and the branch, and where that write is in a block the
+            // walk does not reach the walk ends without an answer. **Not a named
             // `int`**, measured: `int c = p != 0; if (c)` lowers the declaration
             // as a copy of a temporary, and a copy is a value this walk does not
             // follow, so it refines nothing, as before.
@@ -610,7 +612,6 @@ pub(crate) fn tested_against_null(
         match cfg.predecessors(block) {
             [only]
                 if block != function.entry()
-                    && !walked[only.index()]
                     && matches!(function.block(*only).terminator, Terminator::Goto(to) if to == block) =>
             {
                 block = *only;
@@ -619,8 +620,8 @@ pub(crate) fn tested_against_null(
         }
     }
 
-    // Nothing in this block wrote a condition that is not a pointer, so there
-    // is no comparison here for this walk to read.
+    // Nothing the walk reached wrote a condition that is not a pointer, so
+    // there is no comparison here for it to read.
     //
     // **Nothing holds this `None`, and nothing can.** Answering such a
     // condition non-null instead leaves the suite green, because an `int` is

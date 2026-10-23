@@ -1817,3 +1817,74 @@ fn a_goto_back_into_the_entry_block_is_not_its_only_way_in() {
     let found = concluded(&map, unit, function);
     assert_eq!(found.len(), 1, "{found:?}");
 }
+
+/// A write to the pointer after the walk crosses into the block before
+/// refuses the comparison it finds there, as one in the same block does.
+///
+/// `bb0: c = p != 0; Goto bb1`, `bb1: p = r; Branch c`: the branch reads `c`,
+/// which was about the `p` that `p = r` has since replaced. Not a shape this
+/// frontend lowers, since nothing sits between an operator's join and its
+/// branch; another frontend's can. Found by review.
+///
+/// Mutation: forget what the walk has recorded as changed when it crosses,
+/// `changed.fill(false)` after the step to the block before, in
+/// `nullability::tested_against_null`. The arms are refined about the old
+/// `p` and this fails with one finding where it expects two.
+#[test]
+fn a_write_to_the_pointer_after_a_goto_refuses_the_comparison_before_it() {
+    let (map, names) = sources();
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut function = Function::new(names.function, int, vec![pointer, pointer]);
+    let mut parameters = function.parameters();
+    let p = parameters.next().expect("a first parameter");
+    let r = parameters.next().expect("a second parameter");
+    drop(parameters);
+    let condition = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let branch = function.reserve_block();
+    let taken = function.reserve_block();
+    let untaken = function.reserve_block();
+    let after = function.reserve_block();
+    function.fill_block(
+        entry,
+        goto(
+            branch,
+            vec![Element::Assign(Operation {
+                place: Place::local(condition),
+                value: Rvalue::Binary {
+                    op: BinOp::Ne,
+                    lhs: Operand::Copy(Place::local(p)),
+                    rhs: Operand::Constant(0),
+                },
+                origin: Origin::Written(names.at[0]),
+            })],
+        ),
+    );
+    function.fill_block(
+        branch,
+        Block {
+            elements: vec![Element::Assign(Operation {
+                place: Place::local(p),
+                value: Rvalue::Use(Operand::Copy(Place::local(r))),
+                origin: Origin::Written(names.at[2]),
+            })],
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(condition)),
+                then: taken,
+                otherwise: untaken,
+                origin: Origin::Written(names.at[2]),
+            },
+        },
+    );
+    function.fill_block(taken, goto(after, vec![write_through(p, names.at[1])]));
+    function.fill_block(untaken, goto(after, vec![write_through(p, names.at[3])]));
+    function.fill_block(after, returns());
+
+    let found = concluded(&map, unit, function);
+    assert_eq!(found.len(), 2, "{found:?}");
+}
