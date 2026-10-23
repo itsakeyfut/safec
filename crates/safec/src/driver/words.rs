@@ -683,7 +683,10 @@ pub(super) fn memory_finding(
             "nothing about this function's memory is proved",
             "split the function into smaller ones",
         ),
-        (Kind::Unassigned, Conclusion::Unsafe, _) => (
+        // Only ever a proof: a read some paths assigned is not reported yet
+        // (#582). `Unknown` takes the same words so the match stays
+        // exhaustive without a second wording nothing produces.
+        (Kind::Unassigned, Conclusion::Unsafe | Conclusion::Unknown, _) => (
             UNASSIGNED,
             said(
                 name,
@@ -691,16 +694,6 @@ pub(super) fn memory_finding(
                 |name| format!("`{name}` is read before anything was assigned to it"),
             ),
             "read here",
-            "assign it where it is declared, `= 0` if nothing else",
-        ),
-        (Kind::Unassigned, Conclusion::Unknown, _) => (
-            UNASSIGNED,
-            said(
-                name,
-                "this may read a pointer before anything was assigned to it",
-                |name| format!("`{name}` may be read before anything was assigned to it"),
-            ),
-            "not assigned on every path here",
             "assign it where it is declared, `= 0` if nothing else",
         ),
         // Neither check answers this and `Diagnostic::concluded` gives `None`

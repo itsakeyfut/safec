@@ -114,12 +114,13 @@ is the decision.
 **`SC0411` is a pointer local read before anything was assigned to it.** C17
 6.3.2.1 p2 leaves reading a local whose address is never taken undefined
 while it is indeterminate, whatever the read is for, so `int *p; if (p != 0) {
-*p = 1; }` is reported at the comparison and at the write. It is a proof where
-no path to the read assigns the local and `Unknown` where some do, which a
-program whose only assigning path is guarded by a flag pays: the check does not
-follow the flag. A local whose address is taken is never asked about. A pointer
-read out of an allocation nothing wrote is the same undefined read, and is not
-reported yet (#581).
+*p = 1; }` is reported at the comparison and at the write. It is always a
+proof, made where no path to the read assigns the local. A read some paths
+assigned is undefined on the others and is not reported yet (#582): this
+check does not follow the condition a path took, and reporting it refused
+`if (key && (p = find(key)) != 0)`, which C defines. A local whose address is
+taken is never asked about. A pointer read out of an allocation nothing wrote
+is the same undefined read, and is not reported yet (#581).
 
 **`SC0319` refuses a name the checks believe.** A call to `abort`, `exit`,
 `_Exit` or `quick_exit` gets no continuation, because C says none returns, and

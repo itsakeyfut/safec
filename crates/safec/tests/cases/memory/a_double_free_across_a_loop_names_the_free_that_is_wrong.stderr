@@ -1,14 +1,3 @@
-error[SC0411]: `keep` may be read before anything was assigned to it
-    ╭─[ a_double_free_across_a_loop_names_the_free_that_is_wrong.c:10:13 ]
-    │
- 10 │             free(keep);
-    │             ─────┬────  
-    │                  ╰────── not assigned on every path here
-────╯
-  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: assign it where it is declared, `= 0` if nothing else
 error[SC0401]: this frees `keep`, which this check stopped following
     ╭─[ a_double_free_across_a_loop_names_the_free_that_is_wrong.c:10:13 ]
     │

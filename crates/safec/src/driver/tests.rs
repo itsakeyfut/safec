@@ -1880,7 +1880,7 @@ mod too_long {
 }
 
 /// A pointer local read before anything was assigned to it is worded as
-/// such, under its own code, as a proof and as a doubt.
+/// such, under its own code, with the clause that makes it undefined.
 mod unassigned {
     use super::super::words::memory_finding;
     use super::*;
@@ -1917,22 +1917,15 @@ mod unassigned {
         )
     }
 
-    /// Mutation: give it another code, or swap the two wordings. This fails.
+    /// Mutation: give it another code, or drop the note. This fails.
     #[test]
-    fn is_sc0411_in_its_own_words_proved_and_doubted() {
+    fn is_sc0411_in_its_own_words() {
         let (code, message, notes) = said(Conclusion::Unsafe);
         assert_eq!(code, "SC0411");
         assert_eq!(message, "`p` is read before anything was assigned to it");
         assert!(
             notes.iter().any(|note| note.starts_with("C17 6.3.2.1 p2")),
             "{notes:?}"
-        );
-
-        let (code, message, _) = said(Conclusion::Unknown);
-        assert_eq!(code, "SC0411");
-        assert_eq!(
-            message,
-            "`p` may be read before anything was assigned to it"
         );
     }
 }

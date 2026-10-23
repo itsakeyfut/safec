@@ -13,6 +13,14 @@
 //! passed null test is exactly the belief that was wrong here. A pointer read
 //! out of an allocation nothing wrote is the same question asked of a slot,
 //! and is #581's.
+//!
+//! **Only a read no path assigns.** One where some paths assigned the local
+//! is undefined on the others, and is not reported: this analysis does not
+//! follow the condition a path took, so `if (key && (p = find(key)) != 0)
+//! use(p);`, a loop that runs at least once and a flag set beside the
+//! assignment look the same as the undefined read, and reporting it refused
+//! programs C defines that clang and gcc build in silence. Telling them apart
+//! is #582's.
 
 use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
@@ -37,44 +45,43 @@ struct Assigned {
     locals: usize,
 }
 
-/// Per local: assigned on every path that reaches here, and on some path.
-type State = Vec<(bool, bool)>;
+/// Per local: assigned on some path that reaches here.
+type State = Vec<bool>;
 
 impl Analysis for Assigned {
     type Value = State;
 
-    /// Two steps per local: the first bit falls to `false` and the second
-    /// rises to `true`, each once, at a join. A transfer that resets a local
-    /// rebuilds from the value it was given rather than lowering one.
+    /// One step per local: its bit rises to `true` once, at a join. A
+    /// transfer that resets a local rebuilds from the value it was given
+    /// rather than lowering one.
     fn height(&self, _function: &Function) -> usize {
-        2 * self.locals + 1
+        self.locals + 1
     }
 
     /// Nothing is assigned where the function starts but its parameters,
     /// which the caller gave a value. A parameter is never watched, so this
     /// is the same as every local unassigned, and says why.
     fn on_entry(&self) -> State {
-        vec![(false, false); self.locals]
+        vec![false; self.locals]
     }
 
-    /// Assigned on every path only where both are; on some path where
-    /// either is.
+    /// Assigned on some path where either is.
     fn join(&self, into: &mut State, from: &State) {
         for (here, there) in into.iter_mut().zip(from) {
-            *here = (here.0 && there.0, here.1 || there.1);
+            *here |= there;
         }
     }
 
     fn element(&self, _function: &Function, element: &Element, value: &mut State) {
         match element {
             Element::Assign(operation) if operation.place.projection.is_empty() => {
-                value[operation.place.local.index()] = (true, true);
+                value[operation.place.local.index()] = true;
             }
             // Each entry to the block a local is declared in is a new object,
             // indeterminate again (C17 6.2.4 p6), so a pointer assigned late
             // in one turn of a loop is not assigned at the start of the next.
             Element::StorageLive { local, .. } => {
-                value[local.index()] = (false, false);
+                value[local.index()] = false;
             }
             _ => {}
         }
@@ -87,7 +94,7 @@ impl Analysis for Assigned {
         } = terminator
         {
             if place.projection.is_empty() {
-                value[place.local.index()] = (true, true);
+                value[place.local.index()] = true;
             }
         }
     }
@@ -165,8 +172,8 @@ fn place_reads(place: &Place, at: Span, reads: &mut Vec<(LocalId, Span)>) {
     }
 }
 
-/// Every read of a watched pointer local that nothing assigned on every path
-/// to it: a proof where no path assigns it, `Unknown` where some do.
+/// Every read of a watched pointer local that no path to it assigned, each a
+/// proof.
 pub(super) fn findings(
     unit: &TranslationUnit,
     func: FuncId,
@@ -204,27 +211,22 @@ pub(super) fn findings(
     let cfg = Cfg::of(function);
     let solution = solve(&analysis, function, &cfg);
     let mut said: Vec<(LocalId, Span)> = Vec::new();
-    let mut report =
-        |local: LocalId, at: Span, state: (bool, bool), findings: &mut Vec<Finding>| {
-            if !analysis.watched.get(local.index()) || state.0 || said.contains(&(local, at)) {
-                return;
-            }
-            said.push((local, at));
-            findings.push(Finding {
-                function: func,
-                kind: Kind::Unassigned,
-                conclusion: if state.1 {
-                    Conclusion::Unknown
-                } else {
-                    Conclusion::Unsafe
-                },
-                at,
-                local: Some(local),
-                freed: None,
-                made: None,
-                unproven: None,
-            });
-        };
+    let mut report = |local: LocalId, at: Span, assigned: bool, findings: &mut Vec<Finding>| {
+        if !analysis.watched.get(local.index()) || assigned || said.contains(&(local, at)) {
+            return;
+        }
+        said.push((local, at));
+        findings.push(Finding {
+            function: func,
+            kind: Kind::Unassigned,
+            conclusion: Conclusion::Unsafe,
+            at,
+            local: Some(local),
+            freed: None,
+            made: None,
+            unproven: None,
+        });
+    };
     for &id in cfg.order() {
         let Some(start) = solution.value(id) else {
             continue;

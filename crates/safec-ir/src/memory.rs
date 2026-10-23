@@ -133,9 +133,9 @@ pub enum Kind {
         /// The most this check holds.
         max: usize,
     },
-    /// A pointer local read before anything was assigned to it, which C17
-    /// 6.3.2.1 p2 leaves undefined whatever the read is for. `Unsafe` where no
-    /// path to the read assigns it and `Unknown` where some do; a local whose
+    /// A pointer local read where no path to the read assigned it, which C17
+    /// 6.3.2.1 p2 leaves undefined whatever the read is for. Always `Unsafe`;
+    /// a read some paths assigned is not one yet (#582), and a local whose
     /// address is taken is never one. See `memory::assigned`.
     Unassigned,
     /// A function this check gave up on part of the way, past `MAX_WORK`, so
