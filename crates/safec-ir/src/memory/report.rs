@@ -1181,10 +1181,12 @@ pub(super) fn used_before(
         // is a read this call has nothing to say about; the library functions
         // that return their first argument free nothing either.
         Callee::Allocates | Callee::ReturnsFirst | Callee::Copies => return,
-        // Frees nothing, and nothing after it runs. **No case tells this from
-        // `Callee::Opaque`'s answer**, measured: memory a pending read reaches
-        // is exposed only by an earlier call that may free it, which doubts
-        // the read first.
+        // Frees nothing, and nothing after it runs: a read unordered against
+        // it either ran before it or never ran. Answered as `Callee::Opaque`
+        // is, `(a[0] + (*out = a, 0)) + (exit(1), 0)` doubted `a[0]`, since
+        // the store exposed `a`. Mutation: answer `(false, true)`. Then
+        // `a_read_unordered_against_exit_after_a_store_exposed_it_is_not_doubted`
+        // reports `SC0402`.
         Callee::Ends => return,
     };
 
