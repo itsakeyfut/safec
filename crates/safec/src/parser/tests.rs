@@ -1838,3 +1838,52 @@ int f(int *p, struct S *s) {
         parse(&split, &sources, &mut diagnostics);
     }
 }
+
+/// A declarator from a header, written after specifiers outside it: `int`
+/// then `#include` of `*a, *b`. From the specifiers, `*a`'s span would cut
+/// the header, so it is `*a`'s own; `*b`'s holds the header whole from the
+/// specifiers, so it is that, as for any declarator. Each init-declarator's
+/// own span is its own tokens, the name's `*` included.
+///
+/// Mutation: have `Parser::declaration_span` fall back to the declarator's
+/// first token alone. The assertion on the spans fails. Mutation: drop the
+/// fallback. It is `SC0207`, and the assertion on the diagnostics fails.
+#[test]
+fn a_declarator_from_a_header_spans_its_own_tokens() {
+    let directory = std::env::temp_dir().join(format!("safec_declarator_{}", std::process::id()));
+    std::fs::create_dir_all(&directory).unwrap();
+    std::fs::write(directory.join("list.h"), "*a, *b").unwrap();
+    std::fs::write(directory.join("main.c"), "int\n#include \"list.h\"\n;\n").unwrap();
+    let mut sources = SourceMap::new();
+    let file = sources.load(directory.join("main.c")).unwrap();
+    let mut diagnostics = DiagnosticSink::new();
+    let tokens = lex(file, sources.file(file), &mut diagnostics);
+    let tokens = preprocess(
+        file,
+        &tokens,
+        safec_ir::target::Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+        &mut sources,
+        &mut diagnostics,
+    );
+    let ast = parse(&tokens, &sources, &mut diagnostics);
+    std::fs::remove_dir_all(&directory).unwrap();
+
+    assert!(
+        diagnostics.diagnostics().is_empty(),
+        "{:?}",
+        diagnostics.diagnostics()
+    );
+    let [Item::Declaration { declarators, .. }] = ast.items() else {
+        panic!("{:?}", ast.items());
+    };
+    let spans: Vec<_> = declarators
+        .iter()
+        .map(|declarator| sources.snippet(declarator.declaration.span))
+        .collect();
+    assert_eq!(spans, ["*a", "int\n#include \"list.h\""]);
+    let own: Vec<_> = declarators
+        .iter()
+        .map(|declarator| declarator.span.map(|span| sources.snippet(span)))
+        .collect();
+    assert_eq!(own, [Some("*a"), Some("*b")]);
+}

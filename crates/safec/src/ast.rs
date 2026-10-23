@@ -207,8 +207,17 @@ pub struct Declaration {
     /// of these. A parameter has neither and stops at its declarator.
     ///
     /// Every declarator of one declaration therefore begins at the same byte,
-    /// because C17 6.7 gives them one set of specifiers between them. What
-    /// tells two of them apart is [`Declaration::name`].
+    /// because C17 6.7 gives them one set of specifiers between them, where
+    /// that span can be joined. What tells two of them apart is
+    /// [`Declaration::name`].
+    ///
+    /// **Where it would cut an included file or an expansion**, a declarator
+    /// from a header written after specifiers outside it, it is
+    /// [`InitDeclarator::span`] instead, which holds the file whole wherever
+    /// the declarator does. Either way it holds every token of this
+    /// declarator, and it is [`InitDeclarator::span`] that holds no other's.
+    /// The fallback rather than the declarator's own span everywhere, because
+    /// every position printed from this span would otherwise move (#555).
     pub span: Span,
     /// The nullability specifier written on this declaration's own pointer, if
     /// one was: a parameter's, or, for a function declared at file scope, the
@@ -265,6 +274,20 @@ impl Specifier {
 pub struct InitDeclarator {
     /// The name and the type this declarator derived.
     pub declaration: Declaration,
+    /// C17 6.7's `init-declarator` itself: from the declarator's first token
+    /// through its initializer, without the specifiers it shares.
+    ///
+    /// What a span over this declarator falls back to where the span it is
+    /// built from first would cut an included file or an expansion: a
+    /// declarator from a header, `a` of `int` then `#include` of `a, b`, cuts
+    /// the header from its specifiers and holds it whole from its own first
+    /// token. `b`, the header's last token, holds it whole from them. See [`Declaration::span`] and ADR-0054.
+    ///
+    /// `None` where this span itself would cut one, `int` then `#include` of
+    /// `x, *a` then `= 0;`, whose declarator starts partway through the
+    /// header and ends outside it. Nothing is made of it then, rather than a
+    /// wider span that could hold another declarator's tokens.
+    pub span: Option<Span>,
     /// C17 6.7.9's `initializer`, in its `assignment-expression` form only.
     ///
     /// A braced initializer is refused by the parser and never reaches here.

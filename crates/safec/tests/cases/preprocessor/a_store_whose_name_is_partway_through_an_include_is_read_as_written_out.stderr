@@ -1,0 +1,26 @@
+error[SC0402]: this uses `a` after it was freed
+    ╭─[ a_store_whose_name_is_partway_through_an_include_is_read_as_written_out.c:10:5 ]
+    │
+  5 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+  6 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+    │ 
+ 10 │     return *a;
+    │     ─────┬────  
+    │          ╰────── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0403]: this may dereference `a` while it is null
+    ╭─[ a_store_whose_name_is_partway_through_an_include_is_read_as_written_out.c:10:5 ]
+    │
+ 10 │     return *a;
+    │     ─────┬────  
+    │          ╰────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

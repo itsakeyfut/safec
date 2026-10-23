@@ -169,7 +169,9 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
 /// That is what keeps `int x;` printing exactly what it printed before there
 /// was a list at all, and it is honest about `int a, b;`: both declarators do
 /// begin at the specifiers, which is what [`Declaration::span`] says and why
-/// the two lines carry the same position.
+/// the two lines carry the same position. The line is the declaration's
+/// span, so a declarator whose own span falls back from a header's is still
+/// printed there.
 ///
 /// [`Declaration::span`]: crate::ast::Declaration::span
 fn dump_declarators(
