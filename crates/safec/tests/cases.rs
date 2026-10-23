@@ -142,6 +142,24 @@ cases! {
         // answers what it knew there. Mutation: answer nothing established
         // on an ended path in `null_at_terminators`. `SC0401`.
         a_free_of_a_null_pointer_after_abort_on_its_arm_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Stored into fresh memory and read back, the pointer is still
+        // indeterminate (#588). Mutation: clear the mark for a store of an
+        // indeterminate pointer as for any other. It is silent.
+        a_pointer_read_out_of_fresh_memory_stored_and_read_back_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store of a determinate pointer clears the mark as before.
+        // Mutation: keep the mark on every store. `SC0411`.
+        a_pointer_read_out_of_memory_a_determinate_store_wrote_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `calloc`'s memory was never fresh, and a store of an indeterminate
+        // pointer keeps a mark rather than making one. Mutation: mark the
+        // memory such a store lands in as fresh. `SC0411`.
+        a_pointer_read_out_of_fresh_memory_stored_into_calloc_memory_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `fill(&t, &q)` writes a determinate pointer into `t`, so storing
+        // `t` into fresh memory stores that, and `*u` is not proved. Mutation:
+        // drop the `escaped` clause in `Known::reads_indeterminate`. `SC0411`.
+        a_pointer_read_out_of_fresh_memory_a_call_replaced_is_not_proved_when_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through a plain copy, which carried the mark unasked before
+        // #588. Mutation: as above. `SC0411`.
+        a_pointer_read_out_of_fresh_memory_a_call_replaced_is_not_proved_when_copied: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of what `malloc` returned before anything wrote
         // it, and written through on the arm a null test passes: a proof
         // (C17 7.22.3.4 p2 and Annex J.2). Mutation: leave a `malloc` site

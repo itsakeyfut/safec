@@ -111,7 +111,9 @@ pub(super) struct Known {
     /// indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2). An intersection at a join, and
     /// cleared only by [`Self::written`] and [`Self::written_all`], in the
     /// direction that can only silence. A pointer read out of it is
-    /// [`Held::fresh_read`](super::parts::Held::fresh_read). Not "empty":
+    /// [`Held::fresh_read`](super::parts::Held::fresh_read), and a store of
+    /// one keeps the mark, since the slot holds an indeterminate value after
+    /// it as before. Not "empty":
     /// taking a fresh block's contents as empty is the unsound starting set
     /// #579 met.
     pub(super) fresh: Vec<bool>,
@@ -1099,6 +1101,17 @@ impl Known {
             self.exposed[site] = true;
             self.written(site);
         }
+    }
+
+    /// Whether `local` holds a pointer read out of fresh memory that nothing
+    /// may have replaced: [`Held::fresh_read`](super::parts::Held::fresh_read),
+    /// and not a local whose address escaped, since code this check cannot
+    /// read may have written a determinate pointer into it since. The one
+    /// answer a copy of it, a store of it and the report ask.
+    /// Unasked, `fill(&t); *h = t; u = *h; *u = 1;` with `fill` writing `t`
+    /// proved `*u` undefined (#588), and so did `fill(&t); u = t;`.
+    pub(super) fn reads_indeterminate(&self, local: usize) -> bool {
+        self.points_to[local].fresh_read && !self.escaped[local]
     }
 
     /// Something may have written `site`, so its contents are no longer

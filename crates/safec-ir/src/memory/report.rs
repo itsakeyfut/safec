@@ -714,7 +714,7 @@ fn say_indeterminate(
     known: &Known,
 ) {
     let local = root.local.index();
-    if !known.points_to[local].fresh_read || known.escaped[local] {
+    if !known.reads_indeterminate(local) {
         return;
     }
     if said
