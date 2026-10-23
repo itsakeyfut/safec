@@ -270,9 +270,12 @@ impl Allocations<'_> {
             // nothing else, every one of them fresh. See `Held::fresh_read`.
             // Mutation: drop the address clause, and
             // `a_pointer_read_through_what_may_be_a_locals_address_is_not_reported`
-            // is reported. **The `lost` clause has no case**, measured: a
-            // local loses its sites where it is made lost, so the clause
-            // before it already answers.
+            // is reported; weaken `all` to `any`, and
+            // `a_pointer_read_through_either_of_two_allocations_one_written_is_not_reported`
+            // is. **The `lost`, `foreign` and `loaded` clauses have no
+            // case**, measured: a local loses its sites where it is made
+            // lost, and no program found gives a loaded or foreign pointer a
+            // fresh site that an exposure has not already cleared.
             let through = &value.points_to[source.local.index()];
             held.fresh_read = source.projection.as_slice() == [Projection::Deref]
                 && through.sites().next().is_some()

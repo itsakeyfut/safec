@@ -1,0 +1,9 @@
+error[SC0403]: this dereferences `p`, which is null
+   ╭─[ a_pointer_read_through_a_null_pointer_is_not_said_to_come_from_fresh_memory.c:9:10 ]
+   │
+ 9 │     int *t = *p;
+   │          ───┬──  
+   │             ╰──── this is null when it is read through
+───╯
+  = note: this check belongs to safety level 1
+  = help: give this pointer a value before reading through it, or do not read through it here
