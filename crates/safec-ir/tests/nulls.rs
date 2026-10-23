@@ -1738,3 +1738,82 @@ fn a_comparison_before_a_goto_into_the_branch_refines_it_and_one_before_a_call_d
         );
     }
 }
+
+/// The entry block is entered from where the function starts as well as by
+/// any edge into it, so a lone `Goto` back to it is not its only way in, and
+/// the walk does not cross it.
+///
+/// `bb0: c = n != 0; Branch c -> bb1, bb2`, `bb1: *p = 1; Return`, `bb2: n =
+/// p != 0; Goto bb0`. On the first arrival at the branch `n` is the caller's
+/// and `p` was never tested, so `*p` may be null. No C program reaches it,
+/// since the lowering puts a loop's head after the entry block; another
+/// frontend's can. Found by review.
+///
+/// Mutation: drop the test that the block is not `Function::entry` in
+/// `nullability::tested_against_null`. The walk reads `bb2`'s comparison,
+/// refines `p` on the edge into `bb1`, and this fails with no finding where
+/// it expects one.
+#[test]
+fn a_goto_back_into_the_entry_block_is_not_its_only_way_in() {
+    let (map, names) = sources();
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut function = Function::new(names.function, int, vec![pointer, int]);
+    let mut parameters = function.parameters();
+    let p = parameters.next().expect("a first parameter");
+    let n = parameters.next().expect("a second parameter");
+    drop(parameters);
+    let condition = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let deref = function.reserve_block();
+    let back = function.reserve_block();
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![Element::Assign(Operation {
+                place: Place::local(condition),
+                value: Rvalue::Binary {
+                    op: BinOp::Ne,
+                    lhs: Operand::Copy(Place::local(n)),
+                    rhs: Operand::Constant(0),
+                },
+                origin: Origin::Written(names.at[0]),
+            })],
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(condition)),
+                then: deref,
+                otherwise: back,
+                origin: Origin::Written(names.at[2]),
+            },
+        },
+    );
+    function.fill_block(
+        deref,
+        Block {
+            elements: vec![write_through(p, names.at[1])],
+            terminator: Terminator::Return,
+        },
+    );
+    function.fill_block(
+        back,
+        goto(
+            entry,
+            vec![Element::Assign(Operation {
+                place: Place::local(n),
+                value: Rvalue::Binary {
+                    op: BinOp::Ne,
+                    lhs: Operand::Copy(Place::local(p)),
+                    rhs: Operand::Constant(0),
+                },
+                origin: Origin::Written(names.at[3]),
+            })],
+        ),
+    );
+
+    let found = concluded(&map, unit, function);
+    assert_eq!(found.len(), 1, "{found:?}");
+}

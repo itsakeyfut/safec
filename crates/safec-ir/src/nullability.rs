@@ -604,9 +604,13 @@ pub(crate) fn tested_against_null(
                 )
             });
         }
+        // **The entry block has one more way in**, from where the function
+        // starts, which `Cfg::predecessors` does not list, so a lone `Goto`
+        // back to it is not the only arrival. Found by review.
         match cfg.predecessors(block) {
             [only]
-                if !walked[only.index()]
+                if block != function.entry()
+                    && !walked[only.index()]
                     && matches!(function.block(*only).terminator, Terminator::Goto(to) if to == block) =>
             {
                 block = *only;
