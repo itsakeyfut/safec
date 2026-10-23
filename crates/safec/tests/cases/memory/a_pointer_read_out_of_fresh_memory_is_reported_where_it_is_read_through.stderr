@@ -1,0 +1,20 @@
+error[SC0411]: `t` points at nothing, since it was read out of memory nothing wrote
+    ╭─[ a_pointer_read_out_of_fresh_memory_is_reported_where_it_is_read_through.c:11:9 ]
+    │
+ 11 │     int n = *t;
+    │         ───┬──  
+    │            ╰──── used here
+────╯
+  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = help: write the slot before reading it, or allocate with `calloc`
+error[SC0403]: this may dereference `t` while it is null
+    ╭─[ a_pointer_read_out_of_fresh_memory_is_reported_where_it_is_read_through.c:11:9 ]
+    │
+ 11 │     int n = *t;
+    │         ───┬──  
+    │            ╰──── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

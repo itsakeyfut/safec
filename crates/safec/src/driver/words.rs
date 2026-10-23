@@ -696,6 +696,22 @@ pub(super) fn memory_finding(
             "read here",
             "assign it where it is declared, `= 0` if nothing else",
         ),
+        // Only ever a proof, as `Unassigned` is, and under its code: both are
+        // a pointer that points at no object because nothing gave it a value.
+        (Kind::IndeterminateLoad, Conclusion::Unsafe | Conclusion::Unknown, _) => (
+            UNASSIGNED,
+            said(
+                name,
+                "this uses a pointer read out of memory nothing wrote",
+                |name| {
+                    format!(
+                        "`{name}` points at nothing, since it was read out of memory nothing wrote"
+                    )
+                },
+            ),
+            "used here",
+            "write the slot before reading it, or allocate with `calloc`",
+        ),
         // Neither check answers this and `Diagnostic::concluded` gives `None`
         // for it, so none of the four is read. Written out rather than `_` so
         // that a fourth conclusion has to be answered for here.
@@ -768,6 +784,13 @@ pub(super) fn memory_finding(
         diagnostic = diagnostic.with_note(
             "C17 6.3.2.1 p2: reading a local whose address is never taken before it is \
              assigned is undefined, whatever the value is read for",
+        );
+    }
+    if finding.kind == Kind::IndeterminateLoad {
+        diagnostic = diagnostic.with_note(
+            "C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate \
+             indeterminate until something writes it, and Annex J.2 lists using that value as \
+             undefined",
         );
     }
     if let Kind::TooLong { walks } = finding.kind {

@@ -1,0 +1,20 @@
+error[SC0402]: this uses `box`, which may have been freed
+    ╭─[ a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_not_reported_as_indeterminate.c:20:10 ]
+    │
+ 20 │     int *t = *box;
+    │          ────┬───  
+    │              ╰───── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0402]: this uses `t`, which may have been freed
+    ╭─[ a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_not_reported_as_indeterminate.c:22:9 ]
+    │
+ 22 │         *t = 1;
+    │         ───┬──  
+    │            ╰──── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

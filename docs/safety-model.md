@@ -166,9 +166,9 @@ This allows incremental adoption.
 
 **An indeterminate pointer is level 1's.** A write, a read or a free through a
 pointer that points at no object is the same class of memory error as one
-through a pointer to freed memory, so the memory check reports it: today a
-pointer local read before anything was assigned to it, `SC0411`, and not yet a
-pointer read out of an allocation nothing wrote (#581).
+through a pointer to freed memory, so the memory check reports it, as
+`SC0411`: a pointer local read before anything was assigned to it, and a
+pointer read out of an allocation nothing wrote.
 
 At levels 1 to 4, a level says **which checks run**, and nothing else. It does
 not decide how

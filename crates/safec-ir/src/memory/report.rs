@@ -226,6 +226,8 @@ fn verdict(
         // Never asked: it is built by `memory::assigned` from where a local
         // was assigned, and it is about no free.
         Kind::Unassigned => true,
+        // Never asked: it is said by `indeterminate`, about no free.
+        Kind::IndeterminateLoad => true,
     };
 
     match earliest {
@@ -631,6 +633,108 @@ pub(super) fn used(
             },
         );
     }
+}
+
+/// Report every dereference at `at` through a pointer read out of memory
+/// nothing wrote. See [`Held::fresh_read`](super::parts::Held::fresh_read).
+///
+/// **Not of a local whose address escaped**, since code this check cannot
+/// read may have written another pointer into it since.
+pub(super) fn indeterminate(
+    sources: &SourceMap,
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    analysis: &Allocations<'_>,
+    at: Option<(Span, Vec<&Place>)>,
+    known: &Known,
+) {
+    let Some((at, dereferenced)) = at else {
+        return;
+    };
+    for place in dereferenced {
+        let root = Place::local(place.local);
+        say_indeterminate(sources, findings, said, analysis, at, &root, known);
+    }
+}
+
+/// Report a `free` or a `realloc` of a pointer read out of memory nothing
+/// wrote, which is a use of an indeterminate value (C17 Annex J.2) and is
+/// not a pointer either may be handed (7.22.3.3 p2, 7.22.3.5 p3).
+pub(super) fn freed_indeterminate(
+    sources: &SourceMap,
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    analysis: &Allocations<'_>,
+    terminator: &Terminator,
+    known: &Known,
+) {
+    let Terminator::Call {
+        callee,
+        arguments,
+        destination: _,
+        then: _,
+        origin,
+    } = terminator
+    else {
+        return;
+    };
+    if !matches!(
+        analysis.callee(*callee),
+        Callee::Frees | Callee::Reallocates
+    ) {
+        return;
+    }
+    if let Some(Operand::Copy(place)) = arguments.first() {
+        if place.projection.is_empty() {
+            say_indeterminate(
+                sources,
+                findings,
+                said,
+                analysis,
+                origin.span(),
+                place,
+                known,
+            );
+        }
+    }
+}
+
+/// The finding both of those make, said once per local per caret.
+fn say_indeterminate(
+    sources: &SourceMap,
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    analysis: &Allocations<'_>,
+    at: Span,
+    root: &Place,
+    known: &Known,
+) {
+    let local = root.local.index();
+    if !known.points_to[local].fresh_read || known.escaped[local] {
+        return;
+    }
+    if said
+        .iter()
+        .any(|(said_at, said_place, _)| *said_at == at && said_place == root)
+    {
+        return;
+    }
+    say(
+        sources,
+        findings,
+        said,
+        root,
+        Finding {
+            function: analysis.function,
+            kind: Kind::IndeterminateLoad,
+            conclusion: Conclusion::Unsafe,
+            at,
+            local: Some(root.local),
+            freed: None,
+            made: None,
+            unproven: None,
+        },
+    );
 }
 
 /// Report a `return` of a pointer to an allocation that may have been freed.

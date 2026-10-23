@@ -66,6 +66,15 @@ pub(super) struct Allocations<'a> {
 }
 
 impl Allocations<'_> {
+    /// Whether what this function returns is an allocation whose contents
+    /// are indeterminate. See [`Known::fresh`].
+    fn leaves_indeterminate(&self, id: FuncId) -> bool {
+        matches!(
+            self.sources.snippet(self.unit.function(id).name),
+            "malloc" | "aligned_alloc"
+        )
+    }
+
     /// What this check can read in the name of the function being called.
     pub(super) fn callee(&self, id: FuncId) -> Callee {
         match self.sources.snippet(self.unit.function(id).name) {
@@ -256,6 +265,23 @@ impl Allocations<'_> {
             if self.reads_caller_memory(source.local, depth, value) {
                 held.from_caller = true;
             }
+            // **Read out of memory nothing wrote, certainly**: one
+            // dereference through a pointer that names allocations and
+            // nothing else, every one of them fresh. See `Held::fresh_read`.
+            // Mutation: drop the address clause, and
+            // `a_pointer_read_through_what_may_be_a_locals_address_is_not_reported`
+            // is reported; weaken `all` to `any`, and
+            // `a_pointer_read_through_either_of_two_allocations_one_written_is_not_reported`
+            // is. **The `lost`, `foreign` and `loaded` clauses have no
+            // case**, measured: a local loses its sites where it is made
+            // lost, and no program found gives a loaded or foreign pointer a
+            // fresh site that an exposure has not already cleared.
+            let through = &value.points_to[source.local.index()];
+            held.fresh_read = source.projection.as_slice() == [Projection::Deref]
+                && through.sites().next().is_some()
+                && !(through.lost || through.foreign || through.loaded)
+                && !through.may_be_a_locals_address()
+                && through.sites().all(|site| value.fresh[site]);
         }
         held
     }
@@ -810,6 +836,8 @@ impl Analysis for Allocations<'_> {
             stale: vec![false; self.locals],
             unreplaced: vec![false; self.locals],
             holds_lost: vec![false; self.locals],
+            // A parameter's memory is the caller's, which may have written it.
+            fresh: vec![false; self.locals],
             inside_locals: vec![Bits::new(self.locals); self.locals],
             realloced: vec![None; self.locals],
             from_caller: vec![false; self.locals],
@@ -871,6 +899,7 @@ impl Analysis for Allocations<'_> {
             stale,
             unreplaced,
             holds_lost,
+            fresh,
             from_caller,
             inside_locals,
             realloced,
@@ -881,6 +910,13 @@ impl Analysis for Allocations<'_> {
         } = into;
         // A may-fact, so a union, as `exposed` is.
         *lost_exposed |= from.lost_exposed;
+        // **An intersection**: fresh where every path left it fresh, since a
+        // use of what was read out of it is reported as a proof. A union here
+        // reported `if (c) *box = q; t = *box; *t = 1;`, which C defines when
+        // `c` holds.
+        for (here, there) in fresh.iter_mut().zip(&from.fresh) {
+            *here = *here && *there;
+        }
         // A may-fact, so a union.
         for (here, there) in holds_lost.iter_mut().zip(&from.holds_lost) {
             *here |= there;
@@ -1102,6 +1138,21 @@ impl Analysis for Allocations<'_> {
                 // projection.
                 let one_step = operation.place.projection.as_slice() == [Projection::Deref];
                 let pointer = operation.place.local.index();
+                // **A write through a pointer may write an allocation**, of
+                // any type, and what it wrote is no longer indeterminate.
+                // Placed only for one dereference through a pointer that
+                // names exactly its sites; anything else may land in any
+                // allocation. See `Known::fresh`.
+                if derefs(&operation.place) > 0 {
+                    let held = &value.points_to[pointer];
+                    if one_step && !(held.loaded || held.lost || held.foreign) {
+                        for site in held.sites().collect::<Vec<_>>() {
+                            value.written(site);
+                        }
+                    } else {
+                        value.written_all();
+                    }
+                }
                 let targets = if one_step {
                     value.written_through(operation.place.local)
                 } else {
@@ -2042,6 +2093,8 @@ impl Analysis for Allocations<'_> {
                 }
                 // What a pointer it was handed may be, read out of memory, as
                 // for an opaque call. See ADR-0040.
+                // Exposed, which is also what says the destination's
+                // allocations are no longer fresh. See `Known::fresh`.
                 let reach = self.reach(function, handed, sites(), value);
                 value.expose(self.sources, reach, Some(origin.span()));
                 value.replaced(|_| true);
@@ -2253,6 +2306,14 @@ impl Analysis for Allocations<'_> {
             return;
         };
         if !place.projection.is_empty() {
+            // `*box = f();` writes an allocation this does not place. See
+            // `Known::fresh`. **No C program reaches this**, measured: the
+            // lowering calls into a temporary and stores that, which the
+            // store transfer clears for. It is here for a frontend that
+            // does not.
+            if derefs(place) > 0 {
+                value.written_all();
+            }
             return;
         }
 
@@ -2314,6 +2375,13 @@ impl Analysis for Allocations<'_> {
             Callee::Opaque | Callee::Frees | Callee::ReturnsFirst | Callee::Copies => None,
         };
         value.reborn(site, made);
+        // **Its contents are indeterminate**, C17 7.22.3.4 p2 and 7.22.3.1
+        // p2, for `malloc` and `aligned_alloc` alone: `calloc`'s are zero
+        // bits (7.22.3.2 p2), which is a null pointer on every target here, and
+        // `realloc`'s are the old object's (7.22.3.5 p2).
+        if self.leaves_indeterminate(*callee) {
+            value.fresh[site] = true;
+        }
         // **`realloc`'s new object holds what the old one held**, C17 7.22.3.5
         // p2, so what a pointer stored in the old one may hold, the new one
         // may. Reborn with nothing in it, a table grown by `realloc` and then
