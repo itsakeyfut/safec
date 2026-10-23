@@ -1,0 +1,84 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:3:5 "g" declared
+  Local "_0" "int" return
+Function a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:5:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" "p"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:6:14 generated
+    Call a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:6:14 written "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:6:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:6:14 generated
+    Operation a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:7:9 written
+      Destination "_3"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Operation a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:7:9 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_3"
+        Constant 0
+    Branch a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:7:9 written "bb5" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Branch a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:7:9 written "bb5" "bb6"
+      Copy "_4"
+  Block "bb3"
+    Sequenced a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:7:9 generated
+    ArgumentsEvaluated a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:7:19 generated
+    Call a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:7:19 written "g" "bb4"
+      Destination "_5"
+  Block "bb4"
+    Operation a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:7:19 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_5"
+        Constant 0
+    Goto "bb2"
+  Block "bb5"
+    Sequenced a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:7:9 generated
+    Operation a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:8:9 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:8:9 written
+      Destination "_6"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:8:9 generated
+    Goto "bb7"
+  Block "bb6"
+    Sequenced a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:7:9 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:10:5 generated
+    Call a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:10:5 written "free" "bb8"
+      Copy "_1"
+  Block "bb8"
+    Sequenced a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:10:5 generated
+    Operation a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:11:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body.c:11:12 generated
+    Return

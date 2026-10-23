@@ -126,9 +126,11 @@ cases! {
         // Mutation: skip the replay's `used` at a terminator calling one of
         // the four names. It is silent.
         a_freed_pointer_read_as_the_argument_of_exit_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The memory check says nothing here; the nullability check still
-        // joins the path through `abort` and doubts `*p`, which is #590.
-        // Mutation: read the four names as `Callee::Opaque`. `SC0402` joins.
+        // Neither check doubts `*p`: the memory check reads `abort` as touching
+        // nothing, and the nullability check ends its path and reads `p != 0`
+        // through the `||`'s normalisation (#592). Mutation: read the four
+        // names as `Callee::Opaque`. `SC0402`. Mutation: stop reading through
+        // the normalisation in `tested_against_null`. `SC0403`.
         a_pointer_tested_before_abort_inside_an_expression_is_not_doubted_as_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A read unordered against `exit`, of memory a store in the same
         // expression exposed: it ran before the call or never ran. Mutation:
@@ -1427,6 +1429,28 @@ cases! {
         // evaluated: the terminator half of the replay's skip. Mutation: ask
         // the terminator of an ended path. It is proved a null dereference.
         a_condition_read_after_abort_on_the_null_arm_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The `&&`'s left operand is a null test, and its right one is reached
+        // only where it held. Mutation: stop reading through the operand's
+        // normalisation, or stop threading the branch past the empty
+        // re-branch where the arms meet. `SC0403`.
+        a_pointer_tested_on_the_left_of_and_is_not_null_in_its_body: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `p == 0 || g()` returns where `p` is null, so `*p` after it is not.
+        // Mutation: stop threading. `SC0403`.
+        a_pointer_tested_null_on_the_left_of_an_or_that_returns_is_not_null_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `p != 0 || g()` reaches its body with `p` null wherever `g()` is
+        // true, so the doubt is right: the right operand's path keeps `p`
+        // null. Mutation: refine the `otherwise` edge as the `then` edge in
+        // `Analysis::edge`. It is silent.
+        a_pointer_tested_on_the_left_of_an_or_may_be_null_in_its_body: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `!(p == 0)` is `p != 0` (C17 6.5.3.3 p5) through one more `== 0`.
+        // Mutation: ignore the polarity a `== 0` adds. `SC0403`.
+        a_negated_null_test_on_the_left_of_and_is_not_null_in_its_body: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **The cost**: `|| 0` never reaches the body through its right
+        // operand, but `0 != 0` is not folded, so the path where `p` is null
+        // reaches it as far as this check can tell. It is here so the cost is
+        // seen, and fails if the threading or the normalisation starts
+        // claiming more than it reads.
+        a_pointer_tested_on_the_left_of_an_or_with_zero_is_still_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `for` on zero is not entered, so what follows it is reached and
         // asked. Mutation: have the `for` site swap its arms where the
         // condition is a constant; the loop is entered and never left, and

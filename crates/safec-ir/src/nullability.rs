@@ -466,6 +466,14 @@ pub(crate) fn tested_against_null(
     // refinement about one of them is about a value the branch no longer
     // reads, and refusing it is the whole of this walk's give-up rule.
     let mut changed = vec![false; function.locals().len()];
+    // **The local whose last write is being looked for**, the condition's at
+    // first. An `int` the condition compares with zero is asked about next:
+    // the lowering normalises an operand of `||` or `&&` before branching on
+    // it, `_4 = p != 0; _5 = _4 != 0; Branch _5`, and reading `_5` alone
+    // taught neither edge anything (#592). `inverted` is whether an odd
+    // number of `== 0` lie between, so that the edge's answer is turned over.
+    let mut asked = condition.local;
+    let mut inverted = false;
 
     for element in function.block(block).elements.iter().rev() {
         // Every variant written out, and every field with it, for the
@@ -523,16 +531,27 @@ pub(crate) fn tested_against_null(
         // A direct store says exactly which local it changed, so the walk
         // carries on and the answer below is refused only if it turns out
         // to be about this one.
-        if operation.place.local != condition.local {
+        if operation.place.local != asked {
             changed[operation.place.local.index()] = true;
             continue;
         }
 
-        // The last write to the condition's local, whatever it is. A
-        // comparison against zero is the one shape this reads; anything
-        // else, `int c = p != 0;` among them, is a value this analysis
-        // cannot follow, and refining on a condition it did not read is
-        // the one direction a refinement must not be wrong in.
+        // **An `int` compared with zero is followed to its own last write**,
+        // in this block and before this one, with `changed` still recording
+        // everything between it and the branch. So `int c = p != 0; if (c)`
+        // in one block refines `p` as `if (p != 0)` does, and where `c` was
+        // written in another block the walk ends without an answer.
+        if let Some((through, equal)) = through_zero(unit, function, &operation.value) {
+            asked = through;
+            inverted ^= equal;
+            continue;
+        }
+
+        // The last write to the local asked about, whatever it is. A
+        // comparison of a pointer against zero is the one shape this reads;
+        // anything else is a value this analysis cannot follow, and refining
+        // on a condition it did not read is the one direction a refinement
+        // must not be wrong in.
         return (match &operation.value {
             Rvalue::Binary { op, lhs, rhs } => compared_to_null(unit, function, *op, lhs, rhs),
             // C17 6.5.3.3 p5: "The expression `!E` is equivalent to
@@ -554,7 +573,17 @@ pub(crate) fn tested_against_null(
         // between here and the branch has been recorded, so a local in
         // that set is one the branch no longer reads the compared value
         // from.
-        .filter(|(local, _)| !changed[local.index()]);
+        .filter(|(local, _)| !changed[local.index()])
+        .map(|(local, learned)| {
+            (
+                local,
+                if inverted {
+                    learned.inverted()
+                } else {
+                    learned
+                },
+            )
+        });
     }
 
     // Nothing in this block wrote a condition that is not a pointer, so there
@@ -710,6 +739,50 @@ fn compared_to_null(
         | BinOp::BitAnd
         | BinOp::BitXor
         | BinOp::BitOr => None,
+    }
+}
+
+/// The `int` a value compares with zero, and whether it is `== 0`: `x != 0`,
+/// `0 != x`, `x == 0`, `0 == x` and `!x`, with `x` a plain local that is not
+/// a pointer. A pointer compared with zero is [`compared_to_null`]'s, and
+/// anything else is not a value [`tested_against_null`] can follow.
+fn through_zero(
+    unit: &TranslationUnit,
+    function: &Function,
+    value: &Rvalue,
+) -> Option<(LocalId, bool)> {
+    let (operand, equal) = match value {
+        Rvalue::Binary {
+            op: BinOp::Ne,
+            lhs,
+            rhs,
+        } => (zero_beside(lhs, rhs)?, false),
+        Rvalue::Binary {
+            op: BinOp::Eq,
+            lhs,
+            rhs,
+        } => (zero_beside(lhs, rhs)?, true),
+        Rvalue::Unary {
+            op: UnOp::Not,
+            operand,
+        } => (operand, true),
+        _ => return None,
+    };
+    match operand {
+        Operand::Copy(place)
+            if place.projection.is_empty() && !pointer_typed(unit, function, place.local) =>
+        {
+            Some((place.local, equal))
+        }
+        _ => None,
+    }
+}
+
+/// The operand beside a constant zero, either side.
+fn zero_beside<'a>(lhs: &'a Operand, rhs: &'a Operand) -> Option<&'a Operand> {
+    match (lhs, rhs) {
+        (other, Operand::Constant(0)) | (Operand::Constant(0), other) => Some(other),
+        _ => None,
     }
 }
 
