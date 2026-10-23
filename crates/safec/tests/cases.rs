@@ -1401,8 +1401,13 @@ cases! {
         // A call inside a larger full expression keeps its edge, because a
         // read written before it is lowered after it. Mutation: drop the
         // `root` test where the call decides its continuation; both reads go
-        // silent.
+        // silent. And the nullability check ends that path only at the next
+        // sequence point: ending it at the call's edge instead silences both.
         a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The arm where `p` is null calls `abort` inside an expression, so the
+        // path ends at the comma after it and does not reach `*p` (#590).
+        // Mutation: never make a path `Path::Ending`. `SC0403` at `*p`.
+        a_pointer_tested_null_on_an_arm_that_calls_abort_inside_an_expression_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `for` on zero is not entered, so what follows it is reached and
         // asked. Mutation: have the `for` site swap its arms where the
         // condition is a constant; the loop is entered and never left, and

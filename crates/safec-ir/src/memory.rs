@@ -496,7 +496,7 @@ fn findings_within(
         // where a free is reached. A free of a pointer that check established
         // is null frees nothing, and `asked` is the one place that is applied.
         // See ADR-0027.
-        let null = nullability::null_at_terminators(unit, function, &cfg);
+        let null = nullability::null_at_terminators(sources, unit, function, &cfg);
 
         // Per function, because a span belongs to one of them. The third
         // field is where in `findings` the report standing at that caret is,
