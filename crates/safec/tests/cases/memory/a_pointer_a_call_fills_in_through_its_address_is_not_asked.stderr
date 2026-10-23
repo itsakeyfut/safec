@@ -1,0 +1,10 @@
+error[SC0401]: this frees `p`, which this check stopped following
+   ╭─[ a_pointer_a_call_fills_in_through_its_address_is_not_asked.c:8:5 ]
+   │
+ 8 │     free(p);
+   │     ───┬───  
+   │        ╰───── this check knows of no allocation this points at
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check knows of no allocation this pointer holds here

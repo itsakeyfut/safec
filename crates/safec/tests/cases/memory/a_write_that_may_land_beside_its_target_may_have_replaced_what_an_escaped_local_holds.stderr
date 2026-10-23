@@ -1,3 +1,14 @@
+error[SC0411]: `pp` may be read before anything was assigned to it
+    ╭─[ a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:14:5 ]
+    │
+ 14 │     *pp = q;
+    │     ───┬───  
+    │        ╰───── not assigned on every path here
+────╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it where it is declared, `= 0` if nothing else
 error[SC0401]: this frees `p`, which may have been freed already
     ╭─[ a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:15:5 ]
     │

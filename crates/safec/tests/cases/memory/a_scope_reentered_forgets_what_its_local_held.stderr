@@ -1,3 +1,13 @@
+error[SC0411]: `p` is read before anything was assigned to it
+   ╭─[ a_scope_reentered_forgets_what_its_local_held.c:6:9 ]
+   │
+ 6 │         *p = 1;
+   │         ───┬──  
+   │            ╰──── read here
+───╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else
 error[SC0403]: this may dereference `p` while it is null
    ╭─[ a_scope_reentered_forgets_what_its_local_held.c:6:9 ]
    │

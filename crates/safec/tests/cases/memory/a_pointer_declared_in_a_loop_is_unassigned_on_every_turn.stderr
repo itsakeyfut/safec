@@ -1,0 +1,20 @@
+error[SC0411]: `p` is read before anything was assigned to it
+   ╭─[ a_pointer_declared_in_a_loop_is_unassigned_on_every_turn.c:8:13 ]
+   │
+ 8 │             free(p);
+   │             ───┬───  
+   │                ╰───── read here
+───╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else
+error[SC0401]: this frees `p`, which this check stopped following
+   ╭─[ a_pointer_declared_in_a_loop_is_unassigned_on_every_turn.c:8:13 ]
+   │
+ 8 │             free(p);
+   │             ───┬───  
+   │                ╰───── this check knows of no allocation this points at
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check knows of no allocation this pointer holds here

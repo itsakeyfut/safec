@@ -1,3 +1,14 @@
+error[SC0411]: `q` may be read before anything was assigned to it
+   ╭─[ an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:8:5 ]
+   │
+ 8 │     free(q);
+   │     ───┬───  
+   │        ╰───── not assigned on every path here
+───╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it where it is declared, `= 0` if nothing else
 error[SC0401]: this frees `q`, which may have been freed already
    ╭─[ an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:8:5 ]
    │

@@ -1878,3 +1878,61 @@ mod too_long {
         assert_eq!(hatched.len(), 1);
     }
 }
+
+/// A pointer local read before anything was assigned to it is worded as
+/// such, under its own code, as a proof and as a doubt.
+mod unassigned {
+    use super::super::words::memory_finding;
+    use super::*;
+    use safec_ir::analysis::Conclusion;
+    use safec_ir::ir::{Function, TranslationUnit, Ty};
+    use safec_ir::memory::{Finding, Kind};
+    use safec_ir::source::SourceMap;
+
+    fn said(conclusion: Conclusion) -> (String, String, Vec<String>) {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "f");
+        let mut unit =
+            TranslationUnit::new(Target::from_triple("x86_64-pc-windows-msvc").expect("known"));
+        let int = unit.push_type(Ty::Int);
+        let function = unit.push_function(Function::new(Span::new(file, 0, 1), int, []));
+        let finding = Finding {
+            function,
+            kind: Kind::Unassigned,
+            conclusion,
+            at: Span::new(file, 0, 1),
+            local: None,
+            freed: None,
+            made: None,
+            unproven: None,
+        };
+        let diagnostic = memory_finding(&sources, &finding, Some("p"), &[]).expect("a diagnostic");
+        (
+            diagnostic
+                .code()
+                .map(|code| code.to_string())
+                .unwrap_or_default(),
+            diagnostic.message().to_owned(),
+            diagnostic.notes().to_vec(),
+        )
+    }
+
+    /// Mutation: give it another code, or swap the two wordings. This fails.
+    #[test]
+    fn is_sc0411_in_its_own_words_proved_and_doubted() {
+        let (code, message, notes) = said(Conclusion::Unsafe);
+        assert_eq!(code, "SC0411");
+        assert_eq!(message, "`p` is read before anything was assigned to it");
+        assert!(
+            notes.iter().any(|note| note.starts_with("C17 6.3.2.1 p2")),
+            "{notes:?}"
+        );
+
+        let (code, message, _) = said(Conclusion::Unknown);
+        assert_eq!(code, "SC0411");
+        assert_eq!(
+            message,
+            "`p` may be read before anything was assigned to it"
+        );
+    }
+}

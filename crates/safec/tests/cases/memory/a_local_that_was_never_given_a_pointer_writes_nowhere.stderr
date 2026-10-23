@@ -1,3 +1,13 @@
+error[SC0411]: `z` is read before anything was assigned to it
+   ╭─[ a_local_that_was_never_given_a_pointer_writes_nowhere.c:7:5 ]
+   │
+ 7 │     free(z);
+   │     ───┬───  
+   │        ╰───── read here
+───╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else
 error[SC0401]: this frees `z`, which this check stopped following
    ╭─[ a_local_that_was_never_given_a_pointer_writes_nowhere.c:7:5 ]
    │
