@@ -183,7 +183,7 @@ the caller's, and the store records nothing a later load reads
 
 Every mutation below was applied on its own to the tree as committed, the whole
 workspace was run with `--no-fail-fast`, and the file was restored. The tests
-named are the ones that failed. The cases are in `crates/safec/tests/cases` and
+named are the ones that failed. The cases are in `tests/cases` and
 every mutation is in the memory check (`crates/safec-ir/src/memory.rs` and
 `memory/`).
 

@@ -32,7 +32,7 @@ It is the handle a reader keeps: a message is reworded whenever a better wording
 is found, and the code is what a suppression list, a grep or a bug report still
 matches afterwards. So a code is assigned once and never changes, which
 `each_lexical_diagnostic_keeps_the_code_it_was_assigned` in
-`crates/safec/src/lexer.rs` states as a rule and holds for the lexical five.
+`crates/safec-c/src/lexer.rs` states as a rule and holds for the lexical five.
 
 The prefix names this compiler rather than a severity, because
 [ADR-0001](adr/0001-promote-unproven-results-in-the-sink.md) lets the sink
@@ -467,7 +467,7 @@ of the change that adds it.
 A diagnostic about the invocation, or about the machine a run is on, rather than
 about a program's text has no code. `no input files`, `cannot read <path>` and
 `--emit object needs clang` are that kind, and eleven of the twelve diagnostics
-the driver, `crates/safec/src/driver.rs` and `driver/`, builds with
+the driver, `crates/safec-c/src/driver.rs` and `driver/`, builds with
 `Diagnostic::error` carry none. There is no class of program for a reader to
 search for and nothing for an explanation to hang on, so a number there would be
 a handle onto nothing.
@@ -518,8 +518,8 @@ touches the prose, and two commands settle this one, which is one more than it
 used to take:
 
 ```sh
-cat crates/safec/src/driver.rs crates/safec/src/driver/*.rs | grep -c "Diagnostic::error("       # the twelve
-cat crates/safec/src/driver.rs crates/safec/src/driver/*.rs | grep -c "Diagnostic::concluded("   # the three: two checks, one invocation
+cat crates/safec-c/src/driver.rs crates/safec-c/src/driver/*.rs | grep -c "Diagnostic::error("       # the twelve
+cat crates/safec-c/src/driver.rs crates/safec-c/src/driver/*.rs | grep -c "Diagnostic::concluded("   # the three: two checks, one invocation
 ```
 
 The second exists because a safety check does not build its diagnostic the same
@@ -600,6 +600,6 @@ words always carry everything the colour does.
 
 ## Where this lives now
 
-Implemented in `crates/safec/src/diagnostics.rs`, with the terminal renderer in
-`crates/safec/src/diagnostics/render.rs`. What a check concludes, and how that
+Implemented in `crates/safec-c/src/diagnostics.rs`, with the terminal renderer in
+`crates/safec-c/src/diagnostics/render.rs`. What a check concludes, and how that
 becomes a severity, is [ADR-0001](adr/0001-promote-unproven-results-in-the-sink.md).

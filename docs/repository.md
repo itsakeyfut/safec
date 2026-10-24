@@ -117,19 +117,24 @@ This keeps the initial codebase small and easy to navigate.
 
 ## What the split actually is, now that one has happened
 
-That criterion has fired twice, and the workspace is three crates:
+That criterion has fired twice, and the workspace is three parts behind one
+crate that presents them:
 
 ```text
+Cargo.toml        the workspace, and the `safec` package
+src/              `safec`: the facade, and the `safec` binary
+tests/            every test that runs the binary, the corpus among them
+benches/          the measurements that run it
 crates/
-├── safec/        the lexer, the parser, sema, the types, the lowering, the
-│                 diagnostics, the CLI and the driver
-├── safec-ir/     the Safety IR, its printer, its interpreter, and the source
-│                 map a span is an offset into
+├── safec-c/      the preprocessor, the lexer, the parser, sema, the types,
+│                 the lowering, the diagnostics, the CLI and the driver
+├── safec-ir/     the Safety IR, its analyses, its printer, its interpreter,
+│                 and the source map a span is an offset into
 └── safec-llvm/   the LLVM backend, which writes textual LLVM IR
 ```
 
-The arrows are `safec -> safec-ir`, `safec -> safec-llvm` and
-`safec-llvm -> safec-ir`, and nothing points the other way.
+The arrows among the parts are `safec-c -> safec-ir`, `safec-c -> safec-llvm`
+and `safec-llvm -> safec-ir`, and nothing points the other way.
 [ADR-0011](adr/0011-the-ir-crate-depends-on-nothing-in-the-workspace.md) has the
 reasoning for the first and the options it rejected, including why `source` is
 on the IR side rather than the frontend's.
@@ -143,6 +148,27 @@ Nothing else has been split, and the paragraphs above still hold for the rest:
 the lexer, the parser and sema are boundaries nothing is pushing on, so
 enforcing them would cost the crates and buy nothing.
 
+### The facade, and where each kind of target lives
+
+`safec` is the crate a user depends on for the compiler. It depends on all
+three parts and re-exports each as a module of its own, `safec::c`, `safec::ir`
+and `safec::llvm`, behind no features. It holds no code a part needs: a type a
+user of one part alone would want lives in that part, and each part's
+documentation says what depending on it alone is for. The root manifest is
+this package as well as the workspace, so `crates/` holds the parts and nothing
+else. [ADR-0058](adr/0058-the-safec-crate-is-a-facade-at-the-workspace-root.md)
+has the reasoning and the options it rejected.
+
+Where a target goes follows from what it needs:
+
+- **A part's own `tests/`** holds what can be tested through that part alone,
+  and builds with nothing above it in the graph. `crates/safec-c/tests/interp.rs`
+  drives the C pipeline in process; `crates/safec-ir/tests/` builds IR by hand.
+- **The root `tests/` and `benches/`** hold everything that runs the `safec`
+  process. They can live nowhere else: cargo defines `CARGO_BIN_EXE_safec` only
+  for the package that holds the binary.
+- **Unit tests** stay beside the code they test, in whichever part that is.
+
 ## When a file becomes a directory
 
 Inside a crate the question is not a boundary cargo enforces but whether a file
@@ -151,7 +177,7 @@ can still be read, and four rules answer it.
 **A file splits when it holds two or more concerns that can be read apart, and
 its code, tests excluded, is over about 2,000 lines.** The number is when to
 look; the concerns decide. A file of one concern stays whole however long:
-`crates/safec/src/lowering.rs` is almost all one `impl Lowering`, and cut by
+`crates/safec-c/src/lowering.rs` is almost all one `impl Lowering`, and cut by
 size its pieces would not read apart. A small file of two concerns stays whole
 too, because every file a reader has to hold costs them more than a section
 does. A concern is a part a reader can follow with the others closed, such as
@@ -162,7 +188,7 @@ apart from each other, because they are read together.
 **`foo.rs` stays the module root, and the parts go in `foo/`.** The root keeps
 the public surface and the `mod` declarations, so a reference to the module's
 public API by its file still names the right one. This is the shape
-`crates/safec/src/diagnostics.rs` and `diagnostics/render.rs` already have, and
+`crates/safec-c/src/diagnostics.rs` and `diagnostics/render.rs` already have, and
 no `mod.rs` is used.
 
 **Inline tests over about 500 lines move to `foo/tests.rs`**, declared
@@ -183,12 +209,12 @@ tests from there to the end. Each split updates its row when it lands.
 | file | code, tests excluded | concerns that read apart | inline tests | the rules say |
 |---|---|---|---|---|
 | `crates/safec-ir/src/memory.rs` | 5,497 | the lattice's parts, the lattice value, building a value out of operands, the transfer functions, the report | 0 | split into `memory/` (#316) |
-| `crates/safec/src/driver.rs` | 2,466 | the pipeline, the words of each safety diagnostic, running the backend, the `--emit` dumps | 1,509 | split into `driver/`, and its tests moved to `driver/tests.rs` (#317) |
-| `crates/safec/src/lowering.rs` | 2,250 | one | 0 | its tests moved to `lowering/tests.rs` (#318) |
-| `crates/safec/src/parser.rs` | 1,888 | one | 0 | its tests moved to `parser/tests.rs` (#318) |
-| `crates/safec/src/types.rs` | 1,617 | one | 0 | its tests moved to `types/tests.rs` (#318) |
+| `crates/safec-c/src/driver.rs` | 2,466 | the pipeline, the words of each safety diagnostic, running the backend, the `--emit` dumps | 1,509 | split into `driver/`, and its tests moved to `driver/tests.rs` (#317) |
+| `crates/safec-c/src/lowering.rs` | 2,250 | one | 0 | its tests moved to `lowering/tests.rs` (#318) |
+| `crates/safec-c/src/parser.rs` | 1,888 | one | 0 | its tests moved to `parser/tests.rs` (#318) |
+| `crates/safec-c/src/types.rs` | 1,617 | one | 0 | its tests moved to `types/tests.rs` (#318) |
 | `crates/safec-ir/src/ir.rs` | 1,279 | one | 0 | its tests moved to `ir/tests.rs` (#318) |
-| `crates/safec/src/ast.rs` | 1,084 | one | 0 | its tests moved to `ast/tests.rs` (#318) |
+| `crates/safec-c/src/ast.rs` | 1,084 | one | 0 | its tests moved to `ast/tests.rs` (#318) |
 | `crates/safec-llvm/src/emit.rs` | 947 | one | 0 | its tests moved to `emit/tests.rs` (#318) |
-| `crates/safec/src/diagnostics.rs` | 678 | one | 0 | its tests moved to `diagnostics/tests.rs` (#318) |
-| `crates/safec/src/diagnostics/render.rs` | 574 | one | 0 | its tests moved to `render/tests.rs` (#318) |
+| `crates/safec-c/src/diagnostics.rs` | 678 | one | 0 | its tests moved to `diagnostics/tests.rs` (#318) |
+| `crates/safec-c/src/diagnostics/render.rs` | 574 | one | 0 | its tests moved to `render/tests.rs` (#318) |

@@ -369,7 +369,7 @@ impl<V> Solution<V> {
 /// would mean walking every block to look for a hole, on every function, for a
 /// mistake the compiler cannot make on its own: [`Function::fill_block`] is the
 /// only way a reserved id becomes a block, and outside the tests the only
-/// caller that reserves one is `safec`'s lowering.
+/// caller that reserves one is `safec-c`'s lowering.
 pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solution<A::Value> {
     solve_within(analysis, function, cfg, usize::MAX).expect("no walk count is past `usize::MAX`")
 }

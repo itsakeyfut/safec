@@ -49,7 +49,7 @@ The last row is what this does not reach: a parameter's allocation is exposed wh
 
 ### Confirmation
 
-The cases are in `crates/safec/tests/cases/memory`, and every mutation is in `crates/safec-ir/src/memory/`.
+The cases are in `tests/cases/memory`, and every mutation is in `crates/safec-ir/src/memory/`.
 
 - `Allocations::edge` not marking an unheld site `Unheld` fails `a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved`, and so do `a_pointer_freed_and_set_to_null_on_one_arm_is_returned`, `a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test` and `a_pointer_freed_and_set_to_null_in_a_loop_builds`, which are refused.
 - `Known::held_sites` leaving out `inside` fails `a_pointer_stored_on_the_arm_that_freed_it_is_doubted`, and leaving out what locals hold fails `a_copy_made_on_the_arm_that_freed_it_is_doubted`; each builds, among many other cases that fail with them. Before #478 only those two did, because a holder left out mattered only where one side held the site and the other did not; since `Allocations::edge` marks every unheld site `Unheld`, a holder left out makes a site that is still read lose its state at every edge, and the symmetric controls in the table fail too, measured.

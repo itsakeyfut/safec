@@ -80,10 +80,10 @@ to say.
 ### Confirmation
 
 `every_file_in_the_corpus_belongs_to_a_case_in_the_table` in
-`crates/safec/tests/cases.rs`.
+`tests/cases.rs`.
 
 The mutation: delete the `add:` line from the `cases!` table while leaving
-`crates/safec/tests/cases/frontend/add.c` in place. That test fails, naming
+`tests/cases/frontend/add.c` in place. That test fails, naming
 `add`, and no other test does. So does each of these, on its own: a file
 directly in `cases/`, a directory no group names, a directory inside a group,
 and one case's files moved to another group, which also fails that case,
@@ -148,7 +148,7 @@ the group's directory fails it, by name and on the first run.
 
 ## More Information
 
-* [`crates/safec/tests/cases.rs`](../../crates/safec/tests/cases.rs), where the
+* [`tests/cases.rs`](../../tests/cases.rs), where the
   table and both guards live.
 * [`docs/repository.md`](../repository.md) for the dependency principle.
 * The keyword-table test that motivated the drivers is the lesson that a test

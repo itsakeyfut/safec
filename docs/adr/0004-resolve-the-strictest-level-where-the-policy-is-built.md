@@ -169,14 +169,14 @@ The resolution itself is guarded by three tests, one at each level it can be
 reached from:
 
 * `the_strictest_safety_level_denies_unknown_however_the_policy_is_built` in
-  `crates/safec/src/diagnostics/tests.rs` calls `Policy::new(SafetyLevel::Strict,
+  `crates/safec-c/src/diagnostics/tests.rs` calls `Policy::new(SafetyLevel::Strict,
   false)` directly, which is the adapter's path, and asserts both the resolved
   answer and that an unproven diagnostic reaching the sink becomes an error.
 * `the_strictest_safety_level_denies_unknown_even_unresolved` in the same file
   goes through an `Options` built by hand with `safety: Strict` and
   `deny_unknown: false`.
 * `the_strictest_safety_level_denies_unknown_in_the_sink` in
-  `crates/safec/src/driver/tests.rs` goes through `compile`, so the guard covers
+  `crates/safec-c/src/driver/tests.rs` goes through `compile`, so the guard covers
   the path an actual run takes.
 
 Verified by mutation. Replacing the body of `Policy::new` with
@@ -190,7 +190,7 @@ fails those three and one more:
 ADR-0033 added, because this mutation drops that record's clause along with this
 one. Four, applied and read rather than predicted. It was `Self { deny_unknown }`
 until #209 inverted the flag; the mutation is the same one, spelled for the
-argument the constructor now takes. Two tests in `crates/safec/src/cli.rs` held the
+argument the constructor now takes. Two tests in `crates/safec-c/src/cli.rs` held the
 parser's own resolution and passed under it either way, which was the point of
 this record: they never covered this. #209 removed them along with the
 resolution they were about.
@@ -264,9 +264,9 @@ holds that layer now, and what it holds is that the layer does not decide.
 
 ## More Information
 
-* `crates/safec/src/diagnostics.rs`: `Policy`, `Policy::new`,
+* `crates/safec-c/src/diagnostics.rs`: `Policy`, `Policy::new`,
   `impl From<&Options> for Policy`.
-* `crates/safec/src/cli.rs`: `Cli::into_options`, the other resolution site.
+* `crates/safec-c/src/cli.rs`: `Cli::into_options`, the other resolution site.
 * [ADR-0001](0001-promote-unproven-results-in-the-sink.md): why the sink is the
   enforcement point, and what `deny_unknown` decides once a result gets there.
 * [ADR-0003](0003-pass-the-source-map-to-each-render-call.md): the other place a

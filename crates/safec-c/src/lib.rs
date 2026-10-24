@@ -1,9 +1,11 @@
-//! The Safe C compiler.
+//! Everything that reads C, from the preprocessor to the driver.
 //!
-//! The `safec` binary is a thin wrapper around this crate: it parses arguments
-//! and maps the result to a process exit code. Everything else lives here so
-//! that integration tests can drive the compiler in-process instead of
-//! spawning a subprocess.
+//! Depend on this crate to read C into the Safety IR, or to run the whole
+//! pipeline in process with [`driver::run_compiler`]. Depend on `safec` for
+//! the compiler as one crate, which re-exports this one as `safec::c` and
+//! holds the `safec` binary: a thin wrapper that parses arguments with
+//! [`cli::Cli`] and maps what [`driver`] answers to an exit code. See
+//! ADR-0058.
 //!
 //! Everything a program becomes once the C is gone is in `safec_ir` instead:
 //! the IR, its printer, its interpreter, and the source map a span is an

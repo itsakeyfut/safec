@@ -79,7 +79,7 @@ What the chosen option still does not ask, each of which builds on `main` as wel
 
 ### Confirmation
 
-The cases are in `crates/safec/tests/cases`, and every mutation is in `crates/safec-ir/src/memory/`.
+The cases are in `tests/cases`, and every mutation is in `crates/safec-ir/src/memory/`.
 
 - `error[E0004]` at every `match` on `SiteState` if a variant is added, which is how every reader written as a `match` was made to answer `Reachable`. A reader written as `matches!` is not held by it, and review found one: `Known::reborn` counted `Reachable` as live, so a pointer stored last turn that a call may have freed was read as the new allocation in silence. It counts it gone, and `a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again` and `a_pointer_copied_last_turn_that_a_call_may_have_freed_is_doubted_when_stored_and_read_back` fail if it counts it live.
 - `handed_below` exempting `Unknown` through the address again fails `a_pointer_freed_on_one_path_and_handed_by_address_is_asked`, `a_pointer_whose_address_was_taken_before_a_free_on_one_path_is_asked`, `a_pointer_handed_to_a_call_and_then_by_address_is_asked` and `a_may_set_freed_then_written_through_an_alias`, which lose their `SC0407`. The second is the two events in the other order, since a rule about two events is held only in the order a case writes them; this mutation is the only one of the four it fails under, since there the free is of an escaped local, which writes `Unknown` on its arm before any join.

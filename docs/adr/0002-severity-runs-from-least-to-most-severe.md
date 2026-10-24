@@ -69,7 +69,7 @@ idiom.
 
 ### Confirmation
 
-Two unit tests in `crates/safec/src/diagnostics/tests.rs`, and the mutation that fails
+Two unit tests in `crates/safec-c/src/diagnostics/tests.rs`, and the mutation that fails
 them is the same one: putting the variants back in descending order.
 
 * `severities_are_ordered_from_least_to_most_serious` spells the chain out
@@ -137,8 +137,8 @@ and nothing else.
 
 ## More Information
 
-* `crates/safec/src/diagnostics.rs`: `Severity`.
-* `crates/safec/src/safety.rs`: `SafetyLevel`, the other ordinal enum, and the
+* `crates/safec-c/src/diagnostics.rs`: `Severity`.
+* `crates/safec-c/src/safety.rs`: `SafetyLevel`, the other ordinal enum, and the
   doc comment that states the convention this now matches.
 * `codespan-reporting` 0.13.1, `src/diagnostic.rs`: the ordering doctest.
 * [ADR-0001](0001-promote-unproven-results-in-the-sink.md), which separates what

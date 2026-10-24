@@ -200,7 +200,7 @@ fn an_object_is_for_the_machine_the_run_named() {
         if !targetable(triple) {
             assert_ne!(
                 triple,
-                env!("SAFEC_HOST_TRIPLE"),
+                safec::c::cli::HOST_TRIPLE,
                 "this clang cannot target the machine it is running on"
             );
             eprintln!("this clang has no backend for {triple}: that row was not checked");
@@ -256,7 +256,7 @@ fn an_object_the_linker_accepts() {
             "--emit",
             "object",
             "--target",
-            env!("SAFEC_HOST_TRIPLE"),
+            safec::c::cli::HOST_TRIPLE,
             "-o",
             &object.to_string_lossy(),
             &source.to_string_lossy(),
@@ -314,7 +314,7 @@ fn an_object_with_no_path_is_named_after_its_input() {
             "--emit",
             "object",
             "--target",
-            env!("SAFEC_HOST_TRIPLE"),
+            safec::c::cli::HOST_TRIPLE,
             "sub/a.tar.c",
         ],
         scratch.path(),
@@ -367,7 +367,7 @@ fn a_run_that_read_nothing_makes_no_object() {
             "--emit",
             "object",
             "--target",
-            env!("SAFEC_HOST_TRIPLE"),
+            safec::c::cli::HOST_TRIPLE,
             "-o",
             &kept.to_string_lossy(),
             "nosuch.c",
@@ -1017,7 +1017,7 @@ fn linking_for_another_machine_says_what_it_needs() {
     let elsewhere = Target::ALL
         .iter()
         .map(|target| target.triple())
-        .find(|triple| *triple != env!("SAFEC_HOST_TRIPLE"))
+        .find(|triple| *triple != safec::c::cli::HOST_TRIPLE)
         .expect("more than one machine is known");
 
     let scratch = Scratch::new("another_machine");

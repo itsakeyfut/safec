@@ -7,15 +7,15 @@
 //!
 //! Here rather than beside the diagnostics because a check cannot see a
 //! diagnostic: this crate is what an analysis is written against and nothing in
-//! the workspace points at `safec`. `safec_llvm::emit::Refusal` has the same
-//! shape for the same reason, and `safec` turns one of those into a diagnostic
+//! the workspace points at `safec-c`. `safec_llvm::emit::Refusal` has the same
+//! shape for the same reason, and `safec-c` turns one of those into a diagnostic
 //! too.
 //!
 //! **What a module that runs one of these is called.** An analysis lives in a
-//! module of its own in this crate, and the entry point `safec` calls is
+//! module of its own in this crate, and the entry point `safec-c` calls is
 //! `findings`, answering with that module's own `Finding`. Not `check`: it is
 //! the most generic word available for the most specific thing in a module,
-//! `safec`'s `types` already spends it on something else, and
+//! `safec-c`'s `types` already spends it on something else, and
 //! `docs/roadmap.md` puts three more analyses after the memory one, so the
 //! driver would end up calling one bare `check` and four that can only be
 //! reached through a path. Not one `Finding` shared between them either: the
@@ -34,7 +34,7 @@
 /// The three answers `docs/safety-model.md` gives, and the whole of what a
 /// check says: not a severity, not a message, and not whether the build should
 /// fail. What each means for what a user reads is `Diagnostic::concluded`'s in
-/// `safec`, which is the one place that answers it.
+/// `safec-c`, which is the one place that answers it.
 ///
 /// **Three rather than two.** A check that has proved something safe could say
 /// nothing instead, and then "safe is not reported" would be a rule about every
@@ -58,7 +58,7 @@ pub enum Conclusion {
     ///
     /// **Wider than "a check ran and could not decide", since ADR-0035.** A run
     /// asked for a safety level nothing can deliver is reported through this
-    /// value too, by `safec`'s driver rather than by a check: nothing was
+    /// value too, by `safec-c`'s driver rather than by a check: nothing was
     /// established about that level, and that is a true sentence in this
     /// vocabulary even where no check existed to establish it. Whoever wires the
     /// lifetime, ownership or thread checks meets this value here first, so it is

@@ -295,7 +295,7 @@ impl Remedy {
 /// Built by chaining: a message is required, everything else is optional.
 ///
 /// ```
-/// # use safec::diagnostics::{Code, Diagnostic, Label};
+/// # use safec_c::diagnostics::{Code, Diagnostic, Label};
 /// # use safec_ir::source::{SourceMap, Span};
 /// # let mut map = SourceMap::new();
 /// # let file = map.add_virtual("main.c", "int *p = 0;");

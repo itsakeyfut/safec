@@ -40,11 +40,11 @@ What decides it is the name: a call is made with no continuation when its callee
 
 ### Confirmation
 
-Every reader of a call's continuation is `error[E0308]` until it answers for `None`, which is how the interpreter, the printer and the backend came to say what they do without one. The cases are in `crates/safec/tests/cases`, and the mutations in `crates/safec/src/lowering.rs` unless named.
+Every reader of a call's continuation is `error[E0308]` until it answers for `None`, which is how the interpreter, the printer and the backend came to say what they do without one. The cases are in `tests/cases`, and the mutations in `crates/safec-c/src/lowering.rs` unless named.
 
 - The lowering giving every call its continuation fails `a_function_that_ends_in_abort_does_not_reach_the_end`, `each_function_that_cannot_return_ends_a_body` and `code_after_abort_is_not_asked`, which are refused.
 - Dropping any one name from `DOES_NOT_RETURN` fails `each_function_that_cannot_return_ends_a_body`, at that name's function.
-- Names reporting no reserved definition fails `a_function_defined_here_named_abort_is_refused` and `a_function_defined_below_its_call_named_abort_is_refused`, which build, and the unit test `each_name_c_says_does_not_return_is_refused_where_it_is_defined` in `crates/safec/src/sema.rs` for each name; asking more than function definitions fails `a_local_named_exit_is_not_refused`.
+- Names reporting no reserved definition fails `a_function_defined_here_named_abort_is_refused` and `a_function_defined_below_its_call_named_abort_is_refused`, which build, and the unit test `each_name_c_says_does_not_return_is_refused_where_it_is_defined` in `crates/safec-c/src/sema.rs` for each name; asking more than function definitions fails `a_local_named_exit_is_not_refused`.
 - Dropping the test that the call is the root of its full expression fails `a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked`, which goes silent.
 - `Terminator::successors` pushing a block for `None` fails `every_terminator_says_where_control_can_go` in `crates/safec-ir/src/ir/tests.rs`.
 - The backend writing nothing after a call with no continuation fails `llvm_ir_of_a_call_that_does_not_return` and, where `clang` is present, `tests/llvm.rs`, which hands it the module.

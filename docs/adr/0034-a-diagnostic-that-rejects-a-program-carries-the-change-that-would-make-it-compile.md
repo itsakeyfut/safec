@@ -16,9 +16,9 @@ nicety and becomes part of what a safety diagnostic is.
 
 The vocabulary is already half here, which is the part worth checking before
 deciding anything. `Severity::Help` exists in
-`crates/safec/src/diagnostics.rs`, and its doc comment reads "A suggested way to
+`crates/safec-c/src/diagnostics.rs`, and its doc comment reads "A suggested way to
 resolve a diagnostic reported alongside it". **No production code constructs
-one**, though two tests in `crates/safec/src/diagnostics/render/tests.rs` do, by
+one**, though two tests in `crates/safec-c/src/diagnostics/render/tests.rs` do, by
 iterating every severity. A `Diagnostic` holds a severity, a certainty, a
 level, a code, a message, labels and notes, so a remedy written today is a
 `with_note` string like any other.
@@ -112,11 +112,11 @@ either way.
 ### Confirmation
 
 **The constructor, and the build stops rather than a test failing.**
-`Diagnostic::concluded` in `crates/safec/src/diagnostics.rs` takes a `Remedy` as
+`Diagnostic::concluded` in `crates/safec-c/src/diagnostics.rs` takes a `Remedy` as
 its third argument. Mutation: remove that parameter and the two `with_remedy`
 calls in its arms. The library does not compile: `error[E0061]` at
 `memory_finding` and at `nullability_finding` in
-`crates/safec/src/driver/words.rs`, which are every place a safety finding is
+`crates/safec-c/src/driver/words.rs`, which are every place a safety finding is
 built. The test modules fail the same way under `cargo test`; how many of them
 there are is a fact about the suite rather than about this decision, and the
 suite grows, so it is not written down here.
@@ -128,7 +128,7 @@ nothing about the next one, which is the whole population here.
 
 **Reaching the reader is a second thing and takes two more mutations.**
 `a_remedy_is_written_after_the_notes_on_both_rendering_paths` in
-`crates/safec/src/diagnostics/render/tests.rs` renders one diagnostic twice, with a
+`crates/safec-c/src/diagnostics/render/tests.rs` renders one diagnostic twice, with a
 label and without, because `write_one` and `render_header_only` each call
 `write_remedies` and dropping either is a silence on half the diagnostics.
 Mutation: drop the call from `write_one`, and that test fails; restore it and
@@ -138,9 +138,9 @@ drop the one in `render_header_only`, and it fails again. Both were applied.
 *Decision Outcome* rejects a separate diagnostic at `Severity::Help` partly
 because nothing would stop one being counted as an entry that means nothing
 failed. `Diagnostic::new` is private, so outside
-`crates/safec/src/diagnostics.rs` and its child modules there is no way to
+`crates/safec-c/src/diagnostics.rs` and its child modules there is no way to
 build a diagnostic at a severity that means nothing. Mutation: make it `pub`
-again and call it from `crates/safec/src/driver.rs` with `Severity::Help`.
+again and call it from `crates/safec-c/src/driver.rs` with `Severity::Help`.
 That compiles, which is the state [#214](https://github.com/itsakeyfut/safec/issues/214)
 closed. With it private the same call is `error[E0624]`, an associated function
 that is private, and there is nothing to run. A failure to compile, like the

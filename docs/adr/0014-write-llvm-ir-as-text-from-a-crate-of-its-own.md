@@ -107,9 +107,10 @@ is refused in turn.
 
 ### Confirmation
 
-Adding `safec = { path = "../safec" }` to `crates/safec-llvm/Cargo.toml` is the
+The frontend this record calls `safec` is the crate `safec-c` now. Adding
+`safec-c = { path = "../safec-c" }` to `crates/safec-llvm/Cargo.toml` is the
 mutation, and cargo refuses the workspace before compiling anything with
-`error: cyclic package dependency`. A `use safec::` with no such line does not
+`error: cyclic package dependency`. A `use safec_c::` with no such line does not
 resolve either, as `E0432` or `E0433` depending on how far the path gets. The
 manifest is the guard because the manifest is where the reversal would be
 written, which is ADR-0011's argument and the same one line of evidence.
@@ -142,7 +143,7 @@ the other side.
   result carries `signext` or `zeroext` on six of the eight measured targets
   and nothing on the other two, `clang` writes it, and this did not, so a
   `clang`-compiled caller of a function this wrote passed an unextended byte.
-  `the_attributes_are_what_clang_asks_for` in `crates/safec/tests/llvm.rs` is
+  `the_attributes_are_what_clang_asks_for` in `tests/llvm.rs` is
   what holds it now. The rest of the category is still ahead.
 * Neutral, because `#92` reopens it with the evidence that only an object file
   can provide.

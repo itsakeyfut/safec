@@ -30,8 +30,8 @@ use std::time::{Duration, Instant};
 
 use clap::Parser as _;
 
-use safec::cli::Cli;
-use safec::driver;
+use safec::c::cli::Cli;
+use safec::c::driver;
 
 /// The sizes measured, in allocating locals.
 const SIZES: [usize; 3] = [50, 100, 200];

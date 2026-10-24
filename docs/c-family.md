@@ -272,7 +272,7 @@ against the assignment constraint, so `int n = p;` was accepted in silence
 where `n = p;` was `error[SC0302]`. It is now that error too, which was #205,
 and `initializing_with_the_wrong_type` and
 `an_allocation_initialized_into_an_integer_is_a_type_error` in
-`crates/safec/tests/cases` hold it.
+`tests/cases` hold it.
 
 There were two. `Lowering::promoted` gave the temporary of a compound
 assignment and of `++` or `--` the type `Ty::Int` whatever the place held, so
@@ -295,7 +295,7 @@ compound assignment or an increment.
 `a_compound_assignment_on_a_pointer_computes_into_a_pointer`,
 `an_increment_of_a_pointer_computes_into_a_pointer` and
 `a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer`
-in `crates/safec/tests/cases` are what say so.
+in `tests/cases` are what say so.
 
 **Conforming is load-bearing there, and only partly enforced.** C17 6.5.16.2
 p1 is what allows a pointer left operand for `+=` and `-=` and an arithmetic one
@@ -308,7 +308,7 @@ writing a multiplication over an `int *` into a local declared `int`; every
 binary operator's operands are now checked against its own clause of C17 6.5.5
 to 6.5.14, so it is `error[SC0306]` too, which was #236.
 `an_allocation_multiplied_into_an_integer_is_a_type_error` in
-`crates/safec/tests/cases` holds it. An argument reached the shape too:
+`tests/cases` holds it. An argument reached the shape too:
 `g(p)` with `int g(int a)` put a pointer into a parameter, which the callee's
 body holds as a local declared `int`. C17 6.5.2.2 p2 checks each argument
 against its parameter, so it is `error[SC0302]`, which was #356, and
@@ -419,7 +419,7 @@ operand would land where nothing reaches.
 continuation that does return hides the code after it from every check, which
 is a silence: since #343 a definition of one of those names is refused, so
 none can hide a body that returns, and
-`a_function_defined_here_named_abort_is_refused` in `crates/safec/tests/cases`
+`a_function_defined_here_named_abort_is_refused` in `tests/cases`
 holds that. A call
 given a continuation it never takes keeps code no execution reaches in the
 graph, which is a false report, and is what a call to a function of the
@@ -455,7 +455,7 @@ there is adapter output.
 | Phase 2 builds the CFG | Whether an edge can exist that no statement produced | [ADR-0010](adr/0010-give-the-graph-an-edge-no-statement-produced.md), written when the trigger fired |
 | The Safety IR gains a function table | Whether identity is an opaque id or a name | `FuncId`'s doc comment in the IR, where it was recorded when the table landed |
 | The first macro expansion is built | How `Span` says where code came from, which has to serve: macros, instantiations, and generated operations, without a read in one operand landing strictly inside a call in another (ADR-0043) | [ADR-0054](adr/0054-a-span-from-an-expansion-is-located-in-a-copy-of-the-macro-s-body.md), written before the first expansion is built |
-| The safety IR is extracted from the `safec` crate | Which crates may depend on which | [ADR-0011](adr/0011-the-ir-crate-depends-on-nothing-in-the-workspace.md), written when the trigger fired |
+| The safety IR is extracted from the crate that reads C, `safec` then and `safec-c` now | Which crates may depend on which | [ADR-0011](adr/0011-the-ir-crate-depends-on-nothing-in-the-workspace.md), written when the trigger fired |
 | The first safety check is written | Where `Diagnostic` lives, and therefore which crate an analysis can be written in | An ADR. [ADR-0011](adr/0011-the-ir-crate-depends-on-nothing-in-the-workspace.md) says why this is the trigger and why waiting costs nothing |
 | The first C++ lifetime bug is analyzed | Whether the C annotation and the C++ type reached the same IR concept | Wherever it shows that one of them was wrong |
 | The crate is published | The name | Not an ADR. A decision, taken once |

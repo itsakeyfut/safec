@@ -14,7 +14,7 @@ safe, and `Options::deny_unknown`, already parsed and already documented as
 "report `Unknown` analysis results as errors rather than warnings", promises
 that the third case can be made fatal.
 
-Nothing in `crates/safec/src/diagnostics.rs` can express `Unknown`: a
+Nothing in `crates/safec-c/src/diagnostics.rs` can express `Unknown`: a
 `Diagnostic` carries a severity and nothing about what the analysis concluded.
 `DiagnosticSink::report` also settles its error count at the moment a diagnostic
 is pushed, and exposes no way to revise a severity afterwards, so the promotion
@@ -105,7 +105,7 @@ change.
 ### Confirmation
 
 The promotion is `DiagnosticSink::report`'s only branch on certainty, so the
-guards are unit tests in `crates/safec/src/diagnostics/tests.rs`, each named with the
+guards are unit tests in `crates/safec-c/src/diagnostics/tests.rs`, each named with the
 mutation that makes it fail:
 
 * Removing the promotion from `report` fails the test that a sink with
@@ -134,7 +134,7 @@ mutation that makes it fail:
 Each of those mutations was applied and the named test observed to fail.
 
 The wiring this record was written ahead of has since landed. `compile` in
-`crates/safec/src/driver.rs` builds the sink from `Policy::from(options)` and is
+`crates/safec-c/src/driver.rs` builds the sink from `Policy::from(options)` and is
 the only thing that builds one, so the policy takes effect end to end.
 `the_sink_is_built_from_the_options_the_run_was_given` guards it: replacing the
 conversion with `DiagnosticSink::new` fails it. It was named for the *resolved*
@@ -210,9 +210,9 @@ at all.
   uncertainty" is what annotations exist to remove.
 * [`docs/design-principles.md`](../design-principles.md): the principle this
   serves, "separate inference from enforcement".
-* `crates/safec/src/options.rs`: `deny_unknown`.
-* `crates/safec/src/safety.rs`: `SafetyLevel`.
-* `crates/safec/src/diagnostics.rs`: `Severity`, `Diagnostic`, `DiagnosticSink`.
+* `crates/safec-c/src/options.rs`: `deny_unknown`.
+* `crates/safec-c/src/safety.rs`: `SafetyLevel`.
+* `crates/safec-c/src/diagnostics.rs`: `Severity`, `Diagnostic`, `DiagnosticSink`.
 * The multi-agent review that found the gap: `DiagnosticSink::report` settles its
   count at push time, so no later pass can promote, and nothing distinguishes an
   unprovable warning from an ordinary one.

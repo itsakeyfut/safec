@@ -325,7 +325,7 @@ before changed its answer: every one of them frees in a statement of its own.
 * `Element::Sequenced` in
   [`crates/safec-ir/src/ir.rs`](../../crates/safec-ir/src/ir.rs), and the flag
   the walk carries in
-  [`crates/safec/src/lowering.rs`](../../crates/safec/src/lowering.rs).
+  [`crates/safec-c/src/lowering.rs`](../../crates/safec-c/src/lowering.rs).
 * C17 Annex C is the complete list of sequence points, and 6.5 p3 is what makes
   everything not on it unsequenced.
 * Issue #142 carries the measurement and the four programs.

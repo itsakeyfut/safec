@@ -34,7 +34,7 @@
 //! It waits on the frontend: the parser does not read the storage classes, so
 //! no C program can ask for one yet.
 //!
-//! Nothing here reads an IR. `crates/safec/src/lowering.rs` builds one from
+//! Nothing here reads an IR. `crates/safec-c/src/lowering.rs` builds one from
 //! the typed AST; the printer is [`crate::print`] and the interpreter is
 //! [`crate::interp`], and what this module owes them is a shape they do not
 //! have to agree about first.
@@ -127,7 +127,7 @@ impl LocalId {
     /// The index this handle refers to.
     ///
     /// For a side table with a slot per local, which is what a dataflow
-    /// analysis is. `FileId::index` in `crates/safec/src/source.rs` is the same
+    /// analysis is. `FileId::index` in `crates/safec-ir/src/source.rs` is the same
     /// thing several layers up.
     pub fn index(self) -> usize {
         self.0 as usize
@@ -717,7 +717,7 @@ impl Element {
 /// operation's own type to emit it at all.
 ///
 /// A frontend that lowers `c += 1` as one operation into `c` breaks this, which
-/// is what `safec`'s did until it was measured. The fix is what C says the
+/// is what `safec-c`'s did until it was measured. The fix is what C says the
 /// program is: compute into a temporary of the promoted type, then assign.
 /// `lowering.rs::promoted` is where that is done and why.
 #[derive(Clone, Debug, PartialEq)]

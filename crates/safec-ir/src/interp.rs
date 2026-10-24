@@ -871,7 +871,7 @@ mod tests {
     // convenience: this crate has no frontend to compile C with, so a test
     // that runs is a test that the IR is runnable on its own. The programs
     // that go through the lexer, the parser, sema and the lowering before they
-    // run are in `safec`'s `tests/interp.rs`, which is the only side that can
+    // run are in `safec-c`'s `tests/interp.rs`, which is the only side that can
     // compile one. ADR-0011 is the boundary they are on opposite sides of.
 
     /// A pointer holds where it pointed, not the expression that named it.
@@ -889,7 +889,7 @@ mod tests {
     /// with it, and `docs/c-family.md` asks that an analysis be "runnable over
     /// IR built by hand in a test, with no frontend present", so a property of
     /// the IR belongs where the IR can still be written rather than where one
-    /// frontend happens to reach it. `crates/safec/tests/interp.rs` holds the
+    /// frontend happens to reach it. `crates/safec-c/tests/interp.rs` holds the
     /// half of the old test that is still about C.
     ///
     /// Mutation: resolve only the root local in the `Rvalue::Address` arm,

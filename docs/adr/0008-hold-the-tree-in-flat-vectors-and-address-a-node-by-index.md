@@ -52,7 +52,7 @@ not accidental complexity.
 
 ### Confirmation
 
-`an_id_still_names_its_node_after_more_are_pushed` in `crates/safec/src/ast/tests.rs`.
+`an_id_still_names_its_node_after_more_are_pushed` in `crates/safec-c/src/ast/tests.rs`.
 
 The mutation: take the id from `len()` **after** the push rather than before. It
 fails, because every id then names the node written after the one it was handed
@@ -74,9 +74,9 @@ because nothing can break it and still build.
   one layer up and is the shape to copy. Adding them breaks nothing, which is
   the point: the choice being made here is the one that cannot be added later.
 
-  The caller arrived with `crates/safec/src/sema.rs`, which keys a table by
+  The caller arrived with `crates/safec-c/src/sema.rs`, which keys a table by
   `ExprId`, so that id derives `Hash` and `Ast::expr_ids` gives the length.
-  `crates/safec/src/types.rs` brought the other half: a slot per expression,
+  `crates/safec-c/src/types.rs` brought the other half: a slot per expression,
   which is what `ExprId::index` is for. The other three ids still have no
   caller and still have neither, which is the same rule applied rather than an
   oversight.
@@ -99,7 +99,7 @@ because nothing can break it and still build.
   node owns its id, and a function that has pushed must hand the id back rather
   than the node. Returning the node lets the caller push a second copy, and one
   construct with two ids is this decision defeated while looking like it holds.
-  `a_nested_block_is_one_node_in_the_arena` in `crates/safec/src/parser/tests.rs` is
+  `a_nested_block_is_one_node_in_the_arena` in `crates/safec-c/src/parser/tests.rs` is
   what says so, and it reads the arena through `Debug` because the duplicate is
   unreachable from the root and so invisible to every walk of the tree.
 * What would reverse this: giving a node a reference to another node. That is
@@ -132,7 +132,7 @@ because nothing can break it and still build.
 
 ## More Information
 
-* [`crates/safec/src/ast.rs`](../../crates/safec/src/ast.rs), where the tree and
+* [`crates/safec-c/src/ast.rs`](../../crates/safec-c/src/ast.rs), where the tree and
   both guards live.
 * [`docs/repository.md`](../repository.md) for the dependency principle, and
   [`docs/architecture.md`](../architecture.md) for arenas as a reason to write

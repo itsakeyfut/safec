@@ -469,7 +469,7 @@ mod tests {
     /// The frontend used to be such a producer, before #76: it parsed a decimal
     /// literal into an `i128` with no range check, so
     /// `int x = 170141183460469231731687303715884105727;` arrived here and
-    /// `crates/safec/tests/interp.rs` held a copy of this guard written in C.
+    /// `crates/safec-c/tests/interp.rs` held a copy of this guard written in C.
     /// `types.rs` now refuses that constant, so this is the only place the case
     /// can be reached from, and the IR's carrier is why it still has to be.
     ///

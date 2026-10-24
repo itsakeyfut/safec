@@ -203,7 +203,7 @@ blocks and a minute, as many as before any of this. Ordered again inside, the
 same function takes about a third of a second.
 
 What it costs is Tarjan's walk once per loop, over that loop's blocks, and a
-set where a stack was. The bench `crates/safec/benches/growth.rs` measures
+set where a stack was. The bench `benches/growth.rs` measures
 four shapes, nested loops among them.
 
 **The order changes how many walks an analysis takes, and since

@@ -6,12 +6,12 @@
 //! halves of the compiler's contract with `make`, `ninja` and every CI script,
 //! and neither is reachable without spawning the binary.
 //!
-//! [`Outcome`]: safec::driver::Outcome
+//! [`Outcome`]: safec::c::driver::Outcome
 
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 
-use safec::parser::MAX_NESTING;
+use safec::c::parser::MAX_NESTING;
 
 /// Run the compiler the way a build system would.
 fn safec(args: &[&str]) -> Output {

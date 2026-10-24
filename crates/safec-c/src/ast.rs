@@ -39,7 +39,7 @@ impl ExprId {
     ///
     /// For a side table with a slot per expression, which is the dense half of
     /// what ADR-0008 says an id is for. `FileId::index` in
-    /// `crates/safec/src/source.rs` is the same thing one layer up. Not for
+    /// `crates/safec-ir/src/source.rs` is the same thing one layer up. Not for
     /// reaching into an [`Ast`]: use [`Ast::expr`].
     pub fn index(self) -> usize {
         self.0 as usize

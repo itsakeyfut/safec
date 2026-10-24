@@ -1,6 +1,37 @@
+# The root is the workspace and the `safec` package at once: the facade a user
+# depends on, the binary, and every test that runs it. See ADR-0058.
+[package]
+name = "safec"
+description = "A small, hackable, safety-oriented C compiler"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "safec"
+path = "src/main.rs"
+
+# A measurement that asserts nothing and prints a table: its own `main`,
+# since the built-in bench harness needs a nightly compiler.
+[[bench]]
+name = "growth"
+harness = false
+
+[dependencies]
+safec-c = { path = "crates/safec-c" }
+safec-ir = { path = "crates/safec-ir" }
+safec-llvm = { path = "crates/safec-llvm" }
+clap.workspace = true
+
+[lints]
+workspace = true
+
 [workspace]
 resolver = "3"
-members = ["crates/safec", "crates/safec-ir", "crates/safec-llvm"]
+members = ["crates/safec-c", "crates/safec-ir", "crates/safec-llvm"]
 
 [workspace.package]
 version = "0.1.0"

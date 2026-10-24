@@ -16,7 +16,7 @@ the allocated space.
 
 That answer is right and it is not free. Measured before this was decided: 62 of
 the corpus's 219 `.c` files dereference a pointer outside a declaration, and
-`crates/safec/src/cli.rs` defaults `--safety` to `memory`, so everything this
+`crates/safec-c/src/cli.rs` defaults `--safety` to `memory`, so everything this
 check says is said by a bare `safec a.c`. What decides whether that is one
 warning per pointer or one per dereference is whether the check learns anything
 from a dereference it has already reported.
@@ -70,7 +70,7 @@ same reason.
 
 ### Confirmation
 
-`a_pointer_dereferenced_twice_is_reported_once` in `crates/safec/tests/cases`:
+`a_pointer_dereferenced_twice_is_reported_once` in `tests/cases`:
 dropping the call to `met` in `crate::nullability`'s `Analysis::element` reports
 both dereferences and fails it.
 
