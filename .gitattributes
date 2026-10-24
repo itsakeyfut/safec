@@ -8,3 +8,8 @@
 # diff` rendering them, and a regenerated expectation being a readable diff is
 # the whole reason regenerating them is safe.
 crates/safec/tests/cases/** text eol=lf
+
+# The same for the examples, for a reason of their own: `tests/examples.rs`
+# applies the edits an example's comments invite to its text, and an edit
+# spanning two lines written with `\n` matches nothing in a CRLF checkout.
+examples/** text eol=lf
