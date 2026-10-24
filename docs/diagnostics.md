@@ -145,8 +145,8 @@ or a call it was handed, since this check keeps no offsets within one; a
 `free` does not, so a read out of a block nothing wrote before it was freed
 is `SC0411` beside `SC0402`; a store of the indeterminate pointer back into fresh
 memory is a write like any other. A slot written on some paths is not
-reported, as for a local. A pointer read through an index or a member, and
-an integer read out of fresh memory, are not followed.
+reported, unlike a local. A pointer read through a member, and an integer
+read out of fresh memory, are not followed.
 [ADR-0057](adr/0057-a-pointer-read-out-of-fresh-memory-is-reported-where-it-is-read.md)
 is the decision.
 

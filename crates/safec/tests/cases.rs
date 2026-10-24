@@ -147,7 +147,7 @@ cases! {
         // neither the read back nor the copy the lowering takes of the
         // assignment's value is a read of memory nothing wrote. Mutation: keep
         // the slot fresh for a store of an indeterminate pointer. `SC0411`
-        // at both. See ADR-0057.
+        // joins at the store and at the read back. See ADR-0057.
         a_pointer_read_out_of_fresh_memory_stored_and_read_back_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy of it, freed after a call may have replaced it: the doubt at
         // the free stays, since what is freed may not be what was reported.

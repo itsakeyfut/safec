@@ -812,8 +812,10 @@ pub(crate) fn read_out_of_memory_in_element(element: &Element) -> Option<(Span, 
                     places.extend(read_in(lhs));
                     places.extend(read_in(rhs));
                 }
-                // Taking an address reads nothing, as `dereferenced_in_rvalue`
-                // says.
+                // Taking an address reads no value out of the place it
+                // names. The lowering applies C17 6.5.3.2 p3, so `&*p` is a
+                // copy of `p` and `&**p` a copy of `*p`, an operand this
+                // reads.
                 Rvalue::Address(_) => {}
             }
             Some((operation.origin.span(), places))
