@@ -151,10 +151,12 @@ its answer depends on the compiler that builds the file; an include guard so
 named is refused too. A name `-D` or `-U` names is answered from the command
 line instead, reserved or not: `-U __GNUC__` says the build being described
 does not define it, and `-U _FOO_H` lets a header guarded by `_FOO_H` be read.
-A name the target predefines cannot be undefined or given another value there,
-and a name given to both flags is refused. ADR-0059 is the decision.
-`__FILE__`, `__LINE__`, `__DATE__` and
-`__TIME__` are defined, and refused where they are used. `__cplusplus`, which
+The flags apply left to right, as `cc` applies them. A name C17 6.10.8 lists,
+or one the target predefines, cannot be undefined or given another value
+there, and a `-D` that disagrees with another definition of its name is
+`SC0114`, as two `#define`s are. ADR-0059 is the decision. `__FILE__`,
+`__LINE__`, `__DATE__` and `__TIME__` are defined, and refused where they are
+used. `__cplusplus`, which
 C17 6.10.8 p3 forbids a C implementation to predefine, is answered as
 undefined. `linux` and `unix`,
 which a GNU mode defines on Linux and `-std=c17` does not, are refused there

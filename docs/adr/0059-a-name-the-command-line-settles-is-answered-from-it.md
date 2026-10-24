@@ -30,12 +30,16 @@ Chosen option: **the command line settles the names it names.** `-U __GNUC__` is
 
 The build safec analyses is then the one the command line describes, as it already is for `--target`. If the user's compiler in fact predefines a name the user passed to `-U`, safec analyses a build that is not the user's, and its verdict is about that other build. The claim that makes this possible is on the command line, where the user wrote it, and nowhere else.
 
-Two limits keep it to one build that can exist:
+Every name `-D` or `-U` names is settled, `-D`'s included. Most of the time that changes nothing for a `-D`, since a name it defines is a macro and a macro is answered. It does change one thing: after a `-D _FOO` and an `#undef _FOO` in the source, `#ifdef _FOO` is answered as not defined, as it is in the one build described, where it would otherwise be refused.
 
-* **A name the target predefines is not overridden.** `-U _WIN32` for `x86_64-pc-windows-msvc`, or `-D _WIN32=2`, is refused. A `-D` with the same value is accepted, as a second identical `#define` is. The names C17 6.10.8 lists are refused under `-D` and `-U` alike.
-* **A name given to both `-D` and `-U` is refused.** `cc` applies them left to right, and the argument parser collects each flag on its own, so applying them in any fixed order would describe a build `cc` would not make.
+The flags are applied **left to right, as `cc` applies them**, so `-U _FORTIFY_SOURCE -D _FORTIFY_SOURCE=2`, a hardened build's spelling, ends with the name defined as `2`. A first version refused a name given to both flags, on the reasoning that the argument parser keeps each flag on its own. It does, but it also records where each value stood, and that is what the order is rebuilt from. Refusing would have stopped `CC=safec` on exactly the builds it is meant for. Review found both.
 
-`-D` itself settles nothing new: a name it defines is a macro, and a macro is answered.
+What the command line may not do:
+
+* **Name one of C17 6.10.8's names**, under `-D` or `-U`, whether or not the target predefines it. On MSVC `__STDC__` is not predefined but left open, and a first version that asked only of names already defined let `-U __STDC__` settle it, so a double free under `#ifdef __STDC__` was analysed away. Found by review.
+* **Undefine or change a name the target predefines.** `-U _WIN32` for `x86_64-pc-windows-msvc`, or `-D _WIN32=2`, is refused. `cc` accepts both, so this is not a build that cannot exist. It is one nothing needs yet, and a `-D` with the same value is accepted, as a second identical `#define` is.
+
+A `-D` that disagrees with an earlier `-D` of the same name, or with a later `#define` in the source, is refused as two different `#define`s are (`SC0114`). `cc` warns and takes the later one; `clang -pedantic-errors` refuses it, as C17 6.10.3 p2 allows.
 
 ### Confirmation
 
@@ -44,8 +48,10 @@ Corpus cases in `tests/cases/preprocessor/`, each failing under the mutation nam
 * `a_reserved_name_undefined_on_the_command_line_is_answered`: answer a reserved name as refused whatever the command line says, and its `#ifdef` is `SC0104` again.
 * `an_include_guard_named_with_a_reserved_name_is_read_when_the_command_line_undefines_it`: the same mutation, and the header is refused at its first inclusion.
 * `a_name_this_target_predefines_cannot_be_undefined_on_the_command_line`: let `-U` remove a predefined name, and the case builds.
+* `a_standard_name_this_target_leaves_open_cannot_be_settled_on_the_command_line`: refuse a standard name only where it is already defined, and on MSVC the double free under `#ifdef __STDC__` is analysed away, exit 0.
+* `the_command_line_is_read_in_the_order_it_was_given`: put every `-D` before every `-U`, and `_FORTIFY_SOURCE` is left undefined.
 
-`a_name_both_defined_and_undefined_is_refused` in `crates/safec-c/src/cli.rs` holds the refusal of a name given to both flags, in either order: drop the check, and the run is accepted.
+`defines_and_undefines_keep_the_order_they_were_given_in` in `crates/safec-c/src/cli.rs` holds the order at the boundary, and `a_command_line_parsed_without_its_order_is_refused` holds that a `Cli` parsed without it is refused rather than read with every `-D` first.
 
 ### Consequences
 
