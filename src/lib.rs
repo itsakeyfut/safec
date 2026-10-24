@@ -14,7 +14,7 @@
 //!
 //! Nothing here is something a part needs: a type a user of one part alone
 //! would want lives in that part. One module per part rather than the C part
-//! at the root, because the compiler is meant to read more than one language.
+//! at the root, because the compiler is meant to have more than one frontend.
 //! See ADR-0058.
 
 /// Everything that reads C, from the preprocessor to the driver.

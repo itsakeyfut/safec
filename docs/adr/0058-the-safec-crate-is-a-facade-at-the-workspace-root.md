@@ -14,9 +14,13 @@ and the driver, so the name a user would reach for was taken by the part that
 reads C. Nothing presented the compiler as one crate, and a root-level `tests/`
 or `benches/` belonged to no package.
 
-The project means to read C++ as well, through a second frontend. On the day
-that frontend arrives, a crate called `safec` that is also the C frontend names
-one language as the compiler, and every path that names it has to move. On
+C++ is to arrive through a second frontend: the Clang adapter of Phase 10,
+which reads C and C++ through Clang and lowers what it reads into the Safety
+IR, and which `docs/c-family.md` calls the permanent answer for C++ rather
+than a step toward a C++ frontend of this project's own. On the day it
+arrives, a crate called `safec` that is also this project's own C frontend
+names one of two frontends as the compiler, and every path that names it has
+to move. On
 `main` at `c1bf5f81`, `docs/` alone names `crates/safec/` 161 times, counted
 with `git grep -o`, and the number only grows, so the move is cheapest now.
 
@@ -83,24 +87,30 @@ facade would leave some of the old paths alive, such as `crates/safec/tests/`,
 with different contents behind them, and a stale pointer that still resolves
 is found by neither.
 
-**`safec-c`**, because it names the language the part reads, which is what
-`safec-ir` and `safec-llvm` are named for, and a C++ part is then `safec-cpp`
-beside it. The driver and the CLI are in it today, and parts of the driver,
-such as running the analyses and wording their findings, are not specific to
-C. When the second frontend needs them they leave for a crate both frontends
-share, and what remains is the C frontend, still correctly named.
-`safec-frontend` would be the name that has to change on that day, since there
-would be two. `safec-cc` describes today's contents most exactly and the
+**`safec-c`**, because it names what the part reads with a frontend of its
+own, which is how `safec-ir` and `safec-llvm` are named for what they hold and
+what they write. The Clang adapter is then a sibling named for what it reads
+through, such as `safec-clang`, and reading C as well does not make the two
+one crate: one is this project's parser and the other is Clang's.
+
+The driver and the CLI are in `safec-c` today, and when the adapter arrives
+they do not all leave in one direction. What both frontends need beneath them,
+such as the diagnostics and the words a finding is reported in, leaves for a
+crate both depend on. What chooses one frontend or the other cannot be beneath
+either, so it rises above both: into the facade, or into a driver crate that
+would then defend a boundary of its own. What remains is the C frontend,
+still correctly named. `safec-frontend` would be the name that has to change on
+that day, since there would be two. `safec-cc` describes today's contents most exactly and the
 remainder after that split least. Nothing else is split now: the crate moves
 whole, which is all `docs/repository.md` allows without a boundary to defend.
 
 **The binary is in the facade**, because the tests that run it have to be in
 the binary's package, and those are the tests of the whole compiler, which
 belong to the crate a user installs. A `safec-cli` crate would defend no
-boundary.
+boundary today.
 
-**One module per part**, because no language is the root of a compiler meant to
-read two. The cost is a stutter, `safec::ir::ir::TranslationUnit`, which a
+**One module per part**, because no frontend is the root of a compiler meant to
+have two. The cost is a stutter, `safec::ir::ir::TranslationUnit`, which a
 `use` absorbs.
 
 **No features.** The binary uses every part, so there is nothing a feature
@@ -183,8 +193,9 @@ compiles and passes every script, and it is held by review alone.
 ### The C part's modules at the facade's root
 
 * Good, because `safec::driver` keeps working and fewer tests change.
-* Bad, because C becomes the compiler's root and C++ a module beside it, and
-  the shape changes when `safec-cpp` arrives.
+* Bad, because this project's C frontend becomes the compiler's root and the
+  Clang adapter a module beside it, and the shape changes when the adapter
+  arrives.
 
 ## More Information
 
