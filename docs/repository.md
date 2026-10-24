@@ -117,19 +117,24 @@ This keeps the initial codebase small and easy to navigate.
 
 ## What the split actually is, now that one has happened
 
-That criterion has fired twice, and the workspace is three crates:
+That criterion has fired twice, and the workspace is three parts behind one
+crate that presents them:
 
 ```text
+Cargo.toml        the workspace, and the `safec` package
+src/              `safec`: the facade, and the `safec` binary
+tests/            every test that runs the binary, the corpus among them
+benches/          the measurements that run it
 crates/
-├── safec/        the lexer, the parser, sema, the types, the lowering, the
-│                 diagnostics, the CLI and the driver
-├── safec-ir/     the Safety IR, its printer, its interpreter, and the source
-│                 map a span is an offset into
+├── safec-c/      the preprocessor, the lexer, the parser, sema, the types,
+│                 the lowering, the diagnostics, the CLI and the driver
+├── safec-ir/     the Safety IR, its analyses, its printer, its interpreter,
+│                 and the source map a span is an offset into
 └── safec-llvm/   the LLVM backend, which writes textual LLVM IR
 ```
 
-The arrows are `safec -> safec-ir`, `safec -> safec-llvm` and
-`safec-llvm -> safec-ir`, and nothing points the other way.
+The arrows among the parts are `safec-c -> safec-ir`, `safec-c -> safec-llvm`
+and `safec-llvm -> safec-ir`, and nothing points the other way.
 [ADR-0011](adr/0011-the-ir-crate-depends-on-nothing-in-the-workspace.md) has the
 reasoning for the first and the options it rejected, including why `source` is
 on the IR side rather than the frontend's.
@@ -142,6 +147,27 @@ sharing a crate with an LLVM one shares its dependencies the day one arrives.
 Nothing else has been split, and the paragraphs above still hold for the rest:
 the lexer, the parser and sema are boundaries nothing is pushing on, so
 enforcing them would cost the crates and buy nothing.
+
+### The facade, and where each kind of target lives
+
+`safec` is the crate a user depends on for the compiler. It depends on all
+three parts and re-exports each as a module of its own, `safec::c`, `safec::ir`
+and `safec::llvm`, behind no features. It holds no code a part needs: a type a
+user of one part alone would want lives in that part, and each part's
+documentation says what depending on it alone is for. The root manifest is
+this package as well as the workspace, so `crates/` holds the parts and nothing
+else. [ADR-0058](adr/0058-the-safec-crate-is-a-facade-at-the-workspace-root.md)
+has the reasoning and the options it rejected.
+
+Where a target goes follows from what it needs:
+
+- **A part's own `tests/`** holds what can be tested through that part alone,
+  and builds with nothing above it in the graph. `crates/safec-c/tests/interp.rs`
+  drives the C pipeline in process; `crates/safec-ir/tests/` builds IR by hand.
+- **The root `tests/` and `benches/`** hold everything that runs the `safec`
+  process. They can live nowhere else: cargo defines `CARGO_BIN_EXE_safec` only
+  for the package that holds the binary.
+- **Unit tests** stay beside the code they test, in whichever part that is.
 
 ## When a file becomes a directory
 
