@@ -167,44 +167,51 @@ fn the_fib_example_builds_and_exits_with_the_sum_it_computes() {
     assert_eq!(ran.code(), Some(143), "the fib example did not exit 143");
 }
 
+/// The `free` at the end of `main`, with the two markers above it.
+///
+/// **Each edit takes its marker with it**, so a marker moved away from the
+/// line it names, or naming another code, is an edit that no longer matches,
+/// and fails in [`edited`] rather than passing with the marker misplaced.
+const FREE: &str = "    // BREAK IT (SC0402): move this free above the line before.\n    \
+                    // BREAK IT (SC0401): write this free twice.\n    free(total);\n";
+
 /// The marked `free` moved above the read before it is refused as a use after
 /// free.
 ///
 /// Mutation: return at the top of `report.rs::used` in `safec-ir`. The edit
 /// builds and this fails. Mutation: change `SC0402` to `SC0401` in the marker
-/// above `free(total);`. This fails on the marker.
+/// above `free(total);`. This fails in `edited`.
 #[test]
 fn the_fib_example_freed_before_its_read_is_refused_as_a_use_after_free() {
-    let free = "    // BREAK IT (SC0402): move this free above the line before.\n    \
-                // BREAK IT (SC0401): write this free twice.\n    free(total);\n";
     let read = "    int result = *total;\n";
-    let text = edited(FIB, &format!("{read}{free}"), &format!("{free}{read}"));
+    let text = edited(FIB, &format!("{read}{FREE}"), &format!("{FREE}{read}"));
     refused("fib_use_after_free", &text, "SC0402");
 }
 
 /// The marked `free` written twice is refused as a double free.
 ///
-/// Mutation: change `SC0401` to `SC0409` in the marker above `free(total);`.
-/// This fails on the marker.
+/// Mutation: change `SC0401` to `SC0409` in its marker. This fails in
+/// `edited`.
 #[test]
 fn the_fib_example_freed_twice_is_refused_as_a_double_free() {
-    let text = edited(
-        FIB,
-        "    free(total);\n",
-        "    free(total);\n    free(total);\n",
-    );
+    let text = edited(FIB, FREE, &format!("{FREE}    free(total);\n"));
     refused("fib_double_free", &text, "SC0401");
 }
 
 /// The marked null test deleted is refused, as a dereference of a pointer
 /// that may be null.
 ///
-/// Mutation: change `SC0403` to `SC0402` in the marker above the test. This
-/// fails on the marker. Mutation: write the test as `if (0 == total)`. The
-/// edit no longer matches and this fails in `edited`.
+/// The edit takes the marker with it, as [`FREE`]'s do. Mutation: move the
+/// marker above `int *total = malloc(4);`. This fails in `edited`. Mutation:
+/// write the test as `if (0 == total)`. Likewise.
 #[test]
 fn the_fib_example_without_its_null_test_is_refused() {
-    let text = edited(FIB, "    if (total == 0) {\n        return 1;\n    }\n", "");
+    let text = edited(
+        FIB,
+        "    // BREAK IT (SC0403): delete this null test.\n    \
+         if (total == 0) {\n        return 1;\n    }\n",
+        "",
+    );
     refused("fib_null", &text, "SC0403");
 }
 
