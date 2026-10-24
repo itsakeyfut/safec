@@ -132,7 +132,7 @@ frontend breaks it and this fifth one costs a suspicion.
 
 ### Confirmation
 
-Eight cases in `crates/safec-c/tests/cases` and one hand-built unit in
+Eight cases in `tests/cases` and one hand-built unit in
 `crates/safec-ir/tests/freed.rs`. Nine mutations in the memory check
 (`crates/safec-ir/src/memory.rs` and `memory/`), each measured against the whole
 workspace with `--no-fail-fast`, each failing named tests and nothing else.

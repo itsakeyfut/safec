@@ -59,7 +59,7 @@ C17 6.10.8 p2 forbids a `#define` or an `#undef` of the names that subclause lis
 
 ### Confirmation
 
-Held by tests in `crates/safec-c/src/preprocessor.rs` and corpus cases in `crates/safec-c/tests/cases/preprocessor/`, each failing under the mutation named:
+Held by tests in `crates/safec-c/src/preprocessor.rs` and corpus cases in `tests/cases/preprocessor/`, each failing under the mutation named:
 
 * `win32_is_defined_for_msvc` and `win32_is_not_defined_for_linux` are one program for two targets. Predefining nothing refuses `_WIN32`, and reading one target's list for both takes the wrong group in one of them.
 * `an_ifdef_of_a_name_the_implementation_may_define_is_refused` asks about `__GNUC__`. Answering a reserved name no target predefines as undefined makes it exit 0, the free under it analysed away.

@@ -110,8 +110,8 @@ the site marking going.
 | drop `settle` from `join` | `an_escape_on_one_arm_and_a_shared_allocation_on_the_other` |
 | `unproved` marks a freed site as well as a live one | `the_address_of_a_freed_pointer_handed_to_a_call_is_reported` |
 
-The corpus cases are in `crates/safec-c/tests/cases/` and are named in the table
-in `crates/safec-c/tests/cases.rs`, per
+The corpus cases are in `tests/cases/` and are named in the table
+in `tests/cases.rs`, per
 [ADR-0007](./0007-list-the-test-cases-rather-than-discovering-them.md).
 
 ### Consequences

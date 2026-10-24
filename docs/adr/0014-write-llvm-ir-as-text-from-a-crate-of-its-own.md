@@ -143,7 +143,7 @@ the other side.
   result carries `signext` or `zeroext` on six of the eight measured targets
   and nothing on the other two, `clang` writes it, and this did not, so a
   `clang`-compiled caller of a function this wrote passed an unextended byte.
-  `the_attributes_are_what_clang_asks_for` in `crates/safec-c/tests/llvm.rs` is
+  `the_attributes_are_what_clang_asks_for` in `tests/llvm.rs` is
   what holds it now. The rest of the category is still ahead.
 * Neutral, because `#92` reopens it with the evidence that only an object file
   can provide.

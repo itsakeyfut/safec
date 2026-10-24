@@ -70,7 +70,7 @@ same reason.
 
 ### Confirmation
 
-`a_pointer_dereferenced_twice_is_reported_once` in `crates/safec-c/tests/cases`:
+`a_pointer_dereferenced_twice_is_reported_once` in `tests/cases`:
 dropping the call to `met` in `crate::nullability`'s `Analysis::element` reports
 both dereferences and fails it.
 

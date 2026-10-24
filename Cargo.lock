@@ -145,6 +145,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "safec"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "safec-c",
+ "safec-ir",
+ "safec-llvm",
+]
+
+[[package]]
 name = "safec-c"
 version = "0.1.0"
 dependencies = [

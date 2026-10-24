@@ -116,7 +116,7 @@ for the wrong reason:
 says the command line does not decide it early;
 `allowing_unknown_is_refused_at_the_level_defined_as_leaving_none` beside it and
 `an_invocation_that_asks_for_two_different_things_exits_two` in
-`crates/safec-c/tests/exit_code.rs` hold the refusal and its wiring.
+`tests/exit_code.rs` hold the refusal and its wiring.
 
 ### Consequences
 

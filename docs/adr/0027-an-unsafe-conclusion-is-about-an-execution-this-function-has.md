@@ -112,7 +112,7 @@ an implementation holding the other three is what found it:
 ### Confirmation
 
 `a_double_free_in_a_function_the_only_caller_passes_null_to_is_proved` in
-`crates/safec-c/tests/cases`, whose `main` passes `0` to the function that frees
+`tests/cases`, whose `main` passes `0` to the function that frees
 its parameter twice, and whose `.stderr` holds the error. The mutation is the
 third option, written as requiring `made.is_some()` in the `Unsafe` arm of
 `verdict` in `crates/safec-ir/src/memory/report.rs`: measured, that case fails

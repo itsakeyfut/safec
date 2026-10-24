@@ -2,7 +2,7 @@
 //!
 //! `safec_ir::nullability` answers a `Finding` rather than a diagnostic so that
 //! it can be read without a frontend, and this is the file that spends that.
-//! The corpus under `crates/safec-c/tests/cases/` holds the shapes this compiler's
+//! The corpus under `tests/cases/` holds the shapes this compiler's
 //! own lowering produces; what is here is the shapes it does **not** produce and
 //! another frontend can.
 //!

@@ -6,7 +6,7 @@ use safec_ir::ir::{Block, Element, Operation, Origin};
 // convenience: this crate has no frontend to compile C with, so a test
 // that emits is a test that the IR can be read on its own. ADR-0011 is the
 // boundary these are on the far side of. The programs that go through the
-// lexer, the parser and the lowering first are in `safec-c`'s corpus, which
+// lexer, the parser and the lowering first are in `safec`'s corpus, which
 // is the only side that can compile one.
 
 /// A target by name, because `Target` has no other way to be one.

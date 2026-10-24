@@ -7,7 +7,7 @@
 //! through the parser proves both at once and says which of them broke only by
 //! where the diff lands.
 //!
-//! The corpus under `crates/safec-c/tests/cases/` holds the same shapes written
+//! The corpus under `tests/cases/` holds the same shapes written
 //! as C, which is the other half. Both exist because a feature guarded at
 //! one stage is unguarded at every stage that
 //! reads it.

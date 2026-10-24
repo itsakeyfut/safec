@@ -52,7 +52,7 @@ The extra `SC0407` the escaped-local probe reports at `release(slot)`, beside th
 
 ### Confirmation
 
-The cases are in `crates/safec-c/tests/cases`, and every mutation is in `crates/safec-ir/src/memory/transfer.rs` or `built.rs`.
+The cases are in `tests/cases`, and every mutation is in `crates/safec-ir/src/memory/transfer.rs` or `built.rs`.
 
 - Dropping the `char` term from `read_through`'s marker fails `a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported`, `a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported` and `a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported`, which go silent, and `a_free_of_a_byte_read_out_of_memory_proves_nothing`, whose free of the allocation is then not asked about at all.
 - Answering `true` for `Ty::Char` in `may_be_pointer`, the rejected option, fails `a_character_handed_to_a_call_beside_a_table_builds` and `a_string_copied_a_byte_at_a_time_builds`, which doubt a use after free and a double free. Both run with `--allow-unknown`, since [#333](https://github.com/itsakeyfut/safec/issues/333) doubts the pointer each reads out of the table in place, so the doubts are warnings rather than refusals.

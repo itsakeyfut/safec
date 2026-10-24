@@ -40,7 +40,7 @@ What decides it is the name: a call is made with no continuation when its callee
 
 ### Confirmation
 
-Every reader of a call's continuation is `error[E0308]` until it answers for `None`, which is how the interpreter, the printer and the backend came to say what they do without one. The cases are in `crates/safec-c/tests/cases`, and the mutations in `crates/safec-c/src/lowering.rs` unless named.
+Every reader of a call's continuation is `error[E0308]` until it answers for `None`, which is how the interpreter, the printer and the backend came to say what they do without one. The cases are in `tests/cases`, and the mutations in `crates/safec-c/src/lowering.rs` unless named.
 
 - The lowering giving every call its continuation fails `a_function_that_ends_in_abort_does_not_reach_the_end`, `each_function_that_cannot_return_ends_a_body` and `code_after_abort_is_not_asked`, which are refused.
 - Dropping any one name from `DOES_NOT_RETURN` fails `each_function_that_cannot_return_ends_a_body`, at that name's function.

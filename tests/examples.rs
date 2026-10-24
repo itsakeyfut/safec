@@ -19,7 +19,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
 /// `examples/fib.c`, from the repository root.
-const FIB: &str = include_str!("../../../examples/fib.c");
+const FIB: &str = include_str!("../examples/fib.c");
 
 /// A directory of its own, removed however the test ends.
 struct Scratch(PathBuf);

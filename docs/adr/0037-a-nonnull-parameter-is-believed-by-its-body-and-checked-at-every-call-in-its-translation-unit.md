@@ -132,7 +132,7 @@ Every mutation below was applied on its own, the whole workspace was run with
 `--no-fail-fast`, and the file was restored from a copy rather than from git.
 The tests named are the ones that failed; how many there were is not written
 down, because a count is a fact about the suite of the day rather than about
-the rule. The cases are in `crates/safec-c/tests/cases`.
+the rule. The cases are in `tests/cases`.
 
 **Believed by the body.** `Nullability::on_entry` in
 `crates/safec-ir/src/nullability.rs` never reading `Function::nonnull` fails

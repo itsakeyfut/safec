@@ -100,7 +100,7 @@ the free rather than at a read.
 
 Each rule has a mutation in the memory check (`crates/safec-ir/src/memory.rs`
 and `memory/`), applied and measured, and a named case in
-`crates/safec-c/tests/cases` that it fails:
+`tests/cases` that it fails:
 
 * Not calling `returned` fails `a_function_that_returns_what_it_freed`,
   `a_return_after_a_free_on_one_arm_only`, `a_parameter_freed_and_returned`,

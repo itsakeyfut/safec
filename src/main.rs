@@ -2,15 +2,16 @@
 //!
 //! A thin wrapper: it parses the arguments, hands the result to the library,
 //! and maps what comes back to a process exit code. The compiler itself lives
-//! in the `safec-c` library, so that tests can drive it in process.
+//! in `safec-c`, which this package re-exports as `safec::c`, so that tests can
+//! drive it in process.
 
 use std::io::{self, Write as _};
 use std::process::ExitCode;
 
 use clap::Parser;
 
-use safec_c::cli::Cli;
-use safec_c::driver;
+use safec::c::cli::Cli;
+use safec::c::driver;
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
