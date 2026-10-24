@@ -17,8 +17,8 @@ or `benches/` belonged to no package.
 The project means to read C++ as well, through a second frontend. On the day
 that frontend arrives, a crate called `safec` that is also the C frontend names
 one language as the compiler, and every path that names it has to move. On
-`main` at `c1bf5f81`, `docs/` alone names `crates/safec/` 167 times, and the
-number only grows, so the move is cheapest now.
+`main` at `c1bf5f81`, `docs/` alone names `crates/safec/` 161 times, counted
+with `git grep -o`, and the number only grows, so the move is cheapest now.
 
 ## Decision Drivers
 

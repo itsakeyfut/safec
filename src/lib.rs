@@ -1,6 +1,7 @@
 //! The Safe C compiler, as one crate.
 //!
-//! This crate holds no compiler of its own. It presents the parts, each of
+//! This crate holds no stage of the compiler, only the `safec` binary that runs
+//! them. It presents the parts, each of
 //! which is a crate that builds, tests and documents itself with nothing above
 //! it, so depend on whichever is the whole of what you need:
 //!

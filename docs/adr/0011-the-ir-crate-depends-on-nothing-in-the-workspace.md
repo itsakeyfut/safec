@@ -102,7 +102,11 @@ error: cyclic package dependency: package `safec-c v0.1.0 (...)` depends on itse
 package `safec-c v0.1.0 (...)`
     ... which satisfies path dependency `safec-c` (locked to 0.1.0) of package `safec-ir v0.1.0 (...)`
     ... which satisfies path dependency `safec-ir` (locked to 0.1.0) of package `safec-c v0.1.0 (...)`
+    ... which satisfies path dependency `safec-c` (locked to 0.1.0) of package `safec v0.1.0 (...)`
 ```
+
+The last line is the `safec` facade at the workspace root, which depends on
+`safec-c` and so sits in the cycle too (ADR-0058).
 
 The manifest is the guard because the manifest is where the reversal would be
 written. A `use safec_c::` with no such line does not resolve either, which

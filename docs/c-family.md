@@ -455,7 +455,7 @@ there is adapter output.
 | Phase 2 builds the CFG | Whether an edge can exist that no statement produced | [ADR-0010](adr/0010-give-the-graph-an-edge-no-statement-produced.md), written when the trigger fired |
 | The Safety IR gains a function table | Whether identity is an opaque id or a name | `FuncId`'s doc comment in the IR, where it was recorded when the table landed |
 | The first macro expansion is built | How `Span` says where code came from, which has to serve: macros, instantiations, and generated operations, without a read in one operand landing strictly inside a call in another (ADR-0043) | [ADR-0054](adr/0054-a-span-from-an-expansion-is-located-in-a-copy-of-the-macro-s-body.md), written before the first expansion is built |
-| The safety IR is extracted from the `safec` crate | Which crates may depend on which | [ADR-0011](adr/0011-the-ir-crate-depends-on-nothing-in-the-workspace.md), written when the trigger fired |
+| The safety IR is extracted from the crate that reads C, `safec` then and `safec-c` now | Which crates may depend on which | [ADR-0011](adr/0011-the-ir-crate-depends-on-nothing-in-the-workspace.md), written when the trigger fired |
 | The first safety check is written | Where `Diagnostic` lives, and therefore which crate an analysis can be written in | An ADR. [ADR-0011](adr/0011-the-ir-crate-depends-on-nothing-in-the-workspace.md) says why this is the trigger and why waiting costs nothing |
 | The first C++ lifetime bug is analyzed | Whether the C annotation and the C++ type reached the same IR concept | Wherever it shows that one of them was wrong |
 | The crate is published | The name | Not an ADR. A decision, taken once |

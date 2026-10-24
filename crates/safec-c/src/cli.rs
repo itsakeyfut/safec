@@ -20,6 +20,10 @@ use crate::safety::SafetyLevel;
 ///
 /// Set by `build.rs` from cargo's `TARGET`, which is the only thing that knows
 /// it exactly. It is what `--target` defaults to.
+///
+/// The `safec` package's tests read it here rather than through `env!`,
+/// because a build script's variable reaches only its own package. See
+/// ADR-0058.
 pub const HOST_TRIPLE: &str = env!("SAFEC_HOST_TRIPLE");
 
 /// A small, hackable, safety-oriented C compiler.
