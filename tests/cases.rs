@@ -4958,9 +4958,9 @@ cases! {
         // command-line macros. It exits 0.
         a_command_line_definition_and_a_different_one_in_the_source_are_refused: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu", "-DN=2"],
         // C17 6.10.8 p2's names stay the implementation's under `-D` and `-U`
-        // alike: `SC0117` for each. Mutation: read the command line with the
-        // `#undef` of a predefined name refused only where it is not a
-        // standard name. The `-U` is accepted.
+        // alike: `SC0117` for each, with C17's note. Mutation: refuse a
+        // standard name's `-U` as any predefined name's is. `__STDC__` is
+        // told the target predefines it, which is not the rule it breaks.
         a_standard_name_cannot_be_set_on_the_command_line: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu", "-D__STDC_HOSTED__=0", "-U__STDC__"],
         // `#ifdef __LINE__` is answered, and the use is refused. Mutation:
         // expand a dynamic macro as its empty list. `int line = ;` is

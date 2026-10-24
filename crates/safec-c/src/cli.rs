@@ -841,10 +841,11 @@ mod tests {
     ///
     /// Mutation: drop the identifier check on `-D`. Each is accepted, and the
     /// function-like one is read as `#define F(x) x`, a different directive.
-    /// Mutation: ask `char::is_alphanumeric` instead. `é` is accepted.
+    /// Mutation: ask `char::is_alphanumeric` of the characters after the
+    /// first. `Aé` is accepted.
     #[test]
     fn a_define_that_is_not_an_object_like_macro_is_refused() {
-        for given in ["-DF(x)=x", "-D=1", "-Dé"] {
+        for given in ["-DF(x)=x", "-D=1", "-Dé", "-DAé"] {
             let (kind, message) = macro_refusal(&["safec", given, "a.c"]);
             assert_eq!(kind, ErrorKind::ValueValidation, "{given}");
             assert!(message.contains("object-like"), "{given}: {message}");
