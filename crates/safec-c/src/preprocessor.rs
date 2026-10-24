@@ -327,10 +327,7 @@ fn command_line(
                 text.push_str(&format!("#undef {name}"));
             }
         }
-        // A blank line after each, so that a value ending in a splice joins
-        // the blank line rather than the next macro, and is refused as a
-        // `#define` ending in a splice is.
-        text.push_str("\n\n");
+        text.push('\n');
     }
 
     let file = sources.add_virtual("command line", &text);
@@ -2690,9 +2687,12 @@ mod tests {
     /// after it is still defined.
     ///
     /// Asked of the tokens rather than of a run, for the reason the test above
-    /// gives: the refusal stops a run before the parser. Mutation: drop the
-    /// blank line after each command-line macro. The splice joins `AFTER`'s
-    /// line to `A`'s, `AFTER` is never defined, and `x` is not handed over.
+    /// gives: the refusal stops a run before the parser. A directive the lexer
+    /// refuses for a splice still ends at its line break, so nothing more than
+    /// one line per macro is needed; a blank line after each was measured to
+    /// change nothing. Mutation: separate the macros with a space rather than a
+    /// line break. `AFTER`'s `#define` is part of `A`'s line, `AFTER` is never
+    /// defined, and `x` is not handed over.
     #[test]
     fn a_value_ending_in_a_splice_is_refused_without_taking_the_next_macro() {
         let mut sources = SourceMap::new();

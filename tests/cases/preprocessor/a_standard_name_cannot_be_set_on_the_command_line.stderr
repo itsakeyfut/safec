@@ -19,9 +19,9 @@ error[SC0117]: `__STDC__` is defined by the implementation
    │ ─────────┬────────  
    │          ╰────────── predefined here
    │
-   ├─[ <command line>:3:8 ]
+   ├─[ <command line>:2:8 ]
    │
- 3 │ #undef __STDC__
+ 2 │ #undef __STDC__
    │        ────┬───  
    │            ╰───── undefined here
 ───╯
