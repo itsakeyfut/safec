@@ -117,13 +117,14 @@ of the three `pub use` lines in `src/lib.rs` is `E0432` or `E0433` at that
 file's imports through it, depending on how far each path gets, and the test
 target does not build.
 
-`a_function_built_by_hand_is_printed_with_nothing_above_this_crate` in
+`a_function_built_by_hand_from_the_public_api_is_printed` in
 `crates/safec-ir/tests/print.rs` builds a function from `safec-ir`'s public API
-and prints it. Making `print::dump_ir` `pub(crate)` is `E0603` there. That the
-crate has nothing above it is still ADR-0011's guard, now spelled
-`safec-c = { path = "../safec-c" }` or `safec = { path = "../.." }` in
-`crates/safec-ir/Cargo.toml`, both of which cargo refuses as a cyclic package
-dependency.
+and prints it. Making `print::dump_ir` `pub(crate)` is `E0603` there under
+`cargo test -p safec-ir`; across the workspace, `safec-c`'s own use of it fails
+first. That the crate has nothing above it is still ADR-0011's guard, now
+spelled as `safec-c = { path = "../safec-c" }` or `safec = { path = "../.." }`
+under a `[dependencies]` table in `crates/safec-ir/Cargo.toml`, both of which
+cargo refuses as a cyclic package dependency.
 
 Moving the binary out of the root package leaves `env!("CARGO_BIN_EXE_safec")`
 undefined in every process-level test under `tests/`, which is a compile error

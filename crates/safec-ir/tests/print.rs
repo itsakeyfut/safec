@@ -15,10 +15,15 @@ use safec_ir::target::Target;
 /// A function named `answer`, of one block that returns, built from the
 /// public API and printed under the name its span covers.
 ///
-/// Mutation: make `print::dump_ir` `pub(crate)`. That is `E0603` at its
-/// import here, and this target does not build.
+/// Mutation: make `print::dump_ir` `pub(crate)`. Under
+/// `cargo test -p safec-ir` that is `E0603` at its import here, and this
+/// target does not build. Across the workspace `safec-c`'s own use of it fails
+/// first.
+///
+/// That nothing above this crate is in its graph is not this test's to say:
+/// cargo refuses the cycle before anything compiles, which is ADR-0011.
 #[test]
-fn a_function_built_by_hand_is_printed_with_nothing_above_this_crate() {
+fn a_function_built_by_hand_from_the_public_api_is_printed() {
     let mut sources = SourceMap::new();
     let file = sources.add_virtual("t.c", "int answer(void) { return 42; }\n");
     let name = Span::new(file, 4, 10);
