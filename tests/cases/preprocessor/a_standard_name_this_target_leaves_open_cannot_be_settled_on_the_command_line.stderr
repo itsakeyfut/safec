@@ -1,0 +1,8 @@
+error[SC0117]: `__STDC__` is the implementation's to define
+   ╭─[ <command line>:1:8 ]
+   │
+ 1 │ #undef __STDC__
+   │        ────┬───  
+   │            ╰───── undefined here
+───╯
+  = note: C17 6.10.8 lists it, and the command line cannot settle what that subclause leaves to the implementation

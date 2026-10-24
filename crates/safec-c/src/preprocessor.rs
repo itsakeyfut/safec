@@ -22,8 +22,8 @@ use std::path::{Path, PathBuf};
 
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::driver::{Access, reason};
-use crate::lexer::{UNSUPPORTED_SPLICE, lex, unexpected_characters};
-use crate::options::{CommandLineMacro, identifier};
+use crate::lexer::{UNSUPPORTED_SPLICE, is_identifier, lex, unexpected_characters};
+use crate::options::CommandLineMacro;
 use crate::token::{Punct, Token, TokenKind};
 use safec_ir::source::{Cut, Edge, FileId, FileName, SourceMap, Span};
 use safec_ir::target::Target;
@@ -198,7 +198,8 @@ impl Preprocessed {
 /// The end-of-file token is the input's own: an included file's is dropped,
 /// since the parser reads the first one it meets as the end. The macros
 /// `target` predefines are defined before the input is read, and then what
-/// `macros`, the command line's `-D` and `-U`, says, in its order.
+/// `macros`, the command line's `-D` and `-U`, says, one after another in the
+/// order of the list.
 ///
 /// # Panics
 ///
@@ -285,10 +286,16 @@ pub fn preprocess(
 /// points at `<built-in>`, and a `-D` meets a later `#define` of its name as
 /// two `#define`s meet.
 ///
-/// The one thing the source may do and the command line may not is undefine
-/// a name the target predefines, such as `_WIN32` for MSVC. That would describe
-/// a build other than the one the target's compilers make, and nothing needs
-/// it, so it is refused as `SC0117` and its line is not read. See ADR-0059.
+/// Two things the source may do and the command line may not, each refused as
+/// `SC0117` with its line not read. See ADR-0059:
+///
+/// - define or undefine a name C17 6.10.8 lists, whether or not this target
+///   predefines it. Asked of the name rather than left to the `#define` and
+///   `#undef` paths, which ask only of a name already defined: on MSVC
+///   `__STDC__` is not, so `-U __STDC__` settled it and a double free under
+///   `#ifdef __STDC__` was analysed away. Found by review;
+/// - undefine another name the target predefines, such as `_WIN32` for MSVC.
+///   `cc` accepts that, and nothing here needs it yet.
 fn command_line(
     macros: &[CommandLineMacro],
     sources: &mut SourceMap,
@@ -299,30 +306,36 @@ fn command_line(
         return;
     }
     let mut text = String::new();
-    // Each line not to be read, by where it starts, with its name.
-    let mut not_read: Vec<(u32, &str)> = Vec::new();
+    // Each line not to be read: where it starts, the macro, and where its name
+    // starts in the line.
+    let mut not_read: Vec<(u32, &CommandLineMacro, u32)> = Vec::new();
     for given in macros {
         let name = given.name();
         assert!(
-            identifier(name),
+            is_identifier(name),
             "a command-line macro's name is not an ASCII identifier: {name:?}"
         );
         let start = text.len() as u32;
+        let refused = standard(name)
+            || matches!(given, CommandLineMacro::Undefined { .. })
+                && reading
+                    .macros
+                    .get(name)
+                    .is_some_and(|earlier| earlier.origin == Origin::Predefined);
         match given {
             CommandLineMacro::Defined { value, .. } => {
                 assert!(
                     !value.contains(['\n', '\r']),
                     "a command-line macro's value holds a line break: {value:?}"
                 );
+                if refused {
+                    not_read.push((start, given, "#define ".len() as u32));
+                }
                 text.push_str(&format!("#define {name} {value}"));
             }
             CommandLineMacro::Undefined { .. } => {
-                if reading
-                    .macros
-                    .get(name)
-                    .is_some_and(|earlier| earlier.origin == Origin::Predefined && !standard(name))
-                {
-                    not_read.push((start, name));
+                if refused {
+                    not_read.push((start, given, "#undef ".len() as u32));
                 }
                 text.push_str(&format!("#undef {name}"));
             }
@@ -331,27 +344,47 @@ fn command_line(
     }
 
     let file = sources.add_virtual("command line", &text);
-    for (start, name) in &not_read {
-        let at = start + "#undef ".len() as u32;
-        let named = Span::new(file, at, at + name.len() as u32);
-        let earlier = &reading.macros[*name];
-        diagnostics.report(
-            Diagnostic::error(format!("`{name}` is defined by the implementation"))
-                .with_code(PREDEFINED_AGAIN)
-                .with_label(Label::primary(named, "undefined here"))
-                .with_label(Label::secondary(earlier.defined, "predefined here"))
-                .with_note(
-                    "this target predefines it, and the command line cannot undefine what the \
+    for (start, given, offset) in &not_read {
+        let name = given.name();
+        let named = Span::new(file, start + offset, start + offset + name.len() as u32);
+        let what = match given {
+            CommandLineMacro::Defined { .. } => "defined again here",
+            CommandLineMacro::Undefined { .. } => "undefined here",
+        };
+        let report = match reading.macros.get(name) {
+            Some(earlier) if standard(name) => predefined_again(name, named, what, earlier),
+            Some(earlier) => {
+                Diagnostic::error(format!("`{name}` is defined by the implementation"))
+                    .with_code(PREDEFINED_AGAIN)
+                    .with_label(Label::primary(named, what))
+                    .with_label(Label::secondary(earlier.defined, "predefined here"))
+                    .with_note(
+                        "this target predefines it, and the command line cannot undefine what the \
                      target predefines",
+                    )
+            }
+            None => Diagnostic::error(format!("`{name}` is the implementation's to define"))
+                .with_code(PREDEFINED_AGAIN)
+                .with_label(Label::primary(
+                    named,
+                    match given {
+                        CommandLineMacro::Defined { .. } => "defined here",
+                        CommandLineMacro::Undefined { .. } => "undefined here",
+                    },
+                ))
+                .with_note(
+                    "C17 6.10.8 lists it, and the command line cannot settle what that \
+                     subclause leaves to the implementation",
                 ),
-        );
+        };
+        diagnostics.report(report);
     }
     let scan: Vec<Token> = lex(file, sources.file(file), diagnostics)
         .into_iter()
         .filter(|token| {
             !not_read
                 .iter()
-                .any(|(start, _)| token.span.start() == *start)
+                .any(|(start, _, _)| token.span.start() == *start)
         })
         .collect();
     let mut handed_over = Vec::new();
@@ -2688,9 +2721,8 @@ mod tests {
     ///
     /// Asked of the tokens rather than of a run, for the reason the test above
     /// gives: the refusal stops a run before the parser. A directive the lexer
-    /// refuses for a splice still ends at its line break, so nothing more than
-    /// one line per macro is needed; a blank line after each was measured to
-    /// change nothing. Mutation: separate the macros with a space rather than a
+    /// refuses for a splice still ends at its line break, so one line per
+    /// macro is enough. Mutation: separate the macros with a space rather than a
     /// line break. `AFTER`'s `#define` is part of `A`'s line, `AFTER` is never
     /// defined, and `x` is not handed over.
     #[test]

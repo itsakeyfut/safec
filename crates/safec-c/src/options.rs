@@ -44,11 +44,12 @@ pub struct Options {
     pub allow_unknown: bool,
     /// When to colorize diagnostics.
     pub color: ColorMode,
-    /// What `-D` and `-U` said, read before the first line of every input.
+    /// What `-D` and `-U` said, in the order they were given, read before the
+    /// first line of every input.
     ///
-    /// No name is both defined and undefined: `Cli::into_options` refuses
-    /// that, since the order between the two flags is not kept. A name here is
-    /// settled for `#ifdef` and `#ifndef`, reserved or not. See ADR-0059.
+    /// Applied in this order, as `cc` applies them, so a name may appear more
+    /// than once and the last says what it is. A name here is settled for
+    /// `#ifdef` and `#ifndef`, reserved or not. See ADR-0059.
     pub macros: Vec<CommandLineMacro>,
 }
 
@@ -77,20 +78,6 @@ impl CommandLineMacro {
             CommandLineMacro::Defined { name, .. } | CommandLineMacro::Undefined { name } => name,
         }
     }
-}
-
-/// Whether `name` is a C identifier spelled in ASCII: a letter or `_`, then
-/// letters, digits and `_`. `is_ascii_*` rather than `char::is_*`, which
-/// answer for Unicode.
-///
-/// Here rather than in the CLI, so that the CLI's refusal and the
-/// preprocessor's assertion ask one question.
-pub(crate) fn identifier(name: &str) -> bool {
-    let mut characters = name.chars();
-    characters
-        .next()
-        .is_some_and(|first| first.is_ascii_alphabetic() || first == '_')
-        && characters.all(|rest| rest.is_ascii_alphanumeric() || rest == '_')
 }
 
 impl Options {

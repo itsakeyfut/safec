@@ -9,11 +9,12 @@
 use std::path::{Path, PathBuf};
 
 use clap::error::ErrorKind;
-use clap::{CommandFactory, Parser};
+use clap::{CommandFactory, FromArgMatches, Parser};
 
 use safec_ir::target::Target;
 
-use crate::options::{ColorMode, CommandLineMacro, EmitKind, Options, identifier};
+use crate::lexer::is_identifier;
+use crate::options::{ColorMode, CommandLineMacro, EmitKind, Options};
 use crate::safety::SafetyLevel;
 
 /// The triple this compiler was built to run on.
@@ -129,9 +130,57 @@ pub struct Cli {
     // `--help`.
     #[arg(short = 'U', value_name = "NAME")]
     pub undefine: Vec<String>,
+
+    // Which flag each `-D` and `-U` was, in the order they were given, which
+    // the two fields above do not keep and `cc` applies them in. Filled by
+    // `Cli::try_parse_in_order_from` from clap's indices, and not parsed.
+    #[arg(skip)]
+    order: Vec<MacroFlag>,
+}
+
+/// Which of the two flags a command-line macro was given with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MacroFlag {
+    Define,
+    Undefine,
 }
 
 impl Cli {
+    /// Parse this process's arguments as [`Parser::parse`] does, and keep the
+    /// order the `-D`s and `-U`s were given in.
+    ///
+    /// `cc` applies them left to right, so `-U X -D X=2` defines `X`, and that
+    /// is the spelling a hardened build uses for `_FORTIFY_SOURCE`. The fields
+    /// clap fills hold each flag on its own; its indices are what keep the
+    /// order. See ADR-0059.
+    pub fn parse_in_order() -> Self {
+        Self::try_parse_in_order_from(std::env::args_os()).unwrap_or_else(|error| error.exit())
+    }
+
+    /// [`Self::parse_in_order`] of `args`, or the error clap reports.
+    pub fn try_parse_in_order_from<I, T>(args: I) -> Result<Self, clap::Error>
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<std::ffi::OsString> + Clone,
+    {
+        let matches = Self::command().try_get_matches_from(args)?;
+        let mut cli =
+            Self::from_arg_matches(&matches).map_err(|error| error.format(&mut Self::command()))?;
+        let at = |id: &str, flag: MacroFlag| {
+            matches
+                .indices_of(id)
+                .into_iter()
+                .flatten()
+                .map(move |index| (index, flag))
+        };
+        let mut order: Vec<(usize, MacroFlag)> = at("define", MacroFlag::Define)
+            .chain(at("undefine", MacroFlag::Undefine))
+            .collect();
+        order.sort_by_key(|(index, _)| *index);
+        cli.order = order.into_iter().map(|(_, flag)| flag).collect();
+        Ok(cli)
+    }
+
     /// Refuse an invocation that asks for two different things.
     ///
     /// `--safety strict` is defined as leaving nothing `Unknown`, so
@@ -237,12 +286,13 @@ impl Cli {
             color,
             define,
             undefine,
+            order,
         } = self;
 
         let target = resolved_target(target.as_deref(), host).map_err(|message| {
             Self::as_invoked().error(ErrorKind::MissingRequiredArgument, message)
         })?;
-        let macros = command_line_macros(&define, &undefine)
+        let macros = command_line_macros(&define, &undefine, &order)
             .map_err(|message| Self::as_invoked().error(ErrorKind::ValueValidation, message))?;
 
         Ok(Options {
@@ -269,7 +319,8 @@ impl Cli {
     }
 }
 
-/// What `-D` and `-U` said, every `-D` first, or why it cannot be read.
+/// What `-D` and `-U` said, in the order `order` says they were given, or why
+/// one cannot be read.
 ///
 /// Refused here, before anything is read, so that it prints and exits as every
 /// other argument mistake does:
@@ -277,48 +328,60 @@ impl Cli {
 /// - a name that is not an ASCII identifier. That covers an empty one and a
 ///   function-like `F(x)=x`, which this does not read, since only object-like
 ///   macros are read yet;
-/// - a value holding a line break, which would split the line it becomes;
-/// - a name given to both flags. `cc` applies them left to right, and clap
-///   collects each flag on its own, so either order here would sometimes
-///   describe a build `cc` would not make. See ADR-0059.
+/// - a value holding a line break, which would split the line it becomes.
 ///
 /// A `-D` is split at its first `=`, so `N=a=b` defines `N` as `a=b` and `N=`
 /// defines it as nothing.
+///
+/// # Panics
+///
+/// If `order` does not name one flag for each `-D` and `-U`, which is a `Cli`
+/// built some way other than [`Cli::try_parse_in_order_from`]. Taking every
+/// `-D` first instead would describe `-U X -D X` as a build in which `X` is
+/// undefined, which `cc` would not make.
 fn command_line_macros(
     define: &[String],
     undefine: &[String],
+    order: &[MacroFlag],
 ) -> Result<Vec<CommandLineMacro>, String> {
-    let mut macros = Vec::new();
-    for given in define {
-        let (name, value) = given.split_once('=').unwrap_or((given, "1"));
-        if !identifier(name) {
-            return Err(format!(
-                "`-D {given}` is not read: `-D` takes an object-like macro, \
-                 `NAME` or `NAME=VALUE`"
-            ));
+    assert_eq!(
+        order.len(),
+        define.len() + undefine.len(),
+        "the order of `-D` and `-U` was not kept: parse with `Cli::try_parse_in_order_from`"
+    );
+    let (mut defines, mut undefines) = (define.iter(), undefine.iter());
+    let mut macros = Vec::with_capacity(order.len());
+    for flag in order {
+        match flag {
+            MacroFlag::Define => {
+                let given = defines.next().expect("one `-D` for each in the order");
+                let (name, value) = given.split_once('=').unwrap_or((given, "1"));
+                if !is_identifier(name) {
+                    return Err(format!(
+                        "`-D {given}` is not read: `-D` takes an object-like macro, \
+                         `NAME` or `NAME=VALUE`"
+                    ));
+                }
+                if value.contains(['\n', '\r']) {
+                    return Err(format!(
+                        "`-D {name}` is not read: its value holds a line break"
+                    ));
+                }
+                macros.push(CommandLineMacro::Defined {
+                    name: name.to_owned(),
+                    value: value.to_owned(),
+                });
+            }
+            MacroFlag::Undefine => {
+                let name = undefines.next().expect("one `-U` for each in the order");
+                if !is_identifier(name) {
+                    return Err(format!(
+                        "`-U {name}` is not read: `-U` takes a macro's name"
+                    ));
+                }
+                macros.push(CommandLineMacro::Undefined { name: name.clone() });
+            }
         }
-        if value.contains(['\n', '\r']) {
-            return Err(format!(
-                "`-D {name}` is not read: its value holds a line break"
-            ));
-        }
-        macros.push(CommandLineMacro::Defined {
-            name: name.to_owned(),
-            value: value.to_owned(),
-        });
-    }
-    for name in undefine {
-        if !identifier(name) {
-            return Err(format!(
-                "`-U {name}` is not read: `-U` takes a macro's name"
-            ));
-        }
-        if macros.iter().any(|defined| defined.name() == name) {
-            return Err(format!(
-                "`{name}` is both defined (`-D`) and undefined (`-U`)"
-            ));
-        }
-        macros.push(CommandLineMacro::Undefined { name: name.clone() });
     }
     Ok(macros)
 }
@@ -360,7 +423,7 @@ mod tests {
     /// `try_parse_from` also fails for `--help` and `--version`, so a bare
     /// `is_err()` would accept a failure for entirely the wrong reason.
     fn parse_error(args: &[&str]) -> ErrorKind {
-        Cli::try_parse_from(args)
+        Cli::try_parse_in_order_from(args)
             .expect_err("the parse was expected to fail")
             .kind()
     }
@@ -413,7 +476,7 @@ mod tests {
         for level in SafetyLevel::value_variants() {
             let name = level.to_possible_value().unwrap();
             let name = name.get_name();
-            let cli = Cli::try_parse_from(["safec", "--safety", name, "a.c"]).unwrap();
+            let cli = Cli::try_parse_in_order_from(["safec", "--safety", name, "a.c"]).unwrap();
             assert_eq!(
                 cli.safety,
                 Some(*level),
@@ -427,7 +490,7 @@ mod tests {
         for kind in EmitKind::value_variants() {
             let name = kind.to_possible_value().unwrap();
             let name = name.get_name();
-            let cli = Cli::try_parse_from(["safec", "--emit", name, "a.c"]).unwrap();
+            let cli = Cli::try_parse_in_order_from(["safec", "--emit", name, "a.c"]).unwrap();
             assert_eq!(cli.emit, *kind, "--emit {name} did not round trip");
         }
     }
@@ -437,7 +500,7 @@ mod tests {
         for mode in ColorMode::value_variants() {
             let name = mode.to_possible_value().unwrap();
             let name = name.get_name();
-            let cli = Cli::try_parse_from(["safec", "--color", name, "a.c"]).unwrap();
+            let cli = Cli::try_parse_in_order_from(["safec", "--color", name, "a.c"]).unwrap();
             assert_eq!(cli.color, *mode, "--color {name} did not round trip");
         }
     }
@@ -445,7 +508,7 @@ mod tests {
     /// The artifact is spelled out, but cc habits die hard.
     #[test]
     fn accepts_exe_as_an_alias_for_the_executable() {
-        let cli = Cli::try_parse_from(["safec", "--emit", "exe", "a.c"]).unwrap();
+        let cli = Cli::try_parse_in_order_from(["safec", "--emit", "exe", "a.c"]).unwrap();
         assert_eq!(cli.emit, EmitKind::Executable);
     }
 
@@ -456,7 +519,7 @@ mod tests {
     /// two places.
     #[test]
     fn a_bare_invocation_uses_the_documented_defaults() {
-        let cli = Cli::try_parse_from(["safec", "main.c"]).unwrap();
+        let cli = Cli::try_parse_in_order_from(["safec", "main.c"]).unwrap();
         assert_eq!(cli.safety, None);
         assert_eq!(cli.emit, EmitKind::Executable);
         assert_eq!(cli.color, ColorMode::Auto);
@@ -486,7 +549,7 @@ mod tests {
     fn the_default_level_is_what_the_artifact_can_carry() {
         for kind in EmitKind::value_variants() {
             let spelling = kind.spelling();
-            let cli = Cli::try_parse_from(["safec", "--emit", spelling.as_str(), "a.c"])
+            let cli = Cli::try_parse_in_order_from(["safec", "--emit", spelling.as_str(), "a.c"])
                 .expect("every kind is a value `--emit` takes");
 
             assert_eq!(cli.safety, None, "{kind:?}: clap supplied a level");
@@ -506,7 +569,7 @@ mod tests {
 
     #[test]
     fn keeps_every_input_file_in_the_order_given() {
-        let cli = Cli::try_parse_from(["safec", "a.c", "b.c", "c.c"]).unwrap();
+        let cli = Cli::try_parse_in_order_from(["safec", "a.c", "b.c", "c.c"]).unwrap();
         assert_eq!(
             cli.inputs,
             [
@@ -519,7 +582,8 @@ mod tests {
 
     #[test]
     fn accepts_an_explicit_safety_level_before_the_inputs() {
-        let cli = Cli::try_parse_from(["safec", "--safety", "lifetime", "a.c", "b.c"]).unwrap();
+        let cli =
+            Cli::try_parse_in_order_from(["safec", "--safety", "lifetime", "a.c", "b.c"]).unwrap();
         assert_eq!(cli.safety, Some(SafetyLevel::Lifetime));
         assert_eq!(cli.inputs, [PathBuf::from("a.c"), PathBuf::from("b.c")]);
     }
@@ -527,7 +591,7 @@ mod tests {
     #[test]
     fn accepts_an_output_path_through_either_spelling_of_the_flag() {
         for flag in ["-o", "--output"] {
-            let cli = Cli::try_parse_from(["safec", flag, "out.bin", "a.c"]).unwrap();
+            let cli = Cli::try_parse_in_order_from(["safec", flag, "out.bin", "a.c"]).unwrap();
             assert_eq!(
                 cli.output,
                 Some(PathBuf::from("out.bin")),
@@ -538,7 +602,7 @@ mod tests {
 
     #[test]
     fn allow_unknown_is_set_by_its_flag() {
-        let cli = Cli::try_parse_from(["safec", "--allow-unknown", "a.c"]).unwrap();
+        let cli = Cli::try_parse_in_order_from(["safec", "--allow-unknown", "a.c"]).unwrap();
         assert!(cli.allow_unknown);
     }
 
@@ -565,7 +629,7 @@ mod tests {
                 }
                 args.push("a.c");
 
-                let options = Cli::try_parse_from(args)
+                let options = Cli::try_parse_in_order_from(args)
                     .unwrap()
                     .into_options()
                     .expect("this host is a known target");
@@ -594,8 +658,9 @@ mod tests {
     /// [`Policy::new`]: crate::diagnostics::Policy::new
     #[test]
     fn allowing_unknown_is_refused_at_the_level_defined_as_leaving_none() {
-        let cli = Cli::try_parse_from(["safec", "--safety", "strict", "--allow-unknown", "a.c"])
-            .expect("the arguments parse; the conflict is not clap's to see");
+        let cli =
+            Cli::try_parse_in_order_from(["safec", "--safety", "strict", "--allow-unknown", "a.c"])
+                .expect("the arguments parse; the conflict is not clap's to see");
 
         assert_eq!(
             cli.check().expect_err("the pair is refused").kind(),
@@ -613,14 +678,20 @@ mod tests {
     #[test]
     fn an_invocation_that_asks_for_only_one_of_the_two_is_accepted() {
         for level in ["off", "memory", "lifetime", "ownership", "thread", "strict"] {
-            let cli = Cli::try_parse_from(["safec", "--safety", level, "a.c"]).unwrap();
+            let cli = Cli::try_parse_in_order_from(["safec", "--safety", level, "a.c"]).unwrap();
 
             assert!(cli.check().is_ok(), "--safety {level} alone was refused");
         }
 
         for level in ["off", "memory", "lifetime", "ownership", "thread"] {
-            let cli = Cli::try_parse_from(["safec", "--safety", level, "--allow-unknown", "a.c"])
-                .unwrap();
+            let cli = Cli::try_parse_in_order_from([
+                "safec",
+                "--safety",
+                level,
+                "--allow-unknown",
+                "a.c",
+            ])
+            .unwrap();
 
             assert!(
                 cli.check().is_ok(),
@@ -640,7 +711,7 @@ mod tests {
     /// the trip made by one nobody can run is pinning nothing.
     #[test]
     fn every_argument_survives_the_trip_into_options() {
-        let options = Cli::try_parse_from([
+        let options = Cli::try_parse_in_order_from([
             "safec",
             "--safety",
             "thread",
@@ -748,16 +819,17 @@ mod tests {
     /// `--target`. The second fails.
     #[test]
     fn the_target_defaults_to_the_host_and_a_flag_overrides_it() {
-        let defaulted = Cli::try_parse_from(["safec", "a.c"])
+        let defaulted = Cli::try_parse_in_order_from(["safec", "a.c"])
             .expect("a bare invocation parses")
             .into_options()
             .expect("this host is a known target");
         assert_eq!(defaulted.target.triple(), HOST_TRIPLE);
 
-        let named = Cli::try_parse_from(["safec", "--target", "wasm32-unknown-unknown", "a.c"])
-            .expect("a known triple parses")
-            .into_options()
-            .expect("a named target needs no host");
+        let named =
+            Cli::try_parse_in_order_from(["safec", "--target", "wasm32-unknown-unknown", "a.c"])
+                .expect("a known triple parses")
+                .into_options()
+                .expect("a named target needs no host");
         assert_eq!(named.target.triple(), "wasm32-unknown-unknown");
     }
 
@@ -815,7 +887,7 @@ mod tests {
     /// nothing.
     #[test]
     fn an_unknown_host_fails_the_run_rather_than_reporting_success() {
-        let refused = Cli::try_parse_from(["safec", "a.c"])
+        let refused = Cli::try_parse_in_order_from(["safec", "a.c"])
             .expect("a bare invocation parses")
             .into_options_on("x86_64-unknown-linux-musl")
             .expect_err("an unknown host has no target to default to");
@@ -828,7 +900,7 @@ mod tests {
     /// The refusal of a `-D` or `-U` this compiler cannot read, as a run
     /// would see it: its kind and its message.
     fn macro_refusal(args: &[&str]) -> (ErrorKind, String) {
-        let refused = Cli::try_parse_from(args)
+        let refused = Cli::try_parse_in_order_from(args)
             .expect("the arguments parse")
             .into_options()
             .expect_err("the macro is refused");
@@ -836,30 +908,58 @@ mod tests {
     }
 
     /// A `-D` that is not an object-like macro's name is refused before
-    /// anything is read: a function-like one, an empty name, and a name that
-    /// is not ASCII. A failed run, not help, so it exits non-zero.
+    /// anything is read: a function-like one, an empty name, one beginning
+    /// with a digit, and one that is not ASCII. A failed run, not help, so it
+    /// exits non-zero.
+    ///
+    /// The empty name is passed as an argument of its own: clap takes the `=`
+    /// off `-D=1`, which reaches here as the name `1`.
     ///
     /// Mutation: drop the identifier check on `-D`. Each is accepted, and the
     /// function-like one is read as `#define F(x) x`, a different directive.
     /// Mutation: ask `char::is_alphanumeric` of the characters after the
-    /// first. `Aé` is accepted.
+    /// first. `Aé` is accepted. Mutation: take an empty name for an
+    /// identifier. `-D ""` is accepted.
     #[test]
     fn a_define_that_is_not_an_object_like_macro_is_refused() {
-        for given in ["-DF(x)=x", "-D=1", "-Dé", "-DAé"] {
-            let (kind, message) = macro_refusal(&["safec", given, "a.c"]);
-            assert_eq!(kind, ErrorKind::ValueValidation, "{given}");
-            assert!(message.contains("object-like"), "{given}: {message}");
+        for given in [
+            &["safec", "-DF(x)=x", "a.c"][..],
+            &["safec", "-D", "", "a.c"],
+            &["safec", "-D1x", "a.c"],
+            &["safec", "-Dé", "a.c"],
+            &["safec", "-DAé", "a.c"],
+        ] {
+            let (kind, message) = macro_refusal(given);
+            assert_eq!(kind, ErrorKind::ValueValidation, "{given:?}");
+            assert!(message.contains("object-like"), "{given:?}: {message}");
         }
     }
 
-    /// An `-U` of something that is not a name is refused the same way.
+    /// An `-U` of something that is not a name is refused the same way,
+    /// an empty one among them.
     ///
-    /// Mutation: drop the identifier check on `-U`. `-U F(x)` is accepted.
+    /// Mutation: drop the identifier check on `-U`. Both are accepted.
     #[test]
     fn an_undefine_that_is_not_a_name_is_refused() {
-        let (kind, message) = macro_refusal(&["safec", "-UF(x)", "a.c"]);
-        assert_eq!(kind, ErrorKind::ValueValidation);
-        assert!(message.contains("`-U F(x)`"), "{message}");
+        for given in [&["safec", "-UF(x)", "a.c"][..], &["safec", "-U", "", "a.c"]] {
+            let (kind, message) = macro_refusal(given);
+            assert_eq!(kind, ErrorKind::ValueValidation, "{given:?}");
+            assert!(message.contains("`-U "), "{given:?}: {message}");
+        }
+    }
+
+    /// `-D N=` defines `N` as nothing, not as `1`.
+    ///
+    /// Mutation: take an empty value for no value. `N` is defined as `1`.
+    #[test]
+    fn a_define_with_an_empty_value_defines_the_name_as_nothing() {
+        assert_eq!(
+            macros_of(&["safec", "-DN=", "a.c"]),
+            [CommandLineMacro::Defined {
+                name: "N".to_owned(),
+                value: String::new(),
+            }]
+        );
     }
 
     /// A value holding a line break is refused, since it would split the line
@@ -876,22 +976,62 @@ mod tests {
         }
     }
 
-    /// A name given to both `-D` and `-U` is refused, in either order on the
-    /// command line, since the order between the two flags is not kept. See
-    /// ADR-0059.
+    /// What `-D` and `-U` became, in order.
+    fn macros_of(args: &[&str]) -> Vec<CommandLineMacro> {
+        Cli::try_parse_in_order_from(args)
+            .expect("the arguments parse")
+            .into_options()
+            .expect("the macros are read")
+            .macros
+    }
+
+    /// `-D` and `-U` keep the order they were given in, as `cc` applies them,
+    /// so `-U X -D X=2` ends with `X` defined: a hardened build's
+    /// `_FORTIFY_SOURCE`. See ADR-0059.
     ///
-    /// Mutation: drop the check. Both are accepted, and the run describes a
-    /// build in which `A` is undefined, which `cc -U A -D A` would not make.
+    /// Mutation: sort the order by flag, every `-D` first. The first case ends
+    /// with the `-U`. Mutation: leave `order` empty in
+    /// `try_parse_in_order_from`. `into_options` panics that the order was not
+    /// kept.
     #[test]
-    fn a_name_both_defined_and_undefined_is_refused() {
-        for args in [
-            ["safec", "-DA=2", "-UA", "a.c"],
-            ["safec", "-UA", "-DA", "a.c"],
-        ] {
-            let (kind, message) = macro_refusal(&args);
-            assert_eq!(kind, ErrorKind::ValueValidation, "{args:?}");
-            assert!(message.contains("both defined"), "{args:?}: {message}");
-        }
+    fn defines_and_undefines_keep_the_order_they_were_given_in() {
+        let defined = |value: &str| CommandLineMacro::Defined {
+            name: "X".to_owned(),
+            value: value.to_owned(),
+        };
+        let undefined = CommandLineMacro::Undefined {
+            name: "X".to_owned(),
+        };
+        assert_eq!(
+            macros_of(&["safec", "-UX", "-DX=2", "a.c"]),
+            [undefined.clone(), defined("2")]
+        );
+        assert_eq!(
+            macros_of(&["safec", "-DX=1", "-UX", "-D", "X=3", "a.c"]),
+            [defined("1"), undefined, defined("3")]
+        );
+    }
+
+    /// A name given to one flag twice is read twice, as `cc` reads it.
+    ///
+    /// Mutation: refuse a name already seen. Either case is refused.
+    #[test]
+    fn a_name_given_twice_to_one_flag_is_read_twice() {
+        assert_eq!(macros_of(&["safec", "-UA", "-UA", "a.c"]).len(), 2);
+        assert_eq!(macros_of(&["safec", "-DA", "-DA", "a.c"]).len(), 2);
+    }
+
+    /// A `Cli` holding `-D` or `-U` that was not parsed in order is refused
+    /// rather than read with every `-D` first.
+    ///
+    /// Mutation: drop the assertion in `command_line_macros`. This is
+    /// accepted, and the order it would have described is not the one given.
+    #[test]
+    #[should_panic(expected = "the order of `-D` and `-U` was not kept")]
+    fn a_command_line_parsed_without_its_order_is_refused() {
+        let _ = Cli::try_parse_from(["safec", "-UX", "-DX=2", "a.c"])
+            .expect("the arguments parse")
+            .into_options();
     }
 
     /// A named target is the target, on a host this compiler knows or one it

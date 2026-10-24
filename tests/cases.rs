@@ -4961,7 +4961,30 @@ cases! {
         // alike: `SC0117` for each, with C17's note. Mutation: refuse a
         // standard name's `-U` as any predefined name's is. `__STDC__` is
         // told the target predefines it, which is not the rule it breaks.
-        a_standard_name_cannot_be_set_on_the_command_line: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu", "-D__STDC_HOSTED__=0", "-U__STDC__"],
+        // `__x86_64__` is one MSVC's compilers disagree on, so it is refused
+        // unless settled; `-U` settles it, and the `#ifndef` group's double
+        // free is reported. Mutation: ask the settled set only of reserved
+        // names the target does not list. It is `SC0104` again.
+        a_name_the_target_leaves_open_undefined_on_the_command_line_is_answered: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "-U__x86_64__"],
+        // `-D N=3` and `#define N 3` are two identical definitions, which
+        // C17 6.10.3 p2 allows. Mutation: refuse a second definition of a
+        // settled name whatever it says. It is `SC0114`.
+        a_command_line_definition_and_the_same_one_in_the_source_are_accepted: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu", "-DN=3"],
+        // `-D _WIN32=1` says what MSVC's target already says, and is accepted.
+        // Mutation: refuse any `-D` of a predefined name. It is refused.
+        a_name_this_target_predefines_may_be_defined_again_the_same_way_on_the_command_line: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc", "-D_WIN32=1"],
+        // `-U _FORTIFY_SOURCE -D _FORTIFY_SOURCE=2`, a hardened build's
+        // spelling: read left to right, as `cc` reads it, so the name ends
+        // defined as `2`. Mutation: put every `-D` before every `-U`. The `-U`
+        // comes last, and `_FORTIFY_SOURCE` is a name nothing declares.
+        the_command_line_is_read_in_the_order_it_was_given: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu", "-U_FORTIFY_SOURCE", "-D_FORTIFY_SOURCE=2"],
+        a_standard_name_cannot_be_defined_or_undefined_on_the_command_line: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu", "-D__STDC_HOSTED__=0", "-U__STDC__"],
+        // On MSVC `__STDC__` is not predefined but left open, so it is not a
+        // macro when the command line is read. Refused all the same, as a name
+        // C17 6.10.8 lists. Mutation: refuse a standard name only where it is
+        // already defined, as the `#define` and `#undef` paths do. `-U` settles
+        // it, `#ifdef __STDC__` skips the second free, and it exits 0.
+        a_standard_name_this_target_leaves_open_cannot_be_settled_on_the_command_line: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "-U__STDC__"],
         // `#ifdef __LINE__` is answered, and the use is refused. Mutation:
         // expand a dynamic macro as its empty list. `int line = ;` is
         // reported as a syntax error instead.
