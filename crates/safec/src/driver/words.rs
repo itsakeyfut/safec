@@ -698,18 +698,16 @@ pub(super) fn memory_finding(
         ),
         // Only ever a proof, as `Unassigned` is, and under its code: both are
         // a pointer that points at no object because nothing gave it a value.
+        // Reported where it is read, so the name is the local it is read
+        // through, and the slot is `*name`. See ADR-0057.
         (Kind::IndeterminateLoad, Conclusion::Unsafe | Conclusion::Unknown, _) => (
             UNASSIGNED,
             said(
                 name,
-                "this uses a pointer read out of memory nothing wrote",
-                |name| {
-                    format!(
-                        "`{name}` points at nothing, since it was read out of memory nothing wrote"
-                    )
-                },
+                "this reads a pointer out of memory nothing wrote",
+                |name| format!("`*{name}` is read before anything wrote it"),
             ),
-            "used here",
+            "read here",
             "write the slot before reading it, or allocate with `calloc`",
         ),
         // Only ever `Unknown`, since the edge may be one no execution takes.

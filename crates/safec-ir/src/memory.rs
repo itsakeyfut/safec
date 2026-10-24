@@ -57,14 +57,15 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve_within};
 use crate::ir::{
-    Between, Element, FuncId, LocalId, Operand, Place, Rvalue, Terminator, TranslationUnit, Ty,
+    Between, Element, FuncId, LocalId, Operand, Place, Projection, Rvalue, Terminator,
+    TranslationUnit, Ty,
 };
 use crate::nullability::{self};
 use crate::source::{SourceMap, Span};
 
 use built::named;
 use report::{
-    after_a_call, derefs, freed_indeterminate, handed, handed_places, indeterminate, inside,
+    after_a_call, derefs, freed_indeterminate, handed, handed_places, inside, loaded_indeterminate,
     reported, returned, used, used_before,
 };
 use transfer::Allocations;
@@ -151,12 +152,11 @@ pub enum Kind {
         taken: bool,
     },
     /// A pointer read out of an allocation `malloc` or `aligned_alloc` made
-    /// and nothing wrote, on every path, and then dereferenced or freed. Its
-    /// value is indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2), and Annex J.2
-    /// lists using it as undefined. Always `Unsafe`, and only at a use that
-    /// reaches memory through it, which is the memory error level 1 owns: a
-    /// copy or a comparison of it is a use J.2 lists too, and is left out.
-    /// See `Known::fresh`.
+    /// and nothing wrote, on every path. Its value is indeterminate (C17
+    /// 7.22.3.1 p2, 7.22.3.4 p2), and Annex J.2 lists using it as undefined.
+    /// Always `Unsafe`, at the read, whatever it is read for, and not again
+    /// at a later use of what it read. `local` is the pointer it is read
+    /// through. See `Known::fresh` and ADR-0057.
     IndeterminateLoad,
     /// A function this check gave up on part of the way, past `MAX_WORK`, so
     /// nothing about its memory is proved. Always `Unknown`, at the
@@ -520,12 +520,13 @@ fn findings_within(
             for element in &block.elements {
                 // Before `used`, so that the proof stands at the caret and a
                 // doubt about the same place there does not replace it.
-                indeterminate(
+                loaded_indeterminate(
                     sources,
                     &mut findings,
                     &mut said,
                     &analysis,
-                    dereferenced_in_element(element),
+                    function,
+                    read_out_of_memory_in_element(element),
                     &known,
                 );
                 // Before the transfer, which is what the element does: the
@@ -590,20 +591,13 @@ fn findings_within(
                 analysis.element(function, element, &mut known);
             }
 
-            indeterminate(
+            loaded_indeterminate(
                 sources,
                 &mut findings,
                 &mut said,
                 &analysis,
-                dereferenced_in_terminator(&block.terminator),
-                &known,
-            );
-            freed_indeterminate(
-                sources,
-                &mut findings,
-                &mut said,
-                &analysis,
-                &block.terminator,
+                function,
+                read_out_of_memory_in_terminator(&block.terminator),
                 &known,
             );
             // Before the terminator's own transfer, which is what turns a live
@@ -628,22 +622,18 @@ fn findings_within(
                 &block.terminator,
                 &known,
             );
-            // **Not a doubt about a free already proved to free nothing**,
-            // which `freed_indeterminate` said above: the two would be one
-            // free reported twice, once as unknown.
-            let proved: Vec<(Span, LocalId)> = findings
-                .iter()
-                .filter(|finding| finding.kind == Kind::IndeterminateLoad)
-                .filter_map(|finding| finding.local.map(|local| (finding.at, local)))
-                .collect();
+            // **Not a doubt about freeing a pointer already reported where it
+            // was read out of fresh memory**: the two would be one defect
+            // reported twice, the second time as unknown. Only a doubt, and
+            // only about the local freed. See ADR-0057.
+            let reported_at_its_read = freed_indeterminate(&analysis, &block.terminator, &known);
             findings.extend(
                 reported(&analysis, &block.terminator, &known, &null, id)
                     .into_iter()
                     .filter(|finding| {
                         finding.conclusion == Conclusion::Unsafe
-                            || !finding
-                                .local
-                                .is_some_and(|local| proved.contains(&(finding.at, local)))
+                            || reported_at_its_read.is_none()
+                            || finding.local != reported_at_its_read
                     }),
             );
             // After the free's own finding, which is the one whose caret is
@@ -796,6 +786,116 @@ fn projected(place: &Place) -> Vec<&Place> {
         Vec::new()
     } else {
         vec![place]
+    }
+}
+
+/// Where this element runs, and every `*l` it reads as a value there, each
+/// as the place `*l`.
+///
+/// **Not only what an assignment copies.** A load reaches an operator or a
+/// call as an operand, and the lowering hands `*box == q`, `put(*box)` and
+/// `*h = *box` their `*box` directly, with no temporary. A place reached
+/// through two dereferences reads the first on the way, whether it is read
+/// or written. A write to `*l` reads nothing out of it. See ADR-0057.
+pub(crate) fn read_out_of_memory_in_element(element: &Element) -> Option<(Span, Vec<Place>)> {
+    // Every field written out, as `dereferenced_in_element` does.
+    match element {
+        Element::Assign(operation) => {
+            let mut places: Vec<Place> = through(&operation.place).into_iter().collect();
+            match &operation.value {
+                Rvalue::Use(operand) | Rvalue::Unary { op: _, operand } => {
+                    places.extend(read_in(operand));
+                }
+                Rvalue::Binary { op: _, lhs, rhs } => {
+                    places.extend(read_in(lhs));
+                    places.extend(read_in(rhs));
+                }
+                // Taking an address reads nothing, as `dereferenced_in_rvalue`
+                // says.
+                Rvalue::Address(_) => {}
+            }
+            Some((operation.origin.span(), places))
+        }
+        // Converted, so read (C17 6.3.2.1 p2), which is why the lowering
+        // emits it.
+        Element::Evaluate { place, origin } => {
+            Some((origin.span(), read_as_value(place).into_iter().collect()))
+        }
+        Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => None,
+        Element::UnsequencedAccess {
+            local: _,
+            written: _,
+            accessed: _,
+            both_write: _,
+            between: _,
+            origin: _,
+        } => None,
+        Element::StorageLive {
+            local: _,
+            origin: _,
+        } => None,
+        Element::StorageDead {
+            origin: _,
+            local: _,
+        } => None,
+    }
+}
+
+/// The same, for what a terminator reads.
+pub(crate) fn read_out_of_memory_in_terminator(
+    terminator: &Terminator,
+) -> Option<(Span, Vec<Place>)> {
+    match terminator {
+        Terminator::Call {
+            callee: _,
+            arguments,
+            destination,
+            then: _,
+            origin,
+        } => {
+            let mut places: Vec<Place> = arguments.iter().filter_map(read_in).collect();
+            if let Some(destination) = destination {
+                places.extend(through(destination));
+            }
+            Some((origin.span(), places))
+        }
+        Terminator::Branch {
+            condition,
+            then: _,
+            otherwise: _,
+            origin,
+        } => Some((origin.span(), read_in(condition).into_iter().collect())),
+        Terminator::Goto(_) | Terminator::Return | Terminator::Abnormal { to: _ } => None,
+    }
+}
+
+/// The `*l` an operand reads, if it reads one.
+fn read_in(operand: &Operand) -> Option<Place> {
+    match operand {
+        Operand::Copy(place) => read_as_value(place),
+        Operand::Constant(_) => None,
+    }
+}
+
+/// The `*l` a place read as a value reads: itself, where it is `*l`, or the
+/// first dereference on the way to a second.
+fn read_as_value(place: &Place) -> Option<Place> {
+    if place.projection.as_slice() == [Projection::Deref] {
+        Some(place.clone())
+    } else {
+        through(place)
+    }
+}
+
+/// The `*l` reaching a place reads on the way, read or written: the first
+/// of two dereferences at its start.
+fn through(place: &Place) -> Option<Place> {
+    match place.projection.as_slice() {
+        [Projection::Deref, Projection::Deref, ..] => Some(Place {
+            local: place.local,
+            projection: vec![Projection::Deref],
+        }),
+        _ => None,
     }
 }
 

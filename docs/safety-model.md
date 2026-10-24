@@ -168,7 +168,9 @@ This allows incremental adoption.
 pointer that points at no object is the same class of memory error as one
 through a pointer to freed memory, so the memory check reports it, as
 `SC0411`: a pointer local read before anything was assigned to it, and a
-pointer read out of an allocation nothing wrote.
+pointer read out of an allocation nothing wrote. Both are reported where the
+value is read, whatever it is read for, since C17 makes the first undefined
+there (6.3.2.1 p2) and Annex J.2 lists the second.
 
 At levels 1 to 4, a level says **which checks run**, and nothing else. It does
 not decide how

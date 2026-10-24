@@ -1,9 +1,9 @@
-error[SC0411]: `t` points at nothing, since it was read out of memory nothing wrote
-    ╭─[ a_pointer_read_out_of_fresh_memory_through_an_alias_is_reported.c:13:9 ]
+error[SC0411]: `*box2` is read before anything wrote it
+    ╭─[ a_pointer_read_out_of_fresh_memory_through_an_alias_is_reported.c:11:10 ]
     │
- 13 │         *t = 1;
-    │         ───┬──  
-    │            ╰──── used here
+ 11 │     int *t = *box2;
+    │          ────┬────  
+    │              ╰────── read here
 ────╯
   = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
   = note: this check belongs to safety level 1
