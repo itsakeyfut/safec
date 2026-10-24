@@ -1476,6 +1476,21 @@ cases! {
         // `0 == (p == 0)`, with the zero on the left. Mutation: have
         // `zero_beside` read a zero on the right only. `SC0403`.
         a_null_test_compared_with_zero_on_its_left_is_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The right operand's test reaches the join by a `Goto`, the only way
+        // into it once the left operand's edge is threaded, and the walk
+        // reads it there (#595). Mutation: stop the walk in
+        // `tested_against_null` at the top of the branching block. `SC0403`.
+        a_pointer_tested_on_the_right_of_and_is_not_null_in_its_body: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same under `||`, returning where the right operand's `q` is
+        // null. Mutation: as above. `SC0403`.
+        a_pointer_tested_null_on_the_right_of_an_or_that_returns_is_not_null_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `p != 0 || q != 0` reaches its body with `q` untested wherever `p`
+        // is not null, so the doubt is right. **No mutation of this change
+        // silences it**, measured: the left operand's `then` edge reaches the
+        // body without passing the right operand, so whatever the walk
+        // learns there joins with nothing known. It records that the walk
+        // claims nothing for that path.
+        a_pointer_tested_on_the_right_of_an_or_may_be_null_in_its_body: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // **The cost**: `|| 0` never reaches the body through its right
         // operand, but `0 != 0` is not folded, so the path where `p` is null
         // reaches it as far as this check can tell. It is here so the cost is

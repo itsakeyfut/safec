@@ -273,6 +273,9 @@ impl Asked {
 struct Nullability<'a> {
     /// What a callee's name is read from, for [`DOES_NOT_RETURN`].
     sources: &'a SourceMap,
+    /// The function's graph, for the walk [`tested_against_null`] makes
+    /// back across a `Goto`.
+    cfg: &'a Cfg,
     /// What a local's type is, so that a branch on an `int` is not read as a
     /// branch on a pointer.
     unit: &'a TranslationUnit,
@@ -403,8 +406,9 @@ impl Nullability<'_> {
 ///   copy with nothing, which doubted `if (q)` where `q != 0` was proved
 ///   (#334).
 /// - `if (p != 0)` writes the comparison to a temporary and hands a copy of
-///   that, so the comparison is an element of this block, above the
-///   terminator. Reaching it is what [`Analysis::edge`]'s block is for, and
+///   that, so the comparison is an element above the terminator, of this
+///   block or of the block before it where a lone `Goto` enters this one
+///   (#595). Reaching it is what [`Analysis::edge`]'s block is for, and
 ///   the walk below is for this shape alone. A comparison's result is an
 ///   `int`, which is how the two are told apart.
 ///
@@ -437,6 +441,7 @@ impl Nullability<'_> {
 pub(crate) fn tested_against_null(
     unit: &TranslationUnit,
     function: &Function,
+    cfg: &Cfg,
     block: BlockId,
     condition: &Place,
 ) -> Option<(LocalId, Nullness)> {
@@ -475,121 +480,148 @@ pub(crate) fn tested_against_null(
     let mut asked = condition.local;
     let mut inverted = false;
 
-    for element in function.block(block).elements.iter().rev() {
-        // Every variant written out, and every field with it, for the
-        // reason `Analysis::element` gives: an exhaustive match that
-        // writes `..` lets a field added to a variant that already exists
-        // walk past it. The question here is whether anything
-        // below the comparison replaced what it read, so an element kind
-        // added later is exactly the thing that would have to answer.
-        let operation = match element {
-            Element::Assign(operation) => operation,
-            // None of them computes into a local, so none can have changed
-            // one, and there is nothing to record. **One arm rather than
-            // three**, so that this is one behaviour with one guard,
-            // `a_marker_between_a_comparison_and_its_branch_is_stepped_over`;
-            // split into three, two of them would be held by nothing.
-            // Giving up here instead would cost a refinement wherever a
-            // marker separates a comparison from its branch, which is a
-            // false positive on each of them.
-            Element::Evaluate {
-                place: _,
-                origin: _,
+    // **And on into the block before, where only a `Goto` enters**: the
+    // right operand of `&&` computes its result and jumps to the empty
+    // branch where the operator's arms meet, and #592's threading has left
+    // that jump the only way in, so walking on reads the branch's value
+    // where it was computed (#595). One way in is no join, so that block's
+    // end is this block's start and `changed` carries across. Not a call's
+    // continuation, since a call may write a local whose address escaped,
+    // which `changed` does not see; not a block with any other entry, the
+    // entry block included. **It ends without a record of where it has
+    // been**: each step goes to a block whose `Goto` names the block the walk
+    // is in, and the first such names the branching block, which ends in a
+    // `Branch`, so no block is reached twice.
+    let mut block = block;
+    loop {
+        for element in function.block(block).elements.iter().rev() {
+            // Every variant written out, and every field with it, for the
+            // reason `Analysis::element` gives: an exhaustive match that
+            // writes `..` lets a field added to a variant that already exists
+            // walk past it. The question here is whether anything
+            // below the comparison replaced what it read, so an element kind
+            // added later is exactly the thing that would have to answer.
+            let operation = match element {
+                Element::Assign(operation) => operation,
+                // None of them computes into a local, so none can have changed
+                // one, and there is nothing to record. **One arm rather than
+                // three**, so that this is one behaviour with one guard,
+                // `a_marker_between_a_comparison_and_its_branch_is_stepped_over`;
+                // split into three, two of them would be held by nothing.
+                // Giving up here instead would cost a refinement wherever a
+                // marker separates a comparison from its branch, which is a
+                // false positive on each of them.
+                Element::Evaluate {
+                    place: _,
+                    origin: _,
+                }
+                | Element::Sequenced { origin: _ }
+                | Element::ArgumentsEvaluated { origin: _ }
+                | Element::UnsequencedAccess {
+                    local: _,
+                    written: _,
+                    accessed: _,
+                    both_write: _,
+                    between: _,
+                    origin: _,
+                } => continue,
+                // Storage ending takes the object the comparison read away and
+                // storage beginning brings a different one, so either leaves
+                // the local holding something the comparison never saw. That
+                // is a change like any other and is recorded like one.
+                // `Analysis::element` answers `Nullness::Unknown` for both and
+                // `Analysis::edge` refines only a local that is `Unknown`, so
+                // the two do not cancel out: without this they would combine
+                // into a refinement about an object that is gone. One arm
+                // again, for the reason above.
+                Element::StorageLive { local, origin: _ }
+                | Element::StorageDead { origin: _, local } => {
+                    changed[local.index()] = true;
+                    continue;
+                }
+            };
+
+            // A store through a projection may have landed in any local,
+            // because nothing in such an element says which one it lands in, so
+            // there is no single local to record and the walk cannot carry on.
+            if !operation.place.projection.is_empty() {
+                return None;
             }
-            | Element::Sequenced { origin: _ }
-            | Element::ArgumentsEvaluated { origin: _ }
-            | Element::UnsequencedAccess {
-                local: _,
-                written: _,
-                accessed: _,
-                both_write: _,
-                between: _,
-                origin: _,
-            } => continue,
-            // Storage ending takes the object the comparison read away and
-            // storage beginning brings a different one, so either leaves
-            // the local holding something the comparison never saw. That
-            // is a change like any other and is recorded like one.
-            // `Analysis::element` answers `Nullness::Unknown` for both and
-            // `Analysis::edge` refines only a local that is `Unknown`, so
-            // the two do not cancel out: without this they would combine
-            // into a refinement about an object that is gone. One arm
-            // again, for the reason above.
-            Element::StorageLive { local, origin: _ }
-            | Element::StorageDead { origin: _, local } => {
-                changed[local.index()] = true;
+            // A direct store says exactly which local it changed, so the walk
+            // carries on and the answer below is refused only if it turns out
+            // to be about this one.
+            if operation.place.local != asked {
+                changed[operation.place.local.index()] = true;
                 continue;
             }
-        };
 
-        // A store through a projection may have landed in any local,
-        // because nothing in such an element says which one it lands in, so
-        // there is no single local to record and the walk cannot carry on.
-        if !operation.place.projection.is_empty() {
-            return None;
-        }
-        // A direct store says exactly which local it changed, so the walk
-        // carries on and the answer below is refused only if it turns out
-        // to be about this one.
-        if operation.place.local != asked {
-            changed[operation.place.local.index()] = true;
-            continue;
-        }
+            // **An `int` compared with zero is followed to its own last write**,
+            // earlier in the walk, with `changed` still recording everything
+            // between it and the branch, and where that write is in a block the
+            // walk does not reach the walk ends without an answer. **Not a named
+            // `int`**, measured: `int c = p != 0; if (c)` lowers the declaration
+            // as a copy of a temporary, and a copy is a value this walk does not
+            // follow, so it refines nothing, as before.
+            if let Some((through, equal)) = through_zero(unit, function, &operation.value) {
+                asked = through;
+                inverted ^= equal;
+                continue;
+            }
 
-        // **An `int` compared with zero is followed to its own last write**,
-        // in this block and before this one, with `changed` still recording
-        // everything between it and the branch, and where that write is in
-        // another block the walk ends without an answer. **Not a named
-        // `int`**, measured: `int c = p != 0; if (c)` lowers the declaration
-        // as a copy of a temporary, and a copy is a value this walk does not
-        // follow, so it refines nothing, as before.
-        if let Some((through, equal)) = through_zero(unit, function, &operation.value) {
-            asked = through;
-            inverted ^= equal;
-            continue;
+            // The last write to the local asked about, whatever it is. A
+            // comparison of a pointer against zero is the one shape this reads;
+            // anything else is a value this analysis cannot follow, and refining
+            // on a condition it did not read is the one direction a refinement
+            // must not be wrong in.
+            return (match &operation.value {
+                Rvalue::Binary { op, lhs, rhs } => compared_to_null(unit, function, *op, lhs, rhs),
+                // C17 6.5.3.3 p5: "The expression `!E` is equivalent to
+                // `(0==E)`." So `if (!p)` is `if (p == 0)` written shorter, and
+                // a reader who cannot tell those apart should not be given two
+                // answers. The other two operators say nothing about null.
+                Rvalue::Unary {
+                    op: UnOp::Not,
+                    operand,
+                } => compared_to_null(unit, function, BinOp::Eq, operand, &Operand::Constant(0)),
+                Rvalue::Unary {
+                    op: UnOp::Neg | UnOp::BitNot,
+                    operand: _,
+                } => None,
+                Rvalue::Use(_) | Rvalue::Address(_) => None,
+            })
+            // **The refusal, and the only one this walk makes about a local it
+            // can name.** The comparison read this local above; everything
+            // between here and the branch has been recorded, so a local in
+            // that set is one the branch no longer reads the compared value
+            // from.
+            .filter(|(local, _)| !changed[local.index()])
+            .map(|(local, learned)| {
+                (
+                    local,
+                    if inverted {
+                        learned.inverted()
+                    } else {
+                        learned
+                    },
+                )
+            });
         }
-
-        // The last write to the local asked about, whatever it is. A
-        // comparison of a pointer against zero is the one shape this reads;
-        // anything else is a value this analysis cannot follow, and refining
-        // on a condition it did not read is the one direction a refinement
-        // must not be wrong in.
-        return (match &operation.value {
-            Rvalue::Binary { op, lhs, rhs } => compared_to_null(unit, function, *op, lhs, rhs),
-            // C17 6.5.3.3 p5: "The expression `!E` is equivalent to
-            // `(0==E)`." So `if (!p)` is `if (p == 0)` written shorter, and
-            // a reader who cannot tell those apart should not be given two
-            // answers. The other two operators say nothing about null.
-            Rvalue::Unary {
-                op: UnOp::Not,
-                operand,
-            } => compared_to_null(unit, function, BinOp::Eq, operand, &Operand::Constant(0)),
-            Rvalue::Unary {
-                op: UnOp::Neg | UnOp::BitNot,
-                operand: _,
-            } => None,
-            Rvalue::Use(_) | Rvalue::Address(_) => None,
-        })
-        // **The refusal, and the only one this walk makes about a local it
-        // can name.** The comparison read this local above; everything
-        // between here and the branch has been recorded, so a local in
-        // that set is one the branch no longer reads the compared value
-        // from.
-        .filter(|(local, _)| !changed[local.index()])
-        .map(|(local, learned)| {
-            (
-                local,
-                if inverted {
-                    learned.inverted()
-                } else {
-                    learned
-                },
-            )
-        });
+        // **The entry block has one more way in**, from where the function
+        // starts, which `Cfg::predecessors` does not list, so a lone `Goto`
+        // back to it is not the only arrival. Found by review.
+        match cfg.predecessors(block) {
+            [only]
+                if block != function.entry()
+                    && matches!(function.block(*only).terminator, Terminator::Goto(to) if to == block) =>
+            {
+                block = *only;
+            }
+            _ => break,
+        }
     }
 
-    // Nothing in this block wrote a condition that is not a pointer, so there
-    // is no comparison here for this walk to read.
+    // Nothing the walk reached wrote a condition that is not a pointer, so
+    // there is no comparison here for it to read.
     //
     // **Nothing holds this `None`, and nothing can.** Answering such a
     // condition non-null instead leaves the suite green, because an `int` is
@@ -1058,7 +1090,8 @@ impl Analysis for Nullability<'_> {
             return;
         };
 
-        let Some((local, on_then)) = tested_against_null(self.unit, function, block, condition)
+        let Some((local, on_then)) =
+            tested_against_null(self.unit, function, self.cfg, block, condition)
         else {
             return;
         };
@@ -1402,14 +1435,15 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
             continue;
         }
 
+        let cfg = Cfg::of(function);
         let analysis = Nullability {
             sources,
+            cfg: &cfg,
             unit,
             function,
             locals: function.locals().len(),
             escaped: escaped_in(function),
         };
-        let cfg = Cfg::of(function);
         let solution = solve(&analysis, function, &cfg);
 
         for &id in cfg.order() {
@@ -1590,6 +1624,7 @@ pub(crate) fn null_at_terminators(
 ) -> NullAtTerminators {
     let analysis = Nullability {
         sources,
+        cfg,
         unit,
         function,
         locals: function.locals().len(),

@@ -422,6 +422,7 @@ fn analysis<'a>(
             })
             .collect(),
         live_in: transfer::live_in(function),
+        cfg: Cfg::of(function),
         opaque_results: Vec::new(),
     };
     analysis.opaque_results = analysis.opaque_results_of(function);
