@@ -251,6 +251,10 @@ cases! {
         // read only `Rvalue::Use` in `read_out_of_memory_in_element`. It
         // builds.
         a_pointer_read_out_of_fresh_memory_in_a_comparison_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read as the operand of a unary operator, with no temporary.
+        // Mutation: read nothing for `Rvalue::Unary` in
+        // `read_out_of_memory_in_element`. It builds.
+        a_pointer_read_out_of_fresh_memory_under_a_logical_not_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read as an argument, with no temporary. Mutation: drop the
         // arguments in `read_out_of_memory_in_terminator`. It builds.
         a_pointer_read_out_of_fresh_memory_and_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
