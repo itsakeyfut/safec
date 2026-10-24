@@ -659,18 +659,25 @@ pub(super) fn loaded_indeterminate(
         if !analysis.reads_fresh(function, &place, known) {
             continue;
         }
+        // **Keyed by the pointer read through, not by `*l`.** A dereference
+        // of `l` at the same caret is said at `*l` by `used`, and one key
+        // keeps one finding: a read out of a block nothing wrote before it
+        // was freed lost its use after free to this report, though both are
+        // true of it. Mutation: key by `place`, and
+        // `a_pointer_read_out_of_a_freed_table_and_returned` loses `SC0402`.
+        let local = place.local;
+        let root = Place::local(local);
         if said
             .iter()
-            .any(|(said_at, said_place, _)| *said_at == at && *said_place == place)
+            .any(|(said_at, said_place, _)| *said_at == at && *said_place == root)
         {
             continue;
         }
-        let local = place.local;
         say(
             sources,
             findings,
             said,
-            &place,
+            &root,
             Finding {
                 function: analysis.function,
                 kind: Kind::IndeterminateLoad,

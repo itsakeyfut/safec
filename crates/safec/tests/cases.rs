@@ -232,6 +232,15 @@ cases! {
         // Handed to `realloc`, and reported once, at the read. Mutation: ask
         // `freed_indeterminate` about `free` alone. The doubt joins.
         a_pointer_read_out_of_fresh_memory_and_reallocated_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read out of the old block on the arm where `realloc` failed, which
+        // left it live and unwritten (C17 7.22.3.5 p4). Mutation: clear
+        // `fresh` for what a `realloc` is handed. It builds.
+        a_pointer_read_out_of_the_old_block_after_a_failed_realloc_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read out of an allocation a free of one of two may have freed:
+        // freed or never written, it is undefined on every path, and the read
+        // stays a proof beside the doubt. Mutation: clear `fresh` for every
+        // site a free may free. Only the doubt is left.
+        a_pointer_read_out_of_fresh_memory_a_free_may_have_freed_is_still_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `aligned_alloc`'s contents are indeterminate too (C17 7.22.3.1 p2).
         // Mutation: drop it from `leaves_indeterminate`. It builds.
         a_pointer_read_out_of_memory_aligned_alloc_made_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -3011,7 +3020,9 @@ cases! {
         a_freed_pointer_copied_but_not_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What leaves is `*tab`, a pointer read out of memory, and the read of
         // freed `tab` is `SC0402`'s. Mutation: ask a projected source in
-        // `returned`; this gains an `SC0406` about `tab`.
+        // `returned`; this gains an `SC0406` about `tab`. Nothing wrote `tab`
+        // before it was freed, so the read is `SC0411` as well: a free leaves
+        // an allocation fresh (ADR-0057).
         a_pointer_read_out_of_a_freed_table_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 

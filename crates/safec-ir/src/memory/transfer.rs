@@ -1737,17 +1737,15 @@ impl Analysis for Allocations<'_> {
         let touched_now: Vec<usize> = sites().collect();
         value.forget_reallocs_touching(|site| touched_now.contains(&site));
 
-        // **An allocation this may free is no longer fresh**, so a read out
-        // of it is the use after free it is and not an indeterminate pointer
-        // as well: one read, two reports. Only a proof can be lost here, and
-        // `SC0402` makes that one. Mutation: drop this, and
-        // `a_pointer_read_out_of_a_freed_table_and_returned` gains `SC0411`.
-        // See ADR-0057.
-        if matches!(kind, Callee::Frees | Callee::Reallocates) {
-            for &site in &touched_now {
-                value.written(site);
-            }
-        }
+        // **An allocation this may free stays fresh.** Clearing it here was
+        // tried, to spare a read out of freed memory a second report, and
+        // `fresh` is an intersection that nothing sets again: a `realloc`
+        // that fails leaves the old block live and unwritten (C17 7.22.3.5
+        // p4), and a free of one of two allocations leaves the other, so a
+        // read on either path built in silence or as a doubt. Mutation: clear
+        // it for a `realloc`, and
+        // `a_pointer_read_out_of_the_old_block_after_a_failed_realloc_is_reported`
+        // builds. See ADR-0057.
 
         // **What a `realloc` with a non-zero constant size was handed, while
         // it is all live**, before the transfer below makes it unproven: the

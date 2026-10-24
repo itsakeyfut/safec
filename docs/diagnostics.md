@@ -140,9 +140,10 @@ whether `t` is then dereferenced, compared, handed to a call or never used,
 and so is `*box == q` or `put(*box)` with no local between. A later use of
 what it read is not reported again, and a `free` or `realloc` of it raises no
 doubt beside the report, unless a call may have replaced it since. Any write
-anywhere in the allocation ends it, whether by a store, `memcpy`, `memset`, a
-call it was handed, or a `free` that may free it, since this check keeps no
-offsets within one; a store of the indeterminate pointer back into fresh
+anywhere in the allocation ends it, whether by a store, `memcpy`, `memset`
+or a call it was handed, since this check keeps no offsets within one; a
+`free` does not, so a read out of a block nothing wrote before it was freed
+is `SC0411` beside `SC0402`; a store of the indeterminate pointer back into fresh
 memory is a write like any other. A slot written on some paths is not
 reported, as for a local. A pointer read through an index or a member, and
 an integer read out of fresh memory, are not followed.

@@ -113,8 +113,8 @@ pub(super) struct Known {
     /// direction that can only silence. A pointer read out of it is
     /// reported where it is read, and is
     /// [`Held::fresh_read`](super::parts::Held::fresh_read). Any store clears
-    /// it, a store of an indeterminate pointer included, and so does a free
-    /// that may free it. See ADR-0057. Not "empty":
+    /// it, a store of an indeterminate pointer included; a free does not.
+    /// See ADR-0057. Not "empty":
     /// taking a fresh block's contents as empty is the unsound starting set
     /// #579 met.
     pub(super) fresh: Vec<bool>,
