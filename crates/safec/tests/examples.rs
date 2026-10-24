@@ -86,7 +86,8 @@ fn safec(arguments: &[&str], within: &Path) -> Output {
 ///
 /// An edit that no longer matches, because the example changed under it or
 /// arrived with CRLF line endings, fails here by name rather than leaving the
-/// test to check the unedited program.
+/// test to check the unedited program. Mutation: write `free( total );` in the
+/// example. Both tests that edit the `free` fail here.
 fn edited(text: &str, from: &str, to: &str) -> String {
     assert_eq!(
         text.matches(from).count(),
@@ -182,6 +183,9 @@ fn the_fib_example_freed_before_its_read_is_refused_as_a_use_after_free() {
 }
 
 /// The marked `free` written twice is refused as a double free.
+///
+/// Mutation: change `SC0401` to `SC0409` in the marker above `free(total);`.
+/// This fails on the marker.
 #[test]
 fn the_fib_example_freed_twice_is_refused_as_a_double_free() {
     let text = edited(
@@ -194,6 +198,10 @@ fn the_fib_example_freed_twice_is_refused_as_a_double_free() {
 
 /// The marked null test deleted is refused, as a dereference of a pointer
 /// that may be null.
+///
+/// Mutation: change `SC0403` to `SC0402` in the marker above the test. This
+/// fails on the marker. Mutation: write the test as `if (0 == total)`. The
+/// edit no longer matches and this fails in `edited`.
 #[test]
 fn the_fib_example_without_its_null_test_is_refused() {
     let text = edited(FIB, "    if (total == 0) {\n        return 1;\n    }\n", "");
