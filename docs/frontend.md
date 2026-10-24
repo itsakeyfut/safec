@@ -686,12 +686,28 @@ a declaration. They are gaps rather than decisions, and each one is a program
 | `int a[3];`, or any array, function or struct type | the IR holds `int`, `char`, `void` and pointers to them |
 | `s.a` or `p->a`, a member access, typed by the type checker | the IR holds no struct to take a member of |
 | `int g;` at file scope, used inside a function | every place the IR can name starts at a local |
+| `p - q`, the difference of two pointers | C17 6.5.6 p9 makes it a `ptrdiff_t`, which this compiler has no type for, so the type checker leaves it untyped (`types.rs`) |
 
 The reason a refusal is reported rather than lowered around is that the IR has
 no way to say a function has a hole in it: a body with a piece missing and a
 body that is complete are the same shape, and an analysis reading the first
 would answer about code that was never there. A declaration says the one true
 thing, which is that the body is not here.
+
+### What the backend refuses
+
+These lower, so the safety checks read them at `--emit safety-ir`, and
+`crates/safec-llvm` cannot write them, so `--emit llvm-ir`, `object` and
+`executable` report `SC0801` at them. Each is a program `clang 20.1.6
+--target=x86_64-unknown-linux-gnu -std=c17 -pedantic-errors` accepts.
+
+| Written | Why it stops here |
+|---|---|
+| `p[1]`, `p[i]`, `*(p + 1)`, `*(p + i)`: pointer arithmetic by any count but a constant zero | it counts elements, and `ir::Ty` holds no width to count them with (ADR-0013); the interpreter refuses it in the same words |
+
+`p[0]` and `*(p + 0)` build, because the lowering folds an addition of zero
+away (ADR-0021). So a pointer can be read and written through, and not
+stepped: a buffer filled by index checks clean and does not compile.
 
 ### What the interpreter answers differently
 
