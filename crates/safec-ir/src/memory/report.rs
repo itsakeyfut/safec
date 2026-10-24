@@ -694,9 +694,9 @@ pub(super) fn loaded_indeterminate(
 
 /// The local a `free` or a `realloc` at this terminator is handed, where it
 /// holds a pointer read out of fresh memory that nothing may have replaced,
-/// so was reported where it was read: [`Known::reads_indeterminate`]. A doubt
+/// so was reported where it was read: [`Known::holds_fresh_read`]. A doubt
 /// about that free is the same defect again. See ADR-0057.
-pub(super) fn freed_indeterminate(
+pub(super) fn freed_after_its_read_was_reported(
     analysis: &Allocations<'_>,
     terminator: &Terminator,
     known: &Known,
@@ -719,7 +719,7 @@ pub(super) fn freed_indeterminate(
     }
     match arguments.first() {
         Some(Operand::Copy(place))
-            if place.projection.is_empty() && known.reads_indeterminate(place.local.index()) =>
+            if place.projection.is_empty() && known.holds_fresh_read(place.local.index()) =>
         {
             Some(place.local)
         }

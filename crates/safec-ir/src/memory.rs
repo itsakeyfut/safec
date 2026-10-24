@@ -65,8 +65,8 @@ use crate::source::{SourceMap, Span};
 
 use built::named;
 use report::{
-    after_a_call, derefs, freed_indeterminate, handed, handed_places, inside, loaded_indeterminate,
-    reported, returned, used, used_before,
+    after_a_call, derefs, freed_after_its_read_was_reported, handed, handed_places, inside,
+    loaded_indeterminate, reported, returned, used, used_before,
 };
 use transfer::Allocations;
 
@@ -626,7 +626,8 @@ fn findings_within(
             // was read out of fresh memory**: the two would be one defect
             // reported twice, the second time as unknown. Only a doubt, and
             // only about the local freed. See ADR-0057.
-            let reported_at_its_read = freed_indeterminate(&analysis, &block.terminator, &known);
+            let reported_at_its_read =
+                freed_after_its_read_was_reported(&analysis, &block.terminator, &known);
             findings.extend(
                 reported(&analysis, &block.terminator, &known, &null, id)
                     .into_iter()
@@ -801,7 +802,8 @@ pub(crate) fn read_out_of_memory_in_element(element: &Element) -> Option<(Span, 
     // Every field written out, as `dereferenced_in_element` does.
     match element {
         Element::Assign(operation) => {
-            let mut places: Vec<Place> = through(&operation.place).into_iter().collect();
+            let mut places: Vec<Place> =
+                first_of_two_derefs(&operation.place).into_iter().collect();
             match &operation.value {
                 Rvalue::Use(operand) | Rvalue::Unary { op: _, operand } => {
                     places.extend(read_in(operand));
@@ -855,7 +857,7 @@ pub(crate) fn read_out_of_memory_in_terminator(
         } => {
             let mut places: Vec<Place> = arguments.iter().filter_map(read_in).collect();
             if let Some(destination) = destination {
-                places.extend(through(destination));
+                places.extend(first_of_two_derefs(destination));
             }
             Some((origin.span(), places))
         }
@@ -883,13 +885,13 @@ fn read_as_value(place: &Place) -> Option<Place> {
     if place.projection.as_slice() == [Projection::Deref] {
         Some(place.clone())
     } else {
-        through(place)
+        first_of_two_derefs(place)
     }
 }
 
 /// The `*l` reaching a place reads on the way, read or written: the first
 /// of two dereferences at its start.
-fn through(place: &Place) -> Option<Place> {
+fn first_of_two_derefs(place: &Place) -> Option<Place> {
     match place.projection.as_slice() {
         [Projection::Deref, Projection::Deref, ..] => Some(Place {
             local: place.local,

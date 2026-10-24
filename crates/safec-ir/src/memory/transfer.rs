@@ -1517,10 +1517,10 @@ impl Analysis for Allocations<'_> {
                     // this the allocation never leaves the temporary and the
                     // headline program is not an error at all.
                     Rvalue::Use(Operand::Copy(source)) if source.projection.is_empty() => {
-                        let indeterminate = value.reads_indeterminate(source.local.index());
+                        let indeterminate = value.holds_fresh_read(source.local.index());
                         value.points_to[destination.index()] =
                             value.points_to[source.local.index()].clone();
-                        // See `Known::reads_indeterminate`.
+                        // See `Known::holds_fresh_read`.
                         value.points_to[destination.index()].fresh_read = indeterminate;
                     }
                     // **Arithmetic on a pointer is followed.** C17 6.5.6 p8

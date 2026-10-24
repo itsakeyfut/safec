@@ -1110,7 +1110,7 @@ impl Known {
     /// read may have written a determinate pointer into it since. The one
     /// answer a copy of it and the suppression at a free ask, so that the
     /// doubt a free of what `fill(&t)` wrote raises is kept. See ADR-0057.
-    pub(super) fn reads_indeterminate(&self, local: usize) -> bool {
+    pub(super) fn holds_fresh_read(&self, local: usize) -> bool {
         self.points_to[local].fresh_read && !self.escaped[local]
     }
 

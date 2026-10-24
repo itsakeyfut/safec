@@ -151,7 +151,7 @@ cases! {
         a_pointer_read_out_of_fresh_memory_stored_and_read_back_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy of it, freed after a call may have replaced it: the doubt at
         // the free stays, since what is freed may not be what was reported.
-        // Mutation: drop the `escaped` clause in `Known::reads_indeterminate`.
+        // Mutation: drop the `escaped` clause in `Known::holds_fresh_read`.
         // The doubt goes.
         a_pointer_read_out_of_fresh_memory_a_call_replaced_is_still_doubted_where_a_copy_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of what `malloc` returned before anything wrote
@@ -161,12 +161,12 @@ cases! {
         a_pointer_read_out_of_fresh_memory_is_reported_where_it_is_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Freed, which frees no allocation, and reported once, at the read,
         // rather than beside a doubt at the free. Mutation: drop the
-        // suppression after `freed_indeterminate` in the replay. The doubt
-        // joins. See ADR-0057.
+        // suppression after `freed_after_its_read_was_reported` in the
+        // replay. The doubt joins. See ADR-0057.
         a_pointer_read_out_of_fresh_memory_and_freed_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read through and then freed: reported at the read, not again at
         // either use. Mutation: have `loaded_indeterminate` report a read
-        // through a local `Known::reads_indeterminate` marks as well. `SC0411`
+        // through a local `Known::holds_fresh_read` marks as well. `SC0411`
         // joins at the read through.
         a_pointer_read_out_of_fresh_memory_read_through_and_freed_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Copied first, and the copy freed. Mutation: clear the mark on a
@@ -208,7 +208,7 @@ cases! {
         // Read out of fresh memory, and then handed by address to a call
         // that may have written another pointer into it, so the doubt at its
         // free stays. Mutation: drop the `escaped` clause in
-        // `Known::reads_indeterminate`. The doubt goes.
+        // `Known::holds_fresh_read`. The doubt goes.
         a_pointer_read_out_of_fresh_memory_a_call_may_have_replaced_is_still_doubted_where_it_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read through a pointer to either of two allocations, one written,
         // and used only where it is the written one. Mutation: weaken `all`
@@ -230,7 +230,8 @@ cases! {
         // call to `loaded_indeterminate` at the terminator. It builds.
         a_pointer_read_out_of_fresh_memory_by_a_condition_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Handed to `realloc`, and reported once, at the read. Mutation: ask
-        // `freed_indeterminate` about `free` alone. The doubt joins.
+        // `freed_after_its_read_was_reported` about `free` alone. The doubt
+        // joins.
         a_pointer_read_out_of_fresh_memory_and_reallocated_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read out of the old block on the arm where `realloc` failed, which
         // left it live and unwritten (C17 7.22.3.5 p4). Mutation: clear
@@ -283,10 +284,10 @@ cases! {
         // `read_out_of_memory_in_element`. It builds.
         a_pointer_read_out_of_fresh_memory_by_an_expression_statement_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read on the way through two dereferences. Mutation: answer `None`
-        // in `through`. It builds.
+        // in `first_of_two_derefs`. It builds.
         a_pointer_read_out_of_fresh_memory_through_two_dereferences_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written, which reads nothing out of it. Mutation: answer a place
-        // written through one dereference in `through`. `SC0411`.
+        // written through one dereference in `first_of_two_derefs`. `SC0411`.
         a_pointer_written_into_fresh_memory_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Its address is taken, so a write through it may assign it and this
         // check does not follow one. Mutation: drop the exclusion. It is
