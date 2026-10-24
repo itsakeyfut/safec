@@ -260,6 +260,17 @@ cases! {
         // read only `Rvalue::Use` in `read_out_of_memory_in_element`. It
         // builds.
         a_pointer_read_out_of_fresh_memory_in_a_comparison_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same read on both sides, one caret, one report. Mutation:
+        // drop the check of `said` in `loaded_indeterminate`. It panics, as
+        // a second proof at one caret names no free.
+        a_pointer_read_out_of_fresh_memory_twice_in_one_comparison_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // On the right. Mutation: drop the right operand in
+        // `read_out_of_memory_in_element`. It builds.
+        a_pointer_read_out_of_fresh_memory_on_the_right_of_a_comparison_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `**box` as an operand reads `*box` on the way. Mutation: answer
+        // `None` for anything but `*l` in `read_as_value`. Only the null
+        // doubt is left.
+        a_pointer_read_out_of_fresh_memory_and_read_through_in_one_operand_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read as the operand of a unary operator, with no temporary.
         // Mutation: read nothing for `Rvalue::Unary` in
         // `read_out_of_memory_in_element`. It builds.
