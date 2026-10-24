@@ -96,7 +96,7 @@ still `SC0801`, which is the gap this does not close.
 
 ### Confirmation
 
-Each mutation applied on its own to `crates/safec/src/lowering.rs`, the whole
+Each mutation applied on its own to `crates/safec-c/src/lowering.rs`, the whole
 workspace suite run with `--no-fail-fast`, the file restored.
 
 | Mutation | Named test that fails |
@@ -189,6 +189,6 @@ not against what shipped before it, which is the next section.
 ## More Information
 
 * `Lowering::unmoved` and its two callers in
-  [`crates/safec/src/lowering.rs`](../../crates/safec/src/lowering.rs).
+  [`crates/safec-c/src/lowering.rs`](../../crates/safec-c/src/lowering.rs).
 * Issue #172 carries both implementations and the measurement that chose
   between them.

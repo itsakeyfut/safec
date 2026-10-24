@@ -1291,7 +1291,7 @@ fn a_comma_answers_its_right_operand() {
 /// Mutation: write the `Binary` into `a` and drop the temporary. The
 /// assertions below fail, and so does
 /// `a_compound_assignment_on_a_char_is_not_undefined` in
-/// `crates/safec/tests/interp.rs`.
+/// `crates/safec-c/tests/interp.rs`.
 #[test]
 fn a_compound_assignment_is_the_assignment_it_stands_for() {
     let lowered = lowered("int f(int a, int b) {\n    a -= b;\n    return a;\n}\n");

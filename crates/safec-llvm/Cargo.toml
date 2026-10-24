@@ -8,7 +8,7 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 
-# The only dependency, and the point of the crate. `safec` is not here and
+# The only dependency, and the point of the crate. `safec-c` is not here and
 # cannot be: it depends on this one, so the arrow the other way is a cycle cargo
 # refuses before anything compiles. See ADR-0011 and ADR-0014.
 [dependencies]

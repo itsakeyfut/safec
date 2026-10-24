@@ -2,7 +2,7 @@
 //!
 //! `safec_ir::nullability` answers a `Finding` rather than a diagnostic so that
 //! it can be read without a frontend, and this is the file that spends that.
-//! The corpus under `crates/safec/tests/cases/` holds the shapes this compiler's
+//! The corpus under `crates/safec-c/tests/cases/` holds the shapes this compiler's
 //! own lowering produces; what is here is the shapes it does **not** produce and
 //! another frontend can.
 //!
@@ -13,7 +13,7 @@
 //! boundary or a sequence-point marker, and it gives each scope's variable a
 //! local of its own rather than reusing one across such a boundary.
 //! Measured, all of them. ADR-0011 makes the Clang adapter a reader of this
-//! IR without going through `safec`'s frontend, so an unreachable rule today is
+//! IR without going through `safec-c`'s frontend, so an unreachable rule today is
 //! a reachable one then, and a rule nothing can break is a rule nobody can
 //! trust.
 

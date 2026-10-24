@@ -7,7 +7,7 @@
 //! ADR-0011 is where that boundary is argued.
 //!
 //! The rest is shared with the artifacts that are not this crate's. `--emit
-//! tokens` and `--emit ast` are written in `safec`'s driver and print the same
+//! tokens` and `--emit ast` are written in `safec-c`'s driver and print the same
 //! line shape, so [`dump_node`], [`dump_line`], [`DEEPEST_INDENT`] and
 //! [`quoted`] are here for all three: one answer to what a level of indent
 //! looks like, and one to what happens past the depth where it stops helping.
@@ -41,7 +41,7 @@ use crate::source::{SourceMap, Span};
 /// a message that runs to two lines is ordinary.
 ///
 /// This is for text the compiler writes. The text of a file, which `ariadne`
-/// echoes rather than this compiler, goes through `render::echoed` in `safec`
+/// echoes rather than this compiler, goes through `render::echoed` in `safec-c`
 /// instead, for a reason that rules this function out there: it turns one
 /// character into several, and a label's span is a byte offset into the very
 /// text being echoed.
@@ -49,7 +49,7 @@ use crate::source::{SourceMap, Span};
 /// Public, and in this crate, because three artifacts and every diagnostic ask
 /// one question. Every line of `--emit tokens`, `--emit ast` and `--emit
 /// safety-ir` begins with a file's name, and a name is content the same way a
-/// file's text is. Two of those artifacts are written in `safec` and reach
+/// file's text is. Two of those artifacts are written in `safec-c` and reach
 /// here rather than keeping a second answer.
 pub fn shown(text: &str) -> Cow<'_, str> {
     if !text.chars().any(is_obeyed) {
@@ -69,7 +69,7 @@ pub fn shown(text: &str) -> Cow<'_, str> {
 
 /// Whether a terminal would act on this rather than print it.
 ///
-/// Public because `render::echoed` in `safec` is the other half of the pair
+/// Public because `render::echoed` in `safec-c` is the other half of the pair
 /// [`shown`] belongs to, and the two must agree about which characters are the
 /// dangerous ones. One predicate rather than two that could drift.
 ///
@@ -597,7 +597,7 @@ mod tests {
     ///
     /// It is worth asserting here rather than reading, because the pair this
     /// predicate serves now sits either side of a crate boundary, `shown` here
-    /// and `render::echoed` in `safec`, and the two can no longer be changed
+    /// and `render::echoed` in `safec-c`, and the two can no longer be changed
     /// in one edit.
     #[test]
     fn only_newline_and_tab_are_laid_out_rather_than_obeyed() {

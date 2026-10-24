@@ -81,7 +81,7 @@ code already in use" is honoured in the part that matters, which is the number.
 ### Confirmation
 
 The spelling is held by the compiler. `Code::new` in
-`crates/safec/src/diagnostics.rs` asserts `SC` and four digits, and every code
+`crates/safec-c/src/diagnostics.rs` asserts `SC` and four digits, and every code
 in the crate is declared as a `const`, so `Code::new("E0301")` is
 `error[E0080]` at its own declaration rather than a diagnostic somebody has to
 notice in review. `a_code_is_sc_and_four_digits_or_it_is_not_a_code` reaches
@@ -90,10 +90,10 @@ deleted.
 
 Which code goes where is held by tests.
 `each_lexical_diagnostic_keeps_the_code_it_was_assigned` in
-`crates/safec/src/lexer.rs` pins the five lexical codes by string,
+`crates/safec-c/src/lexer.rs` pins the five lexical codes by string,
 `each_syntax_diagnostic_keeps_the_code_it_was_assigned` in
-`crates/safec/src/parser/tests.rs` pins the two syntax codes, and thirteen expected
-files under `crates/safec/tests/cases/` hold a rendered code byte for byte.
+`crates/safec-c/src/parser/tests.rs` pins the two syntax codes, and thirteen expected
+files under `crates/safec-c/tests/cases/` hold a rendered code byte for byte.
 Changing any of the seven fails a test by name. The two are not redundant:
 `SC0202` is reported only past the nesting limit, which no corpus case reaches,
 so the parser test is the only thing holding it.
@@ -177,9 +177,9 @@ not is worse than one that is honestly unenforced.
 
 ## More Information
 
-* `crates/safec/src/lexer.rs` and `crates/safec/src/parser.rs`: the codes in
+* `crates/safec-c/src/lexer.rs` and `crates/safec-c/src/parser.rs`: the codes in
   use, and the doc comment on `EXPECTED` that did the survey this replaces.
-* `crates/safec/src/diagnostics/render.rs`: the header that prints the severity
+* `crates/safec-c/src/diagnostics/render.rs`: the header that prints the severity
   outside the brackets, and the test that renders one at all four severities.
 * [ADR-0001](0001-promote-unproven-results-in-the-sink.md): why a severity moves
   while a code does not.

@@ -145,7 +145,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "safec"
+name = "safec-c"
 version = "0.1.0"
 dependencies = [
  "ariadne",

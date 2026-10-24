@@ -259,7 +259,7 @@ free rather than at a read, which is ADR-0041's reason for `SC0406`. A new
 
 Every mutation below was applied on its own, the whole workspace was run with
 `--no-fail-fast`, and the file was restored. The tests named are the ones that
-failed. The cases are in `crates/safec/tests/cases`, and every mutation is in
+failed. The cases are in `crates/safec-c/tests/cases`, and every mutation is in
 the memory check (`crates/safec-ir/src/memory.rs` and `memory/`) unless it says
 otherwise.
 
@@ -455,7 +455,7 @@ otherwise.
   exempting every unproven site an edge reaches, rather than those the
   address alone reaches, fails
   `a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on`.
-* In `crates/safec/src/driver/words.rs`, changing the words of the `Lost` row
+* In `crates/safec-c/src/driver/words.rs`, changing the words of the `Lost` row
   fails `a_table_allocated_again_by_a_loop_still_holds_what_it_held` alone, and
   giving the `Unsequenced` row the disagreement remedy fails
   `a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it` alone.

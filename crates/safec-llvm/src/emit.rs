@@ -25,7 +25,7 @@ use safec_ir::target::{Extend, Integer, Target};
 /// Something the IR can express and this backend cannot.
 ///
 /// The shape [`Trap`] has for the interpreter, and for the same reason: this
-/// crate cannot see `Diagnostic`, which lives in `safec`. Whoever calls
+/// crate cannot see `Diagnostic`, which lives in `safec-c`. Whoever calls
 /// [`functions`] turns one of these into whatever it reports with.
 ///
 /// [`Trap`]: safec_ir::interp::Trap

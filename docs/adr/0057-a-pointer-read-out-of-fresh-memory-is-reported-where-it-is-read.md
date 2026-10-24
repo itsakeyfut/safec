@@ -45,7 +45,7 @@ Dropping the mark along with the reports it used to make was rejected because a 
 
 ### Confirmation
 
-Each in `crates/safec/tests/cases/memory/` unless named otherwise, with the mutation that fails it in its comment in `crates/safec/tests/cases.rs`:
+Each in `crates/safec-c/tests/cases/memory/` unless named otherwise, with the mutation that fails it in its comment in `crates/safec-c/tests/cases.rs`:
 
 * **The read is reported, whatever it is read for.** `a_pointer_read_out_of_fresh_memory_and_only_compared_is_reported` and `a_pointer_read_out_of_fresh_memory_and_discarded_is_reported`: drop the call to `loaded_indeterminate` for an element, and both build. `..._in_a_comparison_is_reported`, `..._under_a_logical_not_is_reported`, `..._and_handed_to_a_call_is_reported`, `..._by_an_expression_statement_is_reported`, `..._through_two_dereferences_is_reported` and `..._by_a_condition_is_reported` each fail when the matching arm of `read_out_of_memory_in_element` or `read_out_of_memory_in_terminator` reads nothing. `a_pointer_written_into_fresh_memory_is_not_reported` fails when a write through one dereference is read as a read.
 * **Not again at a later use.** `a_pointer_read_out_of_fresh_memory_read_through_and_freed_is_reported_once`: report a read through a local `Known::holds_fresh_read` marks, and `SC0411` joins at the read through.

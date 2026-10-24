@@ -5304,8 +5304,8 @@ fn cases_dir() -> PathBuf {
 /// The compiler is run **from** a directory of its own, [`work_dir`], holding a
 /// copy of the case's input, and handed a bare file name, because it echoes
 /// back the path it was given: `safec --emit
-/// tokens crates/safec/tests/cases/frontend/add.c` prints
-/// `crates/safec/tests/cases/frontend/add.c:3:1 keyword "int"`, while the same
+/// tokens crates/safec-c/tests/cases/frontend/add.c` prints
+/// `crates/safec-c/tests/cases/frontend/add.c:3:1 keyword "int"`, while the same
 /// run from inside the directory prints `add.c:3:1 keyword "int"`. That is
 /// what makes an expected file mean the same thing on every machine, and it is
 /// why passing a path here would silently break every case that reports a

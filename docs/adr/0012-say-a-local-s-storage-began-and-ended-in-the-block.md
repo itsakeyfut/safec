@@ -139,13 +139,13 @@ test helper that reads one. Every arm names its fields; none writes `..`,
 except `Element::name`, where the name does not depend on what the kind carries.
 
 The two programs are `the_same_program_in_a_nested_scope_is_not_the_same_ir` in
-`crates/safec/src/lowering/tests.rs`: it lowers both and fails if the `StorageDead`
+`crates/safec-c/src/lowering/tests.rs`: it lowers both and fails if the `StorageDead`
 loop goes from the `Compound` arm. `a_local_the_function_declares_has_no_marker`
 holds the other half, that a local whose scope is the function's gets nothing,
 and fails if the depth test goes.
 
 The claim by running rather than by inspection is in
-`crates/safec/tests/interp.rs`. `a_read_through_a_pointer_to_dead_storage_stops_the_run`
+`crates/safec-c/tests/interp.rs`. `a_read_through_a_pointer_to_dead_storage_stops_the_run`
 fails if the interpreter treats a storage-end as a no-op, and
 `a_write_through_a_pointer_to_dead_storage_stops_the_run` fails if only the read
 is checked. That second one is load-bearing twice: a write to a slot with no
@@ -196,7 +196,7 @@ and fails.
   that way the marker is emitted nowhere. The element shape is what makes the
   fix possible, and the fix is per-exit-edge emission in the lowering rather
   than anything here; `return` is the first exit that has it, and
-  `a_return_ends_every_scope_it_leaves` in `crates/safec/src/lowering/tests.rs`
+  `a_return_ends_every_scope_it_leaves` in `crates/safec-c/src/lowering/tests.rs`
   is what fails if it goes.
 * Good, because `goto` leaving a scope is expressible: the element sits on the
   path control takes, and the CFG already carries that path.

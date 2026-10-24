@@ -10,15 +10,15 @@
 //! That is also why they say something the unit tests cannot: that a program
 //! still means what it meant after five stages have had it.
 
-use safec::diagnostics::DiagnosticSink;
-use safec::lexer::lex;
-use safec::lowering::lower;
-use safec::parser::parse;
-use safec::preprocessor::preprocess;
+use safec_c::diagnostics::DiagnosticSink;
+use safec_c::lexer::lex;
+use safec_c::lowering::lower;
+use safec_c::parser::parse;
+use safec_c::preprocessor::preprocess;
 // Renamed, because the interpreter has a `resolve` of its own and the two
 // answer different questions: one resolves a name, the other a place.
-use safec::sema::resolve as resolve_names;
-use safec::types::check;
+use safec_c::sema::resolve as resolve_names;
+use safec_c::types::check;
 use safec_ir::interp::{Trap, Value, run};
 use safec_ir::source::SourceMap;
 use safec_ir::target::Target;

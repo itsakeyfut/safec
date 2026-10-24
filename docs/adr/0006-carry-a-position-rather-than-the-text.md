@@ -95,7 +95,7 @@ sake.
   being asked for often enough to be worth materialising.
 * Neutral, and worth stating because the tree has since arrived: the table this
   record calls "parallel to the tokens" is keyed by span, not by token index.
-  `Expr::Identifier` in `crates/safec/src/ast.rs` carries a `Span`, and name
+  `Expr::Identifier` in `crates/safec-c/src/ast.rs` carries a `Span`, and name
   resolution walks the tree rather than the token stream, so an index into the
   scan is not something it holds. `Span` derives `Hash` for that reason. The
   shape the record fixes is unchanged; only what the key is was left open, and
@@ -106,7 +106,7 @@ sake.
   reason is the one this record could not see: a macro body is one piece of
   text, so two uses expanded from one `#define` carry one span and can refer to
   two declarations, while ADR-0008's ids are unique by construction.
-  `crates/safec/src/sema.rs` says so where it declares the table, and calls its
+  `crates/safec-c/src/sema.rs` says so where it declares the table, and calls its
   own type `Binding` rather than `Symbol` so that the name this record spends
   below is still free.
 
@@ -124,7 +124,7 @@ sake.
 
 ### Confirmation
 
-`crates/safec/src/token.rs`:
+`crates/safec-c/src/token.rs`:
 
 ```rust
 const _: () = assert!(mem::size_of::<Token>() == 16);
@@ -146,7 +146,7 @@ than leaving a reader to assume a guard exists.
 
 ## More Information
 
-* `crates/safec/src/token.rs`: `Token`, `TokenKind`, and the size assertion.
+* `crates/safec-c/src/token.rs`: `Token`, `TokenKind`, and the size assertion.
 * `crates/safec-ir/src/source.rs`: the module documentation stating the same rule
   for positions, which this generalises.
 * [ADR-0004](0004-resolve-the-strictest-level-where-the-policy-is-built.md): the same

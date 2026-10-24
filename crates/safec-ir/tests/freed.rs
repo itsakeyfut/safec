@@ -7,7 +7,7 @@
 //! through the parser proves both at once and says which of them broke only by
 //! where the diff lands.
 //!
-//! The corpus under `crates/safec/tests/cases/` holds the same shapes written
+//! The corpus under `crates/safec-c/tests/cases/` holds the same shapes written
 //! as C, which is the other half. Both exist because a feature guarded at
 //! one stage is unguarded at every stage that
 //! reads it.
@@ -1910,7 +1910,7 @@ fn a_pointer_subtracted_from_a_constant_is_not_proved_to_be_off_the_start() {
 /// **Not a subscript, and not C.** C17 6.5.2.1 p1 requires one operand of `[]`
 /// to have integer type, so `q[r]` over two pointers is a constraint violation
 /// rather than a spelling this check has to answer for, and so is the `q + r`
-/// below it under 6.5.6 p2. `safec`'s type check refuses both as the
+/// below it under 6.5.6 p2. `safec-c`'s type check refuses both as the
 /// program's fault, `error[SC0306]`, so no corpus case can reach this shape.
 ///
 /// Mutation: in `built_from`, take the left operand rather than the ones the

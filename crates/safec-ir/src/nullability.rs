@@ -32,7 +32,7 @@
 //! [`crate::ir::Function::promised`], written `_Nonnull` or made by level 5's
 //! default, and this check reads only that it was made (ADR-0050).
 //!
-//! **Nothing here reports.** This builds a [`Conclusion`] and a span; `safec`
+//! **Nothing here reports.** This builds a [`Conclusion`] and a span; `safec-c`
 //! turns one into a diagnostic, because this crate cannot see one, which is
 //! ADR-0011.
 
@@ -143,7 +143,7 @@ pub(crate) enum Path {
 /// and where.
 ///
 /// Not a diagnostic: this crate cannot see one. What each conclusion costs a
-/// build is `Diagnostic::concluded`'s in `safec`, which is the one place that
+/// build is `Diagnostic::concluded`'s in `safec-c`, which is the one place that
 /// answers it, and ADR-0001 is why there is only one.
 ///
 /// **One span and not two.** `docs/safety-model.md` asks the memory axis's
@@ -1770,7 +1770,7 @@ impl NullAtTerminators {
 ///
 /// Not an `Ord` on [`Conclusion`]: that type is `safec_ir`'s answer about one
 /// thing rather than a scale, and ADR-0002 puts the ordering a reader sees on
-/// `Severity` in `safec`, which is the crate that owns what a conclusion costs.
+/// `Severity` in `safec-c`, which is the crate that owns what a conclusion costs.
 fn severity(conclusion: Conclusion) -> u8 {
     match conclusion {
         Conclusion::Unsafe => 2,

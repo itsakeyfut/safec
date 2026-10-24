@@ -132,7 +132,7 @@ Every mutation below was applied on its own, the whole workspace was run with
 `--no-fail-fast`, and the file was restored from a copy rather than from git.
 The tests named are the ones that failed; how many there were is not written
 down, because a count is a fact about the suite of the day rather than about
-the rule. The cases are in `crates/safec/tests/cases`.
+the rule. The cases are in `crates/safec-c/tests/cases`.
 
 **Believed by the body.** `Nullability::on_entry` in
 `crates/safec-ir/src/nullability.rs` never reading `Function::nonnull` fails
@@ -180,9 +180,9 @@ that case alone; not printing it in the IR fails every case that emits the IR.
 Reading a parameter's annotation from the first derivation of its declarator
 rather than the last fails `a_nonnull_after_the_last_star_of_a_parameter_is_read`
 alone. `the_annotation_table_is_the_spellings_this_compiler_knows` in
-`crates/safec/src/token.rs` holds the spelling, and
+`crates/safec-c/src/token.rs` holds the spelling, and
 `a_word_spelled_as_an_annotation_is_one_and_its_neighbours_are_not` in
-`crates/safec/src/lexer.rs` fails when `scan_word` never asks for one.
+`crates/safec-c/src/lexer.rs` fails when `scan_word` never asks for one.
 
 **Refused where it cannot apply.** Deleting the call to `Parser::placed` fails
 every `a_nonnull_on_..._is_refused` case, at least one per reason that function

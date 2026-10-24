@@ -17,7 +17,7 @@
 //! **This answers a [`Finding`] rather than a diagnostic.** ADR-0011 keeps this
 //! crate from seeing one, and what that buys is a check testable against IR
 //! built by hand instead of only through the frontend. `safec_llvm`'s `Refusal`
-//! is the same shape, and `safec` turns one of those into a diagnostic too.
+//! is the same shape, and `safec-c` turns one of those into a diagnostic too.
 //!
 //! **An allocation is named by the local it first landed in.** A call's
 //! destination and a parameter are the two places one can arrive from, and both
@@ -216,7 +216,7 @@ const MAX_BYTES: usize = 1 << 30;
 /// One thing this check concluded, and where.
 ///
 /// Not a diagnostic: this crate cannot see one. What each conclusion costs a
-/// build is `Diagnostic::concluded`'s in `safec`, which is the one place that
+/// build is `Diagnostic::concluded`'s in `safec-c`, which is the one place that
 /// answers it, and ADR-0001 is why there is only one.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Finding {
@@ -344,7 +344,7 @@ impl LostReason {
 /// freed already is being told something was established somewhere; where this
 /// check lost the pointer, nothing was, and saying it anyway is a claim about
 /// a program that nobody worked out. Which words each reason gets is
-/// `memory_finding`'s in `safec`, for the reason [`Finding`] gives.
+/// `memory_finding`'s in `safec-c`, for the reason [`Finding`] gives.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Unproven {
     /// The paths or the sites reaching here disagree about a site that really

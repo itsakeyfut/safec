@@ -175,7 +175,7 @@ Every mutation below was applied on its own to the tree as committed, the
 whole workspace was run with `--no-fail-fast`, and the file was restored from
 git. The tests named are the ones that failed; how many there were is not
 written down, because a count is a fact about the suite of the day rather than
-about the rule. The cases are in `crates/safec/tests/cases`.
+about the rule. The cases are in `crates/safec-c/tests/cases`.
 
 **Where a conclusion goes.** This is the one the record is about. Having
 `driver.rs::route` keep nothing in `hatched`, which is the hatch as a

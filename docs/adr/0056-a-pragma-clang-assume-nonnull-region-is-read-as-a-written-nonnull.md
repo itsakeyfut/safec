@@ -40,7 +40,7 @@ Reading it only at level 5 was rejected because the header that needs the pragma
 
 ### Confirmation
 
-**Nothing holds this yet, and nothing can**: the preprocessor reads no `#pragma`, and `no_directive_is_left_in_what_is_preprocessed` and `a_directive_that_is_not_read_keeps_the_code_it_was_assigned` in `crates/safec/src/preprocessor.rs` are what hold that a `#pragma` is refused rather than read today. The change that reads this one owes, before it lands, a case for each bullet above and the mutation that fails it, and replaces this paragraph with them.
+**Nothing holds this yet, and nothing can**: the preprocessor reads no `#pragma`, and `no_directive_is_left_in_what_is_preprocessed` and `a_directive_that_is_not_read_keeps_the_code_it_was_assigned` in `crates/safec-c/src/preprocessor.rs` are what hold that a `#pragma` is refused rather than read today. The change that reads this one owes, before it lands, a case for each bullet above and the mutation that fails it, and replaces this paragraph with them.
 
 ### Consequences
 

@@ -93,30 +93,31 @@ model ever has to build without an argument parser.
 
 ### Confirmation
 
-Adding `safec = { path = "../safec" }` to `crates/safec-ir/Cargo.toml` is the
+The frontend this record calls `safec` is the crate `safec-c` now. Adding
+`safec-c = { path = "../safec-c" }` to `crates/safec-ir/Cargo.toml` is the
 mutation, and cargo refuses the workspace before compiling anything:
 
 ```text
-error: cyclic package dependency: package `safec v0.1.0 (...)` depends on itself. Cycle:
-package `safec v0.1.0 (...)`
-    ... which satisfies path dependency `safec` (locked to 0.1.0) of package `safec-ir v0.1.0 (...)`
-    ... which satisfies path dependency `safec-ir` (locked to 0.1.0) of package `safec v0.1.0 (...)`
+error: cyclic package dependency: package `safec-c v0.1.0 (...)` depends on itself. Cycle:
+package `safec-c v0.1.0 (...)`
+    ... which satisfies path dependency `safec-c` (locked to 0.1.0) of package `safec-ir v0.1.0 (...)`
+    ... which satisfies path dependency `safec-ir` (locked to 0.1.0) of package `safec-c v0.1.0 (...)`
 ```
 
 The manifest is the guard because the manifest is where the reversal would be
-written. A `use safec::` with no such line does not resolve either, which
+written. A `use safec_c::` with no such line does not resolve either, which
 catches the same reversal one step later. Which code that is depends on how far
-the path gets: `use safec::driver;` is `error[E0432]: unresolved import safec`
-and `use safec::lexer::lex;` is `error[E0433]: cannot find module or crate
-safec`. Both were measured; neither is worth relying on, which is why the
-manifest is the guard this record names.
+the path gets: `use safec_c::driver;` is `error[E0432]: unresolved import
+safec_c` and `safec_c::lexer::lex` in an expression is `error[E0433]: cannot
+find module or crate safec_c`. Both were measured; neither is worth relying on,
+which is why the manifest is the guard this record names.
 
 The testable half is `a_function_built_by_hand_runs` and the five other
 hand-built interpreter tests, which live in `crates/safec-ir/src/interp.rs` and
 compile with no frontend in the dependency graph at all. `cargo tree -p
 safec-ir` prints one line, which is the same claim from the other side. The
 eighteen interpreter tests that compile a C program before running it moved to
-`crates/safec/tests/interp.rs`, because a test that lexes C is a test of the
+`crates/safec-c/tests/interp.rs`, because a test that lexes C is a test of the
 pair rather than of the IR.
 
 The printer's five hand-built tests moved with the printer for the same reason,

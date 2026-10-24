@@ -102,7 +102,7 @@ measured during #91's review, which an ordinary `.c` file reaches.
 
 ### Confirmation
 
-`an_object_is_for_the_machine_the_run_named` in `crates/safec/tests/object.rs`
+`an_object_is_for_the_machine_the_run_named` in `crates/safec-c/tests/object.rs`
 makes an object for all eight targets and reads what each one is out of its own
 header, against eight measurements written out rather than walked. A target this
 `clang` was not built with is said out loud and skipped, and the host's own

@@ -404,7 +404,7 @@ of a parameter's own function type, may still go unnamed.
 
 ### What an integer constant is worth, and what type it is not
 
-The scan settles where a constant ends and stops there. `crates/safec/src/types.rs`
+The scan settles where a constant ends and stops there. `crates/safec-c/src/types.rs`
 is what reads it, because deciding the type needs the range of `int` and the
 scan is below the target. Three bases, C17 6.4.4.1 p1: a leading `0x` or `0X`
 is hexadecimal, a leading `0` is octal, and anything else is decimal, so `010`
@@ -413,7 +413,7 @@ have, and then discarded.
 
 **Rejected, because there is no type to give them to.** 6.4.4.1 p5 asks for the
 first type in a list that holds the value, and the list is `int`,
-`unsigned int`, `long`, and so on. `crates/safec/src/ast.rs`'s `Type` has `Int`,
+`unsigned int`, `long`, and so on. `crates/safec-c/src/ast.rs`'s `Type` has `Int`,
 `Char`, `Void` and the types derived from them, and
 `crates/safec-ir/src/target.rs`'s `Target` answers `int()` and `char()`. There
 is no `unsigned int` and no `long` for p5's table to select, so `int` is the
@@ -477,7 +477,7 @@ table, because `long` is 32 bits on `x86_64-pc-windows-msvc` and 64 on
 `x86_64-unknown-linux-gnu`.
 
 Character constants (6.4.4.4) are not here, because the parser builds no
-expression for one: `crates/safec/src/parser.rs`'s `primary` reads a number and
+expression for one: `crates/safec-c/src/parser.rs`'s `primary` reads a number and
 an identifier, and a character constant is refused as `expected an expression`.
 
 ### Which zero is a null pointer constant
@@ -676,7 +676,7 @@ it does.
 
 ### What the lowering refuses
 
-The frontend accepts these and `crates/safec/src/lowering.rs` cannot build IR
+The frontend accepts these and `crates/safec-c/src/lowering.rs` cannot build IR
 for them, so they are reported as `SC0304` and the function they are in is left
 a declaration. They are gaps rather than decisions, and each one is a program
 `clang 20.1.6` compiles.

@@ -10,7 +10,7 @@ decision-makers: itsakeyfut
 
 [`safety-model.md`](../safety-model.md#safe-unsafe-unknown) reports an
 `Unknown` conclusion as a warning and makes `--deny-unknown` the flag that turns
-it into an error. `crates/safec/src/cli.rs` resolves it that way today: the flag
+it into an error. `crates/safec-c/src/cli.rs` resolves it that way today: the flag
 sets it, `--safety strict` implies it, and every level below leaves it off.
 
 That default belongs to a compiler that accepts every program and comments on
@@ -91,7 +91,7 @@ taken in two places.
 ### Confirmation
 
 `every_level_that_runs_a_check_denies_unknown_unless_it_was_allowed` in
-`crates/safec/src/diagnostics/tests.rs` is the rule. It walks a written-out table of
+`crates/safec-c/src/diagnostics/tests.rs` is the rule. It walks a written-out table of
 every level against both answers, and checks that table's length against
 `SafetyLevel::value_variants()`, so a level added without an answer fails it by
 name rather than passing quietly.
@@ -112,11 +112,11 @@ for the wrong reason:
 `dereference` siblings are the only cases that reach the unpromoted arm of
 `certainty_note` from a command line.
 `every_safety_level_carries_the_request_across_the_boundary_unchanged` in
-`crates/safec/src/cli.rs`, which replaced the test that held the old default,
+`crates/safec-c/src/cli.rs`, which replaced the test that held the old default,
 says the command line does not decide it early;
 `allowing_unknown_is_refused_at_the_level_defined_as_leaving_none` beside it and
 `an_invocation_that_asks_for_two_different_things_exits_two` in
-`crates/safec/tests/exit_code.rs` hold the refusal and its wiring.
+`crates/safec-c/tests/exit_code.rs` hold the refusal and its wiring.
 
 ### Consequences
 

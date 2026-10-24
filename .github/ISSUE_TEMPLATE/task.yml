@@ -110,7 +110,7 @@ body:
         real only when breaking the code makes a named test fail, so name the
         mutation if you already know it.
       placeholder: |
-        `cargo test -p safec parser::`, plus a fixture under `crates/safec/tests/fixtures/`.
+        `cargo test -p safec-c parser::`, plus a fixture under `crates/safec-c/tests/fixtures/`.
         Removing the precedence climb makes `a + b * c` associate left and fails
         `multiplication_binds_tighter_than_addition`.
     validations:

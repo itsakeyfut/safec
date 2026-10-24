@@ -2,7 +2,7 @@
 //!
 //! Everything the safety analyses are written against lives here, and nothing
 //! that knows how a program was spelled. There is no lexer, no parser and no
-//! syntax tree in this crate, and there cannot be one: `safec` depends on this
+//! syntax tree in this crate, and there cannot be one: `safec-c` depends on this
 //! crate, so a dependency the other way is a cycle cargo refuses before it
 //! compiles anything. See ADR-0011.
 //!

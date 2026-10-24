@@ -47,7 +47,7 @@ Chosen option: **non-null by default at level 5, and `_Nullable` where null is p
 
 ### Confirmation
 
-Each bullet is held by corpus cases in `crates/safec/tests/cases/nullable`, and each mutation below was applied on its own and named the tests that failed.
+Each bullet is held by corpus cases in `crates/safec-c/tests/cases/nullable`, and each mutation below was applied on its own and named the tests that failed.
 
 - **The default, and the check that reports it.** Never making the default in `Lowering::body` fails `a_null_returned_where_level_5_promised_a_pointer_is_refused`, `an_allocation_returned_where_level_5_promised_a_pointer_is_doubted` and `the_end_of_a_function_promising_a_pointer_at_level_5_is_refused`, which go silent, and `a_result_level_5_promised_is_read_without_a_test`, which is doubted.
 - **`_Nullable` takes it back.** Letting the default apply where `_Nullable` was written fails `a_nullable_return_is_tested_before_it_is_read`. Lowering `_Nullable` as a promise fails `a_nullable_parameter_is_doubted_by_its_body` and `a_null_passed_to_a_nullable_parameter_is_accepted`.

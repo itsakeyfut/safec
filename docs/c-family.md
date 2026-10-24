@@ -272,7 +272,7 @@ against the assignment constraint, so `int n = p;` was accepted in silence
 where `n = p;` was `error[SC0302]`. It is now that error too, which was #205,
 and `initializing_with_the_wrong_type` and
 `an_allocation_initialized_into_an_integer_is_a_type_error` in
-`crates/safec/tests/cases` hold it.
+`crates/safec-c/tests/cases` hold it.
 
 There were two. `Lowering::promoted` gave the temporary of a compound
 assignment and of `++` or `--` the type `Ty::Int` whatever the place held, so
@@ -295,7 +295,7 @@ compound assignment or an increment.
 `a_compound_assignment_on_a_pointer_computes_into_a_pointer`,
 `an_increment_of_a_pointer_computes_into_a_pointer` and
 `a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer`
-in `crates/safec/tests/cases` are what say so.
+in `crates/safec-c/tests/cases` are what say so.
 
 **Conforming is load-bearing there, and only partly enforced.** C17 6.5.16.2
 p1 is what allows a pointer left operand for `+=` and `-=` and an arithmetic one
@@ -308,7 +308,7 @@ writing a multiplication over an `int *` into a local declared `int`; every
 binary operator's operands are now checked against its own clause of C17 6.5.5
 to 6.5.14, so it is `error[SC0306]` too, which was #236.
 `an_allocation_multiplied_into_an_integer_is_a_type_error` in
-`crates/safec/tests/cases` holds it. An argument reached the shape too:
+`crates/safec-c/tests/cases` holds it. An argument reached the shape too:
 `g(p)` with `int g(int a)` put a pointer into a parameter, which the callee's
 body holds as a local declared `int`. C17 6.5.2.2 p2 checks each argument
 against its parameter, so it is `error[SC0302]`, which was #356, and
@@ -419,7 +419,7 @@ operand would land where nothing reaches.
 continuation that does return hides the code after it from every check, which
 is a silence: since #343 a definition of one of those names is refused, so
 none can hide a body that returns, and
-`a_function_defined_here_named_abort_is_refused` in `crates/safec/tests/cases`
+`a_function_defined_here_named_abort_is_refused` in `crates/safec-c/tests/cases`
 holds that. A call
 given a continuation it never takes keeps code no execution reaches in the
 graph, which is a false report, and is what a call to a function of the

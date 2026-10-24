@@ -7,7 +7,7 @@
 # `text eol=lf` rather than `-text`: marking them binary would also stop `git
 # diff` rendering them, and a regenerated expectation being a readable diff is
 # the whole reason regenerating them is safe.
-crates/safec/tests/cases/** text eol=lf
+crates/safec-c/tests/cases/** text eol=lf
 
 # The same for the examples, for a reason of their own: `tests/examples.rs`
 # applies the edits an example's comments invite to its text, and an edit

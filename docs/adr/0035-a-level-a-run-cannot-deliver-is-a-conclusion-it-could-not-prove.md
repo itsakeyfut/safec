@@ -297,9 +297,9 @@ defect, and its table entry says so.
 * [`safety-model.md`](../safety-model.md#incremental-safety-levels), which gains
   the rule in the same change, and
   [`diagnostics.md`](../diagnostics.md) for the three kinds of diagnostic.
-* `crates/safec/src/cli.rs`, `crates/safec/src/options.rs`,
-  `crates/safec/src/safety.rs` and `crates/safec/src/driver.rs` carry the
-  behaviour. `crates/safec/src/diagnostics/render.rs` and
+* `crates/safec-c/src/cli.rs`, `crates/safec-c/src/options.rs`,
+  `crates/safec-c/src/safety.rs` and `crates/safec-c/src/driver.rs` carry the
+  behaviour. `crates/safec-c/src/diagnostics/render.rs` and
   `crates/safec-ir/src/analysis.rs` carry comments this decision made false: the
   first counted the producers of an unproven conclusion, the second said what the
   value means.

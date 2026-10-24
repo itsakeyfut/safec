@@ -74,7 +74,7 @@ to do instead.
 ### Confirmation
 
 `a_renderer_does_not_hold_the_source_map` in
-`crates/safec/src/diagnostics/render/tests.rs` renders a diagnostic, adds a file to
+`crates/safec-c/src/diagnostics/render/tests.rs` renders a diagnostic, adds a file to
 the map while the renderer is still alive, and renders a diagnostic against the
 new file.
 
@@ -135,7 +135,7 @@ It guards both halves at once, in two different ways:
 
 ## More Information
 
-* `crates/safec/src/diagnostics/render.rs`: `Renderer`, `SourceMapCache`.
+* `crates/safec-c/src/diagnostics/render.rs`: `Renderer`, `SourceMapCache`.
 * [`docs/frontend.md`](../frontend.md): stage 3 adds the preprocessor, which is
   where `#include` arrives.
 * [ADR-0001](0001-promote-unproven-results-in-the-sink.md): the review that

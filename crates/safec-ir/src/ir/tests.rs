@@ -204,7 +204,7 @@ fn an_edge_no_statement_produced_can_be_built() {
 /// `dataflow::Analysis::edge` names an edge by its index into this list.
 /// Mutation: have the `Branch` arm push `otherwise` before `then`. This
 /// fails, and so does every test that reads the order rather than the set,
-/// which is a wider set than it looks and reaches the `safec` crate,
+/// which is a wider set than it looks and reaches the `safec-c` crate,
 /// because the lowering builds an `if`'s arms in this order too.
 /// `each_arm_of_a_branch_is_told_something_different` in
 /// `crates/safec-ir/tests/written.rs` is the one worth following from

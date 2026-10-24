@@ -94,7 +94,7 @@ Every join that can cross files goes through `SourceMap::join`: the parser's joi
 
 ### Confirmation
 
-Inclusions and expansions are built by #545 and #546, and the corpus cases in `crates/safec/tests/cases/preprocessor/` hold this decision: one for each shape the prototype silenced, each run as a macro beside the same program written out, the two giving the same errors:
+Inclusions and expansions are built by #545 and #546, and the corpus cases in `crates/safec-c/tests/cases/preprocessor/` hold this decision: one for each shape the prototype silenced, each run as a macro beside the same program written out, the two giving the same errors:
 
 * A call that cuts an expansion is refused, and the same call holding the whole expansion is reported as it is written out. Making the wholeness test answer "whole" for the cut fails it, since the cut call is then the use-location design's span and the read inside it is skipped. So does testing only the end of the chain's innermost level, which `#define B release` inside `#define A (x = *p) + B` used as `A(p)` holds.
 * A parenthesised body used as a whole operand, `#define N (*p)`, is not refused. Deciding wholeness on node spans fails it.

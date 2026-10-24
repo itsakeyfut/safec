@@ -1,5 +1,5 @@
 [package]
-name = "safec"
+name = "safec-c"
 description = "A small, hackable, safety-oriented C compiler"
 version.workspace = true
 edition.workspace = true
