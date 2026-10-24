@@ -311,6 +311,7 @@ pub fn compile(options: &Options) -> Compiled {
             file,
             &scanned,
             options.target,
+            &options.macros,
             &mut sources,
             &mut diagnostics,
         );

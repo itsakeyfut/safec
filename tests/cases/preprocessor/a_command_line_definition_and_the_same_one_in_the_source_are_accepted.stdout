@@ -1,0 +1,2 @@
+Declaration a_command_line_definition_and_the_same_one_in_the_source_are_accepted.c:2:1 "x" "int"
+  Number <command line>:1:11 "3"

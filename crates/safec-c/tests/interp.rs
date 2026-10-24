@@ -44,7 +44,7 @@ fn ran_for(triple: &str, text: &str) -> Result<Value, Trap> {
     let target = Target::from_triple(triple).expect("a known triple");
 
     let tokens = lex(file, sources.file(file), &mut diagnostics);
-    let tokens = preprocess(file, &tokens, target, &mut sources, &mut diagnostics);
+    let tokens = preprocess(file, &tokens, target, &[], &mut sources, &mut diagnostics);
     let mut ast = parse(&tokens, &sources, &mut diagnostics);
     let resolution = resolve_names(&sources, &ast, &mut diagnostics);
     let types = check(
@@ -486,6 +486,7 @@ fn a_trap_points_at_what_stopped_it() {
         file,
         &tokens,
         safec_ir::target::Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+        &[],
         &mut sources,
         &mut diagnostics,
     );
@@ -540,6 +541,7 @@ fn a_trap_on_a_call_points_at_the_call() {
         file,
         &tokens,
         safec_ir::target::Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+        &[],
         &mut sources,
         &mut diagnostics,
     );

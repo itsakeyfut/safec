@@ -416,6 +416,7 @@ fn a_policy_is_read_from_the_options_the_run_was_given() {
         target: Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
         allow_unknown: false,
         color: crate::options::ColorMode::Never,
+        macros: Vec::new(),
     };
     assert!(Policy::from(&options).deny_unknown());
 
@@ -487,6 +488,7 @@ fn the_strictest_safety_level_denies_unknown_even_unresolved() {
         target: Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
         allow_unknown: true,
         color: crate::options::ColorMode::Never,
+        macros: Vec::new(),
     };
 
     assert!(Policy::from(&options).deny_unknown());

@@ -1,0 +1,4 @@
+Declaration a_value_given_on_the_command_line_is_expanded.c:1:1 "x" "int"
+  Binary <command line>:1:14 "*"
+    Number <command line>:1:14 "2"
+    Number <command line>:1:18 "2"

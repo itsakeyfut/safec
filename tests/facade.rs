@@ -30,7 +30,7 @@ fn a_program_reaches_every_part_through_the_facade_alone() {
     let target = Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple");
 
     let tokens = lex(file, sources.file(file), &mut diagnostics);
-    let tokens = preprocess(file, &tokens, target, &mut sources, &mut diagnostics);
+    let tokens = preprocess(file, &tokens, target, &[], &mut sources, &mut diagnostics);
     let mut ast = parse(&tokens, &sources, &mut diagnostics);
     let resolution = resolve(&sources, &ast, &mut diagnostics);
     let types = check(

@@ -1,0 +1,13 @@
+Function an_include_guard_named_with_a_reserved_name_is_read_when_the_command_line_undefines_it.h:3:1 "twice" "int (int)"
+  Parameter an_include_guard_named_with_a_reserved_name_is_read_when_the_command_line_undefines_it.h:3:11 "x" "int"
+  Compound an_include_guard_named_with_a_reserved_name_is_read_when_the_command_line_undefines_it.h:3:18
+    Return an_include_guard_named_with_a_reserved_name_is_read_when_the_command_line_undefines_it.h:4:5
+      Binary an_include_guard_named_with_a_reserved_name_is_read_when_the_command_line_undefines_it.h:4:12 "+"
+        Identifier an_include_guard_named_with_a_reserved_name_is_read_when_the_command_line_undefines_it.h:4:12 "x"
+        Identifier an_include_guard_named_with_a_reserved_name_is_read_when_the_command_line_undefines_it.h:4:16 "x"
+Function an_include_guard_named_with_a_reserved_name_is_read_when_the_command_line_undefines_it.c:4:1 "main" "int (void)"
+  Compound an_include_guard_named_with_a_reserved_name_is_read_when_the_command_line_undefines_it.c:4:16
+    Return an_include_guard_named_with_a_reserved_name_is_read_when_the_command_line_undefines_it.c:5:5
+      Call an_include_guard_named_with_a_reserved_name_is_read_when_the_command_line_undefines_it.c:5:12
+        Identifier an_include_guard_named_with_a_reserved_name_is_read_when_the_command_line_undefines_it.c:5:12 "twice"
+        Number an_include_guard_named_with_a_reserved_name_is_read_when_the_command_line_undefines_it.c:5:18 "2"

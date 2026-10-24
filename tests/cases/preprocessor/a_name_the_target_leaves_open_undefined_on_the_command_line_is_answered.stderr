@@ -1,0 +1,16 @@
+error[SC0401]: this frees `p`, which was freed already
+   ╭─[ a_name_the_target_leaves_open_undefined_on_the_command_line_is_answered.c:8:5 ]
+   │
+ 5 │     int *p = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+ 6 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+   │ 
+ 8 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first

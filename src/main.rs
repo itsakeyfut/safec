@@ -8,13 +8,11 @@
 use std::io::{self, Write as _};
 use std::process::ExitCode;
 
-use clap::Parser;
-
 use safec::c::cli::Cli;
 use safec::c::driver;
 
 fn main() -> ExitCode {
-    let cli = Cli::parse();
+    let cli = Cli::parse_in_order();
 
     // Refused here rather than inside the compiler: an invocation that asks for
     // two different things has nothing to compile, and clap's own error is what

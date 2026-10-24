@@ -667,6 +667,14 @@ fn is_identifier_continue(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '_'
 }
 
+/// Whether all of `text` is one identifier, as the scan reads one: what `-D`
+/// and `-U` are asked of, so that a name the command line accepts is a name
+/// the source could have spelled.
+pub(crate) fn is_identifier(text: &str) -> bool {
+    let mut characters = text.chars();
+    characters.next().is_some_and(is_identifier_start) && characters.all(is_identifier_continue)
+}
+
 /// Whether `c` belongs to a run of characters the scan can make nothing of.
 ///
 /// Not "can no token begin here": whitespace and a comment can begin no token

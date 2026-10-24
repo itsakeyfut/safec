@@ -104,3 +104,4 @@ Held by tests in `crates/safec-c/src/preprocessor.rs` and corpus cases in `tests
 * `clang 20.1.6 --target=<triple> -std=c17 -dM -E` was run on an empty file for each row of `Target::ALL`, on 2026-10-20.
 * `cl.exe`'s side is <https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros>. `gcc`'s side is <https://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html> and <https://gcc.gnu.org/onlinedocs/cpp/Standard-Predefined-Macros.html>. All three were read on 2026-10-20.
 * [ADR-0013](./0013-the-translation-unit-carries-the-target-and-answers-what-a-type-is-worth.md) is the same stance applied to what a type is worth.
+* [ADR-0059](./0059-a-name-the-command-line-settles-is-answered-from-it.md) narrows this: a name `-D` or `-U` names is answered from the command line rather than refused.

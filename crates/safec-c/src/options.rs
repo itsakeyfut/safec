@@ -44,6 +44,40 @@ pub struct Options {
     pub allow_unknown: bool,
     /// When to colorize diagnostics.
     pub color: ColorMode,
+    /// What `-D` and `-U` said, in the order they were given, read before the
+    /// first line of every input.
+    ///
+    /// Applied in this order, as `cc` applies them, so a name may appear more
+    /// than once and the last says what it is. A name here is settled for
+    /// `#ifdef` and `#ifndef`, reserved or not. See ADR-0059.
+    pub macros: Vec<CommandLineMacro>,
+}
+
+/// A macro the command line defines or undefines before the first line is
+/// read.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CommandLineMacro {
+    /// `-D name`, whose value is `1`, or `-D name=value`.
+    Defined {
+        /// The macro's name, an ASCII identifier.
+        name: String,
+        /// Its replacement list, as written after the `=`.
+        value: String,
+    },
+    /// `-U name`.
+    Undefined {
+        /// The macro's name, an ASCII identifier.
+        name: String,
+    },
+}
+
+impl CommandLineMacro {
+    /// The name this defines or undefines.
+    pub fn name(&self) -> &str {
+        match self {
+            CommandLineMacro::Defined { name, .. } | CommandLineMacro::Undefined { name } => name,
+        }
+    }
 }
 
 impl Options {
@@ -491,6 +525,7 @@ mod tests {
             target: Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
             allow_unknown: false,
             color: ColorMode::Never,
+            macros: Vec::new(),
         }
     }
 }
