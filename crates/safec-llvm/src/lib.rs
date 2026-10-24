@@ -2,6 +2,10 @@
 //!
 //! [`TranslationUnit`]: safec_ir::ir::TranslationUnit
 //!
+//! Depend on this crate, with `safec-ir`, to write a unit out as LLVM IR with
+//! no frontend in the graph. The `safec` crate re-exports it as `safec::llvm`
+//! for a user who wants the whole compiler. See ADR-0058.
+//!
 //! Text rather than a library. `docs/architecture.md` names `inkwell` as the
 //! initial direction and this knowingly goes the other way; ADR-0014 is where
 //! that is argued and where the trigger for reversing it is written down.
