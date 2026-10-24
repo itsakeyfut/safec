@@ -704,11 +704,11 @@ pub(super) fn memory_finding(
             UNASSIGNED,
             said(
                 name,
-                "this reads a pointer out of memory nothing wrote",
-                |name| format!("`*{name}` is read before anything wrote it"),
+                "this reads a pointer out of memory before anything was assigned to it",
+                |name| format!("`*{name}` is read before anything was assigned to it"),
             ),
             "read here",
-            "write the slot before reading it, or allocate with `calloc`",
+            "assign to it before reading it, or allocate with `calloc`",
         ),
         // Only ever `Unknown`, since the edge may be one no execution takes.
         // `Unsafe` takes the same words so the match stays exhaustive.

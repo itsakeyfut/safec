@@ -1986,7 +1986,7 @@ mod unassigned {
     fn a_pointer_read_out_of_fresh_memory_is_sc0411_in_its_own_words() {
         let (code, message, notes) = said(Kind::IndeterminateLoad, Conclusion::Unsafe);
         assert_eq!(code, "SC0411");
-        assert_eq!(message, "`*p` is read before anything wrote it");
+        assert_eq!(message, "`*p` is read before anything was assigned to it");
         assert!(
             notes
                 .iter()
