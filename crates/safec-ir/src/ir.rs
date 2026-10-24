@@ -127,7 +127,7 @@ impl LocalId {
     /// The index this handle refers to.
     ///
     /// For a side table with a slot per local, which is what a dataflow
-    /// analysis is. `FileId::index` in `crates/safec-c/src/source.rs` is the same
+    /// analysis is. `FileId::index` in `crates/safec-ir/src/source.rs` is the same
     /// thing several layers up.
     pub fn index(self) -> usize {
         self.0 as usize
