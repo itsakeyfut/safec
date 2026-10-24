@@ -266,6 +266,16 @@ Everything the subset left out. See [frontend.md](frontend.md), Stages 2 and 4.
   type-checks ([frontend.md](frontend.md), Stage 1): storing one, calling
   through one, and comparing two. Phase 8 names one and passes it (#115)
 - variadic functions
+- the jump and selection statements the subset does not read: `break`,
+  `continue`, `do`, `switch` and `goto`, each refused today as `SC0207`. No
+  Stage in [frontend.md](frontend.md) lists them
+- pointer arithmetic in the backend, which writes none but by zero, and a
+  type for the difference of two pointers. See [frontend.md](frontend.md),
+  *What the backend refuses* and *What the lowering refuses*
+- a driver that can stand in for `cc` in an existing build. `-c`, `-I`, `-D`,
+  `-O`, `-g`, `-W` and `-std` are each refused as an unexpected argument today,
+  and the module is handed to `clang` with no optimisation level and no debug
+  information (`driver/backend.rs`)
 - broader compatibility, potentially C11 or C17
 
 **Done when:** a real single-file C program from outside this repository
