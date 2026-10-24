@@ -1,0 +1,28 @@
+error[SC0117]: `__STDC_HOSTED__` is defined by the implementation
+   ╭─[ <built-in>:3:1 ]
+   │
+ 3 │ #define __STDC_HOSTED__ 1
+   │ ────────────┬────────────  
+   │             ╰────────────── predefined here
+   │
+   ├─[ <command line>:1:9 ]
+   │
+ 1 │ #define __STDC_HOSTED__ 0
+   │         ───────┬───────  
+   │                ╰───────── defined again here
+───╯
+  = note: C17 6.10.8 p2 says it shall not be the subject of a `#define` or an `#undef`
+error[SC0117]: `__STDC__` is defined by the implementation
+   ╭─[ <built-in>:1:1 ]
+   │
+ 1 │ #define __STDC__ 1
+   │ ─────────┬────────  
+   │          ╰────────── predefined here
+   │
+   ├─[ <command line>:3:8 ]
+   │
+ 3 │ #undef __STDC__
+   │        ────┬───  
+   │            ╰───── undefined here
+───╯
+  = note: C17 6.10.8 p2 says it shall not be the subject of a `#define` or an `#undef`

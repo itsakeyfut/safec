@@ -1,0 +1,16 @@
+error[SC0401]: this frees `p`, which was freed already
+    ╭─[ a_name_defined_on_the_command_line_chooses_its_group.c:11:5 ]
+    │
+  5 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+  6 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+    │ 
+ 11 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed again here
+────╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first

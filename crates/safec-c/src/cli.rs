@@ -13,7 +13,7 @@ use clap::{CommandFactory, Parser};
 
 use safec_ir::target::Target;
 
-use crate::options::{ColorMode, EmitKind, Options};
+use crate::options::{ColorMode, CommandLineMacro, EmitKind, Options, identifier};
 use crate::safety::SafetyLevel;
 
 /// The triple this compiler was built to run on.
@@ -112,6 +112,23 @@ pub struct Cli {
         default_value_t = ColorMode::Auto
     )]
     pub color: ColorMode,
+
+    /// Define an object-like macro before the first line is read: `NAME`
+    /// defines it as `1`.
+    #[arg(short = 'D', value_name = "NAME[=VALUE]")]
+    pub define: Vec<String>,
+
+    /// Say that a macro is not defined when the first line is read.
+    ///
+    /// Also settles a name the compiler might predefine, such as `__GNUC__` or
+    /// an include guard's `_FOO_H`, for `#ifdef` and `#ifndef`, which refuse
+    /// such a name otherwise.
+    // `-U` of a reserved name is a claim about the build that this compiler
+    // cannot check, and the build analysed is the one it describes. See
+    // ADR-0059. `//` rather than `///`, because clap prints a doc comment into
+    // `--help`.
+    #[arg(short = 'U', value_name = "NAME")]
+    pub undefine: Vec<String>,
 }
 
 impl Cli {
@@ -218,11 +235,15 @@ impl Cli {
             target,
             allow_unknown,
             color,
+            define,
+            undefine,
         } = self;
 
         let target = resolved_target(target.as_deref(), host).map_err(|message| {
             Self::as_invoked().error(ErrorKind::MissingRequiredArgument, message)
         })?;
+        let macros = command_line_macros(&define, &undefine)
+            .map_err(|message| Self::as_invoked().error(ErrorKind::ValueValidation, message))?;
 
         Ok(Options {
             inputs,
@@ -243,8 +264,63 @@ impl Cli {
             // that turns the pair into what the sink does. See ADR-0004.
             allow_unknown,
             color,
+            macros,
         })
     }
+}
+
+/// What `-D` and `-U` said, every `-D` first, or why it cannot be read.
+///
+/// Refused here, before anything is read, so that it prints and exits as every
+/// other argument mistake does:
+///
+/// - a name that is not an ASCII identifier. That covers an empty one and a
+///   function-like `F(x)=x`, which this does not read, since only object-like
+///   macros are read yet;
+/// - a value holding a line break, which would split the line it becomes;
+/// - a name given to both flags. `cc` applies them left to right, and clap
+///   collects each flag on its own, so either order here would sometimes
+///   describe a build `cc` would not make. See ADR-0059.
+///
+/// A `-D` is split at its first `=`, so `N=a=b` defines `N` as `a=b` and `N=`
+/// defines it as nothing.
+fn command_line_macros(
+    define: &[String],
+    undefine: &[String],
+) -> Result<Vec<CommandLineMacro>, String> {
+    let mut macros = Vec::new();
+    for given in define {
+        let (name, value) = given.split_once('=').unwrap_or((given, "1"));
+        if !identifier(name) {
+            return Err(format!(
+                "`-D {given}` is not read: `-D` takes an object-like macro, \
+                 `NAME` or `NAME=VALUE`"
+            ));
+        }
+        if value.contains(['\n', '\r']) {
+            return Err(format!(
+                "`-D {name}` is not read: its value holds a line break"
+            ));
+        }
+        macros.push(CommandLineMacro::Defined {
+            name: name.to_owned(),
+            value: value.to_owned(),
+        });
+    }
+    for name in undefine {
+        if !identifier(name) {
+            return Err(format!(
+                "`-U {name}` is not read: `-U` takes a macro's name"
+            ));
+        }
+        if macros.iter().any(|defined| defined.name() == name) {
+            return Err(format!(
+                "`{name}` is both defined (`-D`) and undefined (`-U`)"
+            ));
+        }
+        macros.push(CommandLineMacro::Undefined { name: name.clone() });
+    }
+    Ok(macros)
 }
 
 /// The target a run compiles for: the one it named, or the host's.
@@ -577,6 +653,10 @@ mod tests {
             "wasm32-unknown-unknown",
             "-o",
             "out.ir",
+            "-DN=a=b",
+            "-D",
+            "M",
+            "-UGUARD",
             "a.c",
             "b.c",
         ])
@@ -600,6 +680,21 @@ mod tests {
                 target: Target::from_triple("wasm32-unknown-unknown").expect("a known triple"),
                 allow_unknown: true,
                 color: ColorMode::Never,
+                // Split at the first `=`, a bare name defined as `1`, and the
+                // attached and separate spellings read alike.
+                macros: vec![
+                    CommandLineMacro::Defined {
+                        name: "N".to_owned(),
+                        value: "a=b".to_owned(),
+                    },
+                    CommandLineMacro::Defined {
+                        name: "M".to_owned(),
+                        value: "1".to_owned(),
+                    },
+                    CommandLineMacro::Undefined {
+                        name: "GUARD".to_owned(),
+                    },
+                ],
             }
         );
     }
@@ -728,6 +823,74 @@ mod tests {
         assert_eq!(refused.kind(), ErrorKind::MissingRequiredArgument);
         assert!(refused.use_stderr(), "the refusal goes to stdout");
         assert_ne!(refused.exit_code(), 0, "the refusal exits 0");
+    }
+
+    /// The refusal of a `-D` or `-U` this compiler cannot read, as a run
+    /// would see it: its kind and its message.
+    fn macro_refusal(args: &[&str]) -> (ErrorKind, String) {
+        let refused = Cli::try_parse_from(args)
+            .expect("the arguments parse")
+            .into_options()
+            .expect_err("the macro is refused");
+        (refused.kind(), refused.to_string())
+    }
+
+    /// A `-D` that is not an object-like macro's name is refused before
+    /// anything is read: a function-like one, an empty name, and a name that
+    /// is not ASCII. A failed run, not help, so it exits non-zero.
+    ///
+    /// Mutation: drop the identifier check on `-D`. Each is accepted, and the
+    /// function-like one is read as `#define F(x) x`, a different directive.
+    /// Mutation: ask `char::is_alphanumeric` instead. `é` is accepted.
+    #[test]
+    fn a_define_that_is_not_an_object_like_macro_is_refused() {
+        for given in ["-DF(x)=x", "-D=1", "-Dé"] {
+            let (kind, message) = macro_refusal(&["safec", given, "a.c"]);
+            assert_eq!(kind, ErrorKind::ValueValidation, "{given}");
+            assert!(message.contains("object-like"), "{given}: {message}");
+        }
+    }
+
+    /// An `-U` of something that is not a name is refused the same way.
+    ///
+    /// Mutation: drop the identifier check on `-U`. `-U F(x)` is accepted.
+    #[test]
+    fn an_undefine_that_is_not_a_name_is_refused() {
+        let (kind, message) = macro_refusal(&["safec", "-UF(x)", "a.c"]);
+        assert_eq!(kind, ErrorKind::ValueValidation);
+        assert!(message.contains("`-U F(x)`"), "{message}");
+    }
+
+    /// A value holding a line break is refused, since it would split the line
+    /// it becomes into two directives.
+    ///
+    /// Mutation: drop the line-break check. It is accepted, and
+    /// `preprocess` panics on it instead.
+    #[test]
+    fn a_define_whose_value_holds_a_line_break_is_refused() {
+        for given in ["-DA=1\n#define B 2", "-DA=1\r"] {
+            let (kind, message) = macro_refusal(&["safec", given, "a.c"]);
+            assert_eq!(kind, ErrorKind::ValueValidation, "{given:?}");
+            assert!(message.contains("line break"), "{given:?}: {message}");
+        }
+    }
+
+    /// A name given to both `-D` and `-U` is refused, in either order on the
+    /// command line, since the order between the two flags is not kept. See
+    /// ADR-0059.
+    ///
+    /// Mutation: drop the check. Both are accepted, and the run describes a
+    /// build in which `A` is undefined, which `cc -U A -D A` would not make.
+    #[test]
+    fn a_name_both_defined_and_undefined_is_refused() {
+        for args in [
+            ["safec", "-DA=2", "-UA", "a.c"],
+            ["safec", "-UA", "-DA", "a.c"],
+        ] {
+            let (kind, message) = macro_refusal(&args);
+            assert_eq!(kind, ErrorKind::ValueValidation, "{args:?}");
+            assert!(message.contains("both defined"), "{args:?}: {message}");
+        }
     }
 
     /// A named target is the target, on a host this compiler knows or one it

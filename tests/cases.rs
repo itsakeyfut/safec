@@ -4931,6 +4931,37 @@ cases! {
         // undefined, and the double free is reported where the `#ifdef`
         // should have been refused.
         a_name_its_compilers_disagree_on_is_refused_for_msvc: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `-D TWICE` skips the `#ifndef` group's allocation and takes the
+        // `#ifdef` group's second free, so the double free is reported.
+        // Mutation: hand `preprocess` no command-line macros. Both groups go
+        // the other way, and it exits 0.
+        a_name_defined_on_the_command_line_chooses_its_group: ["--emit", "safety-ir", "--target", "x86_64-unknown-linux-gnu", "-D", "TWICE"],
+        // A value of three tokens with blanks between them, rather than `1`.
+        // Mutation: define every `-D` as `1`. The initialiser is a literal.
+        a_value_given_on_the_command_line_is_expanded: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu", "-DSIZE=2 * 2"],
+        // `-U __GNUC__` settles the name, so `#ifndef __GNUC__` takes its
+        // group and the double free in it is reported (ADR-0059). Mutation:
+        // drop the settled clause from the reserved-name refusal. It is
+        // `SC0104` again and nothing is analysed.
+        a_reserved_name_undefined_on_the_command_line_is_answered: ["--emit", "safety-ir", "--target", "x86_64-unknown-linux-gnu", "-U__GNUC__"],
+        // A header guarded by `_TWICE_H`, included twice and holding a
+        // function's definition: read once, or the second definition would be
+        // refused. Mutation: drop the settled clause. The guard is `SC0104`
+        // at the first inclusion.
+        an_include_guard_named_with_a_reserved_name_is_read_when_the_command_line_undefines_it: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu", "-U_TWICE_H"],
+        // `_WIN32` is the target's, and the command line describes the build
+        // its compilers make. Mutation: let `-U` remove a predefined name. It
+        // exits 0.
+        a_name_this_target_predefines_cannot_be_undefined_on_the_command_line: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc", "-U_WIN32"],
+        // `-D N=2` meets `#define N 3` as two `#define`s meet: `SC0114`, with
+        // the first at `<command line>`. Mutation: hand `preprocess` no
+        // command-line macros. It exits 0.
+        a_command_line_definition_and_a_different_one_in_the_source_are_refused: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu", "-DN=2"],
+        // C17 6.10.8 p2's names stay the implementation's under `-D` and `-U`
+        // alike: `SC0117` for each. Mutation: read the command line with the
+        // `#undef` of a predefined name refused only where it is not a
+        // standard name. The `-U` is accepted.
+        a_standard_name_cannot_be_set_on_the_command_line: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu", "-D__STDC_HOSTED__=0", "-U__STDC__"],
         // `#ifdef __LINE__` is answered, and the use is refused. Mutation:
         // expand a dynamic macro as its empty list. `int line = ;` is
         // reported as a syntax error instead.

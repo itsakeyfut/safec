@@ -19,6 +19,7 @@ fn parsed(text: &str) -> Parsed {
         file,
         &tokens,
         safec_ir::target::Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+        &[],
         &mut sources,
         &mut diagnostics,
     );
@@ -366,6 +367,7 @@ fn no_tokens_at_all_parse_to_nothing() {
         file,
         &[],
         safec_ir::target::Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+        &[],
         &mut sources,
         &mut diagnostics,
     );
@@ -1729,6 +1731,7 @@ int f(int *p, struct S *s) {
         first,
         &tokens,
         safec_ir::target::Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+        &[],
         &mut sources,
         &mut whole,
     );
@@ -1791,6 +1794,7 @@ int f(int *p, struct S *s) {
             &split,
             safec_ir::target::Target::from_triple("x86_64-unknown-linux-gnu")
                 .expect("a known triple"),
+            &[],
             &mut sources,
             &mut diagnostics,
         );
@@ -1832,6 +1836,7 @@ int f(int *p, struct S *s) {
             &split,
             safec_ir::target::Target::from_triple("x86_64-unknown-linux-gnu")
                 .expect("a known triple"),
+            &[],
             &mut sources,
             &mut diagnostics,
         );
@@ -1862,6 +1867,7 @@ fn a_declarator_from_a_header_spans_its_own_tokens() {
         file,
         &tokens,
         safec_ir::target::Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+        &[],
         &mut sources,
         &mut diagnostics,
     );

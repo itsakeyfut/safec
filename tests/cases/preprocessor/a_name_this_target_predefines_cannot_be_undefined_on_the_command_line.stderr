@@ -1,0 +1,14 @@
+error[SC0117]: `_WIN32` is defined by the implementation
+   ╭─[ <built-in>:2:1 ]
+   │
+ 2 │ #define _WIN32 1
+   │ ────────┬───────  
+   │         ╰───────── predefined here
+   │
+   ├─[ <command line>:1:8 ]
+   │
+ 1 │ #undef _WIN32
+   │        ───┬──  
+   │           ╰──── undefined here
+───╯
+  = note: this target predefines it, and the command line cannot undefine what the target predefines

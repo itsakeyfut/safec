@@ -15,7 +15,7 @@
 //! ADR-0054. The translation unit is preprocessed whole before it is
 //! parsed, for the reason that record gives.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::driver::{Access, reason};
 use crate::lexer::{UNSUPPORTED_SPLICE, lex, unexpected_characters};
+use crate::options::{CommandLineMacro, identifier};
 use crate::token::{Punct, Token, TokenKind};
 use safec_ir::source::{Cut, Edge, FileId, FileName, SourceMap, Span};
 use safec_ir::target::Target;
@@ -112,6 +113,9 @@ struct Reading {
     /// distinct macros cost the square of its depth. Found by review.
     open_macros: HashMap<String, usize>,
     open_expansions: usize,
+    /// Every name `-D` or `-U` named, which `#ifdef` and `#ifndef` answer
+    /// whether or not the compiler might predefine it. See ADR-0059.
+    settled: HashSet<String>,
 }
 
 /// An object-like macro.
@@ -193,11 +197,20 @@ impl Preprocessed {
 ///
 /// The end-of-file token is the input's own: an included file's is dropped,
 /// since the parser reads the first one it meets as the end. The macros
-/// `target` predefines are defined before the input is read.
+/// `target` predefines are defined before the input is read, and then what
+/// `macros`, the command line's `-D` and `-U`, says, in its order.
+///
+/// # Panics
+///
+/// If a name in `macros` is not an ASCII identifier, or a value holds a line
+/// break. `Cli::into_options` refuses both, so only a caller that built the
+/// list by hand can get here, and its list would otherwise be read as other
+/// directives than it says.
 pub fn preprocess(
     file: FileId,
     tokens: &[Token],
     target: Target,
+    macros: &[CommandLineMacro],
     sources: &mut SourceMap,
     diagnostics: &mut DiagnosticSink,
 ) -> Preprocessed {
@@ -210,6 +223,7 @@ pub fn preprocess(
         expansions_in_all: 0,
         open_macros: HashMap::new(),
         open_expansions: 0,
+        settled: macros.iter().map(|given| given.name().to_owned()).collect(),
     };
     if let Some(path) = path_of(sources.file(file).name()) {
         reading.open.push((canonical(path), file));
@@ -257,11 +271,99 @@ pub fn preprocess(
             },
         );
     }
+    command_line(macros, sources, &mut reading, diagnostics);
 
     let mut spliced = Vec::with_capacity(tokens.len());
     read_includes(tokens, sources, &mut reading, diagnostics, &mut spliced);
     spliced.extend(tokens.iter().copied().filter(|token| token.is_eof()));
     Preprocessed(spliced)
+}
+
+/// Read what `-D` and `-U` said as the lines of a file of their own, `command
+/// line`, through the same path as a `#define` or an `#undef` in the source.
+/// So a refusal of one points at `<command line>`, as one of a predefinition
+/// points at `<built-in>`, and a `-D` meets a later `#define` of its name as
+/// two `#define`s meet.
+///
+/// The one thing the source may do and the command line may not is undefine
+/// a name the target predefines, such as `_WIN32` for MSVC. That would describe
+/// a build other than the one the target's compilers make, and nothing needs
+/// it, so it is refused as `SC0117` and its line is not read. See ADR-0059.
+fn command_line(
+    macros: &[CommandLineMacro],
+    sources: &mut SourceMap,
+    reading: &mut Reading,
+    diagnostics: &mut DiagnosticSink,
+) {
+    if macros.is_empty() {
+        return;
+    }
+    let mut text = String::new();
+    // Each line not to be read, by where it starts, with its name.
+    let mut not_read: Vec<(u32, &str)> = Vec::new();
+    for given in macros {
+        let name = given.name();
+        assert!(
+            identifier(name),
+            "a command-line macro's name is not an ASCII identifier: {name:?}"
+        );
+        let start = text.len() as u32;
+        match given {
+            CommandLineMacro::Defined { value, .. } => {
+                assert!(
+                    !value.contains(['\n', '\r']),
+                    "a command-line macro's value holds a line break: {value:?}"
+                );
+                text.push_str(&format!("#define {name} {value}"));
+            }
+            CommandLineMacro::Undefined { .. } => {
+                if reading
+                    .macros
+                    .get(name)
+                    .is_some_and(|earlier| earlier.origin == Origin::Predefined && !standard(name))
+                {
+                    not_read.push((start, name));
+                }
+                text.push_str(&format!("#undef {name}"));
+            }
+        }
+        // A blank line after each, so that a value ending in a splice joins
+        // the blank line rather than the next macro, and is refused as a
+        // `#define` ending in a splice is.
+        text.push_str("\n\n");
+    }
+
+    let file = sources.add_virtual("command line", &text);
+    for (start, name) in &not_read {
+        let at = start + "#undef ".len() as u32;
+        let named = Span::new(file, at, at + name.len() as u32);
+        let earlier = &reading.macros[*name];
+        diagnostics.report(
+            Diagnostic::error(format!("`{name}` is defined by the implementation"))
+                .with_code(PREDEFINED_AGAIN)
+                .with_label(Label::primary(named, "undefined here"))
+                .with_label(Label::secondary(earlier.defined, "predefined here"))
+                .with_note(
+                    "this target predefines it, and the command line cannot undefine what the \
+                     target predefines",
+                ),
+        );
+    }
+    let scan: Vec<Token> = lex(file, sources.file(file), diagnostics)
+        .into_iter()
+        .filter(|token| {
+            !not_read
+                .iter()
+                .any(|(start, _)| token.span.start() == *start)
+        })
+        .collect();
+    let mut handed_over = Vec::new();
+    read_includes(&scan, sources, reading, diagnostics, &mut handed_over);
+    // Every line is a directive, so nothing reaches the parser from here.
+    assert!(
+        handed_over.is_empty(),
+        "the command line handed the parser tokens: {text:?}"
+    );
 }
 
 /// Append `tokens` to `spliced`, an `#include "file"` replaced by that file's
@@ -1450,9 +1552,11 @@ fn act(
                 // later `#ifdef` of one chose a group it does not. Found by
                 // review. `unix`, which a GNU mode defines and `-std=c17` does
                 // not, is unsettled the same way, reserved or not. See
-                // ADR-0055.
+                // ADR-0055. A name `-D` or `-U` named is answered instead: the
+                // command line says which build this is. See ADR-0059.
                 Named::Read(name)
                     if !reading.macros.contains_key(name)
+                        && !reading.settled.contains(name)
                         && (unsettled(reading.target).contains(&name)
                             || (reserved(name) && !known(name))) =>
                 {
@@ -2052,6 +2156,7 @@ mod tests {
             file,
             &tokens,
             Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
             &mut sources,
             &mut diagnostics,
         );
@@ -2102,6 +2207,7 @@ mod tests {
             file,
             &tokens,
             Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
             &mut sources,
             &mut diagnostics,
         );
@@ -2240,6 +2346,7 @@ mod tests {
             main,
             &tokens,
             Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
             &mut sources,
             &mut diagnostics,
         );
@@ -2285,6 +2392,7 @@ mod tests {
             main,
             &tokens,
             Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
             &mut sources,
             &mut diagnostics,
         );
@@ -2347,6 +2455,7 @@ mod tests {
                 file,
                 &tokens,
                 Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+                &[],
                 &mut sources,
                 &mut diagnostics,
             );
@@ -2385,6 +2494,7 @@ mod tests {
             file,
             &tokens,
             Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
             &mut sources,
             &mut diagnostics,
         );
@@ -2417,6 +2527,7 @@ mod tests {
             file,
             &tokens,
             Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
             &mut sources,
             &mut diagnostics,
         );
@@ -2451,6 +2562,7 @@ mod tests {
             file,
             &tokens,
             Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
             &mut sources,
             &mut diagnostics,
         );
@@ -2560,6 +2672,7 @@ mod tests {
             file,
             &tokens,
             Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
             &mut sources,
             &mut diagnostics,
         );
@@ -2571,6 +2684,48 @@ mod tests {
             .map(|token| sources.snippet(token.span))
             .collect();
         assert_eq!(spelled, ["int", "d", ";", "int", "f", ";"]);
+    }
+
+    /// A `-D` whose value ends in `\` is refused alone, and the macro given
+    /// after it is still defined.
+    ///
+    /// Asked of the tokens rather than of a run, for the reason the test above
+    /// gives: the refusal stops a run before the parser. Mutation: drop the
+    /// blank line after each command-line macro. The splice joins `AFTER`'s
+    /// line to `A`'s, `AFTER` is never defined, and `x` is not handed over.
+    #[test]
+    fn a_value_ending_in_a_splice_is_refused_without_taking_the_next_macro() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "#ifdef AFTER\nint x;\n#endif\n");
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        let macros = [
+            CommandLineMacro::Defined {
+                name: "A".to_owned(),
+                value: "1\\".to_owned(),
+            },
+            CommandLineMacro::Defined {
+                name: "AFTER".to_owned(),
+                value: "1".to_owned(),
+            },
+        ];
+        let handed = preprocess(
+            file,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &macros,
+            &mut sources,
+            &mut diagnostics,
+        );
+
+        let spelled: Vec<&str> = handed
+            .tokens()
+            .iter()
+            .filter(|token| !token.is_eof())
+            .map(|token| sources.snippet(token.span))
+            .collect();
+        assert_eq!(spelled, ["int", "x", ";"]);
+        assert!(diagnostics.has_errors(), "`-D A=1\\` is refused");
     }
 
     /// What `target` predefines `name` as, read from its list.
@@ -2632,7 +2787,7 @@ mod tests {
             let file = sources.add_virtual("t.c", "");
             let mut diagnostics = DiagnosticSink::new();
             let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
-            preprocess(file, &tokens, *target, &mut sources, &mut diagnostics);
+            preprocess(file, &tokens, *target, &[], &mut sources, &mut diagnostics);
             assert!(
                 diagnostics.diagnostics().is_empty(),
                 "{}: {:?}",
@@ -2669,6 +2824,7 @@ mod tests {
             file,
             &tokens,
             Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
             &mut sources,
             &mut diagnostics,
         );

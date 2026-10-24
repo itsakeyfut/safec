@@ -1,0 +1,14 @@
+error[SC0114]: `N` is defined again differently
+   ╭─[ a_command_line_definition_and_a_different_one_in_the_source_are_refused.c:1:9 ]
+   │
+ 1 │ #define N 3
+   │         ┬  
+   │         ╰── defined again here
+   │
+   ├─[ <command line>:1:1 ]
+   │
+ 1 │ #define N 2
+   │ ─────┬─────  
+   │      ╰─────── defined here first
+───╯
+  = note: a macro may be defined again only with the same replacement list

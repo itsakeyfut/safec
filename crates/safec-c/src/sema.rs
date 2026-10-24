@@ -1618,6 +1618,7 @@ mod tests {
             &tokens,
             safec_ir::target::Target::from_triple("x86_64-unknown-linux-gnu")
                 .expect("a known triple"),
+            &[],
             &mut sources,
             &mut diagnostics,
         );

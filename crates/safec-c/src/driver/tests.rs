@@ -63,6 +63,7 @@ fn options(inputs: Vec<PathBuf>) -> Options {
         target: Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
         allow_unknown: false,
         color: ColorMode::Never,
+        macros: Vec::new(),
     }
 }
 
