@@ -571,11 +571,12 @@ pub(super) struct Held {
     pub(super) returned_by: Option<usize>,
     /// Whether this was read, on every path, out of an allocation
     /// [`Known::fresh`](super::known::Known::fresh) marks, so is
-    /// indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2), and Annex J.2 lists a
-    /// use of it as undefined: a dereference of it, or a free, is reported.
-    /// Copied with the value and kept
+    /// indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2), and was reported
+    /// where it was read. **It decides no report.** It is what drops the
+    /// doubt a free or a `realloc` of the value would raise beside that
+    /// report, which is the same defect again. Copied with the value and kept
     /// only where both paths agree. Arithmetic drops it, so `t + 1` is not
-    /// followed.
+    /// followed. See ADR-0057.
     pub(super) fresh_read: bool,
 }
 

@@ -277,25 +277,40 @@ impl Allocations<'_> {
             if self.reads_caller_memory(source.local, depth, value) {
                 held.from_caller = true;
             }
-            // **Read out of memory nothing wrote, certainly**: one
-            // dereference through a pointer that names allocations and
-            // nothing else, every one of them fresh. See `Held::fresh_read`.
-            // Mutation: drop the address clause, and
-            // `a_pointer_read_through_what_may_be_a_locals_address_is_not_reported`
-            // is reported; weaken `all` to `any`, and
-            // `a_pointer_read_through_either_of_two_allocations_one_written_is_not_reported`
-            // is. **The `lost`, `foreign` and `loaded` clauses have no
-            // case**, measured: a local loses its sites where it is made
-            // lost, and no program found gives a loaded or foreign pointer a
-            // fresh site that an exposure has not already cleared.
-            let through = &value.points_to[source.local.index()];
-            held.fresh_read = source.projection.as_slice() == [Projection::Deref]
-                && through.sites().next().is_some()
-                && !(through.lost || through.foreign || through.loaded)
-                && !through.may_be_a_locals_address()
-                && through.sites().all(|site| value.fresh[site]);
+            // The question the report asks at this read, so that a value
+            // carrying the mark is always one reported where it was read.
+            // See `Self::reads_fresh` and ADR-0057.
+            held.fresh_read = self.reads_fresh(function, source, value);
         }
         held
+    }
+
+    /// Whether reading `source` reads a pointer out of memory nothing wrote,
+    /// certainly: one dereference through a pointer that names allocations
+    /// and nothing else, every one of them fresh. The report asks it at every
+    /// read of such a place, and [`Self::read_through`] asks it for
+    /// [`Held::fresh_read`], which is sound only while the two agree. See
+    /// ADR-0057.
+    ///
+    /// **A pointer, by its type.** A byte or an integer read out of fresh
+    /// memory is not followed.
+    ///
+    /// Mutation: drop the address clause, and
+    /// `a_pointer_read_through_what_may_be_a_locals_address_is_not_reported`
+    /// is reported; weaken `all` to `any`, and
+    /// `a_pointer_read_through_either_of_two_allocations_one_written_is_not_reported`
+    /// is. **The `lost`, `foreign` and `loaded` clauses have no case**,
+    /// measured: a local loses its sites where it is made lost, and no program
+    /// found gives a loaded or foreign pointer a fresh site that an exposure
+    /// has not already cleared.
+    pub(super) fn reads_fresh(&self, function: &Function, source: &Place, value: &Known) -> bool {
+        let through = &value.points_to[source.local.index()];
+        source.projection.as_slice() == [Projection::Deref]
+            && self.may_be_pointer(function, source)
+            && through.sites().next().is_some()
+            && !(through.lost || through.foreign || through.loaded)
+            && !through.may_be_a_locals_address()
+            && through.sites().all(|site| value.fresh[site])
     }
 
     /// Whether a load `depth` dereferences through `local` reads memory a
@@ -1160,20 +1175,15 @@ impl Analysis for Allocations<'_> {
                 // names exactly its sites; anything else may land in any
                 // allocation. See `Known::fresh`.
                 //
-                // **Not a store of an indeterminate pointer**, which leaves
-                // the slot holding an indeterminate value, as it did: `*h =
-                // t; u = *h;` with `t` read out of fresh memory reads `u` as
-                // fresh too (#588). Mutation: clear for this store as for any
-                // other. Then
-                // `a_pointer_read_out_of_fresh_memory_stored_and_read_back_is_reported`
-                // is silent.
-                let indeterminate = match &operation.value {
-                    Rvalue::Use(Operand::Copy(source)) if source.projection.is_empty() => {
-                        value.reads_indeterminate(source.local.index())
-                    }
-                    _ => false,
-                };
-                if derefs(&operation.place) > 0 && !indeterminate {
+                // **A store of an indeterminate pointer too.** The pointer was
+                // reported where it was read, and keeping the slot fresh
+                // reported the copy the lowering takes of the assignment's
+                // value (C17 6.5.16 p3) as a read of memory nothing wrote, at
+                // the store that wrote it. Mutation: keep the slot fresh for
+                // such a store, and
+                // `a_pointer_read_out_of_fresh_memory_stored_and_read_back_is_reported_once`
+                // gains two. See ADR-0057.
+                if derefs(&operation.place) > 0 {
                     let held = &value.points_to[pointer];
                     if one_step && !(held.loaded || held.lost || held.foreign) {
                         for site in held.sites().collect::<Vec<_>>() {
@@ -1507,10 +1517,10 @@ impl Analysis for Allocations<'_> {
                     // this the allocation never leaves the temporary and the
                     // headline program is not an error at all.
                     Rvalue::Use(Operand::Copy(source)) if source.projection.is_empty() => {
-                        let indeterminate = value.reads_indeterminate(source.local.index());
+                        let indeterminate = value.holds_fresh_read(source.local.index());
                         value.points_to[destination.index()] =
                             value.points_to[source.local.index()].clone();
-                        // See `Known::reads_indeterminate`.
+                        // See `Known::holds_fresh_read`.
                         value.points_to[destination.index()].fresh_read = indeterminate;
                     }
                     // **Arithmetic on a pointer is followed.** C17 6.5.6 p8
@@ -1726,6 +1736,16 @@ impl Analysis for Allocations<'_> {
         // review. See ADR-0039.
         let touched_now: Vec<usize> = sites().collect();
         value.forget_reallocs_touching(|site| touched_now.contains(&site));
+
+        // **An allocation this may free stays fresh.** Clearing it here was
+        // tried, to spare a read out of freed memory a second report, and
+        // `fresh` is an intersection that nothing sets again: a `realloc`
+        // that fails leaves the old block live and unwritten (C17 7.22.3.5
+        // p4), and a free of one of two allocations leaves the other, so a
+        // read on either path built in silence or as a doubt. Mutation: clear
+        // it for a `realloc`, and
+        // `a_pointer_read_out_of_the_old_block_after_a_failed_realloc_is_reported`
+        // builds. See ADR-0057.
 
         // **What a `realloc` with a non-zero constant size was handed, while
         // it is all live**, before the transfer below makes it unproven: the

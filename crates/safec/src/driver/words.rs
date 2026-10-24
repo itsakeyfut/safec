@@ -265,7 +265,8 @@ fn said(name: Option<&str>, unnamed: &str, named: impl FnOnce(&str) -> String) -
 /// or about a pointer read out of memory there is no name, and the message is
 /// the one that names nothing, since `p[2]` is not a use of `p` and `free(*pp)`
 /// is not a free of `pp`. Only the message: the labels are about other reads,
-/// which the finding does not say the local of.
+/// which the finding does not say the local of. A read out of fresh memory is
+/// the exception, named as `*name` after the pointer it is read through.
 ///
 /// `lengths` is every parameter length a definition evaluates on entry, for
 /// [`unordered`].
@@ -697,20 +698,18 @@ pub(super) fn memory_finding(
             "assign it where it is declared, `= 0` if nothing else",
         ),
         // Only ever a proof, as `Unassigned` is, and under its code: both are
-        // a pointer that points at no object because nothing gave it a value.
+        // a pointer read before anything was assigned to it.
+        // Reported where it is read, so the name is the local it is read
+        // through, and the slot is `*name`. See ADR-0057.
         (Kind::IndeterminateLoad, Conclusion::Unsafe | Conclusion::Unknown, _) => (
             UNASSIGNED,
             said(
                 name,
-                "this uses a pointer read out of memory nothing wrote",
-                |name| {
-                    format!(
-                        "`{name}` points at nothing, since it was read out of memory nothing wrote"
-                    )
-                },
+                "this reads a pointer out of memory before anything was assigned to it",
+                |name| format!("`*{name}` is read before anything was assigned to it"),
             ),
-            "used here",
-            "write the slot before reading it, or allocate with `calloc`",
+            "read here",
+            "assign to it before reading it, or allocate with `calloc`",
         ),
         // Only ever `Unknown`, since the edge may be one no execution takes.
         // `Unsafe` takes the same words so the match stays exhaustive.

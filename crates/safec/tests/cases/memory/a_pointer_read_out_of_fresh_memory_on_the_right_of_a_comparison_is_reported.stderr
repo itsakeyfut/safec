@@ -1,0 +1,10 @@
+error[SC0411]: `*box` is read before anything was assigned to it
+   ╭─[ a_pointer_read_out_of_fresh_memory_on_the_right_of_a_comparison_is_reported.c:8:13 ]
+   │
+ 8 │     int r = q == *box;
+   │             ────┬────  
+   │                 ╰────── read here
+───╯
+  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = help: assign to it before reading it, or allocate with `calloc`
