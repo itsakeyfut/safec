@@ -78,4 +78,9 @@ unreachable_pub = "warn"
 # search matches text and this matches the language: `unsafe` inside a macro
 # expansion, inside a string literal, or split across a line break is a
 # difference between the two, and only one of them is right about which is which.
+#
+# A package takes none of this table unless its manifest says `[lints]` and
+# `workspace = true`, so deleting those two lines would be a local reversal of
+# all of it. `every_package_in_the_workspace_takes_the_workspace_lints` in
+# `tests/lints.rs` is what holds every package to it.
 unsafe_code = "forbid"
