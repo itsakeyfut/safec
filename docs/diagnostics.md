@@ -169,16 +169,21 @@ their kind, is always unknown there.
 [ADR-0060](adr/0060-an-access-is-proved-inside-its-object-only-where-its-size-was-read.md)
 is the decision.
 
-**`SC0413` is the same belief asked where a pointer leaves.** A pointer handed
-to a call, returned, or stored through a pointer is believed by whoever
-receives it to point at one whole object of the type it is handed on as, so it
-is asked there whether it does: `g(p + 5)`, `return p + 5;` and `*box = p +
-5;` are each `SC0413`, labelled `passed here`, `returned here` or `stored
-here`. It is a class of its own rather than `SC0412` because nothing has been
-read or written through the pointer yet, and what to change is what is handed
-on. A `void *` leaves believing nothing and asks nothing, a constant is a
-null, and a library function this check reads by name is asked how far it
-reaches rather than this.
+**`SC0413` is the same belief asked where a pointer leaves.** A pointer passed
+to a call, returned, or stored is believed by whoever receives it to point at
+the start of an object as wide as the type it leaves as, so it is asked there
+whether it does: `g(p + 5)`, `return p + 5;` and `*box = p + 5;` are each
+`SC0413`, labelled `passed here`, `returned here` or `stored here`. A pointer
+to memory lets the pointers stored there leave with it, so `int *q = v;
+h(&q);` asks `q`, and `memcpy` asks what its source points at as a store. It
+is a class of its own rather than `SC0412` because nothing has been read or
+written through the pointer yet, and what to change is what leaves. **It is
+always unknown**, even where the object is shown narrower, `this lets a
+pointer to 1 byte leave where 4 bytes are believed`: C leaves the call
+defined, and only the receiver's read through it is not. A `void *` leaves
+believing nothing and asks no width, a constant is a null, and a library
+function this check reads by name, and does not define here, is asked how far
+it reaches instead.
 
 **`SC0319` refuses a name the checks believe.** A call to `abort`, `exit`,
 `_Exit` or `quick_exit` gets no continuation, because C says none returns, and

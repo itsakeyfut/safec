@@ -143,9 +143,10 @@ of memory, is believed to point at one whole object of the type it arrives as.
 An access is proved to fit only from those; it is `Unsafe` where every object it
 may reach is known exactly and is narrower than the access, and `Unknown`
 everywhere else, a pointer moved off its start among them. What is believed
-where a pointer arrives is asked where it leaves, handed to a call, returned
-or stored, except a `void *`, which leaves believing nothing and asks no
-width. See
+where a pointer arrives is asked where it leaves, passed to a call, returned
+or stored, with the pointers stored in what it points at, except a `void *`,
+which leaves believing nothing and asks no width. What is asked there is
+never a proof, since C leaves the departure itself defined. See
 [ADR-0060](adr/0060-an-access-is-proved-inside-its-object-only-where-its-size-was-read.md).
 
 
