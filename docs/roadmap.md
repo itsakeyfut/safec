@@ -228,7 +228,8 @@ Phase 9.
   pointers. See [frontend.md](frontend.md), *What the backend refuses* and
   *What the lowering refuses*
 - storage and types: global variables and `static`, the integer widths,
-  `unsigned` and `const`, `char` and string literals, `sizeof` and casts
+  `unsigned` and `const`, character constants and string literals, `sizeof`
+  and casts
 - the jump and selection statements the subset does not read: `break`,
   `continue`, `do`, `switch` and `goto`, each refused today as `SC0207`. No
   Stage in [frontend.md](frontend.md) lists them
