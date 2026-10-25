@@ -1,0 +1,83 @@
+Target "x86_64-pc-windows-msvc"
+Function two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
+  Local "_3" "void *"
+  Local "_4" "void *"
+  Local "_5" "int *"
+  Local "_6" "int"
+  Local "_7" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:4:14 generated
+    Call two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:4:14 written "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:4:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:4:14 generated
+    Branch two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:5:9 written "bb2" "bb3"
+      Copy "_1"
+  Block "bb2"
+    Sequenced two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:5:9 generated
+    ArgumentsEvaluated two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:6:13 generated
+    Call two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:6:13 written "malloc" "bb5"
+      Destination "_4"
+      Constant 1
+  Block "bb3"
+    Sequenced two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:8:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:8:9 written "bb6" "bb7"
+      Copy "_6"
+  Block "bb5"
+    Operation two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:6:9 written
+      Destination "_2"
+      Use
+        Copy "_4"
+    Operation two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:6:9 written
+      Destination "_5"
+      Use
+        Copy "_2"
+    Sequenced two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:6:9 generated
+    Goto "bb4"
+  Block "bb6"
+    Sequenced two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:8:9 generated
+    Operation two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:9:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:9:16 generated
+    Return
+  Block "bb7"
+    Sequenced two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:8:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:11:5 written
+      Destination "_2"
+        Deref
+      Use
+        Constant 5
+    Operation two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:11:5 written
+      Destination "_7"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:11:5 generated
+    Operation two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:12:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:12:12 generated
+    Return

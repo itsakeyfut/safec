@@ -1,7 +1,7 @@
-error[SC0412]: this may reach outside the object `p` points at
-    ╭─[ a_join_of_four_bytes_and_one_byte.c:11:5 ]
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_belief_two_paths_meet_with_is_the_narrower.c:15:5 ]
     │
- 11 │     *p = 5;
+ 15 │     *q = 5;
     │     ───┬──  
     │        ╰──── this check cannot say this is inside its object
 ────╯

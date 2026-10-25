@@ -101,7 +101,7 @@ Each mutation applied on its own, the workspace run, and the file restored.
 
 * `fits` answering every access inside:
   `a_write_through_a_pointer_moved_past_its_allocation_after_a_null_test`,
-  `an_int_written_into_one_byte`, `a_pointer_written_into_four_bytes` and the
+  `an_int_written_into_one_byte`, `a_pointer_written_into_four_bytes_is_outside_where_a_pointer_takes_eight` and the
   rest of `tests/cases/bounds/` that report go silent.
 * `made_extent` leaving the allocator's argument unread: `an_int_written_into_one_byte`
   turns `Unknown`, `an_int_written_into_one_byte_is_an_error_where_unknown_is_allowed`
@@ -109,7 +109,7 @@ Each mutation applied on its own, the workspace run, and the file restored.
 * `calloc` reading its first argument only:
   `a_calloc_of_two_constants_is_their_product`.
 * the fold in `fits` proving a fit when any object it may reach is wide enough
-  rather than every one: `a_join_of_four_bytes_and_one_byte` goes silent.
+  rather than every one: `two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside` goes silent.
 * `Extent::joined` keeping the larger bound, or dropping its arm for two equal
   sizes: `two_sizes_for_one_object_meet_as_a_bound_below_both` in
   `crates/safec-ir/src/memory/parts.rs`. No C program brings two sizes for one
@@ -127,8 +127,8 @@ Each mutation applied on its own, the workspace run, and the file restored.
   `a_parameter_written_through_is_inside` is reported; an opaque call's result
   not believed: `a_call_s_result_is_believed_whole` is reported.
 * `reached_by_library` removed: `a_memset_wider_than_its_allocation` and
-  `a_memset_of_a_length_nothing_bounds` go silent.
-* `x86_64-pc-windows-msvc` given 32 pointer bits: `a_pointer_written_into_four_bytes`
+  `a_memset_of_a_length_nothing_bounds_is_unknown` go silent.
+* `x86_64-pc-windows-msvc` given 32 pointer bits: `a_pointer_written_into_four_bytes_is_outside_where_a_pointer_takes_eight`
   goes silent, and `every_target_is_what_clang_says_it_is` fails.
 * a new `Kind` with no words: `error[E0004]` at `memory_finding` in
   `crates/safec-c/src/driver/words.rs`.

@@ -3007,7 +3007,7 @@ cases! {
         // A pointer is eight bytes on one target and four on another, which
         // is `Target::pointer_bits`. Mutation: give `x86_64-pc-windows-msvc`
         // 32 pointer bits; the first goes silent.
-        a_pointer_written_into_four_bytes: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_written_into_four_bytes_is_outside_where_a_pointer_takes_eight: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_written_into_four_bytes_fits_where_a_pointer_takes_four: ["--emit", "safety-ir", "--target", "i686-unknown-linux-gnu"],
         // Two allocations of different sizes, each exact, which proves
         // neither fit nor outside: a may-set proves nothing from one member.
@@ -3015,7 +3015,7 @@ cases! {
         // `Extent::joined`, whose unit test is in `memory/parts.rs`.
         // Mutation: prove a fit when any object is wide enough rather than
         // every one; this goes silent.
-        a_join_of_four_bytes_and_one_byte: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The `void *` round trip, which needs no cast: a load is believed by
         // the type it is read as, which here is `void *` and so nothing. Mutation:
         // believe every pointer read out of memory to point at eight bytes;
@@ -3035,7 +3035,7 @@ cases! {
         // bytes. Mutation: drop `reached_by_library`; the first two go
         // silent, and the third is unchanged, which is why it is here.
         a_memset_wider_than_its_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_memset_of_a_length_nothing_bounds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_memset_of_a_length_nothing_bounds_is_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_memcpy_that_fits_both_objects_is_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `calloc(m, n)` makes `m * n` bytes. Mutation: read only `m`; `p` is
         // reported as well.
@@ -3081,6 +3081,26 @@ cases! {
         // a departure of the type that is read. Mutation: answer a belief
         // without the record in `fits`; both go silent.
         a_char_address_stored_as_void_and_read_through_an_int_alias: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `void *` arrives believing nothing, so even one byte through it
+        // is not shown to fit. Mutation: believe a `void *` one byte in
+        // `pointee_size`; this goes silent.
+        a_void_pointer_parameter_is_believed_to_point_at_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Two loads meet as the narrower belief, here a `void *`'s nothing.
+        // Mutation: keep the wider in `Held::joined`; this goes silent.
+        a_belief_two_paths_meet_with_is_the_narrower: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A negative size is no size read. Mutation: read one as the
+        // largest `u64` in `constant_argument`; this goes silent.
+        an_allocation_of_a_negative_size_is_no_size_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A proof over two sizes names neither, and one byte is one byte.
+        // Mutation: name the largest of the sizes in `fits`, or answer
+        // `bytes` for every count in `words.rs`; each changes its message.
+        an_access_wider_than_two_allocations_of_different_sizes_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_byte_written_into_nothing_is_one_byte: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read out of memory and handed straight to `memset` is
+        // believed by the type it is read as: four bytes fit, a hundred are
+        // not shown to. Mutation: answer every such argument inside in
+        // `reached_by_library`; the second goes silent.
+        a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 

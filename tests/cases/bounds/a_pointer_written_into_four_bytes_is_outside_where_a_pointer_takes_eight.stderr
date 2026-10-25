@@ -1,5 +1,5 @@
 error[SC0412]: this reaches 8 bytes into an object of 4 bytes
-   ╭─[ a_pointer_written_into_four_bytes.c:8:5 ]
+   ╭─[ a_pointer_written_into_four_bytes_is_outside_where_a_pointer_takes_eight.c:8:5 ]
    │
  4 │     int **pp = malloc(4);
    │                ────┬────  
