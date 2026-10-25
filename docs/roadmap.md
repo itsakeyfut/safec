@@ -28,6 +28,12 @@ free(p);
 *p = 10;   // detect
 ```
 
+Then the C a multi-file program commonly needs: arrays, structs, strings,
+globals, the rest of the control statements, and building one program from
+several files and headers. Each construct lands either read by the memory
+check or concluded `Unknown`, so the safety already built never answers safe
+for code it cannot read.
+
 Then lifetime safety:
 
 ```c
@@ -53,6 +59,20 @@ Phase 3 and the dataflow framework is Phase 4, because a backend needs only the
 Safety IR while the analyses need the framework as well. Data still flows the
 way `architecture.md` draws it.
 
+**Nor is the order of the phases the order of their numbers.** Phase 11 was
+added after the rest and runs before Phases 6 to 8. A phase keeps the number
+it was given, because records and issues cite phases by number in text that is
+not rewritten, and a renumbering would point them at other phases. The phases
+are listed below in the order they run:
+
+1. Phases 0 to 5
+2. Phase 11: Systems C
+3. Phase 6: Lifetime Safety
+4. Phase 7: Ownership
+5. Phase 8: Thread Safety
+6. Phase 9: Broader C
+7. Phase 10: Clang Integration
+
 Each phase closes when its **Done when** line is true. That line exists so that
 "is the phase finished" is a question with an answer rather than a feeling, and
 so that the milestone can be closed.
@@ -75,7 +95,7 @@ The hand-written frontend, from source text to a typed AST. See
 - lexer
 - a minimal preprocessor: `#include`, object-like `#define`, `#ifdef` and
   `#ifndef`. Function-like macros, `#` and `##`, and evaluating a full `#if`
-  expression are Phase 9. What `#include` buys early is that every later phase
+  expression are Phase 11. What `#include` buys early is that every later phase
   can be tested against a real header instead of a hand-written prototype
 - recursive-descent parser
 - AST
@@ -193,6 +213,50 @@ Safety level 1. The first phase that reports something about a C program.
 nothing, and a case the analysis cannot prove is an error that
 `--allow-unknown` turns back into a warning.
 
+### Phase 11: Systems C
+
+The C a multi-file program commonly needs, built before the rest of the safety
+model so that the remaining analyses are written against a language worth
+checking. Phase 5 was built over a subset with no arrays, structs, strings or
+globals. See [frontend.md](frontend.md), Stages 2 and 3, which this takes from
+Phase 9.
+
+- arrays, structs, `union`, `enum` and `typedef`, and pointer arithmetic in the
+  backend, which writes none but by zero, with a type for the difference of two
+  pointers. See [frontend.md](frontend.md), *What the backend refuses* and
+  *What the lowering refuses*
+- storage and types: global variables and `static`, the integer widths,
+  `unsigned` and `const`, `char` and string literals, `sizeof` and casts
+- the jump and selection statements the subset does not read: `break`,
+  `continue`, `do`, `switch` and `goto`, each refused today as `SC0207`. No
+  Stage in [frontend.md](frontend.md) lists them
+- compiling the rest of a function pointer, which already parses and
+  type-checks ([frontend.md](frontend.md), Stage 1): storing one, calling
+  through one, and comparing two. Phase 8 names one and passes it (#115)
+- variadic functions
+- the rest of the preprocessor that a program's own code uses: function-like
+  macros, `#` and `##`, and `#if` with a full constant expression
+- building one program from several files: `-c`, `-I`, and linking several
+  objects. `-D` and `-U` are done ahead of the rest (ADR-0059)
+- a minimal set of standard headers shipped with safec, such as `<stdio.h>`,
+  `<stdlib.h>` and `<string.h>`, declaring what a program commonly calls, with
+  the definitions taken from the system's C library. Reading the system's own
+  headers is Phase 9
+
+**Safety comes first, and every construct lands under one rule.** It is added
+so that the memory check either reads it or concludes `Unknown` about it. At a
+level where a check runs, an unproven program then fails, and `--allow-unknown`
+turns it back into a warning (ADR-0033). No construct is refused at levels 1 to
+4 for how it is written (ADR-0049). When a check later reads the construct, the
+same program passes without being rewritten. A construct no check reads is
+allowed only inside a hatch (ADR-0032, ADR-0038), and inline assembly, the one
+such construct in view, is Phase 9's.
+
+**Done when:** every construct listed compiles to an executable at `--safety
+off`, and the corpus shows, for each, that at `--safety memory` the memory check
+either reads it or concludes `Unknown`. None is answered safe without being
+read.
+
 ### Phase 6: Lifetime Safety
 
 Safety level 2.
@@ -235,9 +299,10 @@ Safety levels 4 and 5.
 
 - a parameter of function-pointer type and an argument that names a function,
   which is what `pthread_create`'s start routine is; brought forward from Phase
-  9, which keeps the rest of compiling a function pointer (#115). `<pthread.h>`
-  needs `typedef` and `union`, which are Phase 9's too, so a program here
-  declares the thread functions it calls by hand
+  9 when Phase 9 held function pointers (#115). The rest of compiling one is
+  Phase 11's, which runs first. `<pthread.h>` is one of the system's own
+  headers, which are Phase 9's, so a program here declares the thread functions
+  it calls by hand
 - thread creation and join
 - shared state
 - synchronization primitives
@@ -257,26 +322,26 @@ fails rather than passing quietly.
 
 ### Phase 9: Broader C
 
-Everything the subset left out. See [frontend.md](frontend.md), Stages 2 and 4.
+What replacing a production `cc` needs beyond Phase 11. See
+[frontend.md](frontend.md), Stage 4.
 
-- the rest of the preprocessor: function-like macros, `#` and `##`, `#if` with a
-  full constant expression, conditional compilation
-- `typedef`, `enum`, `union`
-- compiling the rest of a function pointer, which already parses and
-  type-checks ([frontend.md](frontend.md), Stage 1): storing one, calling
-  through one, and comparing two. Phase 8 names one and passes it (#115)
-- variadic functions
-- the jump and selection statements the subset does not read: `break`,
-  `continue`, `do`, `switch` and `goto`, each refused today as `SC0207`. No
-  Stage in [frontend.md](frontend.md) lists them
-- pointer arithmetic in the backend, which writes none but by zero, and a
-  type for the difference of two pointers. See [frontend.md](frontend.md),
-  *What the backend refuses* and *What the lowering refuses*
-- a driver that can stand in for `cc` in an existing build. `-c`, `-I`, `-D`,
-  `-O`, `-g`, `-W` and `-std` are each refused as an unexpected argument today,
-  and the module is handed to `clang` with no optimisation level and no debug
-  information (`driver/backend.rs`)
-- broader compatibility, potentially C11 or C17
+The core of the language this phase used to hold, from arrays and structs to
+the jump statements, function pointers, variadic functions, the rest of the
+program's own preprocessor, `-c`, `-I` and shipped headers, moved to Phase 11,
+which runs before Phases 6 to 8. What stays here:
+
+- reading the system's own standard headers, which lean on extensions and on
+  nearly all of the language
+- the rest of C11 and C17 that Phase 11 does not list
+- the GNU extensions real code uses, `__attribute__` and its kin
+- a driver that stands in for `cc` in an existing build in full: `-O`, `-g`,
+  `-W` and `-std`, each refused as an unexpected argument today, and a module
+  handed to `clang` with no optimisation level and no debug information
+  (`driver/backend.rs`)
+- a freestanding environment: no C library, an entry point of the program's
+  own, `volatile`
+- inline assembly, allowed only inside a hatch, and an experiment into how much
+  safety can be carried into one
 
 **Done when:** a real single-file C program from outside this repository
 compiles and runs.
