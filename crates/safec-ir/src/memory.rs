@@ -72,7 +72,7 @@ use crate::source::{SourceMap, Span};
 use built::named;
 use report::{
     after_a_call, derefs, freed_after_its_read_was_reported, handed, handed_places, inside,
-    loaded_indeterminate, outside, reached_by_library, reported, returned, used, used_before,
+    loaded_indeterminate, may_not_fit, reached_by_library, reported, returned, used, used_before,
 };
 use transfer::Allocations;
 
@@ -535,7 +535,7 @@ fn findings_within(
         // until the sort at the end of this function.
         let mut said: Vec<(Span, Place, usize)> = Vec::new();
         // The pointers already asked whether an access fits, per caret, kept
-        // apart from `said` for the reason `outside` gives.
+        // apart from `said` for the reason `may_not_fit` gives.
         let mut asked: Vec<(Span, LocalId)> = Vec::new();
         // **And the pointers a library call touched, apart from those.** The
         // same pointer at the same call is two accesses, a dereference in an
@@ -580,7 +580,7 @@ fn findings_within(
                     func,
                 );
                 // The same accesses, asked whether they fit. See ADR-0060.
-                outside(
+                may_not_fit(
                     &mut findings,
                     &mut asked,
                     &analysis,
@@ -660,7 +660,7 @@ fn findings_within(
                 &known,
                 func,
             );
-            outside(
+            may_not_fit(
                 &mut findings,
                 &mut asked,
                 &analysis,

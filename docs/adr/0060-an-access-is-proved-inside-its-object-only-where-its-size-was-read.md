@@ -187,7 +187,7 @@ folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
 
 * `crates/safec-ir/src/memory/parts.rs`: `Extent`, `Held::believed`,
   `Held::inner_address`.
-* `crates/safec-ir/src/memory/report.rs`: `fits`, `outside`,
+* `crates/safec-ir/src/memory/report.rs`: `fits`, `may_not_fit`,
   `reached_by_library`.
 * `crates/safec-ir/src/memory/transfer.rs`: `made_extent`, `pointee_size`, the
   extent where a parameter and a call's destination are made, and its join.

@@ -230,7 +230,7 @@ fn verdict(
         Kind::Unassigned | Kind::SometimesUnassigned { .. } => true,
         // Never asked: it is said by `loaded_indeterminate`, about no free.
         Kind::IndeterminateLoad => true,
-        // Never asked: it is said by `outside`, about no free.
+        // Never asked: it is said by `may_not_fit`, about no free.
         Kind::OutsideItsObject { .. } => true,
     };
 
@@ -811,7 +811,7 @@ fn fits(
 /// **Not through [`say`], and not keyed with it.** A use after free and an
 /// access outside its object are two questions about one place, and both can
 /// be true: keyed together, one would replace the other. See ADR-0060.
-pub(super) fn outside(
+pub(super) fn may_not_fit(
     findings: &mut Vec<Finding>,
     asked: &mut Vec<(Span, LocalId)>,
     analysis: &Allocations<'_>,
