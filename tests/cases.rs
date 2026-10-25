@@ -3009,13 +3009,17 @@ cases! {
         // 32 pointer bits; the first goes silent.
         a_pointer_written_into_four_bytes: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_written_into_four_bytes_fits_where_a_pointer_takes_four: ["--emit", "safety-ir", "--target", "i686-unknown-linux-gnu"],
-        // Two exact sizes meet as a bound below both, which proves neither
-        // fit nor outside. Mutation: `Extent::joined` keeping the larger;
-        // this goes silent.
+        // Two allocations of different sizes, each exact, which proves
+        // neither fit nor outside: a may-set proves nothing from one member.
+        // They are two sites, so this is the fold in `fits` and not
+        // `Extent::joined`, whose unit test is in `memory/parts.rs`.
+        // Mutation: prove a fit when any object is wide enough rather than
+        // every one; this goes silent.
         a_join_of_four_bytes_and_one_byte: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The `void *` round trip, RK-068's: a load is believed by the type
-        // it is read as, which here is `void *`. Mutation: believe a load by
-        // the type of the local it lands in; this goes silent.
+        // it is read as, which here is `void *` and so nothing. Mutation:
+        // believe every pointer read out of memory to point at eight bytes;
+        // this goes silent.
         a_char_address_stored_as_void_and_read_as_int: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same round trip through locals, where the edge names `c` and
         // its size is read. Mutation: fold a local's address as

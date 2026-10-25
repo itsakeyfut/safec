@@ -102,13 +102,19 @@ Each mutation applied on its own, the workspace run, and the file restored.
   builds, and `an_int_written_into_four_bytes_is_inside` is reported.
 * `calloc` reading its first argument only:
   `a_calloc_of_two_constants_is_their_product`.
-* `Extent::joined` keeping the larger bound: `a_join_of_four_bytes_and_one_byte`
-  goes silent.
+* the fold in `fits` proving a fit when any object it may reach is wide enough
+  rather than every one: `a_join_of_four_bytes_and_one_byte` goes silent.
+* `Extent::joined` keeping the larger bound, or dropping its arm for two equal
+  sizes: `two_sizes_for_one_object_meet_as_a_bound_below_both` in
+  `crates/safec-ir/src/memory/parts.rs`. No C program brings two sizes for one
+  site, since a site is one call's destination or one parameter, so nothing in
+  the corpus holds it.
 * `Offset::NonZero` read as `Zero` in `fits`:
   `a_write_through_a_pointer_moved_past_its_allocation_after_a_null_test` goes
   silent.
-* `read_through` believing a load by the destination's type rather than the
-  read's: `a_char_address_stored_as_void_and_read_as_int` goes silent.
+* `read_through` believing every pointer read out of memory to point at eight
+  bytes, whatever it was read as: `a_char_address_stored_as_void_and_read_as_int`
+  goes silent.
 * a local's address folded as `AtLeast(0)`:
   `a_char_address_converted_through_void_and_written_as_int` turns `Unknown`.
 * a parameter's extent `AtLeast(0)` where the function starts:
@@ -120,6 +126,11 @@ Each mutation applied on its own, the workspace run, and the file restored.
   goes silent, and `every_target_is_what_clang_says_it_is` fails.
 * a new `Kind` with no words: `error[E0004]` at `memory_finding` in
   `crates/safec-c/src/driver/words.rs`.
+
+**Held by nothing, and each says why.** `Held::inner_address` and the
+`Unknown` an `Index` in a place gets: no C reaches either, since the lowering
+folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
+`Index` is built and has to be guarded.
 
 ### Consequences
 
