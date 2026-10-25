@@ -534,6 +534,14 @@ fn findings_within(
         // The pointers already asked whether an access fits, per caret, kept
         // apart from `said` for the reason `outside` gives.
         let mut asked: Vec<(Span, LocalId)> = Vec::new();
+        // **And the pointers a library call touched, apart from those.** The
+        // same pointer at the same call is two accesses, a dereference in an
+        // argument and the call's own reach, and the second may be the
+        // wider: keyed together, a doubt about `*p` in `memset(p, *p, 8)`
+        // stood where the proof that `memset` writes past `p`'s object
+        // should have, and `--allow-unknown` built the overflow. Found by
+        // review. See ADR-0060.
+        let mut touched: Vec<(Span, LocalId)> = Vec::new();
 
         for &id in cfg.order() {
             // `Cfg::order` holds exactly the reachable blocks and `solve` gives
@@ -659,7 +667,7 @@ fn findings_within(
             );
             touched_by_length(
                 &mut findings,
-                &mut asked,
+                &mut touched,
                 &analysis,
                 function,
                 &block.terminator,

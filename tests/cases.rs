@@ -3040,6 +3040,12 @@ cases! {
         // `calloc(m, n)` makes `m * n` bytes. Mutation: read only `m`; `p` is
         // reported as well.
         a_calloc_of_two_constants_is_their_product: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A doubt about `*p` and a proof about what `memset` writes through
+        // `p`, at one call, each said, so that the proof stays an error
+        // where unknown is allowed. Mutation: key `touched_by_length` with
+        // the dereferences' list in `findings_within`; the proof goes and
+        // this exits 0.
+        a_proof_at_a_call_is_not_displaced_by_a_doubt_about_its_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
     }
 
     "returns" => {
