@@ -1,0 +1,10 @@
+error[SC0413]: this hands on a pointer that may not point at a whole object
+    ╭─[ a_call_in_a_write_s_own_operands_is_not_asked_about_the_write.c:21:23 ]
+    │
+ 21 │     r = (x = a[0]) + (*pp = a + now(), 0);
+    │                       ───────┬───────  
+    │                              ╰───────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as

@@ -2572,9 +2572,8 @@ impl Analysis for Allocations<'_> {
         // **What a call this check cannot read returns is believed whole**,
         // as a parameter is, and bounded by what it may return that this
         // check recorded: an allocation this function handed it is folded in
-        // at its size. The `return` in its body is where the belief is to be
-        // asked, which #623 writes; until it does, nothing asks it. See
-        // ADR-0060.
+        // at its size. The `return` in its body is where the belief is asked,
+        // where that body is one this check reads. See ADR-0060.
         if matches!(kind, Callee::Opaque) {
             value.points_to[site].believed = self.pointee_size(function, place);
         }

@@ -8,6 +8,7 @@ use std::collections::BTreeSet;
 use crate::analysis::Conclusion;
 use crate::ir::{
     BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
+    Ty, TyId,
 };
 use crate::nullability::NullAtTerminators;
 use crate::source::{SourceMap, Span};
@@ -18,7 +19,7 @@ use super::parts::{
     Callee, Extent, Freeing, Offset, Reach, Reached, Read, SiteState, earlier, same,
 };
 use super::transfer::Allocations;
-use super::{Finding, Kind, LostReason, Unproven};
+use super::{Departure, Finding, Kind, LostReason, Unproven};
 
 /// What a set of sites says about whatever touched them.
 ///
@@ -232,6 +233,8 @@ fn verdict(
         Kind::IndeterminateLoad => true,
         // Never asked: it is said by `may_not_fit`, about no free.
         Kind::OutsideItsObject { .. } => true,
+        // Never asked: it is said where a pointer leaves, about no free.
+        Kind::HandedOnPartial { .. } => true,
     };
 
     match earliest {
@@ -803,10 +806,10 @@ fn fits(
 /// one.** A deeper level goes through a pointer read out of memory, which is
 /// believed to be one whole object of the type it was read as, and the
 /// access through it is exactly that type, so it fits by what is believed.
-/// What would make that belief worth anything is that the store that put the
-/// pointer there is asked, which is the departure half of ADR-0060 and is
-/// not written yet (#623): until it is, the belief is asked nowhere, and
-/// [`fits`] bounds it by what the memory is recorded to hold.
+/// What makes that belief worth anything is that the store that put the
+/// pointer there is asked, by [`departed_in_element`], and that [`fits`]
+/// bounds it by what the memory is recorded to hold. A `void *` store asks
+/// no width, which #624 is about.
 ///
 /// **Not through [`say`], and not keyed with it.** A use after free and an
 /// access outside its object are two questions about one place, and both can
@@ -953,6 +956,231 @@ pub(super) fn reached_by_library(
             made,
             unproven,
         });
+    }
+}
+
+/// How many bytes one object of the type `ty` points to takes, where `ty`
+/// is a pointer: `None` for anything else and for a `void *`, which leaves
+/// believing nothing and so asks nothing. See ADR-0060.
+fn pointee_width(analysis: &Allocations<'_>, ty: TyId) -> Option<u64> {
+    match analysis.unit.ty(ty) {
+        Ty::Pointer(pointee) => analysis.unit.size_of(pointee).filter(|&width| width > 0),
+        Ty::Int | Ty::Char | Ty::Void => None,
+    }
+}
+
+/// Whether a value leaving as a pointer to `width` bytes points at the
+/// start of a whole object that wide, and the local it is the value of, or
+/// `None` where it is a constant and so a null, which leaves nothing to ask.
+///
+/// **Each shape a value can arrive in, written out**, so that a kind of
+/// rvalue added later answers here: a local's own value is asked as
+/// [`fits`] asks an access; a pointer read out of memory and handed straight
+/// on is believed by the type it is read as, as a load assigned first is; a
+/// local's address is that local's size; and anything built here without a
+/// temporary, which the C frontend does not do, is unknown. See ADR-0060.
+fn leaving(
+    analysis: &Allocations<'_>,
+    function: &Function,
+    value: &Rvalue,
+    width: u64,
+    known: &Known,
+) -> Option<(Fit, Option<LocalId>)> {
+    match value {
+        Rvalue::Use(Operand::Constant(_)) => None,
+        Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
+            fits(analysis, function, place.local, width, known).map(|fit| (fit, Some(place.local)))
+        }
+        Rvalue::Use(Operand::Copy(place)) if derefs(place) > 0 => {
+            let believed = analysis.pointee_size(function, place).unwrap_or(0);
+            let fit = if believed >= width {
+                Fit::Inside
+            } else {
+                Fit::Unknown
+            };
+            Some((fit, None))
+        }
+        Rvalue::Use(Operand::Copy(_)) => Some((Fit::Unknown, None)),
+        Rvalue::Address(place) if place.projection.is_empty() => {
+            let fit = match analysis.unit.size_of(function.local(place.local)) {
+                Some(size) if size >= width => Fit::Inside,
+                Some(size) => Fit::Outside {
+                    extent: Some(size),
+                    made: None,
+                },
+                None => Fit::Unknown,
+            };
+            Some((fit, None))
+        }
+        Rvalue::Address(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
+            Some((Fit::Unknown, None))
+        }
+    }
+}
+
+/// Push what [`leaving`] answered, once per value per caret and door.
+fn say_leaving(
+    findings: &mut Vec<Finding>,
+    departed: &mut Vec<(Span, Departure, Option<LocalId>)>,
+    analysis: &Allocations<'_>,
+    left: (Span, Departure, u64),
+    answer: Option<(Fit, Option<LocalId>)>,
+) {
+    let (at, how, width) = left;
+    let Some((fit, local)) = answer else {
+        return;
+    };
+    let (conclusion, extent, made, unproven) = match fit {
+        Fit::Inside => return,
+        Fit::Outside { extent, made } => (Conclusion::Unsafe, extent, made, None),
+        Fit::Unknown => (Conclusion::Unknown, None, None, Some(Unproven::Extent)),
+    };
+    if local.is_some() && departed.contains(&(at, how, local)) {
+        return;
+    }
+    departed.push((at, how, local));
+    findings.push(Finding {
+        function: analysis.function,
+        kind: Kind::HandedOnPartial { how, width, extent },
+        conclusion,
+        at,
+        local,
+        freed: None,
+        made,
+        unproven,
+    });
+}
+
+/// Report a pointer this element hands back by a `return` or stores through
+/// a pointer, where this check cannot show it points at one whole object of
+/// the type it leaves as.
+///
+/// **The departure half of ADR-0060.** A caller believes what it is handed
+/// back, and a later load believes what it reads, so this is where either
+/// belief is asked. A `void *` leaves believing nothing and asks nothing, and
+/// a constant is a null, which the nullability check answers.
+pub(super) fn departed_in_element(
+    findings: &mut Vec<Finding>,
+    departed: &mut Vec<(Span, Departure, Option<LocalId>)>,
+    analysis: &Allocations<'_>,
+    function: &Function,
+    element: &Element,
+    known: &Known,
+) {
+    let Element::Assign(operation) = element else {
+        return;
+    };
+    let how = if operation.place == Place::local(function.return_place()) {
+        Departure::Return
+    } else if !operation.place.projection.is_empty() {
+        Departure::Store
+    } else {
+        return;
+    };
+    let Some(width) = analysis
+        .unit
+        .place_ty(function, &operation.place)
+        .and_then(|ty| pointee_width(analysis, ty))
+    else {
+        return;
+    };
+    let answer = leaving(analysis, function, &operation.value, width, known);
+    say_leaving(
+        findings,
+        departed,
+        analysis,
+        (operation.origin.span(), how, width),
+        answer,
+    );
+}
+
+/// Report a pointer this call is handed where this check cannot show it
+/// points at one whole object of the type the callee believes it is.
+///
+/// **What the callee believes is its parameter's type**, so the callee's
+/// parameters are walked as well as the call's arguments: `void g();` names
+/// none, and a call through it passing fewer arguments than the definition
+/// takes would ask nothing about the rest while the body believed them. A
+/// pointer parameter no argument fills is unknown, and an argument past every
+/// parameter is asked as its own type, which is what a variadic or an
+/// unprototyped callee receives.
+///
+/// **Only a call this check cannot read.** `free`, an allocator and a call
+/// that does not return are handed nothing they read as an object; a library
+/// function in `LIBRARY` is asked how far it reaches by
+/// [`reached_by_library`], and an argument it reaches is not asked twice.
+/// See ADR-0060.
+pub(super) fn departed_at_call(
+    findings: &mut Vec<Finding>,
+    departed: &mut Vec<(Span, Departure, Option<LocalId>)>,
+    analysis: &Allocations<'_>,
+    function: &Function,
+    terminator: &Terminator,
+    known: &Known,
+) {
+    let Terminator::Call {
+        callee,
+        arguments,
+        origin,
+        ..
+    } = terminator
+    else {
+        return;
+    };
+    match analysis.callee(*callee) {
+        Callee::Opaque => {}
+        Callee::Frees
+        | Callee::Allocates
+        | Callee::Reallocates
+        | Callee::ReturnsFirst
+        | Callee::Copies
+        | Callee::Ends => return,
+    }
+    let reached: Vec<usize> = analysis
+        .library(*callee)
+        .map(|row| row.reaches.iter().map(|&(index, _)| index).collect())
+        .unwrap_or_default();
+    let at = origin.span();
+    let declared = analysis.unit.function(*callee);
+    let parameters: Vec<LocalId> = declared.parameters().collect();
+    for index in 0..parameters.len().max(arguments.len()) {
+        if reached.contains(&index) {
+            continue;
+        }
+        let ty = match (parameters.get(index), arguments.get(index)) {
+            (Some(&parameter), _) => declared.local(parameter),
+            (None, Some(Operand::Copy(place))) => {
+                let Some(ty) = analysis.unit.place_ty(function, place) else {
+                    continue;
+                };
+                ty
+            }
+            (None, Some(Operand::Constant(_)) | None) => continue,
+        };
+        let Some(width) = pointee_width(analysis, ty) else {
+            continue;
+        };
+        let answer = match arguments.get(index) {
+            Some(argument) => leaving(
+                analysis,
+                function,
+                &Rvalue::Use(argument.clone()),
+                width,
+                known,
+            ),
+            // Nothing was passed for a parameter the body believes. No C
+            // reaches this: the frontend refuses a call with too few
+            // arguments as `SC0303`, through `void g();` too. It is here for
+            // a frontend that does not.
+            None => Some((Fit::Unknown, None)),
+        };
+        say_leaving(
+            findings,
+            departed,
+            analysis,
+            (at, Departure::Argument, width),
+            answer,
+        );
     }
 }
 

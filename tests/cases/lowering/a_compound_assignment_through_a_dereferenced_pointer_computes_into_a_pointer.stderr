@@ -1,0 +1,10 @@
+error[SC0413]: this hands on a pointer that may not point at a whole object
+   ╭─[ a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:53 ]
+   │
+ 3 │ int main(void) { int *q = malloc(8); int **pp = &q; *pp += 1; return 0; }
+   │                                                     ────┬───  
+   │                                                         ╰───── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as

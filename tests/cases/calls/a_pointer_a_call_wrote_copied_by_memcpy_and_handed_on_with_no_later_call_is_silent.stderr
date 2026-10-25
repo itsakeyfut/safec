@@ -1,0 +1,10 @@
+error[SC0413]: this hands on `s`, which may not point at a whole object
+    ╭─[ a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:12:12 ]
+    │
+ 12 │     return use(s);
+    │            ───┬──  
+    │               ╰──── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as

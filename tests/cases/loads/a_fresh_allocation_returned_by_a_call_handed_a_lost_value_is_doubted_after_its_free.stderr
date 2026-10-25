@@ -1,3 +1,13 @@
+warning[SC0413]: this hands on `u`, which may not point at a whole object
+    ╭─[ a_fresh_allocation_returned_by_a_call_handed_a_lost_value_is_doubted_after_its_free.c:16:14 ]
+    │
+ 16 │     int *r = alloc_wrap(u);
+    │              ──────┬──────  
+    │                    ╰──────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as
 warning[SC0407]: this passes `u`, which this check stopped following
     ╭─[ a_fresh_allocation_returned_by_a_call_handed_a_lost_value_is_doubted_after_its_free.c:16:14 ]
     │

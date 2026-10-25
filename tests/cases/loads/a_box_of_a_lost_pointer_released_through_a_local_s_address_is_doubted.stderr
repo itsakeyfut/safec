@@ -1,3 +1,23 @@
+warning[SC0413]: this hands on `u`, which may not point at a whole object
+    ╭─[ a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:23:5 ]
+    │
+ 23 │     *box = u;
+    │     ────┬───  
+    │         ╰───── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as
+warning[SC0413]: this hands on `u`, which may not point at a whole object
+    ╭─[ a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:24:5 ]
+    │
+ 24 │     *box2 = u;
+    │     ────┬────  
+    │         ╰────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as
 warning[SC0402]: this uses `r`, which this check stopped following
     ╭─[ a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:29:9 ]
     │

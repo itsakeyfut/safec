@@ -3101,6 +3101,30 @@ cases! {
         // not shown to. Mutation: answer every such argument inside in
         // `reached_by_library`; the second goes silent.
         a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer that leaves is asked whether it is whole, `SC0413`, at
+        // each of the three doors where the other side believes it is.
+        // Mutation: drop `departed_at_call`, or `departed_in_element`'s
+        // `Return` or `Store` door; the first, second or third goes silent.
+        a_pointer_moved_past_its_allocation_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_moved_off_its_start_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_moved_off_its_start_stored_into_memory: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same three doors, each handed a whole allocation. Mutation:
+        // answer every departure unknown in `say_leaving`; this is reported
+        // three times.
+        a_whole_pointer_handed_on_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `char` handed to an `int *` parameter through a `void *` is
+        // proved narrower than the parameter believes. Mutation: take the
+        // width from the argument's own type in `departed_at_call`; this goes
+        // silent, since `void *` asks nothing.
+        a_char_handed_to_an_int_parameter_is_proved_narrower: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Past every parameter, what the callee receives is the argument's
+        // own type. Mutation: skip an argument with no parameter; this goes
+        // silent.
+        a_pointer_passed_past_every_parameter_is_asked_as_its_own_type: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `void *` leaves believing nothing, so nothing is asked of it.
+        // Mutation: give a `void *` a width of one in `pointee_width`; this
+        // is reported.
+        a_void_pointer_handed_on_asks_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 

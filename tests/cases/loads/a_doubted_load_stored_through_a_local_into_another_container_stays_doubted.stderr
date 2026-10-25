@@ -1,3 +1,13 @@
+warning[SC0413]: this hands on `x`, which may not point at a whole object
+    ╭─[ a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:23:13 ]
+    │
+ 23 │             *t4 = x;
+    │             ───┬───  
+    │                ╰───── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as
 warning[SC0402]: this uses `q`, which this check stopped following
     ╭─[ a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:28:13 ]
     │

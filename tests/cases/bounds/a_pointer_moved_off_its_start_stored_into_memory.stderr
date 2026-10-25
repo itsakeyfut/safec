@@ -1,0 +1,10 @@
+error[SC0413]: this hands on a pointer that may not point at a whole object
+    ╭─[ a_pointer_moved_off_its_start_stored_into_memory.c:12:5 ]
+    │
+ 12 │     *box = p + 5;
+    │     ──────┬─────  
+    │           ╰─────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as

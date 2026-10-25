@@ -1,3 +1,13 @@
+error[SC0413]: this hands on `a`, which may not point at a whole object
+    ╭─[ a_table_holding_a_live_pointer_whose_address_escaped_is_doubted_when_handed_on.c:15:5 ]
+    │
+ 15 │     *t = a;
+    │     ───┬──  
+    │        ╰──── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as
 error[SC0407]: this passes a pointer to where a pointer that may have been freed is stored
     ╭─[ a_table_holding_a_live_pointer_whose_address_escaped_is_doubted_when_handed_on.c:16:12 ]
     │

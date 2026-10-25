@@ -1,0 +1,10 @@
+error[SC0413]: this hands on a pointer that may not point at a whole object
+    ╭─[ a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:9 ]
+    │
+ 11 │     x = h(a + a[0]);
+    │         ─────┬─────  
+    │              ╰─────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as

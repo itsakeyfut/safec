@@ -1,3 +1,13 @@
+error[SC0413]: this hands on `a`, which may not point at a whole object
+   ╭─[ an_allocation_handed_to_a_call_beside_its_holders_address_is_doubted_after_it.c:9:5 ]
+   │
+ 9 │     g2(a, &a);
+   │     ────┬────  
+   │         ╰────── passed here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as
 error[SC0407]: this passes `a`, which may point to a freed allocation
    ╭─[ an_allocation_handed_to_a_call_beside_its_holders_address_is_doubted_after_it.c:9:5 ]
    │
