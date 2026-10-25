@@ -152,13 +152,15 @@ is the decision.
 
 **`SC0412` is an access that may not fit the object it reaches.** It is a
 class of its own because it is about where in an object an access lands, not
-whether the object is live, so it can stand beside `SC0402` at one caret. It is
-asked at every level of a dereference that may go through a local's value, so
-`**pi` asks what `v` holds where `pi = &v`. It is
-a proof where every object the pointer may reach was allocated with a constant
-size, the pointer is at its start, and the access is wider than each:
-`int *p = malloc(1); *p = 5;` is `this reaches 4 bytes into an object of 1`,
-an error under `--allow-unknown` too. It is unknown wherever less is known: a
+whether the object is live, so it can stand beside `SC0402` at one caret.
+Every level of a dereference that may go through a local's value asks that
+value, so `**pi` asks what `v` holds where `pi = &v`, and so does `*pi` handed
+to a call. An access is a proof where every object the pointer may reach was
+allocated with a constant size, the pointer is at its start, and the access is
+wider than each: `int *p = malloc(1); *p = 5;` is `this reaches 4 bytes into an
+object of 1`, an error under `--allow-unknown` too. Below the first level it is
+a proof only where the pointer gone through is certainly one local's value. It
+is unknown wherever less is known: a
 pointer moved off its start, since no distance is carried, an allocation whose
 size is not a constant, a pointer this check lost or whose local escaped, and
 a pointer read out of memory as a `void *`. A parameter, a call's result and a

@@ -3149,18 +3149,45 @@ cases! {
         // An access that goes through a local's address asks what that local
         // holds at the access, whichever came first, the move or the address,
         // and at every level. Mutation: ask only the first level in
-        // `may_not_fit`; the first four go silent. Mutation: stop after the
-        // second level; the fourth does.
+        // `may_not_fit`; the first four go silent, and three of the cases
+        // below change. Mutation: stop after the second level; the fourth
+        // does, and so does the one through an allocation below.
         a_pointer_moved_after_its_local_s_address_was_taken_is_asked_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_moved_before_its_local_s_address_was_taken_is_asked_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_void_pointer_moved_and_read_through_an_int_alias_of_its_local_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_three_levels_through_locals_is_asked_at_the_last: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A whole pointer, and one moved and moved back before the access,
-        // say nothing of size; the free and null doubts they keep are `main`'s.
+        // say nothing of size: they keep the `SC0402` and `SC0403` they had
+        // before, and gain no `SC0412`.
         // Mutation: doubt the escape of a local reached through an address in
-        // `may_not_fit`; both gain an `SC0412`.
+        // `may_not_fit`; both gain an `SC0412`, and fifteen other cases
+        // change.
         a_whole_pointer_read_through_its_local_s_address_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_moved_and_moved_back_before_it_is_read_through_its_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local's address stored in an allocation is found as one held by
+        // a local is. Mutation: walk only the address edges of the level
+        // above in `read_from_locals`, not `Known::levels_below`; this goes
+        // silent.
+        a_pointer_moved_after_its_local_s_address_was_stored_in_an_allocation_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read through a local's address and handed on, to a
+        // function or to `memset`, asks what the local holds, as one gone
+        // through does. Mutation: answer `None` from `through_locals`; both
+        // go silent.
+        a_pointer_read_through_its_local_s_address_and_handed_on_is_asked_what_the_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_through_its_local_s_address_and_handed_to_memset_is_asked_what_the_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `v` is asked twice at one caret, doubted through itself and proved
+        // through `pi`, and the proof stands. Mutation: keep the first
+        // answer in `say_fit`; this says a doubt instead.
+        a_proof_through_a_local_s_address_stands_beside_a_doubt_about_the_local_itself: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `pi` is `&v` or `&u`, so `u` being one `char` is a doubt and not a
+        // proof. Mutation: return `fit` unchanged from `only_if_certain`;
+        // this says a proof. Mutation: keep only the first local in
+        // `read_from_locals`; this goes silent.
+        a_pointer_that_may_be_either_of_two_locals_proves_nothing_from_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Each local `pi` may be is asked, here the first, as the case above
+        // asks the last. Mutation: keep only the last local in
+        // `read_from_locals`; this goes silent.
+        a_pointer_that_may_be_either_of_two_locals_is_asked_of_each: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument
