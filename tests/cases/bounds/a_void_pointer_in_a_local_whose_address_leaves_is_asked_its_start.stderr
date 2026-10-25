@@ -1,0 +1,10 @@
+error[SC0413]: this lets `v` leave, which may not point at the start of an object
+   ╭─[ a_void_pointer_in_a_local_whose_address_leaves_is_asked_its_start.c:2:80 ]
+   │
+ 2 │ int main(void){ int *p = malloc(4); if (p == 0) { return 1; } void *v = p + 5; take(&v); return 0; }
+   │                                                                                ────┬───  
+   │                                                                                    ╰───── passed here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave as a `void *` only at the start of an object

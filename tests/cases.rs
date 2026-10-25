@@ -3122,13 +3122,23 @@ cases! {
         // silent.
         a_pointer_passed_past_every_parameter_is_asked_as_its_own_type: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `void *` leaves believing no width, and is asked whether it
-        // starts an object, at a call and at a store, in this function or a
-        // callee. Mutation: answer `None` for `void` in `pointee_width`; the
-        // first three go silent. Mutation: give `void` a width of one; the
-        // fourth is reported.
+        // starts an object at every door. Mutation, for the four that report:
+        // answer `None` for `void` in `pointee_width`; each goes silent.
+        //
+        // At a call. Mutation: skip a width of zero in `departed_at_call`.
         a_void_pointer_off_its_start_leaving_is_asked_whether_it_starts_an_object: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // At a store in this function, and at one in a callee. Mutation: skip
+        // a width of zero in `departed_in_element`; both go silent.
         a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_off_its_start_stored_as_void_by_a_callee: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // In a local whose address leaves, named in the words a named pointer
+        // gets. Mutation: skip a width of zero in `contents_leaving`; this
+        // goes silent.
+        a_void_pointer_in_a_local_whose_address_leaves_is_asked_its_start: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `void *` parameter handed on unchanged starts what it starts, and
+        // nothing is known of its size: asked its start it is silent, asked
+        // any width it would not be. Mutation: give `void` a width of one in
+        // `pointee_width`; this is reported.
         a_void_pointer_of_no_known_size_leaves_asking_no_width: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the

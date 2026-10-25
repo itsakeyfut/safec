@@ -235,7 +235,8 @@ folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
   11's rule allows until a distance is carried.
 * Bad, because `strcpy` and its family are always `Unknown` at their
   destination, and a list walked through `void *` is `Unknown` at every step.
-* Bad, because a `void *` store is not asked about a size, which is #624.
+* Bad, because a `void *` store is asked its start and no size, so size
+  through a `void *` is not seen, which is #627.
 * Bad, because every pointer handed on off its start is `Unknown`, so a
   pointer one past the end handed to a call that only compares with it is
   refused, and corpus cases that already reported a doubt about such a
@@ -270,9 +271,11 @@ folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
 
 ### Ask a `void *` its start and no width
 
-* Good, because every way a pointer enters memory is then asked about its
-  start: a typed store at its type, a `void *` store at zero width, a byte at
-  one, and `memcpy`'s source through the pointers it reaches. One existing
+* Good, because every way a pointer enters memory through a projection, a
+  call or `memcpy` is then asked about its start: a typed store at its type,
+  a `void *` store at zero width, a byte at one, and `memcpy`'s source
+  through the pointers it reaches. An assignment to a local whose address was
+  taken and has not left the function is not one of those. One existing
   corpus case changed, the one that asserted the old rule.
 * Bad, because a pointer off its start passed to a `void *` parameter,
   `fwrite(buf + off, ...)` among them, is a false `Unknown`.

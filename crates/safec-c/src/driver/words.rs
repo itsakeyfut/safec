@@ -831,7 +831,10 @@ pub(super) fn memory_finding(
                      believed",
                     bytes(width)
                 ),
-                // A `void *` is asked its start and no width, and says so.
+                // A `void *` is asked its start and no width, and says so. A
+                // width of zero is `report::pointee_width`'s answer for a
+                // pointer to `void`, the one type with no size today; a type
+                // added later with none answers there first. See ADR-0060.
                 (false, _) if width == 0 => said(
                     name,
                     "this lets a pointer leave that may not point at the start of an object",
