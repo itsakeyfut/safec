@@ -1612,10 +1612,11 @@ fn act(
                                  is compiled"
                             )
                         })
-                        // The way out is the reader's to state, not this
-                        // compiler's to suggest: either answer is a claim about
-                        // the build that nothing here can check. See ADR-0059,
-                        // and ADR-0034 for why a way out is a remedy.
+                        // Both ways out, and the reader to choose between them:
+                        // either is a claim about the build that nothing here can
+                        // check, so this does not lean toward one. See ADR-0059.
+                        // A remedy rather than a note, as `docs/diagnostics.md`
+                        // says of a way out.
                         .with_remedy(Remedy::new(format!(
                             "say whether the build defines it: `-D {name}` if it does, \
                              `-U {name}` if it does not"

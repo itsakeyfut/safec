@@ -541,15 +541,18 @@ differently, `= note:` and `= help:`, and they are different fields on a
 in it.
 
 A safety check cannot report without one. `Diagnostic::concluded` takes a
-remedy as an argument rather than offering a `with_` method for it, so a
+remedy as an argument rather than leaving it to a `with_` method, so a safety
 rejection built without one does not compile. That is the whole mechanism, and
 [ADR-0034](adr/0034-a-diagnostic-that-rejects-a-program-carries-the-change-that-would-make-it-compile.md)
 records why it is a field rather than a diagnostic reported alongside.
 
 **The hole is that `Diagnostic::error` is public.** A check that builds a
-rejection through it instead carries no remedy and nothing says so. What that
-costs is a rejection reaching a reader without its remedy, which is visible in
-the output and in a corpus expectation rather than silent.
+rejection through it instead carries no remedy unless it asks for one, and
+nothing says so. `Diagnostic::with_remedy` is crate-wide so that one can: the
+preprocessor's refusal of a name the implementation may define asks for `-D`
+or `-U`. What a forgotten one costs is a rejection reaching a reader without
+its remedy, which is visible in the output and in a corpus expectation rather
+than silent.
 
 **A remedy is a claim, like a label is.** So one is written against what its
 row established rather than against what its words suggest, and two rows here

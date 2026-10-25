@@ -455,12 +455,13 @@ impl Diagnostic {
 
     /// Ask for a change that would make the program compile.
     ///
-    /// **Crate-wide, and still not public, because nothing attaches a second
-    /// one.** [`Self::concluded`] calls this once, and so does the
-    /// preprocessor's refusal of a name the implementation may define, the
-    /// first rejection outside a safety check to carry a way out. With one
-    /// remedy per diagnostic, whether this appends or replaces is a difference
-    /// no mutation can show: both were tried and the suite stayed green either
+    /// **Crate-wide, so that a rejection built through [`Self::error`] can
+    /// carry one.** The preprocessor's refusal of a name the implementation may
+    /// define does, and [`Self::concluded`] calls this for every safety check.
+    ///
+    /// **Not public, because nothing attaches a second one.** With one remedy
+    /// per diagnostic, whether this appends or replaces is a difference no
+    /// mutation can show: both were tried and the suite stayed green either
     /// way. Whoever writes the first rejection with two ways out of it brings a
     /// test for the order they arrive in.
     pub(crate) fn with_remedy(mut self, remedy: Remedy) -> Self {
