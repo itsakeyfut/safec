@@ -1026,18 +1026,18 @@ impl Analysis for Allocations<'_> {
         } = into;
         // A may-fact, so a union, as `exposed` is.
         *lost_exposed |= from.lost_exposed;
-        // **Read before `state` is joined below**, because a side that left
-        // the site `SiteState::Unheld` contributes nothing, as it contributes
-        // nothing to the state: no execution's next use of the site starts on
-        // that path, so taking the smaller size from it would doubt an access
-        // that path never reaches. A side that never made the site is the
-        // same. See ADR-0048 and ADR-0060.
-        for (site, (here, there)) in extent.iter_mut().zip(&from.extent).enumerate() {
-            let unheld_here = matches!(state[site], SiteState::Unheld);
-            let unheld_there = matches!(from.state[site], SiteState::Unheld);
+        // A side that never made the site says nothing about it. Two sides
+        // that both did are joined as `Extent::joined` says, which only
+        // narrows, so being wrong here doubts an access rather than proves
+        // one. **`SiteState::Unheld` is not asked**, although it is the
+        // state's identity (ADR-0048): a site is one call's destination or one
+        // parameter, which makes it with the same size every time, so two
+        // sides never bring different sizes for it and there is nothing for
+        // the identity to choose between. Measured: a version that took the
+        // other side's size where one side was `Unheld` answered every test
+        // as this one does. See ADR-0060.
+        for (here, there) in extent.iter_mut().zip(&from.extent) {
             *here = match (*here, *there) {
-                (Some(_), Some(theirs)) if unheld_here && !unheld_there => Some(theirs),
-                (Some(ours), Some(_)) if unheld_there && !unheld_here => Some(ours),
                 (Some(ours), Some(theirs)) => Some(ours.joined(theirs)),
                 (Some(only), None) | (None, Some(only)) => Some(only),
                 (None, None) => None,

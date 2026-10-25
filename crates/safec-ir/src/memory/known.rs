@@ -953,11 +953,10 @@ impl Known {
             exposed_after_call,
             // About no site.
             lost_exposed: _,
-            // The caller says what the new allocation takes, as it says
-            // whether it is fresh, since only it knows what made it.
-            extent,
+            // Left to the caller, which writes what the new allocation takes
+            // on the line after this, since only it knows what made it.
+            extent: _,
         } = self;
-        extent[site] = None;
 
         // **A local that loses an allocation that is gone may hold one**, so
         // a store of it marks where it lands, as a load out of a marked
