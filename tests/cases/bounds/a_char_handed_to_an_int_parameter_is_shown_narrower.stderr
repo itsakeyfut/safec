@@ -1,5 +1,5 @@
 error[SC0413]: this lets a pointer to 1 byte leave where 4 bytes are believed
-   ╭─[ a_char_handed_to_an_int_parameter_is_proved_narrower.c:6:5 ]
+   ╭─[ a_char_handed_to_an_int_parameter_is_shown_narrower.c:6:5 ]
    │
  6 │     g(v);
    │     ──┬─  

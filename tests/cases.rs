@@ -3116,7 +3116,7 @@ cases! {
         // proved narrower than the parameter believes. Mutation: take the
         // width from the argument's own type in `departed_at_call`; this goes
         // silent, since `void *` asks nothing.
-        a_char_handed_to_an_int_parameter_is_proved_narrower: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_char_handed_to_an_int_parameter_is_shown_narrower: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Past every parameter, what the callee receives is the argument's
         // own type. Mutation: skip an argument with no parameter; this goes
         // silent.

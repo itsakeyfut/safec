@@ -1005,6 +1005,8 @@ fn leaving(
             fits(analysis, function, place.local, width, known, true)
                 .map(|fit| (fit, Some(place.local)))
         }
+        // A belief narrower than the width is unknown and not narrower,
+        // since a belief is a floor and the object may be wider.
         Rvalue::Use(Operand::Copy(place)) if derefs(place) > 0 => {
             let believed = analysis.pointee_size(function, place).unwrap_or(0);
             let fit = if believed >= width {
@@ -1176,6 +1178,8 @@ pub(super) fn departed_in_element(
     } else if !operation.place.projection.is_empty() {
         Departure::Store
     } else {
+        // A copy into a local leaves nothing: it is asked where the local's
+        // value or its address leaves.
         return;
     };
     let Some(ty) = analysis.unit.place_ty(function, &operation.place) else {
@@ -1210,11 +1214,15 @@ pub(super) fn departed_in_element(
 /// parameter is asked as its own type, which is what a variadic or an
 /// unprototyped callee receives.
 ///
-/// **Only a call this check cannot read.** `free`, an allocator and a call
-/// that does not return are handed nothing they read as an object; a library
-/// function in `LIBRARY` is asked how far it reaches by
-/// [`reached_by_library`], and an argument it reaches is not asked twice.
-/// See ADR-0060.
+/// **Which callees ask, by what `Callee` says of them**, unless the callee
+/// is defined in this unit, which is asked as any function whatever its
+/// name. An opaque call asks every argument, but one its `LIBRARY` row
+/// reaches, which [`reached_by_library`] asks instead. `memcpy` and `memmove`
+/// ask what their source points at, as a store into the destination. `free`,
+/// an allocator, `realloc`, a call that does not return, and a library
+/// function that returns its first argument ask nothing here: the first four
+/// read nothing they are handed as an object, and the last is asked how far
+/// it reaches. See ADR-0060.
 pub(super) fn departed_at_call(
     findings: &mut Vec<Finding>,
     departed: &mut Vec<(Span, Departure, Option<LocalId>)>,
