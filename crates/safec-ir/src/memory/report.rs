@@ -674,8 +674,9 @@ enum Fit {
 ///    holding anything: whatever is known about it may be stale (ADR-0017,
 ///    ADR-0018), so it is unknown. RK-061 is why the escape is asked here.
 /// 3. A value read out of memory on every path is believed by the type it was
-///    read as, and nothing more ([`Held::believed`](super::parts::Held::believed)).
-///    One read on some paths only is unknown.
+///    read as, and nothing more ([`Held::believed`](super::parts::Held::believed)),
+///    nor more than what that memory is recorded to hold. One read on some
+///    paths only is unknown.
 /// 4. Off its start, or perhaps off it: unknown, since no distance is
 ///    carried (ADR-0036).
 /// 5. An edge that may be the address of something inside a local rather
@@ -710,20 +711,6 @@ fn fits(
     if held.lost || held.foreign || known.escaped[local.index()] {
         return Some(Fit::Unknown);
     }
-    if let Some(believed) = held.believed {
-        return Some(if believed >= width {
-            Fit::Inside
-        } else {
-            Fit::Unknown
-        });
-    }
-    if held.loaded || held.offset != Offset::Zero {
-        return Some(Fit::Unknown);
-    }
-    if held.may_be_a_locals_address() && held.inner_address {
-        return Some(Fit::Unknown);
-    }
-
     let sites = held
         .sites()
         .map(|site| known.extent[site].unwrap_or(Extent::AtLeast(0)));
@@ -739,6 +726,29 @@ fn fits(
                 .map_or(Extent::AtLeast(0), Extent::Exactly)
         });
     let extents: Vec<Extent> = sites.chain(locals).collect();
+
+    // **No wider than what the memory it was read from is known to hold**,
+    // where that is recorded: a `void *` slot written with a `char`'s address
+    // and read back through an `int **` alias, or an `int *` copied in by
+    // `memcpy`, arrives believed four bytes wide and is known to name one.
+    // The belief is the floor where nothing is recorded, and the record is
+    // the floor where it says less. Found by review. What the record cannot
+    // see is a pointer off its start stored as a `void *`, which ADR-0060
+    // lists.
+    if let Some(believed) = held.believed {
+        let recorded = extents.iter().all(|extent| extent.lower() >= width);
+        return Some(if believed >= width && recorded {
+            Fit::Inside
+        } else {
+            Fit::Unknown
+        });
+    }
+    if held.loaded || held.offset != Offset::Zero {
+        return Some(Fit::Unknown);
+    }
+    if held.may_be_a_locals_address() && held.inner_address {
+        return Some(Fit::Unknown);
+    }
 
     if extents.iter().all(|extent| extent.lower() >= width) {
         return Some(Fit::Inside);

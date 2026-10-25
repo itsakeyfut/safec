@@ -3075,6 +3075,13 @@ cases! {
         // `aligned_alloc`'s size is its second argument. Mutation: make it
         // the first; this goes silent, sixteen bytes read for one.
         an_int_written_into_one_aligned_byte: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A load is believed no wider than what its memory is recorded to
+        // hold: a `char`'s address put there through a `void **` alias, or
+        // by `memcpy`, and read back as an `int *`. No store either asks is
+        // a departure of the type that is read. Mutation: answer a belief
+        // without the record in `fits`; both go silent.
+        a_char_address_stored_as_void_and_read_through_an_int_alias: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "returns" => {

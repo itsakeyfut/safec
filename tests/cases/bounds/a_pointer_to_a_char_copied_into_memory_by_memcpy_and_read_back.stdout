@@ -1,0 +1,130 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:2:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:3:5 "main"
+  Local "_0" "int" return
+  Local "_1" "char" "c"
+  Local "_2" "void *" "vc"
+  Local "_3" "char *"
+  Local "_4" "int *" "bad"
+  Local "_5" "int **" "slot"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int **"
+  Local "_9" "void *"
+  Local "_10" "int *" "q"
+  Local "_11" "int"
+  Local "_12" "int"
+  Block "bb0" entry
+    Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:3:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:4:10 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:4:14 generated
+    Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:5:16 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:5:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:5:16 generated
+    Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:6:10 written
+      Destination "_4"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:6:16 generated
+    ArgumentsEvaluated a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:7:18 generated
+    Call a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:7:18 written "malloc" "bb1"
+      Destination "_6"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:7:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:7:18 generated
+    Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:8:9 written
+      Destination "_7"
+      Binary "Eq"
+        Copy "_5"
+        Constant 0
+    Branch a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:8:9 written "bb2" "bb3"
+      Copy "_7"
+  Block "bb2"
+    Sequenced a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:8:9 generated
+    Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:8:22 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:8:29 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:8:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:9:18 written
+      Destination "_8"
+      Address
+        Place "_4"
+    ArgumentsEvaluated a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:9:5 generated
+    Call a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:9:5 written "memcpy" "bb5"
+      Destination "_9"
+      Copy "_5"
+      Copy "_8"
+      Constant 8
+  Block "bb5"
+    Sequenced a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:9:5 generated
+    Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:10:10 written
+      Destination "_10"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:10:14 generated
+    Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:11:9 written
+      Destination "_11"
+      Binary "Eq"
+        Copy "_10"
+        Constant 0
+    Branch a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:11:9 written "bb6" "bb7"
+      Copy "_11"
+  Block "bb6"
+    Sequenced a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:11:9 generated
+    Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:11:19 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:11:26 generated
+    Return
+  Block "bb7"
+    Sequenced a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:11:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:12:5 written
+      Destination "_10"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:12:5 written
+      Destination "_12"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:12:5 generated
+    Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:13:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:13:12 generated
+    Return
