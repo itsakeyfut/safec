@@ -108,7 +108,11 @@ call.
 
 **The question**, `report::fits`, is asked at every access `used` asks about,
 of the pointer the place goes through first; a deeper level goes through a load
-of exactly the type it reads, so it fits by what is believed. In order: a
+of exactly the type it reads, so it fits by what is believed, **except where it
+may go through a local**, whose value is asked at the access as it stands
+there: an assignment to a local is no door, so `v = p + 4;` after `pi = &v;`
+was believed at `**pi = 1` (#629). That local's escape is not doubted, since
+its address is what escapes it. In order: a
 pointer holding nothing is the nullability check's; a lost, foreign or escaped
 one is `Unknown`, since something may have written it where this check did not
 see; a pointer moved off its start holds something for this question even

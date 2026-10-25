@@ -153,6 +153,8 @@ is the decision.
 **`SC0412` is an access that may not fit the object it reaches.** It is a
 class of its own because it is about where in an object an access lands, not
 whether the object is live, so it can stand beside `SC0402` at one caret. It is
+asked at every level of a dereference that may go through a local's value, so
+`**pi` asks what `v` holds where `pi = &v`. It is
 a proof where every object the pointer may reach was allocated with a constant
 size, the pointer is at its start, and the access is wider than each:
 `int *p = malloc(1); *p = 5;` is `this reaches 4 bytes into an object of 1`,
