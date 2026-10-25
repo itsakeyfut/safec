@@ -49,7 +49,7 @@ records why the prefix is this one and what was rejected.
 | `SC01xx` | lexical, what a character, a token or a directive is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105`, `SC0106`, `SC0107`, `SC0108`, `SC0109`, `SC0110`, `SC0111`, `SC0112`, `SC0113`, `SC0114`, `SC0115`, `SC0116`, `SC0117` |
 | `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203`, `SC0204`, `SC0205`, `SC0206`, `SC0207` |
 | `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305`, `SC0306`, `SC0307`, `SC0308`, `SC0309`, `SC0310`, `SC0311`, `SC0312`, `SC0313`, `SC0314`, `SC0315`, `SC0316`, `SC0317`, `SC0318`, `SC0319` |
-| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406`, `SC0407`, `SC0408`, `SC0409`, `SC0410`, `SC0411`, `SC0412` |
+| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406`, `SC0407`, `SC0408`, `SC0409`, `SC0410`, `SC0411`, `SC0412`, `SC0413` |
 | `SC05xx` | lifetime | none yet |
 | `SC06xx` | ownership | `SC0601` |
 | `SC07xx` | thread | none yet |
@@ -168,6 +168,17 @@ that reads or writes as far as a string runs, `strlen`, `strcmp`, `strcpy` and
 their kind, is always unknown there.
 [ADR-0060](adr/0060-an-access-is-proved-inside-its-object-only-where-its-size-was-read.md)
 is the decision.
+
+**`SC0413` is the same belief asked where a pointer leaves.** A pointer handed
+to a call, returned, or stored through a pointer is believed by whoever
+receives it to point at one whole object of the type it is handed on as, so it
+is asked there whether it does: `g(p + 5)`, `return p + 5;` and `*box = p +
+5;` are each `SC0413`, labelled `passed here`, `returned here` or `stored
+here`. It is a class of its own rather than `SC0412` because nothing has been
+read or written through the pointer yet, and what to change is what is handed
+on. A `void *` leaves believing nothing and asks nothing, a constant is a
+null, and a library function this check reads by name is asked how far it
+reaches rather than this.
 
 **`SC0319` refuses a name the checks believe.** A call to `abort`, `exit`,
 `_Exit` or `quick_exit` gets no continuation, because C says none returns, and

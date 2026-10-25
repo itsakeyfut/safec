@@ -143,8 +143,9 @@ of memory, is believed to point at one whole object of the type it arrives as.
 An access is proved to fit only from those; it is `Unsafe` where every object it
 may reach is known exactly and is narrower than the access, and `Unknown`
 everywhere else, a pointer moved off its start among them. What is believed
-where a pointer arrives is to be asked where it leaves, handed to a call,
-returned or stored, which is #623; until then nothing asks it. See
+where a pointer arrives is asked where it leaves, handed to a call, returned
+or stored, except a `void *`, which leaves believing nothing and asks no
+width. See
 [ADR-0060](adr/0060-an-access-is-proved-inside-its-object-only-where-its-size-was-read.md).
 
 
