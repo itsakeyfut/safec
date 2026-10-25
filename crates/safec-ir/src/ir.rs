@@ -1421,17 +1421,37 @@ impl TranslationUnit {
 
     /// What this type is worth on this unit's target, if it is an integer.
     ///
-    /// `None` for `void` and for a pointer, which are the two that have no
-    /// width to answer with: a `void` is not a value and a pointer's width is
-    /// not something this compiler needs yet. A caller that wants to convert or
-    /// to check a range has to say what it does about those, which is the point
-    /// of answering `Option` rather than panicking.
+    /// `None` for `void` and for a pointer, which are the two that are not
+    /// integers: a `void` is not a value, and a pointer is not converted or
+    /// range-checked as one. What a pointer takes in memory is
+    /// [`Self::size_of`]'s to say. A caller that wants to convert or to check
+    /// a range has to say what it does about those, which is the point of
+    /// answering `Option` rather than panicking.
     pub fn integer(&self, id: TyId) -> Option<Integer> {
         match self.ty(id) {
             Ty::Int => Some(self.target.int()),
             Ty::Char => Some(self.target.char()),
             Ty::Void | Ty::Pointer(_) => None,
         }
+    }
+
+    /// How many bytes an object of this type takes on this unit's target, or
+    /// `None` for `void`, which is not an object type.
+    ///
+    /// What the memory check compares an access with, so that a pointer
+    /// written into four bytes is asked about eight where pointers take eight.
+    /// A `match` rather than a fallback, so that a kind of type added later is
+    /// `error[E0004]` here until it says what it is worth. See ADR-0060.
+    pub fn size_of(&self, id: TyId) -> Option<u64> {
+        let bits = match self.ty(id) {
+            Ty::Int => self.target.int().bits(),
+            Ty::Char => self.target.char().bits(),
+            Ty::Pointer(_) => self.target.pointer_bits(),
+            Ty::Void => return None,
+        };
+        // In C's bytes, which are `char`s (C17 6.5.3.4 p4), so a `char` is
+        // one whatever its width.
+        Some(u64::from(bits / self.target.char().bits()))
     }
 
     /// The type a place reaches, or `None` where its projections do not fit.

@@ -139,15 +139,17 @@ enum Widening {
 /// A machine, and what C's types are worth on it, and what it asks of a value
 /// crossing a call.
 ///
-/// Only `int` and `char` are described, because they are the only integer types
-/// the frontend parses. A pointer's width is deliberately absent: nothing can
-/// observe one yet, and ADR-0013 records that as the rule rather than an
-/// oversight.
+/// Only `int` and `char` are described among the integers, because they are
+/// the only integer types the frontend parses. A pointer's width is here
+/// because the memory check asks whether an access fits the object it reaches,
+/// and a pointer written into four bytes does not fit on a machine whose
+/// pointers take eight. See ADR-0060, which amends ADR-0013 on that point.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Target {
     triple: &'static str,
     int: Integer,
     character: Integer,
+    pointer_bits: u32,
     widening: Widening,
 }
 
@@ -156,7 +158,8 @@ impl Target {
     ///
     /// Written out, and each row measured with
     /// `clang 20.1.6 --target=<triple> -dM -E -x c /dev/null` reading
-    /// `__SIZEOF_INT__`, `__CHAR_BIT__` and `__CHAR_UNSIGNED__`. A row nobody
+    /// `__SIZEOF_INT__`, `__CHAR_BIT__`, `__CHAR_UNSIGNED__` and
+    /// `__SIZEOF_POINTER__`. A row nobody
     /// measured is a machine this compiler would be inventing, so the test
     /// beside this writes the same numbers out again rather than walking this
     /// table against itself, which would hold for any numbers at all.
@@ -173,20 +176,49 @@ impl Target {
     /// `char` returning one, reading the attribute on the result and on the
     /// parameter.
     pub const ALL: &'static [Self] = &[
-        Self::new("aarch64-apple-darwin", 32, 8, true, Widening::Required),
-        Self::new("aarch64-unknown-linux-gnu", 32, 8, false, Widening::None),
+        Self::new("aarch64-apple-darwin", 32, 8, true, 64, Widening::Required),
+        Self::new(
+            "aarch64-unknown-linux-gnu",
+            32,
+            8,
+            false,
+            64,
+            Widening::None,
+        ),
         Self::new(
             "armv7-unknown-linux-gnueabihf",
             32,
             8,
             false,
+            32,
             Widening::Required,
         ),
-        Self::new("i686-unknown-linux-gnu", 32, 8, true, Widening::Required),
-        Self::new("wasm32-unknown-unknown", 32, 8, true, Widening::Required),
-        Self::new("x86_64-apple-darwin", 32, 8, true, Widening::Required),
-        Self::new("x86_64-pc-windows-msvc", 32, 8, true, Widening::None),
-        Self::new("x86_64-unknown-linux-gnu", 32, 8, true, Widening::Required),
+        Self::new(
+            "i686-unknown-linux-gnu",
+            32,
+            8,
+            true,
+            32,
+            Widening::Required,
+        ),
+        Self::new(
+            "wasm32-unknown-unknown",
+            32,
+            8,
+            true,
+            32,
+            Widening::Required,
+        ),
+        Self::new("x86_64-apple-darwin", 32, 8, true, 64, Widening::Required),
+        Self::new("x86_64-pc-windows-msvc", 32, 8, true, 64, Widening::None),
+        Self::new(
+            "x86_64-unknown-linux-gnu",
+            32,
+            8,
+            true,
+            64,
+            Widening::Required,
+        ),
     ];
 
     /// One row of [`Self::ALL`], and nothing else builds one.
@@ -199,10 +231,12 @@ impl Target {
         int_bits: u32,
         char_bits: u32,
         char_signed: bool,
+        pointer_bits: u32,
         widening: Widening,
     ) -> Self {
         Self {
             triple,
+            pointer_bits,
             widening,
             int: Integer {
                 bits: int_bits,
@@ -250,6 +284,13 @@ impl Target {
     /// `aarch64-unknown-linux-gnu` and `armv7-unknown-linux-gnueabihf`.
     pub fn char(self) -> Integer {
         self.character
+    }
+
+    /// How many bits a pointer takes here: what an object holding one is
+    /// worth when the memory check asks whether an access fits it. See
+    /// ADR-0060.
+    pub fn pointer_bits(self) -> u32 {
+        self.pointer_bits
     }
 
     /// What a program for this machine is called when nobody said.
@@ -320,13 +361,15 @@ mod tests {
     /// at all, which is the reason the keyword table is written out too. These
     /// numbers came from
     /// `clang 20.1.6 --target=<triple> -dM -E -x c /dev/null`, reading
-    /// `__SIZEOF_INT__`, `__CHAR_BIT__` and `__CHAR_UNSIGNED__`. The extension
+    /// `__SIZEOF_INT__`, `__CHAR_BIT__`, `__CHAR_UNSIGNED__` and
+    /// `__SIZEOF_POINTER__`, the last in bytes and written here in bits. The
+    /// extension
     /// column came from `clang 20.1.6 --target=<triple> -S -emit-llvm -O0` on
     /// `char csink(char x) { return x; }`, reading the attribute on the result
     /// and on the parameter, which agree on every row.
     ///
     /// Mutation: make `char` signed on `aarch64-unknown-linux-gnu`, or change
-    /// any width. This fails. Mutation: add a row to `Target::ALL` without
+    /// any width, a pointer's among them. This fails. Mutation: add a row to `Target::ALL` without
     /// measuring it. The count fails. Mutation: give
     /// `x86_64-pc-windows-msvc` `Widening::Required`. The `char` column fails,
     /// and so do four other tests: the two machines that ask for nothing are
@@ -337,21 +380,46 @@ mod tests {
         // The last column is what `clang` writes for a `char`, which is the
         // measurement, rather than the flag behind it, which is this module's
         // own business.
-        let measured: &[(&str, u32, u32, bool, Option<Extend>)] = &[
-            ("aarch64-apple-darwin", 32, 8, true, Some(Extend::Sign)),
-            ("aarch64-unknown-linux-gnu", 32, 8, false, None),
+        // The triple, `int`'s bits, `char`'s bits, whether `char` is signed,
+        // a pointer's bits, and what a `char` is widened by.
+        type Row = (&'static str, u32, u32, bool, u32, Option<Extend>);
+        let measured: &[Row] = &[
+            ("aarch64-apple-darwin", 32, 8, true, 64, Some(Extend::Sign)),
+            ("aarch64-unknown-linux-gnu", 32, 8, false, 64, None),
             (
                 "armv7-unknown-linux-gnueabihf",
                 32,
                 8,
                 false,
+                32,
                 Some(Extend::Zero),
             ),
-            ("i686-unknown-linux-gnu", 32, 8, true, Some(Extend::Sign)),
-            ("wasm32-unknown-unknown", 32, 8, true, Some(Extend::Sign)),
-            ("x86_64-apple-darwin", 32, 8, true, Some(Extend::Sign)),
-            ("x86_64-pc-windows-msvc", 32, 8, true, None),
-            ("x86_64-unknown-linux-gnu", 32, 8, true, Some(Extend::Sign)),
+            (
+                "i686-unknown-linux-gnu",
+                32,
+                8,
+                true,
+                32,
+                Some(Extend::Sign),
+            ),
+            (
+                "wasm32-unknown-unknown",
+                32,
+                8,
+                true,
+                32,
+                Some(Extend::Sign),
+            ),
+            ("x86_64-apple-darwin", 32, 8, true, 64, Some(Extend::Sign)),
+            ("x86_64-pc-windows-msvc", 32, 8, true, 64, None),
+            (
+                "x86_64-unknown-linux-gnu",
+                32,
+                8,
+                true,
+                64,
+                Some(Extend::Sign),
+            ),
         ];
 
         assert_eq!(
@@ -360,12 +428,13 @@ mod tests {
             "a target nobody measured is a machine this compiler invented"
         );
 
-        for &(triple, int_bits, char_bits, char_signed, extension) in measured {
+        for &(triple, int_bits, char_bits, char_signed, pointer_bits, extension) in measured {
             let target = Target::from_triple(triple).expect("a measured triple is known");
             assert_eq!(target.int().bits(), int_bits, "{triple}");
             assert!(target.int().signed(), "{triple}: C17 6.2.5 p4");
             assert_eq!(target.char().bits(), char_bits, "{triple}");
             assert_eq!(target.char().signed(), char_signed, "{triple}");
+            assert_eq!(target.pointer_bits(), pointer_bits, "{triple}");
             assert_eq!(target.extension(target.char()), extension, "{triple}");
             // Nothing widens an `int`, on every row measured so far. It is what
             // C17 6.3.1.1 p2 promotes to, so nothing is narrower than it that
