@@ -3129,7 +3129,7 @@ cases! {
         a_void_pointer_off_its_start_leaving_is_asked_whether_it_starts_an_object: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_off_its_start_stored_as_void_by_a_callee: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_void_pointer_at_the_start_of_one_byte_leaves_asking_no_width: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_void_pointer_of_no_known_size_leaves_asking_no_width: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument
