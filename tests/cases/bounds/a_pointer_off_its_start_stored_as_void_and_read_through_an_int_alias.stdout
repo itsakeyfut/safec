@@ -1,0 +1,150 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:3:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *" "a"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "void *" "v"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "void **" "as_void"
+  Local "_8" "int **" "slot"
+  Local "_9" "int *"
+  Local "_10" "void *"
+  Local "_11" "int *" "q"
+  Local "_12" "int"
+  Local "_13" "int"
+  Block "bb0" entry
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:3:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:4:14 generated
+    Call a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:4:14 written "malloc" "bb1"
+      Destination "_2"
+      Constant 16
+  Block "bb1"
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:4:14 generated
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:5:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:5:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:5:9 generated
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:6:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:6:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:8:15 generated
+    Call a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:8:15 written "malloc" "bb5"
+      Destination "_5"
+      Constant 8
+  Block "bb5"
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:8:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:8:15 generated
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:9:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:9:9 written "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:9:9 generated
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:10:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:10:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:9:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:12:12 written
+      Destination "_7"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:12:22 generated
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:13:11 written
+      Destination "_8"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:13:18 generated
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:14:16 written
+      Destination "_9"
+      Binary "Add"
+        Copy "_1"
+        Constant 5
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:14:5 written
+      Destination "_7"
+        Deref
+      Use
+        Copy "_9"
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:14:5 written
+      Destination "_10"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:14:5 generated
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:15:10 written
+      Destination "_11"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:15:14 generated
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:16:9 written
+      Destination "_12"
+      Binary "Eq"
+        Copy "_11"
+        Constant 0
+    Branch a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:16:9 written "bb9" "bb10"
+      Copy "_12"
+  Block "bb9"
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:16:9 generated
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:17:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:17:16 generated
+    Return
+  Block "bb10"
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:16:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:19:5 written
+      Destination "_11"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:19:5 written
+      Destination "_13"
+      Use
+        Copy "_11"
+          Deref
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:19:5 generated
+    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:20:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:20:12 generated
+    Return

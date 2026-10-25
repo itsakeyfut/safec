@@ -831,6 +831,17 @@ pub(super) fn memory_finding(
                      believed",
                     bytes(width)
                 ),
+                // A `void *` is asked its start and no width, and says so.
+                (false, _) if width == 0 => said(
+                    name,
+                    "this lets a pointer leave that may not point at the start of an object",
+                    |name| {
+                        format!(
+                            "this lets `{name}` leave, which may not point at the start of an \
+                             object"
+                        )
+                    },
+                ),
                 (false, _) => said(
                     name,
                     "this lets a pointer leave that may not point at an object as wide as its type",
@@ -843,8 +854,12 @@ pub(super) fn memory_finding(
                 ),
             },
             departure(how),
-            "let a pointer leave only at the start of a local or of an allocation of constant \
-             size, as wide as the type it leaves as",
+            if width == 0 {
+                "let a pointer leave as a `void *` only at the start of an object"
+            } else {
+                "let a pointer leave only at the start of a local or of an allocation of \
+                 constant size, as wide as the type it leaves as"
+            },
         ),
         // Neither check answers this and `Diagnostic::concluded` gives `None`
         // for it, so none of the four is read. Written out rather than `_` so

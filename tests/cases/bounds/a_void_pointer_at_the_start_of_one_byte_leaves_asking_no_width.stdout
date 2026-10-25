@@ -1,0 +1,33 @@
+Target "x86_64-pc-windows-msvc"
+Function a_void_pointer_at_the_start_of_one_byte_leaves_asking_no_width.c:1:6 "g" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "v"
+Function a_void_pointer_at_the_start_of_one_byte_leaves_asking_no_width.c:3:5 "main"
+  Local "_0" "int" return
+  Local "_1" "char" "c"
+  Local "_2" "char *"
+  Block "bb0" entry
+    Operation a_void_pointer_at_the_start_of_one_byte_leaves_asking_no_width.c:3:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_void_pointer_at_the_start_of_one_byte_leaves_asking_no_width.c:4:10 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_void_pointer_at_the_start_of_one_byte_leaves_asking_no_width.c:4:14 generated
+    Operation a_void_pointer_at_the_start_of_one_byte_leaves_asking_no_width.c:5:7 written
+      Destination "_2"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_void_pointer_at_the_start_of_one_byte_leaves_asking_no_width.c:5:5 generated
+    Call a_void_pointer_at_the_start_of_one_byte_leaves_asking_no_width.c:5:5 written "g" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_void_pointer_at_the_start_of_one_byte_leaves_asking_no_width.c:5:5 generated
+    Operation a_void_pointer_at_the_start_of_one_byte_leaves_asking_no_width.c:6:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_void_pointer_at_the_start_of_one_byte_leaves_asking_no_width.c:6:12 generated
+    Return

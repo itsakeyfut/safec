@@ -973,11 +973,17 @@ pub(super) fn reached_by_library(
 }
 
 /// How many bytes one object of the type `ty` points to takes, where `ty`
-/// is a pointer: `None` for anything else and for a `void *`, which leaves
-/// believing nothing and so asks nothing. See ADR-0060.
+/// is a pointer, and `None` for anything else.
+///
+/// **Zero for a `void *`, and not `None`.** A `void *` leaves believing no
+/// width, but whoever converts it back believes it starts an object, so it is
+/// asked that much: a width of zero makes [`fits`] answer from the start
+/// alone. Answering `None` asked a `void *` nothing, and a pointer off its
+/// start stored through a `void **` alias and read back through an `int **`
+/// one was believed whole (#624). See ADR-0060.
 fn pointee_width(analysis: &Allocations<'_>, ty: TyId) -> Option<u64> {
     match analysis.unit.ty(ty) {
-        Ty::Pointer(pointee) => analysis.unit.size_of(pointee).filter(|&width| width > 0),
+        Ty::Pointer(pointee) => Some(analysis.unit.size_of(pointee).unwrap_or(0)),
         Ty::Int | Ty::Char | Ty::Void => None,
     }
 }
@@ -1143,8 +1149,8 @@ fn contents_leaving(
         // point at a local that holds something believed.
         let read = Rvalue::Use(Operand::Copy(Place::local(local)));
         work.extend(locals_reached(function, &read, known));
-        // A local that holds no pointer, or a `void *`, has nothing a reader
-        // believes of it.
+        // A local that holds no pointer has nothing a reader believes of it;
+        // a `void *` is asked whether it starts an object.
         let Some(width) = pointee_width(analysis, function.local(local)) else {
             continue;
         };
@@ -1160,7 +1166,7 @@ fn contents_leaving(
 ///
 /// **The departure half of ADR-0060.** A caller believes what it is handed
 /// back, and a later load believes what it reads, so this is where either
-/// belief is asked. A `void *` leaves believing nothing and asks nothing, and
+/// belief is asked. A `void *` is asked only whether it starts an object, and
 /// a constant is a null, which the nullability check answers.
 pub(super) fn departed_in_element(
     findings: &mut Vec<Finding>,

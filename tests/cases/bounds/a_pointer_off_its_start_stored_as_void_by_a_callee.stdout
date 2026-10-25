@@ -1,0 +1,55 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_off_its_start_stored_as_void_by_a_callee.c:1:6 "put"
+  Local "_0" "void" return
+  Local "_1" "void **" parameter "slot"
+  Local "_2" "int *" parameter "p"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int *"
+  Local "_6" "void *"
+  Block "bb0" entry
+    Operation a_pointer_off_its_start_stored_as_void_by_a_callee.c:2:9 written
+      Destination "_3"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_off_its_start_stored_as_void_by_a_callee.c:2:9 written "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_pointer_off_its_start_stored_as_void_by_a_callee.c:2:9 generated
+    Operation a_pointer_off_its_start_stored_as_void_by_a_callee.c:3:13 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_2"
+        Constant 0
+    Branch a_pointer_off_its_start_stored_as_void_by_a_callee.c:3:13 written "bb4" "bb5"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_pointer_off_its_start_stored_as_void_by_a_callee.c:2:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+  Block "bb4"
+    Sequenced a_pointer_off_its_start_stored_as_void_by_a_callee.c:3:13 generated
+    Operation a_pointer_off_its_start_stored_as_void_by_a_callee.c:4:21 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_2"
+        Constant 5
+    Operation a_pointer_off_its_start_stored_as_void_by_a_callee.c:4:13 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_pointer_off_its_start_stored_as_void_by_a_callee.c:4:13 written
+      Destination "_6"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_off_its_start_stored_as_void_by_a_callee.c:4:13 generated
+    Goto "bb6"
+  Block "bb5"
+    Sequenced a_pointer_off_its_start_stored_as_void_by_a_callee.c:3:13 generated
+    Goto "bb6"
+  Block "bb6"
+    Goto "bb3"
