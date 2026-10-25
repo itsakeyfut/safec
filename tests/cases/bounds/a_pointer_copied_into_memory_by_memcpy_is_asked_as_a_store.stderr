@@ -8,3 +8,13 @@ error[SC0413]: this lets a pointer to 1 byte leave where 4 bytes are believed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer to 1 byte leave where 4 bytes are believed
+   ╭─[ a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:127 ]
+   │
+ 4 │ int main(void) { char c = 0; void *v = &c; int *q = v; int **box = malloc(8); if (box == 0) { return 1; } memcpy(box, &q, 8); h(box); return c; }
+   │                                                                                                                               ───┬──  
+   │                                                                                                                                  ╰──── passed here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

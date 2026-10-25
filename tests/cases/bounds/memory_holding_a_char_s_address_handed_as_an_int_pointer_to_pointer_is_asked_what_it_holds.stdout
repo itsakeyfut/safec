@@ -1,0 +1,160 @@
+Target "x86_64-pc-windows-msvc"
+Function memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:3:6 "use"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "pi"
+  Local "_2" "int"
+  Local "_3" "int *" "p"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:4:9 written
+      Destination "_2"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:4:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:4:9 generated
+    StorageLive memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:5:9 generated "_3"
+    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:5:14 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:5:18 generated
+    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:6:13 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_3"
+        Constant 0
+    Branch memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:6:13 written "bb4" "bb5"
+      Copy "_4"
+  Block "bb2"
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:4:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+  Block "bb4"
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:6:13 generated
+    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:7:13 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:7:13 written
+      Destination "_5"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:7:13 generated
+    Goto "bb6"
+  Block "bb5"
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:6:13 generated
+    Goto "bb6"
+  Block "bb6"
+    StorageDead memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:9:5 generated "_3"
+    Goto "bb3"
+Function memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:12:5 "main"
+  Local "_0" "int" return
+  Local "_1" "char *" "c"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "void **" "m"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "void *"
+  Local "_8" "void *" "pm"
+  Block "bb0" entry
+    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:12:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:13:15 generated
+    Call memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:13:15 written "malloc" "bb1"
+      Destination "_2"
+      Constant 1
+  Block "bb1"
+    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:13:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:13:15 generated
+    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:14:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:14:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:14:9 generated
+    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:15:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:15:16 generated
+    Return
+  Block "bb3"
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:14:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:17:16 generated
+    Call memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:17:16 written "malloc" "bb5"
+      Destination "_5"
+      Constant 8
+  Block "bb5"
+    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:17:12 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:17:16 generated
+    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:18:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:18:9 written "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:18:9 generated
+    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:19:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:19:16 generated
+    Return
+  Block "bb7"
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:18:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:21:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_1"
+    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:21:5 written
+      Destination "_7"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:21:5 generated
+    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:22:11 written
+      Destination "_8"
+      Use
+        Copy "_4"
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:22:16 generated
+    ArgumentsEvaluated memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:23:5 generated
+    Call memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:23:5 written "use" "bb9"
+      Copy "_8"
+  Block "bb9"
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:23:5 generated
+    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:24:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:24:12 generated
+    Return
