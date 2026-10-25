@@ -6,3 +6,4 @@ error[SC0104]: this `#ifdef` asks about a name the implementation may define
    │ ╰── directive begins here
 ───╯
   = note: `__x86_64__` is reserved for the implementation (C17 7.1.3), and whether it is defined depends on the compiler, so none of this conditional's groups is compiled
+  = help: say whether the build defines it: `-D __x86_64__` if it does, `-U __x86_64__` if it does not

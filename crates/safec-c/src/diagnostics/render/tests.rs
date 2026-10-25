@@ -306,8 +306,8 @@ fn content_never_reaches_the_terminal_as_an_instruction() {
         .clone()
         .with_label(Label::primary(Span::new(file, 0, 3), "here\u{1b}[32m"))
         .with_note("note\u{1b}[33m");
-    // Through `concluded` rather than beside it: that is the one way a
-    // remedy is attached, now that `with_remedy` is private.
+    // Through `concluded` rather than beside it, which is how a safety check
+    // attaches its remedy.
     let remedied = Diagnostic::concluded(
         Conclusion::Unknown,
         "m",

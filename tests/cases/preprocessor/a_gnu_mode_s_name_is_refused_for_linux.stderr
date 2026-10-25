@@ -6,3 +6,4 @@ error[SC0104]: this `#ifdef` asks about a name the implementation may define
    │ ╰── directive begins here
 ───╯
   = note: `unix` is defined in some modes a compiler builds for this target and not in others, so none of this conditional's groups is compiled
+  = help: say whether the build defines it: `-D unix` if it does, `-U unix` if it does not

@@ -4915,6 +4915,15 @@ cases! {
         // Mutation: read `#ifndef N` followed by `#define N` as a guard,
         // whatever `N` is. It exits 0.
         a_reserved_guard_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same program with `-U _MT`: one build, the one without `_MT`.
+        // The header is read, `SINGLE_THREADED` is defined, and only one free
+        // is compiled. Mutation: drop the settled clause in `act`. The guard
+        // is `SC0104` again.
+        a_reserved_guard_is_read_once_the_command_line_says_the_build_does_not_define_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "-U_MT"],
+        // And with `-D _MT`: the build with it, which skips the header and
+        // compiles both frees, so the double free is reported. Mutation: hand
+        // `preprocess` no command-line macros. The guard is `SC0104` instead.
+        a_reserved_guard_is_skipped_once_the_command_line_says_the_build_defines_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "-D_MT"],
         // The `extern "C"` idiom: C forbids an implementation to predefine
         // `__cplusplus` (C17 6.10.8 p3), so it is undefined in every build.
         // Mutation: leave it to the rule for reserved names. Both `#ifdef`s
