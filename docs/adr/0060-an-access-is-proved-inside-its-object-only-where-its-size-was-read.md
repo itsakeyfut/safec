@@ -81,10 +81,16 @@ exact and narrower is **`Unsafe`**, and so an error that `--allow-unknown`
 leaves an error. Anything between is `Unknown`, because a may-set proves nothing
 from one member (RK-035).
 
-`memset`, `memcpy` and `memmove` with a constant length are an access of that
-many bytes at each pointer they touch, and with any other length `Unknown`. The
-string functions write as far as a string runs, which nothing here reads, so
-their destination is always `Unknown`.
+A library function read by name reaches through the pointers it is handed as
+one table, `memory::parts::LIBRARY`, says per argument: by a length, as
+`memset`, `memcpy`, `memmove`, `memcmp`, `memchr` and `strncpy`'s destination
+do, which is an access of that many bytes where the length is a constant and
+`Unknown` otherwise; or as far as a string runs, as `strlen`, `strcmp` and the
+copies and concatenations otherwise do, which nothing here reads and so is
+always `Unknown`. The same row says what the function does to what it is
+handed and what it allocates, so a name cannot be added for one question and
+forgotten for the other. A name not in the table is believed, as a parameter
+is.
 
 `Target` gains `pointer_bits`, measured per row with `clang`, which amends
 ADR-0013's "a pointer's width is not here": the memory check is now a reader.
@@ -120,7 +126,7 @@ Each mutation applied on its own, the workspace run, and the file restored.
 * a parameter's extent `AtLeast(0)` where the function starts:
   `a_parameter_written_through_is_inside` is reported; an opaque call's result
   not believed: `a_call_s_result_is_believed_whole` is reported.
-* `touched_by_length` removed: `a_memset_wider_than_its_allocation` and
+* `reached_by_library` removed: `a_memset_wider_than_its_allocation` and
   `a_memset_of_a_length_nothing_bounds` go silent.
 * `x86_64-pc-windows-msvc` given 32 pointer bits: `a_pointer_written_into_four_bytes`
   goes silent, and `every_target_is_what_clang_says_it_is` fails.
@@ -182,7 +188,7 @@ folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
 * `crates/safec-ir/src/memory/parts.rs`: `Extent`, `Held::believed`,
   `Held::inner_address`.
 * `crates/safec-ir/src/memory/report.rs`: `fits`, `outside`,
-  `touched_by_length`.
+  `reached_by_library`.
 * `crates/safec-ir/src/memory/transfer.rs`: `made_extent`, `pointee_size`, the
   extent where a parameter and a call's destination are made, and its join.
 * `crates/safec-ir/src/target.rs`: `Target::pointer_bits`.

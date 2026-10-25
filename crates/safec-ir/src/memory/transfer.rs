@@ -16,7 +16,8 @@ use super::bits::Bits;
 use super::built::{built_from, named, replaced_by};
 use super::known::Known;
 use super::parts::{
-    Callee, Extent, Freeing, Held, Offset, PendingRead, Reached, Read, Realloced, SiteState,
+    Callee, Extent, Freeing, Held, LIBRARY, Library, Makes, Offset, PendingRead, Reached, Read,
+    Realloced, SiteState,
 };
 use super::{
     LostReason, dereferenced_in_element, dereferenced_in_terminator, derefs, handed_places,
@@ -100,22 +101,15 @@ impl Allocations<'_> {
         destination: &Place,
     ) -> Extent {
         let constant = |index: usize| self.constant_argument(callee, handed, index);
-        let asked = match kind {
-            Callee::Allocates => match self.sources.snippet(self.unit.function(callee).name) {
-                "malloc" => constant(0),
-                "aligned_alloc" => constant(1),
-                "calloc" => constant(0)
-                    .zip(constant(1))
-                    .and_then(|(m, n)| m.checked_mul(n)),
-                // `callee` answers `Allocates` for those three names alone.
-                _ => None,
-            },
-            Callee::Reallocates => constant(1),
-            Callee::Opaque => {
-                return Extent::AtLeast(self.pointee_size(function, destination).unwrap_or(0));
-            }
-            // These return before a site is made, so nothing asks.
-            Callee::Frees | Callee::ReturnsFirst | Callee::Copies | Callee::Ends => None,
+        if matches!(kind, Callee::Opaque) {
+            return Extent::AtLeast(self.pointee_size(function, destination).unwrap_or(0));
+        }
+        let asked = match self.library(callee).and_then(|row| row.makes) {
+            Some(Makes::Argument(index)) => constant(index),
+            Some(Makes::Product(m, n)) => constant(m)
+                .zip(constant(n))
+                .and_then(|(m, n)| m.checked_mul(n)),
+            None => None,
         };
         asked.map_or(Extent::AtLeast(0), Extent::Exactly)
     }
@@ -155,14 +149,13 @@ impl Allocations<'_> {
         {
             return Callee::Ends;
         }
-        match name {
-            "free" => Callee::Frees,
-            "malloc" | "calloc" | "aligned_alloc" => Callee::Allocates,
-            "realloc" => Callee::Reallocates,
-            "memcpy" | "memmove" => Callee::Copies,
-            "memset" | "strcpy" | "strncpy" | "strcat" | "strncat" => Callee::ReturnsFirst,
-            _ => Callee::Opaque,
-        }
+        self.library(id).map_or(Callee::Opaque, |row| row.callee)
+    }
+
+    /// The row of [`LIBRARY`] this function's name is, if any.
+    pub(super) fn library(&self, id: FuncId) -> Option<&'static Library> {
+        let name = self.sources.snippet(self.unit.function(id).name);
+        LIBRARY.iter().find(|row| row.name == name)
     }
 
     /// What a write through a pointer carries: the sites the written value may

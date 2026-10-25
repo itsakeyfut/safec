@@ -3032,7 +3032,7 @@ cases! {
         a_parameter_written_through_is_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_s_result_is_believed_whole: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A library call that takes a length is an access of that many
-        // bytes. Mutation: drop `touched_by_length`; the first two go
+        // bytes. Mutation: drop `reached_by_library`; the first two go
         // silent, and the third is unchanged, which is why it is here.
         a_memset_wider_than_its_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_memset_of_a_length_nothing_bounds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -3042,7 +3042,7 @@ cases! {
         a_calloc_of_two_constants_is_their_product: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A doubt about `*p` and a proof about what `memset` writes through
         // `p`, at one call, each said, so that the proof stays an error
-        // where unknown is allowed. Mutation: key `touched_by_length` with
+        // where unknown is allowed. Mutation: key `reached_by_library` with
         // the dereferences' list in `findings_within`; the proof goes and
         // this exits 0.
         a_proof_at_a_call_is_not_displaced_by_a_doubt_about_its_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
@@ -3061,6 +3061,20 @@ cases! {
         // proved outside.
         an_allocation_s_size_is_what_its_parameter_receives: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_length_is_what_its_parameter_receives: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Each row of `LIBRARY` that reaches by a length or a string, read.
+        // Mutation: drop a row's `reaches`, or its row, and its case loses
+        // the report: `memmove`, `memcmp` at both arguments, `strlen`.
+        a_memmove_wider_than_its_destination: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_memcmp_longer_than_both_objects: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_strlen_is_not_shown_to_fit: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `strncpy` writes exactly `n` characters, so its destination is an
+        // access of `n` and fits here; its source is read as a string, which
+        // is not shown to fit. Mutation: read its destination as a string;
+        // the destination is reported too.
+        a_strncpy_of_its_destination_s_size_is_unknown_only_at_its_source: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `aligned_alloc`'s size is its second argument. Mutation: make it
+        // the first; this goes silent, sixteen bytes read for one.
+        an_int_written_into_one_aligned_byte: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "returns" => {

@@ -1,0 +1,118 @@
+Target "x86_64-pc-windows-msvc"
+Function a_memcmp_longer_than_both_objects.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_memcmp_longer_than_both_objects.c:2:5 "memcmp" declared
+  Local "_0" "int" return
+  Local "_1" "void *" parameter "a"
+  Local "_2" "void *" parameter "b"
+  Local "_3" "int" parameter "n"
+Function a_memcmp_longer_than_both_objects.c:4:5 "main"
+  Local "_0" "int" return
+  Local "_1" "char *" "p"
+  Local "_2" "void *"
+  Local "_3" "char *" "q"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "char"
+  Local "_8" "char"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation a_memcmp_longer_than_both_objects.c:4:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_memcmp_longer_than_both_objects.c:5:15 generated
+    Call a_memcmp_longer_than_both_objects.c:5:15 written "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_memcmp_longer_than_both_objects.c:5:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_memcmp_longer_than_both_objects.c:5:15 generated
+    ArgumentsEvaluated a_memcmp_longer_than_both_objects.c:6:15 generated
+    Call a_memcmp_longer_than_both_objects.c:6:15 written "malloc" "bb2"
+      Destination "_4"
+      Constant 4
+  Block "bb2"
+    Operation a_memcmp_longer_than_both_objects.c:6:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_memcmp_longer_than_both_objects.c:6:15 generated
+    Operation a_memcmp_longer_than_both_objects.c:7:9 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_memcmp_longer_than_both_objects.c:7:9 written "bb3" "bb4"
+      Copy "_5"
+  Block "bb3"
+    Sequenced a_memcmp_longer_than_both_objects.c:7:9 generated
+    Operation a_memcmp_longer_than_both_objects.c:8:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_memcmp_longer_than_both_objects.c:8:16 generated
+    Return
+  Block "bb4"
+    Sequenced a_memcmp_longer_than_both_objects.c:7:9 generated
+    Goto "bb5"
+  Block "bb5"
+    Operation a_memcmp_longer_than_both_objects.c:10:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_memcmp_longer_than_both_objects.c:10:9 written "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_memcmp_longer_than_both_objects.c:10:9 generated
+    Operation a_memcmp_longer_than_both_objects.c:11:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_memcmp_longer_than_both_objects.c:11:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_memcmp_longer_than_both_objects.c:10:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_memcmp_longer_than_both_objects.c:13:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 0
+    Operation a_memcmp_longer_than_both_objects.c:13:5 written
+      Destination "_7"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_memcmp_longer_than_both_objects.c:13:5 generated
+    Operation a_memcmp_longer_than_both_objects.c:14:5 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 0
+    Operation a_memcmp_longer_than_both_objects.c:14:5 written
+      Destination "_8"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_memcmp_longer_than_both_objects.c:14:5 generated
+    ArgumentsEvaluated a_memcmp_longer_than_both_objects.c:15:12 generated
+    Call a_memcmp_longer_than_both_objects.c:15:12 written "memcmp" "bb9"
+      Destination "_9"
+      Copy "_1"
+      Copy "_3"
+      Constant 100
+  Block "bb9"
+    Operation a_memcmp_longer_than_both_objects.c:15:5 written
+      Destination "_0"
+      Use
+        Copy "_9"
+    Sequenced a_memcmp_longer_than_both_objects.c:15:12 generated
+    Return

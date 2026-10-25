@@ -161,9 +161,11 @@ pointer moved off its start, since no distance is carried, an allocation whose
 size is not a constant, a pointer this check lost or whose local escaped, and
 a pointer read out of memory as a `void *`. A parameter, a call's result and a
 pointer read out of memory are believed to point at one whole object of the
-type they arrive as, so `void f(int *p) { *p = 1; }` is silent. `memset`,
-`memcpy` and `memmove` are asked about the length they are handed, and the
-string functions are always unknown at their destination.
+type they arrive as, so `void f(int *p) { *p = 1; }` is silent. A library
+function that takes a length, `memset`, `memcpy`, `memmove`, `memcmp`, `memchr`
+and `strncpy`'s destination, is asked about the length it is handed, and one
+that reads or writes as far as a string runs, `strlen`, `strcmp`, `strcpy` and
+their kind, is always unknown there.
 [ADR-0060](adr/0060-an-access-is-proved-inside-its-object-only-where-its-size-was-read.md)
 is the decision.
 

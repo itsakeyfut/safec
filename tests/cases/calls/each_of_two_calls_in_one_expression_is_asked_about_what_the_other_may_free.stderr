@@ -1,3 +1,13 @@
+error[SC0412]: this may reach outside the object `s` points at
+    ╭─[ each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:12 ]
+    │
+ 10 │     return strlen(s) + strlen(t);
+    │            ────┬────  
+    │                ╰────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
 error[SC0407]: this passes `s`, which may point to a freed allocation
     ╭─[ each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:12 ]
     │
@@ -8,6 +18,16 @@ error[SC0407]: this passes `s`, which may point to a freed allocation
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0412]: this may reach outside the object `t` points at
+    ╭─[ each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:24 ]
+    │
+ 10 │     return strlen(s) + strlen(t);
+    │                        ────┬────  
+    │                            ╰────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
 error[SC0407]: this passes `t`, which may point to a freed allocation
     ╭─[ each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:24 ]
     │

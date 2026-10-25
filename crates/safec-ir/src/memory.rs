@@ -72,7 +72,7 @@ use crate::source::{SourceMap, Span};
 use built::named;
 use report::{
     after_a_call, derefs, freed_after_its_read_was_reported, handed, handed_places, inside,
-    loaded_indeterminate, outside, reported, returned, touched_by_length, used, used_before,
+    loaded_indeterminate, outside, reached_by_library, reported, returned, used, used_before,
 };
 use transfer::Allocations;
 
@@ -665,7 +665,7 @@ fn findings_within(
                 dereferenced_in_terminator(&block.terminator),
                 &known,
             );
-            touched_by_length(
+            reached_by_library(
                 &mut findings,
                 &mut touched,
                 &analysis,

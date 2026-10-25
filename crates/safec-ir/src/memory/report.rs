@@ -14,7 +14,9 @@ use crate::source::{SourceMap, Span};
 
 use super::built::named;
 use super::known::Known;
-use super::parts::{Callee, Extent, Freeing, Offset, Reached, Read, SiteState, earlier, same};
+use super::parts::{
+    Callee, Extent, Freeing, Offset, Reach, Reached, Read, SiteState, earlier, same,
+};
 use super::transfer::Allocations;
 use super::{Finding, Kind, LostReason, Unproven};
 
@@ -848,20 +850,19 @@ pub(super) fn outside(
     }
 }
 
-/// Report every library call at this terminator that reads or writes a number
-/// of bytes through a pointer it is handed, where this check cannot show the
-/// bytes fit.
+/// Report every library call at this terminator that reads or writes through
+/// a pointer it is handed further than this check can show fits.
 ///
-/// **What the call is asked to touch is the access.** `memset(d, c, n)` writes
-/// `n` bytes at `d` (C17 7.24.6.1), and `memcpy` and `memmove` read `n` at the
-/// source and write `n` at the destination (7.24.2.1, 7.24.2.2), so a constant
-/// `n` is asked as an access of that width and any other `n` is unknown. The
-/// string functions write as far as a string runs (7.24.2.3 to 7.24.3.2),
-/// which this check does not read, so their destination is always unknown.
+/// **What the call is asked to touch is the access**, as [`LIBRARY`](super::parts::LIBRARY) says per
+/// argument: a [`Reach::Length`] is an access of as many bytes as that
+/// argument holds, read as the parameter receives it, and any length this
+/// check cannot read is unknown; a [`Reach::String`] runs as far as a string
+/// does, which nothing here reads, so it is unknown wherever the pointer
+/// holds anything. A null holds nothing and is the nullability check's.
 /// See ADR-0060.
-pub(super) fn touched_by_length(
+pub(super) fn reached_by_library(
     findings: &mut Vec<Finding>,
-    asked: &mut Vec<(Span, LocalId)>,
+    touched: &mut Vec<(Span, LocalId)>,
     analysis: &Allocations<'_>,
     function: &Function,
     terminator: &Terminator,
@@ -876,42 +877,36 @@ pub(super) fn touched_by_length(
     else {
         return;
     };
-    let at = origin.span();
-    // As the parameter receives it, for `made_extent`'s reason.
-    let length = analysis.constant_argument(*callee, arguments, 2);
-    // Which arguments are touched, and whether how far is a string's length.
-    let (touched, strings): (&[usize], bool) = match analysis
-        .sources
-        .snippet(analysis.unit.function(*callee).name)
-    {
-        "memset" => (&[0], false),
-        "memcpy" | "memmove" => (&[0, 1], false),
-        "strcpy" | "strncpy" | "strcat" | "strncat" => (&[0], true),
-        _ => return,
+    let Some(row) = analysis.library(*callee) else {
+        return;
     };
-    for &index in touched {
+    let at = origin.span();
+    for &(index, reach) in row.reaches {
         let Some(Operand::Copy(place)) = arguments.get(index) else {
             continue;
         };
         let local = place.local;
-        if asked.contains(&(at, local)) {
+        if touched.contains(&(at, local)) {
             continue;
         }
-        // A pointer read out of memory and handed straight over is believed
-        // by the type it was read as, as one assigned to a local first is.
+        let width = match reach {
+            Reach::Length(length) => analysis.constant_argument(*callee, arguments, length),
+            Reach::String => None,
+        };
         let fit = if place.projection.is_empty() {
-            match (strings, length) {
-                (false, Some(width)) => fits(analysis, function, local, width, known),
+            match width {
+                Some(width) => fits(analysis, function, local, width, known),
                 // Anything that holds something is unknown here.
-                (true, _) | (false, None) => {
-                    fits(analysis, function, local, 0, known).map(|_| Fit::Unknown)
-                }
+                None => fits(analysis, function, local, 0, known).map(|_| Fit::Unknown),
             }
         } else {
+            // **A pointer read out of memory and handed straight over** is
+            // believed by the type it was read as, as one assigned to a local
+            // first is.
             let believed = analysis.pointee_size(function, place).unwrap_or(0);
-            match (strings, length) {
-                (false, Some(width)) if believed >= width => Some(Fit::Inside),
-                _ => Some(Fit::Unknown),
+            match width {
+                Some(width) if believed >= width => Some(Fit::Inside),
+                Some(_) | None => Some(Fit::Unknown),
             }
         };
         let (conclusion, extent, made, unproven) = match fit {
@@ -919,11 +914,13 @@ pub(super) fn touched_by_length(
             Some(Fit::Outside { extent, made }) => (Conclusion::Unsafe, Some(extent), made, None),
             Some(Fit::Unknown) => (Conclusion::Unknown, None, None, Some(Unproven::Extent)),
         };
-        asked.push((at, local));
+        touched.push((at, local));
         findings.push(Finding {
             function: analysis.function,
+            // No width where none was read: it is printed only beside a
+            // proof, and a proof needs one.
             kind: Kind::OutsideItsObject {
-                width: length.filter(|_| !strings).unwrap_or(0),
+                width: width.unwrap_or(0),
                 extent,
             },
             conclusion,

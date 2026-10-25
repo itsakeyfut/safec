@@ -82,6 +82,184 @@ pub(super) enum Callee {
     Opaque,
 }
 
+/// How far a library call reaches through one pointer it is handed.
+///
+/// See [`LIBRARY`], which is the only place one is written.
+#[derive(Clone, Copy)]
+pub(super) enum Reach {
+    /// As many bytes as the argument at this index says, read as the
+    /// parameter receives it.
+    Length(usize),
+    /// As far as a string runs, which this check does not read, so it is
+    /// never shown to fit.
+    String,
+}
+
+/// How many bytes an allocation function makes, out of its arguments.
+#[derive(Clone, Copy)]
+pub(super) enum Makes {
+    /// The argument at this index.
+    Argument(usize),
+    /// The product of the two arguments at these indices, as `calloc`'s.
+    Product(usize, usize),
+}
+
+/// A library function this check reads by name.
+///
+/// **One row says everything that is read about the name**, and a row that
+/// leaves a field out is `error[E0063]`: what it does to what it is handed,
+/// for the memory transfer; how far it reaches through which argument, for
+/// whether an access fits; and what it makes, where it allocates. Kept as
+/// three readers matching names of their own, adding a function that takes
+/// a length to the first and forgetting the second left `memmove(p, q, 64)`
+/// on four bytes silent with every test green. Found by review. See
+/// ADR-0060.
+pub(super) struct Library {
+    /// What the source calls it.
+    pub(super) name: &'static str,
+    /// What it does to what it is handed.
+    pub(super) callee: Callee,
+    /// How far it reaches through each argument it reads or writes through.
+    pub(super) reaches: &'static [(usize, Reach)],
+    /// How many bytes it makes, where it makes an allocation.
+    pub(super) makes: Option<Makes>,
+}
+
+/// Every library function this check reads by name, with what each is read
+/// as. A name not here is [`Callee::Opaque`] and reaches nothing this check
+/// asks about: it is believed, as a parameter is.
+///
+/// The clauses: `free` 7.22.3.3, `malloc` 7.22.3.4, `calloc` 7.22.3.2,
+/// `aligned_alloc` 7.22.3.1, `realloc` 7.22.3.5; `memcpy` 7.24.2.1,
+/// `memmove` 7.24.2.2, `strcpy` 7.24.2.3, `strncpy` 7.24.2.4, which writes
+/// exactly `n` characters (p2, p3), `strcat` 7.24.3.1, `strncat` 7.24.3.2,
+/// which appends after a string whose length nothing here reads; `memcmp`
+/// 7.24.4.1, `strcmp` 7.24.4.2, `strncmp` 7.24.4.4, which stops at a null
+/// character before `n`; `memchr` 7.24.5.1, `strchr` 7.24.5.2, `strrchr`
+/// 7.24.5.5, `strstr` 7.24.5.7; `memset` 7.24.6.1, `strlen` 7.24.6.3.
+pub(super) const LIBRARY: &[Library] = &[
+    Library {
+        name: "free",
+        callee: Callee::Frees,
+        reaches: &[],
+        makes: None,
+    },
+    Library {
+        name: "malloc",
+        callee: Callee::Allocates,
+        reaches: &[],
+        makes: Some(Makes::Argument(0)),
+    },
+    Library {
+        name: "calloc",
+        callee: Callee::Allocates,
+        reaches: &[],
+        makes: Some(Makes::Product(0, 1)),
+    },
+    Library {
+        name: "aligned_alloc",
+        callee: Callee::Allocates,
+        reaches: &[],
+        makes: Some(Makes::Argument(1)),
+    },
+    Library {
+        name: "realloc",
+        callee: Callee::Reallocates,
+        reaches: &[],
+        makes: Some(Makes::Argument(1)),
+    },
+    Library {
+        name: "memcpy",
+        callee: Callee::Copies,
+        reaches: &[(0, Reach::Length(2)), (1, Reach::Length(2))],
+        makes: None,
+    },
+    Library {
+        name: "memmove",
+        callee: Callee::Copies,
+        reaches: &[(0, Reach::Length(2)), (1, Reach::Length(2))],
+        makes: None,
+    },
+    Library {
+        name: "memset",
+        callee: Callee::ReturnsFirst,
+        reaches: &[(0, Reach::Length(2))],
+        makes: None,
+    },
+    Library {
+        name: "strcpy",
+        callee: Callee::ReturnsFirst,
+        reaches: &[(0, Reach::String), (1, Reach::String)],
+        makes: None,
+    },
+    Library {
+        name: "strncpy",
+        callee: Callee::ReturnsFirst,
+        reaches: &[(0, Reach::Length(2)), (1, Reach::String)],
+        makes: None,
+    },
+    Library {
+        name: "strcat",
+        callee: Callee::ReturnsFirst,
+        reaches: &[(0, Reach::String), (1, Reach::String)],
+        makes: None,
+    },
+    Library {
+        name: "strncat",
+        callee: Callee::ReturnsFirst,
+        reaches: &[(0, Reach::String), (1, Reach::String)],
+        makes: None,
+    },
+    Library {
+        name: "memcmp",
+        callee: Callee::Opaque,
+        reaches: &[(0, Reach::Length(2)), (1, Reach::Length(2))],
+        makes: None,
+    },
+    Library {
+        name: "memchr",
+        callee: Callee::Opaque,
+        reaches: &[(0, Reach::Length(2))],
+        makes: None,
+    },
+    Library {
+        name: "strlen",
+        callee: Callee::Opaque,
+        reaches: &[(0, Reach::String)],
+        makes: None,
+    },
+    Library {
+        name: "strcmp",
+        callee: Callee::Opaque,
+        reaches: &[(0, Reach::String), (1, Reach::String)],
+        makes: None,
+    },
+    Library {
+        name: "strncmp",
+        callee: Callee::Opaque,
+        reaches: &[(0, Reach::String), (1, Reach::String)],
+        makes: None,
+    },
+    Library {
+        name: "strchr",
+        callee: Callee::Opaque,
+        reaches: &[(0, Reach::String)],
+        makes: None,
+    },
+    Library {
+        name: "strrchr",
+        callee: Callee::Opaque,
+        reaches: &[(0, Reach::String)],
+        makes: None,
+    },
+    Library {
+        name: "strstr",
+        callee: Callee::Opaque,
+        reaches: &[(0, Reach::String), (1, Reach::String)],
+        makes: None,
+    },
+];
+
 /// A free, and whether C has ordered it before what comes after it.
 ///
 /// **The two halves travel together or the second is forgotten.** A span alone
