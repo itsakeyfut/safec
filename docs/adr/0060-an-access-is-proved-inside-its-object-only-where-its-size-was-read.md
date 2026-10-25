@@ -60,26 +60,39 @@ exactly, which `TranslationUnit::size_of` answers from the target.
 of the type it arrives as**: a parameter, through its site's extent; what a
 call this check cannot read returns; and a pointer read out of memory, through
 `Held::believed`, which is the size of what the pointer *read* points to and
-not of the local it lands in, so the `void *` round trip RK-068 is about
-believes nothing. A `void *` arrives believing nothing.
+not of the local it lands in, so a `char`'s address converted to `void *` and
+back, which needs no cast, believes nothing. A `void *` arrives believing
+nothing. **A belief is no wider than what this check recorded**: a load is
+bounded by the objects its memory is recorded to hold, and a call's result by
+what it may return that this check saw, so a `char`'s address written through
+a `void **` alias and read through an `int **` one, or copied in by `memcpy`,
+is `Unknown` rather than four bytes.
 
 **A pointer that leaves is asked** whether it points at one whole object of the
 type it leaves as: an argument, a returned pointer, and a pointer stored
 through a projection. That half is #623, and until it lands what is believed is
-asked nowhere, which is where `main` already was.
+asked nowhere, which is where `main` already was. A `void *` that leaves asks
+no width, so a pointer off its start stored as one and read back as another
+type is believed whole even after #623; that is #624.
 
 **The question**, `report::fits`, is asked at every access `used` asks about,
 of the pointer the place goes through first; a deeper level goes through a load
 of exactly the type it reads, so it fits by what is believed. In order: a
 pointer holding nothing is the nullability check's; a lost, foreign or escaped
-one is `Unknown` (RK-061); a believed one fits where the belief is wide enough;
+one is `Unknown`, since something may have written it where this check did not
+see; a pointer moved off its start holds something for this question even
+where it names nothing, since arithmetic on a null or on a local's address is
+not a null; a believed one fits where the belief and the record are both wide
+enough;
 one off its start, or perhaps off it, is `Unknown`, since no distance is carried
 (ADR-0036); an edge that may be the address of something inside a local is
 `Unknown` (`Held::inner_address`); and otherwise every object it may reach is
 folded. Every lower bound at least as wide as the access is proved. Every one
 exact and narrower is **`Unsafe`**, and so an error that `--allow-unknown`
 leaves an error. Anything between is `Unknown`, because a may-set proves nothing
-from one member (RK-035).
+from one member: an access that fits one of two allocations a pointer may hold
+may still overflow the other. A size is read off a constant as the parameter
+receives it, converted as C17 6.5.2.2 p7 converts it.
 
 A library function read by name reaches through the pointers it is handed as
 one table, `memory::parts::LIBRARY`, says per argument: by a length, as
@@ -132,6 +145,22 @@ Each mutation applied on its own, the workspace run, and the file restored.
   goes silent, and `every_target_is_what_clang_says_it_is` fails.
 * a new `Kind` with no words: `error[E0004]` at `memory_finding` in
   `crates/safec-c/src/driver/words.rs`.
+* a row of `LIBRARY` without one of its three fields: `error[E0063]`.
+* review's findings, each with a case in `tests/cases/bounds/` and the
+  mutation beside it in `tests/cases.rs`, each applied and seen to fail its
+  case: the library reach keyed with the dereferences
+  (`a_proof_at_a_call_is_not_displaced_by_a_doubt_about_its_argument`), the
+  offset left out of what a pointer holds
+  (`a_pointer_moved_off_null_and_tested_is_not_proved_inside`,
+  `a_local_s_address_moved_past_it_and_tested_is_not_proved_inside`), a
+  constant read as written (`an_allocation_s_size_is_what_its_parameter_receives`,
+  `a_length_is_what_its_parameter_receives`), a row of `LIBRARY` dropped or
+  narrowed (`a_memmove_wider_than_its_destination`,
+  `a_memcmp_longer_than_both_objects`, `a_strlen_is_not_shown_to_fit`,
+  `a_strncpy_of_its_destination_s_size_is_unknown_only_at_its_source`,
+  `an_int_written_into_one_aligned_byte`), and a belief answered without its
+  record (`a_char_address_stored_as_void_and_read_through_an_int_alias`,
+  `a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back`).
 
 **Held by nothing, and each says why.** `Held::inner_address` and the
 `Unknown` an `Index` in a place gets: no C reaches either, since the lowering
@@ -147,14 +176,21 @@ folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
 * Bad, because **a pointer that is lost, foreign or escaped is doubted about
   its size as well as about whether it was freed**, so 192 corpus cases that
   already reported a doubt gained an `SC0412` beside it, and the output-parameter
-  idiom, `get(&p); if (p) *p = 1;`, is `Unknown`. The escape is RK-061's rule:
+  idiom, `get(&p); if (p) *p = 1;`, is `Unknown`. The escape is doubted because
   something may have written the local where this check could not see.
+* Bad, because the record a load is bounded by is coarser than the program:
+  a store through one load read back through another,
+  `an_allocation_stored_through_a_load_and_freed_is_doubted_when_read_back_one_level_further`,
+  gains a false `Unknown`.
 * Bad, because every access off a pointer's start is `Unknown`, so `p[1]` does
   not build at `--safety memory` without `--allow-unknown`. That is what Phase
   11's rule allows until a distance is carried.
 * Bad, because `strcpy` and its family are always `Unknown` at their
   destination, and a list walked through `void *` is `Unknown` at every step.
-* Bad, because what is believed is not yet asked anywhere, until #623.
+* Bad, because what is believed is not yet asked anywhere, until #623, and a
+  `void *` store is not asked about a size even then, which is #624. **#621,
+  which lets the backend write pointer arithmetic, depends on #623** for
+  that reason: `g(p + 5)` is kept from an executable today only by `SC0801`.
 * What would reverse this: a lattice that carries a distance and a length per
   allocation, which would make `Extent` and `Offset` one fact; or annotations
   that say how many objects a parameter points at.

@@ -107,8 +107,9 @@ is not paid. What it does change is that a **diagnostic** now turns on a width,
 which `docs/architecture.md`'s output table did not allow for; that divergence
 is recorded there and in `docs/frontend.md` rather than reopening this record.
 
-**A pointer's width is not here**, and that is the rule rather than an
-oversight. Nothing can observe one: the artifact prints `int *` rather than a
+**A pointer's width was not here**, and was the rule rather than an
+oversight, until ADR-0060 gave it a reader; the paragraph after this one says
+what changed. Nothing can observe one: the artifact prints `int *` rather than a
 size, there is no `sizeof`, and the interpreter refuses pointer arithmetic.
 `i686-unknown-linux-gnu` and `wasm32-unknown-unknown` have 4-byte pointers where
 the rest have 8, so the fact is real and the reader is not. It arrives with the
