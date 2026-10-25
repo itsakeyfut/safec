@@ -54,14 +54,14 @@ preprocessor is where the two diverge. [roadmap.md](roadmap.md) pulls a minimal
 subset of this stage forward into Phase 1: `#include`, object-like `#define`,
 `#ifdef` and `#ifndef`. What that buys is that every later phase can be tested
 against a real header rather than a hand-written prototype. The rest of the
-stage, and all of Stage 2, stay in Phase 9.
+stage, and all of Stage 2, are Phase 11, which runs before Phases 6 to 8.
 
 Function pointers moved from Stage 2 into Stage 1, because C17 6.7.6 makes them a
 shape of the declarator grammar that pointers and functions already need, not a
 feature of their own: `int (*f)(int)` parsed as soon as declarators did (#33).
 The type checker reads them too, a call through one included (#361). What is
 left is the lowering, which refuses one as `SC0304` because the IR holds none,
-and that belongs to Phase 9 rather than to a stage of the parser (#41).
+and that belongs to Phase 11 rather than to a stage of the parser (#41).
 
 ## What is refused today
 
