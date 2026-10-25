@@ -20,7 +20,7 @@ use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
+use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label, Remedy};
 use crate::driver::{Access, reason};
 use crate::lexer::{UNSUPPORTED_SPLICE, is_identifier, lex, unexpected_characters};
 use crate::options::CommandLineMacro;
@@ -1611,7 +1611,15 @@ fn act(
                                  target and not in others, so none of this conditional's groups \
                                  is compiled"
                             )
-                        }),
+                        })
+                        // The way out is the reader's to state, not this
+                        // compiler's to suggest: either answer is a claim about
+                        // the build that nothing here can check. See ADR-0059,
+                        // and ADR-0034 for why a way out is a remedy.
+                        .with_remedy(Remedy::new(format!(
+                            "say whether the build defines it: `-D {name}` if it does, \
+                             `-U {name}` if it does not"
+                        ))),
                     );
                     open(frame, what, None);
                 }
