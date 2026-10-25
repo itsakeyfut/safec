@@ -3140,6 +3140,21 @@ cases! {
         // any width it would not be. Mutation: give `void` a width of one in
         // `pointee_width`; this is reported.
         a_void_pointer_of_no_known_size_leaves_asking_no_width: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An access that goes through a local's address asks what that local
+        // holds at the access, whichever came first, the move or the address,
+        // and at every level. Mutation: ask only the first level in
+        // `may_not_fit`; the first four go silent. Mutation: stop after the
+        // second level; the fourth does.
+        a_pointer_moved_after_its_local_s_address_was_taken_is_asked_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_moved_before_its_local_s_address_was_taken_is_asked_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_void_pointer_moved_and_read_through_an_int_alias_of_its_local_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_three_levels_through_locals_is_asked_at_the_last: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A whole pointer, and one moved and moved back before the access,
+        // say nothing of size; the free and null doubts they keep are `main`'s.
+        // Mutation: doubt the escape of a local reached through an address in
+        // `may_not_fit`; both gain an `SC0412`.
+        a_whole_pointer_read_through_its_local_s_address_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_moved_and_moved_back_before_it_is_read_through_its_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument

@@ -2453,7 +2453,7 @@ impl Analysis for Allocations<'_> {
                     let believed = function.locals().nth(local).and_then(|id| {
                         let width = self.pointee_size(function, &Place::local(id))?;
                         let whole = matches!(
-                            fits(self, function, id, width, value, true),
+                            fits(self, function, id, width, value, false),
                             None | Some(Fit::Inside)
                         );
                         whole.then_some(width)

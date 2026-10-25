@@ -676,8 +676,9 @@ pub(super) enum Fit {
 ///    that is not null either, and a null test on it takes the nullability
 ///    check's doubt away: `int *q = p + 1; if (q) *q = 1;` with `p` null or
 ///    `&x` was answered by neither check. Found by review.
-/// 2. For an access and not for a value leaving: lost, written by a call
-///    this check cannot read, or an escaped local holding anything: whatever is known about it may be stale (ADR-0017,
+/// 2. Where `doubt_unseen_writes`, for an access through the local itself:
+///    lost, written by a call this check cannot read, or an escaped local
+///    holding anything: whatever is known about it may be stale (ADR-0017,
 ///    ADR-0018), so it is unknown. The escape is asked because a write
 ///    through the escaped address can put any pointer in the local where
 ///    this check does not see it, so what it holds proves nothing.
@@ -706,7 +707,7 @@ pub(super) fn fits(
     local: LocalId,
     width: u64,
     known: &Known,
-    leaving: bool,
+    doubt_unseen_writes: bool,
 ) -> Option<Fit> {
     let held = &known.points_to[local.index()];
     let holds_something = held.sites().next().is_some()
@@ -718,7 +719,8 @@ pub(super) fn fits(
     if !holds_something {
         return None;
     }
-    // **Where a value leaves, none of these is doubted**, because each
+    // **Where a value leaves, or a local is reached through its own address,
+    // none of these is doubted**, because each
     // stands for a write that was asked where it happened. The escape stands
     // for writes this check did not see, and each marks the local
     // (`Known::replaced`): one through a pointer it cannot pin down is a
@@ -728,9 +730,11 @@ pub(super) fn fits(
     // every time, so the sites folded below answer for it. Doubting them
     // where a value leaves refused `grow(&a); grow(&a);` with `a` a whole
     // allocation, the output-parameter idiom, since the first call is what
-    // marks `a`. An access still doubts all three, which costs a false
+    // marks `a`; doubting the escape of a local reached through its address
+    // doubted every `**pi`, since that address is what escapes it. An access
+    // through the local itself still doubts all three, which costs a false
     // report and not a silence. See ADR-0060.
-    if !leaving && (held.lost || held.foreign || known.escaped[local.index()]) {
+    if doubt_unseen_writes && (held.lost || held.foreign || known.escaped[local.index()]) {
         return Some(Fit::Unknown);
     }
     let sites = held
@@ -816,14 +820,18 @@ pub(super) fn fits(
 /// Report every access at `at` that this check cannot show fits the object
 /// its pointer reaches, once per pointer per caret.
 ///
-/// **Asked of the pointer the place goes through first, and of no deeper
-/// one.** A deeper level goes through a pointer read out of memory, which is
-/// believed to be one whole object of the type it was read as, and the
-/// access through it is exactly that type, so it fits by what is believed.
-/// What makes that belief worth anything is that the store that put the
-/// pointer there is asked, by [`departed_in_element`], and that [`fits`]
-/// bounds it by what the memory is recorded to hold. A `void *` store is
-/// asked its start and no width, so size through one is #627.
+/// **Asked of the pointer the place goes through first, and of a deeper one
+/// where it may be a local's value.** A deeper level goes through a pointer
+/// read out of memory, which is believed to be one whole object of the type it
+/// was read as: what makes that belief worth anything is that the store that
+/// put the pointer there is asked, by [`departed_in_element`], and that
+/// [`fits`] bounds it by what the memory is recorded to hold. A local is not
+/// memory with a door: `v = p + 4;` after `pi = &v;` is an assignment, asked
+/// nowhere, and `**pi = 1` believed what `v` held. So a deeper level that may
+/// go through a local asks that local's value, as it stands at the access, as
+/// [`contents_leaving`] asks it where an address leaves; the order of the
+/// assignment and the address then does not matter. A `void *` store is asked
+/// its start and no width, so size through one is #627. See ADR-0060.
 ///
 /// **Not through [`say`], and not keyed with it.** A use after free and an
 /// access outside its object are two questions about one place, and both can
@@ -841,53 +849,84 @@ pub(super) fn may_not_fit(
     };
     for place in places {
         let local = place.local;
-        if asked.contains(&(at, local)) {
-            continue;
-        }
         // **An index is not read**, and is unknown rather than silent: no C
         // reaches one, since the lowering writes `p[i]` as `*(p + i)`, and a
         // frontend that builds one has to be answered for.
-        let fit = if place
+        if place
             .projection
             .iter()
             .any(|step| matches!(step, Projection::Index(_)))
         {
-            Some((Fit::Unknown, 0))
-        } else {
-            let first = Place {
+            say_fit(findings, asked, analysis, at, local, 0, Some(Fit::Unknown));
+            continue;
+        }
+        // Each level of dereference, the first asked of the place's own local
+        // and every deeper one of the locals the level above may point at.
+        let mut reached = vec![local];
+        for level in 1..=place.projection.len() {
+            let through = Place {
                 local,
-                projection: vec![Projection::Deref],
+                projection: vec![Projection::Deref; level],
             };
             // A `void` place has no size, and is no access this asks about.
             let Some(width) = analysis
                 .unit
-                .place_ty(function, &first)
+                .place_ty(function, &through)
                 .and_then(|ty| analysis.unit.size_of(ty))
             else {
-                continue;
+                break;
             };
-            fits(analysis, function, local, width, known, false).map(|fit| (fit, width))
-        };
-        let Some((fit, width)) = fit else {
-            continue;
-        };
-        let (conclusion, extent, made, unproven) = match fit {
-            Fit::Inside => continue,
-            Fit::Outside { extent, made } => (Conclusion::Unsafe, extent, made, None),
-            Fit::Unknown => (Conclusion::Unknown, None, None, Some(Unproven::Extent)),
-        };
-        asked.push((at, local));
-        findings.push(Finding {
-            function: analysis.function,
-            kind: Kind::OutsideItsObject { width, extent },
-            conclusion,
-            at,
-            local: Some(local),
-            freed: None,
-            made,
-            unproven,
-        });
+            let mut next = Vec::new();
+            for &pointer in &reached {
+                // The first level is an access through the local itself, and
+                // doubts what may have written it unseen. A deeper one asks a
+                // local reached through its own address, which that address
+                // has escaped, so it does not: the writes the escape stands
+                // for are marked and asked where they happened (ADR-0060).
+                let fit = fits(analysis, function, pointer, width, known, level == 1);
+                say_fit(findings, asked, analysis, at, pointer, width, fit);
+                let held = &known.points_to[pointer.index()];
+                for target in function.locals() {
+                    if held.writes_to.get(target.index()) && !next.contains(&target) {
+                        next.push(target);
+                    }
+                }
+            }
+            reached = next;
+        }
     }
+}
+
+/// Push what [`fits`] answered about an access through `local`'s value, once
+/// per local per caret.
+fn say_fit(
+    findings: &mut Vec<Finding>,
+    asked: &mut Vec<(Span, LocalId)>,
+    analysis: &Allocations<'_>,
+    at: Span,
+    local: LocalId,
+    width: u64,
+    fit: Option<Fit>,
+) {
+    let (conclusion, extent, made, unproven) = match fit {
+        None | Some(Fit::Inside) => return,
+        Some(Fit::Outside { extent, made }) => (Conclusion::Unsafe, extent, made, None),
+        Some(Fit::Unknown) => (Conclusion::Unknown, None, None, Some(Unproven::Extent)),
+    };
+    if asked.contains(&(at, local)) {
+        return;
+    }
+    asked.push((at, local));
+    findings.push(Finding {
+        function: analysis.function,
+        kind: Kind::OutsideItsObject { width, extent },
+        conclusion,
+        at,
+        local: Some(local),
+        freed: None,
+        made,
+        unproven,
+    });
 }
 
 /// Report every library call at this terminator that reads or writes through
@@ -935,9 +974,9 @@ pub(super) fn reached_by_library(
         };
         let fit = if place.projection.is_empty() {
             match width {
-                Some(width) => fits(analysis, function, local, width, known, false),
+                Some(width) => fits(analysis, function, local, width, known, true),
                 // Anything that holds something is unknown here.
-                None => fits(analysis, function, local, 0, known, false).map(|_| Fit::Unknown),
+                None => fits(analysis, function, local, 0, known, true).map(|_| Fit::Unknown),
             }
         } else {
             // **A pointer read out of memory and handed straight over** is
@@ -1013,7 +1052,7 @@ fn leaving(
     match value {
         Rvalue::Use(Operand::Constant(_)) => None,
         Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
-            fits(analysis, function, place.local, width, known, true)
+            fits(analysis, function, place.local, width, known, false)
                 .map(|fit| (fit, Some(place.local)))
         }
         // A belief narrower than the width is unknown and not narrower,
@@ -1161,7 +1200,7 @@ fn contents_leaving(
             continue;
         };
         let answer =
-            fits(analysis, function, local, width, known, true).map(|fit| (fit, Some(local)));
+            fits(analysis, function, local, width, known, false).map(|fit| (fit, Some(local)));
         say_leaving(findings, departed, analysis, (at, how, width), answer);
     }
 }
