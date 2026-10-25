@@ -108,7 +108,18 @@ call.
 
 **The question**, `report::fits`, is asked at every access `used` asks about,
 of the pointer the place goes through first; a deeper level goes through a load
-of exactly the type it reads, so it fits by what is believed. In order: a
+of exactly the type it reads, so it fits by what is believed, **except where it
+may go through a local**, whose value is asked at the access as it stands
+there: an assignment to a local is no door, so `v = p + 4;` after `pi = &v;`
+was believed at `**pi = 1` (#629). That local's escape is not doubted, since
+its address is what escapes it. The locals are the ones the walk a load takes
+finds, through an allocation as through a local, and below the first level a
+proof needs the pointer to be certainly one local's value, since a may-set
+proves nothing from one member. Such a pointer handed on, to a call or to a
+library function that takes a length, is asked the same way, and one local
+asked twice at one caret is said once, the proof over the doubt. A write
+through a pointer into a local starts where what it held and what was written
+start, not anywhere, since the local is now asked. In order: a
 pointer holding nothing is the nullability check's; a lost, foreign or escaped
 one is `Unknown`, since something may have written it where this check did not
 see; a pointer moved off its start holds something for this question even

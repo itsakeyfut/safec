@@ -579,8 +579,9 @@ fn findings_within(
         // until the sort at the end of this function.
         let mut said: Vec<(Span, Place, usize)> = Vec::new();
         // The pointers already asked whether an access fits, per caret, kept
-        // apart from `said` for the reason `may_not_fit` gives.
-        let mut asked: Vec<(Span, LocalId)> = Vec::new();
+        // apart from `said` for the reason `may_not_fit` gives, with where
+        // the report standing for each is, as `said` keeps it.
+        let mut asked: Vec<(Span, LocalId, usize)> = Vec::new();
         // **And the pointers a library call touched, apart from those.** The
         // same pointer at the same call is two accesses, a dereference in an
         // argument and the call's own reach, and the second may be the

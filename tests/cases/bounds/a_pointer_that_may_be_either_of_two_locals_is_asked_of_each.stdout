@@ -1,0 +1,127 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:3:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int *" "a"
+  Local "_6" "int *" "b"
+  Local "_7" "int **" "pi"
+  Local "_8" "int **"
+  Local "_9" "int **"
+  Local "_10" "int **"
+  Local "_11" "int *"
+  Local "_12" "int *"
+  Local "_13" "int"
+  Block "bb0" entry
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:3:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:4:14 generated
+    Call a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:4:14 written "malloc" "bb1"
+      Destination "_3"
+      Constant 16
+  Block "bb1"
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:4:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:4:14 generated
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:5:9 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:5:9 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:5:9 generated
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:6:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:6:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:8:10 written
+      Destination "_5"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:8:14 generated
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:9:10 written
+      Destination "_6"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:9:14 generated
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:10:16 written
+      Destination "_8"
+      Address
+        Place "_6"
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:10:11 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:10:16 generated
+    Branch a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:11:9 written "bb5" "bb6"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:11:9 generated
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:12:14 written
+      Destination "_9"
+      Address
+        Place "_5"
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:12:9 written
+      Destination "_7"
+      Use
+        Copy "_9"
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:12:9 written
+      Destination "_10"
+      Use
+        Copy "_7"
+    Sequenced a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:12:9 generated
+    Goto "bb7"
+  Block "bb6"
+    Sequenced a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:11:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:14:9 written
+      Destination "_11"
+      Binary "Add"
+        Copy "_2"
+        Constant 4
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:14:5 written
+      Destination "_5"
+      Use
+        Copy "_11"
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:14:5 written
+      Destination "_12"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:14:5 generated
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:15:5 written
+      Destination "_7"
+        Deref
+          Deref
+      Use
+        Constant 1
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:15:5 written
+      Destination "_13"
+      Use
+        Copy "_7"
+          Deref
+            Deref
+    Sequenced a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:15:5 generated
+    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:16:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:16:12 generated
+    Return
