@@ -1,3 +1,13 @@
+error[SC0412]: this may reach outside the object `t` points at
+    ╭─[ a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:28:5 ]
+    │
+ 28 │     *t = a;
+    │     ───┬──  
+    │        ╰──── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
 error[SC0402]: this uses `a`, which may have been freed
     ╭─[ a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:30:5 ]
     │

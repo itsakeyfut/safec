@@ -18,3 +18,13 @@ warning[SC0402]: this uses `w`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+warning[SC0412]: this may reach outside the object `w` points at
+    ╭─[ a_lost_pointer_read_back_on_one_arm_before_its_free_is_doubted.c:23:9 ]
+    │
+ 23 │     int v = *w;
+    │         ───┬──  
+    │            ╰──── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide

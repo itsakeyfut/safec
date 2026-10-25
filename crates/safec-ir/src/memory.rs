@@ -14,6 +14,12 @@
 //! a call is handed, which is ADR-0042. [`Kind`] is how the caller tells them
 //! apart.
 //!
+//! **And one about size, out of the same walk.** Whether an access fits the
+//! object it reaches reads what each site was made with, `Known::extent`, and
+//! what a pointer read out of memory is believed to point at. It is not about
+//! a free, so it is asked beside the dereference question rather than through
+//! it. See ADR-0060.
+//!
 //! **This answers a [`Finding`] rather than a diagnostic.** ADR-0011 keeps this
 //! crate from seeing one, and what that buys is a check testable against IR
 //! built by hand instead of only through the frontend. `safec_llvm`'s `Refusal`
@@ -66,7 +72,7 @@ use crate::source::{SourceMap, Span};
 use built::named;
 use report::{
     after_a_call, derefs, freed_after_its_read_was_reported, handed, handed_places, inside,
-    loaded_indeterminate, reported, returned, used, used_before,
+    loaded_indeterminate, outside, reported, returned, touched_by_length, used, used_before,
 };
 use transfer::Allocations;
 
@@ -164,6 +170,21 @@ pub enum Kind {
     TooLong {
         /// The walks it was given before it gave up.
         walks: usize,
+    },
+    /// `int *p = malloc(1); *p = 5;`, `*(p + 5) = 1;`
+    ///
+    /// An access this check could not show lands inside the object it
+    /// reaches. `Unsafe` only where every object it may reach has a size this
+    /// check read exactly, it starts at the start of each, and it is wider
+    /// than every one of them; `Unknown` wherever less is known. A pointer
+    /// moved off its start is never proved outside, since no distance is
+    /// carried (ADR-0036). See ADR-0060.
+    OutsideItsObject {
+        /// How many bytes the access reads or writes.
+        width: u64,
+        /// How many bytes the object takes, where it is proved outside and
+        /// every object it may reach agrees.
+        extent: Option<u64>,
     },
 }
 
@@ -381,6 +402,11 @@ pub enum Unproven {
     /// evaluate, so whether it is still at the start of its allocation is not
     /// known. Only [`Kind::InteriorFree`] carries it. See ADR-0036.
     Offset,
+    /// This check could not show that an access fits the object it reaches:
+    /// the pointer may be off its start, or what it reaches has a size this
+    /// check did not read or read as smaller than the access. Only
+    /// [`Kind::OutsideItsObject`] carries it. See ADR-0060.
+    Extent,
 }
 
 /// Every double free this unit contains, and every one it cannot rule out.
@@ -505,6 +531,9 @@ fn findings_within(
         // is appended to and assigned into, never removed from or reordered,
         // until the sort at the end of this function.
         let mut said: Vec<(Span, Place, usize)> = Vec::new();
+        // The pointers already asked whether an access fits, per caret, kept
+        // apart from `said` for the reason `outside` gives.
+        let mut asked: Vec<(Span, LocalId)> = Vec::new();
 
         for &id in cfg.order() {
             // `Cfg::order` holds exactly the reachable blocks and `solve` gives
@@ -538,6 +567,15 @@ fn findings_within(
                     dereferenced_in_element(element),
                     &known,
                     func,
+                );
+                // The same accesses, asked whether they fit. See ADR-0060.
+                outside(
+                    &mut findings,
+                    &mut asked,
+                    &analysis,
+                    function,
+                    dereferenced_in_element(element),
+                    &known,
                 );
                 // After the dereferences in the element, as `handed` is after
                 // the ones at a call, so that `return *tab;` keeps a doubt
@@ -610,6 +648,22 @@ fn findings_within(
                 dereferenced_in_terminator(&block.terminator),
                 &known,
                 func,
+            );
+            outside(
+                &mut findings,
+                &mut asked,
+                &analysis,
+                function,
+                dereferenced_in_terminator(&block.terminator),
+                &known,
+            );
+            touched_by_length(
+                &mut findings,
+                &mut asked,
+                &analysis,
+                function,
+                &block.terminator,
+                &known,
             );
             // After the dereferences at this call, so a caret carrying both
             // reads `SC0402` above `SC0407`, and before the transfer, for the

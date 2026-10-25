@@ -1,3 +1,23 @@
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:13:9 ]
+    │
+ 13 │         c[i] = d[i];
+    │         ─────┬─────  
+    │              ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:13:9 ]
+    │
+ 13 │         c[i] = d[i];
+    │         ─────┬─────  
+    │              ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
 error[SC0401]: this frees `p`, which may have been freed already
     ╭─[ a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:16:5 ]
     │

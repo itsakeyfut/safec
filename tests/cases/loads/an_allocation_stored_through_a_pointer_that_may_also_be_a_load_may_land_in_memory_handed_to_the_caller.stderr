@@ -1,3 +1,13 @@
+error[SC0412]: this may reach outside the object `w` points at
+    ╭─[ an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:18:5 ]
+    │
+ 18 │     *w = m;
+    │     ───┬──  
+    │        ╰──── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
 error[SC0402]: this uses `q`, which may have been freed
     ╭─[ an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:22:5 ]
     │

@@ -1,3 +1,13 @@
+error[SC0412]: this may reach outside the object `t` points at
+    ╭─[ a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:30:5 ]
+    │
+ 30 │     show(*t);
+    │     ────┬───  
+    │         ╰───── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
 error[SC0402]: this uses `p`, which may have been freed
     ╭─[ a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:31:5 ]
     │

@@ -95,6 +95,15 @@ const UNSEQUENCED_ACCESS: Code = Code::new("SC0409");
 const TOO_LARGE: Code = Code::new("SC0410");
 const UNASSIGNED: Code = Code::new("SC0411");
 
+/// An access that may not fit the object its pointer reaches.
+///
+/// A class of its own rather than any code above, because it is about where
+/// in an object an access lands and not whether the object is live: a use
+/// after free is about the allocation, and this is about its size. An
+/// allocation too small and a pointer off its start share it, being one
+/// question. See ADR-0060.
+const OUTSIDE_ITS_OBJECT: Code = Code::new("SC0412");
+
 /// What to change where this check stopped following a pointer and cannot
 /// say why: `LostReason::Other`.
 ///
@@ -376,7 +385,13 @@ pub(super) fn memory_finding(
         (
             Kind::DoubleFree,
             Conclusion::Unknown,
-            Some(Unproven::Disagreement | Unproven::Unsequenced | Unproven::Offset) | None,
+            Some(
+                Unproven::Disagreement
+                | Unproven::Unsequenced
+                | Unproven::Offset
+                | Unproven::Extent,
+            )
+            | None,
         ) => (
             DOUBLE_FREE,
             said(
@@ -419,7 +434,7 @@ pub(super) fn memory_finding(
         (
             Kind::UseAfterFree,
             Conclusion::Unknown,
-            Some(Unproven::Disagreement | Unproven::Offset) | None,
+            Some(Unproven::Disagreement | Unproven::Offset | Unproven::Extent) | None,
         ) => (
             USE_AFTER_FREE,
             said(name, "this uses a value that may have been freed", |name| {
@@ -461,7 +476,13 @@ pub(super) fn memory_finding(
         (
             Kind::ReturnAfterFree,
             Conclusion::Unknown,
-            Some(Unproven::Disagreement | Unproven::Unsequenced | Unproven::Offset) | None,
+            Some(
+                Unproven::Disagreement
+                | Unproven::Unsequenced
+                | Unproven::Offset
+                | Unproven::Extent,
+            )
+            | None,
         ) => (
             RETURN_AFTER_FREE,
             said(
@@ -515,7 +536,7 @@ pub(super) fn memory_finding(
         (
             Kind::ArgumentAfterFree,
             Conclusion::Unknown,
-            Some(Unproven::Disagreement | Unproven::Offset) | None,
+            Some(Unproven::Disagreement | Unproven::Offset | Unproven::Extent) | None,
         ) => (
             ARGUMENT_AFTER_FREE,
             said(
@@ -543,7 +564,8 @@ pub(super) fn memory_finding(
                 Unproven::Disagreement
                 | Unproven::Lost(_)
                 | Unproven::Unsequenced
-                | Unproven::Offset,
+                | Unproven::Offset
+                | Unproven::Extent,
             )
             | None,
         ) => (
@@ -587,6 +609,7 @@ pub(super) fn memory_finding(
             Conclusion::Unknown,
             Some(
                 Unproven::Offset
+                | Unproven::Extent
                 | Unproven::Lost(_)
                 | Unproven::Disagreement
                 | Unproven::Unsequenced,
@@ -726,6 +749,46 @@ pub(super) fn memory_finding(
         // Neither check answers this and `Diagnostic::concluded` gives `None`
         // for it, so none of the four is read. Written out rather than `_` so
         // that a fourth conclusion has to be answered for here.
+        // **The numbers are in the message and not the label**, because the
+        // label says what is wrong at the caret and the numbers are why it
+        // is proved. Only a proof carries them: every object it may reach was
+        // read as exactly that size. See ADR-0060.
+        (Kind::OutsideItsObject { width, extent }, Conclusion::Unsafe, _) => (
+            OUTSIDE_ITS_OBJECT,
+            match extent {
+                Some(extent) => format!(
+                    "this reaches {width} {} into an object of {extent}",
+                    bytes(width)
+                ),
+                None => "this reaches past the end of the object it points at".to_owned(),
+            },
+            "wider than the object it reaches",
+            "allocate at least as many bytes as this reads or writes",
+        ),
+        // Every reason named, although only `Extent` arrives, for the reason
+        // the double-free rows give.
+        (
+            Kind::OutsideItsObject { .. },
+            Conclusion::Unknown,
+            Some(
+                Unproven::Extent
+                | Unproven::Offset
+                | Unproven::Lost(_)
+                | Unproven::Disagreement
+                | Unproven::Unsequenced,
+            )
+            | None,
+        ) => (
+            OUTSIDE_ITS_OBJECT,
+            said(
+                name,
+                "this may reach outside the object it points at",
+                |name| format!("this may reach outside the object `{name}` points at"),
+            ),
+            "this check cannot say this is inside its object",
+            "reach the object through a pointer to its start, and allocate it with a constant \
+             size at least this wide",
+        ),
         (_, Conclusion::Safe, _) => (DOUBLE_FREE, "nothing".to_owned(), "nothing", "nothing"),
     };
 
@@ -1107,4 +1170,9 @@ fn returned(
         diagnostic = diagnostic.with_label(Label::secondary(promised_at, promise_label));
     }
     Some(diagnostic)
+}
+
+/// `byte` or `bytes`, so that one access of one byte does not read as several.
+fn bytes(count: u64) -> &'static str {
+    if count == 1 { "byte" } else { "bytes" }
 }

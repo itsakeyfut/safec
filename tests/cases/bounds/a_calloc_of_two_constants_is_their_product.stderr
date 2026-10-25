@@ -1,0 +1,13 @@
+error[SC0412]: this reaches 4 bytes into an object of 2
+    ╭─[ a_calloc_of_two_constants_is_their_product.c:13:5 ]
+    │
+  5 │     int *q = calloc(1, 2);
+    │              ──────┬─────  
+    │                    ╰─────── allocated here
+    │ 
+ 13 │     *q = 1;
+    │     ───┬──  
+    │        ╰──── wider than the object it reaches
+────╯
+  = note: this check belongs to safety level 1
+  = help: allocate at least as many bytes as this reads or writes

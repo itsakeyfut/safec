@@ -8,6 +8,16 @@ warning[SC0402]: this uses a value that may have been freed
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0412]: this may reach outside the object `ppp` points at
+    ╭─[ a_write_through_a_pointer_whose_address_escaped_two_levels_up_does_not_doubt_that_pointer.c:10:5 ]
+    │
+ 10 │     **ppp = q;
+    │     ────┬────  
+    │         ╰────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
 warning[SC0401]: this frees `p`, which may have been freed already
     ╭─[ a_write_through_a_pointer_whose_address_escaped_two_levels_up_does_not_doubt_that_pointer.c:11:5 ]
     │

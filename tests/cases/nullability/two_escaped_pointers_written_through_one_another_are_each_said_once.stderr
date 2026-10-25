@@ -18,6 +18,26 @@ error[SC0402]: this uses `q`, which may have been freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0412]: this may reach outside the object `p` points at
+   ╭─[ two_escaped_pointers_written_through_one_another_are_each_said_once.c:4:5 ]
+   │
+ 4 │     *p = *q;
+   │     ───┬───  
+   │        ╰───── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
+error[SC0412]: this may reach outside the object `q` points at
+   ╭─[ two_escaped_pointers_written_through_one_another_are_each_said_once.c:4:5 ]
+   │
+ 4 │     *p = *q;
+   │     ───┬───  
+   │        ╰───── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
 error[SC0402]: this uses `p`, which may have been freed
     ╭─[ two_escaped_pointers_written_through_one_another_are_each_said_once.c:10:5 ]
     │
@@ -38,6 +58,26 @@ error[SC0402]: this uses `q`, which may have been freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0412]: this may reach outside the object `p` points at
+    ╭─[ two_escaped_pointers_written_through_one_another_are_each_said_once.c:10:5 ]
+    │
+ 10 │     *p += *q;
+    │     ────┬───  
+    │         ╰───── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ two_escaped_pointers_written_through_one_another_are_each_said_once.c:10:5 ]
+    │
+ 10 │     *p += *q;
+    │     ────┬───  
+    │         ╰───── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
 error[SC0403]: this may dereference `p` while it is null
    ╭─[ two_escaped_pointers_written_through_one_another_are_each_said_once.c:4:5 ]
    │

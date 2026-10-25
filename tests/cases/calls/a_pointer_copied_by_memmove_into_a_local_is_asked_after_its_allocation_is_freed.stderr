@@ -18,6 +18,16 @@ error[SC0402]: this uses `s`, which may have been freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0412]: this may reach outside the object `s` points at
+    ╭─[ a_pointer_copied_by_memmove_into_a_local_is_asked_after_its_allocation_is_freed.c:12:5 ]
+    │
+ 12 │     return *s;
+    │     ─────┬────  
+    │          ╰────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
 error[SC0403]: this may dereference `s` while it is null
     ╭─[ a_pointer_copied_by_memmove_into_a_local_is_asked_after_its_allocation_is_freed.c:12:5 ]
     │

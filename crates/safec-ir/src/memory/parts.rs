@@ -297,6 +297,48 @@ impl Offset {
     }
 }
 
+/// How many bytes the object a site stands for takes, as far as this check
+/// read it.
+///
+/// **Two kinds of answer, because only one of them can prove an access
+/// outside.** An allocation of a constant size is exactly that size, and an
+/// access wider than it from its start lands outside on every execution. A
+/// parameter and a call's result are only believed to point at one whole
+/// object of the type they arrive as, which is a lower bound: an access wider
+/// than that may still fit. `AtLeast(0)` is nothing read at all. See ADR-0060.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Extent {
+    /// This many bytes, read off an allocation's constant size.
+    Exactly(u64),
+    /// At least this many bytes, and perhaps more.
+    AtLeast(u64),
+}
+
+impl Extent {
+    /// The fewest bytes it may take.
+    pub(super) fn lower(self) -> u64 {
+        match self {
+            Self::Exactly(bytes) | Self::AtLeast(bytes) => bytes,
+        }
+    }
+
+    /// The two together: itself where they agree, and the smaller lower
+    /// bound where they do not.
+    ///
+    /// **It only descends**, and every value it can take is a constant the
+    /// function wrote or the size of a type it names, so a loop cannot climb
+    /// it: two different exact sizes meet as a bound below both, and a bound
+    /// meets anything as the smaller bound. That is what ends a walk over it,
+    /// rather than the walk's own limit. See ADR-0060.
+    pub(super) fn joined(self, other: Self) -> Self {
+        if self == other {
+            self
+        } else {
+            Self::AtLeast(self.lower().min(other.lower()))
+        }
+    }
+}
+
 /// Where an allocation came from, where two paths agree about it.
 ///
 /// `None` where they do not, which only ever loses what was known and so cannot
@@ -578,6 +620,33 @@ pub(super) struct Held {
     /// only where both paths agree. Arithmetic drops it, so `t + 1` is not
     /// followed. See ADR-0057.
     pub(super) fresh_read: bool,
+    /// How many bytes this value is believed to point at the start of, where
+    /// it is, on every path, a pointer read out of memory or returned by a
+    /// call this check cannot read, and nothing since.
+    ///
+    /// **The size of what the pointer read points to, and not of what the
+    /// local it lands in points to.** `void **pp; ... int *q = *pp;` reads a
+    /// `void *`, which arrives believing nothing, and a `char`'s address
+    /// stored that way and read back into `q` is not a whole `int`: believing
+    /// `q`'s own type put four bytes on one, the `void *` round trip RK-068 is
+    /// about. A proof, so an intersection at a join, as [`Self::fresh_read`]
+    /// is, and copied with the value and dropped by anything else, arithmetic
+    /// included. What the sites a load holds say about where it points is
+    /// not read for this, since they are held at an offset nobody said. See
+    /// ADR-0060.
+    pub(super) believed: Option<u64>,
+    /// Whether an edge in [`Self::writes_to`] may be the address of
+    /// something inside the local it names rather than of the local itself.
+    ///
+    /// **An edge can only name a local**, so `&*pp`, which C17 6.5.3.2 p3
+    /// makes `pp`'s value, puts an edge on `pp`, and an access through it is
+    /// not an access of `pp`'s eight bytes. Asking the local's size for one
+    /// would answer about the wrong object. A constant zero index is the
+    /// local's own start and does not set it. No C reaches this today, since
+    /// the lowering folds `&*pp`; it is here for the frontend that does not,
+    /// and for the first address of a member. A may-fact, so a union. See
+    /// ADR-0060.
+    pub(super) inner_address: bool,
 }
 
 impl Held {
@@ -616,6 +685,8 @@ impl Held {
             from_caller: false,
             returned_by: None,
             fresh_read: false,
+            believed: None,
+            inner_address: false,
         }
     }
 
@@ -710,9 +781,13 @@ impl Held {
             from_caller,
             returned_by,
             fresh_read,
+            believed,
+            inner_address,
         } = self;
         sites.clear_all();
         *fresh_read = false;
+        *believed = None;
+        *inner_address = false;
         *from_caller = false;
         *returned_by = None;
         *lost = false;
@@ -758,12 +833,21 @@ impl Held {
             from_caller,
             returned_by,
             fresh_read,
+            believed,
+            inner_address,
         } = self;
+        *inner_address = *inner_address || other.inner_address;
         if *returned_by != other.returned_by {
             *returned_by = None;
         }
         // A proof, so an intersection, as `freed` is.
         *fresh_read = *fresh_read && other.fresh_read;
+        // A proof as well: believed where every path read it out of memory,
+        // and then only as much as the path that believed least.
+        *believed = match (*believed, other.believed) {
+            (Some(here), Some(there)) => Some(here.min(there)),
+            _ => None,
+        };
         *offset = offset.joined(other.offset);
         *from_caller = *from_caller || other.from_caller;
         *loaded = *loaded || other.loaded;
@@ -821,11 +905,17 @@ impl Held {
             from_caller,
             returned_by,
             fresh_read,
+            believed,
+            inner_address,
         } = self;
+        *inner_address = *inner_address || other.inner_address;
         *from_caller = *from_caller || other.from_caller;
         // Arithmetic builds a new value, which is no longer exactly what a
         // `realloc` returned. See ADR-0039.
         *returned_by = None;
+        // Nor the start of what was read, so nothing about it is believed.
+        // See ADR-0060.
+        *believed = None;
         // Nor certainly what was read: not followed. **No case holds this**,
         // measured: arithmetic builds on `Held::none`, and a store into a
         // local through its address is into one whose address escaped,

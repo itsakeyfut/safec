@@ -1,0 +1,13 @@
+error[SC0412]: this reaches 8 bytes into an object of 4
+   ╭─[ a_pointer_written_into_four_bytes.c:8:5 ]
+   │
+ 4 │     int **pp = malloc(4);
+   │                ────┬────  
+   │                    ╰────── allocated here
+   │ 
+ 8 │     *pp = 0;
+   │     ───┬───  
+   │        ╰───── wider than the object it reaches
+───╯
+  = note: this check belongs to safety level 1
+  = help: allocate at least as many bytes as this reads or writes

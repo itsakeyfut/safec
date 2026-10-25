@@ -2987,6 +2987,57 @@ cases! {
         a_byte_handed_straight_to_a_call_beside_a_table_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
     }
 
+    "bounds" => {
+        // Whether an access fits the object its pointer reaches, `SC0412`.
+        // See ADR-0060, whose Confirmation names the mutation each of these
+        // fails under.
+        //
+        // The issue's own program: a null test on the moved pointer took away
+        // the `SC0403` that had been standing in for this. Mutation: answer
+        // `Offset::NonZero` as `Zero` in `fits`; this goes silent.
+        a_write_through_a_pointer_moved_past_its_allocation_after_a_null_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Proved outside, and so an error that `--allow-unknown` leaves one.
+        // Mutation: leave the allocator's argument unread in `made_extent`;
+        // both turn unknown, and the second builds.
+        an_int_written_into_one_byte: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_int_written_into_one_byte_is_an_error_where_unknown_is_allowed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // The same allocation read and written as wide as it is. Mutation:
+        // the same; this turns unknown.
+        an_int_written_into_four_bytes_is_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer is eight bytes on one target and four on another, which
+        // is `Target::pointer_bits`. Mutation: give `x86_64-pc-windows-msvc`
+        // 32 pointer bits; the first goes silent.
+        a_pointer_written_into_four_bytes: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_written_into_four_bytes_fits_where_a_pointer_takes_four: ["--emit", "safety-ir", "--target", "i686-unknown-linux-gnu"],
+        // Two exact sizes meet as a bound below both, which proves neither
+        // fit nor outside. Mutation: `Extent::joined` keeping the larger;
+        // this goes silent.
+        a_join_of_four_bytes_and_one_byte: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The `void *` round trip, RK-068's: a load is believed by the type
+        // it is read as, which here is `void *`. Mutation: believe a load by
+        // the type of the local it lands in; this goes silent.
+        a_char_address_stored_as_void_and_read_as_int: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same round trip through locals, where the edge names `c` and
+        // its size is read. Mutation: fold a local's address as
+        // `Extent::AtLeast(0)`; this turns unknown.
+        a_char_address_converted_through_void_and_written_as_int: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What arrives across a function's boundary is believed whole.
+        // Mutation: give a parameter `Extent::AtLeast(0)` where the function
+        // starts; the first is reported. Mutation: drop the belief in an
+        // opaque call's result; the second is reported.
+        a_parameter_written_through_is_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_call_s_result_is_believed_whole: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A library call that takes a length is an access of that many
+        // bytes. Mutation: drop `touched_by_length`; the first two go
+        // silent, and the third is unchanged, which is why it is here.
+        a_memset_wider_than_its_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_memset_of_a_length_nothing_bounds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_memcpy_that_fits_both_objects_is_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `calloc(m, n)` makes `m * n` bytes. Mutation: read only `m`; `p` is
+        // reported as well.
+        a_calloc_of_two_constants_is_their_product: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    }
+
     "returns" => {
         // A pointer a function returns, asked at its `return` about every
         // allocation it may hold. See ADR-0041, whose Confirmation names the

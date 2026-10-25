@@ -1,3 +1,23 @@
+warning[SC0412]: this may reach outside the object it points at
+    ╭─[ a_load_moved_by_a_subscript_after_a_free_is_unproven.c:27:10 ]
+    │
+ 27 │     int *q = t3[i][i];
+    │          ──────┬─────  
+    │                ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
+warning[SC0412]: this may reach outside the object it points at
+    ╭─[ a_load_moved_by_a_subscript_after_a_free_is_unproven.c:27:14 ]
+    │
+ 27 │     int *q = t3[i][i];
+    │              ────┬───  
+    │                  ╰───── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
 warning[SC0402]: this uses `q`, which may have been freed
     ╭─[ a_load_moved_by_a_subscript_after_a_free_is_unproven.c:31:5 ]
     │
