@@ -1405,7 +1405,10 @@ impl Analysis for Allocations<'_> {
                         Vec::new()
                     };
                     for &target in &deep_targets {
+                        // Where it starts survives, as below.
+                        let offset = value.points_to[target].offset.joined(written.offset);
                         value.points_to[target].accumulated(&written);
+                        value.points_to[target].offset = offset;
                         // No program observes this, as for the write through
                         // one dereference below, and it is here for the same
                         // reason: keeping the proof is the confident direction.
@@ -1598,7 +1601,17 @@ impl Analysis for Allocations<'_> {
                     // the heap half over the merged value at every join. See
                     // ADR-0019.
                     for target in targets {
+                        // **Where it starts is what either value said**, the
+                        // old one or the one written, and not unknown, which
+                        // [`Held::accumulated`] says for a value built by
+                        // arithmetic. A local is asked what it holds where it
+                        // is reached through its address (ADR-0060), and the
+                        // value written was asked where it was stored: made
+                        // unknown, `**t3 = r;` with `*t3 = &slot` doubted
+                        // every later `***t3`. Found by review.
+                        let offset = value.points_to[target].offset.joined(written.offset);
                         value.points_to[target].accumulated(&written);
+                        value.points_to[target].offset = offset;
                         // **The proof goes, whatever the accumulator would
                         // say about it.** [`Held::accumulated`] keeps it while
                         // the set does not grow, which is right where an

@@ -2866,7 +2866,13 @@ cases! {
         a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // "In silence" is the memory check's: no use after free is reported.
         // The nullability check doubts the read through memory in place, as a
-        // warning under `--allow-unknown` (#333).
+        // warning under `--allow-unknown` (#333). Nor is any size doubted:
+        // `**t3 = r;` leaves `slot` where `r` starts. Mutation: leave the
+        // offset `Held::accumulated` gives a local written two levels down;
+        // this and five others gain an `SC0412`. Mutation: leave it for a
+        // local written through one dereference;
+        // `a_locals_address_read_back_out_of_an_allocation_is_written_through`
+        // does.
         a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And a local's own address edge below the first level, `t3 = &t2;
         // t2 = &slot; u = *t3; *u`. Silent with the value live and written
