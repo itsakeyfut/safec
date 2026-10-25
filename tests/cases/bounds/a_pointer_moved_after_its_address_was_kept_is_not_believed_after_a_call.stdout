@@ -1,0 +1,92 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:2:6 "keep" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "pp"
+Function a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:3:6 "other" declared
+  Local "_0" "void" return
+Function a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:4:6 "use" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+Function a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *" "a"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int **"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Block "bb0" entry
+    Operation a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:27 generated
+    Call a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:27 written "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:23 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:27 generated
+    Operation a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:42 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:42 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:42 generated
+    Operation a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:52 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:59 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:42 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:69 written
+      Destination "_4"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:64 generated
+    Call a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:64 written "keep" "bb5"
+      Copy "_4"
+  Block "bb5"
+    Sequenced a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:64 generated
+    Operation a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:78 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_1"
+        Constant 5
+    Operation a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:74 written
+      Destination "_1"
+      Use
+        Copy "_5"
+    Operation a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:74 written
+      Destination "_6"
+      Use
+        Copy "_1"
+    Sequenced a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:74 generated
+    ArgumentsEvaluated a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:85 generated
+    Call a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:85 written "other" "bb6"
+  Block "bb6"
+    Sequenced a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:85 generated
+    ArgumentsEvaluated a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:94 generated
+    Call a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:94 written "use" "bb7"
+      Copy "_1"
+  Block "bb7"
+    Sequenced a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:94 generated
+    Operation a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:102 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:109 generated
+    Return

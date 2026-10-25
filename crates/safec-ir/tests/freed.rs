@@ -282,7 +282,7 @@ fn concluded(
         .filter(|finding| {
             !matches!(
                 finding.kind,
-                Kind::OutsideItsObject { .. } | Kind::HandedOnPartial { .. }
+                Kind::OutsideItsObject { .. } | Kind::HandedOnNarrow { .. }
             )
         })
         .collect()

@@ -1,0 +1,28 @@
+error[SC0413]: this lets a pointer to 1 byte leave where 4 bytes are believed
+   ╭─[ a_char_returned_and_stored_as_an_int_pointer_is_shown_narrower.c:6:5 ]
+   │
+ 4 │     char *c = malloc(1);
+   │               ────┬────  
+   │                   ╰────── allocated here
+   │ 
+ 6 │     return v;
+   │     ────┬────  
+   │         ╰────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer to 1 byte leave where 4 bytes are believed
+    ╭─[ a_char_returned_and_stored_as_an_int_pointer_is_shown_narrower.c:13:9 ]
+    │
+ 10 │     char *c = malloc(1);
+    │               ────┬────  
+    │                   ╰────── allocated here
+    │ 
+ 13 │         *box = v;
+    │         ────┬───  
+    │             ╰───── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

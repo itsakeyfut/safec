@@ -1,13 +1,3 @@
-error[SC0413]: this hands on `old`, which may not point at a whole object
-    ╭─[ a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:17:13 ]
-    │
- 17 │             release(old);
-    │             ──────┬─────  
-    │                   ╰─────── passed here
-────╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as
 error[SC0407]: this passes `old`, which this check stopped following
     ╭─[ a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:17:13 ]
     │

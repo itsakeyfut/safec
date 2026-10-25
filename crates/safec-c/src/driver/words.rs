@@ -109,7 +109,7 @@ const OUTSIDE_ITS_OBJECT: Code = Code::new("SC0412");
 /// Not `SC0412`, because nothing has been read or written through it yet:
 /// it is where another function or a later load will believe it whole, and
 /// the fix is in what is handed on rather than in an access. See ADR-0060.
-const HANDED_ON_PARTIAL: Code = Code::new("SC0413");
+const HANDED_ON_NARROW: Code = Code::new("SC0413");
 
 /// What to change where this check stopped following a pointer and cannot
 /// say why: `LostReason::Other`.
@@ -805,46 +805,46 @@ pub(super) fn memory_finding(
         ),
         // **Where it left is the label**, since the three doors are one
         // question and the reader needs only to know which one this is.
-        (Kind::HandedOnPartial { how, width, extent }, Conclusion::Unsafe, _) => (
-            HANDED_ON_PARTIAL,
-            match extent {
-                Some(extent) => format!(
-                    "this hands on a pointer to {extent} {} where {width} {} are believed",
+        // **Only ever `Unknown`**, for the reason `Kind::HandedOnNarrow`
+        // gives, and `Unsafe` takes the same words so the match stays
+        // exhaustive; what was shown narrower is said in the message. The
+        // reason is not read, since only `Extent` arrives.
+        (
+            Kind::HandedOnNarrow {
+                how,
+                width,
+                narrower,
+                extent,
+            },
+            Conclusion::Unknown | Conclusion::Unsafe,
+            _,
+        ) => (
+            HANDED_ON_NARROW,
+            match (narrower, extent) {
+                (true, Some(extent)) => format!(
+                    "this lets a pointer to {extent} {} leave where {width} {} are believed",
                     bytes(extent),
                     bytes(width)
                 ),
-                None => format!(
-                    "this hands on a pointer to objects each narrower than the {width} {} \
+                (true, None) => format!(
+                    "this lets a pointer leave to objects each narrower than the {width} {} \
                      believed",
                     bytes(width)
                 ),
+                (false, _) => said(
+                    name,
+                    "this lets a pointer leave that may not point at an object as wide as its type",
+                    |name| {
+                        format!(
+                            "this lets `{name}` leave, which may not point at an object as wide \
+                             as its type"
+                        )
+                    },
+                ),
             },
             departure(how),
-            "hand on a pointer to the start of an object as wide as the type it is handed on as",
-        ),
-        // Every reason named, although only `Extent` arrives, for the reason
-        // the double-free rows give.
-        (
-            Kind::HandedOnPartial { how, .. },
-            Conclusion::Unknown,
-            Some(
-                Unproven::Extent
-                | Unproven::Offset
-                | Unproven::Lost(_)
-                | Unproven::Disagreement
-                | Unproven::Unsequenced,
-            )
-            | None,
-        ) => (
-            HANDED_ON_PARTIAL,
-            said(
-                name,
-                "this hands on a pointer that may not point at a whole object",
-                |name| format!("this hands on `{name}`, which may not point at a whole object"),
-            ),
-            departure(how),
-            "hand on a pointer to the start of a local or of an allocation of constant size, as \
-             wide as the type it is handed on as",
+            "let a pointer leave only at the start of a local or of an allocation of constant \
+             size, as wide as the type it leaves as",
         ),
         // Neither check answers this and `Diagnostic::concluded` gives `None`
         // for it, so none of the four is read. Written out rather than `_` so

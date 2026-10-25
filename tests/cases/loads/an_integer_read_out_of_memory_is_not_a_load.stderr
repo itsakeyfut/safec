@@ -1,4 +1,4 @@
-error[SC0413]: this hands on `r`, which may not point at a whole object
+error[SC0413]: this lets `r` leave, which may not point at an object as wide as its type
     ╭─[ an_integer_read_out_of_memory_is_not_a_load.c:23:5 ]
     │
  23 │     show(r);
@@ -7,4 +7,4 @@ error[SC0413]: this hands on `r`, which may not point at a whole object
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

@@ -1,4 +1,4 @@
-error[SC0413]: this hands on a pointer to 1 byte where 4 bytes are believed
+error[SC0413]: this lets a pointer to 1 byte leave where 4 bytes are believed
    ╭─[ a_char_handed_to_an_int_parameter_is_proved_narrower.c:6:5 ]
    │
  6 │     g(v);
@@ -6,4 +6,5 @@ error[SC0413]: this hands on a pointer to 1 byte where 4 bytes are believed
    │       ╰─── passed here
 ───╯
   = note: this check belongs to safety level 1
-  = help: hand on a pointer to the start of an object as wide as the type it is handed on as
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

@@ -234,7 +234,7 @@ fn verdict(
         // Never asked: it is said by `may_not_fit`, about no free.
         Kind::OutsideItsObject { .. } => true,
         // Never asked: it is said where a pointer leaves, about no free.
-        Kind::HandedOnPartial { .. } => true,
+        Kind::HandedOnNarrow { .. } => true,
     };
 
     match earliest {
@@ -653,7 +653,7 @@ pub(super) fn used(
 /// proof; and unknown. A pointer that holds nothing is not one of them and
 /// is `None` from [`fits`], because a null or absent pointer is the
 /// nullability check's question and not a size. See ADR-0060.
-enum Fit {
+pub(super) enum Fit {
     Inside,
     Outside {
         extent: Option<u64>,
@@ -676,8 +676,8 @@ enum Fit {
 ///    that is not null either, and a null test on it takes the nullability
 ///    check's doubt away: `int *q = p + 1; if (q) *q = 1;` with `p` null or
 ///    `&x` was answered by neither check. Found by review.
-/// 2. Lost, written by a call this check cannot read, or an escaped local
-///    holding anything: whatever is known about it may be stale (ADR-0017,
+/// 2. For an access and not for a value leaving: lost, written by a call
+///    this check cannot read, or an escaped local holding anything: whatever is known about it may be stale (ADR-0017,
 ///    ADR-0018), so it is unknown. The escape is asked because a write
 ///    through the escaped address can put any pointer in the local where
 ///    this check does not see it, so what it holds proves nothing.
@@ -700,12 +700,13 @@ enum Fit {
 ///    `width` is outside; anything between is unknown, since a may-set
 ///    proves nothing from one member: an access that fits one of two
 ///    allocations a local may hold may still overflow the other.
-fn fits(
+pub(super) fn fits(
     analysis: &Allocations<'_>,
     function: &Function,
     local: LocalId,
     width: u64,
     known: &Known,
+    leaving: bool,
 ) -> Option<Fit> {
     let held = &known.points_to[local.index()];
     let holds_something = held.sites().next().is_some()
@@ -717,7 +718,19 @@ fn fits(
     if !holds_something {
         return None;
     }
-    if held.lost || held.foreign || known.escaped[local.index()] {
+    // **Where a value leaves, none of these is doubted**, because each
+    // stands for a write that was asked where it happened. The escape stands
+    // for writes this check did not see, and each marks the local
+    // (`Known::replaced`): one through a pointer it cannot pin down is a
+    // store in this function, asked as one; one by a call it cannot read is
+    // a store in the callee's body, asked there. `lost` is one of those, or a
+    // site made again by the same call, which makes it with the same size
+    // every time, so the sites folded below answer for it. Doubting them
+    // where a value leaves refused `grow(&a); grow(&a);` with `a` a whole
+    // allocation, the output-parameter idiom, since the first call is what
+    // marks `a`. An access still doubts all three, which costs a false
+    // report and not a silence. See ADR-0060.
+    if !leaving && (held.lost || held.foreign || known.escaped[local.index()]) {
         return Some(Fit::Unknown);
     }
     let sites = held
@@ -852,7 +865,7 @@ pub(super) fn may_not_fit(
             else {
                 continue;
             };
-            fits(analysis, function, local, width, known).map(|fit| (fit, width))
+            fits(analysis, function, local, width, known, false).map(|fit| (fit, width))
         };
         let Some((fit, width)) = fit else {
             continue;
@@ -921,9 +934,9 @@ pub(super) fn reached_by_library(
         };
         let fit = if place.projection.is_empty() {
             match width {
-                Some(width) => fits(analysis, function, local, width, known),
+                Some(width) => fits(analysis, function, local, width, known, false),
                 // Anything that holds something is unknown here.
-                None => fits(analysis, function, local, 0, known).map(|_| Fit::Unknown),
+                None => fits(analysis, function, local, 0, known, false).map(|_| Fit::Unknown),
             }
         } else {
             // **A pointer read out of memory and handed straight over** is
@@ -989,7 +1002,8 @@ fn leaving(
     match value {
         Rvalue::Use(Operand::Constant(_)) => None,
         Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
-            fits(analysis, function, place.local, width, known).map(|fit| (fit, Some(place.local)))
+            fits(analysis, function, place.local, width, known, true)
+                .map(|fit| (fit, Some(place.local)))
         }
         Rvalue::Use(Operand::Copy(place)) if derefs(place) > 0 => {
             let believed = analysis.pointee_size(function, place).unwrap_or(0);
@@ -1030,25 +1044,112 @@ fn say_leaving(
     let Some((fit, local)) = answer else {
         return;
     };
-    let (conclusion, extent, made, unproven) = match fit {
+    // **Unknown either way**, for the reason `Kind::HandedOnNarrow` gives;
+    // what was shown is carried into the words.
+    let (narrower, extent, made) = match fit {
         Fit::Inside => return,
-        Fit::Outside { extent, made } => (Conclusion::Unsafe, extent, made, None),
-        Fit::Unknown => (Conclusion::Unknown, None, None, Some(Unproven::Extent)),
+        Fit::Outside { extent, made } => (true, extent, made),
+        Fit::Unknown => (false, None, None),
     };
+    // Once per local per caret and door: a second argument of another width
+    // at the same call says the same thing about the same pointer, and every
+    // one is unknown, so which width is named changes nothing a reader can
+    // act on. A value with no local, a load or a constant's address, has no
+    // identity to key on and is said each time.
     if local.is_some() && departed.contains(&(at, how, local)) {
         return;
     }
     departed.push((at, how, local));
     findings.push(Finding {
         function: analysis.function,
-        kind: Kind::HandedOnPartial { how, width, extent },
-        conclusion,
+        kind: Kind::HandedOnNarrow {
+            how,
+            width,
+            narrower,
+            extent,
+        },
+        conclusion: Conclusion::Unknown,
         at,
         local,
         freed: None,
         made,
-        unproven,
+        unproven: Some(Unproven::Extent),
     });
+}
+
+/// The locals a value leaving this function may point at, where it is a
+/// pointer to pointers: a local's address taken here, or one a local's value
+/// may hold. Empty for a constant and for anything this check does not
+/// follow to a local.
+fn locals_reached(function: &Function, value: &Rvalue, known: &Known) -> Vec<LocalId> {
+    match value {
+        Rvalue::Address(place) if place.projection.is_empty() => vec![place.local],
+        Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
+            let held = &known.points_to[place.local.index()];
+            function
+                .locals()
+                .filter(|target| held.writes_to.get(target.index()))
+                .collect()
+        }
+        Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
+            Vec::new()
+        }
+    }
+}
+
+/// Ask every pointer a value leaving as a `ty` lets leave with it: what each
+/// local it may point at holds, believed by the receiver as the type `ty`
+/// points to, and so on down while that is a pointer too.
+///
+/// **Handing on a pointer to memory hands on the pointers stored there.**
+/// `int *q = v; h(&q);` with `v` a `char`'s address lets `h` read `*pp` and
+/// believe it a whole `int`, and nothing asked `q`, since an assignment to a
+/// local is no door. Asking the local's own value where its address leaves
+/// is the door, with the state at that point, so an assignment after the
+/// address was taken is seen too. Memory this check follows as sites holds
+/// what stores put there, each asked where it was stored. Found by review.
+///
+/// **Each local at its own type**, not at the type the value leaves as: a
+/// `void *` leaving believes nothing, but whoever converts it back and reads
+/// the local reads what was stored there, which is a pointer of the local's
+/// type. Reading it as another type is #624's. See ADR-0060.
+fn contents_leaving(
+    findings: &mut Vec<Finding>,
+    departed: &mut Vec<(Span, Departure, Option<LocalId>)>,
+    analysis: &Allocations<'_>,
+    function: &Function,
+    left: (Span, Departure, TyId),
+    value: &Rvalue,
+    known: &Known,
+) {
+    let (at, how, ty) = left;
+    // **Only a pointer lets anything leave with it.** An integer can hold
+    // edges, since a call this check cannot read may return any escaped
+    // local's address and its result is followed whatever its type, and
+    // asking through one doubted `return use2(&a);` about `a`.
+    if !matches!(analysis.unit.ty(ty), Ty::Pointer(_)) {
+        return;
+    }
+    let mut work = locals_reached(function, value, known);
+    let mut asked: Vec<LocalId> = Vec::new();
+    while let Some(local) = work.pop() {
+        if asked.contains(&local) {
+            continue;
+        }
+        asked.push(local);
+        // Further in first, since a `void *` that believes nothing may still
+        // point at a local that holds something believed.
+        let read = Rvalue::Use(Operand::Copy(Place::local(local)));
+        work.extend(locals_reached(function, &read, known));
+        // A local that holds no pointer, or a `void *`, has nothing a reader
+        // believes of it.
+        let Some(width) = pointee_width(analysis, function.local(local)) else {
+            continue;
+        };
+        let answer =
+            fits(analysis, function, local, width, known, true).map(|fit| (fit, Some(local)));
+        say_leaving(findings, departed, analysis, (at, how, width), answer);
+    }
 }
 
 /// Report a pointer this element hands back by a `return` or stores through
@@ -1077,21 +1178,25 @@ pub(super) fn departed_in_element(
     } else {
         return;
     };
-    let Some(width) = analysis
-        .unit
-        .place_ty(function, &operation.place)
-        .and_then(|ty| pointee_width(analysis, ty))
-    else {
+    let Some(ty) = analysis.unit.place_ty(function, &operation.place) else {
         return;
     };
-    let answer = leaving(analysis, function, &operation.value, width, known);
-    say_leaving(
+    let at = operation.origin.span();
+    // What the value points to first, then the value, whatever it leaves as.
+    contents_leaving(
         findings,
         departed,
         analysis,
-        (operation.origin.span(), how, width),
-        answer,
+        function,
+        (at, how, ty),
+        &operation.value,
+        known,
     );
+    let Some(width) = pointee_width(analysis, ty) else {
+        return;
+    };
+    let answer = leaving(analysis, function, &operation.value, width, known);
+    say_leaving(findings, departed, analysis, (at, how, width), answer);
 }
 
 /// Report a pointer this call is handed where this check cannot show it
@@ -1127,21 +1232,55 @@ pub(super) fn departed_at_call(
     else {
         return;
     };
-    match analysis.callee(*callee) {
-        Callee::Opaque => {}
-        Callee::Frees
-        | Callee::Allocates
-        | Callee::Reallocates
-        | Callee::ReturnsFirst
-        | Callee::Copies
-        | Callee::Ends => return,
+    let at = origin.span();
+    let declared = analysis.unit.function(*callee);
+    // **A body here is what runs, whatever it is called.** Defining a
+    // library name is undefined (C17 7.1.3 p2), and the check reads such a
+    // call by name everywhere else; but the departure is asked of the body
+    // that believes its parameters, so a definition of `memcmp` taking
+    // `int *` is asked as any function is. Found by review.
+    let defined = declared.is_defined();
+    match (defined, analysis.callee(*callee)) {
+        (true, _) | (false, Callee::Opaque) => {}
+        // **`memcpy` and `memmove` store what they copy**, so the pointers
+        // their source reaches leave into the destination as a store would
+        // put them there. Found by review.
+        (false, Callee::Copies) => {
+            let source_ty = match arguments.get(1) {
+                Some(Operand::Copy(place)) => analysis.unit.place_ty(function, place),
+                Some(Operand::Constant(_)) | None => None,
+            };
+            if let (Some(source), Some(source_ty)) = (arguments.get(1), source_ty) {
+                contents_leaving(
+                    findings,
+                    departed,
+                    analysis,
+                    function,
+                    (at, Departure::Store, source_ty),
+                    &Rvalue::Use(source.clone()),
+                    known,
+                );
+            }
+            return;
+        }
+        // `free`, an allocator, `realloc` and a call that does not return
+        // read nothing they are handed as an object, and a library function
+        // that returns its first argument is asked how far it reaches by
+        // `reached_by_library` instead.
+        (
+            false,
+            Callee::Frees
+            | Callee::Allocates
+            | Callee::Reallocates
+            | Callee::ReturnsFirst
+            | Callee::Ends,
+        ) => return,
     }
     let reached: Vec<usize> = analysis
         .library(*callee)
+        .filter(|_| !defined)
         .map(|row| row.reaches.iter().map(|&(index, _)| index).collect())
         .unwrap_or_default();
-    let at = origin.span();
-    let declared = analysis.unit.function(*callee);
     let parameters: Vec<LocalId> = declared.parameters().collect();
     for index in 0..parameters.len().max(arguments.len()) {
         if reached.contains(&index) {
@@ -1157,6 +1296,17 @@ pub(super) fn departed_at_call(
             }
             (None, Some(Operand::Constant(_)) | None) => continue,
         };
+        if let Some(argument) = arguments.get(index) {
+            contents_leaving(
+                findings,
+                departed,
+                analysis,
+                function,
+                (at, Departure::Argument, ty),
+                &Rvalue::Use(argument.clone()),
+                known,
+            );
+        }
         let Some(width) = pointee_width(analysis, ty) else {
             continue;
         };
@@ -1168,10 +1318,12 @@ pub(super) fn departed_at_call(
                 width,
                 known,
             ),
-            // Nothing was passed for a parameter the body believes. No C
-            // reaches this: the frontend refuses a call with too few
-            // arguments as `SC0303`, through `void g();` too. It is here for
-            // a frontend that does not.
+            // Nothing was passed for a parameter the body believes. The
+            // frontend refuses a call with too few arguments as `SC0303`,
+            // through `void g();` too, though C17 6.5.2.2 p2 constrains the
+            // count only where the callee has a prototype; so nothing
+            // reaches this today, and it answers for the day that refusal
+            // is lifted.
             None => Some((Fit::Unknown, None)),
         };
         say_leaving(

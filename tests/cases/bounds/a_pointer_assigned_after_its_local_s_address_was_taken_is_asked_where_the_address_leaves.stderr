@@ -1,0 +1,10 @@
+error[SC0413]: this lets `q` leave, which may not point at an object as wide as its type
+   ╭─[ a_pointer_assigned_after_its_local_s_address_was_taken_is_asked_where_the_address_leaves.c:3:102 ]
+   │
+ 3 │ int main(void) { int *a = malloc(4); if (a == 0) { return 1; } int *q = 0; int **pp = &q; q = a + 5; h(pp); return 0; }
+   │                                                                                                      ──┬──  
+   │                                                                                                        ╰──── passed here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

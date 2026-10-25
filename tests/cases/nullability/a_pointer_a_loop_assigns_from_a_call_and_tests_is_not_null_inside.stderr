@@ -1,4 +1,4 @@
-error[SC0413]: this hands on `q`, which may not point at a whole object
+error[SC0413]: this lets `q` leave, which may not point at an object as wide as its type
    ╭─[ a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:4:17 ]
    │
  4 │     while ((q = next(q))) {
@@ -7,7 +7,7 @@ error[SC0413]: this hands on `q`, which may not point at a whole object
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0407]: this passes `q`, which may point to a freed allocation
    ╭─[ a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:4:17 ]
    │

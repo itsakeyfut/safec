@@ -193,16 +193,25 @@ pub enum Kind {
     /// `g(p + 5)`, `return p + 5;`, `*box = p + 5;`
     ///
     /// A pointer that leaves this function, which whoever receives it
-    /// believes to point at one whole object of the type it is handed on as,
-    /// and which this check could not show does. The other half of what
-    /// [`Kind::OutsideItsObject`] believes where a pointer arrives: `Unsafe`
-    /// on the same terms, `Unknown` otherwise. See ADR-0060.
-    HandedOnPartial {
+    /// believes to point at the start of an object as wide as the type it
+    /// leaves as, and which this check could not show does. The other half
+    /// of what [`Kind::OutsideItsObject`] believes where a pointer arrives.
+    ///
+    /// **Always `Unknown`, even where the object is shown narrower.** C
+    /// leaves nothing undefined where a pointer to one `char` is passed as an
+    /// `int *`; it is undefined where the receiver reads or writes through
+    /// it, and `Unsafe` says some execution of this function is undefined.
+    /// What is shown here is that the receiver's belief is false, so the
+    /// words say narrower and the conclusion stays unproven. See ADR-0060.
+    HandedOnNarrow {
         /// Where it leaves.
         how: Departure,
         /// How many bytes it is believed to point at where it arrives.
         width: u64,
-        /// How many bytes the object takes, where it is proved narrower and
+        /// Whether every object it may reach was read as exactly narrower
+        /// than `width`, which the words say.
+        narrower: bool,
+        /// How many bytes the object takes, where it is shown narrower and
         /// every object it may reach agrees.
         extent: Option<u64>,
     },

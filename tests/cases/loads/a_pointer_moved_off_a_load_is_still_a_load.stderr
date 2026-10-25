@@ -1,4 +1,4 @@
-error[SC0413]: this hands on `r`, which may not point at a whole object
+error[SC0413]: this lets `r` leave, which may not point at an object as wide as its type
     ╭─[ a_pointer_moved_off_a_load_is_still_a_load.c:16:5 ]
     │
  16 │     show(r);
@@ -7,7 +7,7 @@ error[SC0413]: this hands on `r`, which may not point at a whole object
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0402]: this uses `p`, which may have been freed
     ╭─[ a_pointer_moved_off_a_load_is_still_a_load.c:17:5 ]
     │

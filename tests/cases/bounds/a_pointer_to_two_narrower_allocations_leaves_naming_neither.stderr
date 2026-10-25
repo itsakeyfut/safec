@@ -1,0 +1,10 @@
+error[SC0413]: this lets a pointer leave to objects each narrower than the 4 bytes believed
+   ╭─[ a_pointer_to_two_narrower_allocations_leaves_naming_neither.c:9:5 ]
+   │
+ 9 │     g(v);
+   │     ──┬─  
+   │       ╰─── passed here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

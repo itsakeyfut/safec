@@ -1,0 +1,150 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:2:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:6 "h"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "pp"
+  Local "_2" "int"
+  Local "_3" "int *" "p"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:24 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:24 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:24 generated
+    Return
+  Block "bb2"
+    Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:24 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:50 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:54 generated
+    Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:63 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:63 written "bb4" "bb5"
+      Copy "_4"
+  Block "bb4"
+    Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:63 generated
+    Return
+  Block "bb5"
+    Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:63 generated
+    Goto "bb6"
+  Block "bb6"
+    Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:83 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:83 written
+      Destination "_5"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:83 generated
+    Return
+Function a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:5 "main"
+  Local "_0" "int" return
+  Local "_1" "char" "c"
+  Local "_2" "void *" "v"
+  Local "_3" "char *"
+  Local "_4" "int *" "q"
+  Local "_5" "int **" "box"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int **"
+  Local "_9" "void *"
+  Block "bb0" entry
+    Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:23 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:27 generated
+    Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:40 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:36 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:40 generated
+    Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:49 written
+      Destination "_4"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:53 generated
+    ArgumentsEvaluated a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:68 generated
+    Call a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:68 written "malloc" "bb1"
+      Destination "_6"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:62 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:68 generated
+    Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:83 written
+      Destination "_7"
+      Binary "Eq"
+        Copy "_5"
+        Constant 0
+    Branch a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:83 written "bb2" "bb3"
+      Copy "_7"
+  Block "bb2"
+    Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:83 generated
+    Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:95 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:102 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:83 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:119 written
+      Destination "_8"
+      Address
+        Place "_4"
+    ArgumentsEvaluated a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:107 generated
+    Call a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:107 written "memcpy" "bb5"
+      Destination "_9"
+      Copy "_5"
+      Copy "_8"
+      Constant 8
+  Block "bb5"
+    Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:107 generated
+    ArgumentsEvaluated a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:127 generated
+    Call a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:127 written "h" "bb6"
+      Copy "_5"
+  Block "bb6"
+    Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:127 generated
+    Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:135 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:142 generated
+    Return

@@ -1,3 +1,13 @@
+error[SC0413]: this lets a pointer to 1 byte leave where 4 bytes are believed
+   ╭─[ a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:9:5 ]
+   │
+ 9 │     memcpy(slot, &bad, 8);
+   │     ──────────┬──────────  
+   │               ╰──────────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0412]: this may reach outside the object `q` points at
     ╭─[ a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:12:5 ]
     │

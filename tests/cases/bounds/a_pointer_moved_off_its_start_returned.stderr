@@ -1,4 +1,4 @@
-error[SC0413]: this hands on a pointer that may not point at a whole object
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
    ╭─[ a_pointer_moved_off_its_start_returned.c:8:5 ]
    │
  8 │     return p + 5;
@@ -7,4 +7,4 @@ error[SC0413]: this hands on a pointer that may not point at a whole object
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

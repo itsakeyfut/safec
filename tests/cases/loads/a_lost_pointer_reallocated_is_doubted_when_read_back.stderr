@@ -8,16 +8,6 @@ warning[SC0401]: this frees `u`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
-warning[SC0413]: this hands on `u`, which may not point at a whole object
-    ╭─[ a_lost_pointer_reallocated_is_doubted_when_read_back.c:19:5 ]
-    │
- 19 │     *box = u;
-    │     ────┬───  
-    │         ╰───── stored here
-────╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven; it is an error without `--allow-unknown`
-  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as
 warning[SC0402]: this uses `r`, which this check stopped following
     ╭─[ a_lost_pointer_reallocated_is_doubted_when_read_back.c:23:9 ]
     │

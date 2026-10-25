@@ -8,13 +8,3 @@ error[SC0406]: this returns `p`, which may point to a freed allocation
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0413]: this hands on `p`, which may not point at a whole object
-   ╭─[ a_parameter_whose_address_escaped_returned_without_a_free.c:3:5 ]
-   │
- 3 │     return p;
-   │     ────┬────  
-   │         ╰────── returned here
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as

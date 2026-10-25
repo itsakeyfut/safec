@@ -1,13 +1,3 @@
-warning[SC0413]: this hands on `u`, which may not point at a whole object
-    ╭─[ a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:10:5 ]
-    │
- 10 │     put(box, u);
-    │     ─────┬─────  
-    │          ╰─────── passed here
-────╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven; it is an error without `--allow-unknown`
-  = help: hand on a pointer to the start of a local or of an allocation of constant size, as wide as the type it is handed on as
 warning[SC0407]: this passes `u`, which this check stopped following
     ╭─[ a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:10:5 ]
     │
