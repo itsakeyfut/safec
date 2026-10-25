@@ -39,7 +39,7 @@ use crate::lexer::lex;
 use crate::lowering::lower;
 use crate::options::{EmitKind, Options};
 use crate::parser::parse;
-use crate::preprocessor::{Preprocessed, preprocess};
+use crate::preprocessor::{Preprocessed, prelude, preprocess_with};
 use crate::safety::SafetyLevel;
 use crate::sema::{Resolution, resolve};
 use crate::types::{Types, check};
@@ -133,6 +133,8 @@ impl From<Outcome> for ExitCode {
 /// at a time. The loop below takes an error count either side of each input's
 /// own work instead, and the run-level answer is for what genuinely spans the
 /// run: the outcome, and linking, which `finish` does once the loop is done.
+/// The one exception is a refusal of the command line, which is the build's
+/// and stops every input; the comment on `read_whole` says how.
 pub fn compile(options: &Options) -> Compiled {
     // The one place a sink is built from the options, so that no part of the
     // compiler can invent its own policy. See ADR-0001.
@@ -289,6 +291,21 @@ pub fn compile(options: &Options) -> Compiled {
             bytes: Vec::new(),
         },
     };
+    // What every input starts from, read once for the build rather than once
+    // per input, so that a refusal of a `-D` or `-U` is reported once. Only
+    // where an input was loaded, so that a run with none reads nothing of the
+    // command line, as before. A refusal here is the build's, so it stops
+    // every input's analysis below, as it did when each input read it.
+    let before_the_prelude = diagnostics.error_count();
+    let starting_state = (!loaded.is_empty()).then(|| {
+        prelude(
+            options.target,
+            &options.macros,
+            &mut sources,
+            &mut diagnostics,
+        )
+    });
+    let command_line_read = diagnostics.error_count() == before_the_prelude;
     for &file in &loaded {
         // `file_owned` rather than `file`: the scan holds its text for longer
         // than a statement, and `#include` adds to the map while it does. See
@@ -303,18 +320,23 @@ pub fn compile(options: &Options) -> Compiled {
         // after the scan is open on a file whose declarations were dropped. Every macro name in it is then a name
         // nothing declares. An included file that cannot be read is the same
         // case again.
-        let read_whole = diagnostics.error_count();
+        //
+        // Taken from before the prelude where the command line was refused,
+        // so that the count differs and no input is analysed: the refusal was
+        // counted once, before any input, and would otherwise be counted by
+        // none of them.
+        let read_whole = if command_line_read {
+            diagnostics.error_count()
+        } else {
+            before_the_prelude
+        };
         let scanned = lex(file, &source, &mut diagnostics);
         // Run whatever is emitted, so a directive is reported under
         // `--emit tokens` as it was when the lexer reported it.
-        let tokens = preprocess(
-            file,
-            &scanned,
-            options.target,
-            &options.macros,
-            &mut sources,
-            &mut diagnostics,
-        );
+        let prelude = starting_state
+            .as_ref()
+            .expect("a prelude is read where an input is loaded");
+        let tokens = preprocess_with(file, &scanned, prelude, &mut sources, &mut diagnostics);
 
         // Every input appends to one artifact, and every line names its file,
         // so `--emit tokens a.c b.c` reads as one dump rather than needing two
@@ -1019,7 +1041,8 @@ fn stem(name: &FileName) -> String {
 /// number, and there is nothing a user can do with it.
 ///
 /// `before` is the error count taken either side of this input's own work, the
-/// same one the parse is gated on. A run-level count would let a typo in `a.c`
+/// same one the parse is gated on, or the count from before the command line
+/// was read where it was refused, which `compile`'s loop says. A run-level count would let a typo in `a.c`
 /// decide that `b.c` is never compiled, which is what `compile`'s own comment
 /// says not to do.
 fn said_something(diagnostics: &DiagnosticSink, before: usize) -> bool {

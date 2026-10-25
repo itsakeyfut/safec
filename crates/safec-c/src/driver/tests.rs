@@ -8,7 +8,7 @@ use super::backend::{Scratch, Unmade, backend_failure};
 use super::*;
 use crate::ast::{Item, Stmt, Type};
 use crate::cli::HOST_TRIPLE;
-use crate::options::{ColorMode, EmitKind};
+use crate::options::{ColorMode, CommandLineMacro, EmitKind};
 use crate::safety::SafetyLevel;
 use safec_ir::source::Span;
 use safec_ir::target::Target;
@@ -294,8 +294,8 @@ fn the_strictest_safety_level_denies_unknown_in_the_sink() {
 }
 
 /// The files a run read from a path: its inputs, here, where nothing is
-/// included. Not every file in the map, which also holds each input's
-/// predefined macros, in a file of their own.
+/// included. Not every file in the map, which also holds the build's
+/// predefined macros and command line, each in a file of its own.
 fn read(sources: &SourceMap) -> Vec<&safec_ir::source::SourceFile> {
     sources
         .files()
@@ -319,6 +319,118 @@ fn every_input_is_read_in_the_order_it_was_given() {
         .map(|file| file.contents().to_owned())
         .collect();
     assert_eq!(contents, ["int a;\n", "int b;\n"]);
+}
+
+/// How many files in the map are the virtual one called `name`.
+fn virtual_files(sources: &SourceMap, name: &str) -> usize {
+    sources
+        .files()
+        .filter(|(_, file)| matches!(file.name(), FileName::Virtual(named) if named == name))
+        .count()
+}
+
+/// `<built-in>` and `<command line>` are read once for the build, however
+/// many inputs it has.
+///
+/// Mutation: read the prelude inside the input loop. Each is in the map
+/// twice.
+#[test]
+fn the_command_line_is_read_once_for_every_input() {
+    let first = TempFile::new("safec_driver_prelude_a.c", "int a;\n");
+    let second = TempFile::new("safec_driver_prelude_b.c", "int b;\n");
+    let mut options = options(vec![
+        first.path().to_path_buf(),
+        second.path().to_path_buf(),
+    ]);
+    options.macros = vec![CommandLineMacro::Defined {
+        name: "A".to_owned(),
+        value: "1".to_owned(),
+    }];
+
+    let compiled = compile(&options);
+
+    assert_eq!(virtual_files(&compiled.sources, "built-in"), 1);
+    assert_eq!(virtual_files(&compiled.sources, "command line"), 1);
+}
+
+/// A refusal of the command line is the build's: reported once with two
+/// inputs, and neither input is analysed, so no tree is written.
+///
+/// Mutation: preprocess each input with `preprocess`, which reads its own
+/// prelude. The refusal is reported twice. Mutation: take each input's count
+/// from where it starts, whatever the prelude said. Both trees are written.
+#[test]
+fn a_refusal_of_the_command_line_is_reported_once_and_stops_every_input() {
+    let first = TempFile::new("safec_driver_refused_a.c", "int a;\n");
+    let second = TempFile::new("safec_driver_refused_b.c", "int b;\n");
+    let mut options = options(vec![
+        first.path().to_path_buf(),
+        second.path().to_path_buf(),
+    ]);
+    options.emit = EmitKind::Ast;
+    // `_WIN32` is the target's, which the command line may not undefine.
+    options.macros = vec![CommandLineMacro::Undefined {
+        name: "_WIN32".to_owned(),
+    }];
+
+    let (report, artifact, outcome) = run(&options);
+
+    assert_eq!(report.matches("SC0117").count(), 1, "{report}");
+    assert_eq!(artifact, "", "an input was analysed");
+    assert_eq!(outcome, Outcome::Failed);
+}
+
+/// A refused command line stops each input's analysis and not its scan:
+/// `--emit tokens` still dumps both inputs, as it did when each input read
+/// the command line itself.
+///
+/// Mutation: skip every input where the command line was refused. The dump is
+/// empty.
+#[test]
+fn a_refusal_of_the_command_line_still_dumps_every_input_s_tokens() {
+    let first = TempFile::new("safec_driver_refused_tokens_a.c", "int alpha;\n");
+    let second = TempFile::new("safec_driver_refused_tokens_b.c", "int beta;\n");
+    let mut options = options(vec![
+        first.path().to_path_buf(),
+        second.path().to_path_buf(),
+    ]);
+    options.macros = vec![CommandLineMacro::Undefined {
+        name: "_WIN32".to_owned(),
+    }];
+
+    let (report, artifact, outcome) = run(&options);
+
+    assert_eq!(report.matches("SC0117").count(), 1, "{report}");
+    assert!(artifact.contains("\"alpha\""), "{artifact}");
+    assert!(artifact.contains("\"beta\""), "{artifact}");
+    assert_eq!(outcome, Outcome::Failed);
+}
+
+/// Each input starts from the build's prelude, not from where the input
+/// before it left off: a macro the first defines is not defined in the second.
+///
+/// What holds this day to day is the borrow: `preprocess_with` takes the
+/// prelude by `&` and copies it. This test is what fails if that is undone.
+/// Mutation: take `&mut Prelude` and read every input into its own `Reading`
+/// rather than a copy. The second input's `#ifdef` takes its group, and
+/// `leaked` is declared.
+#[test]
+fn a_macro_one_input_defines_is_not_defined_in_the_next() {
+    let first = TempFile::new("safec_driver_leak_a.c", "#define ONLY_A 1\nint a;\n");
+    let second = TempFile::new(
+        "safec_driver_leak_b.c",
+        "#ifdef ONLY_A\nint leaked;\n#endif\nint b;\n",
+    );
+    let mut options = options(vec![
+        first.path().to_path_buf(),
+        second.path().to_path_buf(),
+    ]);
+    options.emit = EmitKind::Ast;
+
+    let (report, artifact, _) = run(&options);
+
+    assert!(artifact.contains("\"b\""), "{report}{artifact}");
+    assert!(!artifact.contains("leaked"), "{artifact}");
 }
 
 /// One path named twice is one translation unit. Reading it twice would

@@ -95,6 +95,10 @@ const MAX_EXPANSIONS_IN_ALL: usize = 2 * MAX_EXPANSIONS;
 
 /// The files being read, the macros defined, and how many inclusions and
 /// expansions there have been so far.
+///
+/// `Clone`, because a [`Prelude`] is one of these before any input is read,
+/// and every input starts from a copy of it.
+#[derive(Clone, Debug)]
 struct Reading {
     /// Outermost first, each by its canonical path, so a cycle is found
     /// whatever spelling reached it.
@@ -119,6 +123,7 @@ struct Reading {
 }
 
 /// An object-like macro.
+#[derive(Clone, Debug)]
 struct Macro {
     /// Its replacement list, in its `#define`: what each expansion holds.
     spelled: Span,
@@ -169,7 +174,8 @@ pub(crate) fn cut_words(sources: &SourceMap, cut: Cut) -> (String, String, Optio
 /// The tokens the parser reads: one input's, every `#include` spliced in, and
 /// no directive among them.
 ///
-/// Only [`preprocess`] builds one, since the field is private, and
+/// Only [`preprocess_with`] builds one, which [`preprocess`] calls for a
+/// caller with one input, since the field is private, and
 /// [`crate::parser::parse`] takes nothing else. So a caller that lexes and
 /// parses without preprocessing does not compile, where it used to hand the
 /// parser every directive to be dropped without a word: seven test helpers
@@ -191,15 +197,20 @@ impl Preprocessed {
     }
 }
 
-/// Splice every `#include "file"` in `tokens`, the scan of `file`, record
-/// every `#define` and `#undef` and expand what they define, and report every
-/// other directive.
+/// What every input of one build starts from: the macros the target
+/// predefines and what the command line said, read once.
 ///
-/// The end-of-file token is the input's own: an included file's is dropped,
-/// since the parser reads the first one it meets as the end. The macros
-/// `target` predefines are defined before the input is read, and then what
-/// `macros`, the command line's `-D` and `-U`, says, one after another in the
-/// order of the list.
+/// Each input is preprocessed from a copy, so nothing one input defines
+/// reaches the next, and a refusal of a `-D` or `-U` is the build's, reported
+/// once rather than once per input.
+#[derive(Debug)]
+pub struct Prelude {
+    reading: Reading,
+}
+
+/// Read the macros `target` predefines, and then what `macros`, the command
+/// line's `-D` and `-U`, says, one after another in the order of the list, into
+/// the state every input of a build starts from.
 ///
 /// # Panics
 ///
@@ -207,14 +218,12 @@ impl Preprocessed {
 /// break. `Cli::into_options` refuses both, so only a caller that built the
 /// list by hand can get here, and its list would otherwise be read as other
 /// directives than it says.
-pub fn preprocess(
-    file: FileId,
-    tokens: &[Token],
+pub fn prelude(
     target: Target,
     macros: &[CommandLineMacro],
     sources: &mut SourceMap,
     diagnostics: &mut DiagnosticSink,
-) -> Preprocessed {
+) -> Prelude {
     let mut reading = Reading {
         open: Vec::new(),
         inclusions: 0,
@@ -226,9 +235,6 @@ pub fn preprocess(
         open_expansions: 0,
         settled: macros.iter().map(|given| given.name().to_owned()).collect(),
     };
-    if let Some(path) = path_of(sources.file(file).name()) {
-        reading.open.push((canonical(path), file));
-    }
     // Ordinary `#define` lines in a file of their own, so an expansion of one
     // is placed like any other (ADR-0054) and a label in it names
     // `<built-in>`.
@@ -273,11 +279,50 @@ pub fn preprocess(
         );
     }
     command_line(macros, sources, &mut reading, diagnostics);
+    Prelude { reading }
+}
 
+/// Splice every `#include "file"` in `tokens`, the scan of `file`, record
+/// every `#define` and `#undef` and expand what they define, and report every
+/// other directive, starting from a copy of `prelude`.
+///
+/// The end-of-file token is the input's own: an included file's is dropped,
+/// since the parser reads the first one it meets as the end.
+pub fn preprocess_with(
+    file: FileId,
+    tokens: &[Token],
+    prelude: &Prelude,
+    sources: &mut SourceMap,
+    diagnostics: &mut DiagnosticSink,
+) -> Preprocessed {
+    let mut reading = prelude.reading.clone();
+    if let Some(path) = path_of(sources.file(file).name()) {
+        reading.open.push((canonical(path), file));
+    }
     let mut spliced = Vec::with_capacity(tokens.len());
     read_includes(tokens, sources, &mut reading, diagnostics, &mut spliced);
     spliced.extend(tokens.iter().copied().filter(|token| token.is_eof()));
     Preprocessed(spliced)
+}
+
+/// [`prelude`] and then [`preprocess_with`], for a caller with one input.
+///
+/// A build with several reads the prelude once and preprocesses each input
+/// from it, which is what the driver does.
+///
+/// # Panics
+///
+/// As [`prelude`] does.
+pub fn preprocess(
+    file: FileId,
+    tokens: &[Token],
+    target: Target,
+    macros: &[CommandLineMacro],
+    sources: &mut SourceMap,
+    diagnostics: &mut DiagnosticSink,
+) -> Preprocessed {
+    let prelude = prelude(target, macros, sources, diagnostics);
+    preprocess_with(file, tokens, &prelude, sources, diagnostics)
 }
 
 /// Read what `-D` and `-U` said as the lines of a file of their own, `command

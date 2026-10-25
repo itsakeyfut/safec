@@ -965,8 +965,8 @@ mod tests {
     /// A value holding a line break is refused, since it would split the line
     /// it becomes into two directives.
     ///
-    /// Mutation: drop the line-break check. It is accepted, and
-    /// `preprocess` panics on it instead.
+    /// Mutation: drop the line-break check. It is accepted, and `prelude`
+    /// panics on it instead.
     #[test]
     fn a_define_whose_value_holds_a_line_break_is_refused() {
         for given in ["-DA=1\n#define B 2", "-DA=1\r"] {
