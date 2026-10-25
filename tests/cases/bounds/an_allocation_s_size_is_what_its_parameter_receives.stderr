@@ -1,0 +1,11 @@
+error[SC0412]: this reaches 4 bytes into an object of 1
+   ╭─[ an_allocation_s_size_is_what_its_parameter_receives.c:2:66 ]
+   │
+ 2 │ int main(void) { int *p = malloc(257); if (p == 0) { return 1; } *p = 5; return 0; }
+   │                           ─────┬─────                            ───┬──  
+   │                                ╰───────────────────────────────────────── allocated here
+   │                                                                     │    
+   │                                                                     ╰──── wider than the object it reaches
+───╯
+  = note: this check belongs to safety level 1
+  = help: allocate at least as many bytes as this reads or writes

@@ -877,10 +877,8 @@ pub(super) fn touched_by_length(
         return;
     };
     let at = origin.span();
-    let length = match arguments.get(2) {
-        Some(Operand::Constant(bytes)) => u64::try_from(*bytes).ok(),
-        Some(Operand::Copy(_)) | None => None,
-    };
+    // As the parameter receives it, for `made_extent`'s reason.
+    let length = analysis.constant_argument(*callee, arguments, 2);
     // Which arguments are touched, and whether how far is a string's length.
     let (touched, strings): (&[usize], bool) = match analysis
         .sources

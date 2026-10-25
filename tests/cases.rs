@@ -3053,6 +3053,14 @@ cases! {
         // the offset out of `holds_something` in `fits`; both go silent.
         a_pointer_moved_off_null_and_tested_is_not_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_s_address_moved_past_it_and_tested_is_not_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A constant handed to a call is what the parameter receives, as the
+        // backend passes it: 257 to a `char` is one, and 260 is four. Both
+        // declarations are wrong for the library, which only a frontend that
+        // reads `size_t` can refuse. Mutation: read the constant as written
+        // in `constant_argument`; the first goes silent and the second is
+        // proved outside.
+        an_allocation_s_size_is_what_its_parameter_receives: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_length_is_what_its_parameter_receives: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "returns" => {

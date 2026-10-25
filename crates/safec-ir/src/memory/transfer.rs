@@ -99,10 +99,7 @@ impl Allocations<'_> {
         handed: &[Operand],
         destination: &Place,
     ) -> Extent {
-        let constant = |index: usize| match handed.get(index) {
-            Some(Operand::Constant(value)) => u64::try_from(*value).ok(),
-            Some(Operand::Copy(_)) | None => None,
-        };
+        let constant = |index: usize| self.constant_argument(callee, handed, index);
         let asked = match kind {
             Callee::Allocates => match self.sources.snippet(self.unit.function(callee).name) {
                 "malloc" => constant(0),
@@ -121,6 +118,32 @@ impl Allocations<'_> {
             Callee::Frees | Callee::ReturnsFirst | Callee::Copies | Callee::Ends => None,
         };
         asked.map_or(Extent::AtLeast(0), Extent::Exactly)
+    }
+
+    /// The constant a call hands this parameter, as the parameter receives
+    /// it, or `None` where it is not a constant this check can read.
+    ///
+    /// **Converted to the parameter's type first**, as C17 6.5.2.2 p7 does
+    /// "as if by assignment", because the IR carries the constant as the
+    /// source spelled it and the backend converts it at the call: `void
+    /// *malloc(char n);` handed 257 allocates one byte on every target here,
+    /// and reading 257 proved a four-byte write inside it. A parameter that
+    /// is not an integer, or one the declaration does not name, reads
+    /// nothing; so does a value negative after the conversion, which no
+    /// size this check compares is. Found by review. See ADR-0060.
+    pub(super) fn constant_argument(
+        &self,
+        callee: FuncId,
+        arguments: &[Operand],
+        index: usize,
+    ) -> Option<u64> {
+        let Some(Operand::Constant(value)) = arguments.get(index) else {
+            return None;
+        };
+        let declared = self.unit.function(callee);
+        let parameter = declared.parameters().nth(index)?;
+        let integer = self.unit.integer(declared.local(parameter))?;
+        u64::try_from(integer.convert(*value)).ok()
     }
 
     /// What this check can read in the name of the function being called.
