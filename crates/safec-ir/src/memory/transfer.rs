@@ -917,10 +917,13 @@ impl Analysis for Allocations<'_> {
         // value it can take is the size an allocation was asked for or a
         // type's size, one per site made or parameter, so at most one step
         // per such value below where it started, plus one from nothing.
-        // Counted per site as one per position and per local, which is more
-        // than there are values; and whether a local may hold the address of
-        // something inside another is one more bit per local that a join
-        // only sets, one more step each. See ADR-0060.
+        // Counted per site as one per position and one per local, which is
+        // more than there are values, and one more for the step from
+        // nothing: `locals * (positions + locals + 1)`. Whether a local may
+        // hold the address of something inside another is one more bit per
+        // local that a join only sets, the last `locals`. What a local's
+        // value is believed to point at, `Held::believed`, is a proof a join
+        // only lowers or drops, and the slack above covers it. See ADR-0060.
         let positions: usize = function
             .blocks()
             .map(|block| block.elements.len() + 1)
@@ -2567,9 +2570,11 @@ impl Analysis for Allocations<'_> {
         value.reborn(site, made);
         value.extent[site] = Some(self.made_extent(function, *callee, kind, arguments, place));
         // **What a call this check cannot read returns is believed whole**,
-        // whatever else it may be: it may be an allocation this function
-        // handed it, at an offset nobody said, and the `return` in its body is
-        // where that is asked, as a load's store is. See ADR-0060.
+        // as a parameter is, and bounded by what it may return that this
+        // check recorded: an allocation this function handed it is folded in
+        // at its size. The `return` in its body is where the belief is to be
+        // asked, which #623 writes; until it does, nothing asks it. See
+        // ADR-0060.
         if matches!(kind, Callee::Opaque) {
             value.points_to[site].believed = self.pointee_size(function, place);
         }

@@ -180,7 +180,10 @@ pub enum Kind {
     /// moved off its start is never proved outside, since no distance is
     /// carried (ADR-0036). See ADR-0060.
     OutsideItsObject {
-        /// How many bytes the access reads or writes.
+        /// How many bytes the access reads or writes, where that was read,
+        /// and `0` where it was not: a string's length, or a length that is
+        /// not a constant. It is printed only beside a proof, and a proof
+        /// needs one.
         width: u64,
         /// How many bytes the object takes, where it is proved outside and
         /// every object it may reach agrees.

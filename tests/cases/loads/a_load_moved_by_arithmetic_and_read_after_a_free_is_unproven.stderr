@@ -17,7 +17,7 @@ warning[SC0412]: this may reach outside the object it points at
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
-  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 warning[SC0403]: this may dereference a null pointer
     ╭─[ a_load_moved_by_arithmetic_and_read_after_a_free_is_unproven.c:23:5 ]
     │

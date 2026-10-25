@@ -17,7 +17,7 @@ warning[SC0412]: this may reach outside the object `q` points at
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
-  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 warning[SC0401]: this frees `p`, which may have been freed already
     ╭─[ a_pointer_lost_to_a_free_read_through_its_address_moved_and_stored_is_doubted_when_read_back.c:27:9 ]
     │

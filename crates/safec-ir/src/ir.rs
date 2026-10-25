@@ -1413,8 +1413,8 @@ impl TranslationUnit {
 
     /// The machine this unit is for.
     ///
-    /// See ADR-0013 for why it is here rather than in the backend, and why a
-    /// pointer's width is not among what it says.
+    /// See ADR-0013 for why it is here rather than in the backend. A
+    /// pointer's width is among what it says since ADR-0060.
     pub fn target(&self) -> Target {
         self.target
     }

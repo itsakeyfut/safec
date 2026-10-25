@@ -806,8 +806,9 @@ pub(super) struct Held {
     /// local it lands in points to.** `void **pp; ... int *q = *pp;` reads a
     /// `void *`, which arrives believing nothing, and a `char`'s address
     /// stored that way and read back into `q` is not a whole `int`: believing
-    /// `q`'s own type put four bytes on one, the `void *` round trip RK-068 is
-    /// about. A proof, so an intersection at a join, as [`Self::fresh_read`]
+    /// `q`'s own type put four bytes on one. The conversion to and from
+    /// `void *` needs no cast (C17 6.3.2.3 p1, 6.5.16.1 p1), so a type this
+    /// frontend parses no cast for is still reached. A proof, so an intersection at a join, as [`Self::fresh_read`]
     /// is, and copied with the value and dropped by anything else, arithmetic
     /// included. What the sites a load holds say about where it points is
     /// not read for this, since they are held at an offset nobody said. See

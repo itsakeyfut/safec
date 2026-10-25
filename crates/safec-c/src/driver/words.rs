@@ -746,27 +746,34 @@ pub(super) fn memory_finding(
             "read here",
             "assign it on every path, `= 0` where it is declared if nothing else",
         ),
-        // Neither check answers this and `Diagnostic::concluded` gives `None`
-        // for it, so none of the four is read. Written out rather than `_` so
-        // that a fourth conclusion has to be answered for here.
         // **The numbers are in the message and not the label**, because the
         // label says what is wrong at the caret and the numbers are why it
-        // is proved. Only a proof carries them: every object it may reach was
-        // read as exactly that size. See ADR-0060.
+        // is proved. Only a proof carries them, and the object's size only
+        // where every object it may reach was read as that size; where they
+        // differ, every one is narrower than the access and none is named.
+        // See ADR-0060.
         (Kind::OutsideItsObject { width, extent }, Conclusion::Unsafe, _) => (
             OUTSIDE_ITS_OBJECT,
             match extent {
                 Some(extent) => format!(
-                    "this reaches {width} {} into an object of {extent}",
+                    "this reaches {width} {} into an object of {extent} {}",
+                    bytes(width),
+                    bytes(extent)
+                ),
+                None => format!(
+                    "this reaches {width} {} into every object it may point at, and each is \
+                     narrower",
                     bytes(width)
                 ),
-                None => "this reaches past the end of the object it points at".to_owned(),
             },
             "wider than the object it reaches",
-            "allocate at least as many bytes as this reads or writes",
+            "make the object at least as wide as this access, or reach less of it",
         ),
         // Every reason named, although only `Extent` arrives, for the reason
-        // the double-free rows give.
+        // the double-free rows give. **The remedy names what this check can
+        // read**, since what made it unknown may be the pointer, the size or
+        // a length, and saying which would be a claim the finding does not
+        // carry.
         (
             Kind::OutsideItsObject { .. },
             Conclusion::Unknown,
@@ -786,9 +793,12 @@ pub(super) fn memory_finding(
                 |name| format!("this may reach outside the object `{name}` points at"),
             ),
             "this check cannot say this is inside its object",
-            "reach the object through a pointer to its start, and allocate it with a constant \
-             size at least this wide",
+            "this check shows an access fits only through a pointer to the start of a local or \
+             of an allocation of constant size, with a constant length where a call takes one",
         ),
+        // Neither check answers this and `Diagnostic::concluded` gives `None`
+        // for it, so none of the four is read. Written out rather than `_` so
+        // that a fourth conclusion has to be answered for here.
         (_, Conclusion::Safe, _) => (DOUBLE_FREE, "nothing".to_owned(), "nothing", "nothing"),
     };
 

@@ -156,18 +156,13 @@ fn free(callees: &Callees, local: LocalId, at: Span, then: BlockId) -> Block {
     }
 }
 
-/// `local = malloc(8);`, ending the block.
-///
-/// Eight bytes, so that an `int` or a pointer read through it fits on every
-/// target and the tests here hear only about what they are about. An
-/// allocation of a size this check cannot read is one an access cannot be
-/// shown to fit. See ADR-0060.
+/// `local = malloc();`, ending the block.
 fn malloc(callees: &Callees, local: LocalId, at: Span, then: BlockId) -> Block {
     Block {
         elements: vec![],
         terminator: Terminator::Call {
             callee: callees.malloc,
-            arguments: vec![Operand::Constant(8)],
+            arguments: vec![],
             destination: Some(Place::local(local)),
             then: Some(then),
             origin: Origin::Written(at),

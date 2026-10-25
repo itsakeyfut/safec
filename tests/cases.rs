@@ -3016,8 +3016,8 @@ cases! {
         // Mutation: prove a fit when any object is wide enough rather than
         // every one; this goes silent.
         a_join_of_four_bytes_and_one_byte: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The `void *` round trip, RK-068's: a load is believed by the type
-        // it is read as, which here is `void *` and so nothing. Mutation:
+        // The `void *` round trip, which needs no cast: a load is believed by
+        // the type it is read as, which here is `void *` and so nothing. Mutation:
         // believe every pointer read out of memory to point at eight bytes;
         // this goes silent.
         a_char_address_stored_as_void_and_read_as_int: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

@@ -1,4 +1,4 @@
-error[SC0412]: this reaches 4 bytes into an object of 1
+error[SC0412]: this reaches 4 bytes into an object of 1 byte
    ╭─[ an_int_written_into_one_byte.c:8:5 ]
    │
  4 │     int *p = malloc(1);
@@ -10,4 +10,4 @@ error[SC0412]: this reaches 4 bytes into an object of 1
    │        ╰──── wider than the object it reaches
 ───╯
   = note: this check belongs to safety level 1
-  = help: allocate at least as many bytes as this reads or writes
+  = help: make the object at least as wide as this access, or reach less of it

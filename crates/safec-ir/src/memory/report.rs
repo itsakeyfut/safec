@@ -652,7 +652,10 @@ pub(super) fn used(
 /// nullability check's question and not a size. See ADR-0060.
 enum Fit {
     Inside,
-    Outside { extent: u64, made: Option<Span> },
+    Outside {
+        extent: Option<u64>,
+        made: Option<Span>,
+    },
     Unknown,
 }
 
@@ -672,7 +675,9 @@ enum Fit {
 ///    `&x` was answered by neither check. Found by review.
 /// 2. Lost, written by a call this check cannot read, or an escaped local
 ///    holding anything: whatever is known about it may be stale (ADR-0017,
-///    ADR-0018), so it is unknown. RK-061 is why the escape is asked here.
+///    ADR-0018), so it is unknown. The escape is asked because a write
+///    through the escaped address can put any pointer in the local where
+///    this check does not see it, so what it holds proves nothing.
 /// 3. A value read out of memory on every path is believed by the type it was
 ///    read as, and nothing more ([`Held::believed`](super::parts::Held::believed)),
 ///    nor more than what that memory is recorded to hold. One read on some
@@ -690,7 +695,8 @@ enum Fit {
 ///    local whose address it holds at that local's size, is folded. Every
 ///    lower bound at least `width` is proved; every one exact and below
 ///    `width` is outside; anything between is unknown, since a may-set
-///    proves nothing from one member (RK-035).
+///    proves nothing from one member: an access that fits one of two
+///    allocations a local may hold may still overflow the other.
 fn fits(
     analysis: &Allocations<'_>,
     function: &Function,
@@ -762,9 +768,14 @@ fn fits(
         .collect();
     match exact {
         Some(bytes) => {
-            // One size to name where every object agrees, as one allocation
-            // is named only where every site agrees.
-            let extent = bytes.iter().copied().max().unwrap_or(0);
+            // **One size to name only where every object agrees**, as one
+            // allocation is named only where every site agrees: naming the
+            // largest of two said `an object of 2` about a pointer that may
+            // reach one of 1. Found by review.
+            let extent = bytes
+                .first()
+                .copied()
+                .filter(|first| bytes.iter().all(|other| other == first));
             let mut made: Option<Option<Span>> = None;
             for site in held.sites() {
                 let here = match known.state[site] {
@@ -792,8 +803,10 @@ fn fits(
 /// one.** A deeper level goes through a pointer read out of memory, which is
 /// believed to be one whole object of the type it was read as, and the
 /// access through it is exactly that type, so it fits by what is believed.
-/// What makes that belief worth anything is that the store that put the
-/// pointer there is asked, which is the departure half of ADR-0060.
+/// What would make that belief worth anything is that the store that put the
+/// pointer there is asked, which is the departure half of ADR-0060 and is
+/// not written yet (#623): until it is, the belief is asked nowhere, and
+/// [`fits`] bounds it by what the memory is recorded to hold.
 ///
 /// **Not through [`say`], and not keyed with it.** A use after free and an
 /// access outside its object are two questions about one place, and both can
@@ -843,7 +856,7 @@ pub(super) fn outside(
         };
         let (conclusion, extent, made, unproven) = match fit {
             Fit::Inside => continue,
-            Fit::Outside { extent, made } => (Conclusion::Unsafe, Some(extent), made, None),
+            Fit::Outside { extent, made } => (Conclusion::Unsafe, extent, made, None),
             Fit::Unknown => (Conclusion::Unknown, None, None, Some(Unproven::Extent)),
         };
         asked.push((at, local));
@@ -921,7 +934,7 @@ pub(super) fn reached_by_library(
         };
         let (conclusion, extent, made, unproven) = match fit {
             None | Some(Fit::Inside) => continue,
-            Some(Fit::Outside { extent, made }) => (Conclusion::Unsafe, Some(extent), made, None),
+            Some(Fit::Outside { extent, made }) => (Conclusion::Unsafe, extent, made, None),
             Some(Fit::Unknown) => (Conclusion::Unknown, None, None, Some(Unproven::Extent)),
         };
         touched.push((at, local));

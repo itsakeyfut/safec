@@ -17,4 +17,4 @@ error[SC0412]: this may reach outside the object `old` points at
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

@@ -17,7 +17,7 @@ error[SC0412]: this may reach outside the object `u` points at
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0402]: this uses `q`, which may have been freed
     ╭─[ an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:16:5 ]
     │
