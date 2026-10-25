@@ -3208,6 +3208,11 @@ cases! {
         // there; the second does.
         a_void_pointer_s_address_handed_as_an_int_pointer_to_pointer_is_asked_at_the_wider_type: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Leaving as a `void *`, the receiver believes no width, and the
+        // local is still asked at its own: whoever converts it back reads an
+        // `int *`. Mutation: ask each local at the receiver's width only in
+        // `contents_leaving`; this goes silent.
+        a_local_whose_address_leaves_as_void_is_asked_at_its_own_type: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A whole `int` stored as a `void *` fits what the receiver reads,
         // and a parameter's memory holds nothing this function recorded.
         // Mutation: answer a site's content `Unknown` in
