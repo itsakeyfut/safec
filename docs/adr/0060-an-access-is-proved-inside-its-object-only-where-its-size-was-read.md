@@ -174,8 +174,8 @@ folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
 * Good, because an access the check cannot read is `Unknown` rather than
   silence, so #621's arrays and pointer arithmetic land under Phase 11's rule.
 * Bad, because **a pointer that is lost, foreign or escaped is doubted about
-  its size as well as about whether it was freed**, so 192 corpus cases that
-  already reported a doubt gained an `SC0412` beside it, and the output-parameter
+  its size as well as about whether it was freed**, so most corpus cases that
+  already reported such a doubt gained an `SC0412` beside it, and the output-parameter
   idiom, `get(&p); if (p) *p = 1;`, is `Unknown`. The escape is doubted because
   something may have written the local where this check could not see.
 * Bad, because the record a load is bounded by is coarser than the program:
