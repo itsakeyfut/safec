@@ -380,11 +380,39 @@ fn a_refusal_of_the_command_line_is_reported_once_and_stops_every_input() {
     assert_eq!(outcome, Outcome::Failed);
 }
 
+/// A refused command line stops each input's analysis and not its scan:
+/// `--emit tokens` still dumps both inputs, as it did when each input read
+/// the command line itself.
+///
+/// Mutation: skip every input where the command line was refused. The dump is
+/// empty.
+#[test]
+fn a_refusal_of_the_command_line_still_dumps_every_input_s_tokens() {
+    let first = TempFile::new("safec_driver_refused_tokens_a.c", "int alpha;\n");
+    let second = TempFile::new("safec_driver_refused_tokens_b.c", "int beta;\n");
+    let mut options = options(vec![
+        first.path().to_path_buf(),
+        second.path().to_path_buf(),
+    ]);
+    options.macros = vec![CommandLineMacro::Undefined {
+        name: "_WIN32".to_owned(),
+    }];
+
+    let (report, artifact, outcome) = run(&options);
+
+    assert_eq!(report.matches("SC0117").count(), 1, "{report}");
+    assert!(artifact.contains("\"alpha\""), "{artifact}");
+    assert!(artifact.contains("\"beta\""), "{artifact}");
+    assert_eq!(outcome, Outcome::Failed);
+}
+
 /// Each input starts from the build's prelude, not from where the input
 /// before it left off: a macro the first defines is not defined in the second.
 ///
-/// Mutation: preprocess every input from one shared `Reading` rather than a
-/// copy of the prelude. The second input's `#ifdef` takes its group, and
+/// What holds this day to day is the borrow: `preprocess_with` takes the
+/// prelude by `&` and copies it. This test is what fails if that is undone.
+/// Mutation: take `&mut Prelude` and read every input into its own `Reading`
+/// rather than a copy. The second input's `#ifdef` takes its group, and
 /// `leaked` is declared.
 #[test]
 fn a_macro_one_input_defines_is_not_defined_in_the_next() {
