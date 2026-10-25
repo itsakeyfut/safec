@@ -661,8 +661,13 @@ enum Fit {
 /// The order of the tests is the order in which each stops this check
 /// knowing anything:
 ///
-/// 1. Holding no site, no local's address and nothing read out of memory is a
-///    null or absent pointer, which is `None` here.
+/// 1. Holding no site, no local's address, nothing read out of memory or
+///    written by a call, nothing lost, and at its start, is a null or absent
+///    pointer, which is `None` here. **At its start**, because arithmetic on
+///    a null or on a local's address leaves a value holding none of those
+///    that is not null either, and a null test on it takes the nullability
+///    check's doubt away: `int *q = p + 1; if (q) *q = 1;` with `p` null or
+///    `&x` was answered by neither check. Found by review.
 /// 2. Lost, written by a call this check cannot read, or an escaped local
 ///    holding anything: whatever is known about it may be stale (ADR-0017,
 ///    ADR-0018), so it is unknown. RK-061 is why the escape is asked here.
@@ -692,6 +697,7 @@ fn fits(
 ) -> Option<Fit> {
     let held = &known.points_to[local.index()];
     let holds_something = held.sites().next().is_some()
+        || held.offset != Offset::Zero
         || held.may_be_a_locals_address()
         || held.loaded
         || held.foreign

@@ -3046,6 +3046,13 @@ cases! {
         // the dereferences' list in `findings_within`; the proof goes and
         // this exits 0.
         a_proof_at_a_call_is_not_displaced_by_a_doubt_about_its_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A pointer moved off a null or off a local's address holds no site,
+        // and is not therefore null: a null test on it takes the nullability
+        // check's doubt away, and only this is left to ask. The second is the
+        // shape every array index has once arrays compile. Mutation: leave
+        // the offset out of `holds_something` in `fits`; both go silent.
+        a_pointer_moved_off_null_and_tested_is_not_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_s_address_moved_past_it_and_tested_is_not_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "returns" => {

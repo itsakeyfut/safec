@@ -1,0 +1,10 @@
+error[SC0412]: this may reach outside the object `q` points at
+   ╭─[ a_pointer_moved_off_null_and_tested_is_not_proved_inside.c:7:5 ]
+   │
+ 7 │     *q = 5;
+   │     ───┬──  
+   │        ╰──── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: reach the object through a pointer to its start, and allocate it with a constant size at least this wide
