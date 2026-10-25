@@ -62,8 +62,10 @@ way `architecture.md` draws it.
 **Nor is the order of the phases the order of their numbers.** Phase 11 was
 added after the rest and runs before Phases 6 to 8. A phase keeps the number
 it was given, because records and issues cite phases by number in text that is
-not rewritten, and a renumbering would point them at other phases. The phases
-are listed below in the order they run:
+not rewritten, and a renumbering would point them at other phases. For the
+same reason, a record written before Phase 11 existed may say Phase 9 of
+something Phase 11 now holds, such as aggregates and their fields and indices:
+read it as Phase 11. The phases are listed below in the order they run:
 
 1. Phases 0 to 5
 2. Phase 11: Systems C
