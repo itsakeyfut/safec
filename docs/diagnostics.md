@@ -179,7 +179,11 @@ the start of an object as wide as the type it leaves as, so it is asked there
 whether it does: `g(p + 5)`, `return p + 5;` and `*box = p + 5;` are each
 `SC0413`, labelled `passed here`, `returned here` or `stored here`. A pointer
 to memory lets the pointers stored there leave with it, so `int *q = v;
-h(&q);` asks `q`, and `memcpy` asks what its source points at as a store. It
+h(&q);` asks `q`, and `memcpy` asks what its source points at as a store.
+Each is asked at the wider of its own type and the type the receiver reads it
+as, so a `void *` local's address passed as an `int **` asks the local four
+bytes wide, and memory by what its record says the pointers stored there point
+at. It
 is a class of its own rather than `SC0412` because nothing has been read or
 written through the pointer yet, and what to change is what leaves. **It is
 always unknown**, even where the object is shown narrower, `this lets a

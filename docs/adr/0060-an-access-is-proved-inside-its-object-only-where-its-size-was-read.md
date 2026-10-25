@@ -91,9 +91,14 @@ that does not return are asked nothing. **A `void *` that leaves is asked
 whether it starts an object, and no width**: whoever converts it back believes
 that much, and asking nothing let a pointer off its start stored through a
 `void **` alias be read back through an `int **` one as whole (#624). What a
-`void *` cannot carry is size, so a pointer to the start of one `char` passed
-as a `void *` and read back as an `int *` is believed whole; that read is
-undefined by C17 6.5 p7 too, and is #627.
+`void *` cannot carry is size, so **what a pointer lets leave is asked at the
+width the receiver believes**: a local at the wider of its own type and the
+receiver's, and memory by what its record says the pointers stored there point
+at, so `use(pv)` with `pv` a `void *` local's address and `use` taking `int **`
+asks that local four bytes wide. Memory the record does not hold was written
+unseen or is the caller's, and is asked where it was written. A read through a
+type the object was not stored as is undefined by C17 6.5 p7 as well, and is
+reported by size, since effective types are not followed (#627).
 
 **A departure is always `Unknown`**, even where every object is shown
 narrower: C leaves `g(v)` with `v` a `char`'s address passed as an `int *`
@@ -119,7 +124,11 @@ proves nothing from one member. Such a pointer handed on, to a call or to a
 library function that takes a length, is asked the same way, and one local
 asked twice at one caret is said once, the proof over the doubt. A write
 through a pointer into a local starts where what it held and what was written
-start, not anywhere, since the local is now asked. In order: a
+start, not anywhere, since the local is now asked. A pointer read out of a
+local into another is believed only where the local's value fits what it is
+read as, so `int *q = *pi; *q = 1;` asks `v` as `**pi` does, and an `int *`
+read through an alias of a `void *` a callee filled is not believed (#627). In
+order: a
 pointer holding nothing is the nullability check's; a lost, foreign or escaped
 one is `Unknown`, since something may have written it where this check did not
 see; a pointer moved off its start holds something for this question even
@@ -205,6 +214,14 @@ Each mutation applied on its own, the workspace run, and the file restored.
   `a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call`
   loses its `SC0413`; never believed: `a_pointer_handed_by_address_twice_builds`
   and the other cases that grow a pointer by address are reported.
+* a pointer read out of a local believed whatever the local holds:
+  `an_int_pointer_read_through_an_alias_of_a_void_pointer_a_callee_filled_is_asked`
+  and `a_pointer_read_out_of_its_local_before_it_is_used_is_asked_what_the_local_holds`
+  go silent. What leaves asked at its own type only:
+  `a_void_pointer_s_address_handed_as_an_int_pointer_to_pointer_is_asked_at_the_wider_type`
+  goes silent; memory not asked:
+  `memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds`
+  does (#627).
 * review's findings, each with a case in `tests/cases/bounds/` and the
   mutation beside it in `tests/cases.rs`, each applied and seen to fail its
   case: the library reach keyed with the dereferences
@@ -247,7 +264,8 @@ folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
 * Bad, because `strcpy` and its family are always `Unknown` at their
   destination, and a list walked through `void *` is `Unknown` at every step.
 * Bad, because a `void *` store is asked its start and no size, so size
-  through a `void *` is not seen, which is #627.
+  through a `void *` is seen only where the record or a local holds what was
+  stored (#627).
 * Bad, because every pointer handed on off its start is `Unknown`, so a
   pointer one past the end handed to a call that only compares with it is
   refused, and corpus cases that already reported a doubt about such a
@@ -290,7 +308,8 @@ folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
   corpus case changed, the one that asserted the old rule.
 * Bad, because a pointer off its start passed to a `void *` parameter,
   `fwrite(buf + off, ...)` among them, is a false `Unknown`.
-* Bad, because size does not survive, which #627 is about.
+* Bad, because size does not survive the store; #627 asks it where the
+  pointer leaves and where it is read out of a local instead.
 
 ### Follow the narrowest width stored into an allocation
 
