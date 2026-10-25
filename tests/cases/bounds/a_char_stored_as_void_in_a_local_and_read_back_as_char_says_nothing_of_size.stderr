@@ -1,0 +1,10 @@
+error[SC0403]: this may dereference `p` while it is null
+   ╭─[ a_char_stored_as_void_in_a_local_and_read_back_as_char_says_nothing_of_size.c:7:5 ]
+   │
+ 7 │     *p = 1;
+   │     ───┬──  
+   │        ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

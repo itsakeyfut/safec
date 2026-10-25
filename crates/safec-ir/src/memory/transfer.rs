@@ -328,6 +328,31 @@ impl Allocations<'_> {
                 held.writes_to.set(target);
                 held.writes_elsewhere = true;
             }
+            // **Unless it may be read out of a local whose value does not
+            // fit what it is read as.** A local is no memory with a door: an
+            // assignment to it is asked nowhere, and a `void *` a callee
+            // wrote there was asked its start and no width. So the local is
+            // asked what it holds, as an access through its address asks it
+            // (ADR-0060), without doubting the escape its address is.
+            // Believed whatever it held, `int *q = *pi; *q = 1;` with `v = p
+            // + 4` after `pi = &v`, and an `int *` read through an alias of a
+            // `void *` a callee filled with a `char`'s address, were silent
+            // (#627).
+            if let Some(width) = held.believed {
+                let read_from = value.levels_below(source.local, depth - 1).1;
+                let fits_each = function
+                    .locals()
+                    .filter(|local| read_from.contains(&local.index()))
+                    .all(|local| {
+                        matches!(
+                            fits(self, function, local, width, value, false),
+                            None | Some(Fit::Inside)
+                        )
+                    });
+                if !fits_each {
+                    held.believed = None;
+                }
+            }
             // Read out of an allocation that may hold one that is gone.
             // See ADR-0045.
             if value.stale_below(source.local, depth) {

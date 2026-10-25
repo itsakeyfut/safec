@@ -3188,6 +3188,18 @@ cases! {
         // asks the last. Mutation: keep only the last local in
         // `read_from_locals`; this goes silent.
         a_pointer_that_may_be_either_of_two_locals_is_asked_of_each: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read out of a local is believed only where the local's
+        // value fits what it is read as: a `void *` a callee filled with a
+        // `char`'s address, read through an `int **` alias, and a pointer
+        // moved off its start and read out before it is used. Mutation: skip
+        // the local check in `read_through`; both go silent.
+        an_int_pointer_read_through_an_alias_of_a_void_pointer_a_callee_filled_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_its_local_before_it_is_used_is_asked_what_the_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read back as the type it was converted from, it is believed. The
+        // null doubt is the nullability check's. Mutation: leave every load
+        // out of a local unbelieved in `read_through`; this gains an
+        // `SC0412`.
+        a_char_stored_as_void_in_a_local_and_read_back_as_char_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument
