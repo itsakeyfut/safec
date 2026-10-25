@@ -181,7 +181,9 @@ written through the pointer yet, and what to change is what leaves. **It is
 always unknown**, even where the object is shown narrower, `this lets a
 pointer to 1 byte leave where 4 bytes are believed`: C leaves the call
 defined, and only the receiver's read through it is not. A `void *` leaves
-believing nothing and asks no width, a constant is a null, and a library
+believing no width and is asked only whether it starts an object, `this lets
+a pointer leave that may not point at the start of an object`, a constant is
+a null, and a library
 function this check reads by name, and does not define here, is asked how far
 it reaches instead.
 
