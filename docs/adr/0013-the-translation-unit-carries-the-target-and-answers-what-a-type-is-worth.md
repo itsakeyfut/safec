@@ -115,6 +115,12 @@ the rest have 8, so the fact is real and the reader is not. It arrives with the
 backend, where a datalayout line needs it, and it does not arrive before
 because an interface with no caller is invented rather than designed.
 
+**ADR-0060 brought it in, through the memory check rather than the backend.**
+Whether an access fits the object it reaches turns on how many bytes a pointer
+takes, so `Target::pointer_bits` answers it, measured per row as the other
+columns are, and `TranslationUnit::size_of` answers what a type is worth in
+bytes. `Ty` still carries no width.
+
 ### Confirmation
 
 `TranslationUnit::new` takes a target and there is no `Default`, so a unit

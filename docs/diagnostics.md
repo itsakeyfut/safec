@@ -49,7 +49,7 @@ records why the prefix is this one and what was rejected.
 | `SC01xx` | lexical, what a character, a token or a directive is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105`, `SC0106`, `SC0107`, `SC0108`, `SC0109`, `SC0110`, `SC0111`, `SC0112`, `SC0113`, `SC0114`, `SC0115`, `SC0116`, `SC0117` |
 | `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203`, `SC0204`, `SC0205`, `SC0206`, `SC0207` |
 | `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305`, `SC0306`, `SC0307`, `SC0308`, `SC0309`, `SC0310`, `SC0311`, `SC0312`, `SC0313`, `SC0314`, `SC0315`, `SC0316`, `SC0317`, `SC0318`, `SC0319` |
-| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406`, `SC0407`, `SC0408`, `SC0409`, `SC0410`, `SC0411` |
+| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406`, `SC0407`, `SC0408`, `SC0409`, `SC0410`, `SC0411`, `SC0412` |
 | `SC05xx` | lifetime | none yet |
 | `SC06xx` | ownership | `SC0601` |
 | `SC07xx` | thread | none yet |
@@ -148,6 +148,23 @@ memory is a write like any other. A slot written on some paths is not
 reported, unlike a local. A pointer read through a member, and an integer
 read out of fresh memory, are not followed.
 [ADR-0057](adr/0057-a-pointer-read-out-of-fresh-memory-is-reported-where-it-is-read.md)
+is the decision.
+
+**`SC0412` is an access that may not fit the object it reaches.** It is a
+class of its own because it is about where in an object an access lands, not
+whether the object is live, so it can stand beside `SC0402` at one caret. It is
+a proof where every object the pointer may reach was allocated with a constant
+size, the pointer is at its start, and the access is wider than each:
+`int *p = malloc(1); *p = 5;` is `this reaches 4 bytes into an object of 1`,
+an error under `--allow-unknown` too. It is unknown wherever less is known: a
+pointer moved off its start, since no distance is carried, an allocation whose
+size is not a constant, a pointer this check lost or whose local escaped, and
+a pointer read out of memory as a `void *`. A parameter, a call's result and a
+pointer read out of memory are believed to point at one whole object of the
+type they arrive as, so `void f(int *p) { *p = 1; }` is silent. `memset`,
+`memcpy` and `memmove` are asked about the length they are handed, and the
+string functions are always unknown at their destination.
+[ADR-0060](adr/0060-an-access-is-proved-inside-its-object-only-where-its-size-was-read.md)
 is the decision.
 
 **`SC0319` refuses a name the checks believe.** A call to `abort`, `exit`,

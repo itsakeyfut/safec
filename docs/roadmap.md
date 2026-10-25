@@ -204,6 +204,9 @@ Safety level 1. The first phase that reports something about a C program.
 - use-after-free detection
 - double-free detection
 - nullability
+- whether an access fits the object it reaches, which the list above left out
+  and which an allocation too small for what is written into it showed was
+  missing (ADR-0060)
 - the first annotation, and only as much annotation machinery as nullability
   needs. The rest waits for the phase that needs it
 - whether an annotation is trusted or checked. A trusted annotation that is
