@@ -3125,6 +3125,11 @@ cases! {
         // Mutation: give a `void *` a width of one in `pointee_width`; this
         // is reported.
         a_void_pointer_handed_on_asks_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read out of memory and handed straight on is believed by
+        // the type it is read as, here a `void *`, which is narrower than the
+        // `int` the parameter believes. Mutation: answer such an argument
+        // inside in `leaving`; this goes silent.
+        a_pointer_read_as_void_and_handed_to_an_int_parameter_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
