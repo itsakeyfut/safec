@@ -1128,9 +1128,37 @@ pub(super) struct Realloced {
 
 #[cfg(test)]
 mod tests {
-    use super::{Freeing, Held, Offset, SiteState, earlier};
+    use super::{Extent, Freeing, Held, Offset, SiteState, earlier};
     use crate::memory::report::inside;
     use crate::source::{FileId, SourceMap, Span};
+
+    /// Two sizes for one object meet as a bound below both, and one size
+    /// meets itself unchanged.
+    ///
+    /// A unit test and not a corpus case, because no C program brings two
+    /// sizes for one site: a site is one call's destination or one
+    /// parameter, made with the same size every time.
+    ///
+    /// Mutation: keep the larger lower bound. This fails at the first
+    /// assertion, and an access of four bytes into an object that may be one
+    /// would be proved to fit. Mutation: drop the arm for two equal sizes.
+    /// This fails at the second, and an exact size could never be proved
+    /// outside after a loop.
+    #[test]
+    fn two_sizes_for_one_object_meet_as_a_bound_below_both() {
+        assert_eq!(
+            Extent::Exactly(4).joined(Extent::Exactly(1)),
+            Extent::AtLeast(1)
+        );
+        assert_eq!(
+            Extent::Exactly(4).joined(Extent::Exactly(4)),
+            Extent::Exactly(4)
+        );
+        assert_eq!(
+            Extent::AtLeast(8).joined(Extent::Exactly(2)),
+            Extent::AtLeast(2)
+        );
+    }
 
     /// What a local is given replaces every site and every edge it had, and
     /// every mark about how it came by them.
