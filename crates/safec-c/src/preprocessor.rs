@@ -174,7 +174,8 @@ pub(crate) fn cut_words(sources: &SourceMap, cut: Cut) -> (String, String, Optio
 /// The tokens the parser reads: one input's, every `#include` spliced in, and
 /// no directive among them.
 ///
-/// Only [`preprocess`] builds one, since the field is private, and
+/// Only [`preprocess_with`] builds one, which [`preprocess`] calls for a
+/// caller with one input, since the field is private, and
 /// [`crate::parser::parse`] takes nothing else. So a caller that lexes and
 /// parses without preprocessing does not compile, where it used to hand the
 /// parser every directive to be dropped without a word: seven test helpers

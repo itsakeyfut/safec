@@ -133,6 +133,8 @@ impl From<Outcome> for ExitCode {
 /// at a time. The loop below takes an error count either side of each input's
 /// own work instead, and the run-level answer is for what genuinely spans the
 /// run: the outcome, and linking, which `finish` does once the loop is done.
+/// The one exception is a refusal of the command line, which is the build's
+/// and stops every input; the comment on `read_whole` says how.
 pub fn compile(options: &Options) -> Compiled {
     // The one place a sink is built from the options, so that no part of the
     // compiler can invent its own policy. See ADR-0001.
@@ -295,7 +297,7 @@ pub fn compile(options: &Options) -> Compiled {
     // command line, as before. A refusal here is the build's, so it stops
     // every input's analysis below, as it did when each input read it.
     let before_the_prelude = diagnostics.error_count();
-    let prelude = (!loaded.is_empty()).then(|| {
+    let starting_state = (!loaded.is_empty()).then(|| {
         prelude(
             options.target,
             &options.macros,
@@ -331,7 +333,7 @@ pub fn compile(options: &Options) -> Compiled {
         let scanned = lex(file, &source, &mut diagnostics);
         // Run whatever is emitted, so a directive is reported under
         // `--emit tokens` as it was when the lexer reported it.
-        let prelude = prelude
+        let prelude = starting_state
             .as_ref()
             .expect("a prelude is read where an input is loaded");
         let tokens = preprocess_with(file, &scanned, prelude, &mut sources, &mut diagnostics);
@@ -1039,7 +1041,8 @@ fn stem(name: &FileName) -> String {
 /// number, and there is nothing a user can do with it.
 ///
 /// `before` is the error count taken either side of this input's own work, the
-/// same one the parse is gated on. A run-level count would let a typo in `a.c`
+/// same one the parse is gated on, or the count from before the command line
+/// was read where it was refused, which `compile`'s loop says. A run-level count would let a typo in `a.c`
 /// decide that `b.c` is never compiled, which is what `compile`'s own comment
 /// says not to do.
 fn said_something(diagnostics: &DiagnosticSink, before: usize) -> bool {
