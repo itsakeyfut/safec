@@ -755,8 +755,9 @@ pub(super) fn fits(
     // `memcpy`, arrives believed four bytes wide and is known to name one.
     // The belief is the floor where nothing is recorded, and the record is
     // the floor where it says less. Found by review. What the record cannot
-    // see is a pointer off its start stored as a `void *`, which ADR-0060
-    // lists.
+    // see is size through a `void *`, a one-`char` object stored as one and
+    // read back as an `int *`, which #627 is about; a pointer off its start
+    // stored as a `void *` is asked at the store.
     if let Some(believed) = held.believed {
         let recorded = extents.iter().all(|extent| extent.lower() >= width);
         return Some(if believed >= width && recorded {
@@ -821,8 +822,8 @@ pub(super) fn fits(
 /// access through it is exactly that type, so it fits by what is believed.
 /// What makes that belief worth anything is that the store that put the
 /// pointer there is asked, by [`departed_in_element`], and that [`fits`]
-/// bounds it by what the memory is recorded to hold. A `void *` store asks
-/// no width, which #624 is about.
+/// bounds it by what the memory is recorded to hold. A `void *` store is
+/// asked its start and no width, so size through one is #627.
 ///
 /// **Not through [`say`], and not keyed with it.** A use after free and an
 /// access outside its object are two questions about one place, and both can
@@ -973,11 +974,21 @@ pub(super) fn reached_by_library(
 }
 
 /// How many bytes one object of the type `ty` points to takes, where `ty`
-/// is a pointer: `None` for anything else and for a `void *`, which leaves
-/// believing nothing and so asks nothing. See ADR-0060.
+/// is a pointer, and `None` for anything else.
+///
+/// **Zero for a `void *`, and not `None`.** A `void *` leaves believing no
+/// width, but whoever converts it back believes it starts an object, so it is
+/// asked that much: a width of zero makes [`fits`] answer from the start
+/// alone. Answering `None` asked a `void *` nothing, and a pointer off its
+/// start stored through a `void **` alias and read back through an `int **`
+/// one was believed whole (#624).
+///
+/// **The same answer `Allocations::pointee_size` gives a load**, and on
+/// purpose: what a pointer is asked where it leaves is what it is believed
+/// where it arrives, so the two have to agree. See ADR-0060.
 fn pointee_width(analysis: &Allocations<'_>, ty: TyId) -> Option<u64> {
     match analysis.unit.ty(ty) {
-        Ty::Pointer(pointee) => analysis.unit.size_of(pointee).filter(|&width| width > 0),
+        Ty::Pointer(pointee) => Some(analysis.unit.size_of(pointee).unwrap_or(0)),
         Ty::Int | Ty::Char | Ty::Void => None,
     }
 }
@@ -1112,9 +1123,10 @@ fn locals_reached(function: &Function, value: &Rvalue, known: &Known) -> Vec<Loc
 /// what stores put there, each asked where it was stored. Found by review.
 ///
 /// **Each local at its own type**, not at the type the value leaves as: a
-/// `void *` leaving believes nothing, but whoever converts it back and reads
+/// `void *` leaving believes no width, but whoever converts it back and reads
 /// the local reads what was stored there, which is a pointer of the local's
-/// type. Reading it as another type is #624's. See ADR-0060.
+/// type, and a `void *` local is asked its start. Reading it as another type
+/// is #627's. See ADR-0060.
 fn contents_leaving(
     findings: &mut Vec<Finding>,
     departed: &mut Vec<(Span, Departure, Option<LocalId>)>,
@@ -1143,8 +1155,8 @@ fn contents_leaving(
         // point at a local that holds something believed.
         let read = Rvalue::Use(Operand::Copy(Place::local(local)));
         work.extend(locals_reached(function, &read, known));
-        // A local that holds no pointer, or a `void *`, has nothing a reader
-        // believes of it.
+        // A local that holds no pointer has nothing a reader believes of it;
+        // a `void *` is asked whether it starts an object.
         let Some(width) = pointee_width(analysis, function.local(local)) else {
             continue;
         };
@@ -1160,7 +1172,7 @@ fn contents_leaving(
 ///
 /// **The departure half of ADR-0060.** A caller believes what it is handed
 /// back, and a later load believes what it reads, so this is where either
-/// belief is asked. A `void *` leaves believing nothing and asks nothing, and
+/// belief is asked. A `void *` is asked only whether it starts an object, and
 /// a constant is a null, which the nullability check answers.
 pub(super) fn departed_in_element(
     findings: &mut Vec<Finding>,

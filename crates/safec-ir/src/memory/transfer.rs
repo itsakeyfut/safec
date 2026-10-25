@@ -306,7 +306,8 @@ impl Allocations<'_> {
         held.loaded = self.may_be_pointer(function, source) || self.reads_a_byte(function, source);
         // **Believed to point at one whole object of the type it is read as**,
         // which the store that put it there is asked about. A byte is no
-        // pointer and believes nothing, and neither does a `void *`. See
+        // pointer and believes nothing; a `void *` believes it starts an
+        // object and no width, which is all its store is asked. See
         // ADR-0060.
         held.believed = self.pointee_size(function, source);
         // **And what was stored where it was read from**, at an offset nobody

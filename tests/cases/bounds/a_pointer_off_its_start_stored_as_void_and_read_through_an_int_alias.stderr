@@ -1,0 +1,10 @@
+error[SC0413]: this lets a pointer leave that may not point at the start of an object
+    ╭─[ a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:14:5 ]
+    │
+ 14 │     *as_void = a + 5;
+    │     ────────┬───────  
+    │             ╰───────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave as a `void *` only at the start of an object

@@ -43,6 +43,13 @@ becoming an executable.
   memory.
 * Believe nothing.
 
+For a `void *`, which carries no width, three options were weighed (#624):
+
+* **Ask its start and no width.**
+* Follow the narrowest width each store into an allocation was asked at, and
+  believe a load no wider.
+* Follow the type stored in each slot, and report a read through another type.
+
 ## Decision Outcome
 
 Chosen option: **believe a pointer whole where it arrives, and ask where it
@@ -80,9 +87,13 @@ it stands where the address leaves, so `int *q = v; h(&q);` asks `q`, and the
 source of `memcpy` and `memmove` is asked as a store into the destination. A
 call this check reads by name is asked how far it reaches instead, unless the
 callee is defined in this unit, and `free`, an allocator, `realloc` and a call
-that does not return are asked nothing. A `void *` that leaves asks no width,
-so a pointer off its start stored as one and read back as another type is
-believed whole; that is #624.
+that does not return are asked nothing. **A `void *` that leaves is asked
+whether it starts an object, and no width**: whoever converts it back believes
+that much, and asking nothing let a pointer off its start stored through a
+`void **` alias be read back through an `int **` one as whole (#624). What a
+`void *` cannot carry is size, so a pointer to the start of one `char` passed
+as a `void *` and read back as an `int *` is believed whole; that read is
+undefined by C17 6.5 p7 too, and is #627.
 
 **A departure is always `Unknown`**, even where every object is shown
 narrower: C leaves `g(v)` with `v` a `char`'s address passed as an `int *`
@@ -224,7 +235,8 @@ folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
   11's rule allows until a distance is carried.
 * Bad, because `strcpy` and its family are always `Unknown` at their
   destination, and a list walked through `void *` is `Unknown` at every step.
-* Bad, because a `void *` store is not asked about a size, which is #624.
+* Bad, because a `void *` store is asked its start and no size, so size
+  through a `void *` is not seen, which is #627.
 * Bad, because every pointer handed on off its start is `Unknown`, so a
   pointer one past the end handed to a call that only compares with it is
   refused, and corpus cases that already reported a doubt about such a
@@ -256,6 +268,28 @@ folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
 
 * Bad, because `void f(int *p) { *p = 1; }` would not build at `--safety
   memory`, and neither would nearly the whole corpus.
+
+### Ask a `void *` its start and no width
+
+* Good, because every way a pointer enters memory through a projection, a
+  call or `memcpy` is then asked about its start: a typed store at its type,
+  a `void *` store at zero width, a byte at one, and `memcpy`'s source
+  through the pointers it reaches. An assignment to a local whose address was
+  taken and has not left the function is not one of those. One existing
+  corpus case changed, the one that asserted the old rule.
+* Bad, because a pointer off its start passed to a `void *` parameter,
+  `fwrite(buf + off, ...)` among them, is a false `Unknown`.
+* Bad, because size does not survive, which #627 is about.
+
+### Follow the narrowest width stored into an allocation
+
+* Bad, because it adds a field to the lattice and still rests on the belief
+  in a callee's store across a call, which is where the open case lives.
+
+### Follow the stored type per slot
+
+* Bad, because the lattice does not tell an allocation's slots apart, so it
+  is a redesign and wants an experiment first.
 
 ## More Information
 

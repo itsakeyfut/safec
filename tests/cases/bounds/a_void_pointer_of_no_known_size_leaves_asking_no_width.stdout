@@ -1,0 +1,14 @@
+Target "x86_64-pc-windows-msvc"
+Function a_void_pointer_of_no_known_size_leaves_asking_no_width.c:1:6 "g" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "v"
+Function a_void_pointer_of_no_known_size_leaves_asking_no_width.c:3:6 "f"
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+  Block "bb0" entry
+    ArgumentsEvaluated a_void_pointer_of_no_known_size_leaves_asking_no_width.c:4:5 generated
+    Call a_void_pointer_of_no_known_size_leaves_asking_no_width.c:4:5 written "g" "bb1"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_void_pointer_of_no_known_size_leaves_asking_no_width.c:4:5 generated
+    Return

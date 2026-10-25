@@ -1,0 +1,10 @@
+error[SC0413]: this lets a pointer leave that may not point at the start of an object
+   ╭─[ a_pointer_off_its_start_stored_as_void_by_a_callee.c:4:13 ]
+   │
+ 4 │             *slot = p + 5;
+   │             ──────┬──────  
+   │                   ╰──────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave as a `void *` only at the start of an object
