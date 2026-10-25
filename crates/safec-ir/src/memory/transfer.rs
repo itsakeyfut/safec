@@ -16,7 +16,8 @@ use super::bits::Bits;
 use super::built::{built_from, named, replaced_by};
 use super::known::Known;
 use super::parts::{
-    Callee, Freeing, Held, Offset, PendingRead, Reached, Read, Realloced, SiteState,
+    Callee, Extent, Freeing, Held, LIBRARY, Library, Makes, Offset, PendingRead, Reached, Read,
+    Realloced, SiteState,
 };
 use super::{
     LostReason, dereferenced_in_element, dereferenced_in_terminator, derefs, handed_places,
@@ -80,6 +81,65 @@ impl Allocations<'_> {
         )
     }
 
+    /// How many bytes the object a call's result names takes, as far as this
+    /// check can read it.
+    ///
+    /// **Exactly the size an allocation function was asked for, where it was
+    /// asked with constants**: `malloc(n)` and `aligned_alloc(a, n)` make `n`
+    /// bytes (C17 7.22.3.4 p2, 7.22.3.1 p2), `calloc(m, n)` makes `m * n`
+    /// (7.22.3.2 p2), and `realloc(p, n)` makes `n` (7.22.3.5 p2). A size
+    /// this check cannot read, a negative constant among them, which converts
+    /// to a `size_t` nothing could allocate, is nothing read. Any other call's
+    /// result is believed to point at one whole object of the type it
+    /// returns, as a parameter is, and a `void *` at nothing. See ADR-0060.
+    fn made_extent(
+        &self,
+        function: &Function,
+        callee: FuncId,
+        kind: Callee,
+        handed: &[Operand],
+        destination: &Place,
+    ) -> Extent {
+        let constant = |index: usize| self.constant_argument(callee, handed, index);
+        if matches!(kind, Callee::Opaque) {
+            return Extent::AtLeast(self.pointee_size(function, destination).unwrap_or(0));
+        }
+        let asked = match self.library(callee).and_then(|row| row.makes) {
+            Some(Makes::Argument(index)) => constant(index),
+            Some(Makes::Product(m, n)) => constant(m)
+                .zip(constant(n))
+                .and_then(|(m, n)| m.checked_mul(n)),
+            None => None,
+        };
+        asked.map_or(Extent::AtLeast(0), Extent::Exactly)
+    }
+
+    /// The constant a call hands this parameter, as the parameter receives
+    /// it, or `None` where it is not a constant this check can read.
+    ///
+    /// **Converted to the parameter's type first**, as C17 6.5.2.2 p7 does
+    /// "as if by assignment", because the IR carries the constant as the
+    /// source spelled it and the backend converts it at the call: `void
+    /// *malloc(char n);` handed 257 allocates one byte on every target here,
+    /// and reading 257 proved a four-byte write inside it. A parameter that
+    /// is not an integer, or one the declaration does not name, reads
+    /// nothing; so does a value negative after the conversion, which no
+    /// size this check compares is. Found by review. See ADR-0060.
+    pub(super) fn constant_argument(
+        &self,
+        callee: FuncId,
+        arguments: &[Operand],
+        index: usize,
+    ) -> Option<u64> {
+        let Some(Operand::Constant(value)) = arguments.get(index) else {
+            return None;
+        };
+        let declared = self.unit.function(callee);
+        let parameter = declared.parameters().nth(index)?;
+        let integer = self.unit.integer(declared.local(parameter))?;
+        u64::try_from(integer.convert(*value)).ok()
+    }
+
     /// What this check can read in the name of the function being called.
     pub(super) fn callee(&self, id: FuncId) -> Callee {
         let name = self.sources.snippet(self.unit.function(id).name);
@@ -89,14 +149,13 @@ impl Allocations<'_> {
         {
             return Callee::Ends;
         }
-        match name {
-            "free" => Callee::Frees,
-            "malloc" | "calloc" | "aligned_alloc" => Callee::Allocates,
-            "realloc" => Callee::Reallocates,
-            "memcpy" | "memmove" => Callee::Copies,
-            "memset" | "strcpy" | "strncpy" | "strcat" | "strncat" => Callee::ReturnsFirst,
-            _ => Callee::Opaque,
-        }
+        self.library(id).map_or(Callee::Opaque, |row| row.callee)
+    }
+
+    /// The row of [`LIBRARY`] this function's name is, if any.
+    pub(super) fn library(&self, id: FuncId) -> Option<&'static Library> {
+        let name = self.sources.snippet(self.unit.function(id).name);
+        LIBRARY.iter().find(|row| row.name == name)
     }
 
     /// What a write through a pointer carries: the sites the written value may
@@ -202,6 +261,18 @@ impl Allocations<'_> {
         }
     }
 
+    /// How many bytes one object of the type a place's pointer points to
+    /// takes, where the place holds a pointer: `Some(0)` for a `void *`, which
+    /// says nothing about what it points at, and `None` for a place that is
+    /// not a pointer. See ADR-0060.
+    pub(super) fn pointee_size(&self, function: &Function, place: &Place) -> Option<u64> {
+        let ty = self.unit.place_ty(function, place)?;
+        match self.unit.ty(ty) {
+            Ty::Pointer(pointee) => Some(self.unit.size_of(pointee).unwrap_or(0)),
+            Ty::Int | Ty::Char | Ty::Void => None,
+        }
+    }
+
     /// Whether a place is a byte: of character type, which C17 6.5 p7 lets read
     /// any object, a pointer included.
     ///
@@ -232,6 +303,11 @@ impl Allocations<'_> {
         // carries what was stored where it was read from, marked as a load is
         // so that it proves nothing about what it names. See ADR-0046.
         held.loaded = self.may_be_pointer(function, source) || self.reads_a_byte(function, source);
+        // **Believed to point at one whole object of the type it is read as**,
+        // which the store that put it there is asked about. A byte is no
+        // pointer and believes nothing, and neither does a `void *`. See
+        // ADR-0060.
+        held.believed = self.pointee_size(function, source);
         // **And what was stored where it was read from**, at an offset nobody
         // said, so that a dereference of it can be asked about what it may
         // point at. `loaded` stays set, which is what marks the set as
@@ -836,6 +912,18 @@ impl Analysis for Allocations<'_> {
         // step per position more. The same paragraph above applies to
         // it: the transfer empties it at every marker and only a join makes an
         // entry value grow.
+        //
+        // **What a site takes, `Known::extent`, only descends**, and every
+        // value it can take is the size an allocation was asked for or a
+        // type's size, one per site made or parameter, so at most one step
+        // per such value below where it started, plus one from nothing.
+        // Counted per site as one per position and one per local, which is
+        // more than there are values, and one more for the step from
+        // nothing: `locals * (positions + locals + 1)`. Whether a local may
+        // hold the address of something inside another is one more bit per
+        // local that a join only sets, the last `locals`. What a local's
+        // value is believed to point at, `Held::believed`, is a proof a join
+        // only lowers or drops, and the slack above covers it. See ADR-0060.
         let positions: usize = function
             .blocks()
             .map(|block| block.elements.len() + 1)
@@ -848,7 +936,11 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 4 + locals * (locals + 26) + positions * (2 * locals + 3) + locals
+        locals * locals * 4
+            + locals * (locals + 26)
+            + positions * (2 * locals + 3)
+            + locals
+            + locals * (positions + locals + 2)
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -878,6 +970,8 @@ impl Analysis for Allocations<'_> {
             calls: BTreeMap::new(),
             exposed_after_call: BTreeSet::new(),
             lost_exposed: false,
+            // Nothing is made yet but the parameters, below.
+            extent: vec![None; self.locals],
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -887,8 +981,17 @@ impl Analysis for Allocations<'_> {
         // At its start, because the site stands for whatever the caller passed
         // and not for an allocation behind it. ADR-0036 says why a free of
         // `p + 1` is still proved on that reading.
+        //
+        // **And believed to be one whole object of the type it points to**,
+        // and no more: the caller is where it is asked. A `void *` is believed
+        // nothing. See ADR-0060.
+        let function = self.unit.function(self.function);
         for &parameter in &self.parameters {
             known.points_to[parameter.index()].hold(parameter.index(), Offset::Zero);
+            known.extent[parameter.index()] = Some(Extent::AtLeast(
+                self.pointee_size(function, &Place::local(parameter))
+                    .unwrap_or(0),
+            ));
         }
 
         // **And exposed**, so that `release_all(); return *p;` is unproven:
@@ -938,9 +1041,27 @@ impl Analysis for Allocations<'_> {
             calls,
             exposed_after_call,
             lost_exposed,
+            extent,
         } = into;
         // A may-fact, so a union, as `exposed` is.
         *lost_exposed |= from.lost_exposed;
+        // A side that never made the site says nothing about it. Two sides
+        // that both did are joined as `Extent::joined` says, which only
+        // narrows, so being wrong here doubts an access rather than proves
+        // one. **`SiteState::Unheld` is not asked**, although it is the
+        // state's identity (ADR-0048): a site is one call's destination or one
+        // parameter, which makes it with the same size every time, so two
+        // sides never bring different sizes for it and there is nothing for
+        // the identity to choose between. Measured: a version that took the
+        // other side's size where one side was `Unheld` answered every test
+        // as this one does. See ADR-0060.
+        for (here, there) in extent.iter_mut().zip(&from.extent) {
+            *here = match (*here, *there) {
+                (Some(ours), Some(theirs)) => Some(ours.joined(theirs)),
+                (Some(only), None) | (None, Some(only)) => Some(only),
+                (None, None) => None,
+            };
+        }
         // **An intersection**: fresh where every path left it fresh, since a
         // use of what was read out of it is reported as a proof. A union here
         // reported `if (c) *box = q; t = *box; *t = 1;`, which C defines when
@@ -1624,6 +1745,13 @@ impl Analysis for Allocations<'_> {
                         // expressing the shape at all.
                         value.points_to[destination.index()].writes_elsewhere =
                             !taken.projection.is_empty();
+                        // And an access through it is not an access of the
+                        // local the edge names, unless what was taken is that
+                        // local's own start. See `Held::inner_address`.
+                        value.points_to[destination.index()].inner_address = !taken
+                            .projection
+                            .iter()
+                            .all(|step| matches!(step, Projection::Index(Operand::Constant(0))));
                         value.escaped[taken.local.index()] = true;
                         value.unproved(taken.local.index());
                         // What the local holds is reachable to every call from
@@ -2440,6 +2568,16 @@ impl Analysis for Allocations<'_> {
             }
         };
         value.reborn(site, made);
+        value.extent[site] = Some(self.made_extent(function, *callee, kind, arguments, place));
+        // **What a call this check cannot read returns is believed whole**,
+        // as a parameter is, and bounded by what it may return that this
+        // check recorded: an allocation this function handed it is folded in
+        // at its size. The `return` in its body is where the belief is to be
+        // asked, which #623 writes; until it does, nothing asks it. See
+        // ADR-0060.
+        if matches!(kind, Callee::Opaque) {
+            value.points_to[site].believed = self.pointee_size(function, place);
+        }
         // **Its contents are indeterminate**, C17 7.22.3.4 p2 and 7.22.3.1
         // p2, for `malloc` and `aligned_alloc` alone: `calloc`'s are zero
         // bits (7.22.3.2 p2), which is a null pointer on every target here, and

@@ -2987,6 +2987,123 @@ cases! {
         a_byte_handed_straight_to_a_call_beside_a_table_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
     }
 
+    "bounds" => {
+        // Whether an access fits the object its pointer reaches, `SC0412`.
+        // See ADR-0060, whose Confirmation names the mutation each of these
+        // fails under.
+        //
+        // The issue's own program: a null test on the moved pointer took away
+        // the `SC0403` that had been standing in for this. Mutation: answer
+        // `Offset::NonZero` as `Zero` in `fits`; this goes silent.
+        a_write_through_a_pointer_moved_past_its_allocation_after_a_null_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Proved outside, and so an error that `--allow-unknown` leaves one.
+        // Mutation: leave the allocator's argument unread in `made_extent`;
+        // both turn unknown, and the second builds.
+        an_int_written_into_one_byte: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_int_written_into_one_byte_is_an_error_where_unknown_is_allowed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // The same allocation read and written as wide as it is. Mutation:
+        // the same; this turns unknown.
+        an_int_written_into_four_bytes_is_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer is eight bytes on one target and four on another, which
+        // is `Target::pointer_bits`. Mutation: give `x86_64-pc-windows-msvc`
+        // 32 pointer bits; the first goes silent.
+        a_pointer_written_into_four_bytes_is_outside_where_a_pointer_takes_eight: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_written_into_four_bytes_fits_where_a_pointer_takes_four: ["--emit", "safety-ir", "--target", "i686-unknown-linux-gnu"],
+        // Two allocations of different sizes, each exact, which proves
+        // neither fit nor outside: a may-set proves nothing from one member.
+        // They are two sites, so this is the fold in `fits` and not
+        // `Extent::joined`, whose unit test is in `memory/parts.rs`.
+        // Mutation: prove a fit when any object is wide enough rather than
+        // every one; this goes silent.
+        two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The `void *` round trip, which needs no cast: a load is believed by
+        // the type it is read as, which here is `void *` and so nothing. Mutation:
+        // believe every pointer read out of memory to point at eight bytes;
+        // this goes silent.
+        a_char_address_stored_as_void_and_read_as_int: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same round trip through locals, where the edge names `c` and
+        // its size is read. Mutation: fold a local's address as
+        // `Extent::AtLeast(0)`; this turns unknown.
+        a_char_address_converted_through_void_and_written_as_int: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What arrives across a function's boundary is believed whole.
+        // Mutation: give a parameter `Extent::AtLeast(0)` where the function
+        // starts; the first is reported. Mutation: drop the belief in an
+        // opaque call's result; the second is reported.
+        a_parameter_written_through_is_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_call_s_result_is_believed_whole: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A library call that takes a length is an access of that many
+        // bytes. Mutation: drop `reached_by_library`; the first two go
+        // silent, and the third is unchanged, which is why it is here.
+        a_memset_wider_than_its_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_memset_of_a_length_nothing_bounds_is_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_memcpy_that_fits_both_objects_is_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `calloc(m, n)` makes `m * n` bytes. Mutation: read only `m`; `p` is
+        // reported as well.
+        a_calloc_of_two_constants_is_their_product: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A doubt about `*p` and a proof about what `memset` writes through
+        // `p`, at one call, each said, so that the proof stays an error
+        // where unknown is allowed. Mutation: key `reached_by_library` with
+        // the dereferences' list in `findings_within`; the proof goes and
+        // this exits 0.
+        a_proof_at_a_call_is_not_displaced_by_a_doubt_about_its_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A pointer moved off a null or off a local's address holds no site,
+        // and is not therefore null: a null test on it takes the nullability
+        // check's doubt away, and only this is left to ask. The second is the
+        // shape every array index has once arrays compile. Mutation: leave
+        // the offset out of `holds_something` in `fits`; both go silent.
+        a_pointer_moved_off_null_and_tested_is_not_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_s_address_moved_past_it_and_tested_is_not_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A constant handed to a call is what the parameter receives, as the
+        // backend passes it: 257 to a `char` is one, and 260 is four. Both
+        // declarations are wrong for the library, which only a frontend that
+        // reads `size_t` can refuse. Mutation: read the constant as written
+        // in `constant_argument`; the first goes silent and the second is
+        // proved outside.
+        an_allocation_s_size_is_what_its_parameter_receives: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_length_is_what_its_parameter_receives: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Each row of `LIBRARY` that reaches by a length or a string, read.
+        // Mutation: drop a row's `reaches`, or its row, and its case loses
+        // the report: `memmove`, `memcmp` at both arguments, `strlen`.
+        a_memmove_wider_than_its_destination: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_memcmp_longer_than_both_objects: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_strlen_is_not_shown_to_fit: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `strncpy` writes exactly `n` characters, so its destination is an
+        // access of `n` and fits here; its source is read as a string, which
+        // is not shown to fit. Mutation: read its destination as a string;
+        // the destination is reported too.
+        a_strncpy_of_its_destination_s_size_is_unknown_only_at_its_source: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `aligned_alloc`'s size is its second argument. Mutation: make it
+        // the first; this goes silent, sixteen bytes read for one.
+        an_int_written_into_one_aligned_byte: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A load is believed no wider than what its memory is recorded to
+        // hold: a `char`'s address put there through a `void **` alias, or
+        // by `memcpy`, and read back as an `int *`. No store either asks is
+        // a departure of the type that is read. Mutation: answer a belief
+        // without the record in `fits`; both go silent.
+        a_char_address_stored_as_void_and_read_through_an_int_alias: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `void *` arrives believing nothing, so even one byte through it
+        // is not shown to fit. Mutation: believe a `void *` one byte in
+        // `pointee_size`; this goes silent.
+        a_void_pointer_parameter_is_believed_to_point_at_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Two loads meet as the narrower belief, here a `void *`'s nothing.
+        // Mutation: keep the wider in `Held::joined`; this goes silent.
+        a_belief_two_paths_meet_with_is_the_narrower: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A negative size is no size read. Mutation: read one as the
+        // largest `u64` in `constant_argument`; this goes silent.
+        an_allocation_of_a_negative_size_is_no_size_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A proof over two sizes names neither, and one byte is one byte.
+        // Mutation: name the largest of the sizes in `fits`, or answer
+        // `bytes` for every count in `words.rs`; each changes its message.
+        an_access_wider_than_two_allocations_of_different_sizes_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_byte_written_into_nothing_is_one_byte: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read out of memory and handed straight to `memset` is
+        // believed by the type it is read as: four bytes fit, a hundred are
+        // not shown to. Mutation: answer every such argument inside in
+        // `reached_by_library`; the second goes silent.
+        a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    }
+
     "returns" => {
         // A pointer a function returns, asked at its `return` about every
         // allocation it may hold. See ADR-0041, whose Confirmation names the

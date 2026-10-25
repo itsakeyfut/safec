@@ -8,6 +8,16 @@ error[SC0402]: this uses `t`, which may have been freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0412]: this may reach outside the object `t` points at
+    ╭─[ a_call_in_a_loop_may_return_what_it_returned_last_turn.c:16:15 ]
+    │
+ 16 │         sum = sum + *t;
+    │               ────┬───  
+    │                   ╰───── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0401]: this frees `t`, which may have been freed already
     ╭─[ a_call_in_a_loop_may_return_what_it_returned_last_turn.c:20:9 ]
     │

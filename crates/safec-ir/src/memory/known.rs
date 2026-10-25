@@ -11,7 +11,9 @@ use crate::ir::{LocalId, Operand, Place};
 use crate::source::{SourceMap, Span};
 
 use super::bits::Bits;
-use super::parts::{Held, PendingRead, Reached, Read, ReadKey, Realloced, SiteState, read_key};
+use super::parts::{
+    Extent, Held, PendingRead, Reached, Read, ReadKey, Realloced, SiteState, read_key,
+};
 use super::{LostReason, derefs, inside, named};
 
 #[derive(Clone, PartialEq, Eq)]
@@ -178,6 +180,16 @@ pub(super) struct Known {
     /// a named one (#515). See
     /// ADR-0045.
     pub(super) lost_exposed: bool,
+    /// Per site, how many bytes the object it stands for takes, as far as
+    /// this check read it, and `None` where nothing has made the site on this
+    /// path.
+    ///
+    /// Linear in the locals, beside [`Self::state`] and not in a table square
+    /// in them, since it is one answer per allocation. Written where a site is
+    /// made, a parameter where the function starts and a call's destination
+    /// where it returns, and read by the question whether an access fits the
+    /// object it reaches. See ADR-0060.
+    pub(super) extent: Vec<Option<Extent>>,
 }
 
 impl Known {
@@ -941,6 +953,9 @@ impl Known {
             exposed_after_call,
             // About no site.
             lost_exposed: _,
+            // Left to the caller, which writes what the new allocation takes
+            // on the line after this, since only it knows what made it.
+            extent: _,
         } = self;
 
         // **A local that loses an allocation that is gone may hold one**, so

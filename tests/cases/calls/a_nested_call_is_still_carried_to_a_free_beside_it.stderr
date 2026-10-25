@@ -1,3 +1,13 @@
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_nested_call_is_still_carried_to_a_free_beside_it.c:16:12 ]
+    │
+ 16 │     return strlen(strcpy(s, t)) + (free(s), 0);
+    │            ──────────┬─────────  
+    │                      ╰─────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0407]: this may pass a pointer to an allocation that was freed
     ╭─[ a_nested_call_is_still_carried_to_a_free_beside_it.c:16:12 ]
     │
@@ -11,6 +21,26 @@ error[SC0407]: this may pass a pointer to an allocation that was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: put the free and this in separate statements, so that C orders one before the other
+error[SC0412]: this may reach outside the object `s` points at
+    ╭─[ a_nested_call_is_still_carried_to_a_free_beside_it.c:16:19 ]
+    │
+ 16 │     return strlen(strcpy(s, t)) + (free(s), 0);
+    │                   ──────┬─────  
+    │                         ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object `t` points at
+    ╭─[ a_nested_call_is_still_carried_to_a_free_beside_it.c:16:19 ]
+    │
+ 16 │     return strlen(strcpy(s, t)) + (free(s), 0);
+    │                   ──────┬─────  
+    │                         ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0407]: this may pass `s`, which points to an allocation that was freed
     ╭─[ a_nested_call_is_still_carried_to_a_free_beside_it.c:16:19 ]
     │

@@ -8,3 +8,13 @@ error[SC0402]: this uses `s`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0412]: this may reach outside the object `s` points at
+    ╭─[ a_pointer_a_call_wrote_read_through_its_address_is_doubted_after_a_later_call.c:12:5 ]
+    │
+ 12 │     return *s;
+    │     ─────┬────  
+    │          ╰────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

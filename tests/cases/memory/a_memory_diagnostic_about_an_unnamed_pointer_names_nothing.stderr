@@ -10,6 +10,16 @@ error[SC0402]: this uses a value after it was freed
 ───╯
   = note: this check belongs to safety level 1
   = help: move the free after this use, or do not free here
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:5:5 ]
+   │
+ 5 │     return p[2];
+   │     ──────┬─────  
+   │           ╰─────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0401]: this frees a pointer this check stopped following
    ╭─[ a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:8:5 ]
    │

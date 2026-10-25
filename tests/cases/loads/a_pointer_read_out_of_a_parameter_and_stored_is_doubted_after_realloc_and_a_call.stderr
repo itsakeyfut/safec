@@ -8,3 +8,13 @@ warning[SC0402]: this uses `r`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+warning[SC0412]: this may reach outside the object `r` points at
+    ╭─[ a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:27:5 ]
+    │
+ 27 │     return *r;
+    │     ─────┬────  
+    │          ╰────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

@@ -1,0 +1,10 @@
+warning[SC0412]: this may reach outside the object `n` points at
+    ╭─[ a_list_built_in_a_loop_with_nothing_freed_is_walked_without_a_doubt.c:20:9 ]
+    │
+ 20 │         n = *n;
+    │         ───┬──  
+    │            ╰──── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

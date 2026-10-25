@@ -28,6 +28,16 @@ warning[SC0402]: this uses `r`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+warning[SC0412]: this may reach outside the object `r` points at
+    ╭─[ a_fresh_allocation_returned_by_a_call_handed_a_lost_value_is_doubted_after_its_free.c:19:9 ]
+    │
+ 19 │     int v = *r;
+    │         ───┬──  
+    │            ╰──── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 warning[SC0401]: this frees `r`, which this check stopped following
     ╭─[ a_fresh_allocation_returned_by_a_call_handed_a_lost_value_is_doubted_after_its_free.c:20:5 ]
     │

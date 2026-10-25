@@ -270,7 +270,16 @@ fn concluded(
     function: Function,
 ) -> Vec<memory::Finding> {
     unit.push_function(function);
+    // **Without whether an access fits its object**, which is a second
+    // question about the same accesses and is held by the corpus cases in
+    // `tests/cases/bounds`. The programs here escape locals and move pointers
+    // to make a free unproven, and each of those also makes an access
+    // unknown in size, which is right and is not what these are about. See
+    // ADR-0060.
     memory::findings(sources, &unit)
+        .into_iter()
+        .filter(|finding| !matches!(finding.kind, Kind::OutsideItsObject { .. }))
+        .collect()
 }
 
 /// A value freed twice is proved unsafe, and both frees can be named.

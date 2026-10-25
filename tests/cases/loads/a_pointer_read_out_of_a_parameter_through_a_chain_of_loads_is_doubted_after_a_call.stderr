@@ -8,3 +8,13 @@ warning[SC0402]: this uses `q`, which may have been freed
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0412]: this may reach outside the object `q` points at
+   ╭─[ a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:9:5 ]
+   │
+ 9 │     return *q;
+   │     ─────┬────  
+   │          ╰────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

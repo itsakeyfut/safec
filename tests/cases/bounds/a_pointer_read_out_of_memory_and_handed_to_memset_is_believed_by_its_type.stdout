@@ -1,0 +1,56 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:1:7 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
+Function a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int **" parameter "pp"
+  Local "_2" "int"
+  Local "_3" "void *"
+  Local "_4" "void *"
+  Block "bb0" entry
+    Operation a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:4:9 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:4:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:4:9 generated
+    Operation a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:5:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:5:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:4:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:7:5 generated
+    Call a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:7:5 written "memset" "bb4"
+      Destination "_3"
+      Copy "_1"
+        Deref
+      Constant 0
+      Constant 4
+  Block "bb4"
+    Sequenced a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:7:5 generated
+    ArgumentsEvaluated a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:8:5 generated
+    Call a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:8:5 written "memset" "bb5"
+      Destination "_4"
+      Copy "_1"
+        Deref
+      Constant 0
+      Constant 100
+  Block "bb5"
+    Sequenced a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:8:5 generated
+    Operation a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:9:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:9:12 generated
+    Return

@@ -38,3 +38,13 @@ error[SC0402]: this uses `o`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0412]: this may reach outside the object `o` points at
+   ╭─[ a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:9:5 ]
+   │
+ 9 │     *o = 1;
+   │     ───┬──  
+   │        ╰──── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

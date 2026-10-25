@@ -135,6 +135,18 @@ The first of those two is undefined by C17 6.5 p2, not merely undefined on one
 of the orders, and the second is the false positive the rule costs. See
 [ADR-0027](adr/0027-an-unsafe-conclusion-is-about-an-execution-this-function-has.md).
 
+**The memory level asks whether an access fits the object it reaches**, as well
+as whether the object is live. An allocation asked for with a constant size
+takes exactly that, a local takes its type's size, and a pointer that arrives
+from outside the function, a parameter, a call's result or a pointer read out
+of memory, is believed to point at one whole object of the type it arrives as.
+An access is proved to fit only from those; it is `Unsafe` where every object it
+may reach is known exactly and is narrower than the access, and `Unknown`
+everywhere else, a pointer moved off its start among them. What is believed
+where a pointer arrives is to be asked where it leaves, handed to a call,
+returned or stored, which is #623; until then nothing asks it. See
+[ADR-0060](adr/0060-an-access-is-proved-inside-its-object-only-where-its-size-was-read.md).
+
 
 ## Incremental Safety Levels
 

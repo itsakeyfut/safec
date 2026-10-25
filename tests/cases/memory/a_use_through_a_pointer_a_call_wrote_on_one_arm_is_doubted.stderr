@@ -8,3 +8,13 @@ warning[SC0402]: this uses `r`, which may have been freed
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0412]: this may reach outside the object `r` points at
+    ╭─[ a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:18:9 ]
+    │
+ 18 │     int v = *r;
+    │         ───┬──  
+    │            ╰──── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

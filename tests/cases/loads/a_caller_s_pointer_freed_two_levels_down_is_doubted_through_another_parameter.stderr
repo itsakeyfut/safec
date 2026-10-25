@@ -18,6 +18,16 @@ warning[SC0402]: this uses `s`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+warning[SC0412]: this may reach outside the object `s` points at
+    ╭─[ a_caller_s_pointer_freed_two_levels_down_is_doubted_through_another_parameter.c:17:5 ]
+    │
+ 17 │     return *s;
+    │     ─────┬────  
+    │          ╰────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 warning[SC0403]: this may dereference a null pointer
     ╭─[ a_caller_s_pointer_freed_two_levels_down_is_doubted_through_another_parameter.c:16:5 ]
     │

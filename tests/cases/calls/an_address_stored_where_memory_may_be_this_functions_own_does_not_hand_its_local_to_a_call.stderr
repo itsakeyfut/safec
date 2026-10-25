@@ -1,3 +1,13 @@
+error[SC0412]: this may reach outside the object `k` points at
+    ╭─[ an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:22:5 ]
+    │
+ 22 │     *k = &a;
+    │     ───┬───  
+    │        ╰───── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0407]: this passes a pointer to where a pointer that may have been freed is stored
     ╭─[ an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:24:12 ]
     │

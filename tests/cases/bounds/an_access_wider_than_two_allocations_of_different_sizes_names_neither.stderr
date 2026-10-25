@@ -1,0 +1,9 @@
+error[SC0412]: this reaches 4 bytes into every object it may point at, and each is narrower
+    ╭─[ an_access_wider_than_two_allocations_of_different_sizes_names_neither.c:11:5 ]
+    │
+ 11 │     *p = 5;
+    │     ───┬──  
+    │        ╰──── wider than the object it reaches
+────╯
+  = note: this check belongs to safety level 1
+  = help: make the object at least as wide as this access, or reach less of it

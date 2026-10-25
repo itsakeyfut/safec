@@ -14,7 +14,9 @@ use crate::source::{SourceMap, Span};
 
 use super::built::named;
 use super::known::Known;
-use super::parts::{Callee, Freeing, Offset, Reached, Read, SiteState, earlier, same};
+use super::parts::{
+    Callee, Extent, Freeing, Offset, Reach, Reached, Read, SiteState, earlier, same,
+};
 use super::transfer::Allocations;
 use super::{Finding, Kind, LostReason, Unproven};
 
@@ -228,6 +230,8 @@ fn verdict(
         Kind::Unassigned | Kind::SometimesUnassigned { .. } => true,
         // Never asked: it is said by `loaded_indeterminate`, about no free.
         Kind::IndeterminateLoad => true,
+        // Never asked: it is said by `may_not_fit`, about no free.
+        Kind::OutsideItsObject { .. } => true,
     };
 
     match earliest {
@@ -636,6 +640,319 @@ pub(super) fn used(
                 unproven: verdict.unproven,
             },
         );
+    }
+}
+
+/// What this check can say about whether an access fits the object its
+/// pointer reaches.
+///
+/// Three answers and no fourth: proved, which is silence; outside, which is a
+/// proof; and unknown. A pointer that holds nothing is not one of them and
+/// is `None` from [`fits`], because a null or absent pointer is the
+/// nullability check's question and not a size. See ADR-0060.
+enum Fit {
+    Inside,
+    Outside {
+        extent: Option<u64>,
+        made: Option<Span>,
+    },
+    Unknown,
+}
+
+/// Whether an access of `width` bytes through `local`'s own value fits the
+/// object it reaches, or `None` where `local` holds nothing to reach.
+///
+/// **What it is believed or was read to take, and nothing else proves it.**
+/// The order of the tests is the order in which each stops this check
+/// knowing anything:
+///
+/// 1. Holding no site, no local's address, nothing read out of memory or
+///    written by a call, nothing lost, and at its start, is a null or absent
+///    pointer, which is `None` here. **At its start**, because arithmetic on
+///    a null or on a local's address leaves a value holding none of those
+///    that is not null either, and a null test on it takes the nullability
+///    check's doubt away: `int *q = p + 1; if (q) *q = 1;` with `p` null or
+///    `&x` was answered by neither check. Found by review.
+/// 2. Lost, written by a call this check cannot read, or an escaped local
+///    holding anything: whatever is known about it may be stale (ADR-0017,
+///    ADR-0018), so it is unknown. The escape is asked because a write
+///    through the escaped address can put any pointer in the local where
+///    this check does not see it, so what it holds proves nothing.
+/// 3. A value read out of memory on every path is believed by the type it was
+///    read as, and nothing more ([`Held::believed`](super::parts::Held::believed)),
+///    nor more than what that memory is recorded to hold. One read on some
+///    paths only is unknown.
+/// 4. Off its start, or perhaps off it: unknown, since no distance is
+///    carried (ADR-0036).
+/// 5. An edge that may be the address of something inside a local rather
+///    than the local: unknown, since the local's size is not that object's
+///    ([`Held::inner_address`](super::parts::Held::inner_address)). Not
+///    [`Held::writes_elsewhere`](super::parts::Held::writes_elsewhere), which
+///    a call's result and a join with a null path both set while every edge
+///    names a whole local: asking it made `int *q = f(&x); return *q;`
+///    unknown.
+/// 6. Otherwise every object it may reach, each site's [`Extent`] and each
+///    local whose address it holds at that local's size, is folded. Every
+///    lower bound at least `width` is proved; every one exact and below
+///    `width` is outside; anything between is unknown, since a may-set
+///    proves nothing from one member: an access that fits one of two
+///    allocations a local may hold may still overflow the other.
+fn fits(
+    analysis: &Allocations<'_>,
+    function: &Function,
+    local: LocalId,
+    width: u64,
+    known: &Known,
+) -> Option<Fit> {
+    let held = &known.points_to[local.index()];
+    let holds_something = held.sites().next().is_some()
+        || held.offset != Offset::Zero
+        || held.may_be_a_locals_address()
+        || held.loaded
+        || held.foreign
+        || held.lost;
+    if !holds_something {
+        return None;
+    }
+    if held.lost || held.foreign || known.escaped[local.index()] {
+        return Some(Fit::Unknown);
+    }
+    let sites = held
+        .sites()
+        .map(|site| known.extent[site].unwrap_or(Extent::AtLeast(0)));
+    // `LocalId` cannot be built from an index outside the IR, so the locals
+    // are walked and kept where the edge names them.
+    let locals = function
+        .locals()
+        .filter(|target| held.writes_to.get(target.index()))
+        .map(|target| {
+            analysis
+                .unit
+                .size_of(function.local(target))
+                .map_or(Extent::AtLeast(0), Extent::Exactly)
+        });
+    let extents: Vec<Extent> = sites.chain(locals).collect();
+
+    // **No wider than what the memory it was read from is known to hold**,
+    // where that is recorded: a `void *` slot written with a `char`'s address
+    // and read back through an `int **` alias, or an `int *` copied in by
+    // `memcpy`, arrives believed four bytes wide and is known to name one.
+    // The belief is the floor where nothing is recorded, and the record is
+    // the floor where it says less. Found by review. What the record cannot
+    // see is a pointer off its start stored as a `void *`, which ADR-0060
+    // lists.
+    if let Some(believed) = held.believed {
+        let recorded = extents.iter().all(|extent| extent.lower() >= width);
+        return Some(if believed >= width && recorded {
+            Fit::Inside
+        } else {
+            Fit::Unknown
+        });
+    }
+    if held.loaded || held.offset != Offset::Zero {
+        return Some(Fit::Unknown);
+    }
+    if held.may_be_a_locals_address() && held.inner_address {
+        return Some(Fit::Unknown);
+    }
+
+    if extents.iter().all(|extent| extent.lower() >= width) {
+        return Some(Fit::Inside);
+    }
+    let exact: Option<Vec<u64>> = extents
+        .iter()
+        .map(|extent| match extent {
+            Extent::Exactly(bytes) if *bytes < width => Some(*bytes),
+            Extent::Exactly(_) | Extent::AtLeast(_) => None,
+        })
+        .collect();
+    match exact {
+        Some(bytes) => {
+            // **One size to name only where every object agrees**, as one
+            // allocation is named only where every site agrees: naming the
+            // largest of two said `an object of 2` about a pointer that may
+            // reach one of 1. Found by review.
+            let extent = bytes
+                .first()
+                .copied()
+                .filter(|first| bytes.iter().all(|other| other == first));
+            let mut made: Option<Option<Span>> = None;
+            for site in held.sites() {
+                let here = match known.state[site] {
+                    SiteState::Live(made) | SiteState::Freed { made, .. } => made,
+                    SiteState::Unknown | SiteState::Reachable | SiteState::Unheld => None,
+                };
+                made = Some(match made {
+                    Some(already) => same(already, here),
+                    None => here,
+                });
+            }
+            Some(Fit::Outside {
+                extent,
+                made: made.flatten(),
+            })
+        }
+        None => Some(Fit::Unknown),
+    }
+}
+
+/// Report every access at `at` that this check cannot show fits the object
+/// its pointer reaches, once per pointer per caret.
+///
+/// **Asked of the pointer the place goes through first, and of no deeper
+/// one.** A deeper level goes through a pointer read out of memory, which is
+/// believed to be one whole object of the type it was read as, and the
+/// access through it is exactly that type, so it fits by what is believed.
+/// What would make that belief worth anything is that the store that put the
+/// pointer there is asked, which is the departure half of ADR-0060 and is
+/// not written yet (#623): until it is, the belief is asked nowhere, and
+/// [`fits`] bounds it by what the memory is recorded to hold.
+///
+/// **Not through [`say`], and not keyed with it.** A use after free and an
+/// access outside its object are two questions about one place, and both can
+/// be true: keyed together, one would replace the other. See ADR-0060.
+pub(super) fn may_not_fit(
+    findings: &mut Vec<Finding>,
+    asked: &mut Vec<(Span, LocalId)>,
+    analysis: &Allocations<'_>,
+    function: &Function,
+    at: Option<(Span, Vec<&Place>)>,
+    known: &Known,
+) {
+    let Some((at, places)) = at else {
+        return;
+    };
+    for place in places {
+        let local = place.local;
+        if asked.contains(&(at, local)) {
+            continue;
+        }
+        // **An index is not read**, and is unknown rather than silent: no C
+        // reaches one, since the lowering writes `p[i]` as `*(p + i)`, and a
+        // frontend that builds one has to be answered for.
+        let fit = if place
+            .projection
+            .iter()
+            .any(|step| matches!(step, Projection::Index(_)))
+        {
+            Some((Fit::Unknown, 0))
+        } else {
+            let first = Place {
+                local,
+                projection: vec![Projection::Deref],
+            };
+            // A `void` place has no size, and is no access this asks about.
+            let Some(width) = analysis
+                .unit
+                .place_ty(function, &first)
+                .and_then(|ty| analysis.unit.size_of(ty))
+            else {
+                continue;
+            };
+            fits(analysis, function, local, width, known).map(|fit| (fit, width))
+        };
+        let Some((fit, width)) = fit else {
+            continue;
+        };
+        let (conclusion, extent, made, unproven) = match fit {
+            Fit::Inside => continue,
+            Fit::Outside { extent, made } => (Conclusion::Unsafe, extent, made, None),
+            Fit::Unknown => (Conclusion::Unknown, None, None, Some(Unproven::Extent)),
+        };
+        asked.push((at, local));
+        findings.push(Finding {
+            function: analysis.function,
+            kind: Kind::OutsideItsObject { width, extent },
+            conclusion,
+            at,
+            local: Some(local),
+            freed: None,
+            made,
+            unproven,
+        });
+    }
+}
+
+/// Report every library call at this terminator that reads or writes through
+/// a pointer it is handed further than this check can show fits.
+///
+/// **What the call is asked to touch is the access**, as [`LIBRARY`](super::parts::LIBRARY) says per
+/// argument: a [`Reach::Length`] is an access of as many bytes as that
+/// argument holds, read as the parameter receives it, and any length this
+/// check cannot read is unknown; a [`Reach::String`] runs as far as a string
+/// does, which nothing here reads, so it is unknown wherever the pointer
+/// holds anything. A null holds nothing and is the nullability check's.
+/// See ADR-0060.
+pub(super) fn reached_by_library(
+    findings: &mut Vec<Finding>,
+    touched: &mut Vec<(Span, LocalId)>,
+    analysis: &Allocations<'_>,
+    function: &Function,
+    terminator: &Terminator,
+    known: &Known,
+) {
+    let Terminator::Call {
+        callee,
+        arguments,
+        origin,
+        ..
+    } = terminator
+    else {
+        return;
+    };
+    let Some(row) = analysis.library(*callee) else {
+        return;
+    };
+    let at = origin.span();
+    for &(index, reach) in row.reaches {
+        let Some(Operand::Copy(place)) = arguments.get(index) else {
+            continue;
+        };
+        let local = place.local;
+        if touched.contains(&(at, local)) {
+            continue;
+        }
+        let width = match reach {
+            Reach::Length(length) => analysis.constant_argument(*callee, arguments, length),
+            Reach::String => None,
+        };
+        let fit = if place.projection.is_empty() {
+            match width {
+                Some(width) => fits(analysis, function, local, width, known),
+                // Anything that holds something is unknown here.
+                None => fits(analysis, function, local, 0, known).map(|_| Fit::Unknown),
+            }
+        } else {
+            // **A pointer read out of memory and handed straight over** is
+            // believed by the type it was read as, as one assigned to a local
+            // first is.
+            let believed = analysis.pointee_size(function, place).unwrap_or(0);
+            match width {
+                Some(width) if believed >= width => Some(Fit::Inside),
+                Some(_) | None => Some(Fit::Unknown),
+            }
+        };
+        let (conclusion, extent, made, unproven) = match fit {
+            None | Some(Fit::Inside) => continue,
+            Some(Fit::Outside { extent, made }) => (Conclusion::Unsafe, extent, made, None),
+            Some(Fit::Unknown) => (Conclusion::Unknown, None, None, Some(Unproven::Extent)),
+        };
+        touched.push((at, local));
+        findings.push(Finding {
+            function: analysis.function,
+            // No width where none was read: it is printed only beside a
+            // proof, and a proof needs one.
+            kind: Kind::OutsideItsObject {
+                width: width.unwrap_or(0),
+                extent,
+            },
+            conclusion,
+            at,
+            local: place.projection.is_empty().then_some(local),
+            freed: None,
+            made,
+            unproven,
+        });
     }
 }
 

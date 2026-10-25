@@ -8,6 +8,16 @@ warning[SC0401]: this frees `a`, which may have been freed already
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0412]: this may reach outside the object it points at
+    ╭─[ a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:14:10 ]
+    │
+ 14 │     int *q = (*ppo)[k];
+    │          ──────┬──────  
+    │                ╰──────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 warning[SC0402]: this uses `q`, which may have been freed
     ╭─[ a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:18:5 ]
     │

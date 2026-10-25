@@ -1,0 +1,35 @@
+Target "x86_64-pc-windows-msvc"
+Function a_void_pointer_parameter_is_believed_to_point_at_nothing.c:1:7 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
+Function a_void_pointer_parameter_is_believed_to_point_at_nothing.c:3:6 "clear"
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+  Local "_2" "int"
+  Local "_3" "void *"
+  Block "bb0" entry
+    Operation a_void_pointer_parameter_is_believed_to_point_at_nothing.c:4:9 written
+      Destination "_2"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_void_pointer_parameter_is_believed_to_point_at_nothing.c:4:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_void_pointer_parameter_is_believed_to_point_at_nothing.c:4:9 generated
+    ArgumentsEvaluated a_void_pointer_parameter_is_believed_to_point_at_nothing.c:5:9 generated
+    Call a_void_pointer_parameter_is_believed_to_point_at_nothing.c:5:9 written "memset" "bb4"
+      Destination "_3"
+      Copy "_1"
+      Constant 0
+      Constant 1
+  Block "bb2"
+    Sequenced a_void_pointer_parameter_is_believed_to_point_at_nothing.c:4:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+  Block "bb4"
+    Sequenced a_void_pointer_parameter_is_believed_to_point_at_nothing.c:5:9 generated
+    Goto "bb3"

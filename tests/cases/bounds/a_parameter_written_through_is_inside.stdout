@@ -1,0 +1,33 @@
+Target "x86_64-pc-windows-msvc"
+Function a_parameter_written_through_is_inside.c:1:6 "set"
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+  Local "_2" "int"
+  Local "_3" "int"
+  Block "bb0" entry
+    Operation a_parameter_written_through_is_inside.c:2:9 written
+      Destination "_2"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_parameter_written_through_is_inside.c:2:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_parameter_written_through_is_inside.c:2:9 generated
+    Operation a_parameter_written_through_is_inside.c:3:9 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Operation a_parameter_written_through_is_inside.c:3:9 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_parameter_written_through_is_inside.c:3:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_parameter_written_through_is_inside.c:2:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return

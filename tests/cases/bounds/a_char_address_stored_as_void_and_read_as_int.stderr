@@ -1,0 +1,10 @@
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_char_address_stored_as_void_and_read_as_int.c:14:5 ]
+    │
+ 14 │     *q = 1;
+    │     ───┬──  
+    │        ╰──── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

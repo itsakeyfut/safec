@@ -8,6 +8,16 @@ error[SC0402]: this uses `p`, which may have been freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0412]: this may reach outside the object `p` points at
+   ╭─[ an_escaped_local_read_twice_in_one_or_is_reported_twice.c:6:9 ]
+   │
+ 6 │     if (*p || (free(p), *p)) { return 1; }
+   │         ─┬  
+   │          ╰── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0401]: this frees `p`, which may have been freed already
    ╭─[ an_escaped_local_read_twice_in_one_or_is_reported_twice.c:6:16 ]
    │
@@ -28,6 +38,16 @@ error[SC0402]: this uses `p`, which may have been freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0412]: this may reach outside the object `p` points at
+   ╭─[ an_escaped_local_read_twice_in_one_or_is_reported_twice.c:6:25 ]
+   │
+ 6 │     if (*p || (free(p), *p)) { return 1; }
+   │                         ─┬  
+   │                          ╰── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0403]: this may dereference `p` while it is null
    ╭─[ an_escaped_local_read_twice_in_one_or_is_reported_twice.c:6:9 ]
    │

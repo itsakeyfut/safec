@@ -1,0 +1,10 @@
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type.c:8:5 ]
+   │
+ 8 │     memset(*pp, 0, 100);
+   │     ─────────┬─────────  
+   │              ╰─────────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
