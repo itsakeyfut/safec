@@ -1,0 +1,101 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:1:6 "h"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "pp"
+  Local "_2" "int"
+  Local "_3" "int *" "p"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:1:24 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:1:24 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:1:24 generated
+    Return
+  Block "bb2"
+    Sequenced a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:1:24 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:1:50 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:1:54 generated
+    Operation a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:1:63 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:1:63 written "bb4" "bb5"
+      Copy "_4"
+  Block "bb4"
+    Sequenced a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:1:63 generated
+    Return
+  Block "bb5"
+    Sequenced a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:1:63 generated
+    Goto "bb6"
+  Block "bb6"
+    Operation a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:1:83 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:1:83 written
+      Destination "_5"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:1:83 generated
+    Return
+Function a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:2:5 "main"
+  Local "_0" "int" return
+  Local "_1" "char" "c"
+  Local "_2" "void *" "v"
+  Local "_3" "char *"
+  Local "_4" "int *" "q"
+  Local "_5" "int **"
+  Block "bb0" entry
+    Operation a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:2:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:2:23 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:2:27 generated
+    Operation a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:2:40 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:2:36 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:2:40 generated
+    Operation a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:2:49 written
+      Destination "_4"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:2:53 generated
+    Operation a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:2:58 written
+      Destination "_5"
+      Address
+        Place "_4"
+    ArgumentsEvaluated a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:2:56 generated
+    Call a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:2:56 written "h" "bb1"
+      Copy "_5"
+  Block "bb1"
+    Sequenced a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:2:56 generated
+    Operation a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:2:63 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:2:70 generated
+    Return

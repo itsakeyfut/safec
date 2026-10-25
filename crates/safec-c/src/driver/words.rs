@@ -9,7 +9,7 @@ use crate::diagnostics::{Code, Diagnostic, Label, Remedy};
 use crate::safety::SafetyLevel;
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::{Between, Promise};
-use safec_ir::memory::{self, Kind, LostReason, Unproven};
+use safec_ir::memory::{self, Departure, Kind, LostReason, Unproven};
 use safec_ir::nullability::{self, Asked};
 use safec_ir::source::{SourceMap, Span};
 
@@ -103,6 +103,13 @@ const UNASSIGNED: Code = Code::new("SC0411");
 /// allocation too small and a pointer off its start share it, being one
 /// question. See ADR-0060.
 const OUTSIDE_ITS_OBJECT: Code = Code::new("SC0412");
+
+/// A pointer handed on that may not point at a whole object.
+///
+/// Not `SC0412`, because nothing has been read or written through it yet:
+/// it is where another function or a later load will believe it whole, and
+/// the fix is in what is handed on rather than in an access. See ADR-0060.
+const HANDED_ON_NARROW: Code = Code::new("SC0413");
 
 /// What to change where this check stopped following a pointer and cannot
 /// say why: `LostReason::Other`.
@@ -796,6 +803,49 @@ pub(super) fn memory_finding(
             "this check shows an access fits only through a pointer to the start of a local or \
              of an allocation of constant size, with a constant length where a call takes one",
         ),
+        // **Where it left is the label**, since the three doors are one
+        // question and the reader needs only to know which one this is.
+        // **Only ever `Unknown`**, for the reason `Kind::HandedOnNarrow`
+        // gives, and `Unsafe` takes the same words so the match stays
+        // exhaustive; what was shown narrower is said in the message. The
+        // reason is not read, since only `Extent` arrives.
+        (
+            Kind::HandedOnNarrow {
+                how,
+                width,
+                narrower,
+                extent,
+            },
+            Conclusion::Unknown | Conclusion::Unsafe,
+            _,
+        ) => (
+            HANDED_ON_NARROW,
+            match (narrower, extent) {
+                (true, Some(extent)) => format!(
+                    "this lets a pointer to {extent} {} leave where {width} {} are believed",
+                    bytes(extent),
+                    bytes(width)
+                ),
+                (true, None) => format!(
+                    "this lets a pointer leave to objects each narrower than the {width} {} \
+                     believed",
+                    bytes(width)
+                ),
+                (false, _) => said(
+                    name,
+                    "this lets a pointer leave that may not point at an object as wide as its type",
+                    |name| {
+                        format!(
+                            "this lets `{name}` leave, which may not point at an object as wide \
+                             as its type"
+                        )
+                    },
+                ),
+            },
+            departure(how),
+            "let a pointer leave only at the start of a local or of an allocation of constant \
+             size, as wide as the type it leaves as",
+        ),
         // Neither check answers this and `Diagnostic::concluded` gives `None`
         // for it, so none of the four is read. Written out rather than `_` so
         // that a fourth conclusion has to be answered for here.
@@ -1185,4 +1235,13 @@ fn returned(
 /// `byte` or `bytes`, so that one access of one byte does not read as several.
 fn bytes(count: u64) -> &'static str {
     if count == 1 { "byte" } else { "bytes" }
+}
+
+/// Where a pointer left, as the label at the caret says it.
+fn departure(how: Departure) -> &'static str {
+    match how {
+        Departure::Argument => "passed here",
+        Departure::Return => "returned here",
+        Departure::Store => "stored here",
+    }
 }

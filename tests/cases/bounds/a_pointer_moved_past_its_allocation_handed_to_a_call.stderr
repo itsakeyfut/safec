@@ -1,0 +1,10 @@
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_pointer_moved_past_its_allocation_handed_to_a_call.c:14:5 ]
+    │
+ 14 │     g(p + 5);
+    │     ────┬───  
+    │         ╰───── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

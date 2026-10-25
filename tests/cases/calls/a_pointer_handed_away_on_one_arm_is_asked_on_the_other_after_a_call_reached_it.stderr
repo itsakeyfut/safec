@@ -1,3 +1,23 @@
+error[SC0413]: this lets `b` leave, which may not point at an object as wide as its type
+    ╭─[ a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:16:5 ]
+    │
+ 16 │     release_ref(&b);
+    │     ───────┬───────  
+    │            ╰───────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets `a` leave, which may not point at an object as wide as its type
+    ╭─[ a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:17:12 ]
+    │
+ 17 │     return use2(pa);
+    │            ────┬───  
+    │                ╰───── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0407]: this passes a pointer to where a pointer that may have been freed is stored
     ╭─[ a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:17:12 ]
     │

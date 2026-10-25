@@ -1,0 +1,10 @@
+error[SC0413]: this lets a pointer to 1 byte leave where 4 bytes are believed
+   ╭─[ a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type.c:2:56 ]
+   │
+ 2 │ int main(void) { char c = 0; void *v = &c; int *q = v; h(&q); return c; }
+   │                                                        ──┬──  
+   │                                                          ╰──── passed here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

@@ -18,6 +18,16 @@ error[SC0412]: this may reach outside the object `s` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0413]: this lets `slot` leave, which may not point at an object as wide as its type
+    ╭─[ a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:30:5 ]
+    │
+ 30 │     release(slot);
+    │     ──────┬──────  
+    │           ╰──────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0407]: this passes `slot`, which may point to a freed allocation
     ╭─[ a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:30:5 ]
     │

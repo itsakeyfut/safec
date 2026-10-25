@@ -1,3 +1,13 @@
+error[SC0413]: this lets `e` leave, which may not point at an object as wide as its type
+    ╭─[ a_pointer_built_from_one_read_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:19:12 ]
+    │
+ 19 │     return use2(&e);
+    │            ────┬───  
+    │                ╰───── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0407]: this passes a pointer to where a pointer that may have been freed is stored
     ╭─[ a_pointer_built_from_one_read_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:19:12 ]
     │

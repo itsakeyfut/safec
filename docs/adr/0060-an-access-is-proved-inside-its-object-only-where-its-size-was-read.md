@@ -46,8 +46,8 @@ becoming an executable.
 ## Decision Outcome
 
 Chosen option: **believe a pointer whole where it arrives, and ask where it
-leaves**, under `SC0412` for an access and, in #623, `SC0413` for a pointer
-handed on.
+leaves**, under `SC0412` for an access and `SC0413` for a pointer that
+leaves.
 
 **What an object takes is read where it is made.** `Known::extent` holds, per
 site, `Extent::Exactly(n)` for an allocation asked for with constants
@@ -68,12 +68,32 @@ what it may return that this check saw, so a `char`'s address written through
 a `void **` alias and read through an `int **` one, or copied in by `memcpy`,
 is `Unknown` rather than four bytes.
 
-**A pointer that leaves is asked** whether it points at one whole object of the
-type it leaves as: an argument, a returned pointer, and a pointer stored
-through a projection. That half is #623, and until it lands what is believed is
-asked nowhere, which is where `main` already was. A `void *` that leaves asks
-no width, so a pointer off its start stored as one and read back as another
-type is believed whole even after #623; that is #624.
+**A pointer that leaves is asked** whether it points at the start of an object
+as wide as the type it leaves as: an argument, a returned pointer, and a
+pointer stored through a projection. `report::departed_at_call` asks an
+argument as the callee's parameter is typed, walking the parameters as well as
+the arguments so that `void g();` cannot make a call ask nothing, and an
+argument past every parameter as its own type; `report::departed_in_element`
+asks a `return` and a store. **A pointer to memory lets the pointers stored
+there leave with it**: each local it may point at is asked at its own type, as
+it stands where the address leaves, so `int *q = v; h(&q);` asks `q`, and the
+source of `memcpy` and `memmove` is asked as a store into the destination. A
+call this check reads by name is asked how far it reaches instead, unless the
+callee is defined in this unit, and `free`, an allocator, `realloc` and a call
+that does not return are asked nothing. A `void *` that leaves asks no width,
+so a pointer off its start stored as one and read back as another type is
+believed whole; that is #624.
+
+**A departure is always `Unknown`**, even where every object is shown
+narrower: C leaves `g(v)` with `v` a `char`'s address passed as an `int *`
+defined, and only the receiver's read through it is not, while `Unsafe` says
+some execution of this function is undefined. The words say narrower where it
+was shown. **And a departure does not doubt an escape, a callee's write or a
+lost name**, which an access does: each stands for a write asked where it
+happened, a store here or in the callee, or a site made again by the same call
+at the same size. What a call this check cannot read may write into an escaped
+local is believed as its result is, where the local was whole before the
+call.
 
 **The question**, `report::fits`, is asked at every access `used` asks about,
 of the pointer the place goes through first; a deeper level goes through a load
@@ -146,6 +166,23 @@ Each mutation applied on its own, the workspace run, and the file restored.
 * a new `Kind` with no words: `error[E0004]` at `memory_finding` in
   `crates/safec-c/src/driver/words.rs`.
 * a row of `LIBRARY` without one of its three fields: `error[E0063]`.
+* `departed_at_call`, or the `Return` or `Store` door of
+  `departed_in_element`, removed: `a_pointer_moved_past_its_allocation_handed_to_a_call`,
+  `a_pointer_moved_off_its_start_returned` or
+  `a_pointer_moved_off_its_start_stored_into_memory` goes silent. The width
+  taken from the argument rather than the parameter:
+  `a_char_handed_to_an_int_parameter_is_shown_narrower` goes silent.
+* the pointers a departure lets leave with it, not asked at a call or at
+  `memcpy`: `a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type`,
+  `a_pointer_assigned_after_its_local_s_address_was_taken_is_asked_where_the_address_leaves`
+  or `a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store` goes silent.
+  A callee defined here asked by its library name:
+  `a_function_defined_with_a_library_name_is_asked_as_any_function` goes
+  silent.
+* a callee's write into an escaped local believed whatever the local held:
+  `a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call`
+  loses its `SC0413`; never believed: `a_pointer_handed_by_address_twice_builds`
+  and the other cases that grow a pointer by address are reported.
 * review's findings, each with a case in `tests/cases/bounds/` and the
   mutation beside it in `tests/cases.rs`, each applied and seen to fail its
   case: the library reach keyed with the dereferences
@@ -187,10 +224,11 @@ folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
   11's rule allows until a distance is carried.
 * Bad, because `strcpy` and its family are always `Unknown` at their
   destination, and a list walked through `void *` is `Unknown` at every step.
-* Bad, because what is believed is not yet asked anywhere, until #623, and a
-  `void *` store is not asked about a size even then, which is #624. **#621,
-  which lets the backend write pointer arithmetic, depends on #623** for
-  that reason: `g(p + 5)` is kept from an executable today only by `SC0801`.
+* Bad, because a `void *` store is not asked about a size, which is #624.
+* Bad, because every pointer handed on off its start is `Unknown`, so a
+  pointer one past the end handed to a call that only compares with it is
+  refused, and corpus cases that already reported a doubt about such a
+  pointer gained an `SC0413` beside it.
 * What would reverse this: a lattice that carries a distance and a length per
   allocation, which would make `Extent` and `Offset` one fact; or annotations
   that say how many objects a parameter points at.
@@ -206,8 +244,8 @@ folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
 * Bad, because code `safec` never reads can hand in a pointer that is not
   whole, and `safec` then says safe about the body and is believed. That reach
   is bounded the way a written `_Nonnull` is.
-* Bad, because a pointer one past the end that is handed on will be a false
-  `Unknown` once #623 asks.
+* Bad, because a pointer one past the end that is handed on is a false
+  `Unknown`.
 
 ### Doubt every load
 

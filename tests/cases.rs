@@ -3101,6 +3101,66 @@ cases! {
         // not shown to. Mutation: answer every such argument inside in
         // `reached_by_library`; the second goes silent.
         a_pointer_read_out_of_memory_and_handed_to_memset_is_believed_by_its_type: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer that leaves is asked whether it is whole, `SC0413`, at
+        // each of the three doors where the other side believes it is.
+        // Mutation: drop `departed_at_call`, or `departed_in_element`'s
+        // `Return` or `Store` door; the first, second or third goes silent.
+        a_pointer_moved_past_its_allocation_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_moved_off_its_start_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_moved_off_its_start_stored_into_memory: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same three doors, each handed a whole allocation. Mutation:
+        // answer every departure unknown in `say_leaving`; this is reported
+        // three times.
+        a_whole_pointer_handed_on_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `char` handed to an `int *` parameter through a `void *` is
+        // proved narrower than the parameter believes. Mutation: take the
+        // width from the argument's own type in `departed_at_call`; this goes
+        // silent, since `void *` asks nothing.
+        a_char_handed_to_an_int_parameter_is_shown_narrower: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Past every parameter, what the callee receives is the argument's
+        // own type. Mutation: skip an argument with no parameter; this goes
+        // silent.
+        a_pointer_passed_past_every_parameter_is_asked_as_its_own_type: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `void *` leaves believing nothing, so nothing is asked of it.
+        // Mutation: give a `void *` a width of one in `pointee_width`; this
+        // is reported.
+        a_void_pointer_handed_on_asks_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read out of memory and handed straight on is believed by
+        // the type it is read as, here a `void *`, which is narrower than the
+        // `int` the parameter believes. Mutation: answer such an argument
+        // inside in `leaving`; this goes silent.
+        a_pointer_read_as_void_and_handed_to_an_int_parameter_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Handing on a pointer to memory hands on the pointers stored there,
+        // asked at the type they were stored as. Mutation: drop
+        // `contents_leaving` from `departed_at_call`; the first two go
+        // silent. Mutation: drop it from the `memcpy` arm; the third does.
+        a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_after_its_local_s_address_was_taken_is_asked_where_the_address_leaves: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A body is what runs, whatever it is called. Mutation: ask a call by
+        // its library row even where the callee is defined here; this goes
+        // silent.
+        a_function_defined_with_a_library_name_is_asked_as_any_function: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A callee's write into an escaped local is believed only where the
+        // local was whole before it. Mutation: believe it whatever the local
+        // held, in the opaque call's write in `transfer.rs`; the `SC0413` at
+        // `use(a)` goes. Mutation: never believe it; the corpus cases that
+        // grow a pointer by address twice, `a_pointer_handed_by_address_twice_builds`
+        // among them, are reported.
+        a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A departure shown narrower says so, at a return and at a store too,
+        // with where the allocation was made, and names no size where the
+        // sizes differ; it stays unknown. Mutation: drop `narrower` in
+        // `say_leaving`, or `made`; the first changes its words or loses its
+        // label. Mutation: name a size where they differ; the second changes.
+        a_char_returned_and_stored_as_an_int_pointer_is_shown_narrower: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_to_two_narrower_allocations_leaves_naming_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `free` reads nothing it is handed as an object, and a library
+        // function is asked how far it reaches instead. Mutation: ask `free`'s
+        // argument in `departed_at_call`, or drop the skip of an argument the
+        // library row reaches; each gains an `SC0413`.
+        a_free_is_not_asked_as_a_departure: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_library_reach_is_not_asked_again_as_a_departure: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 

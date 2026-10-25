@@ -1,3 +1,13 @@
+warning[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_pointer_lost_to_a_free_read_through_its_address_moved_and_stored_is_doubted_when_read_back.c:19:13 ]
+    │
+ 19 │             *t4 = *po + (k - 1);
+    │             ─────────┬─────────  
+    │                      ╰─────────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 warning[SC0402]: this uses `q`, which this check stopped following
     ╭─[ a_pointer_lost_to_a_free_read_through_its_address_moved_and_stored_is_doubted_when_read_back.c:24:13 ]
     │

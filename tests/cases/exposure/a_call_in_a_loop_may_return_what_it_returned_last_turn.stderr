@@ -18,6 +18,16 @@ error[SC0412]: this may reach outside the object `t` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0413]: this lets `slot` leave, which may not point at an object as wide as its type
+    ╭─[ a_call_in_a_loop_may_return_what_it_returned_last_turn.c:19:9 ]
+    │
+ 19 │         **ppp = t;
+    │         ────┬────  
+    │             ╰────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0401]: this frees `t`, which may have been freed already
     ╭─[ a_call_in_a_loop_may_return_what_it_returned_last_turn.c:20:9 ]
     │

@@ -19,6 +19,7 @@ use super::parts::{
     Callee, Extent, Freeing, Held, LIBRARY, Library, Makes, Offset, PendingRead, Reached, Read,
     Realloced, SiteState,
 };
+use super::report::{Fit, fits};
 use super::{
     LostReason, dereferenced_in_element, dereferenced_in_terminator, derefs, handed_places,
 };
@@ -2441,8 +2442,24 @@ impl Analysis for Allocations<'_> {
                     if !value.escaped[local] {
                         continue;
                     }
+                    // **What the callee may write here is believed whole, as
+                    // its result is**, since it is a store in the callee's
+                    // body, asked there; and only where what the local held
+                    // before is whole too, since a callee that writes
+                    // nothing leaves that. Believing it whatever it held let
+                    // `keep(&a); a = a + 5; other();` pass `a` on as whole.
+                    // A belief nothing here can show stays off. See ADR-0060.
+                    let believed = function.locals().nth(local).and_then(|id| {
+                        let width = self.pointee_size(function, &Place::local(id))?;
+                        let whole = matches!(
+                            fits(self, function, id, width, value, true),
+                            None | Some(Fit::Inside)
+                        );
+                        whole.then_some(width)
+                    });
                     let holds_an_address = value.points_to[local].writes_to.any();
                     let held = &mut value.points_to[local];
+                    held.believed = believed;
                     for &site in &stored {
                         if !(holds_an_address && deep[site]) {
                             held.hold(site, Offset::Unknown);
@@ -2572,9 +2589,8 @@ impl Analysis for Allocations<'_> {
         // **What a call this check cannot read returns is believed whole**,
         // as a parameter is, and bounded by what it may return that this
         // check recorded: an allocation this function handed it is folded in
-        // at its size. The `return` in its body is where the belief is to be
-        // asked, which #623 writes; until it does, nothing asks it. See
-        // ADR-0060.
+        // at its size. The `return` in its body is where the belief is asked,
+        // where that body is one this check reads. See ADR-0060.
         if matches!(kind, Callee::Opaque) {
             value.points_to[site].believed = self.pointee_size(function, place);
         }

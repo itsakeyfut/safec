@@ -71,8 +71,9 @@ use crate::source::{SourceMap, Span};
 
 use built::named;
 use report::{
-    after_a_call, derefs, freed_after_its_read_was_reported, handed, handed_places, inside,
-    loaded_indeterminate, may_not_fit, reached_by_library, reported, returned, used, used_before,
+    after_a_call, departed_at_call, departed_in_element, derefs, freed_after_its_read_was_reported,
+    handed, handed_places, inside, loaded_indeterminate, may_not_fit, reached_by_library, reported,
+    returned, used, used_before,
 };
 use transfer::Allocations;
 
@@ -189,6 +190,49 @@ pub enum Kind {
         /// every object it may reach agrees.
         extent: Option<u64>,
     },
+    /// `g(p + 5)`, `return p + 5;`, `*box = p + 5;`
+    ///
+    /// A pointer that leaves this function, which whoever receives it
+    /// believes to point at the start of an object as wide as the type it
+    /// leaves as, and which this check could not show does. The other half
+    /// of what [`Kind::OutsideItsObject`] believes where a pointer arrives.
+    ///
+    /// **Always `Unknown`, even where the object is shown narrower.** C
+    /// leaves nothing undefined where a pointer to one `char` is passed as an
+    /// `int *`; it is undefined where the receiver reads or writes through
+    /// it, and `Unsafe` says some execution of this function is undefined.
+    /// What is shown here is that the receiver's belief is false, so the
+    /// words say narrower and the conclusion stays unproven. See ADR-0060.
+    HandedOnNarrow {
+        /// Where it leaves.
+        how: Departure,
+        /// How many bytes it is believed to point at where it arrives.
+        width: u64,
+        /// Whether every object it may reach was read as exactly narrower
+        /// than `width`, which the words say.
+        narrower: bool,
+        /// How many bytes the object takes, where it is shown narrower and
+        /// every object it may reach agrees.
+        extent: Option<u64>,
+    },
+}
+
+/// Where a pointer leaves the function it was followed in.
+///
+/// Three doors, each one where the other side believes what it is handed:
+/// a callee believes its parameter, a caller the result, and a later load
+/// what was stored. See ADR-0060.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Departure {
+    /// Handed to a call as an argument.
+    Argument,
+    /// Handed back by a `return`.
+    Return,
+    /// Written through a projection, into memory through a pointer and,
+    /// once arrays compile, into an element of a local array; or copied into
+    /// memory by `memcpy` or `memmove`. A later read believes what it finds
+    /// there, as it believes a load.
+    Store,
 }
 
 /// About how many bytes one block's value takes for each local, beside the
@@ -545,6 +589,9 @@ fn findings_within(
         // should have, and `--allow-unknown` built the overflow. Found by
         // review. See ADR-0060.
         let mut touched: Vec<(Span, LocalId)> = Vec::new();
+        // And the pointers that left, per caret and door, apart again: a
+        // pointer read through and handed on at one call is two questions.
+        let mut departed: Vec<(Span, Departure, Option<LocalId>)> = Vec::new();
 
         for &id in cfg.order() {
             // `Cfg::order` holds exactly the reachable blocks and `solve` gives
@@ -596,6 +643,16 @@ fn findings_within(
                 returned(
                     &mut findings,
                     &mut said,
+                    &analysis,
+                    function,
+                    element,
+                    &known,
+                );
+                // And whether what it returns or stores is whole, which the
+                // other side believes. See ADR-0060.
+                departed_in_element(
+                    &mut findings,
+                    &mut departed,
                     &analysis,
                     function,
                     element,
@@ -671,6 +728,14 @@ fn findings_within(
             reached_by_library(
                 &mut findings,
                 &mut touched,
+                &analysis,
+                function,
+                &block.terminator,
+                &known,
+            );
+            departed_at_call(
+                &mut findings,
+                &mut departed,
                 &analysis,
                 function,
                 &block.terminator,

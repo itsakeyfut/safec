@@ -1,3 +1,13 @@
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:23:5 ]
+    │
+ 23 │     release(**t3 + 1);
+    │     ────────┬────────  
+    │             ╰────────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0407]: this passes a pointer that may point to a freed allocation
     ╭─[ a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven.c:23:5 ]
     │

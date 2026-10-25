@@ -1,3 +1,13 @@
+error[SC0413]: this lets `q` leave, which may not point at an object as wide as its type
+   ╭─[ an_argument_incremented_while_another_reads_it_is_reported.c:6:5 ]
+   │
+ 6 │     g(q, q++);
+   │     ────┬────  
+   │         ╰────── passed here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0409]: this reads `q`, which another argument of the same call writes
    ╭─[ an_argument_incremented_while_another_reads_it_is_reported.c:6:7 ]
    │
