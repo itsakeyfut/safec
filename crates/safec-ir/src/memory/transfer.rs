@@ -2797,6 +2797,16 @@ impl Analysis for Allocations<'_> {
                 // the walk finds. They stay wide because a route it misses
                 // would cost a free nobody is told about, not because a case
                 // says so.
+                //
+                // **What an argument may be the address of**: the locals its
+                // address edges name, which `written_through` answers for a
+                // plain local, or, for a place of dereferences, the locals the
+                // level above may be. **An argument naming none hands none**:
+                // a pointer moved off an array by arithmetic has lost its edge
+                // (#639), and one this check lost reads as nothing below it,
+                // so `fill(&m[1] - 1)` leaves `m[0]` reported as nothing wrote
+                // it. That is a report the reader sees, and widening it would
+                // silence every local beside such a call. See ADR-0057.
                 let mut handed_locals: Vec<usize> = Vec::new();
                 for argument in handed {
                     if let Operand::Copy(place) = argument {

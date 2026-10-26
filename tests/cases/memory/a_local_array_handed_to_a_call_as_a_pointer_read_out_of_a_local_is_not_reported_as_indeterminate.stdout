@@ -1,0 +1,68 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:1:6 "fill" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "m"
+Function a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:3:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *[1]" "m"
+  Local "_2" "int **" "p"
+  Local "_3" "int **"
+  Local "_4" "int ***" "pp"
+  Local "_5" "int ***"
+  Local "_6" "int *" "q"
+  Local "_7" "int **"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:3:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:5:15 generated
+      Destination "_3"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:5:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:5:15 generated
+    Operation a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:6:17 written
+      Destination "_5"
+      Address
+        Place "_2"
+    Operation a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:6:12 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:6:17 generated
+    ArgumentsEvaluated a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:7:5 generated
+    Call a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:7:5 written "fill" "bb1"
+      Copy "_4"
+        Deref
+  Block "bb1"
+    Sequenced a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:7:5 generated
+    Operation a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:8:14 generated
+      Destination "_7"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:8:10 written
+      Destination "_6"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:8:14 generated
+    Operation a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:9:12 written
+      Destination "_8"
+      Binary "Eq"
+        Copy "_6"
+        Constant 0
+    Operation a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:9:5 written
+      Destination "_0"
+      Use
+        Copy "_8"
+    Sequenced a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate.c:9:12 generated
+    Return

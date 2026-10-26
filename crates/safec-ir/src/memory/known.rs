@@ -233,8 +233,10 @@ pub(super) struct Known {
     /// cleared only by [`Self::written_local`] and [`Self::replaced`], which a write
     /// that may land there calls: an assignment, a placed store, a call's
     /// result, a store this check cannot place, which `replaced` answers for
-    /// every escaped local it may reach, and a call, which writes only the
-    /// locals in [`Self::exposed_locals`] (#643). An intersection at a join.
+    /// every escaped local it may reach, a call, which writes only the
+    /// locals in [`Self::exposed_locals`], and a library copy, which writes
+    /// only where its first argument may point, as the `Callee::Copies` arm
+    /// of the transfer says (#643). An intersection at a join.
     ///
     /// **Wrong in both directions, and the two are not alike.** A write this
     /// check does not see leaves the mark set, and a program that did write
@@ -950,7 +952,9 @@ impl Known {
     /// [`Self::level_below`], the walk every load takes, until neither set
     /// grows: through what an allocation contains, and through what a local
     /// holds, since a callee handed `&p` can read `p` and write through it.
-    /// Two finite sets that only grow, so it ends. See ADR-0057.
+    /// Two finite sets that only grow, so it ends. Not [`Self::beneath`],
+    /// which follows locals alone: an address stored in an allocation is
+    /// found only by walking the sites beside them. See ADR-0057.
     ///
     /// **After [`Self::expose`], at the same call**, which is what puts the
     /// allocations the call was handed into `reachable_now`: asked before it,
