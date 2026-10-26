@@ -1,0 +1,93 @@
+Target "x86_64-pc-windows-msvc"
+Function an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:1:6 "run"
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "m"
+  Local "_2" "void *" "pm"
+  Local "_3" "int ***" "pi"
+  Local "_4" "int"
+  Local "_5" "int **" "a"
+  Local "_6" "int"
+  Local "_7" "int *" "b"
+  Local "_8" "int"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:2:11 written
+      Destination "_2"
+      Use
+        Copy "_1"
+    Sequenced an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:2:16 generated
+    Operation an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:3:12 written
+      Destination "_3"
+      Use
+        Copy "_2"
+    Sequenced an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:3:17 generated
+    Operation an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:4:9 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_3"
+        Constant 0
+    Branch an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:4:9 written "bb1" "bb2"
+      Copy "_4"
+  Block "bb1"
+    Sequenced an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:4:9 generated
+    StorageLive an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:5:9 generated "_5"
+    Operation an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:5:15 written
+      Destination "_5"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:5:19 generated
+    Operation an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:6:13 written
+      Destination "_6"
+      Binary "Ne"
+        Copy "_5"
+        Constant 0
+    Branch an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:6:13 written "bb4" "bb5"
+      Copy "_6"
+  Block "bb2"
+    Sequenced an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:4:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+  Block "bb4"
+    Sequenced an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:6:13 generated
+    StorageLive an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:7:13 generated "_7"
+    Operation an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:7:18 written
+      Destination "_7"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:7:22 generated
+    Operation an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:8:17 written
+      Destination "_8"
+      Binary "Ne"
+        Copy "_7"
+        Constant 0
+    Branch an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:8:17 written "bb7" "bb8"
+      Copy "_8"
+  Block "bb5"
+    Sequenced an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:6:13 generated
+    Goto "bb6"
+  Block "bb6"
+    StorageDead an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:12:5 generated "_5"
+    Goto "bb3"
+  Block "bb7"
+    Sequenced an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:8:17 generated
+    Operation an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:9:17 written
+      Destination "_7"
+        Deref
+      Use
+        Constant 1
+    Operation an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:9:17 written
+      Destination "_9"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:9:17 generated
+    Goto "bb9"
+  Block "bb8"
+    Sequenced an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:8:17 generated
+    Goto "bb9"
+  Block "bb9"
+    StorageDead an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:11:9 generated "_7"
+    Goto "bb6"

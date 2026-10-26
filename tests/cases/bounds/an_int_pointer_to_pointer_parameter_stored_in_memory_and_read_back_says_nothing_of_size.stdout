@@ -1,0 +1,114 @@
+Target "x86_64-pc-windows-msvc"
+Function an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:3:6 "run"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "m"
+  Local "_2" "int ***" "box"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int **"
+  Local "_6" "int **" "a"
+  Local "_7" "int"
+  Local "_8" "int *" "b"
+  Local "_9" "int"
+  Local "_10" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:4:18 generated
+    Call an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:4:18 written "malloc" "bb1"
+      Destination "_3"
+      Constant 8
+  Block "bb1"
+    Operation an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:4:12 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:4:18 generated
+    Operation an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:5:9 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:5:9 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:5:9 generated
+    Return
+  Block "bb3"
+    Sequenced an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:8:5 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_1"
+    Operation an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:8:5 written
+      Destination "_5"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:8:5 generated
+    Operation an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:9:11 written
+      Destination "_6"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:9:15 generated
+    Operation an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:10:9 written
+      Destination "_7"
+      Binary "Ne"
+        Copy "_6"
+        Constant 0
+    Branch an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:10:9 written "bb5" "bb6"
+      Copy "_7"
+  Block "bb5"
+    Sequenced an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:10:9 generated
+    StorageLive an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:11:9 generated "_8"
+    Operation an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:11:14 written
+      Destination "_8"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:11:18 generated
+    Operation an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:12:13 written
+      Destination "_9"
+      Binary "Ne"
+        Copy "_8"
+        Constant 0
+    Branch an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:12:13 written "bb8" "bb9"
+      Copy "_9"
+  Block "bb6"
+    Sequenced an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:10:9 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:16:5 generated
+    Call an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:16:5 written "free" "bb11"
+      Copy "_2"
+  Block "bb8"
+    Sequenced an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:12:13 generated
+    Operation an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:13:13 written
+      Destination "_8"
+        Deref
+      Use
+        Constant 1
+    Operation an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:13:13 written
+      Destination "_10"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:13:13 generated
+    Goto "bb10"
+  Block "bb9"
+    Sequenced an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:12:13 generated
+    Goto "bb10"
+  Block "bb10"
+    StorageDead an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:15:5 generated "_8"
+    Goto "bb7"
+  Block "bb11"
+    Sequenced an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size.c:16:5 generated
+    Return

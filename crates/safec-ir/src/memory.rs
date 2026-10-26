@@ -483,6 +483,11 @@ fn analysis<'a>(
         unit,
         function: func,
         locals: function.locals().len(),
+        depth: function
+            .locals()
+            .map(|local| transfer::pointer_depth(unit, function.local(local)))
+            .max()
+            .unwrap_or(0),
         parameters: function.parameters().collect(),
         exposed_parameters: function
             .parameters()

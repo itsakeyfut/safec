@@ -16,8 +16,8 @@ use super::bits::Bits;
 use super::built::{built_from, named, replaced_by};
 use super::known::Known;
 use super::parts::{
-    Callee, Extent, Freeing, Held, LIBRARY, Library, Makes, Offset, PendingRead, Reached, Read,
-    Realloced, SiteState, bounded,
+    Callee, Extent, Freeing, Held, LIBRARY, Levels, Library, Makes, Offset, PendingRead, Reached,
+    Read, Realloced, SiteState, bounded,
 };
 use super::report::{Fit, fits, slots_leaving};
 use super::{
@@ -32,6 +32,17 @@ pub(super) struct Allocations<'a> {
     pub(super) function: FuncId,
     /// How many locals the function has, which is how many sites there can be.
     pub(super) locals: usize,
+    /// How deep the deepest pointer type among the function's locals is,
+    /// counted in `*`s, which is as long as a [`Levels`] here gets.
+    ///
+    /// Mutation: two shorter, and
+    /// `a_void_pointer_three_levels_deep_converted_whole_is_believed_below_its_first_level`
+    /// goes silent, since the `0` a `void ***` believes two levels down is
+    /// the entry dropped. One shorter changes no case, as [`Levels`]'s doc
+    /// says it cannot: a read asks index `d - 1` through a local at least
+    /// `d + 1` deep. The deepest local's own depth is kept rather than that
+    /// margin taken, so the length needs no argument to be long enough.
+    pub(super) depth: usize,
     /// The locals a caller filled, which are sites because an allocation can
     /// arrive through one.
     pub(super) parameters: Vec<LocalId>,
@@ -274,52 +285,85 @@ impl Allocations<'_> {
         }
     }
 
-    /// How many bytes each pointer stored in what a value of type `ty`
-    /// points at is believed to point at, at most: what a pointer of the
-    /// type it points to believes, and `0` where that is no pointer, since
-    /// nothing stored there was vouched for as one. `None` for a `ty` that
-    /// is no pointer. See [`Held::contents_at_most`] and ADR-0060.
-    pub(super) fn contents_bound(&self, ty: TyId) -> Option<u64> {
-        match self.unit.ty(ty) {
-            Ty::Pointer(pointee) => Some(match self.unit.ty(pointee) {
-                Ty::Pointer(inner) => self.unit.size_of(inner).unwrap_or(0),
-                Ty::Int | Ty::Char | Ty::Void => 0,
-            }),
-            Ty::Int | Ty::Char | Ty::Void => None,
+    /// How many bytes the pointers each level below what a value of type
+    /// `ty` points at are believed to point at, at most: at each level, what
+    /// a pointer of the type stored there believes, and `0` from the first
+    /// level that is no pointer down, since nothing stored there was vouched
+    /// for as one. `void ***` believes `8` and then `0`, `int ***` `8` and
+    /// then `4`. `None` for a `ty` that is no pointer. See
+    /// [`Held::contents_at_most`] and ADR-0060.
+    pub(super) fn type_levels(&self, ty: TyId) -> Option<Levels> {
+        let Ty::Pointer(mut stored) = self.unit.ty(ty) else {
+            return None;
+        };
+        let mut levels = Vec::with_capacity(self.depth);
+        let mut vouched = true;
+        for _ in 0..self.depth {
+            let width = match self.unit.ty(stored) {
+                Ty::Pointer(inner) if vouched => {
+                    stored = inner;
+                    self.unit.size_of(inner).unwrap_or(0)
+                }
+                Ty::Pointer(_) | Ty::Int | Ty::Char | Ty::Void => {
+                    vouched = false;
+                    0
+                }
+            };
+            levels.push(Some(width));
         }
+        Some(Levels::from_bounds(levels))
+    }
+
+    /// What a pointer read as `place` believes the memory it points at
+    /// holds, by level: the type it is read as, no more than what the
+    /// memory it is read out of was believed one level further down
+    /// ([`Known::memory_levels`]). A local's own value believes what it
+    /// carries. See [`Held::contents_at_most`] and ADR-0060.
+    ///
+    /// **One answer for a load assigned and a load handed straight on**,
+    /// so that `use(*pi)` and `a = *pi; use(a);` cannot be told apart.
+    pub(super) fn contents_read(
+        &self,
+        function: &Function,
+        place: &Place,
+        value: &Known,
+    ) -> Levels {
+        if place.projection.is_empty() {
+            return value.points_to[place.local.index()]
+                .contents_at_most
+                .clone();
+        }
+        let mut levels = self
+            .unit
+            .place_ty(function, place)
+            .and_then(|ty| self.type_levels(ty))
+            .unwrap_or_default();
+        let depth = derefs(place);
+        if depth > 0 {
+            levels.bound_by(&value.memory_levels(place.local, depth).below(1));
+        }
+        levels
     }
 
     /// How many bytes a pointer read through `place` is believed to point
     /// at: the type it is read as, no more than the pointer gone through
-    /// says its memory holds, nor than the sites it may be read out of say
-    /// was stored there. `0` where nothing is believed.
+    /// says its memory holds that many levels down, nor than the sites it
+    /// may be read out of, or any on the way to them, say was stored there
+    /// ([`Known::memory_levels`]). `0` where nothing is believed.
     ///
     /// **One answer for every reader of a load**: a load assigned, a load
     /// handed straight to a call or to a library function, and a deeper
-    /// level of an access. Only the local gone through, where `place` has
-    /// exactly one dereference, is asked its [`Held::contents_at_most`]: a
-    /// deeper level reads a pointer that was itself loaded at its own type,
-    /// whose bound a load sets from that type. Where an outer pointer was
-    /// converted, that loses what its arrival said below the first level,
-    /// which is #634. See ADR-0060.
+    /// level of an access. **At every depth**: `**pi` with `pi` a `void ***`
+    /// converted to `int ***` reads what `pi` arrived believing two levels
+    /// down, where asking it only at one dereference believed the type
+    /// (#634). See ADR-0060.
     pub(super) fn believed_read(&self, function: &Function, place: &Place, value: &Known) -> u64 {
         let as_read = self.pointee_size(function, place).unwrap_or(0);
         let depth = derefs(place);
         if depth == 0 {
             return as_read;
         }
-        let gone_through = if depth == 1 {
-            value.points_to[place.local.index()].contents_at_most
-        } else {
-            None
-        };
-        let bound = value
-            .levels_below(place.local, depth - 1)
-            .0
-            .into_iter()
-            .fold(gone_through, |bound, site| {
-                bounded(bound, value.stored_at_most[site])
-            });
+        let bound = value.memory_levels(place.local, depth).at(0);
         bound.map_or(as_read, |bound| as_read.min(bound))
     }
 
@@ -364,11 +408,16 @@ impl Allocations<'_> {
             .pointee_size(function, source)
             .map(|_| self.believed_read(function, source, value));
         // **And it arrives as the type it is read as**, which bounds what its
-        // own memory holds. See `Held::contents_at_most`.
-        held.contents_at_most = self
-            .unit
-            .place_ty(function, source)
-            .and_then(|ty| self.contents_bound(ty));
+        // own memory holds, no more than the memory it was read out of
+        // believed one level down: `a = *pi;` with `pi` a `void ***`
+        // converted to `int ***` believes nothing of what `*a` points at,
+        // where the type alone said whole `int`s (#634). See
+        // `Held::contents_at_most`.
+        //
+        // Mutation: take the type alone, and
+        // `a_void_pointer_three_levels_deep_converted_whole_is_believed_below_its_first_level`
+        // goes silent.
+        held.contents_at_most = self.contents_read(function, source, value);
         // **And what was stored where it was read from**, at an offset nobody
         // said, so that a dereference of it can be asked about what it may
         // point at. `loaded` stays set, which is what marks the set as
@@ -1061,7 +1110,7 @@ impl Analysis for Allocations<'_> {
             // Nothing is made yet but the parameters, below.
             extent: vec![None; self.locals],
             // Nothing stored and nothing handed to a call yet.
-            stored_at_most: vec![None; self.locals],
+            stored_at_most: vec![Levels::default(); self.locals],
             handed_at_most: vec![None; self.locals],
         };
 
@@ -1081,8 +1130,9 @@ impl Analysis for Allocations<'_> {
             known.points_to[parameter.index()].hold(parameter.index(), Offset::Zero);
             // And what its memory holds is believed as its type says, which
             // the caller asked where it stored it. See `Held::contents_at_most`.
-            known.points_to[parameter.index()].contents_at_most =
-                self.contents_bound(function.local(parameter));
+            known.points_to[parameter.index()].contents_at_most = self
+                .type_levels(function.local(parameter))
+                .unwrap_or_default();
             known.extent[parameter.index()] = Some(Extent::AtLeast(
                 self.pointee_size(function, &Place::local(parameter))
                     .unwrap_or(0),
@@ -1142,7 +1192,7 @@ impl Analysis for Allocations<'_> {
         } = into;
         // Bounds, so the lower of two, and a side with none is no bound.
         for (here, there) in stored_at_most.iter_mut().zip(&from.stored_at_most) {
-            *here = bounded(*here, *there);
+            here.bound_by(there);
         }
         for (here, there) in handed_at_most.iter_mut().zip(&from.handed_at_most) {
             *here = bounded(*here, *there);
@@ -1603,9 +1653,22 @@ impl Analysis for Allocations<'_> {
                         let bound = (self.may_be_pointer(function, &operation.place)
                             && written.loaded)
                             .then(|| written.believed.unwrap_or(0));
+                        // **And below it, what the stored pointer believes of
+                        // its own memory, whatever it is**: a parameter or a
+                        // call's result too, which name a site the record
+                        // holds and leave what that site holds to what they
+                        // arrived as. `*box = m;` with `m` a `void **`
+                        // parameter, read back through an `int ***`, believed
+                        // whole `int`s two levels down (#634). A local's
+                        // address and an allocation believe nothing here, so
+                        // record nothing. See `Known::stored_at_most`.
+                        //
+                        // Mutation: record level 0 alone, and
+                        // `a_parameter_stored_in_memory_and_read_back_is_believed_as_it_arrived_below_its_first_level`
+                        // goes silent.
+                        let stored = written.contents_at_most.behind(bound, self.depth);
                         for container in &containers {
-                            value.stored_at_most[*container] =
-                                bounded(value.stored_at_most[*container], bound);
+                            value.stored_at_most[*container].bound_by(&stored);
                             for &site in &carried {
                                 value.inside[*container].set(site);
                             }
@@ -2398,24 +2461,13 @@ impl Analysis for Allocations<'_> {
                             // `memcpy(b, m, 8)` with `m` a `void **`
                             // parameter, or `b` filled from memory that held a
                             // `char *` nothing recorded, handed `b` on as an
-                            // `int **` with nothing asked (#632).
-                            let arrived = if from_depth == 0 {
-                                value.points_to[source.local.index()].contents_at_most
-                            } else {
-                                self.unit
-                                    .place_ty(function, source)
-                                    .and_then(|ty| self.contents_bound(ty))
-                            };
-                            let copied_bound = value
-                                .levels_below(source.local, from_depth)
-                                .0
-                                .into_iter()
-                                .fold(arrived, |bound, site| {
-                                    bounded(bound, value.stored_at_most[site])
-                                });
+                            // `int **` with nothing asked (#632). **At every
+                            // level**, as a store records it (#634).
+                            let mut copied_bound = self.contents_read(function, source, value);
+                            copied_bound
+                                .bound_by(&value.memory_levels(source.local, from_depth + 1));
                             for container in into {
-                                value.stored_at_most[container] =
-                                    bounded(value.stored_at_most[container], copied_bound);
+                                value.stored_at_most[container].bound_by(&copied_bound);
                                 for &site in &copied {
                                     value.inside[container].set(site);
                                 }
@@ -2815,7 +2867,8 @@ impl Analysis for Allocations<'_> {
             value.points_to[site].contents_at_most = self
                 .unit
                 .place_ty(function, place)
-                .and_then(|ty| self.contents_bound(ty));
+                .and_then(|ty| self.type_levels(ty))
+                .unwrap_or_default();
         }
         // **Its contents are indeterminate**, C17 7.22.3.4 p2 and 7.22.3.1
         // p2, for `malloc` and `aligned_alloc` alone: `calloc`'s are zero
@@ -2849,10 +2902,10 @@ impl Analysis for Allocations<'_> {
                 for argument in handed {
                     if let Operand::Copy(source) = argument {
                         if source.projection.is_empty() {
-                            value.stored_at_most[site] = bounded(
-                                value.stored_at_most[site],
-                                value.points_to[source.local.index()].contents_at_most,
-                            );
+                            let handed = value.points_to[source.local.index()]
+                                .contents_at_most
+                                .clone();
+                            value.stored_at_most[site].bound_by(&handed);
                         }
                     }
                 }
@@ -2861,8 +2914,8 @@ impl Analysis for Allocations<'_> {
                         (value.inside[old].clone(), value.inside_locals[old].clone());
                     value.inside[site].union_with(&inside);
                     value.inside_locals[site].union_with(&inside_locals);
-                    value.stored_at_most[site] =
-                        bounded(value.stored_at_most[site], value.stored_at_most[old]);
+                    let held = value.stored_at_most[old].clone();
+                    value.stored_at_most[site].bound_by(&held);
                     // And the mark with the row: what the old allocation may
                     // hold of a reborn site is what the new one holds after
                     // the copy. See ADR-0045.
@@ -2972,6 +3025,18 @@ impl Analysis for Allocations<'_> {
         // what a C program goes through. Another frontend need not, and
         // `a_call_into_a_local_whose_address_escaped` builds the shape by hand.
         value.unproved(site);
+    }
+}
+
+/// How many `*`s deep a type is: `0` for one that is no pointer. What
+/// [`Allocations::depth`] is the largest of.
+///
+/// Written out rather than as a `matches!`, so a kind of type added later
+/// is asked whether it has a pointee.
+pub(super) fn pointer_depth(unit: &TranslationUnit, ty: TyId) -> usize {
+    match unit.ty(ty) {
+        Ty::Pointer(pointee) => 1 + pointer_depth(unit, pointee),
+        Ty::Int | Ty::Char | Ty::Void => 0,
     }
 }
 

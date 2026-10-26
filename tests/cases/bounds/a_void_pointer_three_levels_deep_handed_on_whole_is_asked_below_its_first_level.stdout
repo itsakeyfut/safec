@@ -1,0 +1,20 @@
+Target "x86_64-pc-windows-msvc"
+Function a_void_pointer_three_levels_deep_handed_on_whole_is_asked_below_its_first_level.c:1:6 "use" declared
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "p"
+Function a_void_pointer_three_levels_deep_handed_on_whole_is_asked_below_its_first_level.c:2:6 "run"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "m"
+  Local "_2" "void *" "pm"
+  Block "bb0" entry
+    Operation a_void_pointer_three_levels_deep_handed_on_whole_is_asked_below_its_first_level.c:3:11 written
+      Destination "_2"
+      Use
+        Copy "_1"
+    Sequenced a_void_pointer_three_levels_deep_handed_on_whole_is_asked_below_its_first_level.c:3:16 generated
+    ArgumentsEvaluated a_void_pointer_three_levels_deep_handed_on_whole_is_asked_below_its_first_level.c:4:5 generated
+    Call a_void_pointer_three_levels_deep_handed_on_whole_is_asked_below_its_first_level.c:4:5 written "use" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_void_pointer_three_levels_deep_handed_on_whole_is_asked_below_its_first_level.c:4:5 generated
+    Return

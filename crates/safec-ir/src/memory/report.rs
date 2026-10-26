@@ -16,7 +16,7 @@ use crate::source::{SourceMap, Span};
 use super::built::named;
 use super::known::Known;
 use super::parts::{
-    Callee, Extent, Freeing, Offset, Reach, Reached, Read, SiteState, earlier, same,
+    Callee, Extent, Freeing, Levels, Offset, Reach, Reached, Read, SiteState, earlier, same,
 };
 use super::transfer::Allocations;
 use super::{Departure, Finding, Kind, LostReason, Unproven};
@@ -1435,18 +1435,26 @@ fn contents_leaving(
     // on arrives as the type it is read as. A local's address and an
     // allocation are asked by the local and the record below. See
     // `Held::contents_at_most`.
+    //
+    // **At every level the receiver's type has**: `use(pm)` with `pm` a
+    // `void ***` converted whole and `use` taking `int ***` hands on memory
+    // whose pointers point at pointers nobody was asked the width of, which
+    // asking only the first level let leave (#634). The width said is the
+    // receiver's at the first level, as `fits` says one for an access.
+    //
+    // Mutation: ask level 0 alone, and
+    // `a_void_pointer_three_levels_deep_handed_on_whole_is_asked_below_its_first_level`
+    // goes silent.
     let arrived = match value {
-        Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
-            known.points_to[place.local.index()].contents_at_most
+        Rvalue::Use(Operand::Copy(place)) => analysis.contents_read(function, place, known),
+        Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
+            Levels::default()
         }
-        Rvalue::Use(Operand::Copy(place)) => analysis
-            .unit
-            .place_ty(function, place)
-            .and_then(|ty| analysis.contents_bound(ty)),
-        Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => None,
     };
-    if let (Some(bound), Some(width)) = (arrived, pointee_width(analysis, read_as)) {
-        if bound < width {
+    if let (Some(receiver), Some(width)) =
+        (analysis.type_levels(ty), pointee_width(analysis, read_as))
+    {
+        if arrived.narrower_than(&receiver) {
             say_leaving(
                 findings,
                 departed,
@@ -1500,7 +1508,16 @@ fn contents_leaving(
         // at, and the bound stands for a pointer it holds that names none,
         // so a whole object on one path proves nothing of the other. With
         // nothing recorded and no bound there is nothing to ask.
-        let stored_narrower = known.stored_at_most[site].is_some_and(|bound| bound < width);
+        //
+        // **And at every level below**, which is what each pointer stored
+        // there believed of its own memory, whatever the record names: `*box
+        // = m; use(box);` with `m` a `void **` parameter and `use` taking
+        // `int ***` (#634).
+        let receiver = analysis
+            .type_levels(read_as)
+            .unwrap_or_default()
+            .behind(Some(width), analysis.depth);
+        let stored_narrower = known.stored_at_most[site].narrower_than(&receiver);
         let fit = match (extents.is_empty(), stored_narrower) {
             (true, false) => continue,
             (true, true) => Fit::Unknown,

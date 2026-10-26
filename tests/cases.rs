@@ -3273,7 +3273,7 @@ cases! {
         // A round trip through `void *` back to the type a pointer arrived
         // as, and a local a callee filled through the type it is, believe
         // what they are. Mutation: set `Some(0)` for every arrival in
-        // `contents_bound`; the first gains an `SC0412`, beside about a
+        // `type_levels`; the first gains an `SC0412`, beside about a
         // hundred other cases. Mutation: give every local a call reaches as
         // a pointer a width of zero; the second does.
         an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -3335,11 +3335,46 @@ cases! {
         // `contents_at_most` from `Held::accumulated`; this loses a report.
         a_converted_void_parameter_moved_by_arithmetic_keeps_its_bound: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Memory a pointer to no pointer arrived at holds nothing vouched for
-        // as a pointer. Mutation: bound it at no limit in `contents_bound`;
+        // as a pointer. Mutation: bound it at no limit in `type_levels`;
         // both lose a report. Mutation: bound it at one byte; the second
         // does.
         an_int_parameter_read_through_an_int_pointer_to_pointer_believes_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What memory holds is believed at every level of the type it
+        // arrived as, through a conversion, a store and a reload, a copy and
+        // a join (#634). The mutation that silences each is beside it.
+        //
+        // Mutation: `read_through` takes the read type alone; the first goes
+        // silent.
+        a_void_pointer_three_levels_deep_converted_whole_is_believed_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `believed_read` asks the local gone through only at one
+        // dereference; this loses its `SC0412`.
+        a_void_pointer_three_levels_deep_read_two_levels_at_once_is_believed_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `contents_leaving` compares the departing value at level
+        // 0 alone; this goes silent.
+        a_void_pointer_three_levels_deep_handed_on_whole_is_asked_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a store records level 0 alone; all three lose their report
+        // about size.
+        a_parameter_stored_in_memory_and_read_back_is_believed_as_it_arrived_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_parameter_stored_in_memory_and_read_two_levels_at_once_is_believed_as_it_arrived: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_parameter_stored_in_memory_and_handed_on_is_asked_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `Known::memory_levels` folds only the sites at the last
+        // level; the second above loses its `SC0412`. Mutation:
+        // `contents_leaving` compares a site's stored bound at level 0
+        // alone; the third above goes silent.
+        //
+        // Mutation: a store records the levels below only for a pointer that
+        // is not a load; this goes silent.
+        a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the `memcpy` copy takes level 0 alone; this goes silent.
+        memory_a_void_pointer_three_levels_deep_points_at_copied_by_memcpy_is_believed_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `Levels::bound_by` lets a side with no bound at a level
+        // loosen the other; this goes silent.
+        a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `type_levels` answers `Some(0)` at every level; both
+        // are reported.
+        an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument
