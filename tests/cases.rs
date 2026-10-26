@@ -3375,6 +3375,17 @@ cases! {
         // are reported.
         an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a call's result takes level 0 of its type alone; this
+        // goes silent.
+        memory_a_call_returned_as_void_three_levels_deep_is_believed_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `contents_leaving` takes the type a load is read as
+        // alone; this goes silent.
+        a_pointer_read_out_of_a_converted_void_parameter_and_handed_straight_on_is_asked_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `realloc` carries level 0 alone of the pointer it is
+        // handed; the first fails. Mutation: of what the
+        // old allocation held; the second goes silent.
+        a_void_parameter_three_levels_deep_grown_by_realloc_is_believed_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_parameter_stored_in_memory_grown_by_realloc_is_believed_as_it_arrived_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument
