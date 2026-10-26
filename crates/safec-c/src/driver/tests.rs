@@ -2119,8 +2119,8 @@ mod unassigned {
     fn a_pointer_read_out_of_fresh_memory_is_sc0411_in_its_own_words() {
         let (code, message, notes) = said(
             Kind::IndeterminateLoad {
-                allocation: true,
-                local: false,
+                reaches_allocation: true,
+                reaches_local: false,
             },
             Conclusion::Unsafe,
         );

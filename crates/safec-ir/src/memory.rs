@@ -171,9 +171,9 @@ pub enum Kind {
     /// that storage's clause (#640). See `Known::unwritten`.
     IndeterminateLoad {
         /// Whether it may reach an allocation nothing wrote.
-        allocation: bool,
+        reaches_allocation: bool,
         /// Whether it may reach a local nothing wrote.
-        local: bool,
+        reaches_local: bool,
     },
     /// A pointer local whose address is taken, read by name before anything
     /// wrote it, on every path: its value is indeterminate (C17 6.2.4 p6,

@@ -409,7 +409,7 @@ impl Allocations<'_> {
     /// Per local, whether it is made unwritten where the function starts:
     /// every local that holds a pointer but the parameters, which the caller
     /// wrote. See [`Known::unwritten`].
-    fn made_unwritten(&self) -> Vec<bool> {
+    fn unwritten_at_entry(&self) -> Vec<bool> {
         let function = self.unit.function(self.function);
         function
             .locals()
@@ -1186,7 +1186,7 @@ impl Analysis for Allocations<'_> {
             handed_at_most: vec![None; self.locals],
             // Every local that may hold a pointer, but the parameters, which
             // the caller wrote. See `Known::unwritten`.
-            unwritten: self.made_unwritten(),
+            unwritten: self.unwritten_at_entry(),
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -1520,7 +1520,7 @@ impl Analysis for Allocations<'_> {
                 // An assignment to a local writes it, whatever it writes. See
                 // `Known::unwritten`.
                 if operation.place.projection.is_empty() {
-                    value.wrote(operation.place.local.index());
+                    value.written_local(operation.place.local.index());
                 }
 
                 // **This check follows a write through exactly one `Deref` and
@@ -1557,7 +1557,7 @@ impl Analysis for Allocations<'_> {
                             value.written(site);
                         }
                         for local in edges {
-                            value.wrote(local);
+                            value.written_local(local);
                         }
                     } else {
                         value.written_all();
@@ -2914,7 +2914,7 @@ impl Analysis for Allocations<'_> {
         }
         // The call's result writes the local it lands in. See
         // `Known::unwritten`.
-        value.wrote(place.local.index());
+        value.written_local(place.local.index());
 
         match kind {
             Callee::Ends => {

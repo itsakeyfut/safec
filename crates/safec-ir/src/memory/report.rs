@@ -1891,8 +1891,8 @@ pub(super) fn loaded_indeterminate(
         let local = place.local;
         let through = &known.points_to[local.index()];
         let kind = Kind::IndeterminateLoad {
-            allocation: through.sites().next().is_some(),
-            local: through.writes_to.any(),
+            reaches_allocation: through.sites().next().is_some(),
+            reaches_local: through.writes_to.any(),
         };
         let root = Place::local(local);
         if said

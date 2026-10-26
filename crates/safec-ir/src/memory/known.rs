@@ -230,7 +230,7 @@ pub(super) struct Known {
     /// address is taken, and this reads J.2 as ADR-0057 does for an
     /// allocation. Set where a local that may hold a pointer is made, at the
     /// function's entry and at its `StorageLive`, never for a parameter, and
-    /// cleared only by [`Self::wrote`] and [`Self::replaced`], which a write
+    /// cleared only by [`Self::written_local`] and [`Self::replaced`], which a write
     /// that may land there calls: an assignment, a placed store, a call's
     /// result, and a call or a store this check cannot place, which
     /// `replaced` answers for every escaped local it may reach. An
@@ -1254,7 +1254,7 @@ impl Known {
 
     /// Something may have written `local`, so its value is no longer known
     /// to be indeterminate. See [`Self::unwritten`].
-    pub(super) fn wrote(&mut self, local: usize) {
+    pub(super) fn written_local(&mut self, local: usize) {
         self.unwritten[local] = false;
     }
 

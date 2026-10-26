@@ -733,7 +733,10 @@ pub(super) fn memory_finding(
         // through, and the slot is `*name`. See ADR-0057.
         // `calloc` is advice only where the memory may be an allocation.
         (
-            Kind::IndeterminateLoad { allocation, .. },
+            Kind::IndeterminateLoad {
+                reaches_allocation: allocation,
+                ..
+            },
             Conclusion::Unsafe | Conclusion::Unknown,
             _,
         ) => (
@@ -973,7 +976,10 @@ pub(super) fn memory_finding(
     // The clause of each storage the read may reach, an allocation's and a
     // local's, so a read that may reach both cites both.
     let (allocation, local) = match finding.kind {
-        Kind::IndeterminateLoad { allocation, local } => (allocation, local),
+        Kind::IndeterminateLoad {
+            reaches_allocation,
+            reaches_local,
+        } => (reaches_allocation, reaches_local),
         Kind::IndeterminateLocal => (false, true),
         _ => (false, false),
     };
