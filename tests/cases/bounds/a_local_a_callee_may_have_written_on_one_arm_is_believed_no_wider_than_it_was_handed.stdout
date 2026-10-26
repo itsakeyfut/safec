@@ -1,0 +1,126 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:1:6 "put"
+  Local "_0" "void" return
+  Local "_1" "void **" parameter "slot"
+  Local "_2" "char *" parameter "c"
+  Local "_3" "int"
+  Local "_4" "void *"
+  Block "bb0" entry
+    Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:2:9 written
+      Destination "_3"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:2:9 written "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:2:9 generated
+    Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:3:9 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_2"
+    Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:3:9 written
+      Destination "_4"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:3:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:2:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+Function a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:7:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "argc"
+  Local "_2" "char" "c"
+  Local "_3" "int *" "v"
+  Local "_4" "int **" "pi"
+  Local "_5" "int **"
+  Local "_6" "void *" "pv"
+  Local "_7" "char *"
+  Local "_8" "int *" "q"
+  Local "_9" "int"
+  Local "_10" "int"
+  Block "bb0" entry
+    Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:7:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:9:10 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:9:14 generated
+    Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:10:16 written
+      Destination "_5"
+      Address
+        Place "_3"
+    Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:10:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:10:16 generated
+    Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:11:11 written
+      Destination "_6"
+      Use
+        Copy "_4"
+    Sequenced a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:11:16 generated
+    Branch a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:12:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:12:9 generated
+    Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:13:17 written
+      Destination "_7"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:13:9 generated
+    Call a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:13:9 written "put" "bb4"
+      Copy "_6"
+      Copy "_7"
+  Block "bb2"
+    Sequenced a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:12:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:15:10 written
+      Destination "_8"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:15:14 generated
+    Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:16:9 written
+      Destination "_9"
+      Binary "Ne"
+        Copy "_8"
+        Constant 0
+    Branch a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:16:9 written "bb5" "bb6"
+      Copy "_9"
+  Block "bb4"
+    Sequenced a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:13:9 generated
+    Goto "bb3"
+  Block "bb5"
+    Sequenced a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:16:9 generated
+    Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:17:9 written
+      Destination "_8"
+        Deref
+      Use
+        Constant 1
+    Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:17:9 written
+      Destination "_10"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:17:9 generated
+    Goto "bb7"
+  Block "bb6"
+    Sequenced a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:16:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:19:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:19:12 generated
+    Return

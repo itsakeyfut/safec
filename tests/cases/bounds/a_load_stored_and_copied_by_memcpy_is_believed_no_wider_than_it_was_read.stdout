@@ -1,0 +1,200 @@
+Target "x86_64-pc-windows-msvc"
+Function a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:2:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:3:6 "run"
+  Local "_0" "void" return
+  Local "_1" "char **" parameter "cc"
+  Local "_2" "int"
+  Local "_3" "char *" "c"
+  Local "_4" "void **" "a"
+  Local "_5" "void *"
+  Local "_6" "void **" "b"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "void *"
+  Local "_12" "void *"
+  Local "_13" "void *" "pb"
+  Local "_14" "int **" "pi"
+  Local "_15" "int *" "p"
+  Local "_16" "int"
+  Local "_17" "int"
+  Block "bb0" entry
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:4:9 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:4:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:4:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:4:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:5:11 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:5:15 generated
+    ArgumentsEvaluated a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:6:16 generated
+    Call a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:6:16 written "malloc" "bb4"
+      Destination "_5"
+      Constant 8
+  Block "bb4"
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:6:12 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:6:16 generated
+    ArgumentsEvaluated a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:7:16 generated
+    Call a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:7:16 written "malloc" "bb5"
+      Destination "_7"
+      Constant 8
+  Block "bb5"
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:7:12 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:7:16 generated
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:8:9 written
+      Destination "_8"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:8:9 written
+      Destination "_9"
+      Binary "Ne"
+        Copy "_8"
+        Constant 0
+    Branch a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:8:9 written "bb8" "bb7"
+      Copy "_9"
+  Block "bb6"
+    Branch a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:8:9 written "bb8" "bb9"
+      Copy "_9"
+  Block "bb7"
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:8:9 generated
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:8:19 written
+      Destination "_10"
+      Binary "Eq"
+        Copy "_6"
+        Constant 0
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:8:19 written
+      Destination "_9"
+      Binary "Ne"
+        Copy "_10"
+        Constant 0
+    Goto "bb6"
+  Block "bb8"
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:8:9 generated
+    Return
+  Block "bb9"
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:8:9 generated
+    Goto "bb10"
+  Block "bb10"
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:9:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:9:5 written
+      Destination "_11"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:9:5 generated
+    ArgumentsEvaluated a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:10:5 generated
+    Call a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:10:5 written "memcpy" "bb11"
+      Destination "_12"
+      Copy "_6"
+      Copy "_4"
+      Constant 8
+  Block "bb11"
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:10:5 generated
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:11:11 written
+      Destination "_13"
+      Use
+        Copy "_6"
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:11:16 generated
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:12:11 written
+      Destination "_14"
+      Use
+        Copy "_13"
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:12:16 generated
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:13:10 written
+      Destination "_15"
+      Use
+        Copy "_14"
+          Deref
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:13:14 generated
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:14:9 written
+      Destination "_16"
+      Binary "Ne"
+        Copy "_15"
+        Constant 0
+    Branch a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:14:9 written "bb12" "bb13"
+      Copy "_16"
+  Block "bb12"
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:14:9 generated
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:14:19 written
+      Destination "_15"
+        Deref
+      Use
+        Constant 1
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:14:19 written
+      Destination "_17"
+      Use
+        Copy "_15"
+          Deref
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:14:19 generated
+    Goto "bb14"
+  Block "bb13"
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:14:9 generated
+    Goto "bb14"
+  Block "bb14"
+    Return
+Function a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:16:5 "main"
+  Local "_0" "int" return
+  Local "_1" "char" "c"
+  Local "_2" "char *" "pc"
+  Local "_3" "char *"
+  Local "_4" "char **"
+  Block "bb0" entry
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:16:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:16:37 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:16:32 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:16:37 generated
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:16:45 written
+      Destination "_4"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:16:41 generated
+    Call a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:16:41 written "run" "bb1"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:16:41 generated
+    Operation a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:16:51 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read.c:16:58 generated
+    Return

@@ -737,6 +737,15 @@ pub(super) fn fits(
     if doubt_unseen_writes && (held.lost || held.foreign || known.escaped[local.index()]) {
         return Some(Fit::Unknown);
     }
+    // **What a call may have written is no wider than the local was handed
+    // as**, on any path ([`Known::handed_at_most`]). The belief the call left
+    // is a proof and goes at a join with a path that made no call, while the
+    // bound is kept: `if (c) put(pv, &c);` with `put` taking `void **` left
+    // `v` holding nothing believed and nothing named, and a read through its
+    // address believed a whole `int` (#632).
+    if held.foreign && known.handed_at_most[local.index()].is_some_and(|most| most < width) {
+        return Some(Fit::Unknown);
+    }
     let sites = held
         .sites()
         .map(|site| known.extent[site].unwrap_or(Extent::AtLeast(0)));

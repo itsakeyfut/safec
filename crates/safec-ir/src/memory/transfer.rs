@@ -2384,7 +2384,32 @@ impl Analysis for Allocations<'_> {
                                 let locals: Vec<usize> = copied_locals.iter().copied().collect();
                                 value.landed_where_unknown_code_points(&copied, &locals);
                             }
+                            // **And the bound on what it copies**, which a copy
+                            // carries as a store of a load would: what the
+                            // source's memory is believed to hold, from the
+                            // type it arrived as or a load at its type, and
+                            // what was stored in the memory it points at.
+                            // `memcpy(b, m, 8)` with `m` a `void **`
+                            // parameter, or `b` filled from memory that held a
+                            // `char *` nothing recorded, handed `b` on as an
+                            // `int **` with nothing asked (#632).
+                            let arrived = if from_depth == 0 {
+                                value.points_to[source.local.index()].contents_at_most
+                            } else {
+                                self.unit
+                                    .place_ty(function, source)
+                                    .and_then(|ty| self.contents_bound(ty))
+                            };
+                            let copied_bound = value
+                                .levels_below(source.local, from_depth)
+                                .0
+                                .into_iter()
+                                .fold(arrived, |bound, site| {
+                                    bounded(bound, value.stored_at_most[site])
+                                });
                             for container in into {
+                                value.stored_at_most[container] =
+                                    bounded(value.stored_at_most[container], copied_bound);
                                 for &site in &copied {
                                     value.inside[container].set(site);
                                 }
@@ -2808,11 +2833,27 @@ impl Analysis for Allocations<'_> {
                     .flat_map(|local| value.sites_of(local).collect::<Vec<_>>())
                     .filter(|&old| old != site)
                     .collect();
+                // **And the bound on what it holds**, from the pointer it was
+                // handed as from the old allocation below: a `void **`
+                // parameter grown by `realloc` and read through an `int **`
+                // was believed four bytes wide (#632).
+                for argument in handed {
+                    if let Operand::Copy(source) = argument {
+                        if source.projection.is_empty() {
+                            value.stored_at_most[site] = bounded(
+                                value.stored_at_most[site],
+                                value.points_to[source.local.index()].contents_at_most,
+                            );
+                        }
+                    }
+                }
                 for old in old {
                     let (inside, inside_locals) =
                         (value.inside[old].clone(), value.inside_locals[old].clone());
                     value.inside[site].union_with(&inside);
                     value.inside_locals[site].union_with(&inside_locals);
+                    value.stored_at_most[site] =
+                        bounded(value.stored_at_most[site], value.stored_at_most[old]);
                     // And the mark with the row: what the old allocation may
                     // hold of a reborn site is what the new one holds after
                     // the copy. See ADR-0045.

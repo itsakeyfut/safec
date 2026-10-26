@@ -3278,6 +3278,26 @@ cases! {
         // a pointer a width of zero; the second does.
         an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_a_callee_filled_through_an_int_pointer_to_pointer_is_believed_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy carries the bound on what it copies, as a store of a load
+        // would: out of a `void **` parameter, out of memory a load named
+        // nothing in, and grown by `realloc`. Mutation: record no bound where
+        // `memcpy` copies into memory; the first two go silent. Mutation:
+        // carry none into what `realloc` returns; the third does.
+        a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call made on one arm leaves the local bounded by what it was
+        // handed as after the join, where the belief it left is gone.
+        // Mutation: drop the `handed_at_most` question from `fits`; this
+        // goes silent.
+        a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What memory holds on one arm bounds it after the join, beside a
+        // whole object or a null on the other. Mutation: let a recorded
+        // whole object stand over a narrower stored bound in
+        // `contents_leaving`; the first goes silent. Mutation: join
+        // `stored_at_most` by nothing; both do.
+        memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_asked_as_the_narrower: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        memory_holding_a_load_on_one_arm_and_a_null_on_the_other_is_asked_as_the_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument

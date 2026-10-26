@@ -1,0 +1,177 @@
+Target "x86_64-pc-windows-msvc"
+Function a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:2:7 "realloc" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "p"
+  Local "_2" "int" parameter "n"
+Function a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:3:6 "run"
+  Local "_0" "void" return
+  Local "_1" "char **" parameter "cc"
+  Local "_2" "int"
+  Local "_3" "char *" "c"
+  Local "_4" "void **" "a"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "void *"
+  Local "_8" "void *" "pb"
+  Local "_9" "void *"
+  Local "_10" "int"
+  Local "_11" "int **" "pi"
+  Local "_12" "int *" "p"
+  Local "_13" "int"
+  Local "_14" "int"
+  Block "bb0" entry
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:4:9 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:4:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:4:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:4:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:5:11 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:5:15 generated
+    ArgumentsEvaluated a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:6:16 generated
+    Call a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:6:16 written "malloc" "bb4"
+      Destination "_5"
+      Constant 8
+  Block "bb4"
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:6:12 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:6:16 generated
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:7:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:7:9 written "bb5" "bb6"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:7:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:7:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:8:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:8:5 written
+      Destination "_7"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:8:5 generated
+    ArgumentsEvaluated a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:9:16 generated
+    Call a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:9:16 written "realloc" "bb8"
+      Destination "_9"
+      Copy "_4"
+      Constant 16
+  Block "bb8"
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:9:11 written
+      Destination "_8"
+      Use
+        Copy "_9"
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:9:16 generated
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:10:9 written
+      Destination "_10"
+      Binary "Eq"
+        Copy "_8"
+        Constant 0
+    Branch a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:10:9 written "bb9" "bb10"
+      Copy "_10"
+  Block "bb9"
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:10:9 generated
+    Return
+  Block "bb10"
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:10:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:11:11 written
+      Destination "_11"
+      Use
+        Copy "_8"
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:11:16 generated
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:12:10 written
+      Destination "_12"
+      Use
+        Copy "_11"
+          Deref
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:12:14 generated
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:13:9 written
+      Destination "_13"
+      Binary "Ne"
+        Copy "_12"
+        Constant 0
+    Branch a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:13:9 written "bb12" "bb13"
+      Copy "_13"
+  Block "bb12"
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:13:9 generated
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:13:19 written
+      Destination "_12"
+        Deref
+      Use
+        Constant 1
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:13:19 written
+      Destination "_14"
+      Use
+        Copy "_12"
+          Deref
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:13:19 generated
+    Goto "bb14"
+  Block "bb13"
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:13:9 generated
+    Goto "bb14"
+  Block "bb14"
+    Return
+Function a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:15:5 "main"
+  Local "_0" "int" return
+  Local "_1" "char" "c"
+  Local "_2" "char *" "pc"
+  Local "_3" "char *"
+  Local "_4" "char **"
+  Block "bb0" entry
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:15:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:15:37 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:15:32 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:15:37 generated
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:15:45 written
+      Destination "_4"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:15:41 generated
+    Call a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:15:41 written "run" "bb1"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:15:41 generated
+    Operation a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:15:51 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read.c:15:58 generated
+    Return
