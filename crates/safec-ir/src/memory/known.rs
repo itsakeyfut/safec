@@ -996,40 +996,63 @@ impl Known {
         }
     }
 
-    /// Every local a write this check cannot pin down may land in, for
-    /// [`Self::unwritten`], where the write reaches `depth` dereferences
-    /// below `local`: `local` itself at none, `m[0] = p`; the locals its
-    /// address edges name at one, `*t = x`; the locals the level above may
-    /// be at more, `**ppq = x`. **And every local code this check cannot read may name**,
-    /// [`Self::named_by_unknown_code`], where the pointer was read out of
-    /// memory, lost, or written by such code, or the place reaches through
-    /// more than one dereference, since each of those may be an address this
-    /// function never recorded. A store asks it of its place's dereferences;
-    /// a library copy, of one more than its destination argument has, since
-    /// it writes where that argument points.
+    /// Every local a write this check cannot place may land in, for
+    /// [`Self::unwritten`], where the write goes through `dereferences`
+    /// dereferences of `local`:
+    ///
+    /// - at none, `local` itself, `m[0] = p`;
+    /// - at one, the locals `local`'s address edges name, `*t = x`;
+    /// - at more, the locals the level above may be, `**ppq = x`;
+    /// - and every local code this check cannot read may name,
+    ///   [`Self::named_by_unknown_code`], where `local` or a pointer the walk
+    ///   passes through on the way down was read out of memory, lost, or
+    ///   written by such code, since each of those may hold an address this
+    ///   function never recorded.
+    ///
+    /// A store passes its place's [`derefs`], which is zero for a place that
+    /// is not dereferences alone; a library copy passes one more than its
+    /// destination argument has, since it writes where that argument points.
+    ///
+    /// **Only a level the walk passes through decides the last part**, not
+    /// how deep the write is: `memcpy(*pp, s, 8)` with `*pp` certainly `a`
+    /// cannot land in an array whose address was stored in the caller's
+    /// memory, and counting it so silenced a read of that array `main`
+    /// reported. Found by review.
     ///
     /// **Two parts no case holds, measured.** A place with no dereference is
     /// never a store from C: the lowering writes `m[0] = p` through `&m[0]`,
-    /// so landing nowhere at depth zero leaves the suite green. And the
-    /// pointers the last part is for already carry in their edges the
-    /// addresses that memory such code reaches was recorded to hold, so
-    /// dropping it leaves the suite green too; it stands for an address that
-    /// recording misses, where its absence would be a false report.
+    /// and builds an `Index` only under an address, so landing nowhere at
+    /// zero leaves the suite green. And the pointers the last part is for
+    /// already carry in their edges the addresses that memory such code
+    /// reaches was recorded to hold, so dropping it leaves the suite green
+    /// too; it stands for an address that recording misses, where its
+    /// absence would be a false report.
     ///
     /// **A pointer naming no local lands in none.** One moved off an array by
     /// arithmetic has lost its edge (#639), so `*(&m[1] - 1) = p` leaves
-    /// `m[0]` reported as nothing wrote it, which the reader sees; counting it
-    /// a write of every escaped local silenced every array beside it. The
-    /// store door and a library copy both ask this, so the two cannot answer
-    /// one pointer differently. See ADR-0057.
-    pub(super) fn locals_a_write_may_land_in(&self, local: LocalId, depth: usize) -> Vec<usize> {
-        let mut lands: BTreeSet<usize> = match depth {
+    /// `m[0]` reported as nothing wrote it. That report is certain and false:
+    /// `--allow-unknown` does not lower it, and a free of what the array
+    /// holds is not doubted after it. ADR-0057 records why it is kept, and
+    /// #647 what would remove it. The store door and a library copy both ask
+    /// this, so the two cannot answer one pointer differently.
+    pub(super) fn locals_a_write_may_land_in(
+        &self,
+        local: LocalId,
+        dereferences: usize,
+    ) -> Vec<usize> {
+        let mut lands: BTreeSet<usize> = match dereferences {
             0 => BTreeSet::from([local.index()]),
             1 => self.written_through(local).into_iter().collect(),
-            _ => self.levels_below(local, depth - 1).1,
+            _ => self.levels_below(local, dereferences - 1).1,
         };
-        let root = &self.points_to[local.index()];
-        if depth > 1 || root.loaded || root.lost || root.foreign {
+        let unnamed = |held: &Held| held.loaded || held.lost || held.foreign;
+        // The levels a write of more than one dereference reads its way
+        // through: what `local` points at, and so on, above the one written.
+        let through_unnamed = (0..dereferences.saturating_sub(1)).any(|level| {
+            let (sites, locals) = self.levels_below(local, level);
+            !sites.is_empty() || locals.iter().any(|&held| unnamed(&self.points_to[held]))
+        });
+        if unnamed(&self.points_to[local.index()]) || through_unnamed {
             lands.extend(self.named_by_unknown_code());
         }
         lands.into_iter().collect()

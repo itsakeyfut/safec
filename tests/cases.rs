@@ -304,6 +304,15 @@ cases! {
         // Mutation: a library copy whose destination was read out of memory
         // writes every escaped local; this goes silent.
         a_pointer_read_out_of_a_local_array_a_copy_through_caller_memory_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: only a write deeper than one dereference, rather than
+        // one through a pointer read out of memory on the way down, lands
+        // in every local code this check cannot read may name; this goes
+        // silent.
+        a_pointer_read_out_of_a_local_array_a_copy_through_a_dereference_of_a_placed_pointer_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through a pointer read out of the caller's memory, which
+        // may be the array. Mutation: a level the walk passes through is
+        // never asked; this gains an `SC0411`.
+        a_local_array_copied_into_through_a_dereference_of_a_pointer_read_out_of_memory_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call writes only the locals it may reach, `Known::exposed_locals`
         // (#643). See ADR-0057.
         //
