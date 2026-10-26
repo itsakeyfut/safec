@@ -311,8 +311,10 @@ cases! {
         // silent.
         a_pointer_read_out_of_a_local_array_a_copy_through_a_dereference_of_a_placed_pointer_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same through a pointer read out of the caller's memory, which
-        // may be the array. Mutation: a level the walk passes through is
-        // never asked; this gains an `SC0411`.
+        // may be the array. **Held by two routes, measured**: the address
+        // edges `t` carries out of that memory, and the level the walk
+        // passes through being a load. Dropping either alone leaves this
+        // silent; it marks the program the fix must not report.
         a_local_array_copied_into_through_a_dereference_of_a_pointer_read_out_of_memory_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An `int` stored through a pointer that may be the array cannot be
         // a write of its pointer elements (C17 6.5 p7). Mutation:
