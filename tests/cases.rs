@@ -3386,6 +3386,12 @@ cases! {
         // old allocation held; the second goes silent.
         a_void_parameter_three_levels_deep_grown_by_realloc_is_believed_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_parameter_stored_in_memory_grown_by_realloc_is_believed_as_it_arrived_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the `memcpy` copy takes level 0 alone of what
+        // `memory_levels` finds in the source's memory; this goes silent.
+        a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `Known`'s join takes level 0 alone of the other side's
+        // `stored_at_most`; this goes silent.
+        memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument
