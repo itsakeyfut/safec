@@ -104,20 +104,26 @@ pointers in its memory are believed to be, from the type it arrives as (a
 `void **` is believed to hold `void *`s, so nothing), at every level the type
 has, through every conversion and every copy (`memcpy`, `memmove`,
 `realloc`), and that is asked wherever it is read through or handed on. A
-local a call was handed is believed written no wider than it was handed as, and as nothing through a
-`void *` parameter, on every path after that call; and a pointer read out of
-memory that is stored where the record names nothing bounds that memory by
-what it was believed, whatever sites the record says it names (#632). Memory
-holds what each pointer stored there believed of its own memory, level by
-level, so a `void **` parameter stored and read back through an `int ***`
-believes nothing two levels down, and a load takes what its memory believed one
-level further down (#634). The list is no longer than the deepest pointer type
-among the function's locals, which a store cannot lengthen, so the lattice it
-sits in has a finite height. Each only lowers a belief, so being wrong is a
-false `Unknown`, and it is paid by conforming code: a `void **` that does
-point at an `int *` is refused when read through an `int **`, a well-typed store does not raise a
-bound an earlier one set, and a local once handed to a `void *` parameter is
-believed nothing after any later call, since that callee may have kept its
+local a call was handed is believed written no wider than it was handed as,
+and as nothing through a `void *` parameter, on every path after that call;
+and a pointer read out of memory that is stored where the record names
+nothing bounds that memory by what it was believed, whatever sites the record
+says it names (#632). Memory holds what each pointer stored there believed of
+its own memory, level by level, so a `void **` parameter stored and read back
+through an `int ***` believes nothing two levels down, and a load takes what
+its memory believed one level further down. A local reached through its
+address is memory holding its value, so below its own level it is asked, and
+read, by what that value believes (#634). The list is no longer than the
+deepest pointer type among the function's locals, which a store cannot
+lengthen, so the lattice it sits in has a finite height, and both bounds on
+one function count it. What a call writes into a local is still bounded at
+the local's own level only, so below it a local a callee filled is handed on
+believing its declared type, which is #636. Each only lowers a belief, so
+being wrong is a false `Unknown`, and it is paid by conforming code: a
+`void **` that does point at an `int *` is refused when read through an
+`int **`, a well-typed store does not raise a bound an earlier one set, and a
+local once handed to a `void *` parameter is believed nothing after any later
+call, since that callee may have kept its
 address. Reading a
 pointer object through an incompatible pointer type is undefined by C17 6.5 p7
 as well, unless the read is through a character type; it is caught only where
@@ -263,10 +269,16 @@ Each mutation applied on its own, the workspace run, and the file restored.
   `a_void_pointer_three_levels_deep_handed_on_whole_is_asked_below_its_first_level`;
   a store recording its first level alone silences
   `a_parameter_stored_in_memory_and_read_back_is_believed_as_it_arrived_below_its_first_level`;
+  the walk a load takes skipping the locals on the way silences
+  `a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level`,
+  and a departure never asking a local's value below its own level silences
+  `a_local_holding_a_converted_void_pointer_to_pointer_handed_by_address_is_asked_below_its_own_level`;
   a list a store makes longer than the function's depth fails
   `a_store_cannot_make_a_list_longer_than_the_function_s_depth` in
-  `crates/safec-ir/src/memory/parts.rs` (#634). The other mutations of #634
-  are beside their cases in `tests/cases.rs`.
+  `crates/safec-ir/src/memory/parts.rs`, and the size bound leaving the lists
+  out fails `a_function_whose_lists_are_too_large_is_unknown_and_not_read` in
+  `crates/safec-ir/src/memory.rs` (#634). The other mutations of #634 are
+  beside their cases in `tests/cases.rs`.
 * review's findings, each with a case in `tests/cases/bounds/` and the
   mutation beside it in `tests/cases.rs`, each applied and seen to fail its
   case: the library reach keyed with the dereferences
