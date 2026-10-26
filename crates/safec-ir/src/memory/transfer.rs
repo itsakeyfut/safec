@@ -8,7 +8,7 @@ use crate::cfg::Cfg;
 use crate::dataflow::Analysis;
 use crate::ir::{
     BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place, Projection,
-    Rvalue, Terminator, TranslationUnit, Ty,
+    Rvalue, Terminator, TranslationUnit, Ty, TyId,
 };
 use crate::source::{SourceMap, Span};
 
@@ -17,9 +17,9 @@ use super::built::{built_from, named, replaced_by};
 use super::known::Known;
 use super::parts::{
     Callee, Extent, Freeing, Held, LIBRARY, Library, Makes, Offset, PendingRead, Reached, Read,
-    Realloced, SiteState,
+    Realloced, SiteState, bounded,
 };
-use super::report::{Fit, fits};
+use super::report::{Fit, fits, slots_leaving};
 use super::{
     LostReason, dereferenced_in_element, dereferenced_in_terminator, derefs, handed_places,
 };
@@ -274,6 +274,55 @@ impl Allocations<'_> {
         }
     }
 
+    /// How many bytes each pointer stored in what a value of type `ty`
+    /// points at is believed to point at, at most: what a pointer of the
+    /// type it points to believes, and `0` where that is no pointer, since
+    /// nothing stored there was vouched for as one. `None` for a `ty` that
+    /// is no pointer. See [`Held::contents_at_most`] and ADR-0060.
+    pub(super) fn contents_bound(&self, ty: TyId) -> Option<u64> {
+        match self.unit.ty(ty) {
+            Ty::Pointer(pointee) => Some(match self.unit.ty(pointee) {
+                Ty::Pointer(inner) => self.unit.size_of(inner).unwrap_or(0),
+                Ty::Int | Ty::Char | Ty::Void => 0,
+            }),
+            Ty::Int | Ty::Char | Ty::Void => None,
+        }
+    }
+
+    /// How many bytes a pointer read through `place` is believed to point
+    /// at: the type it is read as, no more than the pointer gone through
+    /// says its memory holds, nor than the sites it may be read out of say
+    /// was stored there. `0` where nothing is believed.
+    ///
+    /// **One answer for every reader of a load**: a load assigned, a load
+    /// handed straight to a call or to a library function, and a deeper
+    /// level of an access. Only the local gone through, where `place` has
+    /// exactly one dereference, is asked its [`Held::contents_at_most`]: a
+    /// deeper level reads a pointer that was itself loaded at its own type,
+    /// whose bound a load sets from that type. Where an outer pointer was
+    /// converted, that loses what its arrival said below the first level,
+    /// which is #634. See ADR-0060.
+    pub(super) fn believed_read(&self, function: &Function, place: &Place, value: &Known) -> u64 {
+        let as_read = self.pointee_size(function, place).unwrap_or(0);
+        let depth = derefs(place);
+        if depth == 0 {
+            return as_read;
+        }
+        let gone_through = if depth == 1 {
+            value.points_to[place.local.index()].contents_at_most
+        } else {
+            None
+        };
+        let bound = value
+            .levels_below(place.local, depth - 1)
+            .0
+            .into_iter()
+            .fold(gone_through, |bound, site| {
+                bounded(bound, value.stored_at_most[site])
+            });
+        bound.map_or(as_read, |bound| as_read.min(bound))
+    }
+
     /// Whether a place is a byte: of character type, which C17 6.5 p7 lets read
     /// any object, a pointer included.
     ///
@@ -307,9 +356,19 @@ impl Allocations<'_> {
         // **Believed to point at one whole object of the type it is read as**,
         // which the store that put it there is asked about. A byte is no
         // pointer and believes nothing; a `void *` believes it starts an
-        // object and no width, which is all its store is asked. Unless it
-        // may be read out of a local that does not fit, below. See ADR-0060.
-        held.believed = self.pointee_size(function, source);
+        // object and no width, which is all its store is asked. No more
+        // than the memory it is read out of is believed to hold
+        // ([`Self::believed_read`]), and only where every local it may be
+        // read out of fits, below. See ADR-0060.
+        held.believed = self
+            .pointee_size(function, source)
+            .map(|_| self.believed_read(function, source, value));
+        // **And it arrives as the type it is read as**, which bounds what its
+        // own memory holds. See `Held::contents_at_most`.
+        held.contents_at_most = self
+            .unit
+            .place_ty(function, source)
+            .and_then(|ty| self.contents_bound(ty));
         // **And what was stored where it was read from**, at an offset nobody
         // said, so that a dereference of it can be asked about what it may
         // point at. `loaded` stays set, which is what marks the set as
@@ -1001,6 +1060,9 @@ impl Analysis for Allocations<'_> {
             lost_exposed: false,
             // Nothing is made yet but the parameters, below.
             extent: vec![None; self.locals],
+            // Nothing stored and nothing handed to a call yet.
+            stored_at_most: vec![None; self.locals],
+            handed_at_most: vec![None; self.locals],
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -1017,6 +1079,10 @@ impl Analysis for Allocations<'_> {
         let function = self.unit.function(self.function);
         for &parameter in &self.parameters {
             known.points_to[parameter.index()].hold(parameter.index(), Offset::Zero);
+            // And what its memory holds is believed as its type says, which
+            // the caller asked where it stored it. See `Held::contents_at_most`.
+            known.points_to[parameter.index()].contents_at_most =
+                self.contents_bound(function.local(parameter));
             known.extent[parameter.index()] = Some(Extent::AtLeast(
                 self.pointee_size(function, &Place::local(parameter))
                     .unwrap_or(0),
@@ -1071,7 +1137,16 @@ impl Analysis for Allocations<'_> {
             exposed_after_call,
             lost_exposed,
             extent,
+            stored_at_most,
+            handed_at_most,
         } = into;
+        // Bounds, so the lower of two, and a side with none is no bound.
+        for (here, there) in stored_at_most.iter_mut().zip(&from.stored_at_most) {
+            *here = bounded(*here, *there);
+        }
+        for (here, there) in handed_at_most.iter_mut().zip(&from.handed_at_most) {
+            *here = bounded(*here, *there);
+        }
         // A may-fact, so a union, as `exposed` is.
         *lost_exposed |= from.lost_exposed;
         // A side that never made the site says nothing about it. Two sides
@@ -1510,7 +1585,27 @@ impl Analysis for Allocations<'_> {
                                 Some(operation.origin.span()),
                             );
                         }
+                        // **A pointer read out of memory is bounded by what it
+                        // is believed**, whatever the record says it names:
+                        // the sites a load holds are what the walk every load
+                        // takes found there, at an offset nobody said, and may
+                        // be the caller's memory or another allocation rather
+                        // than what it points at. `char *c = *cc; *m = c;`
+                        // handed `m` on as an `int **` with nothing asked, and
+                        // so did the same with `*m = malloc(4);` first, whose
+                        // site the load also named (#632). **Only a load**,
+                        // which is what `written.loaded` asks: a pointer this
+                        // check lost or a call wrote believes nothing too, and
+                        // bounding it at zero doubted a lost pointer to whole
+                        // allocations read back, which this issue is not
+                        // about. A load that believes nothing is bounded at
+                        // zero, which is what it was asked. See ADR-0060.
+                        let bound = (self.may_be_pointer(function, &operation.place)
+                            && written.loaded)
+                            .then(|| written.believed.unwrap_or(0));
                         for container in &containers {
+                            value.stored_at_most[*container] =
+                                bounded(value.stored_at_most[*container], bound);
                             for &site in &carried {
                                 value.inside[*container].set(site);
                             }
@@ -2295,7 +2390,32 @@ impl Analysis for Allocations<'_> {
                                 let locals: Vec<usize> = copied_locals.iter().copied().collect();
                                 value.landed_where_unknown_code_points(&copied, &locals);
                             }
+                            // **And the bound on what it copies**, which a copy
+                            // carries as a store of a load would: what the
+                            // source's memory is believed to hold, from the
+                            // type it arrived as or a load at its type, and
+                            // what was stored in the memory it points at.
+                            // `memcpy(b, m, 8)` with `m` a `void **`
+                            // parameter, or `b` filled from memory that held a
+                            // `char *` nothing recorded, handed `b` on as an
+                            // `int **` with nothing asked (#632).
+                            let arrived = if from_depth == 0 {
+                                value.points_to[source.local.index()].contents_at_most
+                            } else {
+                                self.unit
+                                    .place_ty(function, source)
+                                    .and_then(|ty| self.contents_bound(ty))
+                            };
+                            let copied_bound = value
+                                .levels_below(source.local, from_depth)
+                                .0
+                                .into_iter()
+                                .fold(arrived, |bound, site| {
+                                    bounded(bound, value.stored_at_most[site])
+                                });
                             for container in into {
+                                value.stored_at_most[container] =
+                                    bounded(value.stored_at_most[container], copied_bound);
                                 for &site in &copied {
                                     value.inside[container].set(site);
                                 }
@@ -2426,6 +2546,58 @@ impl Analysis for Allocations<'_> {
                 // one would need an annotation saying what a callee writes,
                 // and `_Nonnull` is not one.
                 value.replaced(|_| true);
+                // **And as what each local it reaches was handed**, which is
+                // the most its body can be asked to have written there: a
+                // local reached as a `void *` takes a `void *` store, asked
+                // its start and no width, and one reached below a `void *`
+                // takes whatever the body converts the pointer to. `put(pv,
+                // &c)` with `pv` an `int *`'s address converted and `put`
+                // taking `void **` left a `char`'s address believed a whole
+                // `int` (#632). The walk is the one a departure takes, so the
+                // two cannot read a call's arguments differently.
+                // An argument past every parameter, to a variadic or an
+                // unprototyped callee, is read as its own type, as a
+                // departure reads it; a constant hands no local.
+                let declared = self.unit.function(*callee);
+                let parameters: Vec<LocalId> = declared.parameters().collect();
+                for (index, argument) in arguments.iter().enumerate() {
+                    let ty = match (parameters.get(index), argument) {
+                        (Some(&parameter), _) => declared.local(parameter),
+                        (None, Operand::Copy(place)) => match self.unit.place_ty(function, place) {
+                            Some(ty) => ty,
+                            None => continue,
+                        },
+                        (None, Operand::Constant(_)) => continue,
+                    };
+                    let Ty::Pointer(read_as) = self.unit.ty(ty) else {
+                        continue;
+                    };
+                    let (locals, _) = slots_leaving(
+                        self,
+                        function,
+                        read_as,
+                        &Rvalue::Use(argument.clone()),
+                        value,
+                    );
+                    for (local, read_as) in locals {
+                        // Reached as a pointer, the body stores one of that
+                        // type; reached as `void`, through a `void *`, it may
+                        // store any pointer, so nothing is believed; reached
+                        // as no pointer, or below one, a typed store puts no
+                        // pointer there, and bounding that doubted a local
+                        // whose own address a callee may have stored in it.
+                        let Some(read_as) = read_as else {
+                            continue;
+                        };
+                        let width = match self.unit.ty(read_as) {
+                            Ty::Pointer(pointee) => self.unit.size_of(pointee).unwrap_or(0),
+                            Ty::Void => 0,
+                            Ty::Int | Ty::Char => continue,
+                        };
+                        value.handed_at_most[local.index()] =
+                            bounded(value.handed_at_most[local.index()], Some(width));
+                    }
+                }
                 // **And what it wrote there, or into memory it was handed, may
                 // be what it was handed**: `get(&r, u)` and `put(box, u)` may
                 // store `u`, and `free(u)` then made `*r` a use of freed
@@ -2490,8 +2662,13 @@ impl Analysis for Allocations<'_> {
                     // nothing leaves that. Believing it whatever it held let
                     // `keep(&a); a = a + 5; other();` pass `a` on as whole.
                     // A belief nothing here can show stays off. See ADR-0060.
+                    //
+                    // **No wider than it was handed as**, at this call or an
+                    // earlier one ([`Known::handed_at_most`], #632).
                     let believed = function.locals().nth(local).and_then(|id| {
                         let width = self.pointee_size(function, &Place::local(id))?;
+                        let width =
+                            value.handed_at_most[local].map_or(width, |most| width.min(most));
                         let whole = matches!(
                             fits(self, function, id, width, value, false),
                             None | Some(Fit::Inside)
@@ -2634,6 +2811,11 @@ impl Analysis for Allocations<'_> {
         // where that body is one this check reads. See ADR-0060.
         if matches!(kind, Callee::Opaque) {
             value.points_to[site].believed = self.pointee_size(function, place);
+            // And what its memory holds as its type says, as a parameter's.
+            value.points_to[site].contents_at_most = self
+                .unit
+                .place_ty(function, place)
+                .and_then(|ty| self.contents_bound(ty));
         }
         // **Its contents are indeterminate**, C17 7.22.3.4 p2 and 7.22.3.1
         // p2, for `malloc` and `aligned_alloc` alone: `calloc`'s are zero
@@ -2660,11 +2842,27 @@ impl Analysis for Allocations<'_> {
                     .flat_map(|local| value.sites_of(local).collect::<Vec<_>>())
                     .filter(|&old| old != site)
                     .collect();
+                // **And the bound on what it holds**, from the pointer it was
+                // handed as from the old allocation below: a `void **`
+                // parameter grown by `realloc` and read through an `int **`
+                // was believed four bytes wide (#632).
+                for argument in handed {
+                    if let Operand::Copy(source) = argument {
+                        if source.projection.is_empty() {
+                            value.stored_at_most[site] = bounded(
+                                value.stored_at_most[site],
+                                value.points_to[source.local.index()].contents_at_most,
+                            );
+                        }
+                    }
+                }
                 for old in old {
                     let (inside, inside_locals) =
                         (value.inside[old].clone(), value.inside_locals[old].clone());
                     value.inside[site].union_with(&inside);
                     value.inside_locals[site].union_with(&inside_locals);
+                    value.stored_at_most[site] =
+                        bounded(value.stored_at_most[site], value.stored_at_most[old]);
                     // And the mark with the row: what the old allocation may
                     // hold of a reborn site is what the new one holds after
                     // the copy. See ADR-0045.

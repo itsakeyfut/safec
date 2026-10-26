@@ -3238,6 +3238,108 @@ cases! {
         // Mutation: seed no sites for a dereferenced argument in
         // `contents_leaving`; this loses its `SC0413`.
         a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Memory a pointer arrived pointing at holds pointers believed as the
+        // type it arrived as, and a conversion keeps that: a `void **`
+        // parameter's or result's `void *`s were asked no width. Mutation:
+        // set no `contents_at_most` for a parameter; the first two go
+        // silent, and so do the three readers below, which go through one
+        // too. Mutation: set none for a call's result; the next two do.
+        // Mutation: set none for a load; the fifth does.
+        a_void_pointer_to_pointer_parameter_read_through_an_int_alias_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_void_pointer_to_pointer_parameter_handed_on_as_an_int_alias_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        memory_a_call_returned_as_void_read_through_an_int_alias_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        memory_a_call_returned_as_void_handed_on_as_an_int_alias_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local a callee was handed is believed written no wider than it
+        // was handed as, and as nothing through a `void *`. Mutation: ignore
+        // `handed_at_most` where a call writes an escaped local; both go
+        // silent. Mutation: give a local reached as `void` the local's own
+        // width; the second does.
+        a_local_a_callee_was_handed_as_void_is_believed_no_wider_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_handed_to_a_void_pointer_parameter_believes_nothing_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A load stored where the record names nothing bounds that memory
+        // by what it was believed. Mutation: record nothing in
+        // `stored_at_most`; this goes silent.
+        a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Every reader of a load asks the same bound: one handed to a
+        // function, one written through two levels, and one handed to
+        // `memset`. Mutation: read the type alone in `leaving`; the first
+        // goes silent. Mutation: skip the memory a deeper level goes through
+        // in `may_not_fit`; the second does. Mutation: read the type alone
+        // in `reached_by_library`; the third does.
+        a_pointer_read_through_a_void_parameter_and_handed_on_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_write_two_levels_through_a_void_parameter_is_asked_of_the_memory: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A round trip through `void *` back to the type a pointer arrived
+        // as, and a local a callee filled through the type it is, believe
+        // what they are. Mutation: set `Some(0)` for every arrival in
+        // `contents_bound`; the first gains an `SC0412`, beside about a
+        // hundred other cases. Mutation: give every local a call reaches as
+        // a pointer a width of zero; the second does.
+        an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_a_callee_filled_through_an_int_pointer_to_pointer_is_believed_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy carries the bound on what it copies, as a store of a load
+        // would: out of a `void **` parameter, out of memory a load named
+        // nothing in, and grown by `realloc`. Mutation: record no bound where
+        // `memcpy` copies into memory; the first two go silent. Mutation:
+        // carry none into what `realloc` returns; the third does.
+        a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call made on one arm leaves the local bounded by what it was
+        // handed as after the join, where the belief it left is gone.
+        // Mutation: drop the `handed_at_most` question from `fits`; this
+        // goes silent.
+        a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What memory holds on one arm bounds it after the join, beside a
+        // whole object or a null on the other. Mutation: let a recorded
+        // whole object stand over a narrower stored bound in
+        // `contents_leaving`; the first goes silent. Mutation: join
+        // `stored_at_most` by nothing; both do.
+        memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_asked_as_the_narrower: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        memory_holding_a_load_on_one_arm_and_a_null_on_the_other_is_asked_as_the_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A load stored in memory is bounded by what it was believed,
+        // whatever sites the record says it names, which may be another
+        // allocation or the caller's memory: stored over a whole allocation,
+        // through a pointer read out of memory, and two levels below a
+        // parameter. Mutation: bound only a load that names no site and no
+        // local; all three go silent.
+        a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_load_two_levels_below_a_parameter_stored_in_memory_is_bounded_by_its_belief: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A read believes the narrower of the type it reads and what its
+        // memory holds. Mutation: take the memory's bound alone in
+        // `believed_read`; this goes silent.
+        a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A load that believes nothing on some path is bounded at nothing
+        // when stored. Mutation: record no bound for it; this goes silent.
+        a_load_on_one_arm_and_a_null_on_the_other_stored_in_memory_is_bounded_at_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A bound on one arm survives the join, in either order. Mutation:
+        // drop `contents_at_most` from `Held::joined`; the first goes silent.
+        // Mutation: take the other side's alone; the second does.
+        a_converted_void_parameter_on_the_first_arm_bounds_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_converted_void_parameter_on_the_second_arm_bounds_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A stored bound is asked by a read as well as a departure.
+        // Mutation: skip `stored_at_most` in `believed_read`; this goes
+        // silent.
+        a_load_stored_in_memory_and_read_back_through_an_int_alias_is_bounded: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A later store does not raise a stored bound, since one site holds
+        // every slot of an allocation and the later store may be into
+        // another. Mutation: assign the bound at a store; this goes silent.
+        a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read out of a parameter's memory and handed straight on
+        // arrives as the type it is read as. Mutation: bound nothing for such
+        // a departure in `contents_leaving`; this loses its `SC0413`.
+        a_pointer_read_out_of_a_void_parameter_and_handed_straight_on_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Arithmetic keeps the bound of what it is built from. Mutation: drop
+        // `contents_at_most` from `Held::accumulated`; this loses a report.
+        a_converted_void_parameter_moved_by_arithmetic_keeps_its_bound: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Memory a pointer to no pointer arrived at holds nothing vouched for
+        // as a pointer. Mutation: bound it at no limit in `contents_bound`;
+        // both lose a report. Mutation: bound it at one byte; the second
+        // does.
+        an_int_parameter_read_through_an_int_pointer_to_pointer_believes_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument

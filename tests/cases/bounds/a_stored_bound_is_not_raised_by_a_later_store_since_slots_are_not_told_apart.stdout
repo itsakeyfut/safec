@@ -1,0 +1,159 @@
+Target "x86_64-pc-windows-msvc"
+Function a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "char **" parameter "cc"
+  Local "_2" "int **" parameter "ii"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "char *" "c"
+  Local "_7" "int *" "d"
+  Local "_8" "void **" "m"
+  Local "_9" "void *"
+  Local "_10" "int"
+  Local "_11" "void *"
+  Local "_12" "void *"
+  Local "_13" "void *" "pm"
+  Local "_14" "int **" "pi"
+  Local "_15" "int *" "p"
+  Local "_16" "int"
+  Local "_17" "int"
+  Block "bb0" entry
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:3:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:3:9 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_3"
+        Constant 0
+    Branch a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:3:9 written "bb3" "bb2"
+      Copy "_4"
+  Block "bb1"
+    Branch a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:3:9 written "bb3" "bb4"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:3:9 generated
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:3:20 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:3:20 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_5"
+        Constant 0
+    Goto "bb1"
+  Block "bb3"
+    Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:3:9 generated
+    Return
+  Block "bb4"
+    Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:3:9 generated
+    Goto "bb5"
+  Block "bb5"
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:6:11 written
+      Destination "_6"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:6:15 generated
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:7:10 written
+      Destination "_7"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:7:14 generated
+    ArgumentsEvaluated a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:8:16 generated
+    Call a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:8:16 written "malloc" "bb6"
+      Destination "_9"
+      Constant 8
+  Block "bb6"
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:8:12 written
+      Destination "_8"
+      Use
+        Copy "_9"
+    Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:8:16 generated
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:9:9 written
+      Destination "_10"
+      Binary "Eq"
+        Copy "_8"
+        Constant 0
+    Branch a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:9:9 written "bb7" "bb8"
+      Copy "_10"
+  Block "bb7"
+    Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:9:9 generated
+    Return
+  Block "bb8"
+    Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:9:9 generated
+    Goto "bb9"
+  Block "bb9"
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:12:5 written
+      Destination "_8"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:12:5 written
+      Destination "_11"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:12:5 generated
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:13:5 written
+      Destination "_8"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:13:5 written
+      Destination "_12"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:13:5 generated
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:14:11 written
+      Destination "_13"
+      Use
+        Copy "_8"
+    Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:14:16 generated
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:15:11 written
+      Destination "_14"
+      Use
+        Copy "_13"
+    Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:15:16 generated
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:16:10 written
+      Destination "_15"
+      Use
+        Copy "_14"
+          Deref
+    Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:16:14 generated
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:17:9 written
+      Destination "_16"
+      Binary "Ne"
+        Copy "_15"
+        Constant 0
+    Branch a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:17:9 written "bb10" "bb11"
+      Copy "_16"
+  Block "bb10"
+    Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:17:9 generated
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:18:9 written
+      Destination "_15"
+        Deref
+      Use
+        Constant 1
+    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:18:9 written
+      Destination "_17"
+      Use
+        Copy "_15"
+          Deref
+    Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:18:9 generated
+    Goto "bb12"
+  Block "bb11"
+    Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:17:9 generated
+    Goto "bb12"
+  Block "bb12"
+    Return

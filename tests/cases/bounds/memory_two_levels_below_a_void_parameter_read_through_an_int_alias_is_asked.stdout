@@ -1,0 +1,143 @@
+Target "x86_64-pc-windows-msvc"
+Function memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:1:6 "run"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "m"
+  Local "_2" "int"
+  Local "_3" "void **" "t"
+  Local "_4" "int"
+  Local "_5" "void *" "pt"
+  Local "_6" "int **" "pi"
+  Local "_7" "int *" "p"
+  Local "_8" "int"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:2:9 written
+      Destination "_2"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:2:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:2:9 generated
+    StorageLive memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:3:9 generated "_3"
+    Operation memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:3:16 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:3:20 generated
+    Operation memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:4:13 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_3"
+        Constant 0
+    Branch memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:4:13 written "bb4" "bb5"
+      Copy "_4"
+  Block "bb2"
+    Sequenced memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:2:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+  Block "bb4"
+    Sequenced memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:4:13 generated
+    StorageLive memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:5:13 generated "_5"
+    Operation memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:5:19 written
+      Destination "_5"
+      Use
+        Copy "_3"
+    Sequenced memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:5:24 generated
+    StorageLive memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:6:13 generated "_6"
+    Operation memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:6:19 written
+      Destination "_6"
+      Use
+        Copy "_5"
+    Sequenced memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:6:24 generated
+    StorageLive memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:7:13 generated "_7"
+    Operation memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:7:18 written
+      Destination "_7"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:7:22 generated
+    Operation memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:8:17 written
+      Destination "_8"
+      Binary "Ne"
+        Copy "_7"
+        Constant 0
+    Branch memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:8:17 written "bb7" "bb8"
+      Copy "_8"
+  Block "bb5"
+    Sequenced memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:4:13 generated
+    Goto "bb6"
+  Block "bb6"
+    StorageDead memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:12:5 generated "_3"
+    Goto "bb3"
+  Block "bb7"
+    Sequenced memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:8:17 generated
+    Operation memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:9:17 written
+      Destination "_7"
+        Deref
+      Use
+        Constant 1
+    Operation memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:9:17 written
+      Destination "_9"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:9:17 generated
+    Goto "bb9"
+  Block "bb8"
+    Sequenced memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:8:17 generated
+    Goto "bb9"
+  Block "bb9"
+    StorageDead memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:11:9 generated "_7"
+    StorageDead memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:11:9 generated "_6"
+    StorageDead memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:11:9 generated "_5"
+    Goto "bb6"
+Function memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:14:5 "main"
+  Local "_0" "int" return
+  Local "_1" "char" "c"
+  Local "_2" "void *" "v"
+  Local "_3" "char *"
+  Local "_4" "void **" "w"
+  Local "_5" "void **"
+  Local "_6" "void ***"
+  Block "bb0" entry
+    Operation memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:14:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:16:15 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:16:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:16:15 generated
+    Operation memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:17:16 written
+      Destination "_5"
+      Address
+        Place "_2"
+    Operation memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:17:12 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:17:16 generated
+    Operation memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:18:9 written
+      Destination "_6"
+      Address
+        Place "_4"
+    ArgumentsEvaluated memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:18:5 generated
+    Call memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:18:5 written "run" "bb1"
+      Copy "_6"
+  Block "bb1"
+    Sequenced memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:18:5 generated
+    Operation memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:19:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked.c:19:12 generated
+    Return

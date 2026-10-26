@@ -1,0 +1,10 @@
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ memory_holding_a_load_on_one_arm_and_a_null_on_the_other_is_asked_as_the_load.c:27:5 ]
+    │
+ 27 │     use(pm);
+    │     ───┬───  
+    │        ╰───── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

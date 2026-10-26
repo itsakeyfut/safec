@@ -190,6 +190,31 @@ pub(super) struct Known {
     /// where it returns, and read by the question whether an access fits the
     /// object it reaches. See ADR-0060.
     pub(super) extent: Vec<Option<Extent>>,
+    /// Per site, how many bytes a pointer stored there that names nothing
+    /// [`Self::inside`] or [`Self::inside_locals`] records is believed to
+    /// point at, at most, or `None` where no such pointer was stored.
+    ///
+    /// **What the record cannot say**: `char *c = *cc; *m = c;` stores a
+    /// pointer read out of the caller's memory, whose object nothing here
+    /// records, and `m` handed on as an `int **` was believed to hold whole
+    /// `int`s (#632). A bound, so the lower of two at a join, and kept when
+    /// the site is made again, as `inside` is. See ADR-0060.
+    pub(super) stored_at_most: Vec<Option<u64>>,
+    /// Per local, how many bytes a pointer a call may write into it is
+    /// believed to point at, at most: the narrowest width the parameters
+    /// it was handed through believe at its level, and `0` where one was a
+    /// `void *`. That is what this check asks of a callee's body, which is
+    /// asked at the types it stores through: through a `void *` it may have
+    /// stored any pointer at any type. C allows no more through one than
+    /// through an `int **` (C17 6.5 p7), so this is a limit of the asking
+    /// and not of the language. `None` where no call was handed it.
+    ///
+    /// **What a callee wrote is believed as it was handed**, not as the
+    /// local is declared: `int *v` handed to `put(void **slot, char *c)`
+    /// holds a `char`'s address afterwards, asked as a `void *` in `put`'s
+    /// body, and was believed a whole `int` (#632). A bound, so the lower of
+    /// two at a join. See ADR-0060.
+    pub(super) handed_at_most: Vec<Option<u64>>,
 }
 
 impl Known {
@@ -956,6 +981,11 @@ impl Known {
             // Left to the caller, which writes what the new allocation takes
             // on the line after this, since only it knows what made it.
             extent: _,
+            // Kept, as `inside` is: the slots of the new allocation are not
+            // told apart from the old one's, and a bound kept only doubts.
+            stored_at_most: _,
+            // About a local, not a site.
+            handed_at_most: _,
         } = self;
 
         // **A local that loses an allocation that is gone may hold one**, so

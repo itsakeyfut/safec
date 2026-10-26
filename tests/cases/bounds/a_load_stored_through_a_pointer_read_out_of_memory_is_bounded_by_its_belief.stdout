@@ -1,0 +1,220 @@
+Target "x86_64-pc-windows-msvc"
+Function a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:2:6 "use"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "pi"
+  Local "_2" "int"
+  Local "_3" "int *" "p"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:3:9 written
+      Destination "_2"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:3:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:3:9 generated
+    StorageLive a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:4:9 generated "_3"
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:4:14 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:4:18 generated
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:5:13 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_3"
+        Constant 0
+    Branch a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:5:13 written "bb4" "bb5"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+  Block "bb4"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:5:13 generated
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:6:13 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:6:13 written
+      Destination "_5"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:6:13 generated
+    Goto "bb6"
+  Block "bb5"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:5:13 generated
+    Goto "bb6"
+  Block "bb6"
+    StorageDead a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:8:5 generated "_3"
+    Goto "bb3"
+Function a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:10:6 "f"
+  Local "_0" "void" return
+  Local "_1" "char ***" parameter "ccc"
+  Local "_2" "int"
+  Local "_3" "char **" "cc"
+  Local "_4" "int"
+  Local "_5" "void ***" "mm"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "void **" "m"
+  Local "_9" "void *"
+  Local "_10" "int"
+  Local "_11" "void **"
+  Local "_12" "void **" "t"
+  Local "_13" "int"
+  Local "_14" "char *" "c"
+  Local "_15" "void *"
+  Local "_16" "void *" "pm"
+  Block "bb0" entry
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:11:9 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:11:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:11:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:11:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:14:12 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:14:17 generated
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:15:9 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:15:9 written "bb4" "bb5"
+      Copy "_4"
+  Block "bb4"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:15:9 generated
+    Return
+  Block "bb5"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:15:9 generated
+    Goto "bb6"
+  Block "bb6"
+    ArgumentsEvaluated a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:18:18 generated
+    Call a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:18:18 written "malloc" "bb7"
+      Destination "_6"
+      Constant 8
+  Block "bb7"
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:18:13 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:18:18 generated
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:19:9 written
+      Destination "_7"
+      Binary "Eq"
+        Copy "_5"
+        Constant 0
+    Branch a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:19:9 written "bb8" "bb9"
+      Copy "_7"
+  Block "bb8"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:19:9 generated
+    Return
+  Block "bb9"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:19:9 generated
+    Goto "bb10"
+  Block "bb10"
+    ArgumentsEvaluated a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:22:16 generated
+    Call a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:22:16 written "malloc" "bb11"
+      Destination "_9"
+      Constant 8
+  Block "bb11"
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:22:12 written
+      Destination "_8"
+      Use
+        Copy "_9"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:22:16 generated
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:23:9 written
+      Destination "_10"
+      Binary "Eq"
+        Copy "_8"
+        Constant 0
+    Branch a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:23:9 written "bb12" "bb13"
+      Copy "_10"
+  Block "bb12"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:23:9 generated
+    Return
+  Block "bb13"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:23:9 generated
+    Goto "bb14"
+  Block "bb14"
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:26:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_8"
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:26:5 written
+      Destination "_11"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:26:5 generated
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:27:12 written
+      Destination "_12"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:27:16 generated
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:28:9 written
+      Destination "_13"
+      Binary "Eq"
+        Copy "_12"
+        Constant 0
+    Branch a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:28:9 written "bb15" "bb16"
+      Copy "_13"
+  Block "bb15"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:28:9 generated
+    Return
+  Block "bb16"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:28:9 generated
+    Goto "bb17"
+  Block "bb17"
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:31:11 written
+      Destination "_14"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:31:15 generated
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:32:5 written
+      Destination "_12"
+        Deref
+      Use
+        Copy "_14"
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:32:5 written
+      Destination "_15"
+      Use
+        Copy "_12"
+          Deref
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:32:5 generated
+    Operation a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:33:11 written
+      Destination "_16"
+      Use
+        Copy "_8"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:33:16 generated
+    ArgumentsEvaluated a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:34:5 generated
+    Call a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:34:5 written "use" "bb18"
+      Copy "_16"
+  Block "bb18"
+    Sequenced a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief.c:34:5 generated
+    Return

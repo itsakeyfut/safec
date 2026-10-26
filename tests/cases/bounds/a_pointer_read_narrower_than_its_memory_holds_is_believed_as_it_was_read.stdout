@@ -1,0 +1,83 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:1:6 "use"
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "x"
+  Local "_2" "int"
+  Local "_3" "int"
+  Block "bb0" entry
+    Operation a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:2:9 written
+      Destination "_2"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:2:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:2:9 generated
+    Operation a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:3:9 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:3:9 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:3:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:2:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+Function a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:6:6 "run"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "m"
+  Local "_2" "int"
+  Local "_3" "void *" "pm"
+  Local "_4" "char **" "cp"
+  Local "_5" "void *" "w"
+  Block "bb0" entry
+    Operation a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:7:9 written
+      Destination "_2"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:7:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:7:9 generated
+    StorageLive a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:8:9 generated "_3"
+    Operation a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:8:15 written
+      Destination "_3"
+      Use
+        Copy "_1"
+    Sequenced a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:8:20 generated
+    StorageLive a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:9:9 generated "_4"
+    Operation a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:9:16 written
+      Destination "_4"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:9:21 generated
+    StorageLive a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:10:9 generated "_5"
+    Operation a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:10:15 written
+      Destination "_5"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:10:19 generated
+    ArgumentsEvaluated a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:11:9 generated
+    Call a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:11:9 written "use" "bb4"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:7:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+  Block "bb4"
+    Sequenced a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:11:9 generated
+    StorageDead a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:12:5 generated "_5"
+    StorageDead a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:12:5 generated "_4"
+    StorageDead a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read.c:12:5 generated "_3"
+    Goto "bb3"

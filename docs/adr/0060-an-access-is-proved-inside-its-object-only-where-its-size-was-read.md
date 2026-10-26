@@ -97,10 +97,24 @@ width the receiver believes**: a local at the wider of its own type and the
 receiver's, and memory by what its record says the pointers stored there point
 at, so `use(pv)` with `pv` a `void *` local's address and `use` taking `int **`
 asks that local four bytes wide. Memory the record does not hold is not asked
-here, since asking it would doubt every pointer to a parameter's memory handed
-on; a `void *` stored where this function holds no record of it, by the
-caller, by a callee, or as a value whose targets are not recorded, is
-therefore still believed wider when read back, which is #632. Reading a
+by its record, since that would doubt every pointer to a parameter's memory
+handed on. **It is believed as the type it arrived as**: a pointer that
+arrives as a parameter, a call's result or a load carries how wide the
+pointers in its memory are believed to be, from the type it arrives as (a
+`void **` is believed to hold `void *`s, so nothing), one level deep, through
+every conversion and every copy (`memcpy`, `memmove`, `realloc`), and that is
+asked wherever it is read through or handed on. A local a call was handed is
+believed written no wider than it was handed as, and as nothing through a
+`void *` parameter, on every path after that call; and a pointer read out of
+memory that is stored where the record names nothing bounds that memory by
+what it was believed, whatever sites the record says it names (#632). Below
+the first level, and through a store and a reload, the bound is lost, which is
+#634. Each only lowers a belief, so being wrong is a false `Unknown`, and
+it is paid by conforming code: a `void **` that does point at an `int *` is
+refused when read through an `int **`, a well-typed store does not raise a
+bound an earlier one set, and a local once handed to a `void *` parameter is
+believed nothing after any later call, since that callee may have kept its
+address. Reading a
 pointer object through an incompatible pointer type is undefined by C17 6.5 p7
 as well, unless the read is through a character type; it is caught only where
 the widths differ, since effective types are not followed (#627).
@@ -114,7 +128,7 @@ lost name**, which an access does: each stands for a write asked where it
 happened, a store here or in the callee, or a site made again by the same call
 at the same size. What a call this check cannot read may write into an escaped
 local is believed as its result is, where the local was whole before the
-call.
+call, and no wider than the local was handed as (#632).
 
 **The question**, `report::fits`, is asked at every access `used` asks about,
 of the pointer the place goes through first; a deeper level goes through a load
@@ -227,6 +241,17 @@ Each mutation applied on its own, the workspace run, and the file restored.
   `memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds`
   goes silent too. The other mutations of #627 are beside their cases in
   `tests/cases.rs`.
+* memory believed wider than it arrived as: setting no bound for a parameter,
+  a call's result or a load silences
+  `a_void_pointer_to_pointer_parameter_read_through_an_int_alias_is_asked`,
+  `memory_a_call_returned_as_void_read_through_an_int_alias_is_asked` and
+  `memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked`
+  in turn; ignoring the width a local was handed as silences
+  `a_local_a_callee_was_handed_as_void_is_believed_no_wider_when_read_back`;
+  recording nothing stored silences
+  `a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on`
+  (#632). The other mutations of #632 are beside their cases in
+  `tests/cases.rs`.
 * review's findings, each with a case in `tests/cases/bounds/` and the
   mutation beside it in `tests/cases.rs`, each applied and seen to fail its
   case: the library reach keyed with the dereferences
@@ -325,6 +350,25 @@ folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
 
 * Bad, because the lattice does not tell an allocation's slots apart, so it
   is a redesign and wants an experiment first.
+
+### For memory arriving from outside: believe nothing through a converted pointer-to-pointer
+
+* Good, because it needs no new field.
+* Bad, because it refuses the conforming `int **` to `void *` to `int **`
+  round trip, a wide false `Unknown`. Not taken (#632).
+
+### For memory arriving from outside: a bound per allocation from its local's type
+
+* Good, because a site is a local, so its type is at hand.
+* Bad, because it covers one level and left a `void ***` two levels down
+  silent. Not taken (#632).
+
+### For a store that names nothing: mark the record incomplete
+
+* Good, because it is one bit.
+* Bad, because it refuses a correct `int *` read out of a parameter and
+  stored into `int **` memory, a wide false `Unknown`. Not taken; the
+  stored value's belief is recorded instead (#632).
 
 ## More Information
 

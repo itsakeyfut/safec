@@ -1,0 +1,20 @@
+error[SC0412]: this may reach outside the object `p` points at
+    ╭─[ a_converted_void_parameter_on_the_second_arm_bounds_the_join.c:13:9 ]
+    │
+ 13 │         *p = 1;
+    │         ───┬──  
+    │            ╰──── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0403]: this may dereference `pi` while it is null
+    ╭─[ a_converted_void_parameter_on_the_second_arm_bounds_the_join.c:11:10 ]
+    │
+ 11 │     int *p = *pi;
+    │          ───┬───  
+    │             ╰───── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

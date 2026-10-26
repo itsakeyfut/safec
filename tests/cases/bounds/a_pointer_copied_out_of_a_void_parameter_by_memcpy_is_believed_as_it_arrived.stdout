@@ -1,0 +1,167 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:2:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:4:6 "use"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "pi"
+  Local "_2" "int"
+  Local "_3" "int *" "p"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:5:9 written
+      Destination "_2"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:5:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:5:9 generated
+    StorageLive a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:6:9 generated "_3"
+    Operation a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:6:14 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:6:18 generated
+    Operation a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:7:13 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_3"
+        Constant 0
+    Branch a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:7:13 written "bb4" "bb5"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:5:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+  Block "bb4"
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:7:13 generated
+    Operation a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:8:13 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:8:13 written
+      Destination "_5"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:8:13 generated
+    Goto "bb6"
+  Block "bb5"
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:7:13 generated
+    Goto "bb6"
+  Block "bb6"
+    StorageDead a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:10:5 generated "_3"
+    Goto "bb3"
+Function a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:13:6 "f"
+  Local "_0" "void" return
+  Local "_1" "void **" parameter "m"
+  Local "_2" "int"
+  Local "_3" "void **" "b"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "void *"
+  Local "_7" "void *" "pb"
+  Block "bb0" entry
+    Operation a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:14:9 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:14:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:14:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:14:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:17:16 generated
+    Call a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:17:16 written "malloc" "bb4"
+      Destination "_4"
+      Constant 8
+  Block "bb4"
+    Operation a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:17:12 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:17:16 generated
+    Operation a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:18:9 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:18:9 written "bb5" "bb6"
+      Copy "_5"
+  Block "bb5"
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:18:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:18:9 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:21:5 generated
+    Call a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:21:5 written "memcpy" "bb8"
+      Destination "_6"
+      Copy "_3"
+      Copy "_1"
+      Constant 8
+  Block "bb8"
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:21:5 generated
+    Operation a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:22:11 written
+      Destination "_7"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:22:16 generated
+    ArgumentsEvaluated a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:23:5 generated
+    Call a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:23:5 written "use" "bb9"
+      Copy "_7"
+  Block "bb9"
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:23:5 generated
+    Return
+Function a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:26:5 "main"
+  Local "_0" "int" return
+  Local "_1" "char" "c"
+  Local "_2" "void *" "v"
+  Local "_3" "char *"
+  Local "_4" "void **"
+  Block "bb0" entry
+    Operation a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:26:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:28:15 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:28:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:28:15 generated
+    Operation a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:29:7 written
+      Destination "_4"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:29:5 generated
+    Call a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:29:5 written "f" "bb1"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:29:5 generated
+    Operation a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:30:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:30:12 generated
+    Return
