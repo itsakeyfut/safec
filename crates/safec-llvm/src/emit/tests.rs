@@ -392,6 +392,84 @@ fn a_pointer_moved_by_an_integer_is_a_getelementptr_over_its_element() {
     );
 }
 
+/// A count whose type has no sign is widened without one: on a target whose
+/// `char` is unsigned, `p + c` zero-extends `c`.
+///
+/// Mutation: always sign-extend. This fails.
+#[test]
+fn a_pointer_moved_by_an_unsigned_count_widens_it_without_a_sign() {
+    let (sources, at) = named("f");
+    let mut unit = TranslationUnit::new(target("aarch64-unknown-linux-gnu"));
+    let int = unit.push_type(Ty::Int);
+    let char = unit.push_type(Ty::Char);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut f = Function::new(at, pointer, [pointer, char]);
+    let mut parameters = f.parameters();
+    let (p, c) = (
+        parameters.next().expect("two parameters"),
+        parameters.next().expect("two parameters"),
+    );
+    f.push_block(Block {
+        elements: vec![Element::Assign(Operation {
+            place: Place::local(f.return_place()),
+            value: Rvalue::Binary {
+                op: BinOp::Add,
+                lhs: Operand::Copy(Place::local(p)),
+                rhs: Operand::Copy(Place::local(c)),
+            },
+            origin: Origin::Written(at),
+        })],
+        terminator: Terminator::Return,
+    });
+    unit.push_function(f);
+
+    let (out, refusals) = module(&sources, &unit);
+
+    assert_eq!(refusals, vec![], "{out}");
+    assert!(out.contains(" = zext i8 %t1 to i64\n"), "{out}");
+}
+
+/// Each relational comparison of two pointers is refused in the words that
+/// say what it is, C17 6.5.8 p5, and not as arithmetic that needs a width.
+///
+/// Mutation: send only `Lt` to that refusal. `Gt`, `Le` and `Ge` take the
+/// arithmetic refusal's words and this fails.
+#[test]
+fn every_relational_comparison_of_two_pointers_is_refused_as_one() {
+    for op in [BinOp::Lt, BinOp::Gt, BinOp::Le, BinOp::Ge] {
+        let (sources, at) = named("f");
+        let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
+        let int = unit.push_type(Ty::Int);
+        let pointer = unit.push_type(Ty::Pointer(int));
+        let mut f = Function::new(at, int, [pointer]);
+        let p = f.parameters().next().expect("one parameter");
+        f.push_block(Block {
+            elements: vec![Element::Assign(Operation {
+                place: Place::local(f.return_place()),
+                value: Rvalue::Binary {
+                    op,
+                    lhs: Operand::Copy(Place::local(p)),
+                    rhs: Operand::Copy(Place::local(p)),
+                },
+                origin: Origin::Written(at),
+            })],
+            terminator: Terminator::Return,
+        });
+        unit.push_function(f);
+
+        let (_, refusals) = module(&sources, &unit);
+
+        assert_eq!(
+            refusals,
+            vec![Refusal {
+                why: "a relational comparison of two pointers".to_owned(),
+                at: Some(at),
+            }],
+            "{op:?}"
+        );
+    }
+}
+
 /// Whether two pointers name one object is defined and needs no width, so
 /// it is written rather than refused. The interpreter answers the same
 /// question the same way.

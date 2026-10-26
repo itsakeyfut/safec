@@ -768,7 +768,11 @@ fn the_mvp_program_runs_and_answers_three() {
 ///
 /// Mutation: spell the element of `getelementptr` as `i8`. `local`, the
 /// first that steps past its first element, answers another number.
-/// Mutation: drop the negation of a subtraction. `heap` does.
+/// Mutation: drop the negation of a subtraction. `heap` does. Mutation: ask
+/// the written type of a subscript's index rather than the type it decays
+/// to; `index_first` panics the compiler. Mutation: refuse a pointer on the
+/// right of an addition in the backend; `count_first` is refused.
+/// Mutation: accept only a length above one; `one` is refused.
 #[test]
 fn arrays_and_pointer_arithmetic_compute_what_c_says() {
     if !clang_or_skip("what an indexed program answers") {
@@ -800,6 +804,21 @@ fn arrays_and_pointer_arithmetic_compute_what_c_says() {
             "through",
             "int main(void) {\n    int a[3];\n    int *p = a;\n    p[2] = 4;\n    int (*pa)[3] = &a;\n    return (*pa)[2] + a[2];\n}\n",
             8,
+        ),
+        (
+            "index_first",
+            "int main(void) {\n    int a[4];\n    a[1] = 6;\n    return 1[a];\n}\n",
+            6,
+        ),
+        (
+            "count_first",
+            "void *malloc(int n);\nint main(void) {\n    int *p = malloc(8);\n    if (p == 0) {\n        return 1;\n    }\n    p[1] = 5;\n    int n = 1;\n    int *q = n + p;\n    return *q;\n}\n",
+            5,
+        ),
+        (
+            "one",
+            "int main(void) {\n    int a[1];\n    a[0] = 2;\n    return a[0];\n}\n",
+            2,
         ),
         (
             "bytes",

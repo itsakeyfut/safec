@@ -3422,6 +3422,12 @@ cases! {
         // Mutation: the width a local was handed as skips an array of
         // pointers rather than reading its element; this goes silent.
         a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `size_of` wraps an array too large to count rather than
+        // answering `None`; this goes silent.
+        an_array_too_large_to_count_is_not_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `element_of` strips one dimension only; this panics at
+        // `type_levels`.
+        a_pointer_read_out_of_an_array_of_arrays_of_pointers_behind_a_parameter_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument
