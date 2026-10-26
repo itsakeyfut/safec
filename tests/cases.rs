@@ -252,6 +252,12 @@ cases! {
         a_pointer_read_through_the_address_of_a_local_nothing_wrote_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `unwritten_read` reports nothing; this goes silent.
         a_local_whose_address_is_taken_read_by_name_before_anything_wrote_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `unwritten_read` is not asked at a terminator; both
+        // reads, a call's argument and a branch's condition, go silent.
+        a_local_whose_address_is_taken_read_by_name_in_a_call_or_a_condition_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: say only one storage where the pointer may reach both;
+        // one of the two notes goes.
+        a_pointer_read_out_of_an_allocation_or_a_local_nothing_wrote_cites_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: a store through a pointer clears no local; this is
         // reported.
         a_pointer_read_out_of_a_local_array_after_it_was_written_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -267,6 +273,12 @@ cases! {
         // Mutation: `holds_a_pointer` answers `true` for every type; this is
         // reported where `v` is read by name.
         an_integer_local_whose_address_is_taken_read_before_anything_wrote_it_is_not_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `StorageLive` makes every local unwritten again,
+        // whatever its type; this gains an `SC0411`.
+        an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_not_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `holds_a_pointer` answers `true` for `char`; this is
+        // reported.
+        a_character_local_whose_address_is_taken_read_before_anything_wrote_it_is_not_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `Known::replaced` clears no local, which is the door a
         // store this check cannot place goes through; this is reported.
         a_local_written_through_two_dereferences_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

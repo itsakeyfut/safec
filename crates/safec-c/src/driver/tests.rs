@@ -2092,6 +2092,26 @@ mod unassigned {
         assert_eq!(edges, ["when this is false"]);
     }
 
+    /// A local whose address is taken, read by name before anything wrote
+    /// it, is `SC0411` in the words of a local read before it was assigned,
+    /// citing the clauses for a local and not for an allocation (#640).
+    ///
+    /// Mutation: give it the allocation's note, or `*p`'s words. This fails.
+    #[test]
+    fn a_local_read_by_name_before_anything_wrote_it_is_sc0411_citing_a_local() {
+        let (code, message, notes) = said(Kind::IndeterminateLocal, Conclusion::Unsafe);
+        assert_eq!(code, "SC0411");
+        assert_eq!(message, "`p` is read before anything was assigned to it");
+        assert!(
+            notes.iter().any(|note| note.starts_with("C17 6.2.4 p6")),
+            "{notes:?}"
+        );
+        assert!(
+            !notes.iter().any(|note| note.starts_with("C17 7.22.3.1")),
+            "{notes:?}"
+        );
+    }
+
     /// The same code for a pointer read out of memory nothing wrote, in
     /// words of its own. Mutation: give it another code, or drop the note.
     /// This fails.
