@@ -1335,24 +1335,25 @@ fn locals_reached(function: &Function, value: &Rvalue, known: &Known) -> Vec<Loc
 /// believe it a whole `int`, and nothing asked `q`, since an assignment to a
 /// local is no door. Asking the local's own value where its address leaves
 /// is the door, with the state at that point, so an assignment after the
-/// address was taken is seen too. Memory this check follows as sites holds
-/// what stores put there, each asked where it was stored. Found by review.
+/// address was taken is seen too. Found by review.
 ///
 /// **Each local at the wider of its own type and the receiver's.** Whoever
 /// converts a `void *` back and reads the local reads a pointer of the
 /// local's type, so a `void *` leaving still asks each local it reaches at
 /// that type, and a `void *` local its start; and a receiver that reads the
-/// local as a wider type believes that, so `use(pv)` with `pv` a `void
-/// *v`'s address and `use` taking `int **` asks `v` four bytes wide (#627).
+/// local as a wider type believes that: with `void *v = &c; void *pv =
+/// &v;` and `use` taking `int **`, `use(pv)` asks `v` four bytes wide
+/// (#627).
 ///
 /// **Memory by its record, where the receiver believes a width.** Its
 /// stores were asked at the type they stored, and the receiver may read a
 /// wider one: `*m = c; use(pm);` with `m` a `void **` and `c` one `char` is
 /// asked what `m` holds, the objects the pointers stored there point at
 /// ([`Known::inside`], [`Known::inside_locals`]) by their size. What the
-/// record does not hold is not asked: it was written unseen, asked where it
-/// was written, or is the caller's, and asking it here would doubt every
-/// pointer to a parameter's memory handed on (#627). See ADR-0060.
+/// record does not hold is not asked, since asking it would doubt every
+/// pointer to a parameter's memory handed on (#627); a `void *` stored there
+/// by the caller, by a callee, or as a value whose targets are not
+/// recorded, is believed wider when read back, which is #632. See ADR-0060.
 fn contents_leaving(
     findings: &mut Vec<Finding>,
     departed: &mut Vec<(Span, Departure, Option<LocalId>, usize)>,
@@ -1406,8 +1407,9 @@ fn contents_leaving(
         .collect();
     let mut asked_locals: Vec<(LocalId, Option<TyId>)> = Vec::new();
     let mut asked_sites: Vec<(usize, Option<TyId>)> = Vec::new();
-    // Each pair is walked once and the types only get shallower, so the walk
-    // ends.
+    // Each pair is expanded once, behind `asked_locals` and `asked_sites`,
+    // and there are finitely many: the locals, the sites, and the types the
+    // departing one points through. So the walk ends.
     loop {
         if let Some((local, read_as)) = locals.pop() {
             if asked_locals.contains(&(local, read_as)) {
@@ -1415,8 +1417,9 @@ fn contents_leaving(
             }
             asked_locals.push((local, read_as));
             let below = read_as.and_then(|ty| pointee(analysis, ty));
-            // Further in first, since a `void *` that believes nothing may
-            // still point at a local that holds something believed.
+            // What it points at is walked too, since a `void *` that
+            // believes nothing may still point at a local that holds
+            // something believed.
             let read = Rvalue::Use(Operand::Copy(Place::local(local)));
             locals.extend(
                 locals_reached(function, &read, known)

@@ -3195,8 +3195,11 @@ cases! {
         // the local check in `read_through`; both go silent.
         an_int_pointer_read_through_an_alias_of_a_void_pointer_a_callee_filled_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_its_local_before_it_is_used_is_asked_what_the_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Read back as the type it was converted from, it is believed. The
-        // null doubt is the nullability check's. Mutation: leave every load
+        // A `char`'s address read back as a `char *` fits by size, so it is
+        // believed. The `char **` alias of a `void *` local is itself C17 6.5
+        // p7's, which this check does not follow; the conforming spelling,
+        // read as a `void *` and converted, is #631. The null doubt is the
+        // nullability check's. Mutation: leave every load
         // out of a local unbelieved in `read_through`; this gains an
         // `SC0412`.
         a_char_stored_as_void_in_a_local_and_read_back_as_char_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

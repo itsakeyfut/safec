@@ -82,8 +82,9 @@ argument as the callee's parameter is typed, walking the parameters as well as
 the arguments so that `void g();` cannot make a call ask nothing, and an
 argument past every parameter as its own type; `report::departed_in_element`
 asks a `return` and a store. **A pointer to memory lets the pointers stored
-there leave with it**: each local it may point at is asked at its own type, as
-it stands where the address leaves, so `int *q = v; h(&q);` asks `q`, and the
+there leave with it**: each local it may point at is asked at the wider of its
+own type and the type the receiver reads it as, as it stands where the address
+leaves, so `int *q = v; h(&q);` asks `q`, and the
 source of `memcpy` and `memmove` is asked as a store into the destination. A
 call this check reads by name is asked how far it reaches instead, unless the
 callee is defined in this unit, and `free`, an allocator, `realloc` and a call
@@ -95,10 +96,14 @@ that much, and asking nothing let a pointer off its start stored through a
 width the receiver believes**: a local at the wider of its own type and the
 receiver's, and memory by what its record says the pointers stored there point
 at, so `use(pv)` with `pv` a `void *` local's address and `use` taking `int **`
-asks that local four bytes wide. Memory the record does not hold was written
-unseen or is the caller's, and is asked where it was written. A read through a
-type the object was not stored as is undefined by C17 6.5 p7 as well, and is
-reported by size, since effective types are not followed (#627).
+asks that local four bytes wide. Memory the record does not hold is not asked
+here, since asking it would doubt every pointer to a parameter's memory handed
+on; a `void *` stored where this function holds no record of it, by the
+caller, by a callee, or as a value whose targets are not recorded, is
+therefore still believed wider when read back, which is #632. Reading a
+pointer object through an incompatible pointer type is undefined by C17 6.5 p7
+as well, unless the read is through a character type; it is caught only where
+the widths differ, since effective types are not followed (#627).
 
 **A departure is always `Unknown`**, even where every object is shown
 narrower: C leaves `g(v)` with `v` a `char`'s address passed as an `int *`
@@ -127,9 +132,8 @@ through a pointer into a local starts where what it held and what was written
 start, not anywhere, since the local is now asked. A pointer read out of a
 local into another is believed only where the local's value fits what it is
 read as, so `int *q = *pi; *q = 1;` asks `v` as `**pi` does, and an `int *`
-read through an alias of a `void *` a callee filled is not believed (#627). In
-order: a
-pointer holding nothing is the nullability check's; a lost, foreign or escaped
+read through an alias of a `void *` a callee filled is not believed (#627).
+In order: a pointer holding nothing is the nullability check's; a lost, foreign or escaped
 one is `Unknown`, since something may have written it where this check did not
 see; a pointer moved off its start holds something for this question even
 where it names nothing, since arithmetic on a null or on a local's address is
@@ -221,7 +225,8 @@ Each mutation applied on its own, the workspace run, and the file restored.
   `a_void_pointer_s_address_handed_as_an_int_pointer_to_pointer_is_asked_at_the_wider_type`
   goes silent; memory not asked:
   `memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds`
-  does (#627).
+  goes silent too. The other mutations of #627 are beside their cases in
+  `tests/cases.rs`.
 * review's findings, each with a case in `tests/cases/bounds/` and the
   mutation beside it in `tests/cases.rs`, each applied and seen to fail its
   case: the library reach keyed with the dereferences

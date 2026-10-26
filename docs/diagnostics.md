@@ -183,8 +183,7 @@ h(&q);` asks `q`, and `memcpy` asks what its source points at as a store.
 Each is asked at the wider of its own type and the type the receiver reads it
 as, so a `void *` local's address passed as an `int **` asks the local four
 bytes wide, and memory by what its record says the pointers stored there point
-at. It
-is a class of its own rather than `SC0412` because nothing has been read or
+at. It is a class of its own rather than `SC0412` because nothing has been read or
 written through the pointer yet, and what to change is what leaves. **It is
 always unknown**, even where the object is shown narrower, `this lets a
 pointer to 1 byte leave where 4 bytes are believed`: C leaves the call
