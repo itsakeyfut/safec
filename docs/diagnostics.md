@@ -130,7 +130,7 @@ else if (n < 0) p = r; use(p);` is refused, and C defines it, and so is
 result. A path that ends in `abort`, `exit`, `_Exit` or `quick_exit` does not
 reach the read, inside a larger expression too. A read no such
 edge leads to stays silent, however many paths leave it unassigned. A local
-whose address is taken is never asked about.
+whose address is taken is asked by the memory check instead, as below.
 
 A pointer read out of an allocation `malloc` or `aligned_alloc` made, before
 anything wrote it, is indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2), and Annex
@@ -147,6 +147,15 @@ is `SC0411` beside `SC0402`; a store of the indeterminate pointer back into fres
 memory is a write like any other. A slot written on some paths is not
 reported, unlike a local. A pointer read through a member, and an integer
 read out of fresh memory, are not followed.
+
+A local whose address is taken, a local array among them, is indeterminate in
+the same way until something writes it (C17 6.2.4 p6, 6.7.9 p10), and the same
+line of Annex J.2 lists using it. A pointer read out of one, through a pointer
+or by name, is `SC0411` at the read: `int *m[1]; int *q = m[0];` and `int *q;
+int **pq = &q; return q == 0;` (#640). Any write that may land in it ends it:
+an assignment to it, a store through a pointer that may point at it, a copy
+into it, a call's result, or a call it was handed. A local written on some
+paths is not reported, and an integer read out of one is not followed.
 [ADR-0057](adr/0057-a-pointer-read-out-of-fresh-memory-is-reported-where-it-is-read.md)
 is the decision.
 
