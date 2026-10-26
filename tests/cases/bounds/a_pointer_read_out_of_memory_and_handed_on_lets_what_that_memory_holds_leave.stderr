@@ -1,0 +1,20 @@
+error[SC0413]: this lets a pointer to 1 byte leave where 4 bytes are believed
+    ╭─[ a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:22:5 ]
+    │
+ 22 │     use(*b);
+    │     ───┬───  
+    │        ╰───── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0407]: this passes a pointer that may point to a freed allocation
+    ╭─[ a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:22:5 ]
+    │
+ 22 │     use(*b);
+    │     ───┬───  
+    │        ╰───── passed here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

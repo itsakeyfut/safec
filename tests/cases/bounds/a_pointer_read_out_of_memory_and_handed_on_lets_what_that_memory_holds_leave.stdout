@@ -1,0 +1,152 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:3:6 "use"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "pi"
+  Local "_2" "int"
+  Local "_3" "int *" "p"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:4:9 written
+      Destination "_2"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:4:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:4:9 generated
+    StorageLive a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:5:9 generated "_3"
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:5:14 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:5:18 generated
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:6:13 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_3"
+        Constant 0
+    Branch a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:6:13 written "bb4" "bb5"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:4:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+  Block "bb4"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:6:13 generated
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:7:13 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:7:13 written
+      Destination "_5"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:7:13 generated
+    Goto "bb6"
+  Block "bb5"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:6:13 generated
+    Goto "bb6"
+  Block "bb6"
+    StorageDead a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:9:5 generated "_3"
+    Goto "bb3"
+Function a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:12:5 "main"
+  Local "_0" "int" return
+  Local "_1" "char" "c"
+  Local "_2" "void **" "m"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "char *"
+  Local "_6" "void *"
+  Local "_7" "void *" "pm"
+  Local "_8" "int **" "pi"
+  Local "_9" "int ***" "b"
+  Local "_10" "int ***"
+  Block "bb0" entry
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:12:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:14:16 generated
+    Call a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:14:16 written "malloc" "bb1"
+      Destination "_3"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:14:12 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:14:16 generated
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:15:9 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:15:9 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:15:9 generated
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:16:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:16:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:15:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:18:10 written
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:18:5 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:18:5 written
+      Destination "_6"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:18:5 generated
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:19:11 written
+      Destination "_7"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:19:16 generated
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:20:11 written
+      Destination "_8"
+      Use
+        Copy "_7"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:20:16 generated
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:21:16 written
+      Destination "_10"
+      Address
+        Place "_8"
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:21:12 written
+      Destination "_9"
+      Use
+        Copy "_10"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:21:16 generated
+    ArgumentsEvaluated a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:22:5 generated
+    Call a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:22:5 written "use" "bb5"
+      Copy "_9"
+        Deref
+  Block "bb5"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:22:5 generated
+    Operation a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:23:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave.c:23:12 generated
+    Return

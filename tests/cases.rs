@@ -3188,15 +3188,68 @@ cases! {
         // asks the last. Mutation: keep only the last local in
         // `read_from_locals`; this goes silent.
         a_pointer_that_may_be_either_of_two_locals_is_asked_of_each: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read out of a local is believed only where the local's
+        // value fits what it is read as: a `void *` a callee filled with a
+        // `char`'s address, read through an `int **` alias, and a pointer
+        // moved off its start and read out before it is used. Mutation: skip
+        // the local check in `read_through`; both go silent.
+        an_int_pointer_read_through_an_alias_of_a_void_pointer_a_callee_filled_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_its_local_before_it_is_used_is_asked_what_the_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `char`'s address read back as a `char *` fits by size, so it is
+        // believed. The `char **` alias of a `void *` local is itself C17 6.5
+        // p7's, which this check does not follow; the conforming spelling,
+        // read as a `void *` and converted, is #631. The null doubt is the
+        // nullability check's. Mutation: leave every load
+        // out of a local unbelieved in `read_through`; this gains an
+        // `SC0412`.
+        a_char_stored_as_void_in_a_local_and_read_back_as_char_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What a pointer leaving lets leave is asked at the width the
+        // receiver believes: a local at the wider of its own type and the
+        // receiver's, and memory by what its record says it holds.
+        // Mutation: ask each local at its own type only in
+        // `contents_leaving`; the first goes silent. Mutation: walk no sites
+        // there; the second does.
+        a_void_pointer_s_address_handed_as_an_int_pointer_to_pointer_is_asked_at_the_wider_type: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Leaving as a `void *`, the receiver believes no width, and the
+        // local is still asked at its own: whoever converts it back reads an
+        // `int *`. Mutation: ask each local at the receiver's width only in
+        // `contents_leaving`; this goes silent.
+        a_local_whose_address_leaves_as_void_is_asked_at_its_own_type: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A whole `int` stored as a `void *` fits what the receiver reads,
+        // and a parameter's memory holds nothing this function recorded.
+        // Mutation: answer a site's content `Unknown` in
+        // `contents_leaving`; the first gains an `SC0413`. Mutation: answer
+        // memory whose record holds nothing `Unknown` there; the second
+        // does.
+        memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_parameter_s_memory_handed_on_unchanged_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Two objects in memory too narrow for the receiver are one report
+        // at the call, not two printed alike. Mutation: say a value with no
+        // local each time in `say_leaving`; this prints it twice.
+        two_objects_in_memory_both_too_narrow_are_one_report: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // One local asked at two types at one call is said narrower, in
+        // whichever order the walk reaches them. Mutation: keep the first
+        // answer for a local in `say_leaving`; both say a doubt instead.
+        a_local_shown_narrower_is_said_so_when_reached_through_another_local_first: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_shown_narrower_is_said_so_when_reached_directly_first: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read out of memory and handed straight on lets what
+        // that memory holds leave, as one assigned to a local first does.
+        // Mutation: seed no sites for a dereferenced argument in
+        // `contents_leaving`; this loses its `SC0413`.
+        a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument
         // inside in `leaving`; this goes silent.
         a_pointer_read_as_void_and_handed_to_an_int_parameter_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Handing on a pointer to memory hands on the pointers stored there,
-        // asked at the type they were stored as. Mutation: drop
+        // asked at the type they were stored as, and at the receiver's where
+        // that is wider: the third is also reported at `h(box)`, which reads
+        // the copied pointer as an `int *`. Mutation: drop
         // `contents_leaving` from `departed_at_call`; the first two go
-        // silent. Mutation: drop it from the `memcpy` arm; the third does.
+        // silent. Mutation: drop it from the `memcpy` arm; the third loses
+        // its first report.
         a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_assigned_after_its_local_s_address_was_taken_is_asked_where_the_address_leaves: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

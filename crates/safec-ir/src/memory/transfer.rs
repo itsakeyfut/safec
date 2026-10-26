@@ -307,8 +307,8 @@ impl Allocations<'_> {
         // **Believed to point at one whole object of the type it is read as**,
         // which the store that put it there is asked about. A byte is no
         // pointer and believes nothing; a `void *` believes it starts an
-        // object and no width, which is all its store is asked. See
-        // ADR-0060.
+        // object and no width, which is all its store is asked. Unless it
+        // may be read out of a local that does not fit, below. See ADR-0060.
         held.believed = self.pointee_size(function, source);
         // **And what was stored where it was read from**, at an offset nobody
         // said, so that a dereference of it can be asked about what it may
@@ -327,6 +327,33 @@ impl Allocations<'_> {
             for target in locals {
                 held.writes_to.set(target);
                 held.writes_elsewhere = true;
+            }
+            // **Believed only where every local it may be read out of fits
+            // what it is read as.** A local is no memory with a door: an
+            // assignment to it is asked nowhere, and a `void *` a callee
+            // wrote there was asked its start and no width. So each such
+            // local is asked what it holds, as an access through its address
+            // asks it (ADR-0060), without doubting the escape its address
+            // is. `int *q = *pi; *q = 1;` with `v = p + 4` after `pi = &v`
+            // is unknown at `*q` for it (#627).
+            if let Some(width) = held.believed {
+                // One level short of `depth`: the locals the value is read
+                // out of, not those whose address the value may be, which
+                // the walk above took. `report::read_from_locals` takes the
+                // same level for an access.
+                let read_from = value.levels_below(source.local, depth - 1).1;
+                let fits_each = function
+                    .locals()
+                    .filter(|local| read_from.contains(&local.index()))
+                    .all(|local| {
+                        matches!(
+                            fits(self, function, local, width, value, false),
+                            None | Some(Fit::Inside)
+                        )
+                    });
+                if !fits_each {
+                    held.believed = None;
+                }
             }
             // Read out of an allocation that may hold one that is gone.
             // See ADR-0045.

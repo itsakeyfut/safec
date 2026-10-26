@@ -758,10 +758,11 @@ pub(super) fn fits(
     // and read back through an `int **` alias, or an `int *` copied in by
     // `memcpy`, arrives believed four bytes wide and is known to name one.
     // The belief is the floor where nothing is recorded, and the record is
-    // the floor where it says less. Found by review. What the record cannot
-    // see is size through a `void *`, a one-`char` object stored as one and
-    // read back as an `int *`, which #627 is about; a pointer off its start
-    // stored as a `void *` is asked at the store.
+    // the floor where it says less. Found by review. Where the slot is a
+    // local, the belief is kept only where the local's value fits, by
+    // `Allocations::read_through`, and a pointer handed on is asked at the
+    // width its receiver believes, by [`contents_leaving`] (#627); a pointer
+    // off its start stored as a `void *` is asked at the store.
     if let Some(believed) = held.believed {
         let recorded = extents.iter().all(|extent| extent.lower() >= width);
         return Some(if believed >= width && recorded {
@@ -777,8 +778,36 @@ pub(super) fn fits(
         return Some(Fit::Unknown);
     }
 
+    match folded(&extents, width) {
+        Fit::Outside { extent, .. } => {
+            let mut made: Option<Option<Span>> = None;
+            for site in held.sites() {
+                let here = match known.state[site] {
+                    SiteState::Live(made) | SiteState::Freed { made, .. } => made,
+                    SiteState::Unknown | SiteState::Reachable | SiteState::Unheld => None,
+                };
+                made = Some(match made {
+                    Some(already) => same(already, here),
+                    None => here,
+                });
+            }
+            Some(Fit::Outside {
+                extent,
+                made: made.flatten(),
+            })
+        }
+        fit => Some(fit),
+    }
+}
+
+/// What every object a pointer may reach, by its extent, answers for an
+/// access of `width` bytes: proved where every lower bound is at least
+/// `width`, outside where every one is exact and below it, and unknown
+/// otherwise, since a may-set proves nothing from one member. No allocation
+/// is named; the caller knows which sites these were.
+fn folded(extents: &[Extent], width: u64) -> Fit {
     if extents.iter().all(|extent| extent.lower() >= width) {
-        return Some(Fit::Inside);
+        return Fit::Inside;
     }
     let exact: Option<Vec<u64>> = extents
         .iter()
@@ -797,23 +826,9 @@ pub(super) fn fits(
                 .first()
                 .copied()
                 .filter(|first| bytes.iter().all(|other| other == first));
-            let mut made: Option<Option<Span>> = None;
-            for site in held.sites() {
-                let here = match known.state[site] {
-                    SiteState::Live(made) | SiteState::Freed { made, .. } => made,
-                    SiteState::Unknown | SiteState::Reachable | SiteState::Unheld => None,
-                };
-                made = Some(match made {
-                    Some(already) => same(already, here),
-                    None => here,
-                });
-            }
-            Some(Fit::Outside {
-                extent,
-                made: made.flatten(),
-            })
+            Fit::Outside { extent, made: None }
         }
-        None => Some(Fit::Unknown),
+        None => Fit::Unknown,
     }
 }
 
@@ -830,8 +845,9 @@ pub(super) fn fits(
 /// nowhere, and `**pi = 1` believed what `v` held. So a deeper level that may
 /// go through a local asks that local's value, as it stands at the access, as
 /// [`contents_leaving`] asks it where an address leaves; the order of the
-/// assignment and the address then does not matter. A `void *` store is asked
-/// its start and no width, so size through one is #627. See ADR-0060.
+/// assignment and the address then does not matter. A pointer read out of a
+/// local into another first is asked the same way where it is read, by
+/// `Allocations::read_through`. See ADR-0060.
 ///
 /// **Not through [`say`], and not keyed with it.** A use after free and an
 /// access outside its object are two questions about one place, and both can
@@ -1221,7 +1237,7 @@ fn leaving(
 /// Push what [`leaving`] answered, once per value per caret and door.
 fn say_leaving(
     findings: &mut Vec<Finding>,
-    departed: &mut Vec<(Span, Departure, Option<LocalId>)>,
+    departed: &mut Vec<(Span, Departure, Option<LocalId>, usize)>,
     analysis: &Allocations<'_>,
     left: (Span, Departure, u64),
     answer: Option<(Fit, Option<LocalId>)>,
@@ -1237,16 +1253,7 @@ fn say_leaving(
         Fit::Outside { extent, made } => (true, extent, made),
         Fit::Unknown => (false, None, None),
     };
-    // Once per local per caret and door: a second argument of another width
-    // at the same call says the same thing about the same pointer, and every
-    // one is unknown, so which width is named changes nothing a reader can
-    // act on. A value with no local, a load or a constant's address, has no
-    // identity to key on and is said each time.
-    if local.is_some() && departed.contains(&(at, how, local)) {
-        return;
-    }
-    departed.push((at, how, local));
-    findings.push(Finding {
+    let finding = Finding {
         function: analysis.function,
         kind: Kind::HandedOnNarrow {
             how,
@@ -1260,7 +1267,43 @@ fn say_leaving(
         freed: None,
         made,
         unproven: Some(Unproven::Extent),
-    });
+    };
+    // Once per local per caret and door: a second argument of another width
+    // at the same call says the same thing about the same pointer, and every
+    // one is unknown, so which width is named changes nothing a reader can
+    // act on. **What was shown narrower stands over the doubt**, whichever
+    // was asked first: one local is asked once per type it is read as, and
+    // the order the walk reaches them in chose the words. Found by review.
+    if local.is_some() {
+        let standing = departed
+            .iter()
+            .find(|(said_at, said_how, said_local, _)| {
+                *said_at == at && *said_how == how && *said_local == local
+            })
+            .map(|&(.., index)| index);
+        if let Some(index) = standing {
+            let shown = matches!(
+                findings[index].kind,
+                Kind::HandedOnNarrow { narrower: true, .. }
+            );
+            if narrower && !shown {
+                findings[index] = finding;
+            }
+            return;
+        }
+    // A value with no local, a load, a constant's address or what memory
+    // holds, has no identity to key on, and is said unless the same words
+    // already stand at this caret: two objects in memory both too narrow,
+    // or a local and the memory beside it, printed one report twice. Found
+    // by review.
+    } else if findings
+        .iter()
+        .any(|said| said.at == at && said.kind == finding.kind)
+    {
+        return;
+    }
+    departed.push((at, how, local, findings.len()));
+    findings.push(finding);
 }
 
 /// The locals a value leaving this function may point at, where it is a
@@ -1292,17 +1335,28 @@ fn locals_reached(function: &Function, value: &Rvalue, known: &Known) -> Vec<Loc
 /// believe it a whole `int`, and nothing asked `q`, since an assignment to a
 /// local is no door. Asking the local's own value where its address leaves
 /// is the door, with the state at that point, so an assignment after the
-/// address was taken is seen too. Memory this check follows as sites holds
-/// what stores put there, each asked where it was stored. Found by review.
+/// address was taken is seen too. Found by review.
 ///
-/// **Each local at its own type**, not at the type the value leaves as: a
-/// `void *` leaving believes no width, but whoever converts it back and reads
-/// the local reads what was stored there, which is a pointer of the local's
-/// type, and a `void *` local is asked its start. Reading it as another type
-/// is #627's. See ADR-0060.
+/// **Each local at the wider of its own type and the receiver's.** Whoever
+/// converts a `void *` back and reads the local reads a pointer of the
+/// local's type, so a `void *` leaving still asks each local it reaches at
+/// that type, and a `void *` local its start; and a receiver that reads the
+/// local as a wider type believes that: with `void *v = &c; void *pv =
+/// &v;` and `use` taking `int **`, `use(pv)` asks `v` four bytes wide
+/// (#627).
+///
+/// **Memory by its record, where the receiver believes a width.** Its
+/// stores were asked at the type they stored, and the receiver may read a
+/// wider one: `*m = c; use(pm);` with `m` a `void **` and `c` one `char` is
+/// asked what `m` holds, the objects the pointers stored there point at
+/// ([`Known::inside`], [`Known::inside_locals`]) by their size. What the
+/// record does not hold is not asked, since asking it would doubt every
+/// pointer to a parameter's memory handed on (#627); a `void *` stored there
+/// by the caller, by a callee, or as a value whose targets are not
+/// recorded, is believed wider when read back, which is #632. See ADR-0060.
 fn contents_leaving(
     findings: &mut Vec<Finding>,
-    departed: &mut Vec<(Span, Departure, Option<LocalId>)>,
+    departed: &mut Vec<(Span, Departure, Option<LocalId>, usize)>,
     analysis: &Allocations<'_>,
     function: &Function,
     left: (Span, Departure, TyId),
@@ -1314,30 +1368,132 @@ fn contents_leaving(
     // edges, since a call this check cannot read may return any escaped
     // local's address and its result is followed whatever its type, and
     // asking through one doubted `return use2(&a);` about `a`.
-    if !matches!(analysis.unit.ty(ty), Ty::Pointer(_)) {
+    let Some(read_as) = pointee(analysis, ty) else {
         return;
-    }
-    let mut work = locals_reached(function, value, known);
-    let mut asked: Vec<LocalId> = Vec::new();
-    while let Some(local) = work.pop() {
-        if asked.contains(&local) {
-            continue;
+    };
+    // Each slot a pointer may be read out of, with the type the receiver
+    // reads it as, or `None` below a type that stops being a pointer.
+    // What the departing value points at, seeded as a load assigned first
+    // would hold it: a local's own value names its sites and its address
+    // edges; a pointer read out of memory and handed straight on, `use(*b)`,
+    // names what the walk every load takes finds there, which handed
+    // nothing on before (found by review); a local's address is
+    // [`locals_reached`]'s; and what arithmetic builds is asked by
+    // [`leaving`] and names nothing to walk.
+    let (seed_sites, seed_locals): (Vec<usize>, Vec<LocalId>) = match value {
+        Rvalue::Use(Operand::Copy(place)) if derefs(place) > 0 => {
+            let (sites, locals) = known.levels_below(place.local, derefs(place));
+            let locals = function
+                .locals()
+                .filter(|local| locals.contains(&local.index()))
+                .collect();
+            (sites.into_iter().collect(), locals)
         }
-        asked.push(local);
-        // Further in first, since a `void *` that believes nothing may still
-        // point at a local that holds something believed.
-        let read = Rvalue::Use(Operand::Copy(Place::local(local)));
-        work.extend(locals_reached(function, &read, known));
-        // A local that holds no pointer has nothing a reader believes of it;
-        // a `void *` is asked whether it starts an object.
-        let Some(width) = pointee_width(analysis, function.local(local)) else {
-            continue;
-        };
-        // Reached through its address, so its escape is not doubted, as
-        // [`fits`] says.
-        let answer =
-            fits(analysis, function, local, width, known, false).map(|fit| (fit, Some(local)));
-        say_leaving(findings, departed, analysis, (at, how, width), answer);
+        Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => (
+            known.points_to[place.local.index()].sites().collect(),
+            locals_reached(function, value, known),
+        ),
+        Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
+            (Vec::new(), locals_reached(function, value, known))
+        }
+    };
+    let mut locals: Vec<(LocalId, Option<TyId>)> = seed_locals
+        .into_iter()
+        .map(|local| (local, Some(read_as)))
+        .collect();
+    let mut sites: Vec<(usize, Option<TyId>)> = seed_sites
+        .into_iter()
+        .map(|site| (site, Some(read_as)))
+        .collect();
+    let mut asked_locals: Vec<(LocalId, Option<TyId>)> = Vec::new();
+    let mut asked_sites: Vec<(usize, Option<TyId>)> = Vec::new();
+    // Each pair is expanded once, behind `asked_locals` and `asked_sites`,
+    // and there are finitely many: the locals, the sites, and the types the
+    // departing one points through. So the walk ends.
+    loop {
+        if let Some((local, read_as)) = locals.pop() {
+            if asked_locals.contains(&(local, read_as)) {
+                continue;
+            }
+            asked_locals.push((local, read_as));
+            let below = read_as.and_then(|ty| pointee(analysis, ty));
+            // What it points at is walked too, since a `void *` that
+            // believes nothing may still point at a local that holds
+            // something believed.
+            let read = Rvalue::Use(Operand::Copy(Place::local(local)));
+            locals.extend(
+                locals_reached(function, &read, known)
+                    .into_iter()
+                    .map(|next| (next, below)),
+            );
+            sites.extend(
+                known.points_to[local.index()]
+                    .sites()
+                    .map(|site| (site, below)),
+            );
+            // A local that holds no pointer, read as none, has nothing a
+            // reader believes of it; a `void *` is asked whether it starts
+            // an object.
+            let own = pointee_width(analysis, function.local(local));
+            let receiver = read_as.and_then(|ty| pointee_width(analysis, ty));
+            let Some(width) = own.max(receiver) else {
+                continue;
+            };
+            // Reached through its address, so its escape is not doubted, as
+            // [`fits`] says.
+            let answer =
+                fits(analysis, function, local, width, known, false).map(|fit| (fit, Some(local)));
+            say_leaving(findings, departed, analysis, (at, how, width), answer);
+        } else if let Some((site, read_as)) = sites.pop() {
+            // Below a type that is not a pointer the receiver believes
+            // nothing of this memory, and its stores were asked at theirs.
+            let Some(read_as) = read_as else {
+                continue;
+            };
+            if asked_sites.contains(&(site, Some(read_as))) {
+                continue;
+            }
+            asked_sites.push((site, Some(read_as)));
+            let below = pointee(analysis, read_as);
+            let held_sites: Vec<usize> = known.inside[site].ones().collect();
+            let held_locals: Vec<LocalId> = function
+                .locals()
+                .filter(|local| known.inside_locals[site].get(local.index()))
+                .collect();
+            sites.extend(held_sites.iter().map(|&next| (next, below)));
+            locals.extend(held_locals.iter().map(|&next| (next, below)));
+            // A `void *` receiver believes only a start, which the store
+            // that put each pointer here asked; and memory recorded to hold
+            // nothing says nothing.
+            let Some(width) = pointee_width(analysis, read_as).filter(|&width| width > 0) else {
+                continue;
+            };
+            let extents: Vec<Extent> = held_sites
+                .iter()
+                .map(|&held| known.extent[held].unwrap_or(Extent::AtLeast(0)))
+                .chain(held_locals.iter().map(|&held| {
+                    analysis
+                        .unit
+                        .size_of(function.local(held))
+                        .map_or(Extent::AtLeast(0), Extent::Exactly)
+                }))
+                .collect();
+            if extents.is_empty() {
+                continue;
+            }
+            let answer = Some((folded(&extents, width), None));
+            say_leaving(findings, departed, analysis, (at, how, width), answer);
+        } else {
+            break;
+        }
+    }
+}
+
+/// The type `ty` points to, where it is a pointer, and `None` otherwise.
+fn pointee(analysis: &Allocations<'_>, ty: TyId) -> Option<TyId> {
+    match analysis.unit.ty(ty) {
+        Ty::Pointer(pointee) => Some(pointee),
+        Ty::Int | Ty::Char | Ty::Void => None,
     }
 }
 
@@ -1351,7 +1507,7 @@ fn contents_leaving(
 /// a constant is a null, which the nullability check answers.
 pub(super) fn departed_in_element(
     findings: &mut Vec<Finding>,
-    departed: &mut Vec<(Span, Departure, Option<LocalId>)>,
+    departed: &mut Vec<(Span, Departure, Option<LocalId>, usize)>,
     analysis: &Allocations<'_>,
     function: &Function,
     element: &Element,
@@ -1412,7 +1568,7 @@ pub(super) fn departed_in_element(
 /// it reaches. See ADR-0060.
 pub(super) fn departed_at_call(
     findings: &mut Vec<Finding>,
-    departed: &mut Vec<(Span, Departure, Option<LocalId>)>,
+    departed: &mut Vec<(Span, Departure, Option<LocalId>, usize)>,
     analysis: &Allocations<'_>,
     function: &Function,
     terminator: &Terminator,
