@@ -379,9 +379,9 @@ impl Drop for Scratch {
 /// What the backend could not write, as a diagnostic.
 ///
 /// The refusal's own sentence is the message, because it is the specific half:
-/// "the backend cannot write an indexed place, which counts elements and so
-/// needs a width" says more than a heading and a note would. `load_failure` has
-/// the same shape for the same reason.
+/// "the backend cannot write a relational comparison of two pointers" says
+/// more than a heading and a note would. `load_failure` has the same shape
+/// for the same reason.
 ///
 /// A [`Refusal`] never carries text out of a source file, only type spellings
 /// this compiler wrote and numbers, so nothing here needs `shown`. That is

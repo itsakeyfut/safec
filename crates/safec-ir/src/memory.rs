@@ -228,8 +228,8 @@ pub enum Departure {
     Argument,
     /// Handed back by a `return`.
     Return,
-    /// Written through a projection, into memory through a pointer and,
-    /// once arrays compile, into an element of a local array; or copied into
+    /// Written through a projection, into memory through a pointer and into
+    /// an element of a local array (#621); or copied into
     /// memory by `memcpy` or `memmove`. A later read believes what it finds
     /// there, as it believes a load.
     Store,

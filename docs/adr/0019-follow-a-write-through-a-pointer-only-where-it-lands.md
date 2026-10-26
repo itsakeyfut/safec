@@ -102,10 +102,10 @@ keeps the result of `p + 1` inside the object `p` points into, which is why the
 *allocation* travels through the arithmetic arm. A local's address plus one is
 not that local, so the edge does not: `pp[1] = q;` is an out of bounds write,
 and following it reported a proved use after free about an allocation nothing
-had freed. A local that is an array is the one exception, since `m + 1` is its
-second element, and the edge is dropped there too, so a pointer stored through
-`m[1]` and freed is `Unknown` where it is stored and read back rather than
-named as freed where it is used (#621, #639).
+had freed. An array local is not an array of one, since `m + 1` is its second
+element, and the edge is dropped there all the same, so a pointer stored
+through `m[1]` and freed is `Unknown` where it is stored and read back rather
+than named as freed where it is used (#621, #639).
 
 **Where the offset may be zero, the edge survives.** The same paragraph treats a
 local as an array of one, so `&slot + n` may be dereferenced only for `n` of
@@ -120,8 +120,8 @@ nothing here could tell one offset from another; ADR-0036 since carries
 edge is a may-write by union, so being wrong about it is a doubt and never a
 proof. Two things it does not follow: a pointer moved off its start and back,
 `up = po + 1; back = up - 1;`, which drops the edge at `up` before `back` could
-keep it; and an array local, which does not compile yet, where `pp + 1` may name
-a real element and the `NonZero` drop rests on a premise that no longer holds.
+keep it; and an array local, where `m + 1` names a real element and the
+`NonZero` drop rests on a premise that does not hold, which is #639.
 
 [ADR-0021](./0021-fold-a-zero-pointer-offset-where-the-ir-is-built.md) still
 folds a zero away when the IR is built, so `pp[0]` and `*pp` are one shape before

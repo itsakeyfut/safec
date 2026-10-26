@@ -1978,6 +1978,13 @@ impl Analysis for Allocations<'_> {
                         // folds `&*pp` to a copy of `pp`. Another frontend need
                         // not, which is `docs/c-family.md`'s reason for the IR
                         // expressing the shape at all.
+                        //
+                        // **An element of a local array is the shape C does
+                        // reach**: the lowering converts `a` to `&a[0]`, an
+                        // index under this `Address`, and a store through it is a
+                        // may-write for the same answer, since one element
+                        // written does not replace what the rest of the array
+                        // holds (#621).
                         value.points_to[destination.index()].writes_elsewhere =
                             !taken.projection.is_empty();
                         // And an access through it is not an access of the

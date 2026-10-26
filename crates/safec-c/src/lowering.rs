@@ -1503,7 +1503,7 @@ impl Lowering<'_> {
         // Each derivation of the written type, outermost first, so that the IR
         // type is built back up from the base in the order C nests them:
         // `int (*)[4]` is a pointer to an array and `int *[4]` an array of
-        // pointers.
+        // pointers. `None` is a pointer and `Some(length)` an array.
         let mut derivations = Vec::new();
         let mut current = id;
 
@@ -1541,7 +1541,7 @@ impl Lowering<'_> {
                         ))
                         .with_code(LOWERING)
                         .with_label(Label::primary(at, "declared here"))
-                        .with_note("`int`, `char`, `void`, pointers, and arrays of constant length are all this compiler holds so far"),
+                        .with_note("`int`, `char`, `void`, and pointers to them and arrays of them with a constant length are all this compiler holds so far"),
                     );
                     return None;
                 }
@@ -2593,7 +2593,10 @@ impl Lowering<'_> {
     /// - **A local**, `a`: `Address(a[0])`, an `Index` of a constant zero
     ///   under `Rvalue::Address`, which the memory check reads as the local's
     ///   own start and as a may-write of it, since one store through it does
-    ///   not replace what the rest of the array holds.
+    ///   not replace what the rest of the array holds. **And as the array's
+    ///   address escaping**, which the nullability check's escape scan reads
+    ///   only from an `Rvalue::Address`: written any other way, a write
+    ///   through the converted pointer would go unseen there.
     /// - **Reached through a pointer**, `*u`: a copy of `u`, since the address
     ///   of an array is the address of its first element, which is the move
     ///   `&*E` being `E` makes in [`Self::finish_value`]. Written as `Address`
@@ -2947,9 +2950,10 @@ impl Lowering<'_> {
             // an analysis asking what an access reaches has one thing to read
             // rather than two spellings of it.
             //
-            // `Projection::Index` is what an array wants and nothing builds one
-            // yet, because an array is a type this stage refuses. Whoever gives
-            // the IR arrays decides whether a subscript on one is an `Index`.
+            // A subscript on an array is the same shape: the array is converted
+            // to a pointer to its first element where it is used as a value
+            // ([`Self::decayed`]), so `a[i]` is `*(a + i)` and builds no
+            // `Projection::Index` (#621).
             Expr::Subscript { base, index, span } => {
                 let (base, index, span) = (*base, *index, *span);
                 let offset = values.pop().expect("an index");
@@ -2965,10 +2969,11 @@ impl Lowering<'_> {
                 // pointer's type rather than the subscript's: what is worked
                 // out here is the address, and the subscript is what that
                 // address reaches.
-                // Each operand's type as its value has it, which for an array is
-                // a pointer to its first element (C17 6.3.2.1 p3): `a[3]` with
-                // `a` an `int[4]` adds to an `int *`, and asking the type the
-                // frontend wrote took the index for the pointer.
+                //
+                // **Each operand's type as its value has it**, which for an
+                // array is a pointer to its first element (C17 6.3.2.1 p3):
+                // `a[3]` with `a` an `int[4]` adds to an `int *`, and asking the
+                // type the frontend wrote took the index for the pointer.
                 let base_ty = self.ty_of(base, diagnostics)?;
                 let base_ty = self.value_ty(base_ty);
                 let (base, pointer, offset, addressed) =
@@ -3366,9 +3371,10 @@ impl Lowering<'_> {
     /// was broken all the same, and the set of expressions grows every phase.
     /// `docs/c-family.md` is where it is written down, and what it costs.
     ///
-    /// [`TranslationUnit::place_ty`] answers `None` for an `Index` projection,
-    /// which nothing builds, and for a `Deref` through something that is not a
-    /// pointer. What excludes the second is not [`Lowering::begin_place`]'s own
+    /// [`TranslationUnit::place_ty`] answers `None` for an `Index` of anything
+    /// but an array, which the lowering builds only under `Rvalue::Address`, and
+    /// for a `Deref` through something that is not a pointer. What excludes the
+    /// second is not [`Lowering::begin_place`]'s own
     /// reading, which pushes a `Deref` without asking what it dereferences: it
     /// is the `typed` call that begins it, because `types.rs` gives `*x` no
     /// type where `x` is a number, so the expression is refused before a place

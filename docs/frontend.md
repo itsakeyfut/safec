@@ -690,7 +690,7 @@ a declaration. They are gaps rather than decisions, and each one is a program
 
 | Written | Why it stops here |
 |---|---|
-| `int a[n];`, an array whose length is no constant, or any function or struct type | the IR holds `int`, `char`, `void`, pointers, and arrays of a constant length (#621) |
+| `int a[n];`, an array whose length is no constant, or any function or struct type | the IR holds `int`, `char`, `void`, and pointers to them and arrays of them with a constant length (#621) |
 | `s.a` or `p->a`, a member access, typed by the type checker | the IR holds no struct to take a member of |
 | `int g;` at file scope, used inside a function | every place the IR can name starts at a local |
 | `p - q`, the difference of two pointers | C17 6.5.6 p9 makes it a `ptrdiff_t`, which this compiler has no type for, so the type checker leaves it untyped (`types.rs`), until #638 |

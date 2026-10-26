@@ -340,7 +340,7 @@ fn arithmetic_on_a_pointer_other_than_moving_it_is_refused() {
     assert_eq!(
         refusals,
         vec![Refusal {
-            why: "arithmetic on a pointer, which counts elements and so needs a width".to_owned(),
+            why: "arithmetic on a pointer other than moving it by an integer".to_owned(),
             at: Some(at),
         }]
     );
@@ -430,7 +430,7 @@ fn a_pointer_moved_by_an_unsigned_count_widens_it_without_a_sign() {
 }
 
 /// Each relational comparison of two pointers is refused in the words that
-/// say what it is, C17 6.5.8 p5, and not as arithmetic that needs a width.
+/// say what it is, C17 6.5.8 p5, and not as arithmetic on a pointer.
 ///
 /// Mutation: send only `Lt` to that refusal. `Gt`, `Le` and `Ge` take the
 /// arithmetic refusal's words and this fails.

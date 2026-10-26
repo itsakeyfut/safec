@@ -484,10 +484,12 @@ impl Emitter<'_> {
     ///
     /// **`getelementptr` over the element's type does the scaling**, so this
     /// computes no width. The integer is widened to `i64` first, by its own
-    /// type's sign, since that is the index type `getelementptr` takes on
-    /// every target here, and negated for a subtraction. Without `inbounds`,
-    /// which would make an access LLVM assumes stays inside its object out of
-    /// one the memory check only concluded `Unknown` about.
+    /// type's sign, and negated for a subtraction: one index width for a
+    /// constant and a register alike, which `getelementptr` takes on every
+    /// target here, a 32-bit one included, and which holds every `int` this
+    /// compiler has. It is written without `inbounds`, which would let LLVM
+    /// assume an access stays inside its object where the memory check only
+    /// concluded `Unknown`.
     ///
     /// A pointer minus a pointer is `ptrdiff_t` (6.5.6 p9), which this
     /// compiler has no type for, and is refused (#638). So is arithmetic on a
@@ -601,9 +603,8 @@ impl Emitter<'_> {
                     return self.refuse("a relational comparison of two pointers");
                 }
                 _ => {
-                    return self.refuse(
-                        "arithmetic on a pointer, which counts elements and so needs a width",
-                    );
+                    return self
+                        .refuse("arithmetic on a pointer other than moving it by an integer");
                 }
             };
             let left = self.operand(function, lhs, ty, out)?;

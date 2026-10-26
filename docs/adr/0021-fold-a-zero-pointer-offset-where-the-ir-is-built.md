@@ -141,7 +141,8 @@ not against what shipped before it, which is the next section.
   folder that read values would be a different promise. What bounds the class is
   that the frontend refuses most of the other spellings: a hexadecimal or long
   constant, a character constant and a cast are each `SC0304` or `SC0207`
-  today, and an array type is refused outright, so what is left is `-0`,
+  today, and an array is converted to a pointer before a subscript adds to it
+  (#621), so it is one of the pointers this is about; what is left is `-0`,
   `n - n` and `0 * k`. **The boundary is the operand and not the value.** Since
   #384 the type checker evaluates a constant expression and the lowering lowers
   one to its constant, so `-0` and `(1 - 1)` arrive as the literal does and
