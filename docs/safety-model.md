@@ -147,9 +147,10 @@ where a pointer arrives is asked where it leaves, passed to a call, returned
 or stored, with the pointers stored in what it points at, each as wide as the
 receiver reads it; a `void *` is asked only whether it starts an object, since
 it carries no width. Memory a pointer arrives pointing at is believed to hold
-what the type it arrived as says, one level deep, through any conversion or
-copy, so a `void **` read through an `int **` believes nothing of what it
-reads. What is
+what the type it arrived as says, at every level, through any conversion,
+copy, or store and reload, so a `void **` read through an `int **` believes
+nothing of what it reads; what a callee writes into a local is believed so at
+the local's own level only, which is #636. What is
 asked there is
 never a proof, since C leaves the departure itself defined. See
 [ADR-0060](adr/0060-an-access-is-proved-inside-its-object-only-where-its-size-was-read.md).

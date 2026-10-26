@@ -1,0 +1,153 @@
+Target "x86_64-pc-windows-msvc"
+Function a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:3:6 "run"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "m"
+  Local "_2" "void ***" "box"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "void **" "t"
+  Local "_7" "void **"
+  Local "_8" "void *" "pb"
+  Local "_9" "int ***" "pi"
+  Local "_10" "int **" "a"
+  Local "_11" "int"
+  Local "_12" "int *" "b"
+  Local "_13" "int"
+  Local "_14" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:4:19 generated
+    Call a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:4:19 written "malloc" "bb1"
+      Destination "_3"
+      Constant 8
+  Block "bb1"
+    Operation a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:4:13 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:4:19 generated
+    Operation a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:5:9 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:5:9 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:5:9 generated
+    Return
+  Block "bb3"
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:8:9 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:8:9 written "bb5" "bb6"
+      Copy "_5"
+  Block "bb5"
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:8:9 generated
+    ArgumentsEvaluated a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:9:9 generated
+    Call a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:9:9 written "free" "bb8"
+      Copy "_2"
+  Block "bb6"
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:8:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:12:12 written
+      Destination "_6"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:12:16 generated
+    Operation a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:13:5 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:13:5 written
+      Destination "_7"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:13:5 generated
+    Operation a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:14:11 written
+      Destination "_8"
+      Use
+        Copy "_2"
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:14:16 generated
+    Operation a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:15:12 written
+      Destination "_9"
+      Use
+        Copy "_8"
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:15:17 generated
+    Operation a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:16:11 written
+      Destination "_10"
+      Use
+        Copy "_9"
+          Deref
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:16:15 generated
+    Operation a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:17:9 written
+      Destination "_11"
+      Binary "Ne"
+        Copy "_10"
+        Constant 0
+    Branch a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:17:9 written "bb9" "bb10"
+      Copy "_11"
+  Block "bb8"
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:9:9 generated
+    Return
+  Block "bb9"
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:17:9 generated
+    StorageLive a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:18:9 generated "_12"
+    Operation a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:18:14 written
+      Destination "_12"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:18:18 generated
+    Operation a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:19:13 written
+      Destination "_13"
+      Binary "Ne"
+        Copy "_12"
+        Constant 0
+    Branch a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:19:13 written "bb12" "bb13"
+      Copy "_13"
+  Block "bb10"
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:17:9 generated
+    Goto "bb11"
+  Block "bb11"
+    ArgumentsEvaluated a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:23:5 generated
+    Call a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:23:5 written "free" "bb15"
+      Copy "_2"
+  Block "bb12"
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:19:13 generated
+    Operation a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:20:13 written
+      Destination "_12"
+        Deref
+      Use
+        Constant 1
+    Operation a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:20:13 written
+      Destination "_14"
+      Use
+        Copy "_12"
+          Deref
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:20:13 generated
+    Goto "bb14"
+  Block "bb13"
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:19:13 generated
+    Goto "bb14"
+  Block "bb14"
+    StorageDead a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:22:5 generated "_12"
+    Goto "bb11"
+  Block "bb15"
+    Sequenced a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level.c:23:5 generated
+    Return

@@ -1,0 +1,155 @@
+Target "x86_64-pc-windows-msvc"
+Function a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:1:6 "run"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "m"
+  Local "_2" "int"
+  Local "_3" "void **" "t"
+  Local "_4" "void ***" "pt"
+  Local "_5" "void ***"
+  Local "_6" "void *" "pv"
+  Local "_7" "int ***" "pi"
+  Local "_8" "int **" "a"
+  Local "_9" "int"
+  Local "_10" "int *" "b"
+  Local "_11" "int"
+  Local "_12" "int"
+  Block "bb0" entry
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:2:9 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:2:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:2:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:2:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:5:12 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:5:16 generated
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:6:18 written
+      Destination "_5"
+      Address
+        Place "_3"
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:6:13 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:6:18 generated
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:7:11 written
+      Destination "_6"
+      Use
+        Copy "_4"
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:7:16 generated
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:8:12 written
+      Destination "_7"
+      Use
+        Copy "_6"
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:8:17 generated
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:9:11 written
+      Destination "_8"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:9:15 generated
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:10:9 written
+      Destination "_9"
+      Binary "Ne"
+        Copy "_8"
+        Constant 0
+    Branch a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:10:9 written "bb4" "bb5"
+      Copy "_9"
+  Block "bb4"
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:10:9 generated
+    StorageLive a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:11:9 generated "_10"
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:11:14 written
+      Destination "_10"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:11:18 generated
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:12:13 written
+      Destination "_11"
+      Binary "Ne"
+        Copy "_10"
+        Constant 0
+    Branch a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:12:13 written "bb7" "bb8"
+      Copy "_11"
+  Block "bb5"
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:10:9 generated
+    Goto "bb6"
+  Block "bb6"
+    Return
+  Block "bb7"
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:12:13 generated
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:13:13 written
+      Destination "_10"
+        Deref
+      Use
+        Constant 1
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:13:13 written
+      Destination "_12"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:13:13 generated
+    Goto "bb9"
+  Block "bb8"
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:12:13 generated
+    Goto "bb9"
+  Block "bb9"
+    StorageDead a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:15:5 generated "_10"
+    Goto "bb6"
+Function a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:17:5 "main"
+  Local "_0" "int" return
+  Local "_1" "char" "c"
+  Local "_2" "void *" "v"
+  Local "_3" "char *"
+  Local "_4" "void **" "w"
+  Local "_5" "void **"
+  Local "_6" "void ***"
+  Block "bb0" entry
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:17:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:19:15 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:19:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:19:15 generated
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:20:16 written
+      Destination "_5"
+      Address
+        Place "_2"
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:20:12 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:20:16 generated
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:21:9 written
+      Destination "_6"
+      Address
+        Place "_4"
+    ArgumentsEvaluated a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:21:5 generated
+    Call a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:21:5 written "run" "bb1"
+      Copy "_6"
+  Block "bb1"
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:21:5 generated
+    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:22:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:22:12 generated
+    Return

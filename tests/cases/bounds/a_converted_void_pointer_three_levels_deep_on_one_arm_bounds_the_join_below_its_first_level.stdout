@@ -1,0 +1,148 @@
+Target "x86_64-pc-windows-msvc"
+Function a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:1:6 "run"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "m"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" "x"
+  Local "_4" "int *" "px"
+  Local "_5" "int *"
+  Local "_6" "int **" "ppx"
+  Local "_7" "int **"
+  Local "_8" "int ***" "pi"
+  Local "_9" "int ***"
+  Local "_10" "void *" "pm"
+  Local "_11" "int ***"
+  Local "_12" "int"
+  Local "_13" "int **" "a"
+  Local "_14" "int"
+  Local "_15" "int *" "b"
+  Local "_16" "int"
+  Local "_17" "int"
+  Block "bb0" entry
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:2:9 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:2:13 generated
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:3:15 written
+      Destination "_5"
+      Address
+        Place "_3"
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:3:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:3:15 generated
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:4:17 written
+      Destination "_7"
+      Address
+        Place "_4"
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:4:11 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:4:17 generated
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:5:17 written
+      Destination "_9"
+      Address
+        Place "_6"
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:5:12 written
+      Destination "_8"
+      Use
+        Copy "_9"
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:5:17 generated
+    Branch a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:6:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:6:9 generated
+    StorageLive a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:7:9 generated "_10"
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:7:15 written
+      Destination "_10"
+      Use
+        Copy "_1"
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:7:20 generated
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:8:9 written
+      Destination "_8"
+      Use
+        Copy "_10"
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:8:9 written
+      Destination "_11"
+      Use
+        Copy "_8"
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:8:9 generated
+    StorageDead a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:9:5 generated "_10"
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:6:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:10:9 written
+      Destination "_12"
+      Binary "Ne"
+        Copy "_8"
+        Constant 0
+    Branch a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:10:9 written "bb4" "bb5"
+      Copy "_12"
+  Block "bb4"
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:10:9 generated
+    StorageLive a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:11:9 generated "_13"
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:11:15 written
+      Destination "_13"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:11:19 generated
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:12:13 written
+      Destination "_14"
+      Binary "Ne"
+        Copy "_13"
+        Constant 0
+    Branch a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:12:13 written "bb7" "bb8"
+      Copy "_14"
+  Block "bb5"
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:10:9 generated
+    Goto "bb6"
+  Block "bb6"
+    Return
+  Block "bb7"
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:12:13 generated
+    StorageLive a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:13:13 generated "_15"
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:13:18 written
+      Destination "_15"
+      Use
+        Copy "_13"
+          Deref
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:13:22 generated
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:14:17 written
+      Destination "_16"
+      Binary "Ne"
+        Copy "_15"
+        Constant 0
+    Branch a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:14:17 written "bb10" "bb11"
+      Copy "_16"
+  Block "bb8"
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:12:13 generated
+    Goto "bb9"
+  Block "bb9"
+    StorageDead a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:18:5 generated "_13"
+    Goto "bb6"
+  Block "bb10"
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:14:17 generated
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:15:17 written
+      Destination "_15"
+        Deref
+      Use
+        Constant 1
+    Operation a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:15:17 written
+      Destination "_17"
+      Use
+        Copy "_15"
+          Deref
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:15:17 generated
+    Goto "bb12"
+  Block "bb11"
+    Sequenced a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:14:17 generated
+    Goto "bb12"
+  Block "bb12"
+    StorageDead a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level.c:17:9 generated "_15"
+    Goto "bb9"

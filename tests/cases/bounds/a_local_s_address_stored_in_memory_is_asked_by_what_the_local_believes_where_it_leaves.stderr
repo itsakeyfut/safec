@@ -1,0 +1,20 @@
+error[SC0413]: this lets `x` leave, which may not point at an object as wide as its type
+   ╭─[ a_local_s_address_stored_in_memory_is_asked_by_what_the_local_believes_where_it_leaves.c:8:5 ]
+   │
+ 8 │     *box = &x;
+   │     ────┬────  
+   │         ╰────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets `x` leave, which may not point at an object as wide as its type
+    ╭─[ a_local_s_address_stored_in_memory_is_asked_by_what_the_local_believes_where_it_leaves.c:10:5 ]
+    │
+ 10 │     use(pb);
+    │     ───┬───  
+    │        ╰───── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

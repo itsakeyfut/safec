@@ -12,7 +12,7 @@ use crate::source::{SourceMap, Span};
 
 use super::bits::Bits;
 use super::parts::{
-    Extent, Held, PendingRead, Reached, Read, ReadKey, Realloced, SiteState, read_key,
+    Extent, Held, Levels, PendingRead, Reached, Read, ReadKey, Realloced, SiteState, read_key,
 };
 use super::{LostReason, derefs, inside, named};
 
@@ -192,14 +192,21 @@ pub(super) struct Known {
     pub(super) extent: Vec<Option<Extent>>,
     /// Per site, how many bytes a pointer stored there that names nothing
     /// [`Self::inside`] or [`Self::inside_locals`] records is believed to
-    /// point at, at most, or `None` where no such pointer was stored.
+    /// point at, at most, at level 0, and what each pointer stored there
+    /// believed of its own memory at the levels below, with no bound where
+    /// no such pointer was stored. See [`Levels`].
     ///
     /// **What the record cannot say**: `char *c = *cc; *m = c;` stores a
     /// pointer read out of the caller's memory, whose object nothing here
     /// records, and `m` handed on as an `int **` was believed to hold whole
-    /// `int`s (#632). A bound, so the lower of two at a join, and kept when
-    /// the site is made again, as `inside` is. See ADR-0060.
-    pub(super) stored_at_most: Vec<Option<u64>>,
+    /// `int`s (#632). **And what the stored pointer arrived as**: `*box =
+    /// m;` with `m` a `void **` parameter names `m`'s site, which the record
+    /// holds, and left behind on `m` that what `m` points at holds pointers
+    /// nobody was asked the width of, so `box` read back through an `int
+    /// ***` believed whole `int`s two levels down (#634). A bound, so the
+    /// lower of two at a join, and kept when the site is made again, as
+    /// `inside` is. See ADR-0060.
+    pub(super) stored_at_most: Vec<Levels>,
     /// Per local, how many bytes a pointer a call may write into it is
     /// believed to point at, at most: the narrowest width the parameters
     /// it was handed through believe at its level, and `0` where one was a
@@ -686,6 +693,49 @@ impl Known {
     /// stored as through an allocation ([`Self::level_below`]). See ADR-0045.
     pub(super) fn stored_below(&self, local: LocalId, depth: usize) -> BTreeSet<usize> {
         self.levels_below(local, depth).0
+    }
+
+    /// What the pointers in the memory `depth` dereferences below `local`
+    /// are believed to point at, by level, index 0 for those pointers
+    /// themselves: what `local` believes of its memory that far down, and
+    /// what was stored in each site every level on the way may be, each
+    /// taken from the level it was stored at. `depth` is at least one.
+    ///
+    /// **Every level on the way, and not only the last**: `int *b = **pi;`
+    /// reads what `*box = m;` stored in `box`'s site one level above the
+    /// memory `b` is read from, and asking only the sites `*pi` may point at
+    /// read nothing there (#634).
+    ///
+    /// **And each local on the way, by what its own value believes**: a
+    /// local whose address is gone through is memory holding that value, so
+    /// it holds below its own level what the value carries. `void ***pt =
+    /// &t; ... int **a = *pi;` with `t` a load out of a `void ***` read `a`
+    /// believing whole `int`s two levels down, where the sites alone said
+    /// nothing (#634). What the local's value points at itself is asked by
+    /// the local's own fit where it is read, so its own level is no bound
+    /// here. `depth_cap` is [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer),
+    /// which the list that puts it one level down is cut to.
+    ///
+    /// **The one walk a load, a departure and a copy take**, so that the
+    /// spellings of one read cannot believe different things. See
+    /// [`Levels`] and ADR-0060.
+    pub(super) fn memory_levels(&self, local: LocalId, depth: usize, depth_cap: usize) -> Levels {
+        let mut levels = self.points_to[local.index()]
+            .contents_at_most
+            .below(depth - 1);
+        for level in 0..depth {
+            let (sites, locals) = self.levels_below(local, level);
+            for site in sites {
+                levels.bound_by(&self.stored_at_most[site].below(depth - 1 - level));
+            }
+            for slot in locals {
+                let held = self.points_to[slot]
+                    .contents_at_most
+                    .stored_under(None, depth_cap);
+                levels.bound_by(&held.below(depth - 1 - level));
+            }
+        }
+        levels
     }
 
     /// Record that this place was read through, where the read reaches an

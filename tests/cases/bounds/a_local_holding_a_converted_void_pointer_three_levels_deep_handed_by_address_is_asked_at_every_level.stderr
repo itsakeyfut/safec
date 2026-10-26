@@ -1,0 +1,10 @@
+error[SC0413]: this lets `x` leave, which may not point at an object as wide as its type
+   ╭─[ a_local_holding_a_converted_void_pointer_three_levels_deep_handed_by_address_is_asked_at_every_level.c:5:5 ]
+   │
+ 5 │     use(&x);
+   │     ───┬───  
+   │        ╰───── passed here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

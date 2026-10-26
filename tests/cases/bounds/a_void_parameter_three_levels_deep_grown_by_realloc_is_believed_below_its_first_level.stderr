@@ -1,0 +1,40 @@
+error[SC0402]: this uses `a`, which this check stopped following
+    ╭─[ a_void_parameter_three_levels_deep_grown_by_realloc_is_believed_below_its_first_level.c:12:14 ]
+    │
+ 12 │         int *b = *a;
+    │              ───┬──  
+    │                 ╰──── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0412]: this may reach outside the object `a` points at
+    ╭─[ a_void_parameter_three_levels_deep_grown_by_realloc_is_believed_below_its_first_level.c:12:14 ]
+    │
+ 12 │         int *b = *a;
+    │              ───┬──  
+    │                 ╰──── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0402]: this uses `b`, which may have been freed
+    ╭─[ a_void_parameter_three_levels_deep_grown_by_realloc_is_believed_below_its_first_level.c:14:13 ]
+    │
+ 14 │             *b = 1;
+    │             ───┬──  
+    │                ╰──── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0412]: this may reach outside the object `b` points at
+    ╭─[ a_void_parameter_three_levels_deep_grown_by_realloc_is_believed_below_its_first_level.c:14:13 ]
+    │
+ 14 │             *b = 1;
+    │             ───┬──  
+    │                ╰──── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

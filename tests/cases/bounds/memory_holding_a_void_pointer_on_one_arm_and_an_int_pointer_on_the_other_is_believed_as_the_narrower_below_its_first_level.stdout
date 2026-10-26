@@ -1,0 +1,185 @@
+Target "x86_64-pc-windows-msvc"
+Function memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:3:6 "run"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "v"
+  Local "_2" "int ***" parameter "i"
+  Local "_3" "int" parameter "c"
+  Local "_4" "void **" "box"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "void *" "pv"
+  Local "_8" "void *" "pi"
+  Local "_9" "void *"
+  Local "_10" "void *"
+  Local "_11" "void *" "pb"
+  Local "_12" "int ****" "pp"
+  Local "_13" "int ***" "x"
+  Local "_14" "int"
+  Local "_15" "int **" "y"
+  Local "_16" "int"
+  Local "_17" "int *" "d"
+  Local "_18" "int"
+  Local "_19" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:4:18 generated
+    Call memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:4:18 written "malloc" "bb1"
+      Destination "_5"
+      Constant 8
+  Block "bb1"
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:4:12 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:4:18 generated
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:5:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:5:9 written "bb2" "bb3"
+      Copy "_6"
+  Block "bb2"
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:5:9 generated
+    Return
+  Block "bb3"
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:6:11 written
+      Destination "_7"
+      Use
+        Copy "_1"
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:6:16 generated
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:7:11 written
+      Destination "_8"
+      Use
+        Copy "_2"
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:7:16 generated
+    Branch memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:8:9 written "bb5" "bb6"
+      Copy "_3"
+  Block "bb5"
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:8:9 generated
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:9:9 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_7"
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:9:9 written
+      Destination "_9"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:9:9 generated
+    Goto "bb7"
+  Block "bb6"
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:8:9 generated
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:11:9 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_8"
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:11:9 written
+      Destination "_10"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:11:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:13:11 written
+      Destination "_11"
+      Use
+        Copy "_4"
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:13:16 generated
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:14:13 written
+      Destination "_12"
+      Use
+        Copy "_11"
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:14:18 generated
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:15:12 written
+      Destination "_13"
+      Use
+        Copy "_12"
+          Deref
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:15:16 generated
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:16:9 written
+      Destination "_14"
+      Binary "Ne"
+        Copy "_13"
+        Constant 0
+    Branch memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:16:9 written "bb8" "bb9"
+      Copy "_14"
+  Block "bb8"
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:16:9 generated
+    StorageLive memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:17:9 generated "_15"
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:17:15 written
+      Destination "_15"
+      Use
+        Copy "_13"
+          Deref
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:17:19 generated
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:18:13 written
+      Destination "_16"
+      Binary "Ne"
+        Copy "_15"
+        Constant 0
+    Branch memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:18:13 written "bb11" "bb12"
+      Copy "_16"
+  Block "bb9"
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:16:9 generated
+    Goto "bb10"
+  Block "bb10"
+    ArgumentsEvaluated memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:25:5 generated
+    Call memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:25:5 written "free" "bb17"
+      Copy "_4"
+  Block "bb11"
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:18:13 generated
+    StorageLive memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:19:13 generated "_17"
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:19:18 written
+      Destination "_17"
+      Use
+        Copy "_15"
+          Deref
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:19:22 generated
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:20:17 written
+      Destination "_18"
+      Binary "Ne"
+        Copy "_17"
+        Constant 0
+    Branch memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:20:17 written "bb14" "bb15"
+      Copy "_18"
+  Block "bb12"
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:18:13 generated
+    Goto "bb13"
+  Block "bb13"
+    StorageDead memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:24:5 generated "_15"
+    Goto "bb10"
+  Block "bb14"
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:20:17 generated
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:21:17 written
+      Destination "_17"
+        Deref
+      Use
+        Constant 1
+    Operation memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:21:17 written
+      Destination "_19"
+      Use
+        Copy "_17"
+          Deref
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:21:17 generated
+    Goto "bb16"
+  Block "bb15"
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:20:17 generated
+    Goto "bb16"
+  Block "bb16"
+    StorageDead memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:23:9 generated "_17"
+    Goto "bb13"
+  Block "bb17"
+    Sequenced memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level.c:25:5 generated
+    Return

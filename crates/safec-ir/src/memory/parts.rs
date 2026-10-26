@@ -815,8 +815,9 @@ pub(super) struct Held {
     /// ADR-0060.
     pub(super) believed: Option<u64>,
     /// How many bytes each pointer stored in what this value points at is
-    /// believed to point at, at most, or `None` where nothing bounds it
-    /// beyond what this check recorded there.
+    /// believed to point at, at most, and so on down, one [`Levels`] entry
+    /// per level, with no bound where nothing bounds it beyond what this
+    /// check recorded there.
     ///
     /// **Set from the type a pointer arrives as**, a parameter, a call's
     /// result or a load, which is a belief and not what C fixes: a `void **`
@@ -829,13 +830,17 @@ pub(super) struct Held {
     /// pm;` with `pm` a `void **` parameter converted through `void *` read
     /// `*pi` as a whole `int` and wrote four bytes into one `char` (#632).
     /// A local's address and an allocator's result bound nothing here, since
-    /// the local and the allocation's record are asked instead. **One level
-    /// only**: what the pointers stored there point at holds is believed as
-    /// a load of it is read, so a `void ***` converted whole loses the bound
-    /// below, which is #634. **A bound and not a proof**, so a join keeps
+    /// the local and the allocation's record are asked instead. **Every
+    /// level the type has**: a `void ***` believes `8` and then `0`, so `int **a =
+    /// *pi; int *b = *a;` with `pi` that pointer converted to `int ***` reads
+    /// `b` believing nothing, where the type `a` is read as alone said four
+    /// bytes (#634). A load takes what its memory believed one level down,
+    /// and a store leaves this behind in the memory it lands in
+    /// ([`Known::stored_at_most`](super::known::Known::stored_at_most)).
+    /// **A bound and not a proof**, so a join keeps
     /// the lower of two and a side with none is no bound, the reverse of
     /// [`Self::believed`]. See ADR-0060.
-    pub(super) contents_at_most: Option<u64>,
+    pub(super) contents_at_most: Levels,
     /// Whether an edge in [`Self::writes_to`] may be the address of
     /// something inside the local it names rather than of the local itself.
     ///
@@ -864,6 +869,80 @@ pub(super) fn bounded(here: Option<u64>, there: Option<u64>) -> Option<u64> {
         (Some(here), Some(there)) => Some(here.min(there)),
         (Some(only), None) | (None, Some(only)) => Some(only),
         (None, None) => None,
+    }
+}
+
+/// How many bytes the pointers each level below a pointer's memory hold are
+/// believed to point at, at most: index 0 for the pointers stored in that
+/// memory, index 1 for the pointers stored where those point, and so on. A
+/// level past the end, and an entry of `None`, is no bound. See
+/// [`Held::contents_at_most`] and ADR-0060.
+///
+/// **No list is longer than [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer)**,
+/// the deepest pointer type among the function's locals. The two that build
+/// one are [`Allocations::type_levels`](super::transfer::Allocations::type_levels),
+/// which stops there, and [`Self::stored_under`], which drops what would pass it;
+/// [`Self::below`] and a join make none longer than their inputs. So the
+/// lattice this sits in has a finite height by construction, and no loop of
+/// stores and loads can grow one for a fixpoint to chase. What is dropped is
+/// a level no read in this function can ask, since a place dereferenced `d`
+/// times to a pointer goes through a local at least `d + 1` deep and asks
+/// index `d - 1`.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(super) struct Levels(Vec<Option<u64>>);
+
+impl Levels {
+    /// One bound per level, from the shallowest, as given.
+    pub(super) fn from_bounds(bounds: Vec<Option<u64>>) -> Self {
+        Levels(bounds)
+    }
+
+    /// The bound at one level, `None` past the end.
+    pub(super) fn at(&self, level: usize) -> Option<u64> {
+        self.0.get(level).copied().flatten()
+    }
+
+    /// The lower of the two at every level, where `None` is no bound, as
+    /// [`bounded`] says for one: a side that bounds nothing at a level does
+    /// not loosen one that does, and a shorter list bounds nothing past its
+    /// end.
+    pub(super) fn bound_by(&mut self, other: &Levels) {
+        if self.0.len() < other.0.len() {
+            self.0.resize(other.0.len(), None);
+        }
+        for (level, here) in self.0.iter_mut().enumerate() {
+            *here = bounded(*here, other.at(level));
+        }
+    }
+
+    /// What the memory `levels` levels further down holds, as a pointer read
+    /// that far down believes it: the first `levels` dropped.
+    pub(super) fn below(&self, levels: usize) -> Levels {
+        Levels(self.0.iter().skip(levels).copied().collect())
+    }
+
+    /// Whether memory believed `self` is narrower at some level than a
+    /// reader of it believing `read` takes it to be: what a departure asks
+    /// of the memory it lets leave. A level either side has no bound at asks
+    /// nothing, and a reader's `0` is below nothing, so a receiver's type
+    /// stopping short of the memory's asks nothing below it.
+    pub(super) fn narrower_than(&self, read: &Levels) -> bool {
+        self.0
+            .iter()
+            .zip(&read.0)
+            .any(|pair| matches!(pair, (Some(held), Some(read)) if held < read))
+    }
+
+    /// What memory holding a pointer that believes `self` of its own memory
+    /// holds: `first` for that pointer, which is what a store of it records
+    /// at its own level, and `self` one level down, no longer than `depth`.
+    pub(super) fn stored_under(&self, first: Option<u64>, depth: usize) -> Levels {
+        Levels(
+            std::iter::once(first)
+                .chain(self.0.iter().copied())
+                .take(depth)
+                .collect(),
+        )
     }
 }
 
@@ -904,7 +983,7 @@ impl Held {
             returned_by: None,
             fresh_read: false,
             believed: None,
-            contents_at_most: None,
+            contents_at_most: Levels::default(),
             inner_address: false,
         }
     }
@@ -1007,7 +1086,7 @@ impl Held {
         sites.clear_all();
         *fresh_read = false;
         *believed = None;
-        *contents_at_most = None;
+        *contents_at_most = Levels::default();
         *inner_address = false;
         *from_caller = false;
         *returned_by = None;
@@ -1060,7 +1139,7 @@ impl Held {
         } = self;
         *inner_address = *inner_address || other.inner_address;
         // A bound, so the lower of two, and a side with none is no bound.
-        *contents_at_most = bounded(*contents_at_most, other.contents_at_most);
+        contents_at_most.bound_by(&other.contents_at_most);
         if *returned_by != other.returned_by {
             *returned_by = None;
         }
@@ -1135,7 +1214,7 @@ impl Held {
         } = self;
         *inner_address = *inner_address || other.inner_address;
         // `*tab + 1` points into the same memory, which holds what it held.
-        *contents_at_most = bounded(*contents_at_most, other.contents_at_most);
+        contents_at_most.bound_by(&other.contents_at_most);
         *from_caller = *from_caller || other.from_caller;
         // Arithmetic builds a new value, which is no longer exactly what a
         // `realloc` returned. See ADR-0039.
@@ -1356,9 +1435,44 @@ pub(super) struct Realloced {
 
 #[cfg(test)]
 mod tests {
-    use super::{Extent, Freeing, Held, Offset, SiteState, earlier};
+    use super::{Extent, Freeing, Held, Levels, Offset, SiteState, earlier};
     use crate::memory::report::inside;
     use crate::source::{FileId, SourceMap, Span};
+
+    /// A store cannot make a list longer than the function's depth, which is
+    /// what keeps the lattice [`Levels`] sits in finite in height.
+    ///
+    /// A unit test and not a corpus case, because no C program found grows
+    /// one past it: a store adds a level and a load takes one away, so a
+    /// loop of the two holds its length. The cap is what makes that a
+    /// property of the type rather than of every program. Mutation: drop the
+    /// `take` in `Levels::stored_under`. This fails at the first assertion.
+    #[test]
+    fn a_store_cannot_make_a_list_longer_than_the_function_s_depth() {
+        let held = Levels::from_bounds(vec![Some(8), Some(0)]);
+        assert_eq!(
+            held.stored_under(Some(4), 2),
+            Levels::from_bounds(vec![Some(4), Some(8)])
+        );
+        assert_eq!(
+            held.stored_under(None, 3),
+            Levels::from_bounds(vec![None, Some(8), Some(0)])
+        );
+    }
+
+    /// A shorter list bounds nothing past its end, and a side with no bound
+    /// at a level does not loosen the other's, at every level.
+    ///
+    /// Mutation: stop at the shorter list's end. This fails at the first
+    /// assertion, which loses the `0` at index 1.
+    #[test]
+    fn a_shorter_list_bounds_nothing_past_its_end() {
+        let mut here = Levels::from_bounds(vec![Some(8)]);
+        here.bound_by(&Levels::from_bounds(vec![None, Some(0)]));
+        assert_eq!(here, Levels::from_bounds(vec![Some(8), Some(0)]));
+        here.bound_by(&Levels::from_bounds(vec![Some(4)]));
+        assert_eq!(here, Levels::from_bounds(vec![Some(4), Some(0)]));
+    }
 
     /// Two sizes for one object meet as a bound below both, and one size
     /// meets itself unchanged.
