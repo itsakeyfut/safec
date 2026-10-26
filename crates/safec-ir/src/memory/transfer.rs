@@ -1557,8 +1557,8 @@ impl Analysis for Allocations<'_> {
                     let held = &value.points_to[pointer];
                     // **And a local it may land in**, the local its edges name
                     // where the store is placed: `m[0] = p;` writes `m`. Where
-                    // it is not placed, `replaced_by` above has cleared every
-                    // escaped local it may reach. See `Known::unwritten`.
+                    // it is not placed, `replaced_by` above has cleared the
+                    // locals it may land in. See `Known::unwritten`.
                     if one_step && !(held.loaded || held.lost || held.foreign) {
                         let edges: Vec<usize> = held.writes_to.ones().collect();
                         for site in held.sites().collect::<Vec<_>>() {
@@ -2628,26 +2628,17 @@ impl Analysis for Allocations<'_> {
                 // allocations are no longer fresh. See `Known::fresh`.
                 let reach = self.reach(function, handed, sites(), value);
                 value.expose(self.sources, reach, Some(origin.span()));
-                // **It writes only through its first argument** (C17 7.24.2
-                // to 7.24.6 each say what is written, and it is that one), so
-                // a local is written where that argument may be its address:
-                // the locals its address edges name, or, for a place of
-                // dereferences, `memcpy(*pp, s, 8)`, the locals the level
-                // above may be, as the opaque arm below reads an argument.
-                // `memcpy(&a, &b, 4)` cleared every local array's mark, and so
-                // did `memcpy(*pa, &b, 4)` (#643). Every escaped local where
-                // the argument is rooted in a pointer this check lost or a
-                // caller wrote, as `replaced_by` answers for a store it cannot
-                // place. It keeps nothing, so it exposes no local. See
-                // `Known::unwritten`.
-                //
-                // **An argument naming no local writes none**, which is not
-                // what the store door says of the same pointer: a pointer
-                // moved off an array by arithmetic has lost its edge (#639),
-                // and `memcpy(&m[1] - 1, s, 8)` then leaves `m[0]` reported
-                // as nothing wrote it. That is a report the reader sees, and
-                // widening it would silence every local array beside such a
-                // copy. See ADR-0057.
+                // **It writes only through its first argument**: the clause of
+                // each function read by name, C17 7.24.2.1 to 7.24.3.2 and
+                // 7.24.6.1, says what is written, and it is that one. So
+                // a local is written where that argument may point:
+                // `Known::locals_a_write_may_land_in`, one dereference below
+                // it, which is what a store through it asks too, so the two
+                // cannot answer one pointer differently. `memcpy(&a, &b, 4)`
+                // cleared every local array's mark, and so did `memcpy(*pa,
+                // &b, 4)` (#643), and so did a copy through a pointer read out
+                // of the caller's memory (#645). It keeps nothing, so it
+                // exposes no local. See `Known::unwritten` and ADR-0057.
                 let written: Option<Vec<usize>> = match arguments.first() {
                     Some(Operand::Copy(dest))
                         if dest
@@ -2655,25 +2646,7 @@ impl Analysis for Allocations<'_> {
                             .iter()
                             .all(|step| matches!(step, Projection::Deref)) =>
                     {
-                        let to = &value.points_to[dest.local.index()];
-                        // No case tells `loaded` here from a placed pointer,
-                        // measured: a pointer read out of memory carries the
-                        // address edges a store left there, so in every
-                        // program the corpus has, its edges already name the
-                        // local.
-                        if to.loaded || to.lost || to.foreign {
-                            None
-                        } else if dest.projection.is_empty() {
-                            Some(value.written_through(dest.local))
-                        } else {
-                            Some(
-                                value
-                                    .levels_below(dest.local, derefs(dest))
-                                    .1
-                                    .into_iter()
-                                    .collect(),
-                            )
-                        }
+                        Some(value.locals_a_write_may_land_in(dest.local, derefs(dest) + 1))
                     }
                     // A constant writes nothing anyone can read back, and no
                     // other place reaches a call's argument from C.

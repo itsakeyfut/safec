@@ -85,6 +85,11 @@ it writes. A write passes `replaced_by`, which answers for the locals declared
 with the type the write writes, from `TranslationUnit::place_ty` of the place
 being written through.
 
+That type answers for `lost` and `foreign`, which is what this record decides.
+Whether such a write may have *written* a local, which clears
+`Known::unwritten`, is narrower and is ADR-0057's: only the locals of that type
+its place may land in (#645).
+
 **It fires for every projection that is not the certain write, and not for the
 one shape the arm can follow.** This check follows a write through exactly one
 `Deref`, because the edge `Rvalue::Address` records is one step. `**ppp = q` is

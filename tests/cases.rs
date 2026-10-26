@@ -285,9 +285,49 @@ cases! {
         // An array holds its elements, so a store this check cannot place
         // writes it where the type stored is its element's. Mutation:
         // `replaced_by` compares the type stored with the local's own type;
-        // both are reported.
+        // this is reported.
         a_local_array_written_through_a_pointer_read_out_of_memory_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_local_array_filled_backwards_through_a_moved_pointer_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A false report, kept on purpose.** `e` walks back onto `m[1]` and
+        // `m[0]`, but arithmetic drops its edge (#639), so the store is taken
+        // to write no local and the read of `m[0]` is `SC0411`, beside the
+        // reports it already had. Counting it a write of every escaped local
+        // silenced every array beside such a store (#645). See ADR-0057.
+        // Mutation: a pointer naming no local lands in every escaped local;
+        // the `SC0411` goes. Under `--allow-unknown` this program built
+        // before; the certain report is why it does not now (#647).
+        a_local_array_filled_backwards_through_a_moved_pointer_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write this check cannot pin down writes only the locals its
+        // place may land in (#645). See ADR-0057.
+        //
+        // Mutation: `replaced_by` passes `may_hold` as `may_write`; this
+        // goes silent.
+        a_pointer_read_out_of_a_local_array_a_store_through_caller_memory_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a library copy whose destination was read out of memory
+        // writes every escaped local; this goes silent.
+        a_pointer_read_out_of_a_local_array_a_copy_through_caller_memory_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: only a write deeper than one dereference, rather than
+        // one through a pointer read out of memory on the way down, lands
+        // in every local code this check cannot read may name; this goes
+        // silent.
+        a_pointer_read_out_of_a_local_array_a_copy_through_a_dereference_of_a_placed_pointer_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through a pointer read out of the caller's memory, which
+        // may be the array. **Held by two routes, measured**: the address
+        // edges `t` carries out of that memory, and the level the walk
+        // passes through being a load. Dropping either alone leaves this
+        // silent; it marks the program the fix must not report.
+        a_local_array_copied_into_through_a_dereference_of_a_pointer_read_out_of_memory_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An `int` stored through a pointer that may be the array cannot be
+        // a write of its pointer elements (C17 6.5 p7). Mutation:
+        // `replaced_by` drops the type from its write answer; this goes
+        // silent.
+        a_pointer_read_out_of_a_local_array_an_int_stored_where_it_may_point_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A false report, and a real one lost, kept on purpose.** The loop
+        // writes `m[0]`, but `e` has lost its edge (#639), so the read is a
+        // false `SC0411`; and since that read is reported, the second free
+        // of `a` through `q` is no longer doubted. #647 would make the read
+        // `Unknown`. See ADR-0057. Mutation: a pointer naming no local lands
+        // in every escaped local; the `SC0411` goes and `SC0401` returns.
+        a_double_free_through_an_array_filled_backwards_is_reported_as_a_read_nothing_wrote: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call writes only the locals it may reach, `Known::exposed_locals`
         // (#643). See ADR-0057.
         //

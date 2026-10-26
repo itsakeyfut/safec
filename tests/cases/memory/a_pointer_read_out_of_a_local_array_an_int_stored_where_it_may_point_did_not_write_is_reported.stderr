@@ -1,0 +1,20 @@
+error[SC0412]: this may reach outside the object `u` points at
+   ╭─[ a_pointer_read_out_of_a_local_array_an_int_stored_where_it_may_point_did_not_write_is_reported.c:9:5 ]
+   │
+ 9 │     *u = 1;
+   │     ───┬──  
+   │        ╰──── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0411]: `*p` is read before anything was assigned to it
+    ╭─[ a_pointer_read_out_of_a_local_array_an_int_stored_where_it_may_point_did_not_write_is_reported.c:10:10 ]
+    │
+ 10 │     int *q = *p;
+    │          ───┬──  
+    │             ╰──── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = help: assign to it before reading it
