@@ -1,0 +1,50 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_array_handed_to_a_call_is_not_reported_as_indeterminate.c:1:6 "fill" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "m"
+Function a_local_array_handed_to_a_call_is_not_reported_as_indeterminate.c:3:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *[1]" "m"
+  Local "_2" "int **"
+  Local "_3" "int *" "q"
+  Local "_4" "int **"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_local_array_handed_to_a_call_is_not_reported_as_indeterminate.c:3:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_local_array_handed_to_a_call_is_not_reported_as_indeterminate.c:5:10 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_local_array_handed_to_a_call_is_not_reported_as_indeterminate.c:5:5 generated
+    Call a_local_array_handed_to_a_call_is_not_reported_as_indeterminate.c:5:5 written "fill" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_local_array_handed_to_a_call_is_not_reported_as_indeterminate.c:5:5 generated
+    Operation a_local_array_handed_to_a_call_is_not_reported_as_indeterminate.c:6:14 generated
+      Destination "_4"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_local_array_handed_to_a_call_is_not_reported_as_indeterminate.c:6:10 written
+      Destination "_3"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_local_array_handed_to_a_call_is_not_reported_as_indeterminate.c:6:14 generated
+    Operation a_local_array_handed_to_a_call_is_not_reported_as_indeterminate.c:7:12 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Operation a_local_array_handed_to_a_call_is_not_reported_as_indeterminate.c:7:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_local_array_handed_to_a_call_is_not_reported_as_indeterminate.c:7:12 generated
+    Return

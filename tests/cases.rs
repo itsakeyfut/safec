@@ -288,6 +288,36 @@ cases! {
         // both are reported.
         a_local_array_written_through_a_pointer_read_out_of_memory_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_array_filled_backwards_through_a_moved_pointer_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call writes only the locals it may reach, `Known::exposed_locals`
+        // (#643). See ADR-0057.
+        //
+        // Mutation: an opaque call passes `|_| true` as `may_write`; this
+        // goes silent.
+        a_pointer_read_out_of_a_local_array_an_unrelated_call_did_not_reach_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a library copy passes `|_| true` as `may_write`; this
+        // goes silent.
+        a_pointer_read_out_of_a_local_array_a_copy_elsewhere_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the walk drops the arguments' own address edges; this
+        // is reported.
+        a_local_array_handed_to_a_call_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the walk does not start from the sites the call was
+        // handed; this is reported.
+        a_local_array_stored_in_memory_a_call_was_handed_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the walk does not step through what a local holds;
+        // this is reported.
+        a_local_array_reached_through_a_local_a_call_was_handed_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the locals already exposed are not a seed of the walk;
+        // this is reported.
+        a_local_array_put_in_a_local_an_earlier_call_kept_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the walk does not start from `reachable_now()`; this
+        // is reported.
+        a_local_array_stored_in_memory_reached_from_memory_already_handed_away_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `exposed_locals` joined by intersection; this is
+        // reported.
+        a_local_array_put_in_a_local_a_call_kept_on_one_arm_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a store this check cannot place exposes no local; this
+        // is reported.
+        a_local_array_stored_where_this_check_cannot_place_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `aligned_alloc`'s contents are indeterminate too (C17 7.22.3.1 p2).
         // Mutation: drop it from `leaves_indeterminate`. It builds.
         a_pointer_read_out_of_memory_aligned_alloc_made_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
