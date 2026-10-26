@@ -3425,7 +3425,7 @@ cases! {
         // Mutation: `size_of` wraps an array too large to count rather than
         // answering `None`; this goes silent.
         an_array_too_large_to_count_is_not_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `element_of` strips one dimension only; this panics at
+        // Mutation: `innermost_element` strips one dimension only; this panics at
         // `type_levels`.
         a_pointer_read_out_of_an_array_of_arrays_of_pointers_behind_a_parameter_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by

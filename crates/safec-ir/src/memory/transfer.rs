@@ -275,11 +275,13 @@ impl Allocations<'_> {
             // one were, what it holds is its elements. **Held by nothing,
             // measured**: answering `false` changes no case, since no C reads a
             // place of array type.
-            Some(Ty::Array { element, .. }) => match self.unit.ty(element_of(self.unit, element)) {
-                Ty::Pointer(_) => true,
-                Ty::Int | Ty::Char | Ty::Void => false,
-                Ty::Array { .. } => unreachable!("`element_of` strips every array"),
-            },
+            Some(Ty::Array { element, .. }) => {
+                match self.unit.ty(innermost_element(self.unit, element)) {
+                    Ty::Pointer(_) => true,
+                    Ty::Int | Ty::Char | Ty::Void => false,
+                    Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
+                }
+            }
         }
     }
 
@@ -316,14 +318,14 @@ impl Allocations<'_> {
         // `int`s at level 0. Stopping at an array instead believed nothing of
         // an array of pointers reached through a pointer (#621).
         for _ in 0..self.deepest_pointer {
-            stored = element_of(self.unit, stored);
+            stored = innermost_element(self.unit, stored);
             let width = match self.unit.ty(stored) {
                 Ty::Pointer(inner) => {
                     stored = inner;
                     self.unit.size_of(inner).unwrap_or(0)
                 }
                 Ty::Int | Ty::Char | Ty::Void => 0,
-                Ty::Array { .. } => unreachable!("`element_of` strips every array"),
+                Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
             };
             levels.push(Some(width));
         }
@@ -2687,11 +2689,13 @@ impl Analysis for Allocations<'_> {
                             continue;
                         };
                         // An array of pointers holds pointers, as `type_levels` reads it.
-                        let width = match self.unit.ty(element_of(self.unit, read_as)) {
+                        let width = match self.unit.ty(innermost_element(self.unit, read_as)) {
                             Ty::Pointer(pointee) => self.unit.size_of(pointee).unwrap_or(0),
                             Ty::Void => 0,
                             Ty::Int | Ty::Char => continue,
-                            Ty::Array { .. } => unreachable!("`element_of` strips every array"),
+                            Ty::Array { .. } => {
+                                unreachable!("`innermost_element` strips every array")
+                            }
                         };
                         value.handed_at_most[local.index()] =
                             bounded(value.handed_at_most[local.index()], Some(width));
@@ -3078,9 +3082,11 @@ impl Analysis for Allocations<'_> {
 /// The type an array's elements have, through every dimension, and `ty`
 /// itself where it is no array: what memory holding a `ty` holds one
 /// object after another of. Memory holding `int *[2][3]` holds `int *`s.
-pub(super) fn element_of(unit: &TranslationUnit, ty: TyId) -> TyId {
+/// Not one dimension's element, which `Ty::Array`'s `element` is: that of
+/// `int *[2][3]` is `int *[3]`.
+pub(super) fn innermost_element(unit: &TranslationUnit, ty: TyId) -> TyId {
     match unit.ty(ty) {
-        Ty::Array { element, .. } => element_of(unit, element),
+        Ty::Array { element, .. } => innermost_element(unit, element),
         Ty::Int | Ty::Char | Ty::Void | Ty::Pointer(_) => ty,
     }
 }

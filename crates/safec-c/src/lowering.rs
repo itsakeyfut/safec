@@ -2575,7 +2575,7 @@ impl Lowering<'_> {
 
     /// The type a value of type `ty` has once [`Self::decayed`] has converted
     /// it: a pointer to the first element for an array, and `ty` otherwise.
-    fn value_ty(&mut self, ty: TyId) -> TyId {
+    fn decayed_ty(&mut self, ty: TyId) -> TyId {
         match self.unit.ty(ty) {
             Ty::Array { element, .. } => self.unit.push_type(Ty::Pointer(element)),
             Ty::Int | Ty::Char | Ty::Void | Ty::Pointer(_) => ty,
@@ -2975,13 +2975,13 @@ impl Lowering<'_> {
                 // `a[3]` with `a` an `int[4]` adds to an `int *`, and asking the
                 // type the frontend wrote took the index for the pointer.
                 let base_ty = self.ty_of(base, diagnostics)?;
-                let base_ty = self.value_ty(base_ty);
+                let base_ty = self.decayed_ty(base_ty);
                 let (base, pointer, offset, addressed) =
                     if matches!(self.unit.ty(base_ty), Ty::Pointer(_)) {
                         (base, pointer, offset, base_ty)
                     } else {
                         let index_ty = self.ty_of(index, diagnostics)?;
-                        (index, offset, pointer, self.value_ty(index_ty))
+                        (index, offset, pointer, self.decayed_ty(index_ty))
                     };
 
                 // `E[0]` is `*E`, so it is built as `*E` is: one C expression
