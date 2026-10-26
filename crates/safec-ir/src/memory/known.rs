@@ -222,6 +222,33 @@ pub(super) struct Known {
     /// body, and was believed a whole `int` (#632). A bound, so the lower of
     /// two at a join. See ADR-0060.
     pub(super) handed_at_most: Vec<Option<u64>>,
+    /// Per local, whether nothing may have written it since it was made, on
+    /// every path: its value is indeterminate (C17 6.2.4 p6, 6.7.9 p10), and
+    /// Annex J.2 lists using it as undefined. That line of J.2 names no
+    /// condition on the address; the normative text makes such a read
+    /// undefined only through a trap representation (6.2.6.1 p5) where the
+    /// address is taken, and this reads J.2 as ADR-0057 does for an
+    /// allocation. Set where a local that may hold a pointer is made, at the
+    /// function's entry and at its `StorageLive`, never for a parameter, and
+    /// cleared only by [`Self::written_local`] and [`Self::replaced`], which a write
+    /// that may land there calls: an assignment, a placed store, a call's
+    /// result, and a call or a store this check cannot place, which
+    /// `replaced` answers for every escaped local it may reach. An
+    /// intersection at a join.
+    ///
+    /// **Wrong in both directions, and the two are not alike.** A write this
+    /// check does not see leaves the mark set, and a program that did write
+    /// the local is reported `Unsafe`, which the reader can see. A may-write
+    /// counted as a write clears it, and a read nothing wrote goes silent: a
+    /// call is taken to write every escaped local whatever it was handed,
+    /// which is #643.
+    ///
+    /// **What [`Self::fresh`] is for an allocation, for a local reached by
+    /// its address**: a pointer read out of one is reported where it is
+    /// read, `int *q = m[0];` with `m` a local array nothing wrote (#640).
+    /// A local whose address is never taken is `assigned.rs`'s, which reads
+    /// it by name. See ADR-0057.
+    pub(super) unwritten: Vec<bool>,
 }
 
 impl Known {
@@ -1036,6 +1063,9 @@ impl Known {
             stored_at_most: _,
             // About a local, not a site.
             handed_at_most: _,
+            // About a local as well: the call that makes the site writes the
+            // local it is named by, which the call's destination says.
+            unwritten: _,
         } = self;
 
         // **A local that loses an allocation that is gone may hold one**, so
@@ -1220,6 +1250,12 @@ impl Known {
     /// place, or a library call it reads only by name. See [`Self::fresh`].
     pub(super) fn written_all(&mut self) {
         self.fresh.fill(false);
+    }
+
+    /// Something may have written `local`, so its value is no longer known
+    /// to be indeterminate. See [`Self::unwritten`].
+    pub(super) fn written_local(&mut self, local: usize) {
+        self.unwritten[local] = false;
     }
 
     /// Every exposed allocation still live is unproven, because the call being
@@ -1599,6 +1635,11 @@ impl Known {
             // idiom above: the report does not read it. See ADR-0044.
             if may_hold(local) && self.escaped[local] {
                 self.points_to[local].foreign = true;
+                // **And it may have been written**, which is what a write this
+                // check cannot read is: `int *q; get(&q); *pq` is the
+                // output-parameter idiom, and believing `q` unwritten after it
+                // reported a correct program. See `Self::unwritten`.
+                self.unwritten[local] = false;
             }
         }
     }

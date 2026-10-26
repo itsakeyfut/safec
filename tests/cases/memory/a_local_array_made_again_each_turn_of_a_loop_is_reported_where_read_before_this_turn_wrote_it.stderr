@@ -1,0 +1,10 @@
+error[SC0411]: this reads a pointer out of memory before anything was assigned to it
+   ╭─[ a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:8:13 ]
+   │
+ 8 │             q = m[0];
+   │             ────┬───  
+   │                 ╰───── read here
+───╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = help: assign to it before reading it

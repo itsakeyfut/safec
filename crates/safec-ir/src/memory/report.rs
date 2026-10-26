@@ -13,6 +13,7 @@ use crate::ir::{
 use crate::nullability::NullAtTerminators;
 use crate::source::{SourceMap, Span};
 
+use super::bits::Bits;
 use super::built::named;
 use super::known::Known;
 use super::parts::{
@@ -230,8 +231,9 @@ fn verdict(
         // Never asked: it is built by `memory::assigned` from where a local
         // was assigned, and it is about no free.
         Kind::Unassigned | Kind::SometimesUnassigned { .. } => true,
-        // Never asked: it is said by `loaded_indeterminate`, about no free.
-        Kind::IndeterminateLoad => true,
+        // Never asked: each is said by `loaded_indeterminate` or
+        // `unwritten_read`, about no free.
+        Kind::IndeterminateLoad { .. } | Kind::IndeterminateLocal => true,
         // Never asked: it is said by `may_not_fit`, about no free.
         Kind::OutsideItsObject { .. } => true,
         // Never asked: it is said where a pointer leaves, about no free.
@@ -1887,6 +1889,11 @@ pub(super) fn loaded_indeterminate(
         // true of it. Mutation: key by `place`, and
         // `a_pointer_read_out_of_a_freed_table_and_returned` loses `SC0402`.
         let local = place.local;
+        let through = &known.points_to[local.index()];
+        let kind = Kind::IndeterminateLoad {
+            reaches_allocation: through.sites().next().is_some(),
+            reaches_local: through.writes_to.any(),
+        };
         let root = Place::local(local);
         if said
             .iter()
@@ -1901,7 +1908,58 @@ pub(super) fn loaded_indeterminate(
             &root,
             Finding {
                 function: analysis.function,
-                kind: Kind::IndeterminateLoad,
+                kind,
+                conclusion: Conclusion::Unsafe,
+                at,
+                local: Some(local),
+                freed: None,
+                made: None,
+                unproven: None,
+            },
+        );
+    }
+}
+
+/// Report every read by name of a local that holds a pointer, whose address
+/// is taken somewhere in the function, before anything wrote it on any path:
+/// an indeterminate value used (C17 6.2.4 p6, 6.7.9 p10, Annex J.2), once per
+/// local per caret. `int *q; int **pq = &q; return q == 0;` (#640).
+///
+/// `taken` is `assigned::address_taken`, so a local is asked here exactly
+/// where `memory::assigned` does not ask it: that analysis follows no write
+/// through an address and this one does ([`Known::unwritten`]). See ADR-0057.
+pub(super) fn unwritten_read(
+    sources: &SourceMap,
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    analysis: &Allocations<'_>,
+    reads: Vec<(LocalId, Span)>,
+    taken: &Bits,
+    known: &Known,
+) {
+    let function = analysis.unit.function(analysis.function);
+    for (local, at) in reads {
+        if !taken.get(local.index())
+            || !known.unwritten[local.index()]
+            || !analysis.holds_a_pointer(function.local(local))
+        {
+            continue;
+        }
+        let root = Place::local(local);
+        if said
+            .iter()
+            .any(|(said_at, said_place, _)| *said_at == at && *said_place == root)
+        {
+            continue;
+        }
+        say(
+            sources,
+            findings,
+            said,
+            &root,
+            Finding {
+                function: analysis.function,
+                kind: Kind::IndeterminateLocal,
                 conclusion: Conclusion::Unsafe,
                 at,
                 local: Some(local),

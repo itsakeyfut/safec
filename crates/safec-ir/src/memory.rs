@@ -73,7 +73,7 @@ use built::named;
 use report::{
     after_a_call, departed_at_call, departed_in_element, derefs, freed_after_its_read_was_reported,
     handed, handed_places, inside, loaded_indeterminate, may_not_fit, reached_by_library, reported,
-    returned, used, used_before,
+    returned, unwritten_read, used, used_before,
 };
 use transfer::Allocations;
 
@@ -164,7 +164,25 @@ pub enum Kind {
     /// Always `Unsafe`, at the read, whatever it is read for, and not again
     /// at a later use of what it read. `local` is the pointer it is read
     /// through. See `Known::fresh` and ADR-0057.
-    IndeterminateLoad,
+    ///
+    /// Also out of a local that pointer may be the address of, which nothing
+    /// wrote since it was made (C17 6.2.4 p6, 6.7.9 p10, and the same line of
+    /// Annex J.2), so each says which storage it reached and the words cite
+    /// that storage's clause (#640). See `Known::unwritten`.
+    IndeterminateLoad {
+        /// Whether it may reach an allocation nothing wrote.
+        reaches_allocation: bool,
+        /// Whether it may reach a local nothing wrote.
+        reaches_local: bool,
+    },
+    /// A pointer local whose address is taken, read by name before anything
+    /// wrote it, on every path: its value is indeterminate (C17 6.2.4 p6,
+    /// 6.7.9 p10), and Annex J.2 lists using it as undefined, the reading
+    /// ADR-0057 takes. Always `Unsafe`, at the read. `local` is the
+    /// local read. A local whose address is never taken is `Unassigned`'s,
+    /// which `memory::assigned` builds, and the two never meet (#640). See
+    /// `Known::unwritten` and ADR-0057.
+    IndeterminateLocal,
     /// A function this check gave up on part of the way, past `MAX_WORK`, so
     /// nothing about its memory is proved. Always `Unknown`, at the
     /// function's name.
@@ -627,6 +645,9 @@ fn findings_within(
         // pointer read through and handed on at one call is two questions.
         // With where the report standing for each is, as `said` keeps it.
         let mut departed: Vec<(Span, Departure, Option<LocalId>, usize)> = Vec::new();
+        // The locals whose address is taken, which a read by name of asks
+        // `Known::unwritten` and `memory::assigned` does not. See #640.
+        let taken = assigned::address_taken(function);
 
         for &id in cfg.order() {
             // `Cfg::order` holds exactly the reachable blocks and `solve` gives
@@ -649,6 +670,15 @@ fn findings_within(
                     &analysis,
                     function,
                     read_out_of_memory_in_element(element),
+                    &known,
+                );
+                unwritten_read(
+                    sources,
+                    &mut findings,
+                    &mut said,
+                    &analysis,
+                    assigned::element_reads(element),
+                    &taken,
                     &known,
                 );
                 // Before the transfer, which is what the element does: the
@@ -739,6 +769,15 @@ fn findings_within(
                 &analysis,
                 function,
                 read_out_of_memory_in_terminator(&block.terminator),
+                &known,
+            );
+            unwritten_read(
+                sources,
+                &mut findings,
+                &mut said,
+                &analysis,
+                assigned::terminator_reads(&block.terminator),
+                &taken,
                 &known,
             );
             // Before the terminator's own transfer, which is what turns a live

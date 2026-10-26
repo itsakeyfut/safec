@@ -1,0 +1,20 @@
+error[SC0411]: `q` is read before anything was assigned to it
+   ╭─[ a_local_whose_address_is_taken_read_by_name_in_a_call_or_a_condition_is_reported.c:6:5 ]
+   │
+ 6 │     use(q);
+   │     ───┬──  
+   │        ╰──── read here
+───╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else
+error[SC0411]: `q` is read before anything was assigned to it
+    ╭─[ a_local_whose_address_is_taken_read_by_name_in_a_call_or_a_condition_is_reported.c:13:9 ]
+    │
+ 13 │     if (q) {
+    │         ┬  
+    │         ╰── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else

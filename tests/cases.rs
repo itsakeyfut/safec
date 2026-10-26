@@ -242,6 +242,52 @@ cases! {
         // stays a proof beside the doubt. Mutation: clear `fresh` for every
         // site a free may free. Only the doubt is left.
         a_pointer_read_out_of_fresh_memory_a_free_may_have_freed_is_still_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local reached by its address is memory too: a pointer read out of
+        // one nothing wrote is reported where it is read, through a pointer
+        // and by name (#640). See ADR-0057.
+        //
+        // Mutation: `reads_fresh` asks the sites alone; the first two go
+        // silent.
+        a_pointer_read_out_of_a_local_array_nothing_wrote_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_through_the_address_of_a_local_nothing_wrote_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `unwritten_read` reports nothing; this goes silent.
+        a_local_whose_address_is_taken_read_by_name_before_anything_wrote_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `unwritten_read` is not asked at a terminator; both
+        // reads, a call's argument and a branch's condition, go silent.
+        a_local_whose_address_is_taken_read_by_name_in_a_call_or_a_condition_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: say only one storage where the pointer may reach both;
+        // one of the two notes goes.
+        a_pointer_read_out_of_an_allocation_or_a_local_nothing_wrote_cites_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a store through a pointer clears no local; this is
+        // reported.
+        a_pointer_read_out_of_a_local_array_after_it_was_written_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `Known::replaced` clears no local; this is reported.
+        a_local_a_call_was_handed_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `unwritten` joined by union; this is reported.
+        a_local_array_written_on_one_arm_only_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `StorageLive` leaves `unwritten` alone; this goes silent.
+        a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `Known::replaced` clears no local, which is the door a
+        // copy goes through; this is reported.
+        a_local_filled_by_memcpy_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `holds_a_pointer` answers `true` for every type; this is
+        // reported where `v` is read by name.
+        an_integer_local_whose_address_is_taken_read_before_anything_wrote_it_is_not_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `StorageLive` makes every local unwritten again,
+        // whatever its type; this gains an `SC0411`.
+        an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_not_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `holds_a_pointer` answers `true` for `char`; this is
+        // reported.
+        a_character_local_whose_address_is_taken_read_before_anything_wrote_it_is_not_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `Known::replaced` clears no local, which is the door a
+        // store this check cannot place goes through; this is reported.
+        a_local_written_through_two_dereferences_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An array holds its elements, so a store this check cannot place
+        // writes it where the type stored is its element's. Mutation:
+        // `replaced_by` compares the type stored with the local's own type;
+        // both are reported.
+        a_local_array_written_through_a_pointer_read_out_of_memory_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_array_filled_backwards_through_a_moved_pointer_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `aligned_alloc`'s contents are indeterminate too (C17 7.22.3.1 p2).
         // Mutation: drop it from `leaves_indeterminate`. It builds.
         a_pointer_read_out_of_memory_aligned_alloc_made_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
