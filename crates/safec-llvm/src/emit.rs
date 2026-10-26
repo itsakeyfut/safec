@@ -6,11 +6,12 @@
 //! dataflow framework written a phase early. `mem2reg` is what turns these back
 //! into registers, and optimisation is somebody else's job.
 //!
-//! What this refuses is what the interpreter refuses: the same shapes, so that
-//! two consumers of one IR do not disagree about which programs it can
-//! express. Where the *reason* is the same it is said in the same words, and
-//! where it is not it is not: an index is refused here because scaling needs a
-//! width and there because nothing builds one yet, and both are true.
+//! What this refuses is what the interpreter refuses, so that two consumers of
+//! one IR do not disagree about which programs it can express, **except
+//! arrays and pointer arithmetic**: this writes both (#621), and the
+//! interpreter, whose pointer is a local with no element in it, refuses both
+//! until it is given arrays of its own. Where the *reason* for a refusal is
+//! the same it is said in the same words, and where it is not it is not.
 
 use std::fmt::Write as _;
 
@@ -182,6 +183,7 @@ impl Emitter<'_> {
             Ty::Char => format!("i{}", self.unit.target().char().bits()),
             Ty::Void => "void".to_owned(),
             Ty::Pointer(_) => "ptr".to_owned(),
+            Ty::Array { element, length } => format!("[{length} x {}]", self.spell(element)),
         }
     }
 
@@ -267,15 +269,28 @@ impl Emitter<'_> {
                     }
                     _ => return self.refuse("a dereference of something that is not a pointer"),
                 },
-                // `p[i]` lowers as `*(p + i)`, so nothing builds one of these.
-                // Whoever does needs a width to scale by, and `ir::Ty` holds
-                // none for a pointer, which is the reason the arm for pointer
-                // arithmetic below gives in the same words. The interpreter
-                // refuses this one too and says something else, because it
-                // stops at "nothing builds one yet" before reaching the width.
+                // **An array's first element**, which is the one index the
+                // lowering builds: the conversion of a local array to a pointer
+                // to its first element (C17 6.3.2.1 p3), under `Rvalue::Address`.
+                // `p[i]` is `*(p + i)`, which the arm for pointer arithmetic
+                // below writes. Any other index would need its own scaling and
+                // nothing builds one; the interpreter refuses every index.
+                Projection::Index(Operand::Constant(0)) => match self.unit.ty(ty) {
+                    Ty::Array { element, .. } => {
+                        let spelled = self.spell(ty);
+                        let first = self.temp();
+                        writeln!(
+                            out,
+                            "  {first} = getelementptr {spelled}, ptr {address}, i64 0, i64 0"
+                        )
+                        .expect("writing to a string cannot fail");
+                        address = first;
+                        ty = element;
+                    }
+                    _ => return self.refuse("an index into something that is not an array"),
+                },
                 Projection::Index(_) => {
-                    return self
-                        .refuse("an indexed place, which counts elements and so needs a width");
+                    return self.refuse("an index other than an array's first element");
                 }
             }
         }
@@ -295,6 +310,11 @@ impl Emitter<'_> {
         };
         if matches!(self.unit.ty(ty), Ty::Void) {
             return self.refuse("a read of a place that holds nothing");
+        }
+        // C reads an array only by converting it to a pointer to its first
+        // element (C17 6.3.2.1 p3), which the lowering does where it is used.
+        if matches!(self.unit.ty(ty), Ty::Array { .. }) {
+            return self.refuse("a read of a whole array, which C converts rather than reads");
         }
 
         let address = self.address(function, place, out)?;
@@ -459,6 +479,90 @@ impl Emitter<'_> {
         }
     }
 
+    /// A pointer plus an integer, either way round, or a pointer minus one:
+    /// C17 6.5.6 p8, the pointer moved by that many elements.
+    ///
+    /// **`getelementptr` over the element's type does the scaling**, so this
+    /// computes no width. The integer is widened to `i64` first, by its own
+    /// type's sign, since that is the index type `getelementptr` takes on
+    /// every target here, and negated for a subtraction. Without `inbounds`,
+    /// which would make an access LLVM assumes stays inside its object out of
+    /// one the memory check only concluded `Unknown` about.
+    ///
+    /// A pointer minus a pointer is `ptrdiff_t` (6.5.6 p9), which this
+    /// compiler has no type for, and is refused (#638). So is arithmetic on a
+    /// `void *`, which 6.5.6 p2 forbids and the type check refuses first.
+    fn moved(
+        &mut self,
+        function: &Function,
+        op: BinOp,
+        lhs: &Operand,
+        rhs: &Operand,
+        to: TyId,
+        out: &mut String,
+    ) -> Refuses<String> {
+        let (pointer, count) = match (self.pointer(function, lhs), self.pointer(function, rhs)) {
+            (Some(ty), None) => ((lhs, ty), rhs),
+            (None, Some(ty)) if op == BinOp::Add => ((rhs, ty), lhs),
+            (Some(_), Some(_)) => {
+                return self.refuse("a pointer minus a pointer, which needs a type for it");
+            }
+            (None, _) => return self.refuse("an integer minus a pointer"),
+        };
+        let (pointer, ty) = pointer;
+        let Ty::Pointer(element) = self.unit.ty(ty) else {
+            unreachable!("`Self::pointer` answers only a pointer's type")
+        };
+        if matches!(self.unit.ty(element), Ty::Void) {
+            return self.refuse("arithmetic on a `void *`, which has no element to count");
+        }
+        if !matches!(self.unit.ty(to), Ty::Pointer(_)) {
+            let wanted = self.spell(to);
+            return self.refuse(format!("a moved pointer written into a `{wanted}`"));
+        }
+
+        let base = self.operand(function, pointer, ty, out)?;
+        let mut index = match count {
+            // Written as the `i64` it is: a constant is an `int` the source
+            // wrote, which every `i64` holds.
+            Operand::Constant(value) => match i64::try_from(*value) {
+                Ok(value) => value.to_string(),
+                Err(_) => return self.refuse(format!("a pointer moved by {value}")),
+            },
+            Operand::Copy(place) => {
+                let Some(counted) = self.unit.place_ty(function, place) else {
+                    return self.refuse("a place whose projections do not fit its type");
+                };
+                let Some(int) = self.unit.integer(counted) else {
+                    return self.refuse("a pointer moved by something that is not an integer");
+                };
+                let mut index = self.operand(function, count, counted, out)?;
+                if int.bits() < 64 {
+                    let widened = self.temp();
+                    let how = if int.signed() { "sext" } else { "zext" };
+                    writeln!(out, "  {widened} = {how} i{} {index} to i64", int.bits())
+                        .expect("writing to a string cannot fail");
+                    index = widened;
+                }
+                index
+            }
+        };
+        if op == BinOp::Sub {
+            let negated = self.temp();
+            writeln!(out, "  {negated} = sub i64 0, {index}")
+                .expect("writing to a string cannot fail");
+            index = negated;
+        }
+        let spelled = self.spell(element);
+        let result = self.temp();
+        writeln!(
+            out,
+            "  {result} = getelementptr {spelled}, ptr {base}, i64 {index}"
+        )
+        .expect("writing to a string cannot fail");
+        Ok(result)
+    }
+
     /// Two operands under one operator.
     ///
     /// Both are taken as the destination's type, which is the type the
@@ -476,9 +580,10 @@ impl Emitter<'_> {
         out: &mut String,
     ) -> Refuses<String> {
         // Whether two pointers name one object is defined and needs no width.
-        // Everything else about a pointer counts elements, and `ir::Ty` holds
-        // no width to count them with. The interpreter draws the line in the
-        // same place and says so in the same words.
+        // A pointer plus or minus an integer counts elements, and
+        // `getelementptr` over the element's type is what scales it, so no
+        // width reaches `ir::Ty` (ADR-0013). The interpreter still refuses
+        // every one, which is its own change.
         let pointer = self
             .pointer(function, lhs)
             .or_else(|| self.pointer(function, rhs));
@@ -486,6 +591,15 @@ impl Emitter<'_> {
             let predicate = match op {
                 BinOp::Eq => "eq",
                 BinOp::Ne => "ne",
+                BinOp::Add | BinOp::Sub => {
+                    return self.moved(function, op, lhs, rhs, to, out);
+                }
+                // C17 6.5.8 p5 defines these only between pointers into one
+                // object, which is a question this does not answer yet, and the
+                // reason is not a width.
+                BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge => {
+                    return self.refuse("a relational comparison of two pointers");
+                }
                 _ => {
                     return self.refuse(
                         "arithmetic on a pointer, which counts elements and so needs a width",
@@ -626,6 +740,10 @@ impl Emitter<'_> {
         };
         if matches!(self.unit.ty(to), Ty::Void) {
             return self.refuse("an assignment to a place that holds nothing");
+        }
+        // C17 6.5.16 p2: an array is not a modifiable lvalue.
+        if matches!(self.unit.ty(to), Ty::Array { .. }) {
+            return self.refuse("an assignment to a whole array, which C does not have");
         }
 
         let value = match &operation.value {

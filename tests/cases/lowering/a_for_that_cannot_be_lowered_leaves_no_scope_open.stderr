@@ -5,4 +5,4 @@ error[SC0304]: cannot compile something of type `int[n]` yet
    │          ────┬───  
    │              ╰───── declared here
 ───╯
-  = note: `int`, `char`, `void` and pointers to them are all this compiler holds so far
+  = note: `int`, `char`, `void`, pointers, and arrays of constant length are all this compiler holds so far

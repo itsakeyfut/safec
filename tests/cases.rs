@@ -1364,8 +1364,9 @@ cases! {
         // this with `SC0801`, because the subscript built an addition and the
         // backend cannot write pointer arithmetic; ADR-0021 folded the addition
         // away and the refusal went with it.
-        // `an_ir_shape_the_backend_cannot_write` is the case that holds the
-        // refusal itself, which `pp[1]` still earns.
+        // `pp[1]` builds as well since the backend writes pointer arithmetic
+        // (#621), and `an_ir_shape_the_backend_cannot_write` holds a refusal
+        // that is left.
         a_zero_subscript_reaches_the_backend: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         // A message names the local its conclusion is about, read as itself
         // or read through at its first level: a double free, a free through
@@ -3402,6 +3403,22 @@ cases! {
         a_local_s_address_stored_in_memory_is_asked_by_what_the_local_believes_where_it_leaves: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `Known::memory_levels` skips the locals on the way.
         a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What the memory check concludes about an array and an index (#621):
+        // the first element of a local array is read by the array's size, and
+        // every access off a pointer's start is `Unknown`, as ADR-0060 says.
+        //
+        // Mutation: `size_of` answers `None` for an array; this is reported.
+        // Mutation: set `inner_address` for a constant zero index; so is
+        // this.
+        an_access_at_the_start_of_a_local_array_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_access_past_the_start_of_a_local_array_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_index_past_the_start_of_an_allocation_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_element_of_an_array_of_arrays_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer stored into a row is reported where it is stored and read
+        // back, and not named as freed at `*q`, which is #639.
+        a_pointer_stored_into_a_row_and_freed_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `type_levels` stops at an array; this is reported.
+        a_pointer_read_out_of_an_array_of_pointers_behind_a_parameter_is_believed_as_its_element: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument
@@ -4272,9 +4289,11 @@ cases! {
         a_comma_in_a_controlling_expression: ["--emit", "ast"],
         a_dangling_else: ["--emit", "ast"],
         a_definition_that_is_not_a_function: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A parameter the IR cannot hold. A pointer to an array, because an
+        // A parameter the IR cannot hold. A pointer to a function, because an
         // array or a function parameter is a pointer by C17 6.7.6.3 p7 and p8
-        // and the IR holds that.
+        // and the IR holds that, and a pointer to an array is held since #621.
+        // Chosen for what the IR cannot hold, and stops testing this the day
+        // it can.
         a_function_the_ir_cannot_hold: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An argument is checked against the parameter as C adjusts it: an
         // `int` given to `int a[4]` is given to an `int *`, and to `int
@@ -5538,6 +5557,11 @@ cases! {
         // `tests/llvm.rs`, since the block is left with no terminator.
         llvm_ir_of_a_call_that_does_not_return: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         llvm_ir_of_pointers_branches_and_a_loop: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An array of arrays decayed, a row reached through a pointer to an
+        // array, and a pointer moved by a `char`, widened by its sign
+        // (#621). Mutation: spell the element of `getelementptr` as `i8`;
+        // this changes.
+        llvm_ir_of_arrays_and_pointer_arithmetic: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         the_mvp_becomes_llvm_ir: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
@@ -5623,6 +5647,11 @@ cases! {
         // and stops testing this the day it can. Mutation: close the `for`'s
         // scope only when the loop was lowered; `g` gains a `StorageLive`.
         a_for_that_cannot_be_lowered_leaves_no_scope_open: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local array converts to the address of its first element and an
+        // array reached through a pointer to a copy of that pointer (#621).
+        // Mutation: decay `*pa` as `Address` of it with an index appended;
+        // this changes.
+        an_array_converts_to_the_address_of_its_first_element_or_a_copy_of_its_pointer: ["--emit", "safety-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],
         // A `void` value is nothing: a call to a `void` function has no
         // `Destination`, a `void` `?:` has no answer and its arms write
         // none, a comma discards no left operand that is `void`, and neither

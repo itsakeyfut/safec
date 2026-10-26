@@ -759,6 +759,87 @@ fn the_mvp_program_runs_and_answers_three() {
     assert_eq!(ran.code(), Some(3), "the program did not answer 3");
 }
 
+/// Arrays and pointer arithmetic compile to programs that compute what C
+/// says (#621), each run and its exit code read.
+///
+/// At `--safety off`, because what the memory check concludes about each is
+/// the corpus's to hold, under `tests/cases/bounds/`, and here only the
+/// value is asked.
+///
+/// Mutation: spell the element of `getelementptr` as `i8`. Every program
+/// that steps past its first element answers another number. Mutation: drop
+/// the negation of a subtraction. `heap` answers another number. Mutation:
+/// scale a row by the inner array's element rather than the row. `rows` and
+/// `parameter` do.
+#[test]
+fn arrays_and_pointer_arithmetic_compute_what_c_says() {
+    if !clang_or_skip("what an indexed program answers") {
+        return;
+    }
+
+    for (name, text, answer) in [
+        (
+            "local",
+            "int main(void) {\n    int a[4];\n    a[0] = 1;\n    a[3] = 2;\n    return a[0] + a[3];\n}\n",
+            3,
+        ),
+        (
+            "heap",
+            "void *malloc(int n);\nint main(void) {\n    int *p = malloc(8);\n    if (p == 0) {\n        return 1;\n    }\n    p[0] = 3;\n    p[1] = 7;\n    int *q = p + 1;\n    return *q * 10 + *(q - 1);\n}\n",
+            73,
+        ),
+        (
+            "rows",
+            "int main(void) {\n    int a[2][3];\n    a[1][2] = 5;\n    return a[1][2];\n}\n",
+            5,
+        ),
+        (
+            "parameter",
+            "int f(int a[][4]) {\n    return a[1][2];\n}\nint main(void) {\n    int m[2][4];\n    m[1][2] = 9;\n    m[0][2] = 1;\n    return f(m);\n}\n",
+            9,
+        ),
+        (
+            "through",
+            "int main(void) {\n    int a[3];\n    int *p = a;\n    p[2] = 4;\n    int (*pa)[3] = &a;\n    return (*pa)[2] + a[2];\n}\n",
+            8,
+        ),
+        (
+            "bytes",
+            "int main(void) {\n    char s[3];\n    s[0] = 1;\n    s[2] = 2;\n    char *p = s + 2;\n    return *p + s[0];\n}\n",
+            3,
+        ),
+    ] {
+        let scratch = Scratch::new(&format!("indexed_{name}"));
+        scratch.source("indexed.c", text);
+        let program = scratch.path().join(if cfg!(windows) {
+            "indexed.exe"
+        } else {
+            "indexed"
+        });
+
+        let output = safec(
+            &[
+                "--safety",
+                "off",
+                "--emit",
+                "executable",
+                "-o",
+                &program.to_string_lossy(),
+                "indexed.c",
+            ],
+            scratch.path(),
+        );
+
+        let said = String::from_utf8_lossy(&output.stderr);
+        assert_eq!(output.status.code(), Some(0), "{name}: {said}");
+
+        let ran = Command::new(&program)
+            .status()
+            .expect("the program this compiler just wrote can be run");
+        assert_eq!(ran.code(), Some(answer), "{name}");
+    }
+}
+
 /// A run that names no path leaves the program where `cc` leaves one, and the
 /// plainest invocation there is makes one.
 ///
@@ -976,8 +1057,8 @@ int main(void) {
     return a + b;
 }
 
-int f(void) {
-    int xs[3];
+int f(int n) {
+    int xs[n];
     return 0;
 }
 ",
@@ -1275,7 +1356,7 @@ fn a_unit_the_frontend_reported_on_never_reaches_clang() {
     let scratch = Scratch::new("reported_on");
     scratch.source(
         "array.c",
-        "int f(void) {\n    int xs[3];\n    return 0;\n}\n\nint main(void) {\n    return f();\n}\n",
+        "int f(int n) {\n    int xs[n];\n    return 0;\n}\n\nint main(void) {\n    return f(1);\n}\n",
     );
 
     for kind in ["object", "executable"] {

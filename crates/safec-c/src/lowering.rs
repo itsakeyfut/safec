@@ -1483,13 +1483,28 @@ impl Lowering<'_> {
         Some(())
     }
 
+    /// The length an array type was written with, where the type check gave
+    /// it a value that is positive and fits a `u64`: what `ir::Ty::Array`
+    /// holds. `None` for a variable length, and for one that is zero or
+    /// negative, which C17 6.7.6.2 p1 forbids and `types.rs` refuses first.
+    fn positive_length(&self, length: ExprId) -> Option<u64> {
+        self.types
+            .value(length)
+            .and_then(|value| u64::try_from(value).ok())
+            .filter(|&value| value > 0)
+    }
+
     /// The IR type of a type the frontend wrote.
     ///
     /// A loop rather than a recursion, following `ast::spell_type`: the chain
     /// is bounded by the parser, and a walk over a type is the shape that stops
     /// being bounded first when something else builds one.
     fn ty(&mut self, at: Span, id: TypeId, diagnostics: &mut DiagnosticSink) -> Option<TyId> {
-        let mut pointers = 0usize;
+        // Each derivation of the written type, outermost first, so that the IR
+        // type is built back up from the base in the order C nests them:
+        // `int (*)[4]` is a pointer to an array and `int *[4]` an array of
+        // pointers.
+        let mut derivations = Vec::new();
         let mut current = id;
 
         let base = loop {
@@ -1498,16 +1513,26 @@ impl Lowering<'_> {
                 Type::Char => break Ty::Char,
                 Type::Void => break Ty::Void,
                 Type::Pointer(pointee) => {
-                    pointers += 1;
+                    derivations.push(None);
                     current = *pointee;
                 }
-                // An array is not a pointer and saying it is would tell the
-                // memory analysis that one object is another. Nothing has
-                // asked the IR to hold either an array or a function yet, and
-                // #74, which is the issue for what it cannot say, is about
-                // storage duration rather than about these.
-                // A struct is typed by the type checker and reaches here in
-                // any program that declares one, and the IR holds none.
+                // **An array whose length the type check gave a positive
+                // value**, which is what C17 6.7.6.2 p1 asks of a constant
+                // length. Not a pointer: saying it is would tell the memory
+                // analysis that one object is another. A length with no value
+                // is a variable length, which the IR does not hold yet.
+                Type::Array {
+                    element,
+                    length: Some(length),
+                    written: _,
+                } if self.positive_length(*length).is_some() => {
+                    derivations.push(self.positive_length(*length));
+                    current = *element;
+                }
+                // #74, which is the issue for what the IR cannot say, is about
+                // storage duration rather than about these. A struct is typed by
+                // the type checker and reaches here in any program that declares
+                // one, and the IR holds none.
                 Type::Array { .. } | Type::Function { .. } | Type::Struct { .. } => {
                     diagnostics.report(
                         Diagnostic::error(format!(
@@ -1516,7 +1541,7 @@ impl Lowering<'_> {
                         ))
                         .with_code(LOWERING)
                         .with_label(Label::primary(at, "declared here"))
-                        .with_note("`int`, `char`, `void` and pointers to them are all this compiler holds so far"),
+                        .with_note("`int`, `char`, `void`, pointers, and arrays of constant length are all this compiler holds so far"),
                     );
                     return None;
                 }
@@ -1524,8 +1549,14 @@ impl Lowering<'_> {
         };
 
         let mut ty = self.unit.push_type(base);
-        for _ in 0..pointers {
-            ty = self.unit.push_type(Ty::Pointer(ty));
+        for derivation in derivations.into_iter().rev() {
+            ty = self.unit.push_type(match derivation {
+                None => Ty::Pointer(ty),
+                Some(length) => Ty::Array {
+                    element: ty,
+                    length,
+                },
+            });
         }
 
         Some(ty)
@@ -2542,6 +2573,68 @@ impl Lowering<'_> {
         Some(())
     }
 
+    /// The type a value of type `ty` has once [`Self::decayed`] has converted
+    /// it: a pointer to the first element for an array, and `ty` otherwise.
+    fn value_ty(&mut self, ty: TyId) -> TyId {
+        match self.unit.ty(ty) {
+            Ty::Array { element, .. } => self.unit.push_type(Ty::Pointer(element)),
+            Ty::Int | Ty::Char | Ty::Void | Ty::Pointer(_) => ty,
+        }
+    }
+
+    /// The value of a place used as one: what it holds, or, where it is an
+    /// array, a pointer to its first element.
+    ///
+    /// **C17 6.3.2.1 p3**: an expression of array type that is not the operand
+    /// of `&` or `sizeof` is converted to a pointer to the array's first
+    /// element. `&` takes its operand's place and never reaches here, and
+    /// `sizeof` does not parse yet. Two shapes, by where the array is:
+    ///
+    /// - **A local**, `a`: `Address(a[0])`, an `Index` of a constant zero
+    ///   under `Rvalue::Address`, which the memory check reads as the local's
+    ///   own start and as a may-write of it, since one store through it does
+    ///   not replace what the rest of the array holds.
+    /// - **Reached through a pointer**, `*u`: a copy of `u`, since the address
+    ///   of an array is the address of its first element, which is the move
+    ///   `&*E` being `E` makes in [`Self::finish_value`]. Written as `Address`
+    ///   of `*u` with the index appended, it is the `&*pp` shape the memory
+    ///   check reads as the address of the local `u` itself, and a store
+    ///   through it would land there rather than in the array (#621).
+    ///
+    /// Either way into a temporary of the element's pointer type, so the
+    /// type a later analysis reads off it is the one C gives the result.
+    fn decayed(&mut self, builder: &mut Builder, place: Place, span: Span) -> Operand {
+        let ty = self
+            .unit
+            .place_ty(&builder.function, &place)
+            .expect("a place this lowering built has a type");
+        let Ty::Array { element, .. } = self.unit.ty(ty) else {
+            return Operand::Copy(place);
+        };
+        let pointer = self.unit.push_type(Ty::Pointer(element));
+        let first = builder.function.push_local(pointer);
+        let value = match place.projection.last() {
+            None => Rvalue::Address(Place {
+                local: place.local,
+                projection: vec![Projection::Index(Operand::Constant(0))],
+            }),
+            Some(Projection::Deref) => {
+                let mut pointed = place;
+                pointed.projection.pop();
+                Rvalue::Use(Operand::Copy(pointed))
+            }
+            Some(Projection::Index(_)) => {
+                unreachable!("the lowering builds an `Index` only under `Rvalue::Address`")
+            }
+        };
+        builder.push(Operation {
+            place: Place::local(first),
+            value,
+            origin: Origin::Generated(span),
+        });
+        Operand::Copy(Place::local(first))
+    }
+
     /// Build a node's value from the operands its children left.
     fn finish_value(
         &mut self,
@@ -2559,7 +2652,8 @@ impl Lowering<'_> {
             Expr::Number { .. } => {}
             Expr::Identifier { .. } | Expr::Subscript { .. } => {
                 let place = places.pop().expect("a place");
-                values.push(Operand::Copy(place));
+                let span = self.ast.expr(id).span();
+                values.push(self.decayed(builder, place, span));
             }
             Expr::Unary { op, span, .. } => {
                 let span = *span;
@@ -2584,7 +2678,7 @@ impl Lowering<'_> {
                     // place rather than `p` being one.
                     AstUnOp::Deref => {
                         let place = places.pop().expect("a place");
-                        values.push(Operand::Copy(place));
+                        values.push(self.decayed(builder, place, span));
                     }
                     AstUnOp::AddrOf => {
                         let mut place = places.pop().expect("a place");
@@ -2871,12 +2965,18 @@ impl Lowering<'_> {
                 // pointer's type rather than the subscript's: what is worked
                 // out here is the address, and the subscript is what that
                 // address reaches.
+                // Each operand's type as its value has it, which for an array is
+                // a pointer to its first element (C17 6.3.2.1 p3): `a[3]` with
+                // `a` an `int[4]` adds to an `int *`, and asking the type the
+                // frontend wrote took the index for the pointer.
                 let base_ty = self.ty_of(base, diagnostics)?;
+                let base_ty = self.value_ty(base_ty);
                 let (base, pointer, offset, addressed) =
                     if matches!(self.unit.ty(base_ty), Ty::Pointer(_)) {
                         (base, pointer, offset, base_ty)
                     } else {
-                        (index, offset, pointer, self.ty_of(index, diagnostics)?)
+                        let index_ty = self.ty_of(index, diagnostics)?;
+                        (index, offset, pointer, self.value_ty(index_ty))
                     };
 
                 // `E[0]` is `*E`, so it is built as `*E` is: one C expression
@@ -3295,6 +3395,12 @@ impl Lowering<'_> {
                 let int = self.unit.push_type(Ty::Int);
                 builder.function.push_local(int)
             }
+            // An array is no modifiable lvalue (C17 6.3.2.1 p1), so it is the
+            // operand of no compound assignment and no `++` or `--`, which
+            // `types.rs` refuses before a place exists.
+            Ty::Array { .. } => unreachable!(
+                "an array reached a compound assignment, `++` or `--`, which the type check refuses"
+            ),
         }
     }
 
@@ -3558,7 +3664,8 @@ impl Lowering<'_> {
         if let Some((local, place, value)) = store {
             let pointer = match self.unit.ty(function.local(local)) {
                 Ty::Pointer(_) => true,
-                Ty::Int | Ty::Char | Ty::Void => false,
+                // No whole array is written, so none is a pointer written twice.
+                Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => false,
             };
             let unordered = self
                 .unordered_writes(value)
@@ -3601,7 +3708,7 @@ impl Lowering<'_> {
                 // `promoted` gives.
                 let pointer = match self.unit.ty(function.local(local)) {
                     Ty::Pointer(_) => true,
-                    Ty::Int | Ty::Char | Ty::Void => false,
+                    Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => false,
                 };
                 if !write || !pointer || said.contains(&local) {
                     continue;

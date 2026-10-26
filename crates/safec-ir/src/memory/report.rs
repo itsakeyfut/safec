@@ -1223,7 +1223,8 @@ pub(super) fn reached_by_library(
 fn pointee_width(analysis: &Allocations<'_>, ty: TyId) -> Option<u64> {
     match analysis.unit.ty(ty) {
         Ty::Pointer(pointee) => Some(analysis.unit.size_of(pointee).unwrap_or(0)),
-        Ty::Int | Ty::Char | Ty::Void => None,
+        // An array is not a pointer, so nothing it points at has a width.
+        Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => None,
     }
 }
 
@@ -1664,7 +1665,7 @@ pub(super) fn slots_leaving(
 fn pointee(analysis: &Allocations<'_>, ty: TyId) -> Option<TyId> {
     match analysis.unit.ty(ty) {
         Ty::Pointer(pointee) => Some(pointee),
-        Ty::Int | Ty::Char | Ty::Void => None,
+        Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => None,
     }
 }
 

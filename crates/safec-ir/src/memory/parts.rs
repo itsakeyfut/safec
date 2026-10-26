@@ -848,10 +848,12 @@ pub(super) struct Held {
     /// makes `pp`'s value, puts an edge on `pp`, and an access through it is
     /// not an access of `pp`'s eight bytes. Asking the local's size for one
     /// would answer about the wrong object. A constant zero index is the
-    /// local's own start and does not set it. No C reaches this today, since
-    /// the lowering folds `&*pp`; it is here for the frontend that does not,
-    /// and for the first address of a member. A may-fact, so a union. See
-    /// ADR-0060.
+    /// local's own start and does not set it, which is what the lowering
+    /// builds to convert a local array to a pointer to its first element
+    /// (#621); an array reached through a pointer is converted as a copy of
+    /// the pointer instead, so no C reaches the `&*pp` shape, and it is here
+    /// for the frontend that does not fold it, and for the first address of a
+    /// member. A may-fact, so a union. See ADR-0060.
     pub(super) inner_address: bool,
 }
 
@@ -1309,8 +1311,9 @@ impl Held {
     /// **What it does not follow**: a pointer moved off its start and back,
     /// `up = po + 1; back = up - 1;`, since `up` is `Offset::NonZero` and the
     /// edge is gone before `back` could keep it. And it rests on a local being
-    /// an array of one: once array locals compile, `pp + 1` may name a real
-    /// element, and the `NonZero` drop has to be asked again.
+    /// an array of one, which an array local is not: `m[1]` names a real
+    /// element, and the `NonZero` drop loses it, so a use after free through it
+    /// is `Unknown` at the access and not named. That is #639.
     pub(super) fn moved_by_arithmetic(&mut self) {
         if !matches!(self.offset, Offset::Unknown) {
             self.writes_to.clear_all();

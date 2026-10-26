@@ -5,7 +5,7 @@ error[SC0304]: cannot compile something of type `struct S` yet
    │          ──┬─  
    │            ╰─── declared here
 ───╯
-  = note: `int`, `char`, `void` and pointers to them are all this compiler holds so far
+  = note: `int`, `char`, `void`, pointers, and arrays of constant length are all this compiler holds so far
 error[SC0304]: cannot compile something of type `struct S` yet
    ╭─[ a_struct_program_is_typed_and_refused_by_the_lowering.c:5:19 ]
    │
@@ -13,7 +13,7 @@ error[SC0304]: cannot compile something of type `struct S` yet
    │                   ┬  
    │                   ╰── declared here
 ───╯
-  = note: `int`, `char`, `void` and pointers to them are all this compiler holds so far
+  = note: `int`, `char`, `void`, pointers, and arrays of constant length are all this compiler holds so far
 error[SC0304]: cannot compile something of type `struct S *` yet
    ╭─[ a_struct_program_is_typed_and_refused_by_the_lowering.c:6:17 ]
    │
@@ -21,4 +21,4 @@ error[SC0304]: cannot compile something of type `struct S *` yet
    │                 ┬  
    │                 ╰── declared here
 ───╯
-  = note: `int`, `char`, `void` and pointers to them are all this compiler holds so far
+  = note: `int`, `char`, `void`, pointers, and arrays of constant length are all this compiler holds so far

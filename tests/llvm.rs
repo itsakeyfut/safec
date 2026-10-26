@@ -50,6 +50,10 @@ const PROGRAMS: &[(&str, &str)] = &[
         "x86_64-pc-windows-msvc",
     ),
     (
+        "llvm_ir_of_arrays_and_pointer_arithmetic",
+        "x86_64-pc-windows-msvc",
+    ),
+    (
         "an_ir_shape_the_backend_cannot_write",
         "x86_64-pc-windows-msvc",
     ),

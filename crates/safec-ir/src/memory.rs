@@ -518,7 +518,9 @@ fn analysis<'a>(
             // type added later is asked whether it is exposed.
             .filter(|&local| match unit.ty(function.local(local)) {
                 Ty::Pointer(_) => true,
-                Ty::Int | Ty::Char | Ty::Void => false,
+                // No parameter is an array: C17 6.7.6.3 p7 adjusts it to a
+                // pointer.
+                Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => false,
             })
             .collect(),
         live_in: transfer::live_in(function),

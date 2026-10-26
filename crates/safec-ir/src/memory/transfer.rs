@@ -244,7 +244,9 @@ impl Allocations<'_> {
     pub(super) fn is_pointer(&self, function: &Function, local: LocalId) -> bool {
         match self.unit.ty(function.local(local)) {
             Ty::Pointer(_) => true,
-            Ty::Int | Ty::Char | Ty::Void => false,
+            // No whole array is an operand of arithmetic: it is converted to
+            // a pointer to its first element first (C17 6.3.2.1 p3).
+            Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => false,
         }
     }
 
@@ -269,6 +271,13 @@ impl Allocations<'_> {
         {
             Some(Ty::Pointer(_)) | None => true,
             Some(Ty::Int | Ty::Char | Ty::Void) => false,
+            // As its elements do: no whole array is read or written, and where
+            // one were, what it holds is its elements.
+            Some(Ty::Array { element, .. }) => match self.unit.ty(element_of(self.unit, element)) {
+                Ty::Pointer(_) => true,
+                Ty::Int | Ty::Char | Ty::Void => false,
+                Ty::Array { .. } => unreachable!("`element_of` strips every array"),
+            },
         }
     }
 
@@ -280,7 +289,8 @@ impl Allocations<'_> {
         let ty = self.unit.place_ty(function, place)?;
         match self.unit.ty(ty) {
             Ty::Pointer(pointee) => Some(self.unit.size_of(pointee).unwrap_or(0)),
-            Ty::Int | Ty::Char | Ty::Void => None,
+            // An array is not a pointer, so a place of one points at nothing.
+            Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => None,
         }
     }
 
@@ -298,13 +308,20 @@ impl Allocations<'_> {
         let mut levels = Vec::with_capacity(self.deepest_pointer);
         // Once `stored` is no pointer it stays what it is, so every level
         // below answers `0` as well.
+        //
+        // **Through an array to its element**, since memory holding an array
+        // holds its elements one after another: `int *(*)[2]` believes
+        // `int`s at level 0. Stopping at an array instead believed nothing of
+        // an array of pointers reached through a pointer (#621).
         for _ in 0..self.deepest_pointer {
+            stored = element_of(self.unit, stored);
             let width = match self.unit.ty(stored) {
                 Ty::Pointer(inner) => {
                     stored = inner;
                     self.unit.size_of(inner).unwrap_or(0)
                 }
                 Ty::Int | Ty::Char | Ty::Void => 0,
+                Ty::Array { .. } => unreachable!("`element_of` strips every array"),
             };
             levels.push(Some(width));
         }
@@ -382,7 +399,7 @@ impl Allocations<'_> {
             .map(|ty| self.unit.ty(ty))
         {
             Some(Ty::Char) => true,
-            Some(Ty::Pointer(_) | Ty::Int | Ty::Void) | None => false,
+            Some(Ty::Pointer(_) | Ty::Int | Ty::Void | Ty::Array { .. }) | None => false,
         }
     }
 
@@ -2660,10 +2677,12 @@ impl Analysis for Allocations<'_> {
                         let Some(read_as) = read_as else {
                             continue;
                         };
-                        let width = match self.unit.ty(read_as) {
+                        // An array of pointers holds pointers, as `type_levels` reads it.
+                        let width = match self.unit.ty(element_of(self.unit, read_as)) {
                             Ty::Pointer(pointee) => self.unit.size_of(pointee).unwrap_or(0),
                             Ty::Void => 0,
                             Ty::Int | Ty::Char => continue,
+                            Ty::Array { .. } => unreachable!("`element_of` strips every array"),
                         };
                         value.handed_at_most[local.index()] =
                             bounded(value.handed_at_most[local.index()], Some(width));
@@ -3047,6 +3066,16 @@ impl Analysis for Allocations<'_> {
     }
 }
 
+/// The type an array's elements have, through every dimension, and `ty`
+/// itself where it is no array: what memory holding a `ty` holds one
+/// object after another of. Memory holding `int *[2][3]` holds `int *`s.
+pub(super) fn element_of(unit: &TranslationUnit, ty: TyId) -> TyId {
+    match unit.ty(ty) {
+        Ty::Array { element, .. } => element_of(unit, element),
+        Ty::Int | Ty::Char | Ty::Void | Ty::Pointer(_) => ty,
+    }
+}
+
 /// How many `*`s deep a type is: `0` for one that is no pointer. What
 /// [`Allocations::deepest_pointer`] is the largest of.
 ///
@@ -3056,6 +3085,9 @@ pub(super) fn pointer_depth(unit: &TranslationUnit, ty: TyId) -> usize {
     match unit.ty(ty) {
         Ty::Pointer(pointee) => 1 + pointer_depth(unit, pointee),
         Ty::Int | Ty::Char | Ty::Void => 0,
+        // As deep as its element: `int ***a[2]` holds pointers three `*`s
+        // deep, which `Allocations::deepest_pointer` has to be long enough for.
+        Ty::Array { element, .. } => pointer_depth(unit, element),
     }
 }
 

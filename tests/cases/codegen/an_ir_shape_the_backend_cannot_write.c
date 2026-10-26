@@ -3,6 +3,5 @@ int main() {
     int *p;
     n = 1;
     p = &n;
-    p = p + 1;
-    return n;
+    return p < p;
 }
