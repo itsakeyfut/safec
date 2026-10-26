@@ -1545,10 +1545,10 @@ impl Analysis for Allocations<'_> {
                 // gains two. See ADR-0057.
                 if derefs(&operation.place) > 0 {
                     let held = &value.points_to[pointer];
-                    // **And a local it may land in**, which is the local its
-                    // edges name where the store is placed, and any local
-                    // whose address escaped where it is not: `m[0] = p;`
-                    // writes `m`. See `Known::unwritten`.
+                    // **And a local it may land in**, the local its edges name
+                    // where the store is placed: `m[0] = p;` writes `m`. Where
+                    // it is not placed, `replaced_by` above has cleared every
+                    // escaped local it may reach. See `Known::unwritten`.
                     if one_step && !(held.loaded || held.lost || held.foreign) {
                         let edges: Vec<usize> = held.writes_to.ones().collect();
                         for site in held.sites().collect::<Vec<_>>() {
@@ -1559,7 +1559,6 @@ impl Analysis for Allocations<'_> {
                         }
                     } else {
                         value.written_all();
-                        value.wrote_escaped();
                     }
                 }
                 let targets = if one_step {
@@ -2905,7 +2904,6 @@ impl Analysis for Allocations<'_> {
             // does not.
             if derefs(place) > 0 {
                 value.written_all();
-                value.wrote_escaped();
             }
             return;
         }

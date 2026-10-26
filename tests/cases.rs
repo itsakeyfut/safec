@@ -267,8 +267,8 @@ cases! {
         // Mutation: `holds_a_pointer` answers `true` for every type; this is
         // reported where `v` is read by name.
         an_integer_local_whose_address_is_taken_read_before_anything_wrote_it_is_not_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: a store this check cannot place clears no escaped local;
-        // this is reported.
+        // Mutation: `Known::replaced` clears no local, which is the door a
+        // store this check cannot place goes through; this is reported.
         a_local_written_through_two_dereferences_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `aligned_alloc`'s contents are indeterminate too (C17 7.22.3.1 p2).
         // Mutation: drop it from `leaves_indeterminate`. It builds.
