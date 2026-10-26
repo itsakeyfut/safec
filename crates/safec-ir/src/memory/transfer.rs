@@ -297,17 +297,15 @@ impl Allocations<'_> {
             return None;
         };
         let mut levels = Vec::with_capacity(self.depth);
-        let mut vouched = true;
+        // Once `stored` is no pointer it stays what it is, so every level
+        // below answers `0` as well.
         for _ in 0..self.depth {
             let width = match self.unit.ty(stored) {
-                Ty::Pointer(inner) if vouched => {
+                Ty::Pointer(inner) => {
                     stored = inner;
                     self.unit.size_of(inner).unwrap_or(0)
                 }
-                Ty::Pointer(_) | Ty::Int | Ty::Char | Ty::Void => {
-                    vouched = false;
-                    0
-                }
+                Ty::Int | Ty::Char | Ty::Void => 0,
             };
             levels.push(Some(width));
         }
