@@ -241,6 +241,12 @@ fn offset_of(op: BinOp, operands: [&Operand; 2], followed: &[usize], value: &Kno
 /// unit can. Every local then, because a write whose type this cannot name is
 /// a write it cannot narrow.
 ///
+/// **What it may have written is a second, narrower answer**, about
+/// `Known::unwritten` alone: a local of that type which
+/// `Known::locals_a_write_may_land_in` says the place may land in. A local
+/// the write cannot reach keeps its mark, so a read of it nothing wrote is
+/// still `SC0411`. See ADR-0057.
+///
 /// A free function rather than a method, because it is the whole of what one
 /// call site does and reads nothing of [`Allocations`](super::transfer::Allocations) but the unit.
 pub(super) fn replaced_by(
@@ -266,10 +272,7 @@ pub(super) fn replaced_by(
         })
         .collect();
 
-    // **What it may have written is narrower**: only a local its place may
-    // land in, by the same type. Every escaped local of that type let one
-    // store through a pointer read out of the caller's memory clear the mark
-    // of a local array nothing could reach (#645). See ADR-0057.
+    // Written: a local of the type stored that the place may land in.
     let mut lands = vec![false; may_hold.len()];
     for local in value.locals_a_write_may_land_in(place.local, derefs(place)) {
         lands[local] = true;

@@ -2628,8 +2628,9 @@ impl Analysis for Allocations<'_> {
                 // allocations are no longer fresh. See `Known::fresh`.
                 let reach = self.reach(function, handed, sites(), value);
                 value.expose(self.sources, reach, Some(origin.span()));
-                // **It writes only through its first argument** (C17 7.24.2
-                // to 7.24.6 each say what is written, and it is that one), so
+                // **It writes only through its first argument**: the clause of
+                // each function read by name, C17 7.24.2.1 to 7.24.3.2 and
+                // 7.24.6.1, says what is written, and it is that one. So
                 // a local is written where that argument may point:
                 // `Known::locals_a_write_may_land_in`, one dereference below
                 // it, which is what a store through it asks too, so the two

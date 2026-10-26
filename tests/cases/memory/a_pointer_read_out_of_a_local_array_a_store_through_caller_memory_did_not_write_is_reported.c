@@ -1,7 +1,5 @@
-void *memcpy(void *s1, void *s2, int n);
-int f(int ***pp, int **s) {
+int f(int ***pp) {
     if (pp == 0) { return 1; }
-    if (s == 0) { return 1; }
     int **t = *pp;
     if (t == 0) { return 1; }
     int *m[1];

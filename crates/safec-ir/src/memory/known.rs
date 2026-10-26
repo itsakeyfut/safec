@@ -242,8 +242,8 @@ pub(super) struct Known {
     /// check does not see leaves the mark set, and a program that did write
     /// the local is reported `Unsafe`, which the reader can see. A may-write
     /// counted as a write clears it, and a read nothing wrote goes silent,
-    /// which is why a call no longer writes every escaped local whatever it
-    /// was handed.
+    /// which is why no call, store or library copy writes every escaped
+    /// local any more, whatever it was handed or wherever it points.
     ///
     /// **What [`Self::fresh`] is for an allocation, for a local reached by
     /// its address**: a pointer read out of one is reported where it is
@@ -970,7 +970,10 @@ impl Known {
     /// Every local code this check cannot read may name now: the walk
     /// [`Self::expose_locals`] takes, from the same seeds, without marking
     /// anything. What a pointer such code gave this function, or memory it
-    /// can reach, may hold. See ADR-0057.
+    /// can reach, may hold. **Now, not when the pointer was read**: an
+    /// address stored there after a pointer was read out of that memory is
+    /// counted as one the pointer may be, which silences a read of a local
+    /// array the pointer could not reach (#648). See ADR-0057.
     pub(super) fn named_by_unknown_code(&self) -> BTreeSet<usize> {
         let exposed = (0..self.exposed_locals.len()).filter(|&local| self.exposed_locals[local]);
         self.locals_closed_from(self.reachable_now(), exposed.collect())
