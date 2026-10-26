@@ -731,7 +731,12 @@ pub(super) fn memory_finding(
         // a pointer read before anything was assigned to it.
         // Reported where it is read, so the name is the local it is read
         // through, and the slot is `*name`. See ADR-0057.
-        (Kind::IndeterminateLoad, Conclusion::Unsafe | Conclusion::Unknown, _) => (
+        // `calloc` is advice only where the memory may be an allocation.
+        (
+            Kind::IndeterminateLoad { allocation, .. },
+            Conclusion::Unsafe | Conclusion::Unknown,
+            _,
+        ) => (
             UNASSIGNED,
             said(
                 name,
@@ -739,7 +744,23 @@ pub(super) fn memory_finding(
                 |name| format!("`*{name}` is read before anything was assigned to it"),
             ),
             "read here",
-            "assign to it before reading it, or allocate with `calloc`",
+            if allocation {
+                "assign to it before reading it, or allocate with `calloc`"
+            } else {
+                "assign to it before reading it"
+            },
+        ),
+        // Only ever a proof, under the same code: a local whose address is
+        // taken, read by name before anything wrote it (#640).
+        (Kind::IndeterminateLocal, Conclusion::Unsafe | Conclusion::Unknown, _) => (
+            UNASSIGNED,
+            said(
+                name,
+                "this reads a pointer before anything was assigned to it",
+                |name| format!("`{name}` is read before anything was assigned to it"),
+            ),
+            "read here",
+            "assign it where it is declared, `= 0` if nothing else",
         ),
         // Only ever `Unknown`, since the edge may be one no execution takes.
         // `Unsafe` takes the same words so the match stays exhaustive.
@@ -949,11 +970,25 @@ pub(super) fn memory_finding(
              assigned is undefined, whatever the value is read for",
         );
     }
-    if finding.kind == Kind::IndeterminateLoad {
+    // The clause of each storage the read may reach, an allocation's and a
+    // local's, so a read that may reach both cites both.
+    let (allocation, local) = match finding.kind {
+        Kind::IndeterminateLoad { allocation, local } => (allocation, local),
+        Kind::IndeterminateLocal => (false, true),
+        _ => (false, false),
+    };
+    if allocation {
         diagnostic = diagnostic.with_note(
             "C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate \
              indeterminate until something writes it, and Annex J.2 lists using that value as \
              undefined",
+        );
+    }
+    if local {
+        diagnostic = diagnostic.with_note(
+            "C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, \
+             and Annex J.2 lists using that value as undefined, whether or not its address is \
+             taken",
         );
     }
     if let Kind::TooLong { walks } = finding.kind {

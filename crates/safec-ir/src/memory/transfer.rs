@@ -391,6 +391,34 @@ impl Allocations<'_> {
         bound.map_or(as_read, |bound| as_read.min(bound))
     }
 
+    /// Whether an object of type `ty` holds a pointer: a pointer, or an array
+    /// of them through every dimension. What [`Known::unwritten`] watches,
+    /// since a pointer is what ADR-0057 reports read out of memory nothing
+    /// wrote, and an integer or a byte is not followed there either.
+    ///
+    /// Written out rather than as a `matches!`, so a kind of type added later
+    /// is asked whether it holds one.
+    pub(super) fn holds_a_pointer(&self, ty: TyId) -> bool {
+        match self.unit.ty(innermost_element(self.unit, ty)) {
+            Ty::Pointer(_) => true,
+            Ty::Int | Ty::Char | Ty::Void => false,
+            Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
+        }
+    }
+
+    /// Per local, whether it is made unwritten where the function starts:
+    /// every local that holds a pointer but the parameters, which the caller
+    /// wrote. See [`Known::unwritten`].
+    fn made_unwritten(&self) -> Vec<bool> {
+        let function = self.unit.function(self.function);
+        function
+            .locals()
+            .map(|local| {
+                !self.parameters.contains(&local) && self.holds_a_pointer(function.local(local))
+            })
+            .collect()
+    }
+
     /// Whether a place is a byte: of character type, which C17 6.5 p7 lets read
     /// any object, a pointer included.
     ///
@@ -524,19 +552,26 @@ impl Allocations<'_> {
 
     /// Whether reading `source` reads a pointer out of memory nothing wrote,
     /// certainly: one dereference through a pointer that names allocations
-    /// and nothing else, every one of them fresh. The report asks it at every
-    /// read of such a place, and [`Self::read_through`] asks it for
-    /// [`Held::fresh_read`], which is sound only while the two agree. See
-    /// ADR-0057.
+    /// and locals and nothing else, every allocation fresh and every local
+    /// unwritten. The report asks it at every read of such a place, and
+    /// [`Self::read_through`] asks it for [`Held::fresh_read`], which is
+    /// sound only while the two agree. See ADR-0057.
     ///
     /// **A pointer, by its type.** A byte or an integer read out of fresh
     /// memory is not followed.
     ///
-    /// Mutation: drop the address clause, and
-    /// `a_pointer_read_through_what_may_be_a_locals_address_is_not_reported`
-    /// is reported; weaken `all` to `any`, and
+    /// **A local reached by its address is memory too** ([`Known::unwritten`]):
+    /// `int *q = m[0];` with `m` a local array nothing wrote reads an
+    /// indeterminate pointer, as `*box` does out of `malloc`'s block (#640).
+    /// `writes_elsewhere` is not asked. `Address(a[0])` sets it for every
+    /// array, and a path where the pointer held nothing is a null, which is
+    /// the nullability check's as a path holding no site already is for an
+    /// allocation. `inner_address` is asked, since an edge that may name
+    /// something inside another local names the wrong memory.
+    ///
+    /// Mutation: weaken `all` to `any` over the sites, and
     /// `a_pointer_read_through_either_of_two_allocations_one_written_is_not_reported`
-    /// is. **The `lost`, `foreign` and `loaded` clauses have no case**,
+    /// is reported. **The `lost`, `foreign` and `loaded` clauses have no case**,
     /// measured: a local loses its sites where it is made lost, and no program
     /// found gives a loaded or foreign pointer a fresh site that an exposure
     /// has not already cleared.
@@ -544,10 +579,10 @@ impl Allocations<'_> {
         let through = &value.points_to[source.local.index()];
         source.projection.as_slice() == [Projection::Deref]
             && self.may_be_pointer(function, source)
-            && through.sites().next().is_some()
-            && !(through.lost || through.foreign || through.loaded)
-            && !through.may_be_a_locals_address()
+            && (through.sites().next().is_some() || through.writes_to.any())
+            && !(through.lost || through.foreign || through.loaded || through.inner_address)
             && through.sites().all(|site| value.fresh[site])
+            && through.writes_to.ones().all(|local| value.unwritten[local])
     }
 
     /// Whether a load `depth` dereferences through `local` reads memory a
@@ -1147,6 +1182,9 @@ impl Analysis for Allocations<'_> {
             // Nothing stored and nothing handed to a call yet.
             stored_at_most: vec![Levels::default(); self.locals],
             handed_at_most: vec![None; self.locals],
+            // Every local that may hold a pointer, but the parameters, which
+            // the caller wrote. See `Known::unwritten`.
+            unwritten: self.made_unwritten(),
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -1224,7 +1262,13 @@ impl Analysis for Allocations<'_> {
             extent,
             stored_at_most,
             handed_at_most,
+            unwritten,
         } = into;
+        // A proof, so an intersection, as `fresh` is: unwritten only where
+        // no path wrote it.
+        for (here, there) in unwritten.iter_mut().zip(&from.unwritten) {
+            *here = *here && *there;
+        }
         // Bounds, so the lower of two, and a side with none is no bound.
         for (here, there) in stored_at_most.iter_mut().zip(&from.stored_at_most) {
             here.bound_by(there);
@@ -1471,6 +1515,12 @@ impl Analysis for Allocations<'_> {
                 origin: _,
             } => {}
             Element::Assign(operation) => {
+                // An assignment to a local writes it, whatever it writes. See
+                // `Known::unwritten`.
+                if operation.place.projection.is_empty() {
+                    value.wrote(operation.place.local.index());
+                }
+
                 // **This check follows a write through exactly one `Deref` and
                 // nothing deeper.** The edge recorded at `Rvalue::Address` is
                 // one step, and reading it as two would be inventing the
@@ -1495,12 +1545,21 @@ impl Analysis for Allocations<'_> {
                 // gains two. See ADR-0057.
                 if derefs(&operation.place) > 0 {
                     let held = &value.points_to[pointer];
+                    // **And a local it may land in**, which is the local its
+                    // edges name where the store is placed, and any local
+                    // whose address escaped where it is not: `m[0] = p;`
+                    // writes `m`. See `Known::unwritten`.
                     if one_step && !(held.loaded || held.lost || held.foreign) {
+                        let edges: Vec<usize> = held.writes_to.ones().collect();
                         for site in held.sites().collect::<Vec<_>>() {
                             value.written(site);
                         }
+                        for local in edges {
+                            value.wrote(local);
+                        }
                     } else {
                         value.written_all();
+                        value.wrote_escaped();
                     }
                 }
                 let targets = if one_step {
@@ -2025,7 +2084,15 @@ impl Analysis for Allocations<'_> {
             }
             // Storage beginning or ending says nothing about what the local
             // held before, and what it holds now is nothing.
-            Element::StorageLive { local, origin: _ } => value.clear(*local),
+            Element::StorageLive { local, origin: _ } => {
+                value.clear(*local);
+                // **A new object, indeterminate again** (C17 6.2.4 p6), so an
+                // array written late in one turn of a loop is unwritten at
+                // the start of the next. See `Known::unwritten`.
+                if self.holds_a_pointer(function.local(*local)) {
+                    value.unwritten[local.index()] = true;
+                }
+            }
             Element::StorageDead { origin: _, local } => value.clear(*local),
         }
     }
@@ -2838,9 +2905,13 @@ impl Analysis for Allocations<'_> {
             // does not.
             if derefs(place) > 0 {
                 value.written_all();
+                value.wrote_escaped();
             }
             return;
         }
+        // The call's result writes the local it lands in. See
+        // `Known::unwritten`.
+        value.wrote(place.local.index());
 
         match kind {
             Callee::Ends => {

@@ -12,7 +12,9 @@
 //! square in the locals, or of the nullability check, whose answer after a
 //! passed null test is exactly the belief that was wrong here. A pointer read
 //! out of an allocation nothing wrote is the same question asked of a slot,
-//! and is #581's.
+//! and is #581's; a pointer local whose address is taken is the memory
+//! check's, which follows a write through an address (#640), and
+//! [`address_taken`] is the one answer to which local each of them asks.
 //!
 //! **A read no path assigns is a proof.** One some paths assigned is
 //! undefined on the others, and this analysis follows no condition a path
@@ -34,7 +36,7 @@ use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
     BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Operation, Place,
-    Rvalue, Terminator, TranslationUnit, Ty,
+    Projection, Rvalue, Terminator, TranslationUnit, Ty,
 };
 use crate::source::{SourceMap, Span};
 
@@ -109,7 +111,7 @@ impl Analysis for Assigned {
 
 /// Every local an element reads, and where. Its write, if it has one, comes
 /// after: `p = p + 1;` reads `p` first.
-fn element_reads(element: &Element) -> Vec<(LocalId, Span)> {
+pub(super) fn element_reads(element: &Element) -> Vec<(LocalId, Span)> {
     let mut reads = Vec::new();
     match element {
         Element::Assign(operation) => {
@@ -122,7 +124,18 @@ fn element_reads(element: &Element) -> Vec<(LocalId, Span)> {
                     operand_reads(lhs, at, &mut reads);
                     operand_reads(rhs, at, &mut reads);
                 }
-                Rvalue::Address(place) => place_reads(place, at, &mut reads),
+                // An address reads a local only where it goes through it,
+                // `&*p`: `&a[0]`, which converts an array (#621), reads
+                // nothing, and `&p` reads nothing either.
+                Rvalue::Address(place) => {
+                    if place
+                        .projection
+                        .iter()
+                        .any(|step| matches!(step, Projection::Deref))
+                    {
+                        reads.push((place.local, at));
+                    }
+                }
             }
             place_reads(&operation.place, at, &mut reads);
         }
@@ -144,7 +157,7 @@ fn element_reads(element: &Element) -> Vec<(LocalId, Span)> {
 }
 
 /// Every local a terminator reads, and where.
-fn terminator_reads(terminator: &Terminator) -> Vec<(LocalId, Span)> {
+pub(super) fn terminator_reads(terminator: &Terminator) -> Vec<(LocalId, Span)> {
     let mut reads = Vec::new();
     match terminator {
         Terminator::Branch {
@@ -315,6 +328,38 @@ fn reaches_certainly(
     walk(function, target, read, &mut state, &ends_here)
 }
 
+/// Every local whose own address is taken anywhere in `function`: what this
+/// analysis does not watch, since a write through that address is not
+/// followed here, and what the memory check's [`Known::unwritten`] asks by
+/// name instead, since it does follow one. One answer for both, so that a
+/// local is asked by exactly one of them (#640).
+///
+/// [`Known::unwritten`]: super::known::Known::unwritten
+pub(super) fn address_taken(function: &Function) -> Bits {
+    let mut taken = Bits::new(function.locals().len());
+    for block in function.blocks() {
+        for element in &block.elements {
+            if let Element::Assign(Operation {
+                value: Rvalue::Address(place),
+                ..
+            }) = element
+            {
+                // **The whole local's address, or an element's.** `&a[0]` is
+                // the address an array converts to (#621), and its own start.
+                // `&*p` is `p`'s value and not `p`'s address.
+                if !place
+                    .projection
+                    .iter()
+                    .any(|step| matches!(step, Projection::Deref))
+                {
+                    taken.set(place.local.index());
+                }
+            }
+        }
+    }
+    taken
+}
+
 /// Every read of a watched pointer local that no path to it assigned, each a
 /// proof, and every read some path assigned that a branch edge certainly
 /// leads to unassigned, each `Unknown`. See the module comment.
@@ -336,18 +381,8 @@ pub(super) fn findings(
             watched.set(local.index());
         }
     }
-    for block in function.blocks() {
-        for element in &block.elements {
-            if let Element::Assign(Operation {
-                value: Rvalue::Address(place),
-                ..
-            }) = element
-            {
-                if place.projection.is_empty() {
-                    watched.remove(place.local.index());
-                }
-            }
-        }
+    for local in address_taken(function).ones() {
+        watched.remove(local);
     }
     if !watched.any() {
         return;

@@ -1705,10 +1705,16 @@ fn an_offset_that_moves_the_pointer_carries_no_edge() {
 
     let found = concluded(unit, &sources, function);
 
-    // One finding, and which one is the whole of this test. `free(z)` frees
-    // something this check was not following, which it cannot rule out; what
-    // it must not do is free the allocation `q` holds, because nothing put
-    // that allocation in `z`.
+    // One finding about the free, and which one is the whole of this test.
+    // `free(z)` frees something this check was not following, which it
+    // cannot rule out; what it must not do is free the allocation `q` holds,
+    // because nothing put that allocation in `z`. Nothing writes `z` here, so
+    // reading it at the free is also reported, as indeterminate (#640), and
+    // that report is about the read and not about this question.
+    let found: Vec<_> = found
+        .into_iter()
+        .filter(|finding| finding.kind != Kind::IndeterminateLocal)
+        .collect();
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].kind, Kind::DoubleFree, "not a use after free");
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
