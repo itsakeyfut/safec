@@ -1,0 +1,105 @@
+Target "x86_64-pc-windows-msvc"
+Function a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:1:9 "get" declared
+  Local "_0" "void ***" return
+Function a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:2:6 "run"
+  Local "_0" "void" return
+  Local "_1" "void ***" "m"
+  Local "_2" "void ***"
+  Local "_3" "void *" "pm"
+  Local "_4" "int ***" "pi"
+  Local "_5" "int"
+  Local "_6" "int **" "a"
+  Local "_7" "int"
+  Local "_8" "int *" "b"
+  Local "_9" "int"
+  Local "_10" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:3:17 generated
+    Call a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:3:17 written "get" "bb1"
+      Destination "_2"
+  Block "bb1"
+    Operation a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:3:13 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:3:17 generated
+    Operation a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:4:11 written
+      Destination "_3"
+      Use
+        Copy "_1"
+    Sequenced a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:4:16 generated
+    Operation a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:5:12 written
+      Destination "_4"
+      Use
+        Copy "_3"
+    Sequenced a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:5:17 generated
+    Operation a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:6:9 written
+      Destination "_5"
+      Binary "Ne"
+        Copy "_4"
+        Constant 0
+    Branch a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:6:9 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:6:9 generated
+    StorageLive a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:7:9 generated "_6"
+    Operation a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:7:15 written
+      Destination "_6"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:7:19 generated
+    Operation a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:8:13 written
+      Destination "_7"
+      Binary "Ne"
+        Copy "_6"
+        Constant 0
+    Branch a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:8:13 written "bb5" "bb6"
+      Copy "_7"
+  Block "bb3"
+    Sequenced a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Return
+  Block "bb5"
+    Sequenced a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:8:13 generated
+    StorageLive a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:9:13 generated "_8"
+    Operation a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:9:18 written
+      Destination "_8"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:9:22 generated
+    Operation a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:10:17 written
+      Destination "_9"
+      Binary "Ne"
+        Copy "_8"
+        Constant 0
+    Branch a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:10:17 written "bb8" "bb9"
+      Copy "_9"
+  Block "bb6"
+    Sequenced a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:8:13 generated
+    Goto "bb7"
+  Block "bb7"
+    StorageDead a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:14:5 generated "_6"
+    Goto "bb4"
+  Block "bb8"
+    Sequenced a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:10:17 generated
+    Operation a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:11:17 written
+      Destination "_8"
+        Deref
+      Use
+        Constant 1
+    Operation a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:11:17 written
+      Destination "_10"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:11:17 generated
+    Goto "bb10"
+  Block "bb9"
+    Sequenced a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:10:17 generated
+    Goto "bb10"
+  Block "bb10"
+    StorageDead a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level.c:13:9 generated "_8"
+    Goto "bb7"

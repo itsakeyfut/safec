@@ -3341,67 +3341,66 @@ cases! {
         an_int_parameter_read_through_an_int_pointer_to_pointer_believes_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What memory holds is believed at every level of the type it
-        // arrived as, through a conversion, a store and a reload, a copy and
-        // a join (#634). The mutation that silences each is beside it.
+        // arrived as, through a conversion, a store and a reload, a copy, a
+        // join and a local's address (#634). Each case says the mutation
+        // that makes it fail.
         //
-        // Mutation: `read_through` takes the read type alone; the first goes
-        // silent.
+        // Mutation: `read_through` takes the read type alone.
         a_void_pointer_three_levels_deep_converted_whole_is_believed_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `believed_read` asks the local gone through only at one
-        // dereference; this loses its `SC0412`.
+        // Mutation: `believed_read` takes no bound from memory below one
+        // dereference.
         a_void_pointer_three_levels_deep_read_two_levels_at_once_is_believed_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `contents_leaving` compares the departing value at level
-        // 0 alone; this goes silent.
+        // 0 alone.
         a_void_pointer_three_levels_deep_handed_on_whole_is_asked_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: a store records level 0 alone; all three lose their report
-        // about size.
+        // Mutation: a store records level 0 alone.
         a_parameter_stored_in_memory_and_read_back_is_believed_as_it_arrived_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a store records level 0 alone. Mutation:
+        // `Known::memory_levels` folds only the sites at the last level.
         a_parameter_stored_in_memory_and_read_two_levels_at_once_is_believed_as_it_arrived: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a store records level 0 alone. Mutation:
+        // `contents_leaving` compares a site's stored bound at level 0 alone.
         a_parameter_stored_in_memory_and_handed_on_is_asked_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `Known::memory_levels` folds only the sites at the last
-        // level; the second above loses its `SC0412`. Mutation:
-        // `contents_leaving` compares a site's stored bound at level 0
-        // alone; the third above goes silent.
-        //
         // Mutation: a store records the levels below only for a pointer that
-        // is not a load; this goes silent.
+        // is not a load.
         a_load_stored_in_memory_and_read_back_is_believed_as_it_was_read_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: the `memcpy` copy takes level 0 alone; this goes silent.
-        memory_a_void_pointer_three_levels_deep_points_at_copied_by_memcpy_is_believed_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the `memcpy` copy records level 0 alone.
+        a_void_pointer_three_levels_deep_copied_by_memcpy_is_believed_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the `memcpy` copy takes level 0 alone of what
+        // `Known::memory_levels` finds in the source's memory.
+        a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `Levels::bound_by` lets a side with no bound at a level
-        // loosen the other; this goes silent.
+        // loosen the other.
         a_converted_void_pointer_three_levels_deep_on_one_arm_bounds_the_join_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `type_levels` answers `Some(0)` at every level; both
-        // are reported.
+        // Mutation: `Known`'s join takes level 0 alone of the other side's
+        // `stored_at_most`.
+        memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `type_levels` answers `Some(0)` at every level, and this
+        // is reported.
         an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the same, and this is reported.
         an_int_pointer_to_pointer_parameter_stored_in_memory_and_read_back_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: a call's result takes level 0 of its type alone; this
-        // goes silent.
-        memory_a_call_returned_as_void_three_levels_deep_is_believed_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a call's result takes level 0 of its type alone.
+        a_call_returning_a_void_pointer_three_levels_deep_is_believed_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `contents_leaving` takes the type a load is read as
-        // alone; this goes silent.
+        // alone.
         a_pointer_read_out_of_a_converted_void_parameter_and_handed_straight_on_is_asked_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `realloc` carries level 0 alone of the pointer it is
-        // handed; the first fails. Mutation: of what the
-        // old allocation held; the second goes silent.
+        // handed.
         a_void_parameter_three_levels_deep_grown_by_realloc_is_believed_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `realloc` carries level 0 alone of what the old
+        // allocation held.
         a_parameter_stored_in_memory_grown_by_realloc_is_believed_as_it_arrived_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: the `memcpy` copy takes level 0 alone of what
-        // `memory_levels` finds in the source's memory; this goes silent.
-        a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `Known`'s join takes level 0 alone of the other side's
-        // `stored_at_most`; this goes silent.
-        memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local reached through its address is memory holding its value,
         // which is asked below its own level by what that value believes.
-        // Mutation: `contents_leaving` never finds a local's value narrower;
-        // the next four fail.
+        //
+        // Mutation, for each of the next four: `contents_leaving` never finds
+        // a local's value narrower.
         a_void_pointer_to_pointer_parameter_handed_by_address_is_asked_below_its_own_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_holding_a_converted_void_pointer_to_pointer_handed_by_address_is_asked_below_its_own_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_holding_a_converted_void_pointer_three_levels_deep_handed_by_address_is_asked_at_every_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_s_address_stored_in_memory_is_asked_by_what_the_local_believes_where_it_leaves: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `Known::memory_levels` skips the locals on the way; this
-        // goes silent.
+        // Mutation: `Known::memory_levels` skips the locals on the way.
         a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the

@@ -1,5 +1,5 @@
 error[SC0412]: this may reach outside the object `b` points at
-    ╭─[ memory_a_void_pointer_three_levels_deep_points_at_copied_by_memcpy_is_believed_below_its_first_level.c:16:13 ]
+    ╭─[ a_void_pointer_three_levels_deep_copied_by_memcpy_is_believed_below_its_first_level.c:16:13 ]
     │
  16 │             *b = 1;
     │             ───┬──  
