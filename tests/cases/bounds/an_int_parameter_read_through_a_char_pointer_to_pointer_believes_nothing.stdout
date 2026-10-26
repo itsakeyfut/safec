@@ -1,0 +1,52 @@
+Target "x86_64-pc-windows-msvc"
+Function an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:1:6 "run"
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "x"
+  Local "_2" "void *" "v"
+  Local "_3" "char **" "pi"
+  Local "_4" "char *" "p"
+  Local "_5" "int"
+  Local "_6" "char"
+  Block "bb0" entry
+    Operation an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:2:11 written
+      Destination "_2"
+      Use
+        Copy "_1"
+    Sequenced an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:2:15 generated
+    Operation an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:3:12 written
+      Destination "_3"
+      Use
+        Copy "_2"
+    Sequenced an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:3:17 generated
+    Operation an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:4:11 written
+      Destination "_4"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:4:15 generated
+    Operation an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:5:9 written
+      Destination "_5"
+      Binary "Ne"
+        Copy "_4"
+        Constant 0
+    Branch an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:5:9 written "bb1" "bb2"
+      Copy "_5"
+  Block "bb1"
+    Sequenced an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:5:9 generated
+    Operation an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:6:9 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 1
+    Operation an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:6:9 written
+      Destination "_6"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:6:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:5:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return

@@ -1,0 +1,20 @@
+error[SC0413]: this lets `c` leave, which may not point at the start of an object
+    ╭─[ a_load_on_one_arm_and_a_null_on_the_other_stored_in_memory_is_bounded_at_nothing.c:24:5 ]
+    │
+ 24 │     *m = c;
+    │     ───┬──  
+    │        ╰──── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave as a `void *` only at the start of an object
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_load_on_one_arm_and_a_null_on_the_other_stored_in_memory_is_bounded_at_nothing.c:26:5 ]
+    │
+ 26 │     use(pm);
+    │     ───┬───  
+    │        ╰───── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
