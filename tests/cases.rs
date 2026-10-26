@@ -3392,6 +3392,17 @@ cases! {
         // Mutation: `Known`'s join takes level 0 alone of the other side's
         // `stored_at_most`; this goes silent.
         memory_holding_a_void_pointer_on_one_arm_and_an_int_pointer_on_the_other_is_believed_as_the_narrower_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local reached through its address is memory holding its value,
+        // which is asked below its own level by what that value believes.
+        // Mutation: `contents_leaving` never finds a local's value narrower;
+        // the next four fail.
+        a_void_pointer_to_pointer_parameter_handed_by_address_is_asked_below_its_own_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_holding_a_converted_void_pointer_to_pointer_handed_by_address_is_asked_below_its_own_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_holding_a_converted_void_pointer_three_levels_deep_handed_by_address_is_asked_at_every_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_s_address_stored_in_memory_is_asked_by_what_the_local_believes_where_it_leaves: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `Known::memory_levels` skips the locals on the way; this
+        // goes silent.
+        a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument

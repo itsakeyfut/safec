@@ -338,7 +338,7 @@ impl Allocations<'_> {
             .unwrap_or_default();
         let depth = derefs(place);
         if depth > 0 {
-            levels.bound_by(&value.memory_levels(place.local, depth).below(1));
+            levels.bound_by(&value.memory_levels(place.local, depth, self.depth).below(1));
         }
         levels
     }
@@ -361,7 +361,7 @@ impl Allocations<'_> {
         if depth == 0 {
             return as_read;
         }
-        let bound = value.memory_levels(place.local, depth).at(0);
+        let bound = value.memory_levels(place.local, depth, self.depth).at(0);
         bound.map_or(as_read, |bound| as_read.min(bound))
     }
 
@@ -2462,8 +2462,11 @@ impl Analysis for Allocations<'_> {
                             // `int **` with nothing asked (#632). **At every
                             // level**, as a store records it (#634).
                             let mut copied_bound = self.contents_read(function, source, value);
-                            copied_bound
-                                .bound_by(&value.memory_levels(source.local, from_depth + 1));
+                            copied_bound.bound_by(&value.memory_levels(
+                                source.local,
+                                from_depth + 1,
+                                self.depth,
+                            ));
                             for container in into {
                                 value.stored_at_most[container].bound_by(&copied_bound);
                                 for &site in &copied {

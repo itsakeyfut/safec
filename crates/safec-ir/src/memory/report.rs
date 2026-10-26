@@ -1475,8 +1475,26 @@ fn contents_leaving(
         };
         // Reached through its address, so its escape is not doubted, as
         // [`fits`] says.
-        let answer =
-            fits(analysis, function, local, width, known, false).map(|fit| (fit, Some(local)));
+        let fit = fits(analysis, function, local, width, known, false);
+        // **And below its own level, by what its value believes of its
+        // memory**, against what the receiver reads there: `use(&x)` with
+        // `x` a `void **` converted to `int **` and `use` taking `int ***`
+        // hands on memory whose pointers nobody was asked the width of,
+        // which the local's own fit cannot see (#634). Narrower is unknown,
+        // and a fit shown outside stays the answer, since it says more.
+        let narrower = read_as
+            .and_then(|ty| analysis.type_levels(ty))
+            .is_some_and(|receiver| {
+                known.points_to[local.index()]
+                    .contents_at_most
+                    .narrower_than(&receiver)
+            });
+        let fit = match fit {
+            Some(Fit::Outside { .. }) => fit,
+            _ if narrower => Some(Fit::Unknown),
+            _ => fit,
+        };
+        let answer = fit.map(|fit| (fit, Some(local)));
         say_leaving(findings, departed, analysis, (at, how, width), answer);
     }
     for (site, read_as) in sites {

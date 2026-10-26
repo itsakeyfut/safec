@@ -706,16 +706,33 @@ impl Known {
     /// memory `b` is read from, and asking only the sites `*pi` may point at
     /// read nothing there (#634).
     ///
+    /// **And each local on the way, by what its own value believes**: a
+    /// local whose address is gone through is memory holding that value, so
+    /// it holds below its own level what the value carries. `void ***pt =
+    /// &t; ... int **a = *pi;` with `t` a load out of a `void ***` read `a`
+    /// believing whole `int`s two levels down, where the sites alone said
+    /// nothing (#634). What the local's value points at itself is asked by
+    /// the local's own fit where it is read, so its own level is no bound
+    /// here. `depth_cap` is [`Allocations::depth`](super::transfer::Allocations::depth),
+    /// which the list that puts it one level down is cut to.
+    ///
     /// **The one walk a load, a departure and a copy take**, so that the
     /// spellings of one read cannot believe different things. See
     /// [`Levels`] and ADR-0060.
-    pub(super) fn memory_levels(&self, local: LocalId, depth: usize) -> Levels {
+    pub(super) fn memory_levels(&self, local: LocalId, depth: usize, depth_cap: usize) -> Levels {
         let mut levels = self.points_to[local.index()]
             .contents_at_most
             .below(depth - 1);
         for level in 0..depth {
-            for site in self.levels_below(local, level).0 {
+            let (sites, locals) = self.levels_below(local, level);
+            for site in sites {
                 levels.bound_by(&self.stored_at_most[site].below(depth - 1 - level));
+            }
+            for slot in locals {
+                let held = self.points_to[slot]
+                    .contents_at_most
+                    .behind(None, depth_cap);
+                levels.bound_by(&held.below(depth - 1 - level));
             }
         }
         levels

@@ -1,0 +1,31 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_holding_a_converted_void_pointer_three_levels_deep_handed_by_address_is_asked_at_every_level.c:1:6 "use" declared
+  Local "_0" "void" return
+  Local "_1" "int ****" parameter "p"
+Function a_local_holding_a_converted_void_pointer_three_levels_deep_handed_by_address_is_asked_at_every_level.c:2:6 "run"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "m"
+  Local "_2" "void *" "pv"
+  Local "_3" "int ***" "x"
+  Local "_4" "int ****"
+  Block "bb0" entry
+    Operation a_local_holding_a_converted_void_pointer_three_levels_deep_handed_by_address_is_asked_at_every_level.c:3:11 written
+      Destination "_2"
+      Use
+        Copy "_1"
+    Sequenced a_local_holding_a_converted_void_pointer_three_levels_deep_handed_by_address_is_asked_at_every_level.c:3:16 generated
+    Operation a_local_holding_a_converted_void_pointer_three_levels_deep_handed_by_address_is_asked_at_every_level.c:4:12 written
+      Destination "_3"
+      Use
+        Copy "_2"
+    Sequenced a_local_holding_a_converted_void_pointer_three_levels_deep_handed_by_address_is_asked_at_every_level.c:4:16 generated
+    Operation a_local_holding_a_converted_void_pointer_three_levels_deep_handed_by_address_is_asked_at_every_level.c:5:9 written
+      Destination "_4"
+      Address
+        Place "_3"
+    ArgumentsEvaluated a_local_holding_a_converted_void_pointer_three_levels_deep_handed_by_address_is_asked_at_every_level.c:5:5 generated
+    Call a_local_holding_a_converted_void_pointer_three_levels_deep_handed_by_address_is_asked_at_every_level.c:5:5 written "use" "bb1"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_local_holding_a_converted_void_pointer_three_levels_deep_handed_by_address_is_asked_at_every_level.c:5:5 generated
+    Return
