@@ -257,8 +257,10 @@ pub(super) struct Known {
     /// missed there would be a free in silence (ADR-0029).
     ///
     /// **Set by [`Self::expose_locals`] at a call this check cannot read**,
-    /// over what it was handed, and by a store this check cannot place, in
-    /// [`Self::landed_where_unknown_code_points`]. A union at a join, and
+    /// over what it can reach. A store this check cannot place sets nothing
+    /// here: it records the address in memory such code can reach,
+    /// [`Self::landed_where_unknown_code_points`], which the next call's walk
+    /// starts from. A union at a join, and
     /// never cleared, for the reason [`Self::exposed`] gives: nothing here
     /// can say that a callee has dropped an address it kept, so `stash(m);
     /// tick();` may write `m` at the second call. Not at `StorageLive`
@@ -916,12 +918,6 @@ impl Known {
     /// the null it started as and was believed, found by review. ADR-0047
     /// keeps a local's address out of what is exposed, so that a holder is
     /// still asked; this records where it may be and exempts nobody.
-    ///
-    /// **The locals are [`Self::exposed_locals`] from here on**, and not
-    /// only through a landing above: where nothing is exposed yet there is no
-    /// landing, and `*slot = m;` with `slot` from a call left `m` written by
-    /// no later call. That fact exempts nobody either; it only lets a call
-    /// count as a write of the local. See ADR-0057.
     pub(super) fn landed_where_unknown_code_points(&mut self, carried: &[usize], locals: &[usize]) {
         for landing in self.reachable_now() {
             for &site in carried {
@@ -931,17 +927,15 @@ impl Known {
                 self.inside_locals[landing].set(local);
             }
         }
-        for &local in locals {
-            self.exposed_locals[local] = true;
-        }
     }
 
-    /// Record that a call this check cannot read was handed what reaches
-    /// `sites` and `locals`: every local whose address it can find from
-    /// them, at any depth, is [`Self::exposed_locals`] from here on.
+    /// Record that a call this check cannot read was handed the address of
+    /// each of `locals`: every local whose address it can find from them, at
+    /// any depth, is [`Self::exposed_locals`] from here on.
     ///
     /// **From everything it can reach, not only what it was handed**: every
-    /// exposed allocation and every local already exposed, since a callee
+    /// allocation [`Self::reachable_now`] names and every local already
+    /// exposed, since a callee
     /// may keep an address and use it at a later call, `stash(m); tick();`,
     /// and a store into memory already handed over records the address there
     /// for the next call to find, `stash_box(box); *box = m; tick();`. Then
@@ -949,9 +943,12 @@ impl Known {
     /// grows: through what an allocation contains, and through what a local
     /// holds, since a callee handed `&p` can read `p` and write through it.
     /// Two finite sets that only grow, so it ends. See ADR-0057.
-    pub(super) fn expose_locals(&mut self, sites: Vec<usize>, locals: Vec<usize>) {
-        let mut sites: BTreeSet<usize> = sites.into_iter().collect();
-        sites.extend(self.reachable_now());
+    ///
+    /// **After [`Self::expose`], at the same call**, which is what puts the
+    /// allocations the call was handed into `reachable_now`: asked before it,
+    /// `*box = m; fill_box(box);` left `m` unwritten.
+    pub(super) fn expose_locals(&mut self, locals: Vec<usize>) {
+        let mut sites = self.reachable_now();
         let mut locals: BTreeSet<usize> = locals.into_iter().collect();
         locals.extend((0..self.exposed_locals.len()).filter(|&local| self.exposed_locals[local]));
         loop {
@@ -1715,7 +1712,11 @@ impl Known {
             // **And it may have been written**, which is what a write this
             // check cannot read is: `int *q; get(&q); *pq` is the
             // output-parameter idiom, and believing `q` unwritten after it
-            // reported a correct program. See `Self::unwritten`.
+            // reported a correct program. See `Self::unwritten`. The escape
+            // decides nothing here, measured: a mark is read only of a local
+            // whose address is taken, which is escaped, so dropping it leaves
+            // the suite green. It is kept so that `may_write` answers for the
+            // same locals `may_hold` does.
             if may_write(local) && self.escaped[local] {
                 self.unwritten[local] = false;
             }

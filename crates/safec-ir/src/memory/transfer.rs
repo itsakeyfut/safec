@@ -2632,6 +2632,12 @@ impl Analysis for Allocations<'_> {
                 let written: Option<Vec<usize>> = match arguments.first() {
                     Some(Operand::Copy(dest)) if dest.projection.is_empty() => {
                         let to = &value.points_to[dest.local.index()];
+                        // **No case tells a placed destination from one that
+                        // is not**, measured: a pointer read out of memory
+                        // carries the address edges a store left there, so in
+                        // every program the corpus has, its edges already name
+                        // the local. Unplaced is answered as the store door
+                        // answers it, all the same.
                         (!(to.loaded || to.lost || to.foreign))
                             .then(|| value.written_through(dest.local))
                     }
@@ -2748,6 +2754,13 @@ impl Analysis for Allocations<'_> {
                 // every escaped local, since a route missed there is a free in
                 // silence; a route missed here is a report. `int **p = m;
                 // tick(); q = *p;` read `m` in silence (#643). See ADR-0057.
+                //
+                // **No case holds `lost` and `foreign` wider than this set**,
+                // measured: giving them the walk's answer as well leaves the
+                // whole suite green, since every route the corpus has is one
+                // the walk finds. They stay wide because a route it misses
+                // would cost a free nobody is told about, not because a case
+                // says so.
                 let mut handed_locals: Vec<usize> = Vec::new();
                 for argument in handed {
                     if let Operand::Copy(place) = argument {
@@ -2758,7 +2771,7 @@ impl Analysis for Allocations<'_> {
                         }
                     }
                 }
-                value.expose_locals(handed_memory.clone(), handed_locals);
+                value.expose_locals(handed_locals);
                 let may_write = value.exposed_locals.clone();
                 value.replaced(|_| true, |local| may_write[local]);
                 // **And as what each local it reaches was handed**, which is

@@ -300,8 +300,8 @@ cases! {
         // Mutation: the walk drops the arguments' own address edges; this
         // is reported.
         a_local_array_handed_to_a_call_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: the walk does not start from the sites the call was
-        // handed; this is reported.
+        // Mutation: `expose_locals` is asked before `expose` at the call,
+        // so what it was handed is not yet reachable; this is reported.
         a_local_array_stored_in_memory_a_call_was_handed_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: the walk does not step through what a local holds;
         // this is reported.
@@ -315,8 +315,9 @@ cases! {
         // Mutation: `exposed_locals` joined by intersection; this is
         // reported.
         a_local_array_put_in_a_local_a_call_kept_on_one_arm_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: a store this check cannot place exposes no local; this
-        // is reported.
+        // Mutation: the walk does not start from `reachable_now()`, where
+        // a store this check cannot place left the address; this is
+        // reported.
         a_local_array_stored_where_this_check_cannot_place_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `aligned_alloc`'s contents are indeterminate too (C17 7.22.3.1 p2).
         // Mutation: drop it from `leaves_indeterminate`. It builds.
