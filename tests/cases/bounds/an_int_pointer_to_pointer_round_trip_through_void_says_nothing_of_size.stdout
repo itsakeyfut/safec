@@ -1,0 +1,73 @@
+Target "x86_64-pc-windows-msvc"
+Function an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:1:6 "run"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "m"
+  Local "_2" "int"
+  Local "_3" "void *" "v"
+  Local "_4" "int **" "back"
+  Local "_5" "int *" "p"
+  Local "_6" "int"
+  Local "_7" "int"
+  Block "bb0" entry
+    Operation an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:2:9 written
+      Destination "_2"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:2:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:2:9 generated
+    StorageLive an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:3:9 generated "_3"
+    Operation an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:3:15 written
+      Destination "_3"
+      Use
+        Copy "_1"
+    Sequenced an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:3:19 generated
+    StorageLive an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:4:9 generated "_4"
+    Operation an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:4:15 written
+      Destination "_4"
+      Use
+        Copy "_3"
+    Sequenced an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:4:22 generated
+    StorageLive an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:5:9 generated "_5"
+    Operation an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:5:14 written
+      Destination "_5"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:5:18 generated
+    Operation an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:6:13 written
+      Destination "_6"
+      Binary "Ne"
+        Copy "_5"
+        Constant 0
+    Branch an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:6:13 written "bb4" "bb5"
+      Copy "_6"
+  Block "bb2"
+    Sequenced an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:2:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+  Block "bb4"
+    Sequenced an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:6:13 generated
+    Operation an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:7:13 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 1
+    Operation an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:7:13 written
+      Destination "_7"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:7:13 generated
+    Goto "bb6"
+  Block "bb5"
+    Sequenced an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:6:13 generated
+    Goto "bb6"
+  Block "bb6"
+    StorageDead an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:9:5 generated "_5"
+    StorageDead an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:9:5 generated "_4"
+    StorageDead an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:9:5 generated "_3"
+    Goto "bb3"

@@ -1,0 +1,52 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:1:7 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "s"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
+Function a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:2:6 "run"
+  Local "_0" "void" return
+  Local "_1" "void **" parameter "m"
+  Local "_2" "int"
+  Local "_3" "void *" "pm"
+  Local "_4" "int **" "pi"
+  Local "_5" "void *"
+  Block "bb0" entry
+    Operation a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:3:9 written
+      Destination "_2"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:3:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:3:9 generated
+    StorageLive a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:4:9 generated "_3"
+    Operation a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:4:15 written
+      Destination "_3"
+      Use
+        Copy "_1"
+    Sequenced a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:4:20 generated
+    StorageLive a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:5:9 generated "_4"
+    Operation a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:5:15 written
+      Destination "_4"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:5:20 generated
+    ArgumentsEvaluated a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:6:9 generated
+    Call a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:6:9 written "memset" "bb4"
+      Destination "_5"
+      Copy "_4"
+        Deref
+      Constant 0
+      Constant 4
+  Block "bb2"
+    Sequenced a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+  Block "bb4"
+    Sequenced a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:6:9 generated
+    StorageDead a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:7:5 generated "_4"
+    StorageDead a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked.c:7:5 generated "_3"
+    Goto "bb3"

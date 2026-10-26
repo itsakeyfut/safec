@@ -3238,6 +3238,46 @@ cases! {
         // Mutation: seed no sites for a dereferenced argument in
         // `contents_leaving`; this loses its `SC0413`.
         a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Memory a pointer arrived pointing at holds pointers believed as the
+        // type it arrived as, and a conversion keeps that: a `void **`
+        // parameter's or result's `void *`s were asked no width. Mutation:
+        // set no `contents_at_most` for a parameter; the first two go
+        // silent, and so do the three readers below, which go through one
+        // too. Mutation: set none for a call's result; the next two do.
+        // Mutation: set none for a load; the fifth does.
+        a_void_pointer_to_pointer_parameter_read_through_an_int_alias_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_void_pointer_to_pointer_parameter_handed_on_as_an_int_alias_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        memory_a_call_returned_as_void_read_through_an_int_alias_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        memory_a_call_returned_as_void_handed_on_as_an_int_alias_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local a callee was handed is believed written no wider than it
+        // was handed as, and as nothing through a `void *`. Mutation: ignore
+        // `handed_at_most` where a call writes an escaped local; both go
+        // silent. Mutation: give a local reached as `void` the local's own
+        // width; the second does.
+        a_local_a_callee_was_handed_as_void_is_believed_no_wider_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_handed_to_a_void_pointer_parameter_believes_nothing_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A load stored where the record names nothing bounds that memory
+        // by what it was believed. Mutation: record nothing in
+        // `stored_at_most`; this goes silent.
+        a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Every reader of a load asks the same bound: one handed to a
+        // function, one written through two levels, and one handed to
+        // `memset`. Mutation: read the type alone in `leaving`; the first
+        // goes silent. Mutation: skip the memory a deeper level goes through
+        // in `may_not_fit`; the second does. Mutation: read the type alone
+        // in `reached_by_library`; the third does.
+        a_pointer_read_through_a_void_parameter_and_handed_on_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_write_two_levels_through_a_void_parameter_is_asked_of_the_memory: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_through_a_void_parameter_and_handed_to_memset_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A round trip through `void *` back to the type a pointer arrived
+        // as, and a local a callee filled through the type it is, believe
+        // what they are. Mutation: set `Some(0)` for every arrival in
+        // `contents_bound`; the first gains an `SC0412`, beside about a
+        // hundred other cases. Mutation: give every local a call reaches as
+        // a pointer a width of zero; the second does.
+        an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_a_callee_filled_through_an_int_pointer_to_pointer_is_believed_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument
