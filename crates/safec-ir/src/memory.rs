@@ -592,7 +592,8 @@ fn findings_within(
         let mut touched: Vec<(Span, LocalId)> = Vec::new();
         // And the pointers that left, per caret and door, apart again: a
         // pointer read through and handed on at one call is two questions.
-        let mut departed: Vec<(Span, Departure, Option<LocalId>)> = Vec::new();
+        // With where the report standing for each is, as `said` keeps it.
+        let mut departed: Vec<(Span, Departure, Option<LocalId>, usize)> = Vec::new();
 
         for &id in cfg.order() {
             // `Cfg::order` holds exactly the reachable blocks and `solve` gives

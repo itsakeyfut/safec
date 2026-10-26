@@ -1,0 +1,10 @@
+error[SC0413]: this lets a pointer to 1 byte leave where 4 bytes are believed
+    ╭─[ two_objects_in_memory_both_too_narrow_are_one_report.c:31:5 ]
+    │
+ 31 │     use(pm);
+    │     ───┬───  
+    │        ╰───── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

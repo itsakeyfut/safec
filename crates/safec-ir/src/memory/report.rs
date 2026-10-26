@@ -1237,7 +1237,7 @@ fn leaving(
 /// Push what [`leaving`] answered, once per value per caret and door.
 fn say_leaving(
     findings: &mut Vec<Finding>,
-    departed: &mut Vec<(Span, Departure, Option<LocalId>)>,
+    departed: &mut Vec<(Span, Departure, Option<LocalId>, usize)>,
     analysis: &Allocations<'_>,
     left: (Span, Departure, u64),
     answer: Option<(Fit, Option<LocalId>)>,
@@ -1253,16 +1253,7 @@ fn say_leaving(
         Fit::Outside { extent, made } => (true, extent, made),
         Fit::Unknown => (false, None, None),
     };
-    // Once per local per caret and door: a second argument of another width
-    // at the same call says the same thing about the same pointer, and every
-    // one is unknown, so which width is named changes nothing a reader can
-    // act on. A value with no local, a load or a constant's address, has no
-    // identity to key on and is said each time.
-    if local.is_some() && departed.contains(&(at, how, local)) {
-        return;
-    }
-    departed.push((at, how, local));
-    findings.push(Finding {
+    let finding = Finding {
         function: analysis.function,
         kind: Kind::HandedOnNarrow {
             how,
@@ -1276,7 +1267,43 @@ fn say_leaving(
         freed: None,
         made,
         unproven: Some(Unproven::Extent),
-    });
+    };
+    // Once per local per caret and door: a second argument of another width
+    // at the same call says the same thing about the same pointer, and every
+    // one is unknown, so which width is named changes nothing a reader can
+    // act on. **What was shown narrower stands over the doubt**, whichever
+    // was asked first: one local is asked once per type it is read as, and
+    // the order the walk reaches them in chose the words. Found by review.
+    if local.is_some() {
+        let standing = departed
+            .iter()
+            .find(|(said_at, said_how, said_local, _)| {
+                *said_at == at && *said_how == how && *said_local == local
+            })
+            .map(|&(.., index)| index);
+        if let Some(index) = standing {
+            let shown = matches!(
+                findings[index].kind,
+                Kind::HandedOnNarrow { narrower: true, .. }
+            );
+            if narrower && !shown {
+                findings[index] = finding;
+            }
+            return;
+        }
+    // A value with no local, a load, a constant's address or what memory
+    // holds, has no identity to key on, and is said unless the same words
+    // already stand at this caret: two objects in memory both too narrow,
+    // or a local and the memory beside it, printed one report twice. Found
+    // by review.
+    } else if findings
+        .iter()
+        .any(|said| said.at == at && said.kind == finding.kind)
+    {
+        return;
+    }
+    departed.push((at, how, local, findings.len()));
+    findings.push(finding);
 }
 
 /// The locals a value leaving this function may point at, where it is a
@@ -1328,7 +1355,7 @@ fn locals_reached(function: &Function, value: &Rvalue, known: &Known) -> Vec<Loc
 /// pointer to a parameter's memory handed on (#627). See ADR-0060.
 fn contents_leaving(
     findings: &mut Vec<Finding>,
-    departed: &mut Vec<(Span, Departure, Option<LocalId>)>,
+    departed: &mut Vec<(Span, Departure, Option<LocalId>, usize)>,
     analysis: &Allocations<'_>,
     function: &Function,
     left: (Span, Departure, TyId),
@@ -1345,20 +1372,38 @@ fn contents_leaving(
     };
     // Each slot a pointer may be read out of, with the type the receiver
     // reads it as, or `None` below a type that stops being a pointer.
-    let mut locals: Vec<(LocalId, Option<TyId>)> = locals_reached(function, value, known)
+    // What the departing value points at, seeded as a load assigned first
+    // would hold it: a local's own value names its sites and its address
+    // edges; a pointer read out of memory and handed straight on, `use(*b)`,
+    // names what the walk every load takes finds there, which handed
+    // nothing on before (found by review); a local's address is
+    // [`locals_reached`]'s; and what arithmetic builds is asked by
+    // [`leaving`] and names nothing to walk.
+    let (seed_sites, seed_locals): (Vec<usize>, Vec<LocalId>) = match value {
+        Rvalue::Use(Operand::Copy(place)) if derefs(place) > 0 => {
+            let (sites, locals) = known.levels_below(place.local, derefs(place));
+            let locals = function
+                .locals()
+                .filter(|local| locals.contains(&local.index()))
+                .collect();
+            (sites.into_iter().collect(), locals)
+        }
+        Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => (
+            known.points_to[place.local.index()].sites().collect(),
+            locals_reached(function, value, known),
+        ),
+        Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
+            (Vec::new(), locals_reached(function, value, known))
+        }
+    };
+    let mut locals: Vec<(LocalId, Option<TyId>)> = seed_locals
         .into_iter()
         .map(|local| (local, Some(read_as)))
         .collect();
-    let mut sites: Vec<(usize, Option<TyId>)> = match value {
-        Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => known.points_to
-            [place.local.index()]
-        .sites()
+    let mut sites: Vec<(usize, Option<TyId>)> = seed_sites
+        .into_iter()
         .map(|site| (site, Some(read_as)))
-        .collect(),
-        Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
-            Vec::new()
-        }
-    };
+        .collect();
     let mut asked_locals: Vec<(LocalId, Option<TyId>)> = Vec::new();
     let mut asked_sites: Vec<(usize, Option<TyId>)> = Vec::new();
     // Each pair is walked once and the types only get shallower, so the walk
@@ -1459,7 +1504,7 @@ fn pointee(analysis: &Allocations<'_>, ty: TyId) -> Option<TyId> {
 /// a constant is a null, which the nullability check answers.
 pub(super) fn departed_in_element(
     findings: &mut Vec<Finding>,
-    departed: &mut Vec<(Span, Departure, Option<LocalId>)>,
+    departed: &mut Vec<(Span, Departure, Option<LocalId>, usize)>,
     analysis: &Allocations<'_>,
     function: &Function,
     element: &Element,
@@ -1520,7 +1565,7 @@ pub(super) fn departed_in_element(
 /// it reaches. See ADR-0060.
 pub(super) fn departed_at_call(
     findings: &mut Vec<Finding>,
-    departed: &mut Vec<(Span, Departure, Option<LocalId>)>,
+    departed: &mut Vec<(Span, Departure, Option<LocalId>, usize)>,
     analysis: &Allocations<'_>,
     function: &Function,
     terminator: &Terminator,

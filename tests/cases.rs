@@ -3221,6 +3221,20 @@ cases! {
         // does.
         memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_parameter_s_memory_handed_on_unchanged_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Two objects in memory too narrow for the receiver are one report
+        // at the call, not two printed alike. Mutation: say a value with no
+        // local each time in `say_leaving`; this prints it twice.
+        two_objects_in_memory_both_too_narrow_are_one_report: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // One local asked at two types at one call is said narrower, in
+        // whichever order the walk reaches them. Mutation: keep the first
+        // answer for a local in `say_leaving`; both say a doubt instead.
+        a_local_shown_narrower_is_said_so_when_reached_through_another_local_first: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_shown_narrower_is_said_so_when_reached_directly_first: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read out of memory and handed straight on lets what
+        // that memory holds leave, as one assigned to a local first does.
+        // Mutation: seed no sites for a dereferenced argument in
+        // `contents_leaving`; this loses its `SC0413`.
+        a_pointer_read_out_of_memory_and_handed_on_lets_what_that_memory_holds_leave: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument
