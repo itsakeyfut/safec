@@ -1008,6 +1008,14 @@ impl Known {
     /// a library copy, of one more than its destination argument has, since
     /// it writes where that argument points.
     ///
+    /// **Two parts no case holds, measured.** A place with no dereference is
+    /// never a store from C: the lowering writes `m[0] = p` through `&m[0]`,
+    /// so landing nowhere at depth zero leaves the suite green. And the
+    /// pointers the last part is for already carry in their edges the
+    /// addresses that memory such code reaches was recorded to hold, so
+    /// dropping it leaves the suite green too; it stands for an address that
+    /// recording misses, where its absence would be a false report.
+    ///
     /// **A pointer naming no local lands in none.** One moved off an array by
     /// arithmetic has lost its edge (#639), so `*(&m[1] - 1) = p` leaves
     /// `m[0]` reported as nothing wrote it, which the reader sees; counting it
