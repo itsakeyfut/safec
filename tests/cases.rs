@@ -319,6 +319,15 @@ cases! {
         // a store this check cannot place left the address; this is
         // reported.
         a_local_array_stored_where_this_check_cannot_place_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `StorageLive` leaves `exposed_locals` alone; the second
+        // turn's read goes silent.
+        a_pointer_read_out_of_a_local_array_made_again_after_a_call_kept_the_old_one_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a library copy whose first argument is a dereference
+        // writes every escaped local; this goes silent.
+        a_pointer_read_out_of_a_local_array_a_copy_through_a_dereference_elsewhere_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a library copy whose first argument is a dereference
+        // writes no local; this is reported.
+        a_local_array_copied_into_through_a_dereference_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `aligned_alloc`'s contents are indeterminate too (C17 7.22.3.1 p2).
         // Mutation: drop it from `leaves_indeterminate`. It builds.
         a_pointer_read_out_of_memory_aligned_alloc_made_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

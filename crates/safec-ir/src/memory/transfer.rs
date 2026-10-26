@@ -2101,6 +2101,13 @@ impl Analysis for Allocations<'_> {
                 if self.holds_a_pointer(function.local(*local)) {
                     value.unwritten[local.index()] = true;
                 }
+                // **And no call holds its address yet**: one kept from an
+                // earlier lifetime became indeterminate when that one ended
+                // (C17 6.2.4 p2), so a call is no longer a write of it. Kept
+                // across, `stash(m)` in one turn of a loop made `tick()` in
+                // the next a write of a new `m`, and a read nothing wrote was
+                // silent. See `Known::exposed_locals`.
+                value.exposed_locals[local.index()] = false;
             }
             Element::StorageDead { origin: _, local } => value.clear(*local),
         }
@@ -2623,24 +2630,53 @@ impl Analysis for Allocations<'_> {
                 value.expose(self.sources, reach, Some(origin.span()));
                 // **It writes only through its first argument** (C17 7.24.2
                 // to 7.24.6 each say what is written, and it is that one), so
-                // a local is written where that argument is its address, as a
-                // store through it would be. Every escaped local where the
-                // argument is not placed, as `replaced_by` answers for a store
-                // it cannot place. `memcpy(&a, &b, 4)` cleared every local
-                // array's mark (#643). It keeps nothing, so it exposes no
-                // local. See `Known::unwritten`.
+                // a local is written where that argument may be its address:
+                // the locals its address edges name, or, for a place of
+                // dereferences, `memcpy(*pp, s, 8)`, the locals the level
+                // above may be, as the opaque arm below reads an argument.
+                // `memcpy(&a, &b, 4)` cleared every local array's mark, and so
+                // did `memcpy(*pa, &b, 4)` (#643). Every escaped local where
+                // the argument is rooted in a pointer this check lost or a
+                // caller wrote, as `replaced_by` answers for a store it cannot
+                // place. It keeps nothing, so it exposes no local. See
+                // `Known::unwritten`.
+                //
+                // **An argument naming no local writes none**, which is not
+                // what the store door says of the same pointer: a pointer
+                // moved off an array by arithmetic has lost its edge (#639),
+                // and `memcpy(&m[1] - 1, s, 8)` then leaves `m[0]` reported
+                // as nothing wrote it. That is a report the reader sees, and
+                // widening it would silence every local array beside such a
+                // copy. See ADR-0057.
                 let written: Option<Vec<usize>> = match arguments.first() {
-                    Some(Operand::Copy(dest)) if dest.projection.is_empty() => {
+                    Some(Operand::Copy(dest))
+                        if dest
+                            .projection
+                            .iter()
+                            .all(|step| matches!(step, Projection::Deref)) =>
+                    {
                         let to = &value.points_to[dest.local.index()];
-                        // **No case tells a placed destination from one that
-                        // is not**, measured: a pointer read out of memory
-                        // carries the address edges a store left there, so in
-                        // every program the corpus has, its edges already name
-                        // the local. Unplaced is answered as the store door
-                        // answers it, all the same.
-                        (!(to.loaded || to.lost || to.foreign))
-                            .then(|| value.written_through(dest.local))
+                        // No case tells `loaded` here from a placed pointer,
+                        // measured: a pointer read out of memory carries the
+                        // address edges a store left there, so in every
+                        // program the corpus has, its edges already name the
+                        // local.
+                        if to.loaded || to.lost || to.foreign {
+                            None
+                        } else if dest.projection.is_empty() {
+                            Some(value.written_through(dest.local))
+                        } else {
+                            Some(
+                                value
+                                    .levels_below(dest.local, derefs(dest))
+                                    .1
+                                    .into_iter()
+                                    .collect(),
+                            )
+                        }
                     }
+                    // A constant writes nothing anyone can read back, and no
+                    // other place reaches a call's argument from C.
                     _ => None,
                 };
                 let mut may_write = vec![written.is_none(); value.unwritten.len()];

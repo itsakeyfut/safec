@@ -250,27 +250,35 @@ pub(super) struct Known {
     /// it by name. See ADR-0057.
     pub(super) unwritten: Vec<bool>,
     /// Per local, whether code this check cannot read may hold its address:
-    /// [`Self::exposed`] for what is not a site, as [`Self::inside_locals`]
-    /// is [`Self::inside`] for what is not a site. What a call may write
-    /// for [`Self::unwritten`], and asked by nothing else: `lost` and
-    /// `foreign` are still given to every escaped local, since a route
-    /// missed there would be a free in silence (ADR-0029).
+    /// what a call may have written, for [`Self::unwritten`], and nothing
+    /// else reads it. `lost` and `foreign` are still given to every escaped
+    /// local, since a route missed there would be a free in silence
+    /// (ADR-0029).
+    ///
+    /// **Not [`Self::exposed`] for what is not a site**, though it is set by
+    /// the same kind of event. A library copy exposes the allocations it is
+    /// handed and sets nothing here, because it keeps no address: it writes
+    /// only through its first argument, which the `Callee::Copies` arm of
+    /// the transfer answers for by itself.
     ///
     /// **Set by [`Self::expose_locals`] at a call this check cannot read**,
     /// over what it can reach. A store this check cannot place sets nothing
     /// here: it records the address in memory such code can reach,
     /// [`Self::landed_where_unknown_code_points`], which the next call's walk
-    /// starts from. A union at a join, and
-    /// never cleared, for the reason [`Self::exposed`] gives: nothing here
-    /// can say that a callee has dropped an address it kept, so `stash(m);
-    /// tick();` may write `m` at the second call. Not at `StorageLive`
-    /// either, since a callee using an address it kept from an earlier
-    /// lifetime is undefined anyway, and a bit left set clears a mark
-    /// rather than raising one.
+    /// starts from. A union at a join. Never cleared while the local lives,
+    /// for the reason [`Self::exposed`] gives: nothing here can say that a
+    /// callee has dropped an address it kept, so `stash(m); tick();` may
+    /// write `m` at the second call. **Cleared at its `StorageLive`**, where
+    /// the local is a new object and an address kept from the old one is
+    /// indeterminate (C17 6.2.4 p2): kept across, `stash(m)` in one turn of
+    /// a loop made `tick()` in the next a write of the new `m`, and a read
+    /// nothing wrote was silent.
     ///
-    /// **A route missed here is a report**, `SC0411` about a program a call
-    /// did write, never a silence: a bit left unset only keeps a mark that a
-    /// call may have cleared. See ADR-0057.
+    /// **Wrong in both directions, and the two are not alike.** A route the
+    /// walk misses leaves the bit unset, and a program a call did write is
+    /// reported `SC0411`, which the reader sees. A bit set where no call can
+    /// reach clears a mark, and a read nothing wrote goes silent. See
+    /// ADR-0057.
     pub(super) exposed_locals: Vec<bool>,
 }
 
