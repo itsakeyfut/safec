@@ -296,9 +296,12 @@ impl Allocations<'_> {
     ///
     /// **One answer for every reader of a load**: a load assigned, a load
     /// handed straight to a call or to a library function, and a deeper
-    /// level of an access. Only the last pointer gone through is asked its
-    /// [`Held::contents_at_most`], since a deeper one is itself a load of
-    /// exactly the type it reads. See ADR-0060.
+    /// level of an access. Only the local gone through, where `place` has
+    /// exactly one dereference, is asked its [`Held::contents_at_most`]: a
+    /// deeper level reads a pointer that was itself loaded at its own type,
+    /// whose bound a load sets from that type. Where an outer pointer was
+    /// converted, that loses what its arrival said below the first level,
+    /// which is #634. See ADR-0060.
     pub(super) fn believed_read(&self, function: &Function, place: &Place, value: &Known) -> u64 {
         let as_read = self.pointee_size(function, place).unwrap_or(0);
         let depth = derefs(place);
@@ -1588,10 +1591,14 @@ impl Analysis for Allocations<'_> {
                         // nothing of it. `char *c = *cc; *m = c;` handed `m`
                         // on as an `int **` with nothing asked (#632). One
                         // that names a site is in the record, which is asked
-                        // by its extent instead. Not a pointer this check
-                        // lost: it believes nothing, and bounding it at zero
-                        // doubted a lost pointer to whole allocations read
-                        // back, which this issue is not about. See ADR-0060.
+                        // by its extent instead. **Only a load**, which is
+                        // what `written.loaded` asks: a pointer this check
+                        // lost or a call wrote also names nothing and
+                        // believes nothing, and bounding it at zero doubted
+                        // a lost pointer to whole allocations read back,
+                        // which this issue is not about. A load that
+                        // believes nothing is bounded at zero, which is
+                        // what it was asked. See ADR-0060.
                         let names_nothing = carried.is_empty() && !written.writes_to.any();
                         let bound = (self.may_be_pointer(function, &operation.place)
                             && names_nothing
@@ -2549,6 +2556,9 @@ impl Analysis for Allocations<'_> {
                 // taking `void **` left a `char`'s address believed a whole
                 // `int` (#632). The walk is the one a departure takes, so the
                 // two cannot read a call's arguments differently.
+                // An argument past every parameter, to a variadic or an
+                // unprototyped callee, is read as its own type, as a
+                // departure reads it; a constant hands no local.
                 let declared = self.unit.function(*callee);
                 let parameters: Vec<LocalId> = declared.parameters().collect();
                 for (index, argument) in arguments.iter().enumerate() {

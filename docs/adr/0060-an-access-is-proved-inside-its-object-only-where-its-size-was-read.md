@@ -100,13 +100,21 @@ asks that local four bytes wide. Memory the record does not hold is not asked
 by its record, since that would doubt every pointer to a parameter's memory
 handed on. **It is believed as the type it arrived as**: a pointer that
 arrives as a parameter, a call's result or a load carries how wide the
-pointers in its memory are believed to be, from the type it arrives as
-(`void **` holds `void *`, so nothing), through every conversion, and that is
+pointers in its memory are believed to be, from the type it arrives as (a
+`void **` is believed to hold `void *`s, so nothing), one level deep, through
+every conversion and every copy (`memcpy`, `memmove`, `realloc`), and that is
 asked wherever it is read through or handed on. A local a call was handed is
 believed written no wider than it was handed as, and as nothing through a
-`void *` parameter; and a pointer read out of memory that is stored where the
-record names nothing bounds that memory by what it was believed (#632). Each
-only lowers a belief, so being wrong is a false `Unknown`. Reading a
+`void *` parameter, on every path after that call; and a pointer read out of
+memory that is stored where the record names nothing bounds that memory by
+what it was believed (#632). Below the first level, through a store and a
+reload, and for a load whose targets are incomplete, the bound is lost, which
+is #634. Each only lowers a belief, so being wrong is a false `Unknown`, and
+it is paid by conforming code: a `void **` that does point at an `int *` is
+refused when read through an `int **`, a well-typed store does not raise a
+bound an earlier one set, and a local once handed to a `void *` parameter is
+believed nothing after any later call, since that callee may have kept its
+address. Reading a
 pointer object through an incompatible pointer type is undefined by C17 6.5 p7
 as well, unless the read is through a character type; it is caught only where
 the widths differ, since effective types are not followed (#627).
@@ -120,7 +128,7 @@ lost name**, which an access does: each stands for a write asked where it
 happened, a store here or in the callee, or a site made again by the same call
 at the same size. What a call this check cannot read may write into an escaped
 local is believed as its result is, where the local was whole before the
-call.
+call, and no wider than the local was handed as (#632).
 
 **The question**, `report::fits`, is asked at every access `used` asks about,
 of the pointer the place goes through first; a deeper level goes through a load
@@ -342,6 +350,25 @@ folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
 
 * Bad, because the lattice does not tell an allocation's slots apart, so it
   is a redesign and wants an experiment first.
+
+### For memory arriving from outside: believe nothing through a converted pointer-to-pointer
+
+* Good, because it needs no new field.
+* Bad, because it refuses the conforming `int **` to `void *` to `int **`
+  round trip, a wide false `Unknown`. Not taken (#632).
+
+### For memory arriving from outside: a bound per allocation from its local's type
+
+* Good, because a site is a local, so its type is at hand.
+* Bad, because it covers one level and left a `void ***` two levels down
+  silent. Not taken (#632).
+
+### For a store that names nothing: mark the record incomplete
+
+* Good, because it is one bit.
+* Bad, because it refuses a correct `int *` read out of a parameter and
+  stored into `int **` memory, a wide false `Unknown`. Not taken; the
+  stored value's belief is recorded instead (#632).
 
 ## More Information
 

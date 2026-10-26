@@ -928,17 +928,13 @@ pub(super) fn may_not_fit(
                 );
                 continue;
             }
-            // A local the pointer may have been read from, which its address
-            // has escaped, so the escape is not doubted: the writes it stands
-            // for are marked and asked where they happened (ADR-0060). Lost
-            // and foreign stand for the same writes and are not doubted
-            // either, as [`fits`] says.
-            // **And the memory it goes through**, no wider than that memory
-            // is believed to hold ([`Allocations::believed_read`]): `**pi = 1`
+            // **The memory it goes through**, no wider than that memory is
+            // believed to hold ([`Allocations::believed_read`]): `**pi = 1`
             // with `pi` a `void **` parameter converted to `int **` wrote a
             // whole `int` through a pointer nobody was asked the width of
-            // (#632). It names no local, and is keyed with the place's own,
-            // whose answer it stands beside.
+            // (#632). It names no local, since the pointer was read out of
+            // memory, and it is keyed by the place's own local, so it says
+            // nothing where that local's answer already stands at this caret.
             let above = Place {
                 local,
                 projection: vec![Projection::Deref; level - 1],
@@ -953,6 +949,11 @@ pub(super) fn may_not_fit(
                     Some(Fit::Unknown),
                 );
             }
+            // And each local the pointer may have been read from, which its
+            // address has escaped, so the escape is not doubted: the writes
+            // it stands for are marked and asked where they happened
+            // (ADR-0060). Lost and foreign stand for the same writes and are
+            // not doubted either, as [`fits`] says.
             let (locals, certain) = read_from_locals(function, known, local, level - 1);
             for pointer in locals {
                 let fit = fits(analysis, function, pointer, width, known, false)
@@ -1054,9 +1055,10 @@ fn through_locals(
 
 /// Push what [`fits`] answered about an access through `local`'s value, once
 /// per local per caret, and the proof where one level proves what another
-/// only doubted. `at` is the caret, the local the answer is keyed by, and
-/// the local it names, which is `None` for memory a deeper level goes
-/// through.
+/// only doubted. `at` holds three things: the caret; the local the answer
+/// is keyed by, so that one local is said once there; and the local the
+/// words name, which is `None` for memory a deeper level goes through and
+/// otherwise the same local.
 ///
 /// **The worse answer stands, whichever level is asked first.** One pointer
 /// can be asked twice at one caret, through itself and through its address:
@@ -1426,11 +1428,13 @@ fn contents_leaving(
         return;
     };
     // **What the departing value's own memory is believed to hold**, from
-    // the type it arrived as, against what the receiver reads there: `void
-    // run(void **m) { void *pm = m; use(pm); }` with `use` taking `int **`
-    // handed on memory whose pointers nobody was asked the width of (#632).
-    // A local's address and an allocation are asked by the local and the
-    // record below. See `Held::contents_at_most`.
+    // the type it arrived as, is asked against what the receiver reads
+    // there: in `void run(void **m) { void *pm = m; use(pm); }` with `use`
+    // taking `int **`, the memory handed on holds pointers nobody was asked
+    // the width of (#632). A pointer read out of memory and handed straight
+    // on arrives as the type it is read as. A local's address and an
+    // allocation are asked by the local and the record below. See
+    // `Held::contents_at_most`.
     let arrived = match value {
         Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
             known.points_to[place.local.index()].contents_at_most
@@ -1491,6 +1495,11 @@ fn contents_leaving(
             .collect();
         // And what was stored there that the record does not name, by what it
         // was believed ([`Known::stored_at_most`], #632).
+        // A narrower stored bound is unknown even beside a record that
+        // proves: the record names the objects the pointers it holds point
+        // at, and the bound stands for a pointer it holds that names none,
+        // so a whole object on one path proves nothing of the other. With
+        // nothing recorded and no bound there is nothing to ask.
         let stored_narrower = known.stored_at_most[site].is_some_and(|bound| bound < width);
         let fit = match (extents.is_empty(), stored_narrower) {
             (true, false) => continue,

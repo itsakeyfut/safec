@@ -819,15 +819,22 @@ pub(super) struct Held {
     /// beyond what this check recorded there.
     ///
     /// **Set from the type a pointer arrives as**, a parameter, a call's
-    /// result or a load: `void **` holds `void *`, which nobody was asked
-    /// the width of, so `0`; `int **` holds `int *`, so `4`. A conversion
+    /// result or a load, which is a belief and not what C fixes: a `void **`
+    /// is believed to hold `void *`s, which nobody was asked the width of,
+    /// so `0`; an `int **` is believed to hold pointers to whole `int`s, so
+    /// `4`. A `void **` that does point at an `int *` is refused when read
+    /// through an `int **`, which is the cost of believing the type. A
+    /// conversion
     /// to another pointer type keeps it, which is the point: `int **pi =
     /// pm;` with `pm` a `void **` parameter converted through `void *` read
     /// `*pi` as a whole `int` and wrote four bytes into one `char` (#632).
     /// A local's address and an allocator's result bound nothing here, since
-    /// the local and the allocation's record are asked instead. **A bound
-    /// and not a proof**, so a join keeps the lower of two and a side with
-    /// none is no bound, the reverse of [`Self::believed`]. See ADR-0060.
+    /// the local and the allocation's record are asked instead. **One level
+    /// only**: what the pointers stored there point at holds is believed as
+    /// a load of it is read, so a `void ***` converted whole loses the bound
+    /// below, which is #634. **A bound and not a proof**, so a join keeps
+    /// the lower of two and a side with none is no bound, the reverse of
+    /// [`Self::believed`]. See ADR-0060.
     pub(super) contents_at_most: Option<u64>,
     /// Whether an edge in [`Self::writes_to`] may be the address of
     /// something inside the local it names rather than of the local itself.
@@ -846,11 +853,12 @@ pub(super) struct Held {
 /// The lower of two bounds, where `None` is no bound: a side that bounds
 /// nothing does not loosen one that does. See [`Held::contents_at_most`].
 ///
-/// Mutation: answer `None` where one side has no bound; eight cases in
-/// `tests/cases/bounds/` go silent, among them
-/// `a_void_pointer_to_pointer_parameter_read_through_an_int_alias_is_asked`,
-/// since a null test joins the path that bounds with one that holds
-/// nothing.
+/// **A copy is one of these joins**: `pm = m;` builds `pm` from a value
+/// with no bound and accumulates `m` into it, so a version that let a side
+/// with none loosen the other lost every bound at its first copy. Mutation:
+/// answer `None` where one side has no bound;
+/// `a_void_pointer_to_pointer_parameter_read_through_an_int_alias_is_asked`
+/// goes silent, among others.
 pub(super) fn bounded(here: Option<u64>, there: Option<u64>) -> Option<u64> {
     match (here, there) {
         (Some(here), Some(there)) => Some(here.min(there)),

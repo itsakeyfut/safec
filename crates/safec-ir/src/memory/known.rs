@@ -203,8 +203,11 @@ pub(super) struct Known {
     /// Per local, how many bytes a pointer a call may write into it is
     /// believed to point at, at most: the narrowest width the parameters
     /// it was handed through believe at its level, and `0` where one was a
-    /// `void *`, which a callee may store any pointer through. `None` where
-    /// no call was handed it.
+    /// `void *`. That is what this check asks of a callee's body, which is
+    /// asked at the types it stores through: through a `void *` it may have
+    /// stored any pointer at any type. C allows no more through one than
+    /// through an `int **` (C17 6.5 p7), so this is a limit of the asking
+    /// and not of the language. `None` where no call was handed it.
     ///
     /// **What a callee wrote is believed as it was handed**, not as the
     /// local is declared: `int *v` handed to `put(void **slot, char *c)`
