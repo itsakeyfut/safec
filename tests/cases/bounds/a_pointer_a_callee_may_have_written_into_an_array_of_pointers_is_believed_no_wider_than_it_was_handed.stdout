@@ -1,0 +1,94 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:1:6 "put" declared
+  Local "_0" "void" return
+  Local "_1" "char *(*)[2]" parameter "p"
+Function a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:2:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *[2]" "a"
+  Local "_2" "int **"
+  Local "_3" "int *"
+  Local "_4" "void *" "pv"
+  Local "_5" "int *(*)[2]"
+  Local "_6" "int *" "q"
+  Local "_7" "int **"
+  Local "_8" "int"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:2:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:4:5 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:4:5 written
+      Destination "_2"
+        Deref
+      Use
+        Constant 0
+    Operation a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:4:5 written
+      Destination "_3"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:4:5 generated
+    Operation a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:5:16 written
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:5:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:5:16 generated
+    ArgumentsEvaluated a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:6:5 generated
+    Call a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:6:5 written "put" "bb1"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:6:5 generated
+    Operation a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:7:14 generated
+      Destination "_7"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:7:10 written
+      Destination "_6"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:7:14 generated
+    Operation a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:8:9 written
+      Destination "_8"
+      Binary "Ne"
+        Copy "_6"
+        Constant 0
+    Branch a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:8:9 written "bb2" "bb3"
+      Copy "_8"
+  Block "bb2"
+    Sequenced a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:8:9 generated
+    Operation a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:9:9 written
+      Destination "_6"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:9:9 written
+      Destination "_9"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:9:9 generated
+    Goto "bb4"
+  Block "bb3"
+    Sequenced a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:8:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:11:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed.c:11:12 generated
+    Return

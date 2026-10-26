@@ -791,3 +791,36 @@ fn a_branch_is_threaded_along_a_chain_and_never_through_a_place_read_through_a_p
     function.block(first).terminator.successors(&mut successors);
     assert_eq!(successors, [ends, other]);
 }
+
+/// An index of an array reaches its element, and an array takes its
+/// elements' bytes, C17 6.5.3.4 p7.
+///
+/// No C program asks the first: the lowering builds an `Index` only under
+/// `Rvalue::Address`, which no reader asks the type of. Mutation: answer
+/// `None` for an `Index` of an array; the first assertion fails. Mutation:
+/// answer one element's size for an array; the second does.
+#[test]
+fn an_array_s_element_is_what_an_index_reaches_and_its_size_is_its_elements() {
+    let mut unit = TranslationUnit::new(a_target());
+    let int = unit.push_type(Ty::Int);
+    let array = unit.push_type(Ty::Array {
+        element: int,
+        length: 4,
+    });
+
+    let (_sources, at) = spans();
+    let mut function = Function::new(at, int, []);
+    let a = function.push_local(array);
+
+    assert_eq!(
+        unit.place_ty(
+            &function,
+            &Place {
+                local: a,
+                projection: vec![Projection::Index(Operand::Constant(0))],
+            }
+        ),
+        Some(int)
+    );
+    assert_eq!(unit.size_of(array), Some(16));
+}

@@ -272,7 +272,9 @@ impl Allocations<'_> {
             Some(Ty::Pointer(_)) | None => true,
             Some(Ty::Int | Ty::Char | Ty::Void) => false,
             // As its elements do: no whole array is read or written, and where
-            // one were, what it holds is its elements.
+            // one were, what it holds is its elements. **Held by nothing,
+            // measured**: answering `false` changes no case, since no C reads a
+            // place of array type.
             Some(Ty::Array { element, .. }) => match self.unit.ty(element_of(self.unit, element)) {
                 Ty::Pointer(_) => true,
                 Ty::Int | Ty::Char | Ty::Void => false,
@@ -3087,6 +3089,9 @@ pub(super) fn pointer_depth(unit: &TranslationUnit, ty: TyId) -> usize {
         Ty::Int | Ty::Char | Ty::Void => 0,
         // As deep as its element: `int ***a[2]` holds pointers three `*`s
         // deep, which `Allocations::deepest_pointer` has to be long enough for.
+        // **Held by nothing, measured**: answering `0` changes no case,
+        // because every use of an array converts it into a temporary of the
+        // element's pointer type, which is one `*` deeper still.
         Ty::Array { element, .. } => pointer_depth(unit, element),
     }
 }
