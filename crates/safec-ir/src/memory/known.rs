@@ -713,7 +713,7 @@ impl Known {
     /// believing whole `int`s two levels down, where the sites alone said
     /// nothing (#634). What the local's value points at itself is asked by
     /// the local's own fit where it is read, so its own level is no bound
-    /// here. `depth_cap` is [`Allocations::depth`](super::transfer::Allocations::depth),
+    /// here. `depth_cap` is [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer),
     /// which the list that puts it one level down is cut to.
     ///
     /// **The one walk a load, a departure and a copy take**, so that the
@@ -731,7 +731,7 @@ impl Known {
             for slot in locals {
                 let held = self.points_to[slot]
                     .contents_at_most
-                    .behind(None, depth_cap);
+                    .stored_under(None, depth_cap);
                 levels.bound_by(&held.below(depth - 1 - level));
             }
         }

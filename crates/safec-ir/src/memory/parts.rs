@@ -878,10 +878,10 @@ pub(super) fn bounded(here: Option<u64>, there: Option<u64>) -> Option<u64> {
 /// level past the end, and an entry of `None`, is no bound. See
 /// [`Held::contents_at_most`] and ADR-0060.
 ///
-/// **No list is longer than [`Allocations::depth`](super::transfer::Allocations::depth)**,
+/// **No list is longer than [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer)**,
 /// the deepest pointer type among the function's locals. The two that build
 /// one are [`Allocations::type_levels`](super::transfer::Allocations::type_levels),
-/// which stops there, and [`Self::behind`], which drops what would pass it;
+/// which stops there, and [`Self::stored_under`], which drops what would pass it;
 /// [`Self::below`] and a join make none longer than their inputs. So the
 /// lattice this sits in has a finite height by construction, and no loop of
 /// stores and loads can grow one for a fixpoint to chase. What is dropped is
@@ -936,7 +936,7 @@ impl Levels {
     /// What memory holding a pointer that believes `self` of its own memory
     /// holds: `first` for that pointer, which is what a store of it records
     /// at its own level, and `self` one level down, no longer than `depth`.
-    pub(super) fn behind(&self, first: Option<u64>, depth: usize) -> Levels {
+    pub(super) fn stored_under(&self, first: Option<u64>, depth: usize) -> Levels {
         Levels(
             std::iter::once(first)
                 .chain(self.0.iter().copied())
@@ -1446,16 +1446,16 @@ mod tests {
     /// one past it: a store adds a level and a load takes one away, so a
     /// loop of the two holds its length. The cap is what makes that a
     /// property of the type rather than of every program. Mutation: drop the
-    /// `take` in `Levels::behind`. This fails at the first assertion.
+    /// `take` in `Levels::stored_under`. This fails at the first assertion.
     #[test]
     fn a_store_cannot_make_a_list_longer_than_the_function_s_depth() {
         let held = Levels::from_bounds(vec![Some(8), Some(0)]);
         assert_eq!(
-            held.behind(Some(4), 2),
+            held.stored_under(Some(4), 2),
             Levels::from_bounds(vec![Some(4), Some(8)])
         );
         assert_eq!(
-            held.behind(None, 3),
+            held.stored_under(None, 3),
             Levels::from_bounds(vec![None, Some(8), Some(0)])
         );
     }
@@ -1464,7 +1464,7 @@ mod tests {
     /// at a level does not loosen the other's, at every level.
     ///
     /// Mutation: stop at the shorter list's end. This fails at the first
-    /// assertion, which loses the `0` two levels down.
+    /// assertion, which loses the `0` at index 1.
     #[test]
     fn a_shorter_list_bounds_nothing_past_its_end() {
         let mut here = Levels::from_bounds(vec![Some(8)]);

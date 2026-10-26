@@ -38,11 +38,10 @@ pub(super) struct Allocations<'a> {
     /// Mutation: two shorter, and
     /// `a_void_pointer_three_levels_deep_converted_whole_is_believed_below_its_first_level`
     /// goes silent, since the `0` a `void ***` believes two levels down is
-    /// the entry dropped. One shorter changes no case, as [`Levels`]'s doc
-    /// says it cannot: a read asks index `d - 1` through a local at least
-    /// `d + 1` deep. The deepest local's own depth is kept rather than that
-    /// margin taken, so the length needs no argument to be long enough.
-    pub(super) depth: usize,
+    /// the entry dropped. One shorter changes no case, for the reason
+    /// [`Levels`] gives; the margin is kept so that the length needs no
+    /// argument to be long enough.
+    pub(super) deepest_pointer: usize,
     /// The locals a caller filled, which are sites because an allocation can
     /// arrive through one.
     pub(super) parameters: Vec<LocalId>,
@@ -296,10 +295,10 @@ impl Allocations<'_> {
         let Ty::Pointer(mut stored) = self.unit.ty(ty) else {
             return None;
         };
-        let mut levels = Vec::with_capacity(self.depth);
+        let mut levels = Vec::with_capacity(self.deepest_pointer);
         // Once `stored` is no pointer it stays what it is, so every level
         // below answers `0` as well.
-        for _ in 0..self.depth {
+        for _ in 0..self.deepest_pointer {
             let width = match self.unit.ty(stored) {
                 Ty::Pointer(inner) => {
                     stored = inner;
@@ -338,7 +337,11 @@ impl Allocations<'_> {
             .unwrap_or_default();
         let depth = derefs(place);
         if depth > 0 {
-            levels.bound_by(&value.memory_levels(place.local, depth, self.depth).below(1));
+            levels.bound_by(
+                &value
+                    .memory_levels(place.local, depth, self.deepest_pointer)
+                    .below(1),
+            );
         }
         levels
     }
@@ -361,7 +364,9 @@ impl Allocations<'_> {
         if depth == 0 {
             return as_read;
         }
-        let bound = value.memory_levels(place.local, depth, self.depth).at(0);
+        let bound = value
+            .memory_levels(place.local, depth, self.deepest_pointer)
+            .at(0);
         bound.map_or(as_read, |bound| as_read.min(bound))
     }
 
@@ -1061,7 +1066,7 @@ impl Analysis for Allocations<'_> {
         // only lowers or drops, and the slack above covers it. See ADR-0060.
         //
         // **What a local's value believes of its memory and what was stored in
-        // a site, one [`Levels`] each, are a list of [`Self::depth`] entries
+        // a site, one [`Levels`] each, are a list of [`Self::deepest_pointer`] entries
         // apiece**, and a join only lowers an entry: from no bound to a
         // width, and from a width to a smaller one. Every width is a type's
         // size or `0`, so at most one per local and one more, and the list
@@ -1086,7 +1091,7 @@ impl Analysis for Allocations<'_> {
             + positions * (2 * locals + 3)
             + locals
             + locals * (positions + locals + 2)
-            + 2 * locals * self.depth * (locals + 2)
+            + 2 * locals * self.deepest_pointer * (locals + 2)
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -1675,7 +1680,9 @@ impl Analysis for Allocations<'_> {
                         // Mutation: record level 0 alone, and
                         // `a_parameter_stored_in_memory_and_read_back_is_believed_as_it_arrived_below_its_first_level`
                         // goes silent.
-                        let stored = written.contents_at_most.behind(bound, self.depth);
+                        let stored = written
+                            .contents_at_most
+                            .stored_under(bound, self.deepest_pointer);
                         for container in &containers {
                             value.stored_at_most[*container].bound_by(&stored);
                             for &site in &carried {
@@ -2476,7 +2483,7 @@ impl Analysis for Allocations<'_> {
                             copied_bound.bound_by(&value.memory_levels(
                                 source.local,
                                 from_depth + 1,
-                                self.depth,
+                                self.deepest_pointer,
                             ));
                             for container in into {
                                 value.stored_at_most[container].bound_by(&copied_bound);
@@ -3041,7 +3048,7 @@ impl Analysis for Allocations<'_> {
 }
 
 /// How many `*`s deep a type is: `0` for one that is no pointer. What
-/// [`Allocations::depth`] is the largest of.
+/// [`Allocations::deepest_pointer`] is the largest of.
 ///
 /// Written out rather than as a `matches!`, so a kind of type added later
 /// is asked whether it has a pointee.

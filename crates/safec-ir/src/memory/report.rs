@@ -1534,7 +1534,7 @@ fn contents_leaving(
         let receiver = analysis
             .type_levels(read_as)
             .unwrap_or_default()
-            .behind(Some(width), analysis.depth);
+            .stored_under(Some(width), analysis.deepest_pointer);
         let stored_narrower = known.stored_at_most[site].narrower_than(&receiver);
         let fit = match (extents.is_empty(), stored_narrower) {
             (true, false) => continue,

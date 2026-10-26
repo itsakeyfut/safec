@@ -509,7 +509,7 @@ fn analysis<'a>(
         unit,
         function: func,
         locals: function.locals().len(),
-        depth: deepest_pointer(unit, function),
+        deepest_pointer: deepest_pointer(unit, function),
         parameters: function.parameters().collect(),
         exposed_parameters: function
             .parameters()
