@@ -224,14 +224,24 @@ pub(super) struct Known {
     pub(super) handed_at_most: Vec<Option<u64>>,
     /// Per local, whether nothing may have written it since it was made, on
     /// every path: its value is indeterminate (C17 6.2.4 p6, 6.7.9 p10), and
-    /// Annex J.2 lists using it as undefined whether or not its address is
-    /// taken. Set where a local that may hold a pointer is made, at the
+    /// Annex J.2 lists using it as undefined. That line of J.2 names no
+    /// condition on the address; the normative text makes such a read
+    /// undefined only through a trap representation (6.2.6.1 p5) where the
+    /// address is taken, and this reads J.2 as ADR-0057 does for an
+    /// allocation. Set where a local that may hold a pointer is made, at the
     /// function's entry and at its `StorageLive`, never for a parameter, and
     /// cleared only by [`Self::wrote`] and [`Self::replaced`], which a write
     /// that may land there calls: an assignment, a placed store, a call's
     /// result, and a call or a store this check cannot place, which
-    /// `replaced` answers for every escaped local it may reach. Being wrong is
-    /// a report about a program that did write it. An intersection at a join.
+    /// `replaced` answers for every escaped local it may reach. An
+    /// intersection at a join.
+    ///
+    /// **Wrong in both directions, and the two are not alike.** A write this
+    /// check does not see leaves the mark set, and a program that did write
+    /// the local is reported `Unsafe`, which the reader can see. A may-write
+    /// counted as a write clears it, and a read nothing wrote goes silent: a
+    /// call is taken to write every escaped local whatever it was handed,
+    /// which is #643.
     ///
     /// **What [`Self::fresh`] is for an allocation, for a local reached by
     /// its address**: a pointer read out of one is reported where it is

@@ -231,7 +231,8 @@ fn verdict(
         // Never asked: it is built by `memory::assigned` from where a local
         // was assigned, and it is about no free.
         Kind::Unassigned | Kind::SometimesUnassigned { .. } => true,
-        // Never asked: each is said by `loaded_indeterminate`, about no free.
+        // Never asked: each is said by `loaded_indeterminate` or
+        // `unwritten_read`, about no free.
         Kind::IndeterminateLoad { .. } | Kind::IndeterminateLocal => true,
         // Never asked: it is said by `may_not_fit`, about no free.
         Kind::OutsideItsObject { .. } => true,

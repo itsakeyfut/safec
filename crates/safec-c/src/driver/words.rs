@@ -987,8 +987,7 @@ pub(super) fn memory_finding(
     if local {
         diagnostic = diagnostic.with_note(
             "C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, \
-             and Annex J.2 lists using that value as undefined, whether or not its address is \
-             taken",
+             and Annex J.2 lists using that value as undefined",
         );
     }
     if let Kind::TooLong { walks } = finding.kind {

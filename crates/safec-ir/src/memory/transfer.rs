@@ -567,7 +567,9 @@ impl Allocations<'_> {
     /// array, and a path where the pointer held nothing is a null, which is
     /// the nullability check's as a path holding no site already is for an
     /// allocation. `inner_address` is asked, since an edge that may name
-    /// something inside another local names the wrong memory.
+    /// something inside another local names the wrong memory. **Nothing
+    /// guards that clause**: no C program reaches a read through such an
+    /// edge with every other clause holding.
     ///
     /// Mutation: weaken `all` to `any` over the sites, and
     /// `a_pointer_read_through_either_of_two_allocations_one_written_is_not_reported`
@@ -2905,6 +2907,9 @@ impl Analysis for Allocations<'_> {
             if derefs(place) > 0 {
                 value.written_all();
             }
+            // And an escaped local it may land in, as an unplaced store
+            // does. See `Known::unwritten`.
+            replaced_by(self.unit, function, place, value);
             return;
         }
         // The call's result writes the local it lands in. See

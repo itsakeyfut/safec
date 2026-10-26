@@ -177,8 +177,8 @@ pub enum Kind {
     },
     /// A pointer local whose address is taken, read by name before anything
     /// wrote it, on every path: its value is indeterminate (C17 6.2.4 p6,
-    /// 6.7.9 p10), and Annex J.2 lists using it as undefined whether or not
-    /// its address is taken. Always `Unsafe`, at the read. `local` is the
+    /// 6.7.9 p10), and Annex J.2 lists using it as undefined, the reading
+    /// ADR-0057 takes. Always `Unsafe`, at the read. `local` is the
     /// local read. A local whose address is never taken is `Unassigned`'s,
     /// which `memory::assigned` builds, and the two never meet (#640). See
     /// `Known::unwritten` and ADR-0057.
