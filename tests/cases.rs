@@ -3298,6 +3298,15 @@ cases! {
         // `stored_at_most` by nothing; both do.
         memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_asked_as_the_narrower: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         memory_holding_a_load_on_one_arm_and_a_null_on_the_other_is_asked_as_the_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A load stored in memory is bounded by what it was believed,
+        // whatever sites the record says it names, which may be another
+        // allocation or the caller's memory: stored over a whole allocation,
+        // through a pointer read out of memory, and two levels below a
+        // parameter. Mutation: bound only a load that names no site and no
+        // local; all three go silent.
+        a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_load_stored_through_a_pointer_read_out_of_memory_is_bounded_by_its_belief: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_load_two_levels_below_a_parameter_stored_in_memory_is_bounded_by_its_belief: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument

@@ -1585,23 +1585,22 @@ impl Analysis for Allocations<'_> {
                                 Some(operation.origin.span()),
                             );
                         }
-                        // **What the record cannot name is bounded by what it
-                        // is believed**: a pointer read out of memory that
-                        // names no site and no local leaves the record saying
-                        // nothing of it. `char *c = *cc; *m = c;` handed `m`
-                        // on as an `int **` with nothing asked (#632). One
-                        // that names a site is in the record, which is asked
-                        // by its extent instead. **Only a load**, which is
-                        // what `written.loaded` asks: a pointer this check
-                        // lost or a call wrote also names nothing and
-                        // believes nothing, and bounding it at zero doubted
-                        // a lost pointer to whole allocations read back,
-                        // which this issue is not about. A load that
-                        // believes nothing is bounded at zero, which is
-                        // what it was asked. See ADR-0060.
-                        let names_nothing = carried.is_empty() && !written.writes_to.any();
+                        // **A pointer read out of memory is bounded by what it
+                        // is believed**, whatever the record says it names:
+                        // the sites a load holds are what the walk every load
+                        // takes found there, at an offset nobody said, and may
+                        // be the caller's memory or another allocation rather
+                        // than what it points at. `char *c = *cc; *m = c;`
+                        // handed `m` on as an `int **` with nothing asked, and
+                        // so did the same with `*m = malloc(4);` first, whose
+                        // site the load also named (#632). **Only a load**,
+                        // which is what `written.loaded` asks: a pointer this
+                        // check lost or a call wrote believes nothing too, and
+                        // bounding it at zero doubted a lost pointer to whole
+                        // allocations read back, which this issue is not
+                        // about. A load that believes nothing is bounded at
+                        // zero, which is what it was asked. See ADR-0060.
                         let bound = (self.may_be_pointer(function, &operation.place)
-                            && names_nothing
                             && written.loaded)
                             .then(|| written.believed.unwrap_or(0));
                         for container in &containers {

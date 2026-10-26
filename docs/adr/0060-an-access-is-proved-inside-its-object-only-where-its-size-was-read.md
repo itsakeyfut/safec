@@ -107,9 +107,9 @@ asked wherever it is read through or handed on. A local a call was handed is
 believed written no wider than it was handed as, and as nothing through a
 `void *` parameter, on every path after that call; and a pointer read out of
 memory that is stored where the record names nothing bounds that memory by
-what it was believed (#632). Below the first level, through a store and a
-reload, and for a load whose targets are incomplete, the bound is lost, which
-is #634. Each only lowers a belief, so being wrong is a false `Unknown`, and
+what it was believed, whatever sites the record says it names (#632). Below
+the first level, and through a store and a reload, the bound is lost, which is
+#634. Each only lowers a belief, so being wrong is a false `Unknown`, and
 it is paid by conforming code: a `void **` that does point at an `int *` is
 refused when read through an `int **`, a well-typed store does not raise a
 bound an earlier one set, and a local once handed to a `void *` parameter is

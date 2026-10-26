@@ -1,0 +1,155 @@
+Target "x86_64-pc-windows-msvc"
+Function a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:2:6 "use"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "pi"
+  Local "_2" "int"
+  Local "_3" "int *" "p"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:3:9 written
+      Destination "_2"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:3:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:3:9 generated
+    StorageLive a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:4:9 generated "_3"
+    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:4:14 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:4:18 generated
+    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:5:13 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_3"
+        Constant 0
+    Branch a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:5:13 written "bb4" "bb5"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+  Block "bb4"
+    Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:5:13 generated
+    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:6:13 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:6:13 written
+      Destination "_5"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:6:13 generated
+    Goto "bb6"
+  Block "bb5"
+    Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:5:13 generated
+    Goto "bb6"
+  Block "bb6"
+    StorageDead a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:8:5 generated "_3"
+    Goto "bb3"
+Function a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:10:6 "f"
+  Local "_0" "void" return
+  Local "_1" "char **" parameter "cc"
+  Local "_2" "int"
+  Local "_3" "char *" "c"
+  Local "_4" "void **" "m"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "void *"
+  Local "_8" "void *"
+  Local "_9" "void *"
+  Local "_10" "void *" "pm"
+  Block "bb0" entry
+    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:11:9 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:11:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:11:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:11:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:14:11 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:14:15 generated
+    ArgumentsEvaluated a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:15:16 generated
+    Call a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:15:16 written "malloc" "bb4"
+      Destination "_5"
+      Constant 8
+  Block "bb4"
+    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:15:12 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:15:16 generated
+    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:16:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:16:9 written "bb5" "bb6"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:16:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:16:9 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:19:10 generated
+    Call a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:19:10 written "malloc" "bb8"
+      Destination "_7"
+      Constant 4
+  Block "bb8"
+    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:19:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:19:5 written
+      Destination "_8"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:19:5 generated
+    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:20:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:20:5 written
+      Destination "_9"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:20:5 generated
+    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:21:11 written
+      Destination "_10"
+      Use
+        Copy "_4"
+    Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:21:16 generated
+    ArgumentsEvaluated a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:22:5 generated
+    Call a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:22:5 written "use" "bb9"
+      Copy "_10"
+  Block "bb9"
+    Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:22:5 generated
+    Return
