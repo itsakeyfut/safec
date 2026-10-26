@@ -261,11 +261,15 @@ cases! {
         a_local_array_written_on_one_arm_only_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `StorageLive` leaves `unwritten` alone; this goes silent.
         a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: a copy into a local clears nothing; this is reported.
+        // Mutation: `Known::replaced` clears no local, which is the door a
+        // copy goes through; this is reported.
         a_local_filled_by_memcpy_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `holds_a_pointer` answers `true` for every type; this is
-        // reported.
-        an_integer_read_through_the_address_of_a_local_nothing_wrote_is_not_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // reported where `v` is read by name.
+        an_integer_local_whose_address_is_taken_read_before_anything_wrote_it_is_not_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a store this check cannot place clears no escaped local;
+        // this is reported.
+        a_local_written_through_two_dereferences_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `aligned_alloc`'s contents are indeterminate too (C17 7.22.3.1 p2).
         // Mutation: drop it from `leaves_indeterminate`. It builds.
         a_pointer_read_out_of_memory_aligned_alloc_made_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
