@@ -285,9 +285,25 @@ cases! {
         // An array holds its elements, so a store this check cannot place
         // writes it where the type stored is its element's. Mutation:
         // `replaced_by` compares the type stored with the local's own type;
-        // both are reported.
+        // this is reported.
         a_local_array_written_through_a_pointer_read_out_of_memory_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_local_array_filled_backwards_through_a_moved_pointer_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A false report, kept on purpose.** `e` walks back onto `m[1]` and
+        // `m[0]`, but arithmetic drops its edge (#639), so the store is taken
+        // to write no local and the read of `m[0]` is `SC0411`, beside the
+        // reports it already had. Counting it a write of every escaped local
+        // silenced every array beside such a store (#645). See ADR-0057.
+        // Mutation: a pointer naming no local lands in every escaped local;
+        // the `SC0411` goes.
+        a_local_array_filled_backwards_through_a_moved_pointer_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write this check cannot pin down writes only the locals its
+        // place may land in (#645). See ADR-0057.
+        //
+        // Mutation: `replaced_by` passes `may_hold` as `may_write`; this
+        // goes silent.
+        a_pointer_read_out_of_a_local_array_a_store_through_caller_memory_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a library copy whose destination was read out of memory
+        // writes every escaped local; this goes silent.
+        a_pointer_read_out_of_a_local_array_a_copy_through_caller_memory_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call writes only the locals it may reach, `Known::exposed_locals`
         // (#643). See ADR-0057.
         //

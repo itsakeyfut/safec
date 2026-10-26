@@ -266,9 +266,18 @@ pub(super) fn replaced_by(
         })
         .collect();
 
-    // What it may hold it may have written: a store is a write of what it
-    // stores, wherever it lands. See `Known::unwritten`.
-    value.replaced(|local| may_hold[local], |local| may_hold[local]);
+    // **What it may have written is narrower**: only a local its place may
+    // land in, by the same type. Every escaped local of that type let one
+    // store through a pointer read out of the caller's memory clear the mark
+    // of a local array nothing could reach (#645). See ADR-0057.
+    let mut lands = vec![false; may_hold.len()];
+    for local in value.locals_a_write_may_land_in(place.local, derefs(place)) {
+        lands[local] = true;
+    }
+    value.replaced(
+        |local| may_hold[local],
+        |local| may_hold[local] && lands[local],
+    );
 }
 
 /// The sites out of everything a place or an argument reached.

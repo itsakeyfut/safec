@@ -232,11 +232,11 @@ pub(super) struct Known {
     /// function's entry and at its `StorageLive`, never for a parameter, and
     /// cleared only by [`Self::written_local`] and [`Self::replaced`], which a write
     /// that may land there calls: an assignment, a placed store, a call's
-    /// result, a store this check cannot place, which `replaced` answers for
-    /// every escaped local it may reach, a call, which writes only the
-    /// locals in [`Self::exposed_locals`], and a library copy, which writes
-    /// only where its first argument may point, as the `Callee::Copies` arm
-    /// of the transfer says (#643). An intersection at a join.
+    /// result, a call, which writes only the locals in
+    /// [`Self::exposed_locals`] (#643), and a store or a library copy this
+    /// check cannot pin down, which writes only the locals
+    /// [`Self::locals_a_write_may_land_in`] answers (#645). An intersection
+    /// at a join.
     ///
     /// **Wrong in both directions, and the two are not alike.** A write this
     /// check does not see leaves the mark set, and a program that did write
@@ -960,21 +960,71 @@ impl Known {
     /// allocations the call was handed into `reachable_now`: asked before it,
     /// `*box = m; fill_box(box);` left `m` unwritten.
     pub(super) fn expose_locals(&mut self, locals: Vec<usize>) {
-        let mut sites = self.reachable_now();
-        let mut locals: BTreeSet<usize> = locals.into_iter().collect();
-        locals.extend((0..self.exposed_locals.len()).filter(|&local| self.exposed_locals[local]));
+        let mut seeds: BTreeSet<usize> = locals.into_iter().collect();
+        seeds.extend((0..self.exposed_locals.len()).filter(|&local| self.exposed_locals[local]));
+        for local in self.locals_closed_from(self.reachable_now(), seeds) {
+            self.exposed_locals[local] = true;
+        }
+    }
+
+    /// Every local code this check cannot read may name now: the walk
+    /// [`Self::expose_locals`] takes, from the same seeds, without marking
+    /// anything. What a pointer such code gave this function, or memory it
+    /// can reach, may hold. See ADR-0057.
+    pub(super) fn named_by_unknown_code(&self) -> BTreeSet<usize> {
+        let exposed = (0..self.exposed_locals.len()).filter(|&local| self.exposed_locals[local]);
+        self.locals_closed_from(self.reachable_now(), exposed.collect())
+    }
+
+    /// `locals`, and every local whose address may be found from them or
+    /// from `sites` through [`Self::level_below`], at any depth. One walk for
+    /// the call that exposes and the write that asks, so the two cannot find
+    /// different locals. Two finite sets that only grow, so it ends.
+    fn locals_closed_from(
+        &self,
+        mut sites: BTreeSet<usize>,
+        mut locals: BTreeSet<usize>,
+    ) -> BTreeSet<usize> {
         loop {
             let (next_sites, next_locals) = self.level_below(&sites, &locals);
             let before = (sites.len(), locals.len());
             sites.extend(next_sites);
             locals.extend(next_locals);
             if (sites.len(), locals.len()) == before {
-                break;
+                return locals;
             }
         }
-        for local in locals {
-            self.exposed_locals[local] = true;
+    }
+
+    /// Every local a write this check cannot pin down may land in, for
+    /// [`Self::unwritten`], where the write reaches `depth` dereferences
+    /// below `local`: `local` itself at none, `m[0] = p`; the locals its
+    /// address edges name at one, `*t = x`; the locals the level above may
+    /// be at more, `**ppq = x`. **And every local code this check cannot read may name**,
+    /// [`Self::named_by_unknown_code`], where the pointer was read out of
+    /// memory, lost, or written by such code, or the place reaches through
+    /// more than one dereference, since each of those may be an address this
+    /// function never recorded. A store asks it of its place's dereferences;
+    /// a library copy, of one more than its destination argument has, since
+    /// it writes where that argument points.
+    ///
+    /// **A pointer naming no local lands in none.** One moved off an array by
+    /// arithmetic has lost its edge (#639), so `*(&m[1] - 1) = p` leaves
+    /// `m[0]` reported as nothing wrote it, which the reader sees; counting it
+    /// a write of every escaped local silenced every array beside it. The
+    /// store door and a library copy both ask this, so the two cannot answer
+    /// one pointer differently. See ADR-0057.
+    pub(super) fn locals_a_write_may_land_in(&self, local: LocalId, depth: usize) -> Vec<usize> {
+        let mut lands: BTreeSet<usize> = match depth {
+            0 => BTreeSet::from([local.index()]),
+            1 => self.written_through(local).into_iter().collect(),
+            _ => self.levels_below(local, depth - 1).1,
+        };
+        let root = &self.points_to[local.index()];
+        if depth > 1 || root.loaded || root.lost || root.foreign {
+            lands.extend(self.named_by_unknown_code());
         }
+        lands.into_iter().collect()
     }
 
     /// Tell every pending read that `by` did not make that `routes` are now
@@ -1696,8 +1746,9 @@ impl Known {
     /// only until a later call that may free what it was handed (#394).
     ///
     /// **Which it may have written is a second answer, `may_write`**, about
-    /// [`Self::unwritten`] alone. A store this check cannot place answers
-    /// it as `may_hold`; a call answers it with what it may reach,
+    /// [`Self::unwritten`] alone. A store this check cannot pin down answers
+    /// it with the locals its place may land in, of the type it stores; a
+    /// call answers it with what it may reach,
     /// [`Self::exposed_locals`], which is narrower than every escaped local,
     /// so `int **p = m; tick(); q = *p;` reads `m` as nothing wrote it
     /// (#643). Two parameters rather than a second function, so that a new
