@@ -1,0 +1,91 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_to_an_array_of_the_same_length_builds.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int (*)[4]" parameter "a"
+  Local "_2" "int *"
+  Block "bb0" entry
+    Operation a_pointer_to_an_array_of_the_same_length_builds.c:2:12 generated
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_pointer_to_an_array_of_the_same_length_builds.c:2:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_pointer_to_an_array_of_the_same_length_builds.c:2:12 generated
+    Return
+Function a_pointer_to_an_array_of_the_same_length_builds.c:5:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int[4]" "a"
+  Local "_2" "int (*)[4]" "pa"
+  Local "_3" "int (*)[4]"
+  Local "_4" "int[2][4]" "m"
+  Local "_5" "int (*)[4]"
+  Local "_6" "int *"
+  Local "_7" "int"
+  Local "_8" "int (*)[4]"
+  Local "_9" "int"
+  Local "_10" "int *"
+  Local "_11" "int"
+  Block "bb0" entry
+    Operation a_pointer_to_an_array_of_the_same_length_builds.c:5:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_pointer_to_an_array_of_the_same_length_builds.c:7:20 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_pointer_to_an_array_of_the_same_length_builds.c:7:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_to_an_array_of_the_same_length_builds.c:7:20 generated
+    Operation a_pointer_to_an_array_of_the_same_length_builds.c:9:5 generated
+      Destination "_5"
+      Address
+        Place "_4"
+          Index
+            Constant 0
+    Operation a_pointer_to_an_array_of_the_same_length_builds.c:9:5 generated
+      Destination "_6"
+      Use
+        Copy "_5"
+    Operation a_pointer_to_an_array_of_the_same_length_builds.c:9:5 written
+      Destination "_6"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_to_an_array_of_the_same_length_builds.c:9:5 written
+      Destination "_7"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_pointer_to_an_array_of_the_same_length_builds.c:9:5 generated
+    Operation a_pointer_to_an_array_of_the_same_length_builds.c:10:14 generated
+      Destination "_8"
+      Address
+        Place "_4"
+          Index
+            Constant 0
+    Call a_pointer_to_an_array_of_the_same_length_builds.c:10:12 written "f" "bb1"
+      Destination "_9"
+      Copy "_8"
+  Block "bb1"
+    Operation a_pointer_to_an_array_of_the_same_length_builds.c:10:20 generated
+      Destination "_10"
+      Use
+        Copy "_2"
+    Operation a_pointer_to_an_array_of_the_same_length_builds.c:10:12 written
+      Destination "_11"
+      Binary "Add"
+        Copy "_9"
+        Copy "_10"
+          Deref
+    Operation a_pointer_to_an_array_of_the_same_length_builds.c:10:5 written
+      Destination "_0"
+      Use
+        Copy "_11"
+    Sequenced a_pointer_to_an_array_of_the_same_length_builds.c:10:12 generated
+    Return

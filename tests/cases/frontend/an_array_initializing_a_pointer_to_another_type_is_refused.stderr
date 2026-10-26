@@ -1,0 +1,18 @@
+error[SC0302]: cannot initialize `int **` with `int[2]`
+   ╭─[ an_array_initializing_a_pointer_to_another_type_is_refused.c:3:16 ]
+   │
+ 3 │     int **pp = a;
+   │           ─┬   ┬  
+   │            ╰────── this holds `int **`
+   │                │  
+   │                ╰── this is `int[2]`
+───╯
+error[SC0302]: cannot initialize `char *` with `int[2]`
+   ╭─[ an_array_initializing_a_pointer_to_another_type_is_refused.c:4:15 ]
+   │
+ 4 │     char *c = a;
+   │           ┬   ┬  
+   │           ╰────── this holds `char *`
+   │               │  
+   │               ╰── this is `int[2]`
+───╯

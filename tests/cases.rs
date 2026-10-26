@@ -4298,6 +4298,23 @@ cases! {
         // Chosen for what the IR cannot hold, and stops testing this the day
         // it can.
         a_function_the_ir_cannot_hold: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An array source is assigned as the pointer it converts to (C17
+        // 6.3.2.1 p3 and 6.5.16.1 p1), and two arrays of constant lengths are
+        // compatible only where the lengths are equal (6.7.6.2 p6) (#621).
+        //
+        // Mutation: `assignable` answers nothing for an array source; the
+        // first three build.
+        an_array_initializing_a_pointer_to_another_type_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_array_converted_to_an_integer_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_array_passed_where_a_pointer_to_another_type_is_wanted_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `assignable` answers `false` for every array source;
+        // this is refused.
+        an_array_initializing_a_pointer_to_its_element_or_to_void_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `lengths_agree` answers `true`; this builds.
+        a_pointer_to_an_array_of_another_length_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `lengths_agree` asks the lengths to differ; this is
+        // refused.
+        a_pointer_to_an_array_of_the_same_length_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An argument is checked against the parameter as C adjusts it: an
         // `int` given to `int a[4]` is given to an `int *`, and to `int
         // h(void)` an `int (*)(void)`. Mutation: leave a parameter's type as

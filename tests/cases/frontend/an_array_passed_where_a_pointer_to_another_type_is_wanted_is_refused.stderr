@@ -1,0 +1,11 @@
+error[SC0302]: cannot pass `int[2]` to a parameter of type `int **`
+   ╭─[ an_array_passed_where_a_pointer_to_another_type_is_wanted_is_refused.c:5:7 ]
+   │
+ 1 │ void g(int **pp);
+   │              ─┬  
+   │               ╰── declared `int **` here
+   │ 
+ 5 │     g(a);
+   │       ┬  
+   │       ╰── this is `int[2]`
+───╯
