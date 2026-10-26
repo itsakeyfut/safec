@@ -766,11 +766,9 @@ fn the_mvp_program_runs_and_answers_three() {
 /// the corpus's to hold, under `tests/cases/bounds/`, and here only the
 /// value is asked.
 ///
-/// Mutation: spell the element of `getelementptr` as `i8`. Every program
-/// that steps past its first element answers another number. Mutation: drop
-/// the negation of a subtraction. `heap` answers another number. Mutation:
-/// scale a row by the inner array's element rather than the row. `rows` and
-/// `parameter` do.
+/// Mutation: spell the element of `getelementptr` as `i8`. `local`, the
+/// first that steps past its first element, answers another number.
+/// Mutation: drop the negation of a subtraction. `heap` does.
 #[test]
 fn arrays_and_pointer_arithmetic_compute_what_c_says() {
     if !clang_or_skip("what an indexed program answers") {
