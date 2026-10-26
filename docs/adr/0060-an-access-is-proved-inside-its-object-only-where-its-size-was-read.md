@@ -101,17 +101,21 @@ by its record, since that would doubt every pointer to a parameter's memory
 handed on. **It is believed as the type it arrived as**: a pointer that
 arrives as a parameter, a call's result or a load carries how wide the
 pointers in its memory are believed to be, from the type it arrives as (a
-`void **` is believed to hold `void *`s, so nothing), one level deep, through
-every conversion and every copy (`memcpy`, `memmove`, `realloc`), and that is
-asked wherever it is read through or handed on. A local a call was handed is
-believed written no wider than it was handed as, and as nothing through a
+`void **` is believed to hold `void *`s, so nothing), at every level the type
+has, through every conversion and every copy (`memcpy`, `memmove`,
+`realloc`), and that is asked wherever it is read through or handed on. A
+local a call was handed is believed written no wider than it was handed as, and as nothing through a
 `void *` parameter, on every path after that call; and a pointer read out of
 memory that is stored where the record names nothing bounds that memory by
-what it was believed, whatever sites the record says it names (#632). Below
-the first level, and through a store and a reload, the bound is lost, which is
-#634. Each only lowers a belief, so being wrong is a false `Unknown`, and
-it is paid by conforming code: a `void **` that does point at an `int *` is
-refused when read through an `int **`, a well-typed store does not raise a
+what it was believed, whatever sites the record says it names (#632). Memory
+holds what each pointer stored there believed of its own memory, level by
+level, so a `void **` parameter stored and read back through an `int ***`
+believes nothing two levels down, and a load takes what its memory believed one
+level further down (#634). The list is no longer than the deepest pointer type
+among the function's locals, which a store cannot lengthen, so the lattice it
+sits in has a finite height. Each only lowers a belief, so being wrong is a
+false `Unknown`, and it is paid by conforming code: a `void **` that does
+point at an `int *` is refused when read through an `int **`, a well-typed store does not raise a
 bound an earlier one set, and a local once handed to a `void *` parameter is
 believed nothing after any later call, since that callee may have kept its
 address. Reading a
@@ -252,6 +256,17 @@ Each mutation applied on its own, the workspace run, and the file restored.
   `a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on`
   (#632). The other mutations of #632 are beside their cases in
   `tests/cases.rs`.
+* memory believed wider than it arrived as below its first level: a load
+  taking the type it is read as alone silences
+  `a_void_pointer_three_levels_deep_converted_whole_is_believed_below_its_first_level`;
+  a departure asked at its first level alone silences
+  `a_void_pointer_three_levels_deep_handed_on_whole_is_asked_below_its_first_level`;
+  a store recording its first level alone silences
+  `a_parameter_stored_in_memory_and_read_back_is_believed_as_it_arrived_below_its_first_level`;
+  a list a store makes longer than the function's depth fails
+  `a_store_cannot_make_a_list_longer_than_the_function_s_depth` in
+  `crates/safec-ir/src/memory/parts.rs` (#634). The other mutations of #634
+  are beside their cases in `tests/cases.rs`.
 * review's findings, each with a case in `tests/cases/bounds/` and the
   mutation beside it in `tests/cases.rs`, each applied and seen to fail its
   case: the library reach keyed with the dereferences
@@ -369,6 +384,22 @@ folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
 * Bad, because it refuses a correct `int *` read out of a parameter and
   stored into `int **` memory, a wide false `Unknown`. Not taken; the
   stored value's belief is recorded instead (#632).
+
+### For memory below its first level: a bound per site and per level, seeded where a pointer arrives
+
+* Good, because the bound is then a property of the memory, whatever reaches
+  it.
+* Bad, because a site is a local, so a parameter's memory below its first
+  level has no site to hold one: a `void ***` converted whole and read two
+  levels down, and a load stored and read back, stay silent. Not taken (#634).
+
+### For memory below its first level: a bound per level on the value alone
+
+* Good, because a store records what it does today.
+* Bad, because the bound stays behind on the value at a store, so a `void **`
+  parameter stored into memory and read back through an `int ***` stays
+  silent. Not taken; the value carries one bound per level and a store leaves
+  it in the memory it lands in (#634).
 
 ## More Information
 
