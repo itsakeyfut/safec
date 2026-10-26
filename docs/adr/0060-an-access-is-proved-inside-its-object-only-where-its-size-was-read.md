@@ -97,10 +97,16 @@ width the receiver believes**: a local at the wider of its own type and the
 receiver's, and memory by what its record says the pointers stored there point
 at, so `use(pv)` with `pv` a `void *` local's address and `use` taking `int **`
 asks that local four bytes wide. Memory the record does not hold is not asked
-here, since asking it would doubt every pointer to a parameter's memory handed
-on; a `void *` stored where this function holds no record of it, by the
-caller, by a callee, or as a value whose targets are not recorded, is
-therefore still believed wider when read back, which is #632. Reading a
+by its record, since that would doubt every pointer to a parameter's memory
+handed on. **It is believed as the type it arrived as**: a pointer that
+arrives as a parameter, a call's result or a load carries how wide the
+pointers in its memory are believed to be, from the type it arrives as
+(`void **` holds `void *`, so nothing), through every conversion, and that is
+asked wherever it is read through or handed on. A local a call was handed is
+believed written no wider than it was handed as, and as nothing through a
+`void *` parameter; and a pointer read out of memory that is stored where the
+record names nothing bounds that memory by what it was believed (#632). Each
+only lowers a belief, so being wrong is a false `Unknown`. Reading a
 pointer object through an incompatible pointer type is undefined by C17 6.5 p7
 as well, unless the read is through a character type; it is caught only where
 the widths differ, since effective types are not followed (#627).
@@ -226,6 +232,17 @@ Each mutation applied on its own, the workspace run, and the file restored.
   goes silent; memory not asked:
   `memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds`
   goes silent too. The other mutations of #627 are beside their cases in
+  `tests/cases.rs`.
+* memory believed wider than it arrived as: setting no bound for a parameter,
+  a call's result or a load silences
+  `a_void_pointer_to_pointer_parameter_read_through_an_int_alias_is_asked`,
+  `memory_a_call_returned_as_void_read_through_an_int_alias_is_asked` and
+  `memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked`
+  in turn; ignoring the width a local was handed as silences
+  `a_local_a_callee_was_handed_as_void_is_believed_no_wider_when_read_back`;
+  recording nothing stored silences
+  `a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on`
+  (#632). The other mutations of #632 are beside their cases in
   `tests/cases.rs`.
 * review's findings, each with a case in `tests/cases/bounds/` and the
   mutation beside it in `tests/cases.rs`, each applied and seen to fail its
