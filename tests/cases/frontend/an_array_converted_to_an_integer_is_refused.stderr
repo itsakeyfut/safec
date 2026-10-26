@@ -1,0 +1,20 @@
+error[SC0302]: cannot return `int[2]` from a function returning `int`
+   ╭─[ an_array_converted_to_an_integer_is_refused.c:3:12 ]
+   │
+ 1 │ int f(void) {
+   │     ┬  
+   │     ╰── declared to return `int`
+   │ 
+ 3 │     return a;
+   │            ┬  
+   │            ╰── this is `int[2]`
+───╯
+error[SC0302]: cannot initialize `int` with `int[2]`
+   ╭─[ an_array_converted_to_an_integer_is_refused.c:8:13 ]
+   │
+ 8 │     int x = a;
+   │         ┬   ┬  
+   │         ╰────── this holds `int`
+   │             │  
+   │             ╰── this is `int[2]`
+───╯

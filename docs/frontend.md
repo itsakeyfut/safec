@@ -690,10 +690,10 @@ a declaration. They are gaps rather than decisions, and each one is a program
 
 | Written | Why it stops here |
 |---|---|
-| `int a[3];`, or any array, function or struct type | the IR holds `int`, `char`, `void` and pointers to them |
+| `int a[n];`, an array whose length is no constant, or any function or struct type | the IR holds `int`, `char`, `void`, and pointers to them and arrays of them with a constant length (#621) |
 | `s.a` or `p->a`, a member access, typed by the type checker | the IR holds no struct to take a member of |
 | `int g;` at file scope, used inside a function | every place the IR can name starts at a local |
-| `p - q`, the difference of two pointers | C17 6.5.6 p9 makes it a `ptrdiff_t`, which this compiler has no type for, so the type checker leaves it untyped (`types.rs`) |
+| `p - q`, the difference of two pointers | C17 6.5.6 p9 makes it a `ptrdiff_t`, which this compiler has no type for, so the type checker leaves it untyped (`types.rs`), until #638 |
 
 The reason a refusal is reported rather than lowered around is that the IR has
 no way to say a function has a hole in it: a body with a piece missing and a
@@ -710,11 +710,13 @@ These lower, so the safety checks read them at `--emit safety-ir`, and
 
 | Written | Why it stops here |
 |---|---|
-| `p[1]`, `p[i]`, `*(p + 1)`, `*(p + i)`: pointer arithmetic by any count but a constant zero | it counts elements, and `ir::Ty` holds no width to count them with (ADR-0013); the interpreter refuses it in the same words |
+| `p < q`, `p <= q`, `p > q`, `p >= q`: a relational comparison of two pointers | C17 6.5.8 p5 defines it only between pointers into one object, which nothing here says; the interpreter refuses it as arithmetic on a pointer |
 
-`p[0]` and `*(p + 0)` build, because the lowering folds an addition of zero
-away (ADR-0021). So a pointer can be read and written through, and not
-stepped: a buffer filled by index checks clean and does not compile.
+A pointer plus or minus an integer builds, as `getelementptr` over the
+element's type, so no width reaches `ir::Ty` (ADR-0013, #621); `p[0]` and
+`*(p + 0)` are still folded to `*p` by the lowering (ADR-0021). The
+interpreter refuses pointer arithmetic and indexing, since a pointer there is
+a local with no element in it.
 
 ### What the interpreter answers differently
 

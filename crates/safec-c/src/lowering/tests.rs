@@ -883,15 +883,17 @@ fn a_constant_the_frontend_could_not_read_is_reported_once_and_lowers_nothing() 
 
 /// A type the IR cannot hold is reported at the declaration that wrote it.
 ///
-/// The IR has `int`, `char`, `void` and pointers, and nothing has asked it
-/// for more. Lowering an array as a pointer would tell the memory analysis
-/// that one object is another.
+/// The IR has `int`, `char`, `void`, pointers and arrays of a constant
+/// length, and a variable length is none of those. Lowering one as a
+/// pointer would tell the memory analysis that one object is another.
+/// Chosen for what the IR cannot hold, and stops testing this the day it
+/// can.
 ///
-/// Mutation: lower `Type::Array` as a pointer to its element. Nothing is
-/// reported and this fails.
+/// Mutation: lower an array of any length as a pointer to its element.
+/// Nothing is reported and this fails.
 #[test]
 fn a_type_the_ir_cannot_hold_is_reported() {
-    let lowered = lowered("int f(void) {\n    int a[3];\n    return 0;\n}\n");
+    let lowered = lowered("int f(int n) {\n    int a[n];\n    return 0;\n}\n");
     assert_eq!(codes(&lowered), ["SC0304"]);
     assert!(!function(&lowered, "f").is_defined());
 }
@@ -918,7 +920,7 @@ fn a_name_the_ir_cannot_reach_is_reported() {
 #[test]
 fn a_function_that_cannot_be_lowered_does_not_take_the_others_with_it() {
     let lowered = lowered(
-        "int bad(void) {\n    int a[3];\n    return 0;\n}\n\nint good(void) {\n    return 1;\n}\n",
+        "int bad(int n) {\n    int a[n];\n    return 0;\n}\n\nint good(void) {\n    return 1;\n}\n",
     );
     assert_eq!(codes(&lowered), ["SC0304"]);
     assert!(!function(&lowered, "bad").is_defined());
@@ -1658,7 +1660,7 @@ fn a_parameter_whose_array_length_is_a_positive_constant_lowers() {
 /// fails.
 #[test]
 fn a_call_to_a_refused_function_is_not_reported_twice() {
-    let lowered = lowered("int g(int (*a)[3]);\n\nint f(void) {\n    return g(0);\n}\n");
+    let lowered = lowered("int g(int (*a)(int));\n\nint f(void) {\n    return g(0);\n}\n");
     assert_eq!(codes(&lowered), ["SC0304"]);
 }
 
@@ -1833,4 +1835,67 @@ fn a_conflict_between_lengths_spans_every_parameter_with_a_length() {
         })
         .collect();
     assert_eq!(origins, ["int a[(p = 0, 1)], int b[(p = 0, 2)]"]);
+}
+
+/// A local array of constant length is an array in the IR, and its use as
+/// a value is the address of its first element, C17 6.3.2.1 p3.
+///
+/// Mutation: lower `Type::Array` as a pointer to its element. The local is
+/// no array and this fails at the first assertion. Mutation: decay a local
+/// array as a copy of it. The second fails.
+#[test]
+fn a_local_array_decays_to_the_address_of_its_first_element() {
+    let lowered = lowered("int f(void) {\n    int a[4];\n    int *p = a;\n    return 0;\n}\n");
+    let f = function(&lowered, "f");
+    let a = f
+        .locals()
+        .find(|&local| f.name_of(local).map(|span| lowered.sources.snippet(span)) == Some("a"))
+        .expect("a local named `a`");
+    assert!(
+        matches!(lowered.unit.ty(f.local(a)), Ty::Array { length: 4, .. }),
+        "{:?}",
+        lowered.unit.ty(f.local(a))
+    );
+    let decays: Vec<&Operation> = f
+        .blocks()
+        .flat_map(assigns)
+        .filter(|operation| {
+            operation.value
+                == Rvalue::Address(Place {
+                    local: a,
+                    projection: vec![Projection::Index(Operand::Constant(0))],
+                })
+        })
+        .collect();
+    assert_eq!(
+        decays.len(),
+        1,
+        "{:?}",
+        f.blocks().flat_map(assigns).collect::<Vec<_>>()
+    );
+}
+
+/// An array reached through a pointer decays to a copy of that pointer,
+/// since the address of an array is the address of its first element, and
+/// not to `Address` of the place with an index appended, which the memory
+/// check reads as the address of the pointer's own local (#621).
+///
+/// Mutation: decay `*u` as `Address(*u + [Index(0)])`. No operation copies
+/// `pa` whole and this fails.
+#[test]
+fn an_array_reached_through_a_pointer_decays_to_a_copy_of_the_pointer() {
+    let lowered = lowered("int f(int (*pa)[3]) {\n    return (*pa)[1];\n}\n");
+    let f = function(&lowered, "f");
+    let pa = f.parameters().next().expect("one parameter");
+    let copies = f
+        .blocks()
+        .flat_map(assigns)
+        .filter(|operation| operation.value == Rvalue::Use(Operand::Copy(Place::local(pa))))
+        .count();
+    let addresses = f
+        .blocks()
+        .flat_map(assigns)
+        .filter(|operation| matches!(operation.value, Rvalue::Address(_)))
+        .count();
+    assert_eq!((copies, addresses), (1, 0));
 }

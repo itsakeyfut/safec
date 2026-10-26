@@ -171,9 +171,10 @@ fn a_proved_unsafe_run_leaves_what_was_already_there() {
 /// keyed on a safety conclusion would leave this writing its file, which is why
 /// this is here and not only the test above.
 ///
-/// `p + 1` is what the backend refuses today. When it stops refusing, this
-/// fails on the exit code rather than passing quietly, which is the right way
-/// round and is the shape `object.rs` uses for the same reason.
+/// A relational comparison of two pointers, `p < p`, is what the backend
+/// refuses today, since #621 made it write `p + 1`. When it stops refusing,
+/// this fails on the exit code rather than passing quietly, which is the right
+/// way round and is the shape `object.rs` uses for the same reason.
 ///
 /// Mutation: the same one as above.
 #[test]

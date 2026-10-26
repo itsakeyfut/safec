@@ -1,0 +1,119 @@
+target triple = "x86_64-pc-windows-msvc"
+
+define i32 @pick(ptr %arg0, i32 %arg1, i8 %arg2) {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca ptr
+  %_2 = alloca i32
+  %_3 = alloca i8
+  %_4 = alloca ptr
+  %_5 = alloca ptr
+  %_6 = alloca ptr
+  %_7 = alloca ptr
+  %_8 = alloca ptr
+  %_9 = alloca ptr
+  %_10 = alloca i32
+  store ptr %arg0, ptr %_1
+  store i32 %arg1, ptr %_2
+  store i8 %arg2, ptr %_3
+  br label %bb0
+
+bb0:
+  %t0 = load ptr, ptr %_1
+  %t1 = load i32, ptr %_2
+  %t2 = sext i32 %t1 to i64
+  %t3 = getelementptr [3 x i32], ptr %t0, i64 %t2
+  store ptr %t3, ptr %_5
+  %t4 = load ptr, ptr %_5
+  store ptr %t4, ptr %_6
+  %t5 = load ptr, ptr %_6
+  store ptr %t5, ptr %_4
+  %t6 = load ptr, ptr %_4
+  %t7 = load i8, ptr %_3
+  %t8 = sext i8 %t7 to i64
+  %t9 = getelementptr i32, ptr %t6, i64 %t8
+  store ptr %t9, ptr %_7
+  %t10 = load ptr, ptr %_4
+  %t11 = sub i64 0, 1
+  %t12 = getelementptr i32, ptr %t10, i64 %t11
+  store ptr %t12, ptr %_8
+  %t13 = load ptr, ptr %_8
+  %t14 = load i8, ptr %_3
+  %t15 = sext i8 %t14 to i64
+  %t16 = getelementptr i32, ptr %t13, i64 %t15
+  store ptr %t16, ptr %_9
+  %t17 = load ptr, ptr %_7
+  %t18 = load i32, ptr %t17
+  %t19 = load ptr, ptr %_9
+  %t20 = load i32, ptr %t19
+  %t21 = add nsw i32 %t18, %t20
+  store i32 %t21, ptr %_10
+  %t22 = load i32, ptr %_10
+  store i32 %t22, ptr %_0
+  %t23 = load i32, ptr %_0
+  ret i32 %t23
+}
+
+define i32 @main() {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca [2 x [3 x i32]]
+  %_2 = alloca ptr
+  %_3 = alloca ptr
+  %_4 = alloca ptr
+  %_5 = alloca ptr
+  %_6 = alloca i32
+  %_7 = alloca ptr
+  %_8 = alloca ptr
+  %_9 = alloca ptr
+  %_10 = alloca ptr
+  %_11 = alloca i32
+  %_12 = alloca ptr
+  %_13 = alloca i32
+  br label %bb0
+
+bb0:
+  store i32 0, ptr %_0
+  %t0 = getelementptr [2 x [3 x i32]], ptr %_1, i64 0, i64 0
+  store ptr %t0, ptr %_2
+  %t1 = load ptr, ptr %_2
+  %t2 = getelementptr [3 x i32], ptr %t1, i64 1
+  store ptr %t2, ptr %_3
+  %t3 = load ptr, ptr %_3
+  store ptr %t3, ptr %_4
+  %t4 = load ptr, ptr %_4
+  %t5 = getelementptr i32, ptr %t4, i64 1
+  store ptr %t5, ptr %_5
+  %t6 = load ptr, ptr %_5
+  store i32 4, ptr %t6
+  %t7 = load ptr, ptr %_5
+  %t8 = load i32, ptr %t7
+  store i32 %t8, ptr %_6
+  %t9 = getelementptr [2 x [3 x i32]], ptr %_1, i64 0, i64 0
+  store ptr %t9, ptr %_7
+  %t10 = load ptr, ptr %_7
+  %t11 = getelementptr [3 x i32], ptr %t10, i64 1
+  store ptr %t11, ptr %_8
+  %t12 = load ptr, ptr %_8
+  store ptr %t12, ptr %_9
+  %t13 = load ptr, ptr %_9
+  %t14 = getelementptr i32, ptr %t13, i64 2
+  store ptr %t14, ptr %_10
+  %t15 = load ptr, ptr %_10
+  store i32 5, ptr %t15
+  %t16 = load ptr, ptr %_10
+  %t17 = load i32, ptr %t16
+  store i32 %t17, ptr %_11
+  %t18 = getelementptr [2 x [3 x i32]], ptr %_1, i64 0, i64 0
+  store ptr %t18, ptr %_12
+  %t19 = load ptr, ptr %_12
+  %t20 = call i32 @pick(ptr %t19, i32 1, i8 2)
+  store i32 %t20, ptr %_13
+  br label %bb1
+
+bb1:
+  %t21 = load i32, ptr %_13
+  store i32 %t21, ptr %_0
+  %t22 = load i32, ptr %_0
+  ret i32 %t22
+}

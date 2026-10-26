@@ -1,0 +1,20 @@
+error[SC0302]: cannot initialize `int (*)[3]` with `int (*)[4]`
+   ╭─[ a_pointer_to_an_array_of_another_length_is_refused.c:7:20 ]
+   │
+ 7 │     int (*pa)[3] = &a;
+   │           ─┬       ─┬  
+   │            ╰─────────── this holds `int (*)[3]`
+   │                     │  
+   │                     ╰── this is `int (*)[4]`
+───╯
+error[SC0302]: cannot pass `int[2][3]` to a parameter of type `int (*)[4]`
+   ╭─[ a_pointer_to_an_array_of_another_length_is_refused.c:9:14 ]
+   │
+ 1 │ int f(int a[][4]) {
+   │           ┬  
+   │           ╰── declared `int (*)[4]` here
+   │ 
+ 9 │     return f(m);
+   │              ┬  
+   │              ╰── this is `int[2][3]`
+───╯

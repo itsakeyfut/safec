@@ -304,16 +304,17 @@ fn an_edge_no_statement_produced_is_refused() {
     assert!(out.ends_with("declare i32 @f()\n"), "{out}");
 }
 
-/// Arithmetic on a pointer is refused, in the interpreter's own words,
-/// and the refusal says where.
+/// Arithmetic on a pointer other than moving it is refused, and the refusal
+/// says where.
 ///
-/// `p + 1` counts elements and `ir::Ty` holds no width to count them with,
-/// which ADR-0013 decided. Two consumers of one IR that disagreed about
-/// which programs it can express would make the IR mean two things.
+/// `p * 2` means nothing in C (6.5.5 p2), and the type check refuses it
+/// first; a hand-built unit can still write it. `p + 1` is written, by
+/// `a_pointer_moved_by_an_integer_is_a_getelementptr_over_its_element`.
 ///
-/// Mutation: emit a `getelementptr`. Nothing is refused and this fails.
+/// Mutation: send `Mul` to the arm that moves a pointer. Nothing is refused
+/// and this fails.
 #[test]
-fn arithmetic_on_a_pointer_is_refused() {
+fn arithmetic_on_a_pointer_other_than_moving_it_is_refused() {
     let (sources, at) = named("f");
     let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
     let int = unit.push_type(Ty::Int);
@@ -324,7 +325,7 @@ fn arithmetic_on_a_pointer_is_refused() {
         elements: vec![Element::Assign(Operation {
             place: Place::local(f.return_place()),
             value: Rvalue::Binary {
-                op: BinOp::Add,
+                op: BinOp::Mul,
                 lhs: Operand::Copy(Place::local(p)),
                 rhs: Operand::Constant(1),
             },
@@ -339,10 +340,134 @@ fn arithmetic_on_a_pointer_is_refused() {
     assert_eq!(
         refusals,
         vec![Refusal {
-            why: "arithmetic on a pointer, which counts elements and so needs a width".to_owned(),
+            why: "arithmetic on a pointer other than moving it by an integer".to_owned(),
             at: Some(at),
         }]
     );
+}
+
+/// A pointer moved by an integer is a `getelementptr` over the element's
+/// type, with the integer widened to `i64` by its own sign and negated for a
+/// subtraction, C17 6.5.6 p8.
+///
+/// `p - c` with `c` a `char` on a target whose `char` is signed. Mutation:
+/// spell the element as `i8`; the first line is wrong. Mutation: drop the
+/// negation; the second is missing. Mutation: zero-extend a signed count; the
+/// third is wrong.
+#[test]
+fn a_pointer_moved_by_an_integer_is_a_getelementptr_over_its_element() {
+    let (sources, at) = named("f");
+    let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
+    let int = unit.push_type(Ty::Int);
+    let char = unit.push_type(Ty::Char);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut f = Function::new(at, pointer, [pointer, char]);
+    let mut parameters = f.parameters();
+    let (p, c) = (
+        parameters.next().expect("two parameters"),
+        parameters.next().expect("two parameters"),
+    );
+    f.push_block(Block {
+        elements: vec![Element::Assign(Operation {
+            place: Place::local(f.return_place()),
+            value: Rvalue::Binary {
+                op: BinOp::Sub,
+                lhs: Operand::Copy(Place::local(p)),
+                rhs: Operand::Copy(Place::local(c)),
+            },
+            origin: Origin::Written(at),
+        })],
+        terminator: Terminator::Return,
+    });
+    unit.push_function(f);
+
+    let (out, refusals) = module(&sources, &unit);
+
+    assert_eq!(refusals, vec![], "{out}");
+    assert!(out.contains(" = sext i8 %t1 to i64\n"), "{out}");
+    assert!(out.contains(" = sub i64 0, %t2\n"), "{out}");
+    assert!(
+        out.contains(" = getelementptr i32, ptr %t0, i64 %t3\n"),
+        "{out}"
+    );
+}
+
+/// A count whose type has no sign is widened without one: on a target whose
+/// `char` is unsigned, `p + c` zero-extends `c`.
+///
+/// Mutation: always sign-extend. This fails.
+#[test]
+fn a_pointer_moved_by_an_unsigned_count_widens_it_without_a_sign() {
+    let (sources, at) = named("f");
+    let mut unit = TranslationUnit::new(target("aarch64-unknown-linux-gnu"));
+    let int = unit.push_type(Ty::Int);
+    let char = unit.push_type(Ty::Char);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut f = Function::new(at, pointer, [pointer, char]);
+    let mut parameters = f.parameters();
+    let (p, c) = (
+        parameters.next().expect("two parameters"),
+        parameters.next().expect("two parameters"),
+    );
+    f.push_block(Block {
+        elements: vec![Element::Assign(Operation {
+            place: Place::local(f.return_place()),
+            value: Rvalue::Binary {
+                op: BinOp::Add,
+                lhs: Operand::Copy(Place::local(p)),
+                rhs: Operand::Copy(Place::local(c)),
+            },
+            origin: Origin::Written(at),
+        })],
+        terminator: Terminator::Return,
+    });
+    unit.push_function(f);
+
+    let (out, refusals) = module(&sources, &unit);
+
+    assert_eq!(refusals, vec![], "{out}");
+    assert!(out.contains(" = zext i8 %t1 to i64\n"), "{out}");
+}
+
+/// Each relational comparison of two pointers is refused in the words that
+/// say what it is, C17 6.5.8 p5, and not as arithmetic on a pointer.
+///
+/// Mutation: send only `Lt` to that refusal. `Gt`, `Le` and `Ge` take the
+/// arithmetic refusal's words and this fails.
+#[test]
+fn every_relational_comparison_of_two_pointers_is_refused_as_one() {
+    for op in [BinOp::Lt, BinOp::Gt, BinOp::Le, BinOp::Ge] {
+        let (sources, at) = named("f");
+        let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
+        let int = unit.push_type(Ty::Int);
+        let pointer = unit.push_type(Ty::Pointer(int));
+        let mut f = Function::new(at, int, [pointer]);
+        let p = f.parameters().next().expect("one parameter");
+        f.push_block(Block {
+            elements: vec![Element::Assign(Operation {
+                place: Place::local(f.return_place()),
+                value: Rvalue::Binary {
+                    op,
+                    lhs: Operand::Copy(Place::local(p)),
+                    rhs: Operand::Copy(Place::local(p)),
+                },
+                origin: Origin::Written(at),
+            })],
+            terminator: Terminator::Return,
+        });
+        unit.push_function(f);
+
+        let (_, refusals) = module(&sources, &unit);
+
+        assert_eq!(
+            refusals,
+            vec![Refusal {
+                why: "a relational comparison of two pointers".to_owned(),
+                at: Some(at),
+            }],
+            "{op:?}"
+        );
+    }
 }
 
 /// Whether two pointers name one object is defined and needs no width, so
@@ -527,19 +652,18 @@ fn a_parameter_that_holds_nothing_leaves_no_function() {
 ///
 /// Both reach `address` without going through `place_ty` first, which is
 /// what makes them the two shapes that arm answers for. Nothing the
-/// frontend builds is either: `p[i]` lowers as `*(p + i)`, which
-/// `docs/frontend.md` records, and the type checker is what stops the
-/// other one.
+/// frontend builds is either: it builds an `Index` only on an array, and the
+/// type checker is what stops the other one.
 ///
-/// Mutation: emit a `getelementptr` for an index. The first half stops
-/// being refused. Mutation: treat a `Deref` of a non-pointer as a `load`
+/// Mutation: emit a `getelementptr` for an index whatever it indexes. The
+/// first half stops being refused. Mutation: treat a `Deref` of a non-pointer as a `load`
 /// of `ptr`. The second half does.
 #[test]
 fn a_place_this_cannot_reach_is_refused() {
     for (projection, why) in [
         (
             Projection::Index(Operand::Constant(0)),
-            "an indexed place, which counts elements and so needs a width",
+            "an index into something that is not an array",
         ),
         (
             Projection::Deref,

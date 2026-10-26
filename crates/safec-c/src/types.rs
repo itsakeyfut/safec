@@ -2345,7 +2345,7 @@ impl Checker<'_> {
                 (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
                     // Both pointees are asked: `int[3]` is compatible with
                     // `int[]`, and only one of them is complete.
-                    if ast.compatible(left, right, &|a, b| self.resolution.same_struct(a, b)) {
+                    if self.compatible(ast, left, right) {
                         Some(
                             pointee_steppable(ast, left, true, &|ty| self.complete_here(ast, ty))
                                 .and(pointee_steppable(ast, right, false, &|ty| {
@@ -2364,7 +2364,7 @@ impl Checker<'_> {
             BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge => Some(pairing(match (left, right) {
                 (OperandClass::Arithmetic, OperandClass::Arithmetic) => true,
                 (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
-                    ast.compatible(left, right, &|a, b| self.resolution.same_struct(a, b))
+                    self.compatible(ast, left, right)
                         && !matches!(ast.ty(left), Type::Function { .. })
                 }
                 _ => false,
@@ -2374,7 +2374,7 @@ impl Checker<'_> {
             BinOp::Eq | BinOp::Ne => Some(pairing(match (left, right) {
                 (OperandClass::Arithmetic, OperandClass::Arithmetic) => true,
                 (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
-                    ast.compatible(left, right, &|a, b| self.resolution.same_struct(a, b))
+                    self.compatible(ast, left, right)
                         || is_void_beside_an_object(ast, left, right)
                         || is_void_beside_an_object(ast, right, left)
                 }
@@ -2440,9 +2440,7 @@ impl Checker<'_> {
                 let right_void = matches!(ast.ty(*right_pointee), Type::Void);
                 let left_function = matches!(ast.ty(*left_pointee), Type::Function { .. });
                 let right_function = matches!(ast.ty(*right_pointee), Type::Function { .. });
-                if ast.compatible(left, right, &|a, b| self.resolution.same_struct(a, b))
-                    || (left_void && !right_function)
-                {
+                if self.compatible(ast, left, right) || (left_void && !right_function) {
                     Some(left)
                 } else if right_void && !left_function {
                     Some(right)
@@ -2460,9 +2458,9 @@ impl Checker<'_> {
             | (_, Type::Array { .. } | Type::Function { .. }) => None,
             // p3: both of one structure type, which two structs are when
             // they are one tag, and nothing else beside a struct.
-            (Type::Struct { .. }, Type::Struct { .. }) => ast
-                .compatible(left, right, &|a, b| self.resolution.same_struct(a, b))
-                .then_some(left),
+            (Type::Struct { .. }, Type::Struct { .. }) => {
+                self.compatible(ast, left, right).then_some(left)
+            }
             (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => None,
         };
 
@@ -2564,10 +2562,9 @@ impl Checker<'_> {
     /// pushed.
     ///
     /// Only [`Checker::binary`], [`Checker::subscript`] and
-    /// [`Checker::conditional`] ask. `assignable`
-    /// deliberately does not:
-    /// an array source there is silence today, and converting it would add a
-    /// check this issue was not asked for rather than remove a false one.
+    /// [`Checker::conditional`] ask. `assignable` answers an array source as
+    /// this pointer without building it, since its callers hold the tree
+    /// immutably (#621).
     fn decayed(&mut self, ast: &mut Ast, ty: TypeId) -> TypeId {
         match ast.ty(ty) {
             Type::Array { element, .. } => {
@@ -3199,12 +3196,72 @@ impl Checker<'_> {
         );
     }
 
+    /// Whether two types are compatible, C17 6.2.7 p1: `Ast::compatible`'s
+    /// answer, and **two arrays of constant lengths only where the lengths
+    /// are equal** (6.7.6.2 p6), which that comparison cannot ask since the
+    /// values are this stage's. `int (*pa)[3] = &a;` with `a` an `int[4]`
+    /// built once the lowering read arrays, and `clang` refuses it (#621).
+    /// A length with no value, a variable one or none written, is compatible
+    /// with any, as p6 says.
+    fn compatible(&self, ast: &Ast, left: TypeId, right: TypeId) -> bool {
+        ast.compatible(left, right, &|a, b| self.resolution.same_struct(a, b))
+            && self.lengths_agree(ast, left, right)
+    }
+
+    /// Whether every pair of array lengths two compatible types hold at the
+    /// same place agrees, where both have a value. Through pointers and
+    /// array elements, which are where one array type nests in another; a
+    /// function's parameters are adjusted to pointers (6.7.6.3 p7), and the
+    /// length an adjustment drops is not part of the type. Bounded by the
+    /// parser's `MAX_NESTING`, as `Ast::compatible` is.
+    fn lengths_agree(&self, ast: &Ast, left: TypeId, right: TypeId) -> bool {
+        match (ast.ty(left), ast.ty(right)) {
+            (Type::Pointer(left), Type::Pointer(right)) => self.lengths_agree(ast, *left, *right),
+            (
+                Type::Array {
+                    element: left,
+                    length: left_length,
+                    ..
+                },
+                Type::Array {
+                    element: right,
+                    length: right_length,
+                    ..
+                },
+            ) => {
+                let values = (
+                    left_length.and_then(|length| self.values[length.index()]),
+                    right_length.and_then(|length| self.values[length.index()]),
+                );
+                let equal = match values {
+                    (Some(left), Some(right)) => left == right,
+                    _ => true,
+                };
+                equal && self.lengths_agree(ast, *left, *right)
+            }
+            // Nothing else nests an array type that `Ast::compatible` has
+            // not already compared: written out so a kind added later says
+            // whether it does.
+            (
+                Type::Int
+                | Type::Char
+                | Type::Void
+                | Type::Pointer(_)
+                | Type::Array { .. }
+                | Type::Function { .. }
+                | Type::Struct { .. },
+                _,
+            ) => true,
+        }
+    }
+
     /// Whether a value of type `source` may be assigned to a place of type
     /// `target`, C17 6.5.16.1 p1.
     ///
-    /// `None` where this stage does not answer: a `void` target, or an array
-    /// or a function on either side, is a different constraint, and 6.5.16
-    /// p2's requirement that the place be a modifiable lvalue is another.
+    /// `None` where this stage does not answer: a `void` target, an array or a
+    /// function target, and a function source, is a different constraint, and
+    /// 6.5.16 p2's requirement that the place be a modifiable lvalue is
+    /// another. An array source is answered as the pointer it converts to.
     /// Answering `false` for them would be reporting them badly. A `void`
     /// source onto an object type is answered, `false`, since a `void`
     /// expression has no value to be assigned.
@@ -3222,7 +3279,7 @@ impl Checker<'_> {
             // p1's pointer case, with the `void *` half of it. Qualifiers are
             // a thing this compiler cannot yet write.
             (Type::Pointer(target_pointee), Type::Pointer(source_pointee)) => Some(
-                ast.compatible(target, source, &|a, b| self.resolution.same_struct(a, b))
+                self.compatible(ast, target, source)
                     || matches!(ast.ty(*target_pointee), Type::Void)
                     || matches!(ast.ty(*source_pointee), Type::Void),
             ),
@@ -3236,12 +3293,24 @@ impl Checker<'_> {
             // list. Answering `None` here let `return h();` from a function
             // returning `int` build in silence.
             (Type::Int | Type::Char | Type::Pointer(_), Type::Void) => Some(false),
+            // **An array source is the pointer to its first element it has
+            // become** (6.3.2.1 p3) before anything is assigned, so p1 asks
+            // that pointer: `int **pp = a;` with `a` an `int[2]` is a pointer
+            // to `int` assigned to a pointer to `int *`, and `int x = a;` a
+            // pointer assigned to an integer. Left unanswered, both built
+            // once the lowering read arrays, and the first dereferenced an
+            // `int` as a pointer with nothing said (#621).
+            (Type::Pointer(target_pointee), Type::Array { element, .. }) => Some(
+                self.compatible(ast, *target_pointee, *element)
+                    || matches!(ast.ty(*target_pointee), Type::Void),
+            ),
+            (Type::Int | Type::Char | Type::Struct { .. }, Type::Array { .. }) => Some(false),
             (Type::Void | Type::Array { .. } | Type::Function { .. }, _)
-            | (_, Type::Array { .. } | Type::Function { .. }) => None,
+            | (_, Type::Function { .. }) => None,
             // p1: a structure type compatible with the target's, which two
             // structs are when they are one tag, and nothing else.
             (Type::Struct { .. }, Type::Struct { .. }) => {
-                Some(ast.compatible(target, source, &|a, b| self.resolution.same_struct(a, b)))
+                Some(self.compatible(ast, target, source))
             }
             (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => Some(false),
         }

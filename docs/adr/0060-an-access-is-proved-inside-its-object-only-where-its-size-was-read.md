@@ -295,10 +295,15 @@ Each mutation applied on its own, the workspace run, and the file restored.
   record (`a_char_address_stored_as_void_and_read_through_an_int_alias`,
   `a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back`).
 
-**Held by nothing, and each says why.** `Held::inner_address` and the
-`Unknown` an `Index` in a place gets: no C reaches either, since the lowering
-folds `&*p` and writes `p[i]` as `*(p + i)`, and #621 is where the first
-`Index` is built and has to be guarded.
+**What #621's arrays are held by.** The lowering builds an `Index` only as a
+constant zero under `Rvalue::Address`, to convert a local array to a pointer
+to its first element, and that index leaves `Held::inner_address` clear:
+setting it there turns `an_access_at_the_start_of_a_local_array_says_nothing_of_size`
+`Unknown`. A local array's size is its elements', and answering `None` for it
+does the same. `inner_address` set by anything else, and the `Unknown` an
+`Index` in a dereferenced place gets, are still held by nothing, since no C
+reaches either: an array reached through a pointer converts as a copy of the
+pointer, and `p[i]` is still `*(p + i)`.
 
 ### Consequences
 

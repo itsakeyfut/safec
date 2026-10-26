@@ -1,0 +1,80 @@
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ llvm_ir_of_arrays_and_pointer_arithmetic.c:3:12 ]
+   │
+ 3 │     return *(row + c) + *(row - 1 + c);
+   │            ─────────────┬─────────────  
+   │                         ╰─────────────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ llvm_ir_of_arrays_and_pointer_arithmetic.c:3:12 ]
+   │
+ 3 │     return *(row + c) + *(row - 1 + c);
+   │            ─────────────┬─────────────  
+   │                         ╰─────────────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ llvm_ir_of_arrays_and_pointer_arithmetic.c:7:5 ]
+   │
+ 7 │     m[1][1] = 4;
+   │     ─────┬─────  
+   │          ╰─────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ llvm_ir_of_arrays_and_pointer_arithmetic.c:8:5 ]
+   │
+ 8 │     m[1][2] = 5;
+   │     ─────┬─────  
+   │          ╰─────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0403]: this may dereference a null pointer
+   ╭─[ llvm_ir_of_arrays_and_pointer_arithmetic.c:3:12 ]
+   │
+ 3 │     return *(row + c) + *(row - 1 + c);
+   │            ─────────────┬─────────────  
+   │                         ╰─────────────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+   ╭─[ llvm_ir_of_arrays_and_pointer_arithmetic.c:3:12 ]
+   │
+ 3 │     return *(row + c) + *(row - 1 + c);
+   │            ─────────────┬─────────────  
+   │                         ╰─────────────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+   ╭─[ llvm_ir_of_arrays_and_pointer_arithmetic.c:7:5 ]
+   │
+ 7 │     m[1][1] = 4;
+   │     ─────┬─────  
+   │          ╰─────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+   ╭─[ llvm_ir_of_arrays_and_pointer_arithmetic.c:8:5 ]
+   │
+ 8 │     m[1][2] = 5;
+   │     ─────┬─────  
+   │          ╰─────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

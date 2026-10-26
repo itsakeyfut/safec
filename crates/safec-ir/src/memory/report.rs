@@ -45,8 +45,9 @@ struct Verdict {
 /// One answer for the load and for the report, so that the two cannot disagree
 /// about which places are followed below their first level. A place with an
 /// `Index` in it is an array's element and is not one of them. No program
-/// this compiler accepts tells that apart from following it too, measured: an
-/// array of pointers is refused as `SC0304`. See ADR-0045.
+/// this compiler accepts tells that apart from following it too: the lowering
+/// builds an `Index` only under `Rvalue::Address`, which is no place read
+/// or written, and `a[i]` is `*(a + i)` (#621). See ADR-0045.
 pub(super) fn derefs(place: &Place) -> usize {
     if place
         .projection
@@ -1223,7 +1224,8 @@ pub(super) fn reached_by_library(
 fn pointee_width(analysis: &Allocations<'_>, ty: TyId) -> Option<u64> {
     match analysis.unit.ty(ty) {
         Ty::Pointer(pointee) => Some(analysis.unit.size_of(pointee).unwrap_or(0)),
-        Ty::Int | Ty::Char | Ty::Void => None,
+        // An array is not a pointer, so nothing it points at has a width.
+        Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => None,
     }
 }
 
@@ -1664,7 +1666,7 @@ pub(super) fn slots_leaving(
 fn pointee(analysis: &Allocations<'_>, ty: TyId) -> Option<TyId> {
     match analysis.unit.ty(ty) {
         Ty::Pointer(pointee) => Some(pointee),
-        Ty::Int | Ty::Char | Ty::Void => None,
+        Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => None,
     }
 }
 

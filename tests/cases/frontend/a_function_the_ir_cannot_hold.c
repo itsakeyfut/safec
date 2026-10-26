@@ -1,4 +1,4 @@
-int g(int (*a)[3]);
+int g(int (*a)(int));
 
 int f(void) {
     return 0;

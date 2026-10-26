@@ -228,8 +228,8 @@ pub enum Departure {
     Argument,
     /// Handed back by a `return`.
     Return,
-    /// Written through a projection, into memory through a pointer and,
-    /// once arrays compile, into an element of a local array; or copied into
+    /// Written through a projection, into memory through a pointer and into
+    /// an element of a local array (#621); or copied into
     /// memory by `memcpy` or `memmove`. A later read believes what it finds
     /// there, as it believes a load.
     Store,
@@ -518,7 +518,9 @@ fn analysis<'a>(
             // type added later is asked whether it is exposed.
             .filter(|&local| match unit.ty(function.local(local)) {
                 Ty::Pointer(_) => true,
-                Ty::Int | Ty::Char | Ty::Void => false,
+                // No parameter is an array: C17 6.7.6.3 p7 adjusts it to a
+                // pointer.
+                Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => false,
             })
             .collect(),
         live_in: transfer::live_in(function),

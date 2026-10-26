@@ -167,13 +167,32 @@ pub enum Ty {
     Void,
     /// A pointer to the type this id names.
     Pointer(TyId),
+    /// `length` objects of the type `element` names, one after another,
+    /// which is what C17 6.2.5 p20 makes an array. `length` is never zero:
+    /// the lowering builds one only for a constant length the type check
+    /// gave a positive value, and 6.7.6.2 p1 makes any other constant length
+    /// a constraint violation.
+    ///
+    /// **Never a value.** C reads an array only by converting it to a pointer
+    /// to its first element (6.3.2.1 p3) and gives it no assignment, so no
+    /// operation reads or writes a place of this type whole: the lowering
+    /// converts it where it is used, and the backend refuses a read or a
+    /// write of one.
+    Array {
+        /// The type of each element.
+        element: TyId,
+        /// How many elements there are, which the lowering never makes zero.
+        length: u64,
+    },
 }
 
 /// A step from a local towards the thing an operation means.
 ///
 /// `docs/safety-model.md`'s Place is a local plus however many of these it
 /// takes to reach what is being read or written: `*p` is one [`Deref`], and
-/// `a[i]` is one [`Index`]. A field selector joins them when structs do.
+/// an array's element is one [`Index`], which the lowering builds only as a
+/// constant zero to convert a local array to a pointer to its first element:
+/// `a[i]` is `*(a + i)`. A field selector joins them when structs do.
 ///
 /// [`Ord`] for the reason [`Place`] gives.
 ///
@@ -1431,12 +1450,14 @@ impl TranslationUnit {
         match self.ty(id) {
             Ty::Int => Some(self.target.int()),
             Ty::Char => Some(self.target.char()),
-            Ty::Void | Ty::Pointer(_) => None,
+            // No array is a value, so none is converted or range-checked.
+            Ty::Void | Ty::Pointer(_) | Ty::Array { .. } => None,
         }
     }
 
     /// How many bytes an object of this type takes on this unit's target, or
-    /// `None` for `void`, which is not an object type.
+    /// `None` for `void`, which is not an object type, and for an array too
+    /// large to count in a `u64`.
     ///
     /// What the memory check compares an access with, so that a pointer
     /// written into four bytes is asked about eight where pointers take eight.
@@ -1448,6 +1469,12 @@ impl TranslationUnit {
             Ty::Char => self.target.char().bits(),
             Ty::Pointer(_) => self.target.pointer_bits(),
             Ty::Void => return None,
+            // `length` elements and no padding between them, C17 6.5.3.4 p7.
+            // `None` on overflow, which the memory check reads as an object
+            // it knows nothing of the size of, and so `Unknown`.
+            Ty::Array { element, length } => {
+                return self.size_of(element)?.checked_mul(length);
+            }
         };
         // In C's bytes, which are `char`s (C17 6.5.3.4 p4), so a `char` is
         // one whatever its width.
@@ -1471,9 +1498,11 @@ impl TranslationUnit {
             ty = match (projection, self.ty(ty)) {
                 (Projection::Deref, Ty::Pointer(pointee)) => pointee,
                 (Projection::Deref, _) => return None,
-                // `Index` is never built: `p[i]` lowers as `*(p + i)`, which
-                // `docs/frontend.md` records. An analysis that starts building
-                // one has to answer here.
+                // The element an index selects. The lowering builds one only
+                // as a constant zero under `Rvalue::Address`, the conversion of
+                // a local array to a pointer to its first element; `p[i]` is
+                // still `*(p + i)`. See `docs/c-family.md`.
+                (Projection::Index(_), Ty::Array { element, .. }) => element,
                 (Projection::Index(_), _) => return None,
             };
         }

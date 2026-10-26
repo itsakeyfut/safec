@@ -733,11 +733,13 @@ fn resolve(frames: &[Frame], current: usize, place: &Place) -> Result<Location, 
                     ));
                 }
             },
-            // Nothing builds one: an array is a type the lowering refuses, and
-            // a subscript is lowered as the arithmetic C17 6.5.2.1 p2 defines
-            // it as. Whoever gives the IR arrays gives this an answer.
+            // The lowering builds one only to convert a local array to a
+            // pointer to its first element, and a pointer here is a local with
+            // no element in it, so following one is giving the interpreter
+            // arrays, which is its own change (#621). Refused rather than
+            // read as no step, which would answer the array for its element.
             Projection::Index(_) => {
-                return Err(Trap::new("an index, which nothing builds yet"));
+                return Err(Trap::new("an index, which this does not follow yet"));
             }
         }
     }
@@ -1247,10 +1249,9 @@ mod tests {
 
     /// A projection this cannot follow stops the run.
     ///
-    /// Nothing builds a `Projection::Index`: an array is a type the lowering
-    /// refuses, and a subscript is lowered as the arithmetic C17 6.5.2.1 p2
-    /// defines it as. So the only way to reach this is to build the place by
-    /// hand, which is what the interpreter's caller after #74 will do for real.
+    /// The lowering builds a `Projection::Index` only to convert a local
+    /// array to a pointer to its first element, which this does not follow
+    /// yet (#621). Built here by hand on an `int`, which no lowering builds.
     ///
     /// Mutation: treat an index as no step at all. The read answers what the
     /// local holds, a program that indexed something gets the thing itself, and

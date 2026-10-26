@@ -309,9 +309,12 @@ struct Nullability<'a> {
     /// **"In this IR" is load-bearing and is not a claim about C.** C17 6.3.2.1
     /// p3 converts an array to a pointer to its first element with no `&`
     /// anywhere, so `int a[2]; int *q = a; *q = 0;` names and writes a local
-    /// this scan would call unescaped. `Ty` has no array and the frontend
-    /// refuses one, measured, so there is no such door today; the day there is,
-    /// this is what has to answer for it. A function-scope `static` and a
+    /// this scan would call unescaped. Since #621 the IR has arrays, and the
+    /// lowering writes that conversion as `Rvalue::Address` of the array's
+    /// first element, which is the door this scan reads, so the array is
+    /// escaped here as `&a` would make it. A conversion written any other way
+    /// would be a door this does not see, which is why the lowering's
+    /// `decayed` says so. A function-scope `static` and a
     /// `volatile` local are the same shape and are refused for the same
     /// reason.
     ///
@@ -1244,9 +1247,10 @@ fn own_local(operand: &Operand) -> Option<LocalId> {
 ///
 /// A `Deref` anywhere after the first element, rather than two or more of
 /// them, so that an element selected by an index and then dereferenced counts
-/// too: the pointer an index selects is just as much a load. Nothing builds a
-/// [`Projection::Index`] from C today, so a unit test with IR built by hand is
-/// what holds that half.
+/// too: the pointer an index selects is just as much a load. C builds a
+/// [`Projection::Index`] only under `Rvalue::Address`, a place nothing reads
+/// through (#621), so a unit test with IR built by hand is what holds that
+/// half.
 fn read_out_of_memory(place: &Place) -> bool {
     place
         .projection

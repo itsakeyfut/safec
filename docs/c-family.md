@@ -425,6 +425,23 @@ given a continuation it never takes keeps code no execution reaches in the
 graph, which is a false report, and is what a call to a function of the
 program's own that never returns still costs.
 
+**A ninth arrived with arrays (#621)**: **an array used as a value is a
+pointer to its first element** (C17 6.3.2.1 p3), and a frontend builds that
+conversion in one of two shapes, by where the array is. A local array `a` is
+`Rvalue::Address` of `a` with one `Projection::Index` of a constant zero, which
+the memory check reads as the local's own start and a store through it as a
+may-write, since one element written does not replace the rest. An array
+reached through a pointer `u`, `*u`, is a copy of `u`, since the address of an
+array is the address of its first element. That is the only `Index` a frontend
+builds: `a[i]` is `*(a + i)`, as `p[i]` is (ADR-0021).
+
+**What an omission costs here is a wrong target.** `Rvalue::Address` of a
+place with a `Deref` in it can only put an edge on the place's local, which is
+the pointer and not what it points at, so an array reached through a pointer
+and converted that way has a store into it read as a store into the pointer's
+own local, and a pointer stored there and read back through another
+conversion is not found.
+
 The testable half is smaller and just as useful: **an analysis should be
 runnable over IR built by hand in a test, with no frontend present.** If that
 test can be written, the IR is frontend-independent by construction, and the

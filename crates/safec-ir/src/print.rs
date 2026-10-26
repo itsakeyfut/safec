@@ -395,25 +395,40 @@ fn block_name(index: usize) -> String {
 /// Two spellings of one type is a second thing to keep in agreement, and a
 /// reader moving between `--emit ast` and `--emit safety-ir` reads both.
 fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
-    let mut pointers = 0usize;
     let mut current = ty;
+    let mut inner = String::new();
 
     let base = loop {
         match unit.ty(current) {
             Ty::Int => break "int",
             Ty::Char => break "char",
             Ty::Void => break "void",
+            // In parentheses where what it points at is an array, which binds
+            // more tightly than a pointer (C17 6.7.6 p6): `int (*)[4]` is a
+            // pointer to an array and `int *[4]` an array of pointers.
             Ty::Pointer(pointee) => {
-                pointers += 1;
+                inner = match unit.ty(pointee) {
+                    Ty::Array { .. } => format!("(*{inner})"),
+                    Ty::Int | Ty::Char | Ty::Void | Ty::Pointer(_) => format!("*{inner}"),
+                };
                 current = pointee;
+            }
+            // The length as a number, since the IR holds no other: `int a[1 +
+            // 2]` is `int[1 + 2]` in `--emit ast`, which spells what was
+            // written, and `int[3]` here.
+            Ty::Array { element, length } => {
+                inner = format!("{inner}[{length}]");
+                current = element;
             }
         }
     };
 
-    if pointers == 0 {
-        base.to_owned()
+    // The spacing `ast::spell_type` gives, which is `clang`'s: `int *`,
+    // `int (*)[4]`, and `int[4]` with no space.
+    if inner.is_empty() || inner.starts_with('[') {
+        format!("{base}{inner}")
     } else {
-        format!("{base} {}", "*".repeat(pointers))
+        format!("{base} {inner}")
     }
 }
 

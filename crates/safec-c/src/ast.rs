@@ -1026,17 +1026,17 @@ impl Ast {
     /// answering means walking them: `int *p;` and `int *q;` are two `Pointer`
     /// nodes holding two `Int` nodes, and they are the same type.
     ///
-    /// **An array's length is not compared, and that is a known divergence.**
-    /// 6.7.6.2 p6 makes two array types compatible only if both lengths are
-    /// constant expressions and their values are equal, and this compares
-    /// types alone, not the values `types.rs` gives a constant expression:
-    /// `array_length_is_not_evaluated` in the
-    /// corpus is a case that says so by name. So `int[2]` and `int[3]` answer
-    /// "compatible", which is a thing this compiler fails to notice rather
-    /// than a thing it says wrongly: `int (*p)[3]; int a[2]; p = &a;` is
-    /// accepted here and rejected by `clang`. `types.rs` reaches this through
-    /// a pointer's pointee, so the missed report is live rather than waiting
-    /// for a later issue.
+    /// **An array's length is not compared here.** 6.7.6.2 p6 makes two
+    /// array types compatible only if both lengths are constant expressions
+    /// and their values are equal, and this compares types alone, not the
+    /// values `types.rs` gives a constant expression:
+    /// `array_length_is_not_evaluated` in the corpus is a case that says so
+    /// by name. So `int[2]` and `int[3]` answer "compatible" here, and
+    /// `types.rs`'s `Checker::compatible` is what compares the lengths
+    /// wherever a program is type-checked, so `int (*p)[3]; int a[2]; p =
+    /// &a;` is refused as `clang` refuses it (#621). What still answers
+    /// without the lengths is `sema.rs`'s comparison of two declarations of
+    /// one name, which runs before any value exists.
     ///
     /// Recursion, bounded the way `parser.rs::apply` bounds a declarator's
     /// derivations, so a type is at most `MAX_NESTING` deep. The nesting a
