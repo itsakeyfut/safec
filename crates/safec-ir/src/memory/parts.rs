@@ -845,6 +845,12 @@ pub(super) struct Held {
 
 /// The lower of two bounds, where `None` is no bound: a side that bounds
 /// nothing does not loosen one that does. See [`Held::contents_at_most`].
+///
+/// Mutation: answer `None` where one side has no bound; eight cases in
+/// `tests/cases/bounds/` go silent, among them
+/// `a_void_pointer_to_pointer_parameter_read_through_an_int_alias_is_asked`,
+/// since a null test joins the path that bounds with one that holds
+/// nothing.
 pub(super) fn bounded(here: Option<u64>, there: Option<u64>) -> Option<u64> {
     match (here, there) {
         (Some(here), Some(there)) => Some(here.min(there)),
