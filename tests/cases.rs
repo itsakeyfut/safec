@@ -270,6 +270,12 @@ cases! {
         // Mutation: `Known::replaced` clears no local, which is the door a
         // store this check cannot place goes through; this is reported.
         a_local_written_through_two_dereferences_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An array holds its elements, so a store this check cannot place
+        // writes it where the type stored is its element's. Mutation:
+        // `replaced_by` compares the type stored with the local's own type;
+        // both are reported.
+        a_local_array_written_through_a_pointer_read_out_of_memory_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_array_filled_backwards_through_a_moved_pointer_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `aligned_alloc`'s contents are indeterminate too (C17 7.22.3.1 p2).
         // Mutation: drop it from `leaves_indeterminate`. It builds.
         a_pointer_read_out_of_memory_aligned_alloc_made_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

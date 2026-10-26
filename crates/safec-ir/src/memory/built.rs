@@ -7,6 +7,7 @@ use crate::ir::{BinOp, Function, LocalId, Operand, Place, TranslationUnit, Ty};
 use super::derefs;
 use super::known::Known;
 use super::parts::{Held, Offset, Reached};
+use super::transfer::innermost_element;
 
 /// What the operands of a binary operation build.
 ///
@@ -253,9 +254,16 @@ pub(super) fn replaced_by(
     // A row of bytes per local, against a value that is already square in
     // them, because the predicate is asked per index and `LocalId` cannot be
     // built from one.
+    //
+    // **An array holds its elements**, so `*p = &x;` with `p` an `int **`
+    // may land in an `int *m[1]`: compared against the local's own type, the
+    // array was believed unwritten after it, and a read of `m[0]` was reported
+    // as indeterminate (#640).
     let may_hold: Vec<bool> = function
         .locals()
-        .map(|local| everything || written_ty == Some(function.local(local)))
+        .map(|local| {
+            everything || written_ty == Some(innermost_element(unit, function.local(local)))
+        })
         .collect();
 
     value.replaced(|local| may_hold[local]);
