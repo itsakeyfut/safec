@@ -102,7 +102,10 @@ keeps the result of `p + 1` inside the object `p` points into, which is why the
 *allocation* travels through the arithmetic arm. A local's address plus one is
 not that local, so the edge does not: `pp[1] = q;` is an out of bounds write,
 and following it reported a proved use after free about an allocation nothing
-had freed.
+had freed. A local that is an array is the one exception, since `m + 1` is its
+second element, and the edge is dropped there too, so a pointer stored through
+`m[1]` and freed is `Unknown` where it is stored and read back rather than
+named as freed where it is used (#621, #639).
 
 **Where the offset may be zero, the edge survives.** The same paragraph treats a
 local as an array of one, so `&slot + n` may be dereferenced only for `n` of
