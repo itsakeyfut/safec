@@ -63,7 +63,7 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve_within};
 use crate::ir::{
-    Between, Element, FuncId, LocalId, Operand, Place, Projection, Rvalue, Terminator,
+    Between, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
     TranslationUnit, Ty,
 };
 use crate::nullability::{self};
@@ -250,12 +250,38 @@ pub enum Departure {
 /// by review.
 const LINEAR: usize = 1024;
 
+/// How many bytes each level of a [`Levels`](parts::Levels) a local may
+/// carry adds to one block's value: two lists a local, what its value
+/// believes of its memory and what was stored in it as a site, of one
+/// `Option<u64>` a level, which takes 16 bytes. Read off the layout rather
+/// than fitted, since [`LINEAR`] was fitted before the lists existed: a
+/// function at the parser's 256 `*`s takes about 8 KB a local more than
+/// [`LINEAR`] counts, and ran to about twice the memory that bound allows
+/// with nothing printed. Found by review (#634).
+const PER_LEVEL: usize = 32;
+
 /// About how many bytes one block's value takes in a function of this many
-/// locals.
+/// locals, whose deepest pointer type is `depth` `*`s deep.
 ///
 /// Mutation: leave out [`LINEAR`]. Both tests of a function past a bound fail.
-fn per_block(locals: usize) -> usize {
-    locals.saturating_mul(locals.saturating_add(LINEAR))
+/// Mutation: leave out [`PER_LEVEL`].
+/// `a_function_whose_lists_are_too_large_is_unknown_and_not_read` fails.
+fn per_block(locals: usize, depth: usize) -> usize {
+    let per_local = locals
+        .saturating_add(LINEAR)
+        .saturating_add(PER_LEVEL.saturating_mul(depth));
+    locals.saturating_mul(per_local)
+}
+
+/// How many `*`s deep the deepest pointer type among `function`'s locals
+/// is, which is as long as a [`Levels`](parts::Levels) in it gets. One
+/// answer for the analysis and for the bound on its size.
+fn deepest_pointer(unit: &TranslationUnit, function: &Function) -> usize {
+    function
+        .locals()
+        .map(|local| transfer::pointer_depth(unit, function.local(local)))
+        .max()
+        .unwrap_or(0)
 }
 
 /// How many walks times [`per_block`] this check does in one function.
@@ -483,11 +509,7 @@ fn analysis<'a>(
         unit,
         function: func,
         locals: function.locals().len(),
-        depth: function
-            .locals()
-            .map(|local| transfer::pointer_depth(unit, function.local(local)))
-            .max()
-            .unwrap_or(0),
+        depth: deepest_pointer(unit, function),
         parameters: function.parameters().collect(),
         exposed_parameters: function
             .parameters()
@@ -526,7 +548,11 @@ fn findings_within(
         }
 
         let locals = function.locals().len();
-        let bytes = function.blocks().len().saturating_mul(per_block(locals));
+        let depth = deepest_pointer(unit, function);
+        let bytes = function
+            .blocks()
+            .len()
+            .saturating_mul(per_block(locals, depth));
         if bytes > max_bytes {
             findings.push(Finding {
                 function: func,
@@ -551,7 +577,7 @@ fn findings_within(
         // returns, and locals are only ever added, so `per_block` is at least
         // 1,025. A function with no locals would be a division by zero here,
         // which panics and names itself.
-        let walk = u64::try_from(per_block(locals)).unwrap_or(u64::MAX);
+        let walk = u64::try_from(per_block(locals, depth)).unwrap_or(u64::MAX);
         let max_walks = usize::try_from(max_work / walk).unwrap_or(usize::MAX);
         let Some(solution) = solve_within(&analysis, function, &cfg, max_walks) else {
             findings.push(Finding {
@@ -1051,6 +1077,12 @@ mod tests {
     /// A unit holding one function of ten locals and three blocks: 31,020 by
     /// [`per_block`].
     fn ten_by_three() -> (SourceMap, TranslationUnit) {
+        ten_by_three_deep(0)
+    }
+
+    /// The same, with its last local a pointer `depth` `*`s deep, which
+    /// [`per_block`] counts `PER_LEVEL` a level a local for.
+    fn ten_by_three_deep(depth: usize) -> (SourceMap, TranslationUnit) {
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", "f");
         let mut unit = TranslationUnit::new(
@@ -1058,10 +1090,16 @@ mod tests {
         );
         let int = unit.push_type(Ty::Int);
         let mut function = Function::new(Span::new(file, 0, 1), int, []);
-        // Nine, beside the one `Function::new` makes for what it returns.
-        for _ in 0..9 {
+        // Eight, beside the one `Function::new` makes for what it returns
+        // and the last, below.
+        for _ in 0..8 {
             function.push_local(int);
         }
+        let mut deep = int;
+        for _ in 0..depth {
+            deep = unit.push_type(Ty::Pointer(deep));
+        }
+        function.push_local(deep);
         let blocks: Vec<_> = (0..3).map(|_| function.reserve_block()).collect();
         for pair in blocks.windows(2) {
             function.fill_block(
@@ -1120,12 +1158,33 @@ mod tests {
         );
     }
 
+    /// The lists a local's levels take count toward the bound: ten locals,
+    /// one of them three `*`s deep, are `10 * (10 + LINEAR + 3 * PER_LEVEL)`
+    /// a block, so three blocks are 33,900, past a bound the same function
+    /// with no pointer in it is read under.
+    ///
+    /// Mutation: leave out [`PER_LEVEL`]. This is read.
+    #[test]
+    fn a_function_whose_lists_are_too_large_is_unknown_and_not_read() {
+        let (sources, unit) = ten_by_three_deep(3);
+        let findings = findings_within(&sources, &unit, 33_899, MAX_WORK);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(
+            findings[0].kind,
+            Kind::TooLarge {
+                bytes: 33_900,
+                max: 33_899
+            }
+        );
+    }
+
     /// The bounds, written out, so that moving one is a decision a test sees.
     ///
     /// Mutation: change either constant. This fails.
     #[test]
     fn the_bounds_are_two_to_the_thirtieth_and_thirty_second_over_1024_a_local() {
         assert_eq!(LINEAR, 1024);
+        assert_eq!(PER_LEVEL, 32);
         assert_eq!(MAX_BYTES, 1_073_741_824);
         assert_eq!(MAX_WORK, 4_294_967_296);
     }

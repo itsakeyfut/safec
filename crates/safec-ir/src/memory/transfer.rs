@@ -1059,6 +1059,16 @@ impl Analysis for Allocations<'_> {
         // local that a join only sets, the last `locals`. What a local's
         // value is believed to point at, `Held::believed`, is a proof a join
         // only lowers or drops, and the slack above covers it. See ADR-0060.
+        //
+        // **What a local's value believes of its memory and what was stored in
+        // a site, one [`Levels`] each, are a list of [`Self::depth`] entries
+        // apiece**, and a join only lowers an entry: from no bound to a
+        // width, and from a width to a smaller one. Every width is a type's
+        // size or `0`, so at most one per local and one more, and the list
+        // may also grow to its full length once, which changes no bound but
+        // is a step to `Eq`: `locals + 2` steps an entry, two lists a local.
+        // Found by review, which measured a loop head visited 255 times at
+        // 256 `*`s where the bound had not counted these (#634).
         let positions: usize = function
             .blocks()
             .map(|block| block.elements.len() + 1)
@@ -1076,6 +1086,7 @@ impl Analysis for Allocations<'_> {
             + positions * (2 * locals + 3)
             + locals
             + locals * (positions + locals + 2)
+            + 2 * locals * self.depth * (locals + 2)
     }
 
     fn on_entry(&self) -> Self::Value {
