@@ -88,6 +88,11 @@ function returned, and 7.22.3 requires every such allocation to be disjoint from
 every other object. Neither function is ever handed `&p`, so neither can write
 through it. That is the whole reason this check reads a callee's name.
 
+A call this check cannot read reaches every escaped local for `lost` and
+`foreign`, which is what this record decides. Whether such a call may have
+*written* a local, which clears `Known::unwritten`, is narrower and is
+ADR-0057's: only the locals the call may reach (#643).
+
 ### Confirmation
 
 `a_call_this_check_cannot_read_may_have_replaced_what_an_escaped_local_holds`

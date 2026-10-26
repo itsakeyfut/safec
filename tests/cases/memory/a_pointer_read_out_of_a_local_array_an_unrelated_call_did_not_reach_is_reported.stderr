@@ -1,0 +1,10 @@
+error[SC0411]: `*p` is read before anything was assigned to it
+   ╭─[ a_pointer_read_out_of_a_local_array_an_unrelated_call_did_not_reach_is_reported.c:7:10 ]
+   │
+ 7 │     int *q = *p;
+   │          ───┬──  
+   │             ╰──── read here
+───╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = help: assign to it before reading it

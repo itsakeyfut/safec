@@ -288,6 +288,59 @@ cases! {
         // both are reported.
         a_local_array_written_through_a_pointer_read_out_of_memory_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_array_filled_backwards_through_a_moved_pointer_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call writes only the locals it may reach, `Known::exposed_locals`
+        // (#643). See ADR-0057.
+        //
+        // Mutation: an opaque call passes `|_| true` as `may_write`; this
+        // goes silent.
+        a_pointer_read_out_of_a_local_array_an_unrelated_call_did_not_reach_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a library copy passes `|_| true` as `may_write`; this
+        // goes silent.
+        a_pointer_read_out_of_a_local_array_a_copy_elsewhere_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the opaque arm skips `written_through` for a plain
+        // argument; this is reported.
+        a_local_array_handed_to_a_call_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `expose_locals` is asked before `expose` at the call,
+        // so what it was handed is not yet reachable; this is reported.
+        a_local_array_stored_in_memory_a_call_was_handed_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the walk does not step through what a local holds;
+        // this is reported.
+        a_local_array_reached_through_a_local_a_call_was_handed_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the locals already exposed are not a seed of the walk;
+        // this is reported.
+        a_local_array_put_in_a_local_an_earlier_call_kept_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An address placed in memory that only memory already handed over
+        // reaches, rather than in that memory itself. Mutation: the walk
+        // does not start from `reachable_now()`; this is reported.
+        a_local_array_stored_in_memory_reached_from_memory_already_handed_away_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `exposed_locals` joined by intersection; this is
+        // reported.
+        a_local_array_put_in_a_local_a_call_kept_on_one_arm_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An address stored through a pointer this check cannot place,
+        // which records it in every allocation such code can reach.
+        // Mutation: the walk does not start from `reachable_now()`; this is
+        // reported.
+        a_local_array_stored_where_this_check_cannot_place_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the opaque arm skips `levels_below` for an argument
+        // read through a dereference; this is reported.
+        a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `StorageLive` leaves `exposed_locals` alone; the second
+        // turn's read goes silent.
+        a_pointer_read_out_of_a_local_array_made_again_after_a_call_kept_the_old_one_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a library copy whose first argument is a dereference
+        // writes every escaped local; this goes silent.
+        a_pointer_read_out_of_a_local_array_a_copy_through_a_dereference_elsewhere_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a library copy whose first argument is a dereference
+        // writes no local; this is reported.
+        a_local_array_copied_into_through_a_dereference_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A false report, kept on purpose.** `d` points at `m[0]` (C17
+        // 6.5.6 p8), but arithmetic drops its edge (#639), so the call is
+        // taken to write no local and the read of `m[0]` is `SC0411`.
+        // Widening an argument that names no local to every escaped local
+        // would silence the read beside any such call. See ADR-0057.
+        // Mutation: an argument naming no local writes every escaped local;
+        // the `SC0411` goes.
+        a_local_array_handed_to_a_call_through_a_pointer_moved_back_onto_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `aligned_alloc`'s contents are indeterminate too (C17 7.22.3.1 p2).
         // Mutation: drop it from `leaves_indeterminate`. It builds.
         a_pointer_read_out_of_memory_aligned_alloc_made_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

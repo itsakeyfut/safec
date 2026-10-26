@@ -1187,6 +1187,8 @@ impl Analysis for Allocations<'_> {
             // Every local that may hold a pointer, but the parameters, which
             // the caller wrote. See `Known::unwritten`.
             unwritten: self.unwritten_at_entry(),
+            // No call has been handed anything yet.
+            exposed_locals: vec![false; self.locals],
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -1265,11 +1267,17 @@ impl Analysis for Allocations<'_> {
             stored_at_most,
             handed_at_most,
             unwritten,
+            exposed_locals,
         } = into;
         // A proof, so an intersection, as `fresh` is: unwritten only where
         // no path wrote it.
         for (here, there) in unwritten.iter_mut().zip(&from.unwritten) {
             *here = *here && *there;
+        }
+        // A may-fact, so a union, as `exposed` is: a call on one arm may
+        // have kept the address. See `Known::exposed_locals`.
+        for (here, there) in exposed_locals.iter_mut().zip(&from.exposed_locals) {
+            *here = *here || *there;
         }
         // Bounds, so the lower of two, and a side with none is no bound.
         for (here, there) in stored_at_most.iter_mut().zip(&from.stored_at_most) {
@@ -2093,6 +2101,13 @@ impl Analysis for Allocations<'_> {
                 if self.holds_a_pointer(function.local(*local)) {
                     value.unwritten[local.index()] = true;
                 }
+                // **And no call holds its address yet**: one kept from an
+                // earlier lifetime became indeterminate when that one ended
+                // (C17 6.2.4 p2), so a call is no longer a write of it. Kept
+                // across, `stash(m)` in one turn of a loop made `tick()` in
+                // the next a write of a new `m`, and a read nothing wrote was
+                // silent. See `Known::exposed_locals`.
+                value.exposed_locals[local.index()] = false;
             }
             Element::StorageDead { origin: _, local } => value.clear(*local),
         }
@@ -2613,7 +2628,62 @@ impl Analysis for Allocations<'_> {
                 // allocations are no longer fresh. See `Known::fresh`.
                 let reach = self.reach(function, handed, sites(), value);
                 value.expose(self.sources, reach, Some(origin.span()));
-                value.replaced(|_| true);
+                // **It writes only through its first argument** (C17 7.24.2
+                // to 7.24.6 each say what is written, and it is that one), so
+                // a local is written where that argument may be its address:
+                // the locals its address edges name, or, for a place of
+                // dereferences, `memcpy(*pp, s, 8)`, the locals the level
+                // above may be, as the opaque arm below reads an argument.
+                // `memcpy(&a, &b, 4)` cleared every local array's mark, and so
+                // did `memcpy(*pa, &b, 4)` (#643). Every escaped local where
+                // the argument is rooted in a pointer this check lost or a
+                // caller wrote, as `replaced_by` answers for a store it cannot
+                // place. It keeps nothing, so it exposes no local. See
+                // `Known::unwritten`.
+                //
+                // **An argument naming no local writes none**, which is not
+                // what the store door says of the same pointer: a pointer
+                // moved off an array by arithmetic has lost its edge (#639),
+                // and `memcpy(&m[1] - 1, s, 8)` then leaves `m[0]` reported
+                // as nothing wrote it. That is a report the reader sees, and
+                // widening it would silence every local array beside such a
+                // copy. See ADR-0057.
+                let written: Option<Vec<usize>> = match arguments.first() {
+                    Some(Operand::Copy(dest))
+                        if dest
+                            .projection
+                            .iter()
+                            .all(|step| matches!(step, Projection::Deref)) =>
+                    {
+                        let to = &value.points_to[dest.local.index()];
+                        // No case tells `loaded` here from a placed pointer,
+                        // measured: a pointer read out of memory carries the
+                        // address edges a store left there, so in every
+                        // program the corpus has, its edges already name the
+                        // local.
+                        if to.loaded || to.lost || to.foreign {
+                            None
+                        } else if dest.projection.is_empty() {
+                            Some(value.written_through(dest.local))
+                        } else {
+                            Some(
+                                value
+                                    .levels_below(dest.local, derefs(dest))
+                                    .1
+                                    .into_iter()
+                                    .collect(),
+                            )
+                        }
+                    }
+                    // A constant writes nothing anyone can read back, and no
+                    // other place reaches a call's argument from C.
+                    _ => None,
+                };
+                let mut may_write = vec![written.is_none(); value.unwritten.len()];
+                for local in written.into_iter().flatten() {
+                    may_write[local] = true;
+                }
+                value.replaced(|_| true, |local| may_write[local]);
             }
             Callee::Opaque => {
                 // **What the caller stored is out of sight from here on**, as
@@ -2712,7 +2782,44 @@ impl Analysis for Allocations<'_> {
                 // read, so there is nothing here to narrow by. Narrowing this
                 // one would need an annotation saying what a callee writes,
                 // and `_Nonnull` is not one.
-                value.replaced(|_| true);
+                //
+                // **Written, though, only where it can reach**: the locals
+                // whose address it was handed, what it can find from there and
+                // from everything handed over before, which
+                // `Known::expose_locals` walks. `lost` and `foreign` stay on
+                // every escaped local, since a route missed there is a free in
+                // silence; a route missed here is a report. `int **p = m;
+                // tick(); q = *p;` read `m` in silence (#643). See ADR-0057.
+                //
+                // **No case holds `lost` and `foreign` wider than this set**,
+                // measured: giving them the walk's answer as well leaves the
+                // whole suite green, since every route the corpus has is one
+                // the walk finds. They stay wide because a route it misses
+                // would cost a free nobody is told about, not because a case
+                // says so.
+                //
+                // **What an argument may be the address of**: the locals its
+                // address edges name, which `written_through` answers for a
+                // plain local, or, for a place of dereferences, the locals the
+                // level above may be. **An argument naming none hands none**:
+                // a pointer moved off an array by arithmetic has lost its edge
+                // (#639), and one this check lost reads as nothing below it,
+                // so `fill(&m[1] - 1)` leaves `m[0]` reported as nothing wrote
+                // it. That is a report the reader sees, and widening it would
+                // silence every local beside such a call. See ADR-0057.
+                let mut handed_locals: Vec<usize> = Vec::new();
+                for argument in handed {
+                    if let Operand::Copy(place) = argument {
+                        if place.projection.is_empty() {
+                            handed_locals.extend(value.written_through(place.local));
+                        } else {
+                            handed_locals.extend(value.levels_below(place.local, derefs(place)).1);
+                        }
+                    }
+                }
+                value.expose_locals(handed_locals);
+                let may_write = value.exposed_locals.clone();
+                value.replaced(|_| true, |local| may_write[local]);
                 // **And as what each local it reaches was handed**, which is
                 // the most its body can be asked to have written there: a
                 // local reached as a `void *` takes a `void *` store, asked

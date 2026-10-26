@@ -266,7 +266,9 @@ pub(super) fn replaced_by(
         })
         .collect();
 
-    value.replaced(|local| may_hold[local]);
+    // What it may hold it may have written: a store is a write of what it
+    // stores, wherever it lands. See `Known::unwritten`.
+    value.replaced(|local| may_hold[local], |local| may_hold[local]);
 }
 
 /// The sites out of everything a place or an argument reached.
