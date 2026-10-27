@@ -353,6 +353,14 @@ cases! {
         // followed (#639). Mutation: `leaves` takes a pointer naming nothing
         // to land nowhere; this loses its `SC0414`.
         a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `leaves` does not ask `through_unnamed`; these two lose
+        // their `SC0414`.
+        a_freed_pointer_stored_two_levels_below_a_parameter_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_freed_pointer_stored_through_a_pointer_read_out_of_a_parameter_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What a parameter's memory held is a pointer this check lost, and
+        // the words say so. Mutation: word the lost row as a freed one; this
+        // fails.
+        a_pointer_read_out_of_a_parameter_freed_and_stored_back_is_reported_as_one_this_check_lost: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call writes only the locals it may reach, `Known::exposed_locals`
         // (#643). See ADR-0057.
         //

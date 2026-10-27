@@ -106,12 +106,29 @@ allocation code this check cannot read can reach, a parameter's memory
 included (ADR-0040), in a local whose address such code holds
 (`Known::exposed_locals`), or anywhere, where the pointer or a level on the way
 down may hold an address this function never recorded
-(`Known::through_unnamed`). A store into memory only this function reads is
-not asked, for the reason a copy into a local is not: a load of it carries
-what it held. It has a code of its own because what to change is what is
-stored, and because code that is not a caller may read it. A live pointer
-stored and freed after is not this rule, since the store is of what was live as
-it ran; that is #650.
+(`Known::through_unnamed`) or where the pointer names nothing this check
+followed, as one moved off an array by arithmetic does (#639). A write of such
+a local without a pointer, `keep(&slot); slot = x;`, is the same store and is
+asked the same way. A store into memory only this function reads is not asked
+there, since a load of it carries what it held; **what that memory holds is
+not asked if the memory then leaves**, by a return or a store of its address,
+which is #651. A library copy out of the function is the doubt `SC0407` raises
+rather than this proof, which is #652. It has a code of its own because what
+to change is what is stored, and because code that is not a caller may read
+it. A live pointer stored and freed after is not this rule, since the store is
+of what was live as it ran; that is #650.
+
+**What it costs is what a return costs, and the store door has more
+callers.** Asked as a return is, a store doubts what it cannot prove live, so
+a pointer a call this check cannot read returned, stored out after a second
+such call, is refused as unproven with no free in the function at all:
+`keep(a) + (holder = a, 0)` with `holder`'s address kept, which built before,
+now does not without `--allow-unknown`. That was accepted rather than taking
+proofs only, for the reason this record gives for a return: proofs only leaves
+silent every pointer that may have been freed. The proof itself rests on Annex
+J.2, as ADR-0057 does, which lists using a pointer to an object whose
+lifetime has ended (C17 6.2.4 p2) as undefined: the store uses the value
+whether or not anything reads it back.
 
 ### Confirmation
 
@@ -127,6 +144,13 @@ and `memory/`), applied and measured, and a named case in
   `a_freed_pointer_stored_through_a_pointer_to_a_local_a_call_kept_is_reported`,
   and every store leaving fails
   `a_freed_pointer_stored_in_memory_only_this_function_reads_is_not_reported_where_it_is_stored`.
+  Leaving `through_unnamed` out fails
+  `a_freed_pointer_stored_two_levels_below_a_parameter_is_reported` and
+  `a_freed_pointer_stored_through_a_pointer_read_out_of_a_parameter_is_reported`;
+  taking a pointer that names nothing to land nowhere fails
+  `a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported`;
+  and not asking a write of an exposed local fails
+  `a_freed_pointer_written_into_a_local_a_call_kept_is_reported`.
 * Not calling `returned` fails `a_function_that_returns_what_it_freed`,
   `a_return_after_a_free_on_one_arm_only`, `a_parameter_freed_and_returned`,
   `an_escaped_local_freed_and_returned` and

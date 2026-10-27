@@ -1,0 +1,34 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_read_out_of_a_parameter_freed_and_stored_back_is_reported_as_one_this_check_lost.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_read_out_of_a_parameter_freed_and_stored_back_is_reported_as_one_this_check_lost.c:2:6 "put"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter _Nonnull "pp"
+  Local "_2" "int **" parameter _Nonnull "src"
+  Local "_3" "int *" "x"
+  Local "_4" "int *"
+  Block "bb0" entry
+    Operation a_pointer_read_out_of_a_parameter_freed_and_stored_back_is_reported_as_one_this_check_lost.c:2:58 written
+      Destination "_3"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_pointer_read_out_of_a_parameter_freed_and_stored_back_is_reported_as_one_this_check_lost.c:2:62 generated
+    ArgumentsEvaluated a_pointer_read_out_of_a_parameter_freed_and_stored_back_is_reported_as_one_this_check_lost.c:2:68 generated
+    Call a_pointer_read_out_of_a_parameter_freed_and_stored_back_is_reported_as_one_this_check_lost.c:2:68 written "free" "bb1"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_pointer_read_out_of_a_parameter_freed_and_stored_back_is_reported_as_one_this_check_lost.c:2:68 generated
+    Operation a_pointer_read_out_of_a_parameter_freed_and_stored_back_is_reported_as_one_this_check_lost.c:2:77 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_pointer_read_out_of_a_parameter_freed_and_stored_back_is_reported_as_one_this_check_lost.c:2:77 written
+      Destination "_4"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_read_out_of_a_parameter_freed_and_stored_back_is_reported_as_one_this_check_lost.c:2:77 generated
+    Return

@@ -110,8 +110,8 @@ pub enum Kind {
     /// The other door a pointer leaves by: a store into memory a caller,
     /// or code this check cannot read, may read it from, believed live
     /// there as a call's result is. A store into memory only this function
-    /// reads stays in sight, and is asked where it is read back. See
-    /// ADR-0041.
+    /// reads is asked where it is read back, not where it is stored, and not
+    /// at all if that memory leaves later (#651). See ADR-0041.
     StoreAfterFree,
     /// `free(p); g(p);`
     ///

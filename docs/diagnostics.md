@@ -259,9 +259,10 @@ is the decision and records what it costs.
 stored where code outside the function may read it, a caller through a
 parameter or code this check cannot read through memory it was handed, is
 believed live there as a call's result is, so the store is asked what a return
-is asked. A store into memory only the function itself reads back is not, since
-the read back is. It is a code of its own because what to change is what is
-stored, and the reader of it need not be a caller. The same ADR records it.
+is asked, and doubts what it cannot prove live as a return does. A store into
+memory only the function itself reads back is not, since the read back is. It
+is a code of its own because what to change is what is stored, and the reader
+of it need not be a caller. The same ADR records it and what it costs.
 
 **`SC0407` is the other read without a dereference, and the same belief
 arriving by the other door.** A function's body believes its pointer

@@ -115,10 +115,10 @@ const HANDED_ON_NARROW: Code = Code::new("SC0413");
 /// function may read it.
 ///
 /// Not `RETURN_AFTER_FREE`'s, though it is the same belief: what to change is
-/// what is stored, and the store may be read by a caller or by code this
-/// check cannot read alike, neither of which a return is handed to. See
-/// ADR-0041.
-const STORED_AFTER_FREE: Code = Code::new("SC0414");
+/// what is stored rather than what is returned, and what reads it need not be
+/// a caller, since memory handed to code this check cannot read is read
+/// there as well. See ADR-0041.
+const STORE_AFTER_FREE: Code = Code::new("SC0414");
 
 /// What to change where this check stopped following a pointer and cannot
 /// say why: `LostReason::Other`.
@@ -510,7 +510,7 @@ pub(super) fn memory_finding(
             DISAGREEMENT_REMEDY,
         ),
         (Kind::StoreAfterFree, Conclusion::Unsafe, _) => (
-            STORED_AFTER_FREE,
+            STORE_AFTER_FREE,
             said(
                 name,
                 "this stores a pointer to an allocation that was freed where code outside this function may read it",
@@ -526,7 +526,7 @@ pub(super) fn memory_finding(
         (Kind::StoreAfterFree, Conclusion::Unknown, Some(Unproven::Lost(reason))) => {
             let (label, remedy) = lost_words(reason);
             (
-                STORED_AFTER_FREE,
+                STORE_AFTER_FREE,
                 said(
                     name,
                     "this stores a pointer this check stopped following where code outside this function may read it",
@@ -541,9 +541,13 @@ pub(super) fn memory_finding(
             )
         }
         // `Unsequenced` cannot arrive, because `memory::report::verdict`
-        // answers that a store is asked of what it held as it ran, and
-        // `Offset` cannot because only `memory::report::interior` builds it.
-        // Named rather than taken by `_`, as the return's rows are.
+        // answers that a store is asked of what it held as it ran; `Offset`
+        // cannot, because only `memory::report::interior` builds it; and
+        // `Extent` cannot, because only the size checks build it.
+        // `Disagreement` and no reason are the paths this row is for: a
+        // pointer that may hold a freed allocation on one path and a live one
+        // on another. Named rather than taken by `_`, as the return's rows
+        // are.
         (
             Kind::StoreAfterFree,
             Conclusion::Unknown,
@@ -555,7 +559,7 @@ pub(super) fn memory_finding(
             )
             | None,
         ) => (
-            STORED_AFTER_FREE,
+            STORE_AFTER_FREE,
             said(
                 name,
                 "this stores a pointer that may point to a freed allocation where code outside this function may read it",
