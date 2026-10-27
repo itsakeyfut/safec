@@ -1,0 +1,121 @@
+Target "x86_64-pc-windows-msvc"
+Function a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:6 "put"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter _Nonnull "pp"
+  Local "_2" "int *" "x"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "int *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:41 generated
+    Call a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:41 written "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:37 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:41 generated
+    Operation a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:56 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:56 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:56 generated
+    Return
+  Block "bb3"
+    Sequenced a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:56 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:76 written
+      Destination "_2"
+        Deref
+      Use
+        Constant 1
+    Operation a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:76 written
+      Destination "_5"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:76 generated
+    Operation a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:84 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_2"
+    Operation a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:84 written
+      Destination "_6"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:84 generated
+    Return
+Function a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:3:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *[1]" "m"
+  Local "_2" "int **"
+  Local "_3" "int *" "q"
+  Local "_4" "int **"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:3:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:5:9 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:5:5 generated
+    Call a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:5:5 written "put" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:5:5 generated
+    Operation a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:6:14 generated
+      Destination "_4"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:6:10 written
+      Destination "_3"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:6:14 generated
+    Operation a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:7:9 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:7:9 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:7:9 generated
+    Operation a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:7:19 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:7:26 generated
+    Return
+  Block "bb3"
+    Sequenced a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:7:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:8:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:8:12 generated
+    Return

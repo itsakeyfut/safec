@@ -2133,4 +2133,24 @@ mod unassigned {
             "{notes:?}"
         );
     }
+
+    /// A freed pointer stored where code outside the function may read it is
+    /// `SC0414`, in words that say where it was stored, as a proof and as a
+    /// doubt. Mutation: give it `SC0406`'s code, or word it as a return.
+    /// This fails.
+    #[test]
+    fn a_freed_pointer_stored_where_a_caller_reads_it_is_sc0414_in_its_own_words() {
+        let (code, message, _) = said(Kind::StoreAfterFree, Conclusion::Unsafe);
+        assert_eq!(code, "SC0414");
+        assert_eq!(
+            message,
+            "this stores `p` where code outside this function may read it, and it points to an allocation that was freed"
+        );
+        let (code, message, _) = said(Kind::StoreAfterFree, Conclusion::Unknown);
+        assert_eq!(code, "SC0414");
+        assert_eq!(
+            message,
+            "this stores `p` where code outside this function may read it, and it may point to a freed allocation"
+        );
+    }
 }

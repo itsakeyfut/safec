@@ -328,6 +328,24 @@ cases! {
         // `Unknown`. See ADR-0057. Mutation: a pointer naming no local lands
         // in every escaped local; the `SC0411` goes and `SC0401` returns.
         a_double_free_through_an_array_filled_backwards_is_reported_as_a_read_nothing_wrote: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer stored where code outside this function may read it is
+        // asked at the store, as a return is (#641). See ADR-0041.
+        //
+        // Mutation: `stored_away` is not called; these two go silent.
+        a_freed_pointer_a_callee_stores_through_its_parameter_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_freed_pointer_a_callee_stores_through_a_pointer_to_a_local_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a store of a pointer this check followed is asked as a
+        // doubt whatever it holds; this is reported.
+        a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `leaves` does not ask `reachable_now()`; this loses its
+        // `SC0414`.
+        a_freed_pointer_stored_in_memory_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `leaves` does not ask `exposed_locals`; this loses its
+        // `SC0414`.
+        a_freed_pointer_stored_through_a_pointer_to_a_local_a_call_kept_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Stays in sight: the read back is what is asked. Mutation: every
+        // store leaves; this gains an `SC0414`.
+        a_freed_pointer_stored_in_memory_only_this_function_reads_is_not_reported_where_it_is_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call writes only the locals it may reach, `Known::exposed_locals`
         // (#643). See ADR-0057.
         //
