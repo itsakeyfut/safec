@@ -251,7 +251,9 @@ allocation the returned pointer may hold, a parameter's included, as a
 dereference of it would be, so a pointer returned after a call this check
 cannot read, or after its address was taken, is refused as unproven with no
 free in the function at all. The fix is at the return or at the free, which is
-why it is not `SC0402`.
+why it is not `SC0402`. A pointer returned live is asked what it points at
+holds, one level in, as `SC0407` asks what a call is handed: `this returns a
+pointer to where a pointer that may have been freed is stored`, always a doubt.
 [ADR-0041](adr/0041-a-pointer-a-function-returns-is-asked-at-its-return-as-a-dereference-of-it-would-be.md)
 is the decision and records what it costs.
 
@@ -262,7 +264,9 @@ believed live there as a call's result is, so the store is asked what a return
 is asked, and doubts what it cannot prove live as a return does. A store into
 memory only the function itself reads back is not, since the read back is. It
 is a code of its own because what to change is what is stored, and the reader
-of it need not be a caller. The same ADR records it and what it costs.
+of it need not be a caller. A pointer stored out live is asked what it points
+at holds, one level in, as a return is. The same ADR records it and what it
+costs.
 
 **`SC0407` is the other read without a dereference, and the same belief
 arriving by the other door.** A function's body believes its pointer
