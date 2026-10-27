@@ -278,10 +278,13 @@ otherwise.
 
 * Stopping `handed_below` at the first level fails
   `a_box_of_a_box_holding_a_freed_pointer_handed_to_a_call_is_doubted`, and its
-  return and store forms; keeping a site below it whatever its state fails
-  `a_box_of_a_box_holding_a_live_pointer_returned_is_not_reported`, and counting
-  `Reachable` there fails `a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted`
-  among twelve (#654).
+  return and store forms. Counting `Reachable` below it, or keeping a site there
+  whatever its state, fails
+  `a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted`
+  among twelve; a live allocation is never a doubt, so
+  `a_box_of_a_box_holding_a_live_pointer_returned_is_not_reported` is silent
+  under both and marks what the walk must not report. Reading `stale` only at
+  the first level's containers leaves the suite green (#654).
 * Dropping the call to `handed` from `findings` fails
   `a_freed_pointer_handed_to_a_function_defined_in_the_file`, which is #263's
   program, `a_freed_pointer_handed_to_a_function_only_declared`,

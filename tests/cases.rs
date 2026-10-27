@@ -402,8 +402,9 @@ cases! {
         a_box_of_a_box_holding_a_freed_pointer_handed_to_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_box_of_a_box_holding_a_freed_pointer_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_box_of_a_box_holding_a_freed_pointer_stored_through_a_parameter_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: a site below the first level is kept whatever its state;
-        // this is reported.
+        // **Held by no mutation, measured**: a live allocation is never a
+        // doubt, so keeping a site below the first level whatever its state
+        // leaves this silent. It marks the program the walk must not report.
         a_box_of_a_box_holding_a_live_pointer_returned_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call writes only the locals it may reach, `Known::exposed_locals`
         // (#643). See ADR-0057.
