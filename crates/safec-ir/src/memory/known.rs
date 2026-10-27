@@ -1048,17 +1048,27 @@ impl Known {
             1 => self.written_through(local).into_iter().collect(),
             _ => self.levels_below(local, dereferences - 1).1,
         };
-        let unnamed = |held: &Held| held.loaded || held.lost || held.foreign;
-        // The levels a write of more than one dereference reads its way
-        // through: what `local` points at, and so on, above the one written.
-        let through_unnamed = (0..dereferences.saturating_sub(1)).any(|level| {
-            let (sites, locals) = self.levels_below(local, level);
-            !sites.is_empty() || locals.iter().any(|&held| unnamed(&self.points_to[held]))
-        });
-        if unnamed(&self.points_to[local.index()]) || through_unnamed {
+        if self.through_unnamed(local, dereferences) {
             lands.extend(self.named_by_unknown_code());
         }
         lands.into_iter().collect()
+    }
+
+    /// Whether a write through `dereferences` dereferences of `local` goes
+    /// through a pointer that may hold an address this function never
+    /// recorded: `local` itself, or a level the write reads its way through
+    /// above the one written, read out of memory, lost, or written by code
+    /// this check cannot read. A level that is an allocation counts as
+    /// memory. One answer for where a write may land and for whether it
+    /// leaves this function's sight, so the two cannot drift. See ADR-0057
+    /// and ADR-0041.
+    pub(super) fn through_unnamed(&self, local: LocalId, dereferences: usize) -> bool {
+        let unnamed = |held: &Held| held.loaded || held.lost || held.foreign;
+        unnamed(&self.points_to[local.index()])
+            || (0..dereferences.saturating_sub(1)).any(|level| {
+                let (sites, locals) = self.levels_below(local, level);
+                !sites.is_empty() || locals.iter().any(|&held| unnamed(&self.points_to[held]))
+            })
     }
 
     /// Tell every pending read that `by` did not make that `routes` are now
