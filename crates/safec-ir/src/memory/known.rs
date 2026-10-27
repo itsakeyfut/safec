@@ -474,9 +474,8 @@ impl Known {
         // reason that has no meaning below it, and counting it doubted every
         // allocation code this check cannot read may reach, deep in any box
         // handed over. The memory walked through is read for `stale` at every
-        // level; **no case holds that below the first level, measured**, since
-        // a box of a box refilled across a loop turn is reached by the first
-        // level's containers in every program the corpus has.
+        // level; **no case holds that below the first level, measured**:
+        // reading only the first level's containers leaves the suite green.
         let mut walked = sites.clone();
         let mut below = first.clone();
         let mut frontier = (first, first_locals);
