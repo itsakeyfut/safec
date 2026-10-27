@@ -96,12 +96,37 @@ for a double free.
 `docs/diagnostics.md`'s own definition, and the fix here is at the return or
 the free rather than at a read.
 
+**A store that leaves is asked as a return is, under `SC0414`** (#641). A
+pointer stored where code outside the function may read it leaves this
+check's sight by the other door: `void put(int **pp) { ... free(x); *pp = x;
+}` built in silence, and the caller read the freed pointer back as one nobody
+freed. `report::stored_away` asks such a store what `returned` asks, of the
+value stored, at the same point. A store leaves where it may land in an
+allocation code this check cannot read can reach, a parameter's memory
+included (ADR-0040), in a local whose address such code holds
+(`Known::exposed_locals`), or anywhere, where the pointer or a level on the way
+down may hold an address this function never recorded
+(`Known::through_unnamed`). A store into memory only this function reads is
+not asked, for the reason a copy into a local is not: a load of it carries
+what it held. It has a code of its own because what to change is what is
+stored, and because code that is not a caller may read it. A live pointer
+stored and freed after is not this rule, since the store is of what was live as
+it ran; that is #650.
+
 ### Confirmation
 
 Each rule has a mutation in the memory check (`crates/safec-ir/src/memory.rs`
 and `memory/`), applied and measured, and a named case in
 `tests/cases` that it fails:
 
+* Not calling `stored_away` fails
+  `a_freed_pointer_a_callee_stores_through_its_parameter_is_reported` and
+  `a_freed_pointer_a_callee_stores_through_a_pointer_to_a_local_is_reported`.
+  Leaving `reachable_now()` or `exposed_locals` out of `leaves` fails
+  `a_freed_pointer_stored_in_memory_handed_to_a_call_is_reported` or
+  `a_freed_pointer_stored_through_a_pointer_to_a_local_a_call_kept_is_reported`,
+  and every store leaving fails
+  `a_freed_pointer_stored_in_memory_only_this_function_reads_is_not_reported_where_it_is_stored`.
 * Not calling `returned` fails `a_function_that_returns_what_it_freed`,
   `a_return_after_a_free_on_one_arm_only`, `a_parameter_freed_and_returned`,
   `an_escaped_local_freed_and_returned` and

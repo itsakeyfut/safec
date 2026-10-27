@@ -49,7 +49,7 @@ records why the prefix is this one and what was rejected.
 | `SC01xx` | lexical, what a character, a token or a directive is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105`, `SC0106`, `SC0107`, `SC0108`, `SC0109`, `SC0110`, `SC0111`, `SC0112`, `SC0113`, `SC0114`, `SC0115`, `SC0116`, `SC0117` |
 | `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203`, `SC0204`, `SC0205`, `SC0206`, `SC0207` |
 | `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305`, `SC0306`, `SC0307`, `SC0308`, `SC0309`, `SC0310`, `SC0311`, `SC0312`, `SC0313`, `SC0314`, `SC0315`, `SC0316`, `SC0317`, `SC0318`, `SC0319` |
-| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406`, `SC0407`, `SC0408`, `SC0409`, `SC0410`, `SC0411`, `SC0412`, `SC0413` |
+| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406`, `SC0407`, `SC0408`, `SC0409`, `SC0410`, `SC0411`, `SC0412`, `SC0413`, `SC0414` |
 | `SC05xx` | lifetime | none yet |
 | `SC06xx` | ownership | `SC0601` |
 | `SC07xx` | thread | none yet |
@@ -254,6 +254,14 @@ free in the function at all. The fix is at the return or at the free, which is
 why it is not `SC0402`.
 [ADR-0041](adr/0041-a-pointer-a-function-returns-is-asked-at-its-return-as-a-dereference-of-it-would-be.md)
 is the decision and records what it costs.
+
+**`SC0414` is `SC0406` at the other door a pointer leaves by.** A pointer
+stored where code outside the function may read it, a caller through a
+parameter or code this check cannot read through memory it was handed, is
+believed live there as a call's result is, so the store is asked what a return
+is asked. A store into memory only the function itself reads back is not, since
+the read back is. It is a code of its own because what to change is what is
+stored, and the reader of it need not be a caller. The same ADR records it.
 
 **`SC0407` is the other read without a dereference, and the same belief
 arriving by the other door.** A function's body believes its pointer
