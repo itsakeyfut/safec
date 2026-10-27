@@ -230,7 +230,7 @@ fn verdict(
         // free, and answering `true` proved a program C defines on that order.
         // See ADR-0042.
         Kind::ArgumentAfterFree => earliest.is_some_and(|freed| freed.sequenced),
-        // The same question, one level in. No proof reaches it, because
+        // The same question, about what it points at. No proof reaches it, because
         // `handed_below` always answers `Reached::Partial` beside its sites.
         Kind::FreedBehindArgument => earliest.is_some_and(|freed| freed.sequenced),
         // Never asked: it is built from its element in `memory.rs`, not out of
@@ -2080,7 +2080,7 @@ pub(super) fn returned(
         known.handed_reached(source),
         known,
     ) else {
-        // **And what it points at, one level in**, where it said
+        // **And what it points at, at every level**, where it said
         // nothing itself: what leaves holding a freed pointer behind it is
         // the same defect one level down (#651). See `freed_behind`.
         freed_behind(
@@ -2130,8 +2130,8 @@ pub(super) fn returned(
 /// A store into memory only this function reads is not asked here: a load
 /// of it carries what it held, and a dereference of that is asked. **If
 /// that memory leaves later**, by a return or a store of its address, what
-/// it holds is asked there, one level in, by [`freed_behind`] (#651); two
-/// levels in is asked at no door, which is #654.
+/// it holds is asked there, at every level, by [`freed_behind`] (#651,
+/// #654).
 ///
 /// **Not a store of a live pointer that is freed after it**: the store is
 /// of what was live as it ran. Where the memory it lands in leaves later,
@@ -2179,7 +2179,7 @@ pub(super) fn stored_away(
         known.handed_reached(source),
         known,
     ) else {
-        // **And what it points at, one level in**, where it said
+        // **And what it points at, at every level**, where it said
         // nothing itself: what leaves holding a freed pointer behind it is
         // the same defect one level down (#651). See `freed_behind`.
         freed_behind(
@@ -2326,7 +2326,7 @@ pub(super) fn handed(
         );
     }
 
-    // **And what a pointer that said nothing points at, one level in**, by
+    // **And what a pointer that said nothing points at, at every level**, by
     // `freed_behind`. Keyed as `*place`, so that `give(tab, *tab)` is one
     // report rather than two: what `tab` hands on one level in is what
     // `*tab` hands on. Not carried forwards as the pointer is, because only
@@ -2346,7 +2346,7 @@ pub(super) fn handed(
 }
 
 /// Report a pointer that leaves, by a call, a return or a store, where what it
-/// points at may hold a freed pointer one level in: [`Known::handed_below`],
+/// points at may hold a freed pointer at any level: [`Known::handed_below`],
 /// keyed as `*place`, so a finding about the place itself at the same caret
 /// is not repeated. A place of dereferences is asked as its load would be, so
 /// `use2(*k)` is not silent where `q = *k; use2(q);` is asked. See ADR-0045.

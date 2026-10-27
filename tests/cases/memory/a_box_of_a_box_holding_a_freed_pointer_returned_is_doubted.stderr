@@ -1,0 +1,10 @@
+error[SC0406]: this returns a pointer to where a pointer that may have been freed is stored
+    ╭─[ a_box_of_a_box_holding_a_freed_pointer_returned_is_doubted.c:13:5 ]
+    │
+ 13 │     return bb;
+    │     ─────┬────  
+    │          ╰────── returned here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this

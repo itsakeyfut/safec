@@ -455,10 +455,10 @@ impl Known {
         let read_unreplaced = locals
             .iter()
             .any(|&target| self.points_to[target].unreplaced_read);
-        let mut reached: Vec<Reached> = self
-            .level_below(&sites, &locals)
-            .0
-            .into_iter()
+        let (first, first_locals) = self.level_below(&sites, &locals);
+        let mut reached: Vec<Reached> = first
+            .iter()
+            .copied()
             .filter(|&site| match self.state[site] {
                 SiteState::Freed { .. } => true,
                 SiteState::Unknown | SiteState::Unheld => true,
@@ -467,7 +467,39 @@ impl Known {
             })
             .map(Reached::Site)
             .collect();
-        if sites.iter().any(|&container| self.stale[container]) {
+        // **And every level below the first**, until neither set grows, which
+        // two finite sets that only grow must reach. A box of a box holding a
+        // freed pointer was asked at no door (#654). Only what is freed or
+        // unproven counts there: the first level's `Reachable` is asked for a
+        // reason that has no meaning below it, and counting it doubted every
+        // allocation code this check cannot read may reach, deep in any box
+        // handed over.
+        let mut walked = sites.clone();
+        let mut below = first.clone();
+        let mut frontier = (first, first_locals);
+        loop {
+            walked.extend(frontier.0.iter().copied());
+            let (next_sites, next_locals) = self.level_below(&frontier.0, &frontier.1);
+            let new_sites: BTreeSet<usize> = next_sites.difference(&below).copied().collect();
+            let new_locals: BTreeSet<usize> =
+                next_locals.difference(&frontier.1).copied().collect();
+            if new_sites.is_empty() && new_locals.is_empty() {
+                break;
+            }
+            for &site in &new_sites {
+                if matches!(
+                    self.state[site],
+                    SiteState::Freed { .. } | SiteState::Unknown | SiteState::Unheld
+                ) {
+                    reached.push(Reached::Site(site));
+                }
+            }
+            below.extend(new_sites.iter().copied());
+            let mut locals_seen = frontier.1.clone();
+            locals_seen.extend(next_locals.iter().copied());
+            frontier = (new_sites, locals_seen);
+        }
+        if walked.iter().any(|&container| self.stale[container]) {
             reached.push(Reached::Lost(LostReason::Other));
         }
         if !reached.is_empty() {

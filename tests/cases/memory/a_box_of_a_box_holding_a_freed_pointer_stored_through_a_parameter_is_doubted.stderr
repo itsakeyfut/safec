@@ -1,0 +1,10 @@
+error[SC0414]: this stores a pointer where code outside this function may read it, and it points to where a pointer that may have been freed is stored
+    ╭─[ a_box_of_a_box_holding_a_freed_pointer_stored_through_a_parameter_is_doubted.c:26:5 ]
+    │
+ 26 │     *pppp = bb;
+    │     ─────┬────  
+    │          ╰────── stored here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this

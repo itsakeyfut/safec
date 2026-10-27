@@ -1,3 +1,13 @@
+error[SC0407]: this passes a pointer to where a pointer that may have been freed is stored
+    ╭─[ a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:22:5 ]
+    │
+ 22 │     release_ref2(&b);
+    │     ────────┬───────  
+    │             ╰───────── passed here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this one
 error[SC0402]: this uses `c`, which may have been freed
     ╭─[ a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed.c:27:10 ]
     │
