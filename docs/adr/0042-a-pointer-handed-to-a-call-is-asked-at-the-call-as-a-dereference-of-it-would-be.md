@@ -218,7 +218,20 @@ that says which arguments are asked, for `handed` at the call and for the
 transfer that carries them, and `handed` reports through `say`, because
 `used_before` can reach the same caret about the same local.
 
-**And one level in, about what may have been freed.** A pointer argument that is
+**And at every level, about what may have been freed** (one level until
+#654). Below the first level, `Known::handed_below` walks `level_below` until
+neither the sites nor the locals grow, which two finite sets that only grow
+must reach, and keeps an allocation there only where it is freed or unproven
+(`Freed`, `Unknown`, `Unheld`). The first level's rule for a `Reachable` one,
+below, has no meaning deeper in: counting `Reachable` at every level moved
+thirteen corpus programs, twelve of them doubted for nothing and among them
+programs named for not being doubted, while counting only freed and unproven
+ones moved the thirteenth alone, a box two levels in that really holds a freed
+pointer. A box of a box holding a freed pointer had been
+silent at every door. The memory walked through is read for `stale` at every
+level too.
+
+**At the first level:** A pointer argument that is
 a local, and says nothing itself, is asked what `Known::stored_below` says it
 points at may hold: through a local's address, `free(a); use2(&a);`, and through
 what the function stored in its own memory, `*t = a; free(a); use2(t);`. Both
@@ -263,6 +276,12 @@ failed. The cases are in `tests/cases`, and every mutation is in
 the memory check (`crates/safec-ir/src/memory.rs` and `memory/`) unless it says
 otherwise.
 
+* Stopping `handed_below` at the first level fails
+  `a_box_of_a_box_holding_a_freed_pointer_handed_to_a_call_is_doubted`, and its
+  return and store forms; keeping a site below it whatever its state fails
+  `a_box_of_a_box_holding_a_live_pointer_returned_is_not_reported`, and counting
+  `Reachable` there fails `a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted`
+  among twelve (#654).
 * Dropping the call to `handed` from `findings` fails
   `a_freed_pointer_handed_to_a_function_defined_in_the_file`, which is #263's
   program, `a_freed_pointer_handed_to_a_function_only_declared`,
@@ -568,7 +587,7 @@ much as by the `match`, and nothing tells the two apart.
   this check cannot read first, `release(a); use2(&a);`. Its allocation is
   unproven, as a live one whose address was taken is, and the two cannot be
   told apart. That is [#305](https://github.com/itsakeyfut/safec/issues/305).
-  Anything more than one level in is silent too.
+  Anything more than one level in was silent too, until #654, below.
 * Bad, because a pointer read out of memory and handed on, `use(*tab)`, is
   silent, as its dereference is. That is #256.
 * What would reverse this: summaries of the functions this translation unit

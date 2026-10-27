@@ -117,7 +117,7 @@ to change is what is stored, and because code that is not a caller may read
 it. A live pointer stored and freed after is not this rule, since the store is
 of what was live as it ran; that is #650.
 
-**What memory that leaves holds is asked one level in, as a call asks it**
+**What memory that leaves holds is asked, as a call asks it**
 (#651). A pointer that leaves live, by a return or a store, may point at memory
 holding a freed pointer: `free(x); *b = x; return b;` built in silence, and so
 did `*ppp = b;` in its place. Where the pointer itself draws nothing,
@@ -127,8 +127,8 @@ asks of what a call is handed, and says a doubt under the door's code,
 Never a proof, since whoever receives the memory may only write there:
 `*b = x; free(x); return b;` is correct when the caller overwrites `*b` before
 reading it, and a proof would refuse it with nothing `--allow-unknown` can
-lower. One level in, as a call asks, so the three doors agree; a freed pointer
-two levels in is asked at none of them, which is #654. `Known::handed_below`
+lower. At every level, as a call asks (ADR-0042, #654), so the three doors
+agree. `Known::handed_below`
 also reads what a loop made again: a box filled on one turn and freed through on
 the next holds an allocation whose site reads live for the new one, and is
 doubted at all three doors, where it was silent at each.
