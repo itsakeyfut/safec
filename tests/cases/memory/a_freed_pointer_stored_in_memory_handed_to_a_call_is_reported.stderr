@@ -1,0 +1,26 @@
+error[SC0402]: this uses `box`, which may have been freed
+    ╭─[ a_freed_pointer_stored_in_memory_handed_to_a_call_is_reported.c:16:5 ]
+    │
+ 16 │     *box = x;
+    │     ────┬───  
+    │         ╰───── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0414]: this stores `x` where code outside this function may read it, and it points to an allocation that was freed
+    ╭─[ a_freed_pointer_stored_in_memory_handed_to_a_call_is_reported.c:16:5 ]
+    │
+ 11 │     int *x = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 15 │     free(x);
+    │     ───┬───  
+    │        ╰───── freed here
+ 16 │     *box = x;
+    │     ────┬───  
+    │         ╰───── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = help: store a pointer that is still allocated, or do not free this one before storing it

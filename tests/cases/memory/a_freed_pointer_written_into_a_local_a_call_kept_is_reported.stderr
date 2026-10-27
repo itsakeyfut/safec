@@ -1,0 +1,13 @@
+error[SC0414]: this stores `x` where code outside this function may read it, and it points to an allocation that was freed
+   ╭─[ a_freed_pointer_written_into_a_local_a_call_kept_is_reported.c:4:117 ]
+   │
+ 4 │ void use(void); int main(void) { int *slot = 0; keep(&slot); int *x = malloc(4); if (x == 0) { return 1; } free(x); slot = x; use(); return 0; }
+   │                                                                       ────┬────                            ───┬───  ────┬───  
+   │                                                                           ╰─────────────────────────────────────────────────── allocated here
+   │                                                                                                               │         │     
+   │                                                                                                               ╰─────────────── freed here
+   │                                                                                                                         │     
+   │                                                                                                                         ╰───── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = help: store a pointer that is still allocated, or do not free this one before storing it

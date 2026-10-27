@@ -2003,6 +2003,15 @@ mod unassigned {
     use safec_ir::source::SourceMap;
 
     fn said(kind: Kind, conclusion: Conclusion) -> (String, String, Vec<String>) {
+        said_of(kind, conclusion, Some("p"))
+    }
+
+    /// [`said`], about a value with the name given, or none.
+    fn said_of(
+        kind: Kind,
+        conclusion: Conclusion,
+        name: Option<&str>,
+    ) -> (String, String, Vec<String>) {
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", "f");
         let mut unit =
@@ -2019,7 +2028,7 @@ mod unassigned {
             made: None,
             unproven: None,
         };
-        let diagnostic = memory_finding(&sources, &finding, Some("p"), &[]).expect("a diagnostic");
+        let diagnostic = memory_finding(&sources, &finding, name, &[]).expect("a diagnostic");
         (
             diagnostic
                 .code()
@@ -2131,6 +2140,34 @@ mod unassigned {
                 .iter()
                 .any(|note| note.starts_with("C17 7.22.3.1 p2 and 7.22.3.4 p2")),
             "{notes:?}"
+        );
+    }
+
+    /// A freed pointer stored where code outside the function may read it is
+    /// `SC0414`, in words that say where it was stored, as a proof and as a
+    /// doubt, and with no name to give. Mutation: give it `SC0406`'s code,
+    /// word it as a return, or drop where it was stored from the nameless
+    /// form; each fails this test.
+    #[test]
+    fn a_freed_pointer_stored_where_code_outside_the_function_reads_it_is_sc0414_in_its_own_words()
+    {
+        let (code, message, _) = said(Kind::StoreAfterFree, Conclusion::Unsafe);
+        assert_eq!(code, "SC0414");
+        assert_eq!(
+            message,
+            "this stores `p` where code outside this function may read it, and it points to an allocation that was freed"
+        );
+        let (code, message, _) = said(Kind::StoreAfterFree, Conclusion::Unknown);
+        assert_eq!(code, "SC0414");
+        assert_eq!(
+            message,
+            "this stores `p` where code outside this function may read it, and it may point to a freed allocation"
+        );
+        let (code, message, _) = said_of(Kind::StoreAfterFree, Conclusion::Unsafe, None);
+        assert_eq!(code, "SC0414");
+        assert_eq!(
+            message,
+            "this stores a pointer to an allocation that was freed where code outside this function may read it"
         );
     }
 }

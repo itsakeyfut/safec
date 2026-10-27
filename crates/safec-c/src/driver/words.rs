@@ -111,6 +111,15 @@ const OUTSIDE_ITS_OBJECT: Code = Code::new("SC0412");
 /// the fix is in what is handed on rather than in an access. See ADR-0060.
 const HANDED_ON_NARROW: Code = Code::new("SC0413");
 
+/// A pointer to an allocation that was freed, stored where code outside this
+/// function may read it.
+///
+/// Not `RETURN_AFTER_FREE`'s, though it is the same belief: what to change is
+/// what is stored rather than what is returned, and what reads it need not be
+/// a caller, since memory handed to code this check cannot read is read
+/// there as well. See ADR-0041.
+const STORE_AFTER_FREE: Code = Code::new("SC0414");
+
 /// What to change where this check stopped following a pointer and cannot
 /// say why: `LostReason::Other`.
 ///
@@ -498,6 +507,69 @@ pub(super) fn memory_finding(
                 |name| format!("this returns `{name}`, which may point to a freed allocation"),
             ),
             "returned here, where it may have been freed before",
+            DISAGREEMENT_REMEDY,
+        ),
+        (Kind::StoreAfterFree, Conclusion::Unsafe, _) => (
+            STORE_AFTER_FREE,
+            said(
+                name,
+                "this stores a pointer to an allocation that was freed where code outside this function may read it",
+                |name| {
+                    format!(
+                        "this stores `{name}` where code outside this function may read it, and it points to an allocation that was freed"
+                    )
+                },
+            ),
+            "stored here",
+            "store a pointer that is still allocated, or do not free this one before storing it",
+        ),
+        (Kind::StoreAfterFree, Conclusion::Unknown, Some(Unproven::Lost(reason))) => {
+            let (label, remedy) = lost_words(reason);
+            (
+                STORE_AFTER_FREE,
+                said(
+                    name,
+                    "this stores a pointer this check stopped following where code outside this function may read it",
+                    |name| {
+                        format!(
+                            "this stores `{name}` where code outside this function may read it, and this check stopped following it"
+                        )
+                    },
+                ),
+                label,
+                remedy,
+            )
+        }
+        // `Unsequenced` cannot arrive, because `memory::report::verdict`
+        // answers that a store is asked of what it held as it ran; `Offset`
+        // cannot, because only `memory::report::interior` builds it; and
+        // `Extent` cannot, because only the size checks build it.
+        // `Disagreement` and no reason are the paths this row is for: a
+        // pointer that may hold a freed allocation on one path and a live one
+        // on another. Named rather than taken by `_`, as the return's rows
+        // are.
+        (
+            Kind::StoreAfterFree,
+            Conclusion::Unknown,
+            Some(
+                Unproven::Disagreement
+                | Unproven::Unsequenced
+                | Unproven::Offset
+                | Unproven::Extent,
+            )
+            | None,
+        ) => (
+            STORE_AFTER_FREE,
+            said(
+                name,
+                "this stores a pointer that may point to a freed allocation where code outside this function may read it",
+                |name| {
+                    format!(
+                        "this stores `{name}` where code outside this function may read it, and it may point to a freed allocation"
+                    )
+                },
+            ),
+            "stored here, where it may have been freed before",
             DISAGREEMENT_REMEDY,
         ),
         (Kind::ArgumentAfterFree, Conclusion::Unsafe, _) => (

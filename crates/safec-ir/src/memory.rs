@@ -73,7 +73,7 @@ use built::named;
 use report::{
     after_a_call, departed_at_call, departed_in_element, derefs, freed_after_its_read_was_reported,
     handed, handed_places, inside, loaded_indeterminate, may_not_fit, reached_by_library, reported,
-    returned, unwritten_read, used, used_before,
+    returned, stored_away, unwritten_read, used, used_before,
 };
 use transfer::Allocations;
 
@@ -104,6 +104,15 @@ pub enum Kind {
     /// about, because a caller believes what it is handed is live and nothing
     /// reads this function's body from there. See ADR-0041.
     ReturnAfterFree,
+    /// `free(p); *out = p;`, where code outside this function may read
+    /// `*out`.
+    ///
+    /// The other door a pointer leaves by: a store into memory a caller,
+    /// or code this check cannot read, may read it from, believed live
+    /// there as a call's result is. A store into memory only this function
+    /// reads is asked where it is read back, not where it is stored, and not
+    /// at all if that memory leaves later (#651). See ADR-0041.
+    StoreAfterFree,
     /// `free(p); g(p);`
     ///
     /// The other, the same belief arriving by the other door: a function's body
@@ -706,6 +715,17 @@ fn findings_within(
                 // `release(*tab)` does. Before the transfer, for the reason
                 // above: what is returned is what was held as the write ran.
                 returned(
+                    &mut findings,
+                    &mut said,
+                    &analysis,
+                    function,
+                    element,
+                    &known,
+                );
+                // And what it stores where code outside this function may
+                // read it, the return's other door, asked the same way and at
+                // the same point. See ADR-0041.
+                stored_away(
                     &mut findings,
                     &mut said,
                     &analysis,

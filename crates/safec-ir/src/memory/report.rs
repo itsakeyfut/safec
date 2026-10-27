@@ -214,6 +214,11 @@ fn verdict(
         // anywhere in it has run by then, and what leaves is freed in every
         // order C allows. See ADR-0041.
         Kind::ReturnAfterFree => true,
+        // A store is asked of what the value held as it ran, as a return
+        // is: what leaves leaves then. A free later in the same full
+        // expression frees what was stored live, which is #650's case and
+        // not this one. See ADR-0041.
+        Kind::StoreAfterFree => true,
         // **Not a `return`'s answer.** A call is not the end of its full
         // expression, so `(free(a), 0) + use(a)` may call `use` before the
         // free, and answering `true` proved a program C defines on that order.
@@ -2087,6 +2092,129 @@ pub(super) fn returned(
             unproven: verdict.unproven,
         },
     );
+}
+
+/// Report a pointer stored where code outside this function may read it,
+/// where the allocation it points at may have been freed.
+///
+/// **A return's other door** (ADR-0041): what a caller, or code this check
+/// cannot read, reads out of that memory it believes live, as it believes a
+/// call's result, and nothing reads this function's body from there. So the
+/// store is the last place anything can be said about it, and it is asked
+/// what [`returned`] asks, of the value stored: `free(x); *pp = x;` with
+/// `pp` a parameter built in silence (#641). The same event is
+/// [`Departure::Store`] to [`departed_in_element`], which asks it whether
+/// what leaves is whole rather than whether it is live.
+///
+/// **A store through a pointer that leaves**, [`leaves`], **or a write of a
+/// local whose address such code holds**, `keep(&slot); slot = x;`, which
+/// is the same store spelled without the pointer, [`Known::exposed_locals`].
+/// A store into memory only this function reads is not asked here: a load
+/// of it carries what it held, and a dereference of that is asked. **What
+/// that memory holds is not asked if the memory leaves later**, by a return
+/// or by a store of its address, which is #651.
+///
+/// **Not a store of a live pointer that is freed after it**, which leaves
+/// the caller the same freed pointer and is #650: the store is of what was
+/// live as it ran. And a library copy out of the function is still the
+/// doubt [`handed`] raises, which is #652.
+///
+/// **Like a return, it doubts what it cannot prove live**: a pointer a call
+/// this check cannot read returned, stored out after another such call, is
+/// `Unknown` with no free in the function. ADR-0041 records that cost.
+pub(super) fn stored_away(
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    analysis: &Allocations<'_>,
+    function: &Function,
+    element: &Element,
+    known: &Known,
+) {
+    let Element::Assign(operation) = element else {
+        return;
+    };
+    let place = &operation.place;
+    let direct = place.projection.is_empty() && known.exposed_locals[place.local.index()];
+    if !(direct || derefs(place) > 0) || !analysis.may_be_pointer(function, place) {
+        return;
+    }
+    // A constant holds no allocation, and a place with an `Index` is an
+    // array's element, which this does not follow, as at a return. **No case
+    // holds this guard, measured**: the lowering reads an element through
+    // its address, so no source of that shape reaches here from C.
+    let Rvalue::Use(Operand::Copy(source)) = &operation.value else {
+        return;
+    };
+    if !source.projection.is_empty() && derefs(source) == 0 {
+        return;
+    }
+    if !direct && !leaves(known, place) {
+        return;
+    }
+
+    let Some(verdict) = verdict(
+        analysis.sources,
+        Kind::StoreAfterFree,
+        known.handed_reached(source),
+        known,
+    ) else {
+        return;
+    };
+    say(
+        analysis.sources,
+        findings,
+        said,
+        source,
+        Finding {
+            function: analysis.function,
+            kind: Kind::StoreAfterFree,
+            conclusion: verdict.conclusion,
+            at: operation.origin.span(),
+            local: own_local(source),
+            freed: verdict.freed,
+            made: verdict.made,
+            unproven: verdict.unproven,
+        },
+    );
+}
+
+/// Whether a store to `place`, a place of dereferences, may land where code
+/// outside this function may read it:
+///
+/// - anywhere at all, where the pointer or a level on the way down may hold
+///   an address this function never recorded, [`Known::through_unnamed`]:
+///   `**ppp = x`, and `*pp = x` with `pp` read out of a parameter's memory;
+/// - anywhere at all, where the pointer names nothing this check followed,
+///   neither an allocation nor a local: one moved off a local array by
+///   arithmetic (#639), `*a[1] = x`, may be any of them, and taking it to
+///   land nowhere silenced a free;
+/// - an allocation such code can reach, [`Known::reachable_now`], which a
+///   parameter's memory is from the function's start (ADR-0040);
+/// - a local whose address such code holds, [`Known::exposed_locals`].
+///
+/// **The allocations below the first level, at a store of more than one
+/// dereference, decide no case, measured**: such a store reaches
+/// `through_unnamed` or the locals first in every program the corpus has.
+/// And the first two parts each hold `**ppp = x` alone, so only dropping
+/// both silences it.
+fn leaves(known: &Known, place: &Place) -> bool {
+    let depth = derefs(place);
+    if known.through_unnamed(place.local, depth) {
+        return true;
+    }
+    let reachable = known.reachable_now();
+    let into: Vec<usize> = if depth == 1 {
+        known.sites_of(place.local).collect()
+    } else {
+        known
+            .stored_below(place.local, depth - 1)
+            .into_iter()
+            .collect()
+    };
+    let lands = known.locals_a_write_may_land_in(place.local, depth);
+    (into.is_empty() && lands.is_empty())
+        || into.iter().any(|site| reachable.contains(site))
+        || lands.into_iter().any(|local| known.exposed_locals[local])
 }
 
 /// Report a pointer handed to a call where the allocation it points at may

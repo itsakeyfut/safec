@@ -1,3 +1,13 @@
+error[SC0414]: this stores a pointer that may point to a freed allocation where code outside this function may read it
+   ╭─[ a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:74 ]
+   │
+ 5 │ int main(void) { int *a = malloc(4); if (a == 0) { return 1; } keep(&a); a = a + 5; other(); use(a); return 0; }
+   │                                                                          ────┬────  
+   │                                                                              ╰────── stored here, where it may have been freed before
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
 error[SC0413]: this lets `a` leave, which may not point at an object as wide as its type
    ╭─[ a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:94 ]
    │
