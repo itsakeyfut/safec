@@ -1,0 +1,165 @@
+Target "x86_64-pc-windows-msvc"
+Function a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:3:6 "put"
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter _Nonnull "out"
+  Local "_2" "int **" "b"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int *" "x"
+  Local "_6" "int" "i"
+  Local "_7" "int"
+  Local "_8" "void *"
+  Local "_9" "int *"
+  Local "_10" "int"
+  Local "_11" "int"
+  Local "_12" "int *"
+  Local "_13" "int"
+  Local "_14" "int"
+  Local "_15" "int **"
+  Block "bb0" entry
+    ArgumentsEvaluated a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:4:15 generated
+    Call a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:4:15 written "malloc" "bb1"
+      Destination "_3"
+      Constant 8
+  Block "bb1"
+    Operation a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:4:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:4:15 generated
+    Operation a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:5:9 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:5:9 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:5:9 generated
+    Return
+  Block "bb3"
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:6:10 written
+      Destination "_5"
+      Use
+        Constant 0
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:6:14 generated
+    StorageLive a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:7:10 generated "_6"
+    Operation a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:7:14 written
+      Destination "_6"
+      Use
+        Constant 0
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:7:18 generated
+    Goto "bb5"
+  Block "bb5"
+    Operation a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:7:21 written
+      Destination "_7"
+      Binary "Lt"
+        Copy "_6"
+        Constant 2
+    Branch a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:7:21 written "bb6" "bb7"
+      Copy "_7"
+  Block "bb6"
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:7:21 generated
+    ArgumentsEvaluated a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:8:9 generated
+    Call a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:8:9 written "free" "bb8"
+      Copy "_5"
+  Block "bb7"
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:7:21 generated
+    StorageDead a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:12:5 generated "_6"
+    Operation a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:13:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_2"
+    Operation a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:13:5 written
+      Destination "_15"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:13:5 generated
+    Return
+  Block "bb8"
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:8:9 generated
+    ArgumentsEvaluated a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:9:13 generated
+    Call a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:9:13 written "malloc" "bb9"
+      Destination "_8"
+      Constant 4
+  Block "bb9"
+    Operation a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:9:9 written
+      Destination "_5"
+      Use
+        Copy "_8"
+    Operation a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:9:9 written
+      Destination "_9"
+      Use
+        Copy "_5"
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:9:9 generated
+    Operation a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:10:13 written
+      Destination "_10"
+      Binary "Eq"
+        Copy "_5"
+        Constant 0
+    Branch a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:10:13 written "bb10" "bb11"
+      Copy "_10"
+  Block "bb10"
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:10:13 generated
+    ArgumentsEvaluated a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:10:23 generated
+    Call a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:10:23 written "free" "bb13"
+      Copy "_2"
+  Block "bb11"
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:10:13 generated
+    Goto "bb12"
+  Block "bb12"
+    Operation a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:11:13 written
+      Destination "_11"
+      Binary "Eq"
+        Copy "_6"
+        Constant 0
+    Branch a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:11:13 written "bb14" "bb15"
+      Copy "_11"
+  Block "bb13"
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:10:23 generated
+    StorageDead a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:10:32 generated "_6"
+    Return
+  Block "bb14"
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:11:13 generated
+    Operation a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:11:23 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:11:23 written
+      Destination "_12"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:11:23 generated
+    Goto "bb16"
+  Block "bb15"
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:11:13 generated
+    Goto "bb16"
+  Block "bb16"
+    Operation a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:7:28 written
+      Destination "_13"
+      Use
+        Copy "_6"
+    Operation a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:7:28 written
+      Destination "_14"
+      Binary "Add"
+        Copy "_6"
+        Constant 1
+    Operation a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:7:28 written
+      Destination "_6"
+      Use
+        Copy "_14"
+    Sequenced a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted.c:7:28 generated
+    Goto "bb5"

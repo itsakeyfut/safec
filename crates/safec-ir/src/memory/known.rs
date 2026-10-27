@@ -420,6 +420,13 @@ impl Known {
     /// [`Reached::Partial`] is always beside them, since the callee may only
     /// write there. See ADR-0042.
     ///
+    /// **And a pointer this check lost, where the memory pointed at is
+    /// [`Self::stale`]**: it held an allocation a loop has since made again
+    /// at the same site, so what it holds may be the old one, freed, while
+    /// the site reads `Live` for the new one. A box filled on one turn and
+    /// freed through on the next was returned, stored out or handed to a call
+    /// in silence, where a load of the same box was doubted (#651).
+    ///
     /// **A place of dereferences is asked from the level its load would
     /// hold**, by [`Self::handed_level`], so `use2(*k)` and `q = *k;
     /// use2(q);` are one question. Before, only a plain local was asked one
@@ -460,6 +467,9 @@ impl Known {
             })
             .map(Reached::Site)
             .collect();
+        if sites.iter().any(|&container| self.stale[container]) {
+            reached.push(Reached::Lost(LostReason::Other));
+        }
         if !reached.is_empty() {
             reached.push(Reached::Partial);
         }

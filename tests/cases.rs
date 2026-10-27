@@ -362,6 +362,39 @@ cases! {
         // the words say so. Mutation: word the lost row as a freed one; this
         // fails.
         a_pointer_read_out_of_a_parameter_freed_and_stored_back_is_reported_as_one_this_check_lost: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What memory that leaves holds is asked one level in, at the door it
+        // leaves by, as a call asks it (#651). See ADR-0041.
+        //
+        // Mutation: `returned` does not ask `freed_behind`; this goes silent.
+        a_box_holding_a_freed_pointer_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `stored_away` does not ask `freed_behind`; this goes
+        // silent.
+        a_box_holding_a_freed_pointer_stored_through_a_parameter_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `freed_behind` doubts every allocation the box may
+        // contain, live or not; this is reported.
+        a_box_holding_a_live_pointer_returned_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The box left first, so the store into it is the proof of #641,
+        // not the doubt behind it. Mutation: `stored_away` skips its own
+        // verdict and asks only what is behind its value; this loses its
+        // `SC0414`.
+        a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A box written into a local a call kept, the store door's direct
+        // write. Mutation: a direct write does not ask `freed_behind`; this
+        // goes silent.
+        a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `returned` asks `freed_behind` only of a plain local;
+        // this goes silent.
+        a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `freed_behind` doubts every allocation the box may
+        // contain, at the store door; this is reported.
+        a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What a box held may be an allocation a loop has since made again
+        // at the same site, freed on the turn after it was put there. The
+        // three doors. Mutation: `handed_below` does not read `stale`; these
+        // three go silent.
+        a_box_filled_on_one_turn_and_freed_through_on_the_next_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call writes only the locals it may reach, `Known::exposed_locals`
         // (#643). See ADR-0057.
         //

@@ -1,0 +1,16 @@
+error[SC0414]: this stores `x` where code outside this function may read it, and it points to an allocation that was freed
+    ╭─[ a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:15:5 ]
+    │
+ 10 │     int *x = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 14 │     free(x);
+    │     ───┬───  
+    │        ╰───── freed here
+ 15 │     *b = x;
+    │     ───┬──  
+    │        ╰──── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = help: store a pointer that is still allocated, or do not free this one before storing it

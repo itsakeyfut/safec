@@ -110,13 +110,40 @@ down may hold an address this function never recorded
 followed, as one moved off an array by arithmetic does (#639). A write of such
 a local without a pointer, `keep(&slot); slot = x;`, is the same store and is
 asked the same way. A store into memory only this function reads is not asked
-there, since a load of it carries what it held; **what that memory holds is
-not asked if the memory then leaves**, by a return or a store of its address,
-which is #651. A library copy out of the function is the doubt `SC0407` raises
+there, since a load of it carries what it held; where that memory leaves, it
+is asked what it holds, as the next paragraph says. A library copy out of the function is the doubt `SC0407` raises
 rather than this proof, which is #652. It has a code of its own because what
 to change is what is stored, and because code that is not a caller may read
 it. A live pointer stored and freed after is not this rule, since the store is
 of what was live as it ran; that is #650.
+
+**What memory that leaves holds is asked one level in, as a call asks it**
+(#651). A pointer that leaves live, by a return or a store, may point at memory
+holding a freed pointer: `free(x); *b = x; return b;` built in silence, and so
+did `*ppp = b;` in its place. Where the pointer itself draws nothing,
+`report::freed_behind` asks `Known::handed_below` of it, the question ADR-0042
+asks of what a call is handed, and says a doubt under the door's code,
+`FreedBehindReturn` under `SC0406` and `FreedBehindStore` under `SC0414`.
+Never a proof, since whoever receives the memory may only write there:
+`*b = x; free(x); return b;` is correct when the caller overwrites `*b` before
+reading it, and a proof would refuse it with nothing `--allow-unknown` can
+lower. One level in, as a call asks, so the three doors agree; a freed pointer
+two levels in is asked at none of them, which is #654. `Known::handed_below`
+also reads what a loop made again: a box filled on one turn and freed through on
+the next holds an allocation whose site reads live for the new one, and is
+doubted at all three doors, where it was silent at each.
+
+That shape, a live pointer stored and freed after and the box returned, is now
+asked here. #650 is what is left of it: the store into the caller's memory
+through a parameter, which leaves by no door this function has.
+
+**What this costs.** What memory holds only gains, so a slot freed and then
+overwritten with null or a new allocation is still doubted at the door,
+`*b = x; free(x); *b = 0; return b;` among them, which built before; the read
+back and a call were already doubted the same way, and #656 is the strong update
+that would stop all four. And a box holding what a call this check cannot read
+returned, returned after a second such call, is doubted as the pointer itself
+would be. Both are doubts `--allow-unknown` lowers.
 
 **What it costs is what a return costs, and the store door has more
 callers.** Asked as a return is, a store doubts what it cannot prove live, so
@@ -152,6 +179,17 @@ and `memory/`), applied and measured, and a named case in
   which each of the two holds alone;
   and not asking a write of an exposed local fails
   `a_freed_pointer_written_into_a_local_a_call_kept_is_reported`.
+* Not asking `freed_behind` at a return fails
+  `a_box_holding_a_freed_pointer_returned_is_doubted` and, for a return of a
+  dereference, `a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted`;
+  at a leaving store, `a_box_holding_a_freed_pointer_stored_through_a_parameter_is_doubted`
+  and, for a direct write of an exposed local,
+  `a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted`.
+  Doubting every allocation behind it fails
+  `a_box_holding_a_live_pointer_returned_is_not_reported` and
+  `a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported`.
+  `handed_below` not reading `stale` fails the three
+  `a_box_filled_on_one_turn_and_freed_through_on_the_next_..._is_doubted`.
 * Not calling `returned` fails `a_function_that_returns_what_it_freed`,
   `a_return_after_a_free_on_one_arm_only`, `a_parameter_freed_and_returned`,
   `an_escaped_local_freed_and_returned` and

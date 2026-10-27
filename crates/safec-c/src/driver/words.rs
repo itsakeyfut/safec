@@ -65,7 +65,8 @@ const NULL_RETURN: Code = Code::new("SC0408");
 /// See ADR-0037.
 const NULL_ARGUMENT: Code = Code::new("SC0405");
 
-/// A pointer to an allocation that was freed, handed back by a `return`.
+/// A pointer to an allocation that was freed, handed back by a `return`, or
+/// a live one to memory that may hold one.
 ///
 /// Not `USE_AFTER_FREE`'s, because that code is a dereference and this is a
 /// read with none, and because the fix is at the return or at the free rather
@@ -73,7 +74,8 @@ const NULL_ARGUMENT: Code = Code::new("SC0405");
 /// live and cannot see why it is not. See ADR-0041.
 const RETURN_AFTER_FREE: Code = Code::new("SC0406");
 
-/// A pointer to an allocation that was freed, handed to a call.
+/// A pointer to an allocation that was freed, handed to a call, or a live
+/// one to memory that may hold one.
 ///
 /// Not `USE_AFTER_FREE`'s, for `RETURN_AFTER_FREE`'s reasons: this is a read
 /// with no dereference, and the fix is at the call or at the free. The callee
@@ -112,7 +114,7 @@ const OUTSIDE_ITS_OBJECT: Code = Code::new("SC0412");
 const HANDED_ON_NARROW: Code = Code::new("SC0413");
 
 /// A pointer to an allocation that was freed, stored where code outside this
-/// function may read it.
+/// function may read it, or a live one to memory that may hold one.
 ///
 /// Not `RETURN_AFTER_FREE`'s, though it is the same belief: what to change is
 /// what is stored rather than what is returned, and what reads it need not be
@@ -629,10 +631,12 @@ pub(super) fn memory_finding(
         // **Words of its own, under the same code**: what is passed is live,
         // and `a pointer to an allocation that was freed` would be false about
         // `use2(&a)`. The fix is the same, at the call or at the free. Only
-        // `Disagreement` arrives, because `memory::known::Known::handed_below`
-        // always answers `Reached::Partial` beside a site freed or unproven;
-        // every other reason is named rather than taken by `_`, for the reason
-        // the double-free rows give. The label says `perhaps` and the remedy
+        // `Disagreement` and `Lost` arrive, because
+        // `memory::known::Known::handed_below` always answers
+        // `Reached::Partial` beside a site freed or unproven, and a lost
+        // pointer where what is behind is memory a loop made again; `Unsafe`
+        // never does, and every other reason is named rather than taken by
+        // `_`, for the reason the double-free rows give. The label says `perhaps` and the remedy
         // has `DISAGREEMENT_REMEDY`'s two halves because the site may be
         // unproven rather than freed: a free on one path, or a call this check
         // cannot read. See ADR-0042.
@@ -654,6 +658,43 @@ pub(super) fn memory_finding(
             "passed here, perhaps holding a freed pointer behind it",
             "set a pointer stored there to null once it is freed, free it on every path or on \
              none, and keep it out of a call this check cannot read before this one",
+        ),
+        // **What a return or a store leaves holding behind it**, in the words
+        // and for the reasons of the call's row above, under each door's own
+        // code: the same reasons arrive, and `Unsafe` never does.
+        (
+            Kind::FreedBehindReturn,
+            Conclusion::Unsafe | Conclusion::Unknown,
+            Some(
+                Unproven::Disagreement
+                | Unproven::Lost(_)
+                | Unproven::Unsequenced
+                | Unproven::Offset
+                | Unproven::Extent,
+            )
+            | None,
+        ) => (
+            RETURN_AFTER_FREE,
+            "this returns a pointer to where a pointer that may have been freed is stored".to_owned(),
+            "returned here, perhaps holding a freed pointer behind it",
+            "set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this",
+        ),
+        (
+            Kind::FreedBehindStore,
+            Conclusion::Unsafe | Conclusion::Unknown,
+            Some(
+                Unproven::Disagreement
+                | Unproven::Lost(_)
+                | Unproven::Unsequenced
+                | Unproven::Offset
+                | Unproven::Extent,
+            )
+            | None,
+        ) => (
+            STORE_AFTER_FREE,
+            "this stores a pointer where code outside this function may read it, and it points to where a pointer that may have been freed is stored".to_owned(),
+            "stored here, perhaps holding a freed pointer behind it",
+            "set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this",
         ),
         (Kind::InteriorFree, Conclusion::Unsafe, _) => (
             INTERIOR_FREE,

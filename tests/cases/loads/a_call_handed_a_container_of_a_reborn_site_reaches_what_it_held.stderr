@@ -1,3 +1,13 @@
+warning[SC0407]: this passes a pointer to where a pointer that may have been freed is stored
+    ╭─[ a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:23:13 ]
+    │
+ 23 │             release(t2);
+    │             ─────┬─────  
+    │                  ╰─────── passed here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this one
 warning[SC0402]: this uses `r`, which may have been freed
     ╭─[ a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:24:13 ]
     │

@@ -18,3 +18,13 @@ error[SC0412]: this may reach outside the object `old` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0407]: this passes a pointer to where a pointer that may have been freed is stored
+    ╭─[ a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:28:9 ]
+    │
+ 28 │         release_in(d);
+    │         ──────┬──────  
+    │               ╰──────── passed here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this one

@@ -1,0 +1,101 @@
+Target "x86_64-pc-windows-msvc"
+Function a_box_holding_a_live_pointer_returned_is_not_reported.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_box_holding_a_live_pointer_returned_is_not_reported.c:2:7 "make"
+  Local "_0" "int **" return
+  Local "_1" "int **" "b"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *" "x"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int"
+  Local "_8" "int *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_box_holding_a_live_pointer_returned_is_not_reported.c:3:15 generated
+    Call a_box_holding_a_live_pointer_returned_is_not_reported.c:3:15 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_box_holding_a_live_pointer_returned_is_not_reported.c:3:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_box_holding_a_live_pointer_returned_is_not_reported.c:3:15 generated
+    Operation a_box_holding_a_live_pointer_returned_is_not_reported.c:4:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_box_holding_a_live_pointer_returned_is_not_reported.c:4:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_box_holding_a_live_pointer_returned_is_not_reported.c:4:9 generated
+    Operation a_box_holding_a_live_pointer_returned_is_not_reported.c:4:19 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_box_holding_a_live_pointer_returned_is_not_reported.c:4:26 generated
+    Return
+  Block "bb3"
+    Sequenced a_box_holding_a_live_pointer_returned_is_not_reported.c:4:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_box_holding_a_live_pointer_returned_is_not_reported.c:5:14 generated
+    Call a_box_holding_a_live_pointer_returned_is_not_reported.c:5:14 written "malloc" "bb5"
+      Destination "_5"
+      Constant 4
+  Block "bb5"
+    Operation a_box_holding_a_live_pointer_returned_is_not_reported.c:5:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_box_holding_a_live_pointer_returned_is_not_reported.c:5:14 generated
+    Operation a_box_holding_a_live_pointer_returned_is_not_reported.c:6:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_box_holding_a_live_pointer_returned_is_not_reported.c:6:9 written "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_box_holding_a_live_pointer_returned_is_not_reported.c:6:9 generated
+    Operation a_box_holding_a_live_pointer_returned_is_not_reported.c:6:19 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_box_holding_a_live_pointer_returned_is_not_reported.c:6:26 generated
+    Return
+  Block "bb7"
+    Sequenced a_box_holding_a_live_pointer_returned_is_not_reported.c:6:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_box_holding_a_live_pointer_returned_is_not_reported.c:7:5 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 1
+    Operation a_box_holding_a_live_pointer_returned_is_not_reported.c:7:5 written
+      Destination "_7"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_box_holding_a_live_pointer_returned_is_not_reported.c:7:5 generated
+    Operation a_box_holding_a_live_pointer_returned_is_not_reported.c:8:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_box_holding_a_live_pointer_returned_is_not_reported.c:8:5 written
+      Destination "_8"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_box_holding_a_live_pointer_returned_is_not_reported.c:8:5 generated
+    Operation a_box_holding_a_live_pointer_returned_is_not_reported.c:9:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_box_holding_a_live_pointer_returned_is_not_reported.c:9:12 generated
+    Return
