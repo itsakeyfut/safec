@@ -655,6 +655,44 @@ pub(super) fn memory_finding(
             "set a pointer stored there to null once it is freed, free it on every path or on \
              none, and keep it out of a call this check cannot read before this one",
         ),
+        // Never a proof, as what a call is handed behind it is not: the reader
+        // may only write there. Every reason named, as that row names them.
+        (
+            Kind::FreedBehindReturn,
+            Conclusion::Unsafe | Conclusion::Unknown,
+            Some(
+                Unproven::Disagreement
+                | Unproven::Lost(_)
+                | Unproven::Unsequenced
+                | Unproven::Offset
+                | Unproven::Extent,
+            )
+            | None,
+        ) => (
+            RETURN_AFTER_FREE,
+            "this returns a pointer to where a pointer that may have been freed is stored".to_owned(),
+            "returned here, perhaps holding a freed pointer behind it",
+            "set a pointer stored there to null once it is freed, and free it on every path or on none",
+        ),
+        // Never a proof, as what a call is handed behind it is not: the reader
+        // may only write there. Every reason named, as that row names them.
+        (
+            Kind::FreedBehindStore,
+            Conclusion::Unsafe | Conclusion::Unknown,
+            Some(
+                Unproven::Disagreement
+                | Unproven::Lost(_)
+                | Unproven::Unsequenced
+                | Unproven::Offset
+                | Unproven::Extent,
+            )
+            | None,
+        ) => (
+            STORE_AFTER_FREE,
+            "this stores a pointer to where a pointer that may have been freed is stored, where code outside this function may read it".to_owned(),
+            "stored here, perhaps holding a freed pointer behind it",
+            "set a pointer stored there to null once it is freed, and free it on every path or on none",
+        ),
         (Kind::InteriorFree, Conclusion::Unsafe, _) => (
             INTERIOR_FREE,
             said(

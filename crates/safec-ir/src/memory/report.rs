@@ -219,6 +219,9 @@ fn verdict(
         // expression frees what was stored live, which is #650's case and
         // not this one. See ADR-0041.
         Kind::StoreAfterFree => true,
+        // What a leaving pointer holds behind it is asked where it leaves,
+        // as the pointer is, for the reasons the two rows above give.
+        Kind::FreedBehindReturn | Kind::FreedBehindStore => true,
         // **Not a `return`'s answer.** A call is not the end of its full
         // expression, so `(free(a), 0) + use(a)` may call `use` before the
         // free, and answering `true` proved a program C defines on that order.
@@ -2074,6 +2077,18 @@ pub(super) fn returned(
         known.handed_reached(source),
         known,
     ) else {
+        // **And what it points at, one level in**, where it said
+        // nothing itself: what leaves holding a freed pointer behind it is
+        // the same defect one level down (#651). See `freed_behind`.
+        freed_behind(
+            findings,
+            said,
+            analysis,
+            source,
+            operation.origin.span(),
+            Kind::FreedBehindReturn,
+            known,
+        );
         return;
     };
     say(
@@ -2110,9 +2125,10 @@ pub(super) fn returned(
 /// local whose address such code holds**, `keep(&slot); slot = x;`, which
 /// is the same store spelled without the pointer, [`Known::exposed_locals`].
 /// A store into memory only this function reads is not asked here: a load
-/// of it carries what it held, and a dereference of that is asked. **What
-/// that memory holds is not asked if the memory leaves later**, by a return
-/// or by a store of its address, which is #651.
+/// of it carries what it held, and a dereference of that is asked. **If
+/// that memory leaves later**, by a return or a store of its address, what
+/// it holds is asked there, one level in, by [`freed_behind`] (#651); two
+/// levels in is asked at no door, which is #654.
 ///
 /// **Not a store of a live pointer that is freed after it**, which leaves
 /// the caller the same freed pointer and is #650: the store is of what was
@@ -2158,6 +2174,18 @@ pub(super) fn stored_away(
         known.handed_reached(source),
         known,
     ) else {
+        // **And what it points at, one level in**, where it said
+        // nothing itself: what leaves holding a freed pointer behind it is
+        // the same defect one level down (#651). See `freed_behind`.
+        freed_behind(
+            findings,
+            said,
+            analysis,
+            source,
+            operation.origin.span(),
+            Kind::FreedBehindStore,
+            known,
+        );
         return;
     };
     say(
@@ -2301,43 +2329,66 @@ pub(super) fn handed(
     // forwards as the pointer is, because only allocations already freed are
     // asked, and those are reported here. See ADR-0042.
     for place in silent {
-        let Some(verdict) = verdict(
-            analysis.sources,
-            Kind::FreedBehindArgument,
-            known.handed_below(place),
-            known,
-        ) else {
-            continue;
-        };
-        say(
-            analysis.sources,
+        freed_behind(
             findings,
             said,
-            &Place {
-                local: place.local,
-                projection: place
-                    .projection
-                    .iter()
-                    .cloned()
-                    .chain([Projection::Deref])
-                    .collect(),
-            },
-            Finding {
-                function: analysis.function,
-                kind: Kind::FreedBehindArgument,
-                conclusion: verdict.conclusion,
-                at: origin.span(),
-                // What is behind the pointer handed over, which no local holds.
-                // Nothing reads it for this kind, whose words name nothing
-                // because what is passed is live, so no case moves if this
-                // names the place's local instead.
-                local: None,
-                freed: verdict.freed,
-                made: verdict.made,
-                unproven: verdict.unproven,
-            },
+            analysis,
+            place,
+            origin.span(),
+            Kind::FreedBehindArgument,
+            known,
         );
     }
+}
+
+/// Report a pointer that leaves, by a call, a return or a store, where what it
+/// points at may hold a freed pointer one level in, and the pointer itself
+/// drew nothing: [`Known::handed_below`], keyed as `*place`, so `give(tab,
+/// *tab)` is one report rather than two. A place of dereferences is asked as
+/// its load would be, so `use2(*k)` is not silent where `q = *k; use2(q);` is
+/// asked. See ADR-0045. Never a proof, since whoever receives it may only
+/// write there; one function for the three doors, so they ask one question
+/// one way. See ADR-0042 and ADR-0041.
+fn freed_behind(
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    analysis: &Allocations<'_>,
+    place: &Place,
+    at: Span,
+    kind: Kind,
+    known: &Known,
+) {
+    let Some(verdict) = verdict(analysis.sources, kind, known.handed_below(place), known) else {
+        return;
+    };
+    say(
+        analysis.sources,
+        findings,
+        said,
+        &Place {
+            local: place.local,
+            projection: place
+                .projection
+                .iter()
+                .cloned()
+                .chain([Projection::Deref])
+                .collect(),
+        },
+        Finding {
+            function: analysis.function,
+            kind,
+            conclusion: verdict.conclusion,
+            at,
+            // What is behind the pointer that leaves, which no local holds.
+            // Nothing reads it for these kinds, whose words name nothing
+            // because what leaves is live, so no case moves if this names the
+            // place's local instead.
+            local: None,
+            freed: verdict.freed,
+            made: verdict.made,
+            unproven: verdict.unproven,
+        },
+    );
 }
 
 /// The arguments a call is asked about as a pointer it was handed, one place

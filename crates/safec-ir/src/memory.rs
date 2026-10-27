@@ -110,9 +110,23 @@ pub enum Kind {
     /// The other door a pointer leaves by: a store into memory a caller,
     /// or code this check cannot read, may read it from, believed live
     /// there as a call's result is. A store into memory only this function
-    /// reads is asked where it is read back, not where it is stored, and not
-    /// at all if that memory leaves later (#651). See ADR-0041.
+    /// reads is asked where it is read back, not where it is stored, and as
+    /// [`Kind::FreedBehindReturn`] or [`Kind::FreedBehindStore`] where that
+    /// memory leaves later. See ADR-0041.
     StoreAfterFree,
+    /// `free(x); *b = x; return b;`
+    ///
+    /// Not [`Kind::ReturnAfterFree`], because what is returned is live: it
+    /// is what it points at that holds a freed pointer, which the caller may
+    /// read and use. Never a proof, since the caller may only write there, as
+    /// [`Kind::FreedBehindArgument`] is not. See ADR-0041 and ADR-0042.
+    FreedBehindReturn,
+    /// `free(x); *b = x; *out = b;`, where code outside this function may
+    /// read `*out`.
+    ///
+    /// [`Kind::FreedBehindReturn`] at the other door a pointer leaves by,
+    /// and never a proof for the same reason. See ADR-0041 and ADR-0042.
+    FreedBehindStore,
     /// `free(p); g(p);`
     ///
     /// The other, the same belief arriving by the other door: a function's body

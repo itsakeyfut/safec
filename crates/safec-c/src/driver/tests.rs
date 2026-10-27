@@ -2170,4 +2170,23 @@ mod unassigned {
             "this stores a pointer to an allocation that was freed where code outside this function may read it"
         );
     }
+
+    /// What leaves holding a freed pointer behind it is said under the code of
+    /// the door it leaves by, as a doubt about what is behind it. Mutation:
+    /// give either `SC0407`'s code, or the other door's words. This fails.
+    #[test]
+    fn a_pointer_leaving_with_a_freed_pointer_behind_it_is_worded_for_its_door() {
+        let (code, message, _) = said(Kind::FreedBehindReturn, Conclusion::Unknown);
+        assert_eq!(code, "SC0406");
+        assert_eq!(
+            message,
+            "this returns a pointer to where a pointer that may have been freed is stored"
+        );
+        let (code, message, _) = said(Kind::FreedBehindStore, Conclusion::Unknown);
+        assert_eq!(code, "SC0414");
+        assert_eq!(
+            message,
+            "this stores a pointer to where a pointer that may have been freed is stored, where code outside this function may read it"
+        );
+    }
 }

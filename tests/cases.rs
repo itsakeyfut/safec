@@ -362,6 +362,21 @@ cases! {
         // the words say so. Mutation: word the lost row as a freed one; this
         // fails.
         a_pointer_read_out_of_a_parameter_freed_and_stored_back_is_reported_as_one_this_check_lost: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What memory that leaves holds is asked one level in, at the door it
+        // leaves by, as a call asks it (#651). See ADR-0041.
+        //
+        // Mutation: `returned` does not ask `freed_behind`; this goes silent.
+        a_box_holding_a_freed_pointer_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `stored_away` does not ask `freed_behind`; this goes
+        // silent.
+        a_box_holding_a_freed_pointer_stored_through_a_parameter_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `freed_behind` doubts every allocation the box may
+        // contain, live or not; this is reported.
+        a_box_holding_a_live_pointer_returned_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The box left first, so the store into it is the proof of #641,
+        // not the doubt behind it. Mutation: a store is asked only behind
+        // its value; this becomes the doubt.
+        a_box_stored_through_a_parameter_before_a_freed_pointer_is_put_in_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call writes only the locals it may reach, `Known::exposed_locals`
         // (#643). See ADR-0057.
         //
