@@ -2171,6 +2171,11 @@ pub(super) fn stored_away(
 /// [`Known::exposed_locals`]; or anywhere at all, where the pointer or a
 /// level on the way down may hold an address this function never recorded,
 /// [`Known::through_unnamed`].
+///
+/// **The last part decides no case, measured**: dropping it leaves the suite
+/// green, since a pointer read out of memory such code can reach already
+/// holds that memory's sites, which the first part asks. It stands for a
+/// pointer whose sites name nothing, where its absence would be a silence.
 fn leaves(known: &Known, place: &Place) -> bool {
     let depth = derefs(place);
     if known.through_unnamed(place.local, depth) {
