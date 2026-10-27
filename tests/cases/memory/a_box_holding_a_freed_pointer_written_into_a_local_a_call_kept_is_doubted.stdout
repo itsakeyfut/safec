@@ -1,0 +1,116 @@
+Target "x86_64-pc-windows-msvc"
+Function a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:3:6 "keep" declared
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "q"
+Function a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:6 "d1"
+  Local "_0" "void" return
+  Local "_1" "int **" "b"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *" "x"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Local "_8" "int **" "slot"
+  Local "_9" "int ***"
+  Local "_10" "int **"
+  Block "bb0" entry
+    ArgumentsEvaluated a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:27 generated
+    Call a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:27 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:23 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:27 generated
+    Operation a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:42 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:42 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:42 generated
+    Return
+  Block "bb3"
+    Sequenced a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:42 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:67 generated
+    Call a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:67 written "malloc" "bb5"
+      Destination "_5"
+      Constant 4
+  Block "bb5"
+    Operation a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:63 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:67 generated
+    Operation a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:82 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:82 written "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:82 generated
+    ArgumentsEvaluated a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:92 generated
+    Call a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:92 written "free" "bb9"
+      Copy "_1"
+  Block "bb7"
+    Sequenced a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:82 generated
+    Goto "bb8"
+  Block "bb8"
+    ArgumentsEvaluated a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:111 generated
+    Call a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:111 written "free" "bb10"
+      Copy "_4"
+  Block "bb9"
+    Sequenced a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:92 generated
+    Return
+  Block "bb10"
+    Sequenced a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:111 generated
+    Operation a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:120 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:120 written
+      Destination "_7"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:120 generated
+    Operation a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:134 written
+      Destination "_8"
+      Use
+        Constant 0
+    Sequenced a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:141 generated
+    Operation a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:149 written
+      Destination "_9"
+      Address
+        Place "_8"
+    ArgumentsEvaluated a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:144 generated
+    Call a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:144 written "keep" "bb11"
+      Copy "_9"
+  Block "bb11"
+    Sequenced a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:144 generated
+    Operation a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:157 written
+      Destination "_8"
+      Use
+        Copy "_1"
+    Operation a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:157 written
+      Destination "_10"
+      Use
+        Copy "_8"
+    Sequenced a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:157 generated
+    Return

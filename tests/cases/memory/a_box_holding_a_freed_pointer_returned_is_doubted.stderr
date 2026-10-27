@@ -7,4 +7,4 @@ error[SC0406]: this returns a pointer to where a pointer that may have been free
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: set a pointer stored there to null once it is freed, and free it on every path or on none
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this

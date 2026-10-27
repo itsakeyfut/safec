@@ -2186,7 +2186,7 @@ mod unassigned {
         assert_eq!(code, "SC0414");
         assert_eq!(
             message,
-            "this stores a pointer to where a pointer that may have been freed is stored, where code outside this function may read it"
+            "this stores a pointer where code outside this function may read it, and it points to where a pointer that may have been freed is stored"
         );
     }
 }

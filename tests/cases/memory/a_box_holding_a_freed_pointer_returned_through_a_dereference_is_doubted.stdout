@@ -1,0 +1,157 @@
+Target "x86_64-pc-windows-msvc"
+Function a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:7 "e1"
+  Local "_0" "int **" return
+  Local "_1" "int ***" "t"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int **" "b"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *" "x"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int *"
+  Local "_11" "int **"
+  Block "bb0" entry
+    ArgumentsEvaluated a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:29 generated
+    Call a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:29 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:25 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:29 generated
+    Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:44 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:44 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:44 generated
+    Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:52 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:59 generated
+    Return
+  Block "bb3"
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:44 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:72 generated
+    Call a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:72 written "malloc" "bb5"
+      Destination "_5"
+      Constant 8
+  Block "bb5"
+    Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:68 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:72 generated
+    Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:87 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:87 written "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:87 generated
+    ArgumentsEvaluated a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:97 generated
+    Call a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:97 written "free" "bb9"
+      Copy "_1"
+  Block "bb7"
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:87 generated
+    Goto "bb8"
+  Block "bb8"
+    ArgumentsEvaluated a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:127 generated
+    Call a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:127 written "malloc" "bb10"
+      Destination "_8"
+      Constant 4
+  Block "bb9"
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:97 generated
+    Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:106 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:113 generated
+    Return
+  Block "bb10"
+    Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:123 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:127 generated
+    Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:142 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_7"
+        Constant 0
+    Branch a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:142 written "bb11" "bb12"
+      Copy "_9"
+  Block "bb11"
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:142 generated
+    ArgumentsEvaluated a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:152 generated
+    Call a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:152 written "free" "bb14"
+      Copy "_4"
+  Block "bb12"
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:142 generated
+    Goto "bb13"
+  Block "bb13"
+    ArgumentsEvaluated a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:182 generated
+    Call a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:182 written "free" "bb16"
+      Copy "_7"
+  Block "bb14"
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:152 generated
+    ArgumentsEvaluated a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:161 generated
+    Call a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:161 written "free" "bb15"
+      Copy "_1"
+  Block "bb15"
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:161 generated
+    Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:170 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:177 generated
+    Return
+  Block "bb16"
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:182 generated
+    Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:191 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:191 written
+      Destination "_10"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:191 generated
+    Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:199 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:199 written
+      Destination "_11"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:199 generated
+    Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:207 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:214 generated
+    Return

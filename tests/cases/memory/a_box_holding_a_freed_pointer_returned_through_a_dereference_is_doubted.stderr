@@ -1,0 +1,10 @@
+error[SC0406]: this returns a pointer to where a pointer that may have been freed is stored
+   ╭─[ a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:207 ]
+   │
+ 4 │ int **e1(void) { int ***t = malloc(8); if (t == 0) return 0; int **b = malloc(8); if (b == 0) { free(t); return 0; } int *x = malloc(4); if (x == 0) { free(b); free(t); return 0; } free(x); *b = x; *t = b; return *t; }
+   │                                                                                                                                                                                                               ─────┬────  
+   │                                                                                                                                                                                                                    ╰────── returned here, perhaps holding a freed pointer behind it
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this

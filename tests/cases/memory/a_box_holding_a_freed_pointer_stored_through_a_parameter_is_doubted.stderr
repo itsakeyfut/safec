@@ -1,4 +1,4 @@
-error[SC0414]: this stores a pointer to where a pointer that may have been freed is stored, where code outside this function may read it
+error[SC0414]: this stores a pointer where code outside this function may read it, and it points to where a pointer that may have been freed is stored
     ╭─[ a_box_holding_a_freed_pointer_stored_through_a_parameter_is_doubted.c:16:5 ]
     │
  16 │     *ppp = b;
@@ -7,4 +7,4 @@ error[SC0414]: this stores a pointer to where a pointer that may have been freed
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: set a pointer stored there to null once it is freed, and free it on every path or on none
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this
