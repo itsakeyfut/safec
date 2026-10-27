@@ -219,8 +219,11 @@ fn verdict(
         // expression frees what was stored live, which is #650's case and
         // not this one. See ADR-0041.
         Kind::StoreAfterFree => true,
-        // What a leaving pointer holds behind it is asked where it leaves,
-        // as the pointer is, for the reasons the two rows above give.
+        // **Never asked, since neither is ever settled**: `handed_below`
+        // always answers `Reached::Partial` beside what it finds, so these
+        // are `Unknown` and the order decides nothing. `true` for the reasons
+        // the two rows above give, should that change: what leaves leaves
+        // after its expression, or is asked as the store runs.
         Kind::FreedBehindReturn | Kind::FreedBehindStore => true,
         // **Not a `return`'s answer.** A call is not the end of its full
         // expression, so `(free(a), 0) + use(a)` may call `use` before the
@@ -2130,9 +2133,11 @@ pub(super) fn returned(
 /// it holds is asked there, one level in, by [`freed_behind`] (#651); two
 /// levels in is asked at no door, which is #654.
 ///
-/// **Not a store of a live pointer that is freed after it**, which leaves
-/// the caller the same freed pointer and is #650: the store is of what was
-/// live as it ran. And a library copy out of the function is still the
+/// **Not a store of a live pointer that is freed after it**: the store is
+/// of what was live as it ran. Where the memory it lands in leaves later,
+/// by a return or a store of its address, that door asks what it holds;
+/// where it is the caller's own, through a parameter, no door is left,
+/// which is #650. And a library copy out of the function is still the
 /// doubt [`handed`] raises, which is #652.
 ///
 /// **Like a return, it doubts what it cannot prove live**: a pointer a call
@@ -2321,13 +2326,12 @@ pub(super) fn handed(
         );
     }
 
-    // **And what a pointer that said nothing points at, one level in**, keyed
-    // as `*place`, so that `give(tab, *tab)` is one report rather than two:
-    // what `tab` hands on one level in is what `*tab` hands on. A place of
-    // dereferences is asked as its load would be, so `use2(*k)` is not
-    // silent where `q = *k; use2(q);` is asked. See ADR-0045. Not carried
-    // forwards as the pointer is, because only allocations already freed are
-    // asked, and those are reported here. See ADR-0042.
+    // **And what a pointer that said nothing points at, one level in**, by
+    // `freed_behind`. Keyed as `*place`, so that `give(tab, *tab)` is one
+    // report rather than two: what `tab` hands on one level in is what
+    // `*tab` hands on. Not carried forwards as the pointer is, because only
+    // allocations already freed are asked, and those are reported there.
+    // See ADR-0042.
     for place in silent {
         freed_behind(
             findings,
@@ -2342,13 +2346,17 @@ pub(super) fn handed(
 }
 
 /// Report a pointer that leaves, by a call, a return or a store, where what it
-/// points at may hold a freed pointer one level in, and the pointer itself
-/// drew nothing: [`Known::handed_below`], keyed as `*place`, so `give(tab,
-/// *tab)` is one report rather than two. A place of dereferences is asked as
-/// its load would be, so `use2(*k)` is not silent where `q = *k; use2(q);` is
-/// asked. See ADR-0045. Never a proof, since whoever receives it may only
-/// write there; one function for the three doors, so they ask one question
-/// one way. See ADR-0042 and ADR-0041.
+/// points at may hold a freed pointer one level in: [`Known::handed_below`],
+/// keyed as `*place`, so a finding about the place itself at the same caret
+/// is not repeated. A place of dereferences is asked as its load would be, so
+/// `use2(*k)` is not silent where `q = *k; use2(q);` is asked. See ADR-0045.
+/// Never a proof, since whoever receives it may only write there; one
+/// function for the three doors, so they ask one question one way. See
+/// ADR-0042 and ADR-0041.
+///
+/// **Asked only where the pointer itself drew nothing**, which each caller
+/// checks first: a pointer reported in its own right says more than what it
+/// holds behind it, as `give(tab, *tab)` shows at a call.
 fn freed_behind(
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place, usize)>,
