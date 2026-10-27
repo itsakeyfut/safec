@@ -375,7 +375,7 @@ cases! {
         a_box_holding_a_live_pointer_returned_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The box left first, so the store into it is the proof of #641,
         // not the doubt behind it. Mutation: a store is asked only behind
-        // its value; this becomes the doubt.
+        // its value; this loses its `SC0414`.
         a_box_stored_through_a_parameter_before_a_freed_pointer_is_put_in_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call writes only the locals it may reach, `Known::exposed_locals`
         // (#643). See ADR-0057.
