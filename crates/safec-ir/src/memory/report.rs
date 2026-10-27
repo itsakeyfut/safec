@@ -2195,6 +2195,8 @@ pub(super) fn stored_away(
 /// **The allocations below the first level, at a store of more than one
 /// dereference, decide no case, measured**: such a store reaches
 /// `through_unnamed` or the locals first in every program the corpus has.
+/// And the first two parts each hold `**ppp = x` alone, so only dropping
+/// both silences it.
 fn leaves(known: &Known, place: &Place) -> bool {
     let depth = derefs(place);
     if known.through_unnamed(place.local, depth) {

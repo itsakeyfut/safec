@@ -144,11 +144,12 @@ and `memory/`), applied and measured, and a named case in
   `a_freed_pointer_stored_through_a_pointer_to_a_local_a_call_kept_is_reported`,
   and every store leaving fails
   `a_freed_pointer_stored_in_memory_only_this_function_reads_is_not_reported_where_it_is_stored`.
-  Leaving `through_unnamed` out fails
+  Taking a pointer that names nothing to land nowhere fails
+  `a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported`,
+  and doing that and leaving `through_unnamed` out together fails
   `a_freed_pointer_stored_two_levels_below_a_parameter_is_reported` and
-  `a_freed_pointer_stored_through_a_pointer_read_out_of_a_parameter_is_reported`;
-  taking a pointer that names nothing to land nowhere fails
-  `a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported`;
+  `a_freed_pointer_stored_through_a_pointer_read_out_of_a_parameter_is_reported`,
+  which each of the two holds alone;
   and not asking a write of an exposed local fails
   `a_freed_pointer_written_into_a_local_a_call_kept_is_reported`.
 * Not calling `returned` fails `a_function_that_returns_what_it_freed`,

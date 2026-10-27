@@ -353,8 +353,9 @@ cases! {
         // followed (#639). Mutation: `leaves` takes a pointer naming nothing
         // to land nowhere; this loses its `SC0414`.
         a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `leaves` does not ask `through_unnamed`; these two lose
-        // their `SC0414`.
+        // **Held by two routes, measured**: `through_unnamed`, and a pointer
+        // naming nothing taken to land anywhere. Dropping either alone keeps
+        // their `SC0414`; dropping both loses it.
         a_freed_pointer_stored_two_levels_below_a_parameter_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_freed_pointer_stored_through_a_pointer_read_out_of_a_parameter_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What a parameter's memory held is a pointer this check lost, and
