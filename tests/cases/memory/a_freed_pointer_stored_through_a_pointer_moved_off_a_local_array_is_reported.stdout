@@ -1,0 +1,177 @@
+Target "x86_64-pc-windows-msvc"
+Function a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:3:6 "put"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter _Nonnull "pp"
+  Local "_2" "int **[2]" "a"
+  Local "_3" "int ***"
+  Local "_4" "int ***"
+  Local "_5" "int **"
+  Local "_6" "int *" "x"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int ***"
+  Local "_10" "int ***"
+  Local "_11" "int *"
+  Block "bb0" entry
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:5:5 generated
+      Destination "_3"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:5:5 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_3"
+        Constant 1
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:5:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_1"
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:5:5 written
+      Destination "_5"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:5:5 generated
+    ArgumentsEvaluated a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:6:14 generated
+    Call a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:6:14 written "malloc" "bb1"
+      Destination "_7"
+      Constant 4
+  Block "bb1"
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:6:10 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:6:14 generated
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:7:9 written
+      Destination "_8"
+      Binary "Eq"
+        Copy "_6"
+        Constant 0
+    Branch a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:7:9 written "bb2" "bb3"
+      Copy "_8"
+  Block "bb2"
+    Sequenced a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:7:9 generated
+    Return
+  Block "bb3"
+    Sequenced a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:7:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:8:5 generated
+    Call a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:8:5 written "free" "bb5"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:8:5 generated
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:9:6 generated
+      Destination "_9"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:9:6 written
+      Destination "_10"
+      Binary "Add"
+        Copy "_9"
+        Constant 1
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:9:5 written
+      Destination "_10"
+        Deref
+          Deref
+      Use
+        Copy "_6"
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:9:5 written
+      Destination "_11"
+      Use
+        Copy "_10"
+          Deref
+            Deref
+    Sequenced a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:9:5 generated
+    Return
+Function a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *[1]" "m"
+  Local "_2" "int **"
+  Local "_3" "int *"
+  Local "_4" "int **"
+  Local "_5" "int *" "q"
+  Local "_6" "int **"
+  Local "_7" "int"
+  Block "bb0" entry
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:29 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:29 written
+      Destination "_2"
+        Deref
+      Use
+        Constant 0
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:29 written
+      Destination "_3"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:29 generated
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:43 generated
+      Destination "_4"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:39 generated
+    Call a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:39 written "put" "bb1"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:39 generated
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:56 generated
+      Destination "_6"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:52 written
+      Destination "_5"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:56 generated
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:66 written
+      Destination "_7"
+      Binary "Eq"
+        Copy "_5"
+        Constant 0
+    Branch a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:66 written "bb2" "bb3"
+      Copy "_7"
+  Block "bb2"
+    Sequenced a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:66 generated
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:76 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:83 generated
+    Return
+  Block "bb3"
+    Sequenced a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:66 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:88 written
+      Destination "_0"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:11:95 generated
+    Return

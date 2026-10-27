@@ -346,6 +346,13 @@ cases! {
         // Stays in sight: the read back is what is asked. Mutation: every
         // store leaves; this gains an `SC0414`.
         a_freed_pointer_stored_in_memory_only_this_function_reads_is_not_reported_where_it_is_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same store spelled without the pointer. Mutation: a write of a
+        // local `exposed_locals` holds is not asked; this goes silent.
+        a_freed_pointer_written_into_a_local_a_call_kept_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer moved off a local array names nothing this check
+        // followed (#639). Mutation: `leaves` takes a pointer naming nothing
+        // to land nowhere; this loses its `SC0414`.
+        a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call writes only the locals it may reach, `Known::exposed_locals`
         // (#643). See ADR-0057.
         //

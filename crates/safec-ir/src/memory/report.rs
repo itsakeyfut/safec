@@ -2102,15 +2102,26 @@ pub(super) fn returned(
 /// call's result, and nothing reads this function's body from there. So the
 /// store is the last place anything can be said about it, and it is asked
 /// what [`returned`] asks, of the value stored: `free(x); *pp = x;` with
-/// `pp` a parameter built in silence (#641).
+/// `pp` a parameter built in silence (#641). The same event is
+/// [`Departure::Store`] to [`departed_in_element`], which asks it whether
+/// what leaves is whole rather than whether it is live.
 ///
-/// **Only a store that leaves**, [`leaves`]. A store into memory only this
-/// function reads stays in sight, as a copy into a local does: a load of it
-/// carries what it held, and a dereference of that is asked.
+/// **A store through a pointer that leaves**, [`leaves`], **or a write of a
+/// local whose address such code holds**, `keep(&slot); slot = x;`, which
+/// is the same store spelled without the pointer, [`Known::exposed_locals`].
+/// A store into memory only this function reads is not asked here: a load
+/// of it carries what it held, and a dereference of that is asked. **What
+/// that memory holds is not asked if the memory leaves later**, by a return
+/// or by a store of its address, which is #651.
 ///
 /// **Not a store of a live pointer that is freed after it**, which leaves
 /// the caller the same freed pointer and is #650: the store is of what was
-/// live as it ran.
+/// live as it ran. And a library copy out of the function is still the
+/// doubt [`handed`] raises, which is #652.
+///
+/// **Like a return, it doubts what it cannot prove live**: a pointer a call
+/// this check cannot read returned, stored out after another such call, is
+/// `Unknown` with no free in the function. ADR-0041 records that cost.
 pub(super) fn stored_away(
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place, usize)>,
@@ -2123,18 +2134,21 @@ pub(super) fn stored_away(
         return;
     };
     let place = &operation.place;
-    if derefs(place) == 0 || !analysis.may_be_pointer(function, place) {
+    let direct = place.projection.is_empty() && known.exposed_locals[place.local.index()];
+    if !(direct || derefs(place) > 0) || !analysis.may_be_pointer(function, place) {
         return;
     }
     // A constant holds no allocation, and a place with an `Index` is an
-    // array's element, which this does not follow, as at a return.
+    // array's element, which this does not follow, as at a return. **No case
+    // holds this guard, measured**: the lowering reads an element through
+    // its address, so no source of that shape reaches here from C.
     let Rvalue::Use(Operand::Copy(source)) = &operation.value else {
         return;
     };
     if !source.projection.is_empty() && derefs(source) == 0 {
         return;
     }
-    if !leaves(known, place) {
+    if !direct && !leaves(known, place) {
         return;
     }
 
@@ -2165,17 +2179,22 @@ pub(super) fn stored_away(
 }
 
 /// Whether a store to `place`, a place of dereferences, may land where code
-/// outside this function may read it: an allocation such code can reach,
-/// [`Known::reachable_now`], which a parameter's memory is from the
-/// function's start (ADR-0040); a local whose address such code holds,
-/// [`Known::exposed_locals`]; or anywhere at all, where the pointer or a
-/// level on the way down may hold an address this function never recorded,
-/// [`Known::through_unnamed`].
+/// outside this function may read it:
 ///
-/// **The last part decides no case, measured**: dropping it leaves the suite
-/// green, since a pointer read out of memory such code can reach already
-/// holds that memory's sites, which the first part asks. It stands for a
-/// pointer whose sites name nothing, where its absence would be a silence.
+/// - anywhere at all, where the pointer or a level on the way down may hold
+///   an address this function never recorded, [`Known::through_unnamed`]:
+///   `**ppp = x`, and `*pp = x` with `pp` read out of a parameter's memory;
+/// - anywhere at all, where the pointer names nothing this check followed,
+///   neither an allocation nor a local: one moved off a local array by
+///   arithmetic (#639), `*a[1] = x`, may be any of them, and taking it to
+///   land nowhere silenced a free;
+/// - an allocation such code can reach, [`Known::reachable_now`], which a
+///   parameter's memory is from the function's start (ADR-0040);
+/// - a local whose address such code holds, [`Known::exposed_locals`].
+///
+/// **The allocations below the first level, at a store of more than one
+/// dereference, decide no case, measured**: such a store reaches
+/// `through_unnamed` or the locals first in every program the corpus has.
 fn leaves(known: &Known, place: &Place) -> bool {
     let depth = derefs(place);
     if known.through_unnamed(place.local, depth) {
@@ -2190,11 +2209,10 @@ fn leaves(known: &Known, place: &Place) -> bool {
             .into_iter()
             .collect()
     };
-    into.iter().any(|site| reachable.contains(site))
-        || known
-            .locals_a_write_may_land_in(place.local, depth)
-            .into_iter()
-            .any(|local| known.exposed_locals[local])
+    let lands = known.locals_a_write_may_land_in(place.local, depth);
+    (into.is_empty() && lands.is_empty())
+        || into.iter().any(|site| reachable.contains(site))
+        || lands.into_iter().any(|local| known.exposed_locals[local])
 }
 
 /// Report a pointer handed to a call where the allocation it points at may
