@@ -1030,8 +1030,9 @@ impl Known {
     /// [`Self::expose_locals`] takes, from the same seeds, without marking
     /// anything. What a pointer such code gave this function, or memory it
     /// can reach, may hold. **Now, not when a pointer was read**, so a write
-    /// through a pointer read out of memory asks what this answered as it
-    /// was read, [`Held::named_at_read`]: asked at the write, an address
+    /// through a pointer read out of memory, or one such code wrote, asks
+    /// what this answered as it was read or written,
+    /// [`Held::named_at_read`]: asked at the write, an address
     /// stored after the read was counted as one the pointer may be, which
     /// silenced a read of a local array it could not reach (#648). See
     /// ADR-0057.
@@ -1074,6 +1075,28 @@ impl Known {
         }
     }
 
+    /// Add to what each of `landed` records as nameable,
+    /// [`Held::named_at_read`], what code this check cannot read may name
+    /// now, where a store it cannot place may have written that local.
+    ///
+    /// **After the store exposed what it carries**, which
+    /// [`Self::replaced`] runs before: the value it may have put in such a
+    /// local may be an address the store itself just made nameable, so
+    /// `keep(&t); pq = *c; *pq = m; *t = 0;` with `pq` maybe `&t` recorded a
+    /// set without `m` and refused a correct program with a certain
+    /// `SC0411`. Found by review (#661). Only a local the store marked
+    /// `foreign`, since that is what reads this set as of its write.
+    pub(super) fn named_after_a_store(&mut self, landed: &[usize]) {
+        let named = self.locals_named_by_unknown_code();
+        for &local in landed {
+            if self.points_to[local].foreign {
+                for &each in &named {
+                    self.points_to[local].named_at_read.set(each);
+                }
+            }
+        }
+    }
+
     /// Every local a write this check cannot place may land in, for
     /// [`Self::unwritten`], where the write goes through `dereferences`
     /// dereferences of `local`:
@@ -1086,13 +1109,14 @@ impl Known {
     ///   passes through on the way down was read out of memory, lost, or
     ///   written by such code, since each of those may hold an address this
     ///   function never recorded. **As of the read where only `local`
-    ///   itself was read out of memory**, [`Held::named_at_read`]: asked at
-    ///   the write, it counted locals whose address left only after the
-    ///   read, so `t = *pp; *b = m; *t = 0;` was taken to write `m` and an
-    ///   indeterminate `m[0]` was read in silence (#648). A level between
-    ///   `local` and the one written is read at the write, and a lost or
-    ///   foreign local records no point at which it was fixed, so those
-    ///   still take what is named now.
+    ///   itself was read out of memory, or written by such code**,
+    ///   [`Held::named_at_read`]: asked at the write, it counted locals whose
+    ///   address left only after the read, so `t = *pp; *b = m; *t = 0;` was
+    ///   taken to write `m` and an indeterminate `m[0]` was read in silence
+    ///   (#648), and `get(&t); *b = m; *t = 0;` the same (#661). A level
+    ///   between `local` and the one written is read at the write, and a
+    ///   lost local records no point at which it was fixed, so those still
+    ///   take what is named now.
     ///
     /// A store passes its place's [`derefs`], which is zero for a place that
     /// is not dereferences alone; a library copy passes one more than its
@@ -1108,10 +1132,10 @@ impl Known {
     /// never a store from C: the lowering writes `m[0] = p` through `&m[0]`,
     /// and builds an `Index` only under an address, so landing nowhere at
     /// zero leaves the suite green. And the last part for a level between
-    /// `local` and the one written, for a lost pointer and for a foreign
-    /// one leaves it green dropped too, for each of the three alone and all
-    /// together. It stands for an address the edges miss, where its absence
-    /// would be a false `SC0411` (#648).
+    /// `local` and the one written and for a lost pointer leaves it green
+    /// dropped too, for each alone and both together. It stands for an
+    /// address the edges miss, where its absence would be a false `SC0411`
+    /// (#648).
     ///
     /// **Why the edges are not enough for a pointer read out of memory.**
     /// Memory a call wrote records nothing of what it wrote, so in
@@ -1140,10 +1164,11 @@ impl Known {
             _ => self.levels_below(local, dereferences - 1).1,
         };
         let held = &self.points_to[local.index()];
-        // `holds_unrecorded` with `loaded` taken apart: keep the two in step.
-        if self.unnamed_below(local, dereferences) || held.lost || held.foreign {
+        // `holds_unrecorded` with `loaded` and `foreign` taken apart: keep
+        // the two in step.
+        if self.unnamed_below(local, dereferences) || held.lost {
             lands.extend(self.locals_named_by_unknown_code());
-        } else if held.loaded {
+        } else if held.loaded || held.foreign {
             lands.extend(held.named_at_read.ones());
         }
         lands.into_iter().collect()
@@ -1157,8 +1182,8 @@ impl Known {
     /// allocation counts as memory. Whether a write leaves this function's
     /// sight asks this whole; where it may land asks [`Self::unnamed_below`]
     /// and the pointer's own marks apart, because a pointer itself read out
-    /// of memory is answered as of its read (#648). See ADR-0057 and
-    /// ADR-0041.
+    /// of memory is answered as of its read (#648), and one a call wrote as
+    /// of the call (#661). See ADR-0057 and ADR-0041.
     pub(super) fn through_unnamed(&self, local: LocalId, dereferences: usize) -> bool {
         holds_unrecorded(&self.points_to[local.index()]) || self.unnamed_below(local, dereferences)
     }
@@ -1909,6 +1934,7 @@ impl Known {
         may_hold: impl Fn(usize) -> bool,
         may_write: impl Fn(usize) -> bool,
     ) {
+        let named_now = self.locals_named_by_unknown_code();
         for local in 0..self.escaped.len() {
             if may_hold(local)
                 && self.escaped[local]
@@ -1922,6 +1948,21 @@ impl Known {
             // idiom above: the report does not read it. See ADR-0044.
             if may_hold(local) && self.escaped[local] {
                 self.points_to[local].foreign = true;
+            }
+            // **And, where it may have been written, what such code could
+            // name as it wrote**, added rather than set since it may not have
+            // been: a write through it lands there, not in what is named by
+            // the time of the write (#661). See `Held::named_at_read`. Only
+            // where `may_write`: a local the writer cannot reach keeps what
+            // it had, and recording into every escaped local let a store
+            // through a pointer no call could have aimed at `t` count as a
+            // write of what `t` points at. At a call this is taken after the
+            // call exposed what it was handed; a store this check cannot place
+            // adds what it exposes afterwards, `Self::named_after_a_store`.
+            if may_hold(local) && self.escaped[local] && may_write(local) {
+                for &named in &named_now {
+                    self.points_to[local].named_at_read.set(named);
+                }
             }
             // **And it may have been written**, which is what a write this
             // check cannot read is: `int *q; get(&q); *pq` is the
@@ -1947,8 +1988,8 @@ struct Closed {
 
 /// Whether `held` may hold an address this function never recorded: read
 /// out of memory, lost, or written by a call this check cannot read.
-/// [`Known::locals_a_write_may_land_in`] spells it with `loaded` apart, and
-/// follows it.
+/// [`Known::locals_a_write_may_land_in`] spells it with `loaded` and
+/// `foreign` apart, and follows it.
 fn holds_unrecorded(held: &Held) -> bool {
     held.loaded || held.lost || held.foreign
 }

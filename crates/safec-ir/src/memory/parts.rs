@@ -715,9 +715,10 @@ pub(super) struct Held {
     /// exposed. See ADR-0044.
     pub(super) loaded: bool,
     /// The locals code this check cannot read could name where this value
-    /// was read out of memory, what
+    /// was read out of memory, or where such code may have written it
+    /// ([`Held::foreign`], #661), what
     /// [`Known::locals_named_by_unknown_code`](super::known::Known::locals_named_by_unknown_code)
-    /// answered then. Empty where it was not.
+    /// answered then. Empty where it was neither.
     ///
     /// **As of the read, because the value was fixed there.** A local whose
     /// address such code could find only later cannot be what was read, so a
