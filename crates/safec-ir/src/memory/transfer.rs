@@ -449,6 +449,12 @@ impl Allocations<'_> {
         // carries what was stored where it was read from, marked as a load is
         // so that it proves nothing about what it names. See ADR-0046.
         held.loaded = self.may_be_pointer(function, source) || self.reads_a_byte(function, source);
+        // What could be named as this was read. See `Held::named_at_read`.
+        if held.loaded {
+            for named in value.locals_named_by_unknown_code() {
+                held.named_at_read.set(named);
+            }
+        }
         // **Believed to point at one whole object of the type it is read as**,
         // which the store that put it there is asked about. A byte is no
         // pointer and believes nothing; a `void *` believes it starts an
@@ -2555,6 +2561,10 @@ impl Analysis for Allocations<'_> {
                                     held.writes_to.set(target);
                                 }
                                 held.loaded = true;
+                                // As of this copy. See `Held::named_at_read`.
+                                for named in value.locals_named_by_unknown_code() {
+                                    held.named_at_read.set(named);
+                                }
                                 held.lost = marked;
                                 held.stale_read = marked;
                                 held.unreplaced_read = unreplaced;
@@ -2927,6 +2937,9 @@ impl Analysis for Allocations<'_> {
                         whole.then_some(width)
                     });
                     let holds_an_address = value.points_to[local].writes_to.any();
+                    // As of this load, and before the borrow below. See
+                    // `Held::named_at_read`.
+                    let named_now = value.locals_named_by_unknown_code();
                     let held = &mut value.points_to[local];
                     held.believed = believed;
                     for &site in &stored {
@@ -2936,6 +2949,9 @@ impl Analysis for Allocations<'_> {
                     }
                     if !stored.is_empty() {
                         held.loaded = true;
+                        for &named in &named_now {
+                            held.named_at_read.set(named);
+                        }
                     }
                     if hands_a_lost_value {
                         held.lost_read = true;

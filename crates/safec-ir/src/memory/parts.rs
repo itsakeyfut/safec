@@ -621,14 +621,15 @@ pub(super) enum Reached {
 pub(super) struct Held {
     /// A bit per site. A site is a local, so this is square in the locals.
     ///
-    /// **One of four tables square in the locals**, with [`Held::writes_to`],
+    /// **One of five tables square in the locals**, with [`Held::writes_to`],
+    /// [`Held::named_at_read`],
     /// [`Known::inside`](super::known::Known::inside) and
     /// [`Known::inside_locals`](super::known::Known::inside_locals), and the
     /// value holds one for every block and edge. So they are [`Bits`], a bit a
     /// pair, where a `Vec<bool>` spent a byte. Measured on a loop per write
     /// over 100 allocating locals, 401 blocks of 702 locals, release build:
     /// peak memory went from 2,025 MB to 427 MB and time from 2.29 s to
-    /// 0.72 s once all four were packed. Most of what is left is linear in the
+    /// 0.72 s once the four there were then were packed. Most of what is left is linear in the
     /// locals for every block, which is what `memory::LINEAR` counts. See
     /// ADR-0039.
     pub(super) sites: Bits,
@@ -713,6 +714,23 @@ pub(super) struct Held {
     /// write through it is unplaced for that part: what it carries is
     /// exposed. See ADR-0044.
     pub(super) loaded: bool,
+    /// The locals code this check cannot read could name where this value
+    /// was read out of memory, what
+    /// [`Known::locals_named_by_unknown_code`](super::known::Known::locals_named_by_unknown_code)
+    /// answered then. Empty where it was not.
+    ///
+    /// **As of the read, because the value was fixed there.** A local whose
+    /// address such code could find only later cannot be what was read, so a
+    /// write through this lands in these and not in what is named by the
+    /// time of the write: `t = *pp; *b = m; *t = 0;` does not write `m`
+    /// (#648). The edges alone are not enough: memory a call wrote records
+    /// nothing of what it wrote, so `keep(&slot, box); slot = m; t = *box[0];`
+    /// has no edge to `m` though `t` may be it. A union where paths meet and
+    /// through arithmetic, since one path may have read the value after the
+    /// local became nameable. Read by
+    /// [`Known::locals_a_write_may_land_in`](super::known::Known::locals_a_write_may_land_in)
+    /// alone. See ADR-0057.
+    pub(super) named_at_read: Bits,
     /// Whether a call this check cannot read may have written into this
     /// local, through its address, something no site names.
     ///
@@ -977,6 +995,7 @@ impl Held {
             // parameter. See ADR-0036.
             offset: Offset::Zero,
             loaded: false,
+            named_at_read: Bits::new(sites),
             foreign: false,
             stale_read: false,
             unreplaced_read: false,
@@ -1074,6 +1093,7 @@ impl Held {
             writes_elsewhere,
             offset,
             loaded,
+            named_at_read,
             foreign,
             stale_read,
             unreplaced_read,
@@ -1094,6 +1114,7 @@ impl Held {
         *returned_by = None;
         *lost = false;
         *loaded = false;
+        named_at_read.clear_all();
         *foreign = false;
         *stale_read = false;
         *unreplaced_read = false;
@@ -1128,6 +1149,7 @@ impl Held {
             writes_elsewhere,
             offset,
             loaded,
+            named_at_read,
             foreign,
             stale_read,
             unreplaced_read,
@@ -1156,6 +1178,7 @@ impl Held {
         *offset = offset.joined(other.offset);
         *from_caller = *from_caller || other.from_caller;
         *loaded = *loaded || other.loaded;
+        named_at_read.union_with(&other.named_at_read);
         *foreign = *foreign || other.foreign;
         *stale_read = *stale_read || other.stale_read;
         *unreplaced_read = *unreplaced_read || other.unreplaced_read;
@@ -1203,6 +1226,7 @@ impl Held {
             writes_elsewhere,
             offset,
             loaded,
+            named_at_read,
             foreign,
             stale_read,
             unreplaced_read,
@@ -1232,6 +1256,7 @@ impl Held {
 
         // `*tab + 1` is built from a pointer read out of memory, and is one.
         *loaded = *loaded || other.loaded;
+        named_at_read.union_with(&other.named_at_read);
         *foreign = *foreign || other.foreign;
         *stale_read = *stale_read || other.stale_read;
         *unreplaced_read = *unreplaced_read || other.unreplaced_read;
