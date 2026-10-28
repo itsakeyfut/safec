@@ -1,0 +1,209 @@
+Target "x86_64-pc-windows-msvc"
+Function a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:3:6 "use3" declared
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter _Nonnull "bb"
+Function a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:4:6 "make"
+  Local "_0" "void" return
+  Local "_1" "int ***" "bb"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int **" "b"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int **"
+  Local "_8" "int *" "x"
+  Local "_9" "int" "i"
+  Local "_10" "int"
+  Local "_11" "void *"
+  Local "_12" "int *"
+  Local "_13" "int"
+  Local "_14" "int"
+  Local "_15" "int *"
+  Local "_16" "int"
+  Local "_17" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:5:17 generated
+    Call a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:5:17 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:5:12 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:5:17 generated
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:6:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:6:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:6:9 generated
+    Return
+  Block "bb3"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:7:15 generated
+    Call a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:7:15 written "malloc" "bb5"
+      Destination "_5"
+      Constant 8
+  Block "bb5"
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:7:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:7:15 generated
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:8:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:8:9 written "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:8:9 generated
+    ArgumentsEvaluated a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:8:19 generated
+    Call a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:8:19 written "free" "bb9"
+      Copy "_1"
+  Block "bb7"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:8:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:9:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:9:5 written
+      Destination "_7"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:9:5 generated
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:10:10 written
+      Destination "_8"
+      Use
+        Constant 0
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:10:14 generated
+    StorageLive a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:11:10 generated "_9"
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:11:14 written
+      Destination "_9"
+      Use
+        Constant 0
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:11:18 generated
+    Goto "bb10"
+  Block "bb9"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:8:19 generated
+    Return
+  Block "bb10"
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:11:21 written
+      Destination "_10"
+      Binary "Lt"
+        Copy "_9"
+        Constant 2
+    Branch a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:11:21 written "bb11" "bb12"
+      Copy "_10"
+  Block "bb11"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:11:21 generated
+    ArgumentsEvaluated a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:12:9 generated
+    Call a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:12:9 written "free" "bb13"
+      Copy "_8"
+  Block "bb12"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:11:21 generated
+    StorageDead a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:16:5 generated "_9"
+    ArgumentsEvaluated a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:17:5 generated
+    Call a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:17:5 written "use3" "bb23"
+      Copy "_1"
+  Block "bb13"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:12:9 generated
+    ArgumentsEvaluated a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:13:13 generated
+    Call a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:13:13 written "malloc" "bb14"
+      Destination "_11"
+      Constant 4
+  Block "bb14"
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:13:9 written
+      Destination "_8"
+      Use
+        Copy "_11"
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:13:9 written
+      Destination "_12"
+      Use
+        Copy "_8"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:13:9 generated
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:14:13 written
+      Destination "_13"
+      Binary "Eq"
+        Copy "_8"
+        Constant 0
+    Branch a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:14:13 written "bb15" "bb16"
+      Copy "_13"
+  Block "bb15"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:14:13 generated
+    ArgumentsEvaluated a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:14:23 generated
+    Call a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:14:23 written "free" "bb18"
+      Copy "_4"
+  Block "bb16"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:14:13 generated
+    Goto "bb17"
+  Block "bb17"
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:15:13 written
+      Destination "_14"
+      Binary "Eq"
+        Copy "_9"
+        Constant 0
+    Branch a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:15:13 written "bb20" "bb21"
+      Copy "_14"
+  Block "bb18"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:14:23 generated
+    ArgumentsEvaluated a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:14:32 generated
+    Call a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:14:32 written "free" "bb19"
+      Copy "_1"
+  Block "bb19"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:14:32 generated
+    StorageDead a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:14:42 generated "_9"
+    Return
+  Block "bb20"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:15:13 generated
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:15:23 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_8"
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:15:23 written
+      Destination "_15"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:15:23 generated
+    Goto "bb22"
+  Block "bb21"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:15:13 generated
+    Goto "bb22"
+  Block "bb22"
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:11:28 written
+      Destination "_16"
+      Use
+        Copy "_9"
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:11:28 written
+      Destination "_17"
+      Binary "Add"
+        Copy "_9"
+        Constant 1
+    Operation a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:11:28 written
+      Destination "_9"
+      Use
+        Copy "_17"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:11:28 generated
+    Goto "bb10"
+  Block "bb23"
+    Sequenced a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted.c:17:5 generated
+    Return

@@ -401,9 +401,10 @@ impl Known {
     }
 
     /// What a pointer handed to a call points at may hold that may have been
-    /// freed: the allocations [`Self::stored_below`] says it may contain one
-    /// level in, through `&a` or through what this function stored in its own
-    /// memory, that are freed or unproven.
+    /// freed, at any level: the allocations [`Self::stored_below`] says it may
+    /// contain one level in, through `&a` or through what this function
+    /// stored in its own memory, that are freed or unproven, and so on below
+    /// that, by the same rule (#654). See ADR-0042.
     ///
     /// **Not one only [`SiteState::Reachable`] through the address handed**,
     /// because taking an address makes a live allocation that (ADR-0017), so
@@ -467,39 +468,50 @@ impl Known {
             })
             .map(Reached::Site)
             .collect();
-        // **And every level below the first**, until neither set grows, which
-        // two finite sets that only grow must reach. A box of a box holding a
-        // freed pointer was asked at no door (#654). Only what is freed or
-        // unproven counts there: the first level's `Reachable` is asked for a
-        // reason that has no meaning below it, and counting it doubted every
-        // allocation code this check cannot read may reach, deep in any box
-        // handed over. The memory walked through is read for `stale` at every
-        // level; **no case holds that below the first level, measured**:
-        // reading only the first level's containers leaves the suite green.
+        // **And every level below the first, by the first level's rule**,
+        // until neither set grows, which two finite sets that only grow must
+        // reach. A box of a box holding a freed pointer was asked at no door
+        // (#654). What is freed or unproven counts wherever it is reached; a
+        // `Reachable` one counts where it is what an allocation on the way
+        // holds, which is what the first level's `through_address` split
+        // amounts to, and not where only a local's address reaches it.
+        // Counting `Reachable` however it was reached doubted twelve corpus
+        // programs for nothing; not counting it at all left a pointer a call
+        // may have freed, two boxes in, silent. Each local is walked once, not
+        // again at every level below it.
+        // The memory walked through is read for `stale` at every level.
         let mut walked = sites.clone();
         let mut below = first.clone();
+        let mut seen_locals = locals.clone();
+        seen_locals.extend(first_locals.iter().copied());
         let mut frontier = (first, first_locals);
         loop {
             walked.extend(frontier.0.iter().copied());
+            let in_memory: BTreeSet<usize> = frontier
+                .0
+                .iter()
+                .flat_map(|&container| self.inside[container].ones().collect::<Vec<_>>())
+                .collect();
             let (next_sites, next_locals) = self.level_below(&frontier.0, &frontier.1);
             let new_sites: BTreeSet<usize> = next_sites.difference(&below).copied().collect();
             let new_locals: BTreeSet<usize> =
-                next_locals.difference(&frontier.1).copied().collect();
+                next_locals.difference(&seen_locals).copied().collect();
             if new_sites.is_empty() && new_locals.is_empty() {
                 break;
             }
             for &site in &new_sites {
-                if matches!(
-                    self.state[site],
-                    SiteState::Freed { .. } | SiteState::Unknown | SiteState::Unheld
-                ) {
+                let kept = match self.state[site] {
+                    SiteState::Freed { .. } | SiteState::Unknown | SiteState::Unheld => true,
+                    SiteState::Reachable => in_memory.contains(&site),
+                    SiteState::Live(_) => false,
+                };
+                if kept {
                     reached.push(Reached::Site(site));
                 }
             }
             below.extend(new_sites.iter().copied());
-            let mut locals_seen = frontier.1.clone();
-            locals_seen.extend(next_locals.iter().copied());
-            frontier = (new_sites, locals_seen);
+            seen_locals.extend(new_locals.iter().copied());
+            frontier = (new_sites, new_locals);
         }
         if walked.iter().any(|&container| self.stale[container]) {
             reached.push(Reached::Lost(LostReason::Other));
