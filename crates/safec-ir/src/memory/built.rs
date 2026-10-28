@@ -161,12 +161,21 @@ pub(super) fn built_from(
     // as one operand rather than through a temporary, so the bit an operand
     // carries in [`Held`] never arrives for it: `q = *tab + 1; show(q);`
     // exposed nothing, found by mutating [`Held::accumulated`]. See ADR-0040.
-    reached.loaded |= operands.iter().any(|operand| match operand {
+    let read_here = operands.iter().any(|operand| match operand {
         Operand::Copy(source) => {
             !source.projection.is_empty() && (may_be_pointer(source) || reads_a_byte(source))
         }
         Operand::Constant(_) => false,
     });
+    reached.loaded |= read_here;
+    // As of the read, as `read_through` records it, and only for a read made
+    // here: an operand read earlier carries its own, and `t + 1` after
+    // `*b = m;` is still `t`. See `Held::named_at_read`.
+    if read_here {
+        for named in value.locals_named_by_unknown_code() {
+            reached.named_at_read.set(named);
+        }
+    }
 
     reached
 }

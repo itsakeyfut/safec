@@ -312,14 +312,29 @@ cases! {
         // silent.
         a_copy_through_a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read after the address left, it may be the array, and the write may
-        // be its assignment: its edges say so, as the memory it was read
-        // from was recorded to hold `m`. Mutation: a pointer read out of
-        // memory lands in no local its edges name; this gains `SC0411`.
+        // be its assignment. Its edges and what was named as it was read
+        // each say so. Mutation: a pointer read out of memory lands in
+        // neither; this gains `SC0411`. Either alone leaves it silent.
         a_pointer_read_out_of_memory_after_a_local_array_left_may_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read before on one path and after on the other, it may be the
-        // array where the paths meet. Mutation: as above; this gains
-        // `SC0411`.
+        // array where the paths meet. Mutation: as above, both together;
+        // this gains `SC0411`.
         a_pointer_read_out_of_memory_before_a_local_array_left_on_one_path_only_may_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read out of memory a call wrote, after the array's address left
+        // through a local the call kept, it may be that address, and no edge
+        // says so: a call records nothing of what it wrote. A correct
+        // program. Mutation: a load records nothing in `named_at_read`, or a
+        // write through it ignores what it recorded; this gains `SC0411`.
+        a_pointer_read_out_of_memory_a_call_wrote_after_a_local_array_left_may_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same read after the address left on one path and before it on
+        // the other: where the paths meet it may be that address.
+        // Mutation: the join keeps one path's `named_at_read` rather than
+        // the union; this gains `SC0411`.
+        a_pointer_read_out_of_memory_a_call_wrote_after_a_local_array_left_on_one_path_only_may_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same moved as it is read, `*x + 1`, which reaches the value as
+        // one operand rather than through a load. Mutation: such an operand
+        // records nothing in `named_at_read`; this gains `SC0411`.
+        a_pointer_moved_as_it_is_read_out_of_memory_a_call_wrote_after_a_local_array_left_may_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: a library copy whose destination was read out of memory
         // writes every escaped local; this goes silent.
         a_pointer_read_out_of_a_local_array_a_copy_through_caller_memory_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

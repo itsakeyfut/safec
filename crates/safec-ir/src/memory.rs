@@ -301,6 +301,16 @@ const LINEAR: usize = 1024;
 /// with nothing printed. Found by review (#634).
 const PER_LEVEL: usize = 32;
 
+/// How many bytes [`Held::named_at_read`](parts::Held::named_at_read) adds to
+/// each local beside what it adds a pair, which `per_block` counts as three
+/// tenths of a byte. Fitted, since [`LINEAR`] and the byte a pair were fitted
+/// before the field existed: on a loop per write over 100, 140, 150 and 160
+/// allocating locals, 404 to 644 locals, release build, peak memory grew by
+/// 14 to 17%, from 282 to 322 MB at the smallest and 841 to 978 MB at the
+/// largest, and these two terms count 1 to 7% over each of those (#648).
+/// Its bit a pair alone, an eighth of a byte, counted under half of it.
+const NAMED_AT_READ: usize = 96;
+
 /// About how many bytes one block's value takes in a function of this many
 /// locals, whose deepest pointer type is `depth` `*`s deep.
 ///
@@ -309,7 +319,9 @@ const PER_LEVEL: usize = 32;
 /// `a_function_whose_lists_are_too_large_is_unknown_and_not_read` fails.
 fn per_block(locals: usize, depth: usize) -> usize {
     let per_local = locals
+        .saturating_add(locals.saturating_mul(3) / 10)
         .saturating_add(LINEAR)
+        .saturating_add(NAMED_AT_READ)
         .saturating_add(PER_LEVEL.saturating_mul(depth));
     locals.saturating_mul(per_local)
 }
@@ -1149,7 +1161,7 @@ mod tests {
     };
     use crate::target::Target;
 
-    /// A unit holding one function of ten locals and three blocks: 31,020 by
+    /// A unit holding one function of ten locals and three blocks: 33,990 by
     /// [`per_block`].
     fn ten_by_three() -> (SourceMap, TranslationUnit) {
         ten_by_three_deep(0)
@@ -1197,21 +1209,22 @@ mod tests {
     }
 
     /// Past the bound, a function is one `Unknown` finding at its name and
-    /// is not read. Ten locals are `10 * (10 + LINEAR)` a block, so three
-    /// blocks are 31,020.
+    /// is not read. Ten locals are `10 * (10 + 3 + LINEAR + NAMED_AT_READ)`
+    /// a block, so three blocks are 33,990.
     ///
     /// Mutation: drop the guard. The function is solved, and no `TooLarge`
-    /// finding is made.
+    /// finding is made. Mutation: leave out [`NAMED_AT_READ`], or the three
+    /// tenths of a byte a pair. This fails on `bytes`.
     #[test]
     fn a_function_past_the_bound_is_one_unknown_finding() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, 31_019, MAX_WORK);
+        let findings = findings_within(&sources, &unit, 33_989, MAX_WORK);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(
             findings[0].kind,
             Kind::TooLarge {
-                bytes: 31_020,
-                max: 31_019
+                bytes: 33_990,
+                max: 33_989
             }
         );
         assert_eq!(findings[0].conclusion, Conclusion::Unknown);
@@ -1224,7 +1237,7 @@ mod tests {
     #[test]
     fn a_function_at_the_bound_is_read() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, 31_020, MAX_WORK);
+        let findings = findings_within(&sources, &unit, 33_990, MAX_WORK);
         assert!(
             findings
                 .iter()
@@ -1234,21 +1247,22 @@ mod tests {
     }
 
     /// The lists a local's levels take count toward the bound: ten locals,
-    /// one of them three `*`s deep, are `10 * (10 + LINEAR + 3 * PER_LEVEL)`
-    /// a block, so three blocks are 33,900, past a bound the same function
-    /// with no pointer in it is read under.
+    /// one of them three `*`s deep, are
+    /// `10 * (10 + 3 + LINEAR + NAMED_AT_READ + 3 * PER_LEVEL)` a block, so
+    /// three blocks are 36,870, past a bound the same function with no
+    /// pointer in it is read under.
     ///
     /// Mutation: leave out [`PER_LEVEL`]. This is read.
     #[test]
     fn a_function_whose_lists_are_too_large_is_unknown_and_not_read() {
         let (sources, unit) = ten_by_three_deep(3);
-        let findings = findings_within(&sources, &unit, 33_899, MAX_WORK);
+        let findings = findings_within(&sources, &unit, 36_869, MAX_WORK);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(
             findings[0].kind,
             Kind::TooLarge {
-                bytes: 33_900,
-                max: 33_899
+                bytes: 36_870,
+                max: 36_869
             }
         );
     }
@@ -1260,19 +1274,20 @@ mod tests {
     fn the_bounds_are_two_to_the_thirtieth_and_thirty_second_over_1024_a_local() {
         assert_eq!(LINEAR, 1024);
         assert_eq!(PER_LEVEL, 32);
+        assert_eq!(NAMED_AT_READ, 96);
         assert_eq!(MAX_BYTES, 1_073_741_824);
         assert_eq!(MAX_WORK, 4_294_967_296);
     }
 
     /// Past the work bound, a function is one `Unknown` finding at its name.
-    /// Ten locals are 10,340 a walk, so a bound of 31,019 is two walks, and
+    /// Ten locals are 11,330 a walk, so a bound of 33,989 is two walks, and
     /// the three blocks take three.
     ///
     /// Mutation: solve without the bound. No `TooLong` finding is made.
     #[test]
     fn a_function_past_the_work_bound_is_one_unknown_finding() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, MAX_BYTES, 31_019);
+        let findings = findings_within(&sources, &unit, MAX_BYTES, 33_989);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(findings[0].kind, Kind::TooLong { walks: 2 });
         assert_eq!(findings[0].conclusion, Conclusion::Unknown);
@@ -1285,7 +1300,7 @@ mod tests {
     #[test]
     fn a_function_at_the_work_bound_is_read() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, MAX_BYTES, 31_020);
+        let findings = findings_within(&sources, &unit, MAX_BYTES, 33_990);
         assert!(findings.is_empty(), "{findings:?}");
     }
     /// Where a local's address stored in memory can reach, as a test builds
