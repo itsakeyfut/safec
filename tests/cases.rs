@@ -337,8 +337,8 @@ cases! {
         // Mutation: a store of a pointer this check followed is asked as a
         // doubt whatever it holds; this is reported.
         a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `leaves` does not ask `reachable_now()`; this loses its
-        // `SC0414`.
+        // Mutation: `leaves` does not ask `sites_named_by_unknown_code()`;
+        // this loses its `SC0414`.
         a_freed_pointer_stored_in_memory_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `leaves` does not ask `exposed_locals`; this loses its
         // `SC0414`.
@@ -349,6 +349,20 @@ cases! {
         // The same store spelled without the pointer. Mutation: a write of a
         // local `exposed_locals` holds is not asked; this goes silent.
         a_freed_pointer_written_into_a_local_a_call_kept_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A box that left through a local a call kept, `slot = b;`, is
+        // memory such code may read (#655). Mutation: `leaves` asks
+        // `reachable_now()` in place of `sites_named_by_unknown_code()`;
+        // this loses its `SC0414`. Its `SC0402` at the same store is not
+        // about `x` and is a separate false report.
+        a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same two levels below the local, `*c = b; slot = c;`.
+        // Mutation: the walk takes one step from the exposed locals and
+        // stops; this loses its `SC0414`.
+        a_freed_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with `x` live. Held by no mutation of `leaves`, measured:
+        // a live pointer is not a freed one whichever memory it lands in, so
+        // this marks what the store must not report.
+        a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer moved off a local array names nothing this check
         // followed (#639). Mutation: `leaves` takes a pointer naming nothing
         // to land nowhere; this loses its `SC0414`.

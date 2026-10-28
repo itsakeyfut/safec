@@ -1018,7 +1018,7 @@ impl Known {
     pub(super) fn expose_locals(&mut self, locals: Vec<usize>) {
         let mut seeds: BTreeSet<usize> = locals.into_iter().collect();
         seeds.extend((0..self.exposed_locals.len()).filter(|&local| self.exposed_locals[local]));
-        for local in self.locals_closed_from(self.reachable_now(), seeds) {
+        for local in self.closed_from(self.reachable_now(), seeds).1 {
             self.exposed_locals[local] = true;
         }
     }
@@ -1031,26 +1031,44 @@ impl Known {
     /// counted as one the pointer may be, which silences a read of a local
     /// array the pointer could not reach (#648). See ADR-0057.
     pub(super) fn named_by_unknown_code(&self) -> BTreeSet<usize> {
-        let exposed = (0..self.exposed_locals.len()).filter(|&local| self.exposed_locals[local]);
-        self.locals_closed_from(self.reachable_now(), exposed.collect())
+        self.unknown_code_reaches().1
     }
 
-    /// `locals`, and every local whose address may be found from them or
-    /// from `sites` through [`Self::level_below`], at any depth. One walk for
-    /// the call that exposes and the write that asks, so the two cannot find
-    /// different locals. Two finite sets that only grow, so it ends.
-    fn locals_closed_from(
+    /// Every allocation code this check cannot read may reach now: the same
+    /// walk as [`Self::named_by_unknown_code`], answered in sites. That is
+    /// [`Self::reachable_now`] and what an exposed local points at, at any
+    /// depth: `keepp(&slot); slot = b;` puts `b`'s allocation where such code
+    /// can find it, though nothing exposed it (#655). See ADR-0041.
+    pub(super) fn sites_named_by_unknown_code(&self) -> BTreeSet<usize> {
+        self.unknown_code_reaches().0
+    }
+
+    /// The walk [`Self::named_by_unknown_code`] and
+    /// [`Self::sites_named_by_unknown_code`] share, from what is exposed and
+    /// every exposed local, so the sites and the locals cannot come from two
+    /// different walks.
+    fn unknown_code_reaches(&self) -> (BTreeSet<usize>, BTreeSet<usize>) {
+        let exposed = (0..self.exposed_locals.len()).filter(|&local| self.exposed_locals[local]);
+        self.closed_from(self.reachable_now(), exposed.collect())
+    }
+
+    /// `sites` and `locals`, and every site and local whose address may be
+    /// found from them through [`Self::level_below`], at any depth. One walk
+    /// for the call that exposes and the write and the store that ask, so
+    /// they cannot find different memory. Two finite sets that only grow, so
+    /// it ends.
+    fn closed_from(
         &self,
         mut sites: BTreeSet<usize>,
         mut locals: BTreeSet<usize>,
-    ) -> BTreeSet<usize> {
+    ) -> (BTreeSet<usize>, BTreeSet<usize>) {
         loop {
             let (next_sites, next_locals) = self.level_below(&sites, &locals);
             let before = (sites.len(), locals.len());
             sites.extend(next_sites);
             locals.extend(next_locals);
             if (sites.len(), locals.len()) == before {
-                return locals;
+                return (sites, locals);
             }
         }
     }

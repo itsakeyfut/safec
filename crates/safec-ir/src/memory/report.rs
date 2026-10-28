@@ -2221,8 +2221,10 @@ pub(super) fn stored_away(
 ///   neither an allocation nor a local: one moved off a local array by
 ///   arithmetic (#639), `*a[1] = x`, may be any of them, and taking it to
 ///   land nowhere silenced a free;
-/// - an allocation such code can reach, [`Known::reachable_now`], which a
-///   parameter's memory is from the function's start (ADR-0040);
+/// - an allocation such code can reach, [`Known::sites_named_by_unknown_code`]:
+///   one exposed to it, which a parameter's memory is from the function's
+///   start (ADR-0040), or one a local whose address it holds points at, at
+///   any depth, `keepp(&slot); slot = b; *b = x;` (#655);
 /// - a local whose address such code holds, [`Known::exposed_locals`].
 ///
 /// **The allocations below the first level, at a store of more than one
@@ -2235,7 +2237,7 @@ fn leaves(known: &Known, place: &Place) -> bool {
     if known.through_unnamed(place.local, depth) {
         return true;
     }
-    let reachable = known.reachable_now();
+    let reachable = known.sites_named_by_unknown_code();
     let into: Vec<usize> = if depth == 1 {
         known.sites_of(place.local).collect()
     } else {
