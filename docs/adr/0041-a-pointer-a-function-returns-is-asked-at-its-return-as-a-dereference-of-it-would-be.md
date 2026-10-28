@@ -103,7 +103,9 @@ check's sight by the other door: `void put(int **pp) { ... free(x); *pp = x;
 freed. `report::stored_away` asks such a store what `returned` asks, of the
 value stored, at the same point. A store leaves where it may land in an
 allocation code this check cannot read can reach, a parameter's memory
-included (ADR-0040), in a local whose address such code holds
+included (ADR-0040) and what a local whose address such code holds points
+at, at any depth (`keepp(&slot); slot = b; *b = x;`, silent until #655,
+`Known::sites_named_by_unknown_code`), in a local whose address such code holds
 (`Known::exposed_locals`), or anywhere, where the pointer or a level on the way
 down may hold an address this function never recorded
 (`Known::through_unnamed`) or where the pointer names nothing this check
@@ -166,7 +168,13 @@ and `memory/`), applied and measured, and a named case in
 * Not calling `stored_away` fails
   `a_freed_pointer_a_callee_stores_through_its_parameter_is_reported` and
   `a_freed_pointer_a_callee_stores_through_a_pointer_to_a_local_is_reported`.
-  Leaving `reachable_now()` or `exposed_locals` out of `leaves` fails
+  Asking `reachable_now()` in `leaves` in place of
+  `sites_named_by_unknown_code()` fails
+  `a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported`,
+  and taking one step from the exposed locals and stopping fails
+  `a_freed_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_reported`
+  (#655).
+  Leaving `sites_named_by_unknown_code()` or `exposed_locals` out of `leaves` fails
   `a_freed_pointer_stored_in_memory_handed_to_a_call_is_reported` or
   `a_freed_pointer_stored_through_a_pointer_to_a_local_a_call_kept_is_reported`,
   and every store leaving fails
