@@ -1,0 +1,20 @@
+error[SC0402]: this uses `c`, which may have been freed
+    ╭─[ a_box_holding_a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_doubted.c:17:5 ]
+    │
+ 17 │     *c = b;
+    │     ───┬──  
+    │        ╰──── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0414]: this stores a pointer where code outside this function may read it, and it points to where a pointer that may have been freed is stored
+    ╭─[ a_box_holding_a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_doubted.c:17:5 ]
+    │
+ 17 │     *c = b;
+    │     ───┬──  
+    │        ╰──── stored here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this
