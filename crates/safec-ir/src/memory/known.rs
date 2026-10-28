@@ -1029,10 +1029,11 @@ impl Known {
     /// Every local code this check cannot read may name now: the walk
     /// [`Self::expose_locals`] takes, from the same seeds, without marking
     /// anything. What a pointer such code gave this function, or memory it
-    /// can reach, may hold. **Now, not when the pointer was read**: an
-    /// address stored there after a pointer was read out of that memory is
-    /// counted as one the pointer may be, which silences a read of a local
-    /// array the pointer could not reach (#648). See ADR-0057.
+    /// can reach, may hold. **Now, not when a pointer was read**, so it is
+    /// not asked where a write lands through a pointer itself read out of
+    /// memory: an address stored after the read would be counted as one the
+    /// pointer may be, which silenced a read of a local array the pointer
+    /// could not reach (#648). See ADR-0057.
     pub(super) fn locals_named_by_unknown_code(&self) -> BTreeSet<usize> {
         self.unknown_code_reaches().locals
     }
@@ -1083,7 +1084,15 @@ impl Known {
     ///   [`Self::locals_named_by_unknown_code`], where `local` or a pointer the walk
     ///   passes through on the way down was read out of memory, lost, or
     ///   written by such code, since each of those may hold an address this
-    ///   function never recorded.
+    ///   function never recorded. **Not where only `local` itself was read
+    ///   out of memory**, since its edges already name what that memory was
+    ///   recorded to hold as it was read, and what is named by the time of
+    ///   the write includes locals whose address left only after the read:
+    ///   `t = *pp; *b = m; *t = 0;` was taken to write `m`, and an
+    ///   indeterminate `m[0]` was read in silence (#648). A level the walk
+    ///   passes through is read at the write, and a lost or foreign local
+    ///   carries no edge for what it may be, so those still take what is
+    ///   named now.
     ///
     /// A store passes its place's [`derefs`], which is zero for a place that
     /// is not dereferences alone; a library copy passes one more than its
@@ -1095,14 +1104,20 @@ impl Known {
     /// memory, and counting it so silenced a read of that array `main`
     /// reported. Found by review.
     ///
-    /// **Two parts no case holds, measured.** A place with no dereference is
+    /// **One part no case holds, measured.** A place with no dereference is
     /// never a store from C: the lowering writes `m[0] = p` through `&m[0]`,
     /// and builds an `Index` only under an address, so landing nowhere at
-    /// zero leaves the suite green. And the pointers the last part is for
-    /// already carry in their edges the addresses that memory such code
-    /// reaches was recorded to hold, so dropping it leaves the suite green
-    /// too; it stands for an address that recording misses, where its
-    /// absence would be a false report.
+    /// zero leaves the suite green.
+    ///
+    /// **What the edges miss is now a false report, not a silence.** A
+    /// pointer read out of memory lands only where its edges say, so an
+    /// address stored where this check recorded nothing would leave the
+    /// local it names reported `SC0411` though the write assigned it. None
+    /// is known: an address a call was handed is a write of that local at
+    /// the call, and a store records what it stores. Answering with what is
+    /// named at the write instead silenced the read above, and carrying
+    /// what was named as of each read cost a sixth more memory and decided
+    /// no case, measured (#648). See ADR-0057.
     ///
     /// **A pointer naming no local lands in none.** One moved off an array by
     /// arithmetic has lost its edge (#639), so `*(&m[1] - 1) = p` leaves
@@ -1121,7 +1136,8 @@ impl Known {
             1 => self.written_through(local).into_iter().collect(),
             _ => self.levels_below(local, dereferences - 1).1,
         };
-        if self.through_unnamed(local, dereferences) {
+        let held = &self.points_to[local.index()];
+        if self.unnamed_below(local, dereferences) || held.lost || held.foreign {
             lands.extend(self.locals_named_by_unknown_code());
         }
         lands.into_iter().collect()
@@ -1132,16 +1148,26 @@ impl Known {
     /// recorded: `local` itself, or a level the write reads its way through
     /// above the one written, read out of memory, lost, or written by code
     /// this check cannot read. A level that is an allocation counts as
-    /// memory. One answer for where a write may land and for whether it
-    /// leaves this function's sight, so the two cannot drift. See ADR-0057
-    /// and ADR-0041.
+    /// memory. Whether a write leaves this function's sight asks this
+    /// whole; where it may land asks [`Self::unnamed_below`] and the
+    /// pointer's own `lost` and `foreign` apart, because a pointer itself
+    /// read out of memory lands where its edges say (#648). See ADR-0057 and
+    /// ADR-0041.
     pub(super) fn through_unnamed(&self, local: LocalId, dereferences: usize) -> bool {
-        let unnamed = |held: &Held| held.loaded || held.lost || held.foreign;
-        unnamed(&self.points_to[local.index()])
-            || (0..dereferences.saturating_sub(1)).any(|level| {
-                let (sites, locals) = self.levels_below(local, level);
-                !sites.is_empty() || locals.iter().any(|&held| unnamed(&self.points_to[held]))
-            })
+        unnamed(&self.points_to[local.index()]) || self.unnamed_below(local, dereferences)
+    }
+
+    /// The second half of [`Self::through_unnamed`]: whether a level the
+    /// write reads its way through, above the one written, may hold an
+    /// address this function never recorded. Apart, because such a level is
+    /// read at the write, where `local` was read earlier and its edges
+    /// already answer for it, so [`Self::locals_a_write_may_land_in`] asks
+    /// the two differently (#648).
+    fn unnamed_below(&self, local: LocalId, dereferences: usize) -> bool {
+        (0..dereferences.saturating_sub(1)).any(|level| {
+            let (sites, locals) = self.levels_below(local, level);
+            !sites.is_empty() || locals.iter().any(|&held| unnamed(&self.points_to[held]))
+        })
     }
 
     /// Tell every pending read that `by` did not make that `routes` are now
@@ -1909,4 +1935,10 @@ impl Known {
 struct Closed {
     sites: BTreeSet<usize>,
     locals: BTreeSet<usize>,
+}
+
+/// Whether `held` may hold an address this function never recorded: read
+/// out of memory, lost, or written by a call this check cannot read.
+fn unnamed(held: &Held) -> bool {
+    held.loaded || held.lost || held.foreign
 }

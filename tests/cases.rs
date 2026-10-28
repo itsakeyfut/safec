@@ -302,6 +302,24 @@ cases! {
         // Mutation: `replaced_by` passes `may_hold` as `may_write`; this
         // goes silent.
         a_pointer_read_out_of_a_local_array_a_store_through_caller_memory_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read out of memory before a local array's address left
+        // cannot be that array, so a write through it does not write the
+        // array (#648). See ADR-0057. Mutation: a pointer read out of
+        // memory lands in every local code this check cannot read names at
+        // the write again; this goes silent.
+        a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same written by a library copy. Mutation: as above; this goes
+        // silent.
+        a_copy_through_a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read after the address left, it may be the array, and the write may
+        // be its assignment: its edges say so, as the memory it was read
+        // from was recorded to hold `m`. Mutation: a pointer read out of
+        // memory lands in no local its edges name; this gains `SC0411`.
+        a_pointer_read_out_of_memory_after_a_local_array_left_may_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read before on one path and after on the other, it may be the
+        // array where the paths meet. Mutation: as above; this gains
+        // `SC0411`.
+        a_pointer_read_out_of_memory_before_a_local_array_left_on_one_path_only_may_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: a library copy whose destination was read out of memory
         // writes every escaped local; this goes silent.
         a_pointer_read_out_of_a_local_array_a_copy_through_caller_memory_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
