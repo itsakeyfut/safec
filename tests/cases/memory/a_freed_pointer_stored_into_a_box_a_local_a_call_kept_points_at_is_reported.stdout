@@ -1,0 +1,112 @@
+Target "x86_64-pc-windows-msvc"
+Function a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:3:6 "keepp" declared
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "p"
+Function a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:4:6 "use_kept" declared
+  Local "_0" "void" return
+Function a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:5:6 "make"
+  Local "_0" "void" return
+  Local "_1" "int **" "slot"
+  Local "_2" "int ***"
+  Local "_3" "int **" "b"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int *" "x"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int **"
+  Local "_10" "int *"
+  Block "bb0" entry
+    Operation a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:7:11 written
+      Destination "_2"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:7:5 generated
+    Call a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:7:5 written "keepp" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:7:5 generated
+    ArgumentsEvaluated a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:8:15 generated
+    Call a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:8:15 written "malloc" "bb2"
+      Destination "_4"
+      Constant 8
+  Block "bb2"
+    Operation a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:8:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:8:15 generated
+    Operation a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:9:9 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:9:9 written "bb3" "bb4"
+      Copy "_5"
+  Block "bb3"
+    Sequenced a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:9:9 generated
+    Return
+  Block "bb4"
+    Sequenced a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:9:9 generated
+    Goto "bb5"
+  Block "bb5"
+    ArgumentsEvaluated a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:10:14 generated
+    Call a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:10:14 written "malloc" "bb6"
+      Destination "_7"
+      Constant 4
+  Block "bb6"
+    Operation a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:10:10 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:10:14 generated
+    Operation a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:11:9 written
+      Destination "_8"
+      Binary "Eq"
+        Copy "_6"
+        Constant 0
+    Branch a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:11:9 written "bb7" "bb8"
+      Copy "_8"
+  Block "bb7"
+    Sequenced a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:11:9 generated
+    Return
+  Block "bb8"
+    Sequenced a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:11:9 generated
+    Goto "bb9"
+  Block "bb9"
+    Operation a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:12:5 written
+      Destination "_1"
+      Use
+        Copy "_3"
+    Operation a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:12:5 written
+      Destination "_9"
+      Use
+        Copy "_1"
+    Sequenced a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:12:5 generated
+    ArgumentsEvaluated a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:13:5 generated
+    Call a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:13:5 written "free" "bb10"
+      Copy "_6"
+  Block "bb10"
+    Sequenced a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:13:5 generated
+    Operation a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:14:5 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:14:5 written
+      Destination "_10"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:14:5 generated
+    ArgumentsEvaluated a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:15:5 generated
+    Call a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:15:5 written "use_kept" "bb11"
+  Block "bb11"
+    Sequenced a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported.c:15:5 generated
+    Return

@@ -101,18 +101,31 @@ pointer stored where code outside the function may read it leaves this
 check's sight by the other door: `void put(int **pp) { ... free(x); *pp = x;
 }` built in silence, and the caller read the freed pointer back as one nobody
 freed. `report::stored_away` asks such a store what `returned` asks, of the
-value stored, at the same point. A store leaves where it may land in an
-allocation code this check cannot read can reach, a parameter's memory
-included (ADR-0040), in a local whose address such code holds
-(`Known::exposed_locals`), or anywhere, where the pointer or a level on the way
-down may hold an address this function never recorded
-(`Known::through_unnamed`) or where the pointer names nothing this check
-followed, as one moved off an array by arithmetic does (#639). A write of such
-a local without a pointer, `keep(&slot); slot = x;`, is the same store and is
-asked the same way. A store into memory only this function reads is not asked
-there, since a load of it carries what it held; where that memory leaves, it
-is asked what it holds, as the next paragraph says. A library copy out of the function is the doubt `SC0407` raises
-rather than this proof, which is #652. It has a code of its own because what
+value stored, at the same point. A store leaves where it may land in one of
+three places:
+
+- an allocation code this check cannot read can reach
+  (`Known::sites_named_by_unknown_code`): one exposed to it, a parameter's
+  memory included (ADR-0040), or one that a local whose address such code
+  holds points at, at any depth, `keepp(&slot); slot = b; *b = x;` (#655);
+- a local such code can name (`Known::locals_named_by_unknown_code`): one
+  whose address a call was handed, or one whose address such a local holds,
+  `keepp(&slot); slot = &t; t = x;`, before any later call marks it (#655);
+- anywhere, where the pointer or a level on the way down may hold an
+  address this function never recorded (`Known::through_unnamed`), or where
+  the pointer names nothing this check followed, as one moved off an array
+  by arithmetic does (#639).
+
+A write of such a local without a pointer, `keep(&slot); slot = x;`, is the
+same store and is asked the same way. Every route is the same proof, which
+`--allow-unknown` does not lower: through a kept local as through a
+parameter, a freed pointer stored there is a use of an indeterminate value
+(C17 6.2.4p2, Annex J.2), so `free(x); *b = x; *b = 0;` exits 1 even though
+nothing reads `*b` before it is overwritten. A store into memory only this
+function reads is not asked there, since a load of it carries what it held;
+where that memory leaves, it is asked what it holds, as the next paragraph
+says. A library copy out of the function is the doubt `SC0407` raises rather
+than this proof, which is #652. It has a code of its own because what
 to change is what is stored, and because code that is not a caller may read
 it. A live pointer stored and freed after is not this rule, since the store is
 of what was live as it ran; that is #650.
@@ -166,7 +179,20 @@ and `memory/`), applied and measured, and a named case in
 * Not calling `stored_away` fails
   `a_freed_pointer_a_callee_stores_through_its_parameter_is_reported` and
   `a_freed_pointer_a_callee_stores_through_a_pointer_to_a_local_is_reported`.
-  Leaving `reachable_now()` or `exposed_locals` out of `leaves` fails
+  Asking `reachable_now()` in `leaves` in place of
+  `sites_named_by_unknown_code()` fails
+  `a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_reported`,
+  `a_freed_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_reported`
+  and `a_box_holding_a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_doubted`,
+  and taking one step from the exposed locals and stopping fails the second
+  alone. Asking `exposed_locals` in place of
+  `locals_named_by_unknown_code()` fails
+  `a_freed_pointer_written_into_a_local_a_kept_local_points_at_is_reported`
+  at the direct write and
+  `a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points_at_is_reported`
+  among the locals a store lands in. Taking the walk's sites for its locals
+  fails both and ten others (#655).
+  Leaving `sites_named_by_unknown_code()` or `locals_named_by_unknown_code()` out of `leaves` fails
   `a_freed_pointer_stored_in_memory_handed_to_a_call_is_reported` or
   `a_freed_pointer_stored_through_a_pointer_to_a_local_a_call_kept_is_reported`,
   and every store leaving fails

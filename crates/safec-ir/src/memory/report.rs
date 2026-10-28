@@ -2126,7 +2126,10 @@ pub(super) fn returned(
 ///
 /// **A store through a pointer that leaves**, [`leaves`], **or a write of a
 /// local whose address such code holds**, `keep(&slot); slot = x;`, which
-/// is the same store spelled without the pointer, [`Known::exposed_locals`].
+/// is the same store spelled without the pointer: one
+/// [`Known::locals_named_by_unknown_code`] names, which is a local a call
+/// was handed the address of and one whose address such a local holds,
+/// `keepp(&slot); slot = &t; t = x;`, before any later call (#655).
 /// A store into memory only this function reads is not asked here: a load
 /// of it carries what it held, and a dereference of that is asked. **If
 /// that memory leaves later**, by a return or a store of its address, what
@@ -2155,7 +2158,10 @@ pub(super) fn stored_away(
         return;
     };
     let place = &operation.place;
-    let direct = place.projection.is_empty() && known.exposed_locals[place.local.index()];
+    let direct = place.projection.is_empty()
+        && known
+            .locals_named_by_unknown_code()
+            .contains(&place.local.index());
     if !(direct || derefs(place) > 0) || !analysis.may_be_pointer(function, place) {
         return;
     }
@@ -2221,9 +2227,12 @@ pub(super) fn stored_away(
 ///   neither an allocation nor a local: one moved off a local array by
 ///   arithmetic (#639), `*a[1] = x`, may be any of them, and taking it to
 ///   land nowhere silenced a free;
-/// - an allocation such code can reach, [`Known::reachable_now`], which a
-///   parameter's memory is from the function's start (ADR-0040);
-/// - a local whose address such code holds, [`Known::exposed_locals`].
+/// - an allocation such code can reach, [`Known::sites_named_by_unknown_code`]:
+///   one exposed to it, which a parameter's memory is from the function's
+///   start (ADR-0040), or one a local whose address it holds points at, at
+///   any depth, `keepp(&slot); slot = b; *b = x;` (#655);
+/// - a local whose address such code holds, directly or through such a
+///   local, [`Known::locals_named_by_unknown_code`] (#655).
 ///
 /// **The allocations below the first level, at a store of more than one
 /// dereference, decide no case, measured**: such a store reaches
@@ -2235,7 +2244,7 @@ fn leaves(known: &Known, place: &Place) -> bool {
     if known.through_unnamed(place.local, depth) {
         return true;
     }
-    let reachable = known.reachable_now();
+    let reachable = known.sites_named_by_unknown_code();
     let into: Vec<usize> = if depth == 1 {
         known.sites_of(place.local).collect()
     } else {
@@ -2245,9 +2254,10 @@ fn leaves(known: &Known, place: &Place) -> bool {
             .collect()
     };
     let lands = known.locals_a_write_may_land_in(place.local, depth);
-    (into.is_empty() && lands.is_empty())
-        || into.iter().any(|site| reachable.contains(site))
-        || lands.into_iter().any(|local| known.exposed_locals[local])
+    (into.is_empty() && lands.is_empty()) || into.iter().any(|site| reachable.contains(site)) || {
+        let named = known.locals_named_by_unknown_code();
+        lands.into_iter().any(|local| named.contains(&local))
+    }
 }
 
 /// Report a pointer handed to a call where the allocation it points at may

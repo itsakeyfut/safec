@@ -1,0 +1,146 @@
+Target "x86_64-pc-windows-msvc"
+Function a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:3:6 "keepp" declared
+  Local "_0" "void" return
+  Local "_1" "int ****" parameter "p"
+Function a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:4:6 "use_kept" declared
+  Local "_0" "void" return
+Function a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:5:6 "make"
+  Local "_0" "void" return
+  Local "_1" "int ***" "slot"
+  Local "_2" "int ****"
+  Local "_3" "int ***" "c"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int **" "b"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int *" "x"
+  Local "_10" "void *"
+  Local "_11" "int"
+  Local "_12" "int **"
+  Local "_13" "int ***"
+  Local "_14" "int *"
+  Block "bb0" entry
+    Operation a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:7:11 written
+      Destination "_2"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:7:5 generated
+    Call a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:7:5 written "keepp" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:7:5 generated
+    ArgumentsEvaluated a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:8:16 generated
+    Call a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:8:16 written "malloc" "bb2"
+      Destination "_4"
+      Constant 8
+  Block "bb2"
+    Operation a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:8:12 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:8:16 generated
+    Operation a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:9:9 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:9:9 written "bb3" "bb4"
+      Copy "_5"
+  Block "bb3"
+    Sequenced a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:9:9 generated
+    Return
+  Block "bb4"
+    Sequenced a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:9:9 generated
+    Goto "bb5"
+  Block "bb5"
+    ArgumentsEvaluated a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:10:15 generated
+    Call a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:10:15 written "malloc" "bb6"
+      Destination "_7"
+      Constant 8
+  Block "bb6"
+    Operation a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:10:11 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:10:15 generated
+    Operation a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:11:9 written
+      Destination "_8"
+      Binary "Eq"
+        Copy "_6"
+        Constant 0
+    Branch a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:11:9 written "bb7" "bb8"
+      Copy "_8"
+  Block "bb7"
+    Sequenced a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:11:9 generated
+    Return
+  Block "bb8"
+    Sequenced a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:11:9 generated
+    Goto "bb9"
+  Block "bb9"
+    ArgumentsEvaluated a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:12:14 generated
+    Call a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:12:14 written "malloc" "bb10"
+      Destination "_10"
+      Constant 4
+  Block "bb10"
+    Operation a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:12:10 written
+      Destination "_9"
+      Use
+        Copy "_10"
+    Sequenced a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:12:14 generated
+    Operation a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:13:9 written
+      Destination "_11"
+      Binary "Eq"
+        Copy "_9"
+        Constant 0
+    Branch a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:13:9 written "bb11" "bb12"
+      Copy "_11"
+  Block "bb11"
+    Sequenced a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:13:9 generated
+    Return
+  Block "bb12"
+    Sequenced a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:13:9 generated
+    Goto "bb13"
+  Block "bb13"
+    Operation a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:14:5 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:14:5 written
+      Destination "_12"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:14:5 generated
+    Operation a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:15:5 written
+      Destination "_1"
+      Use
+        Copy "_3"
+    Operation a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:15:5 written
+      Destination "_13"
+      Use
+        Copy "_1"
+    Sequenced a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:15:5 generated
+    Operation a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:16:5 written
+      Destination "_6"
+        Deref
+      Use
+        Copy "_9"
+    Operation a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:16:5 written
+      Destination "_14"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:16:5 generated
+    ArgumentsEvaluated a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:17:5 generated
+    Call a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:17:5 written "use_kept" "bb14"
+  Block "bb14"
+    Sequenced a_live_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_not_reported.c:17:5 generated
+    Return
