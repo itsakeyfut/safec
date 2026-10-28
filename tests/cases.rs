@@ -364,6 +364,21 @@ cases! {
         // the write through `t` does not reach. Mutation: `StorageLive`
         // leaves the recorded sets alone; this loses its `SC0411`.
         a_pointer_a_call_wrote_in_an_earlier_turn_does_not_write_the_next_turns_local_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer copied in an earlier turn, whose edge names that turn's
+        // `m`, is no write of this turn's `m` (C17 6.2.4 p2, #664). See
+        // ADR-0057. Mutation: `StorageLive` leaves pointers' edges to the
+        // local, or allocations' record of its address, alone; this loses
+        // its `SC0411`, whichever of the two is left.
+        a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Copied in this turn, after `*b = m;`, it may be this turn's `m`,
+        // and no `SC0411`. No mutation measured gives it one; it fails on
+        // its doubts about `t` when `StorageLive` keeps the edges, does not
+        // mark the pointer `lost`, or marks every pointer `lost`.
+        a_pointer_copied_in_this_turn_may_write_this_turns_local_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `p = &x;` in one turn and `*p` in the next reads an object whose
+        // lifetime ended. Mutation: the edge is removed without marking the
+        // pointer `lost`; this goes silent.
+        a_read_through_a_pointer_to_an_earlier_turns_local_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: a library copy whose destination was read out of memory
         // writes every escaped local; this goes silent.
         a_pointer_read_out_of_a_local_array_a_copy_through_caller_memory_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

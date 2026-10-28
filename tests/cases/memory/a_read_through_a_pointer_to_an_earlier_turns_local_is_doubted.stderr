@@ -1,0 +1,20 @@
+error[SC0402]: this uses `p`, which this check stopped following
+   ╭─[ a_read_through_a_pointer_to_an_earlier_turns_local_is_doubted.c:6:23 ]
+   │
+ 6 │         if (p != 0) { r = *p; }
+   │                       ───┬──  
+   │                          ╰──── this check cannot say what this points at
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0412]: this may reach outside the object `p` points at
+   ╭─[ a_read_through_a_pointer_to_an_earlier_turns_local_is_doubted.c:6:23 ]
+   │
+ 6 │         if (p != 0) { r = *p; }
+   │                       ───┬──  
+   │                          ╰──── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

@@ -2131,6 +2131,23 @@ impl Analysis for Allocations<'_> {
                 for held in value.points_to.iter_mut() {
                     held.named_at_read.remove(local.index());
                 }
+                // **Nor does a pointer or an allocation that held its
+                // address**: the address is indeterminate now, so a pointer
+                // copied in an earlier turn is no write of the new object,
+                // `*b = m; memcpy(&t, src, 8);` across turns (#664). The
+                // pointer becomes `lost` rather than merely emptied, since it
+                // still holds something this check no longer follows, and a
+                // read through it is undefined: emptied, `p = &x;` in one turn
+                // and `*p` in the next was silent. See ADR-0057.
+                for held in value.points_to.iter_mut() {
+                    if held.writes_to.get(local.index()) {
+                        held.writes_to.remove(local.index());
+                        held.lost = true;
+                    }
+                }
+                for row in value.inside_locals.iter_mut() {
+                    row.remove(local.index());
+                }
             }
             Element::StorageDead { origin: _, local } => value.clear(*local),
         }
