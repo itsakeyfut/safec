@@ -1,13 +1,3 @@
-error[SC0402]: this uses `t`, which this check stopped following
-    ╭─[ a_pointer_copied_in_this_turn_may_write_this_turns_local_array.c:10:13 ]
-    │
- 10 │             *t = 0;
-    │             ───┬──  
-    │                ╰──── this check cannot say what this points at
-────╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
 error[SC0412]: this may reach outside the object `t` points at
     ╭─[ a_pointer_copied_in_this_turn_may_write_this_turns_local_array.c:10:13 ]
     │

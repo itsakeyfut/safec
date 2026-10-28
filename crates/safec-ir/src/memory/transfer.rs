@@ -2131,22 +2131,21 @@ impl Analysis for Allocations<'_> {
                 for held in value.points_to.iter_mut() {
                     held.named_at_read.remove(local.index());
                 }
-                // **Nor does a pointer or an allocation that held its
-                // address**: the address is indeterminate now, so a pointer
-                // copied in an earlier turn is no write of the new object,
-                // `*b = m; memcpy(&t, src, 8);` across turns (#664). The
-                // pointer becomes `lost` rather than merely emptied, since it
-                // still holds something this check no longer follows, and a
-                // read through it is undefined: emptied, `p = &x;` in one turn
-                // and `*p` in the next was silent. See ADR-0057.
+                // **Nor does a pointer that held its address**: the address
+                // is indeterminate now, so a pointer copied in an earlier
+                // turn is no write of the new object, `*b = m;
+                // memcpy(&t, src, 8);` across turns (#664). The edge
+                // is removed and nothing more. Marking the pointer `lost` as
+                // well was tried and rejected: a write through a lost pointer
+                // lands in every local such code names, which turned a
+                // certain `SC0411` `main` gave into doubts, and it doubted
+                // `arr[0] = &x; *arr[0]` every turn. A read through such a
+                // pointer is undefined and is still silent, #665. An
+                // allocation's record of the address is left: removing it
+                // decides no case, measured, once the pointer is not marked.
+                // See ADR-0057.
                 for held in value.points_to.iter_mut() {
-                    if held.writes_to.get(local.index()) {
-                        held.writes_to.remove(local.index());
-                        held.lost = true;
-                    }
-                }
-                for row in value.inside_locals.iter_mut() {
-                    row.remove(local.index());
+                    held.writes_to.remove(local.index());
                 }
             }
             Element::StorageDead { origin: _, local } => value.clear(*local),
