@@ -221,17 +221,20 @@ transfer that carries them, and `handed` reports through `say`, because
 **And at every level, about what may have been freed** (one level until
 #654). Below the first level, `Known::handed_below` walks `level_below` until
 neither the sites nor the locals grow, which two finite sets that only grow
-must reach, and keeps an allocation there only where it is freed or unproven
-(`Freed`, `Unknown`, `Unheld`). The first level's rule for a `Reachable` one,
-below, has no meaning deeper in: counting `Reachable` at every level moved
-thirteen corpus programs, twelve of them doubted for nothing and among them
-programs named for not being doubted, while counting only freed and unproven
-ones moved the thirteenth alone, a box two levels in that really holds a freed
-pointer. A box of a box holding a freed pointer had been
-silent at every door. The memory walked through is read for `stale` at every
-level too.
+must reach, and each local is walked once rather than again at every level
+below it. It keeps an allocation there where it is freed or unproven (`Freed`,
+`Unknown`, `Unheld`), and a `Reachable` one where an allocation on the way
+holds it in memory: the first level's rule, below, which exempts one reached
+only through an address. Counting every `Reachable` one, however reached,
+moved thirteen corpus programs, twelve of them doubted for nothing and among
+them programs named for not being doubted. Counting none moved only the
+thirteenth, a box two levels in that really holds a freed pointer, but left a
+box of a box holding a pointer a call may have freed, `opaque(&x)`, silent.
+The split moves the thirteenth alone. A box of a box holding a freed pointer
+had been silent at every door. The memory walked through is read for `stale`
+at every level too.
 
-**At the first level:** A pointer argument that is
+**At the first level**, a pointer argument that is
 a local, and says nothing itself, is asked what `Known::stored_below` says it
 points at may hold: through a local's address, `free(a); use2(&a);`, and through
 what the function stored in its own memory, `*t = a; free(a); use2(t);`. Both
@@ -278,13 +281,21 @@ otherwise.
 
 * Stopping `handed_below` at the first level fails
   `a_box_of_a_box_holding_a_freed_pointer_handed_to_a_call_is_doubted`, and its
-  return and store forms. Counting `Reachable` below it, or keeping a site there
-  whatever its state, fails
+  return and store forms; stopping it after one pass below fails
+  `a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted`.
+  Counting no `Reachable` allocation below the first level fails
+  `a_box_of_a_box_holding_a_pointer_a_call_may_have_freed_handed_to_a_call_is_doubted`
+  and its return form, and counting every one, however reached, fails
   `a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted`
-  among twelve; a live allocation is never a doubt, so
-  `a_box_of_a_box_holding_a_live_pointer_returned_is_not_reported` is silent
-  under both and marks what the walk must not report. Reading `stale` only at
-  the first level's containers leaves the suite green (#654).
+  among twelve. Not counting `Unknown` below it fails
+  `a_box_of_a_box_holding_a_pointer_a_call_was_handed_is_doubted`, and reading
+  `stale` only at the first level's containers fails
+  `a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted`.
+  `a_box_of_a_box_holding_the_callers_pointer_handed_on_after_a_call_is_doubted`
+  is reached both ways and fails only when both are removed. A live
+  allocation is never a doubt, so
+  `a_box_of_a_box_holding_a_live_pointer_returned_is_not_reported` fails under
+  none of these and marks what the walk must not report (#654).
 * Dropping the call to `handed` from `findings` fails
   `a_freed_pointer_handed_to_a_function_defined_in_the_file`, which is #263's
   program, `a_freed_pointer_handed_to_a_function_only_declared`,
@@ -585,12 +596,21 @@ much as by the `match`, and nothing tells the two apart.
   `a_table_holding_a_live_pointer_whose_address_escaped_is_doubted_when_handed_on`
   holds; and `r = keep(a) + release(tab);` over a table holding `a` gains a
   report at `release` beside the one at `keep`.
+* Bad, because asking at every level doubts what one level never reached
+  (#654). The caller's pointer stored two boxes in is doubted when the box is
+  handed on after a call this check cannot read, `*b = p; *h = b; log_it();
+  use3(h);`, which
+  `a_box_of_a_box_holding_the_callers_pointer_handed_on_after_a_call_is_doubted`
+  holds; a pointer freed and then overwritten with null deep in a structure
+  is still taken to be there, which is #656; and an allocation once handed to
+  such a call is doubted wherever in a structure it is stored. Each is a
+  doubt, which `--allow-unknown` lowers, and none is a proof.
 * Bad, because a pointer unproven and handed by address is still silent:
   freed on one path only, `if (c) free(a); use2(&a);`, or handed to a call
   this check cannot read first, `release(a); use2(&a);`. Its allocation is
   unproven, as a live one whose address was taken is, and the two cannot be
   told apart. That is [#305](https://github.com/itsakeyfut/safec/issues/305).
-  Anything more than one level in was silent too, until #654, below.
+  Anything more than one level in was silent too, until #654, above.
 * Bad, because a pointer read out of memory and handed on, `use(*tab)`, is
   silent, as its dereference is. That is #256.
 * What would reverse this: summaries of the functions this translation unit
