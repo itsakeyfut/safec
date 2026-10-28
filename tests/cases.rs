@@ -362,8 +362,8 @@ cases! {
         // the words say so. Mutation: word the lost row as a freed one; this
         // fails.
         a_pointer_read_out_of_a_parameter_freed_and_stored_back_is_reported_as_one_this_check_lost: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // What memory that leaves holds is asked one level in, at the door it
-        // leaves by, as a call asks it (#651). See ADR-0041.
+        // What memory that leaves holds is asked at the door it leaves by, as
+        // a call asks it (#651), at every level (#654). See ADR-0041.
         //
         // Mutation: `returned` does not ask `freed_behind`; this goes silent.
         a_box_holding_a_freed_pointer_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -395,6 +395,40 @@ cases! {
         a_box_filled_on_one_turn_and_freed_through_on_the_next_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What leaves is asked at every level, not one (#654). See ADR-0042.
+        //
+        // Mutation: `handed_below` stops at the first level; these three go
+        // silent.
+        a_box_of_a_box_holding_a_freed_pointer_handed_to_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_box_of_a_box_holding_a_freed_pointer_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_box_of_a_box_holding_a_freed_pointer_stored_through_a_parameter_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **Held by no mutation, measured**: a live allocation is never a
+        // doubt, so keeping a site below the first level whatever its state
+        // leaves this silent. It marks the program the walk must not report.
+        a_box_of_a_box_holding_a_live_pointer_returned_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer a call may have freed two boxes in: `Reachable`, counted
+        // where an allocation on the way holds it, as the first level counts
+        // it. Mutation: `Reachable` is not counted below the first level;
+        // these two go silent.
+        a_box_of_a_box_holding_a_pointer_a_call_may_have_freed_handed_to_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_box_of_a_box_holding_a_pointer_a_call_may_have_freed_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the walk stops after its first pass below the first
+        // level; this goes silent.
+        a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `Unknown` is not counted below the first level; this goes
+        // silent.
+        a_box_of_a_box_holding_a_pointer_a_call_was_handed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `stale` is read only at the first level's containers;
+        // this goes silent.
+        a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A cost, recorded in ADR-0042.** The caller's pointer two boxes in,
+        // after a call that may have freed the caller's memory, is doubted;
+        // one box in, it already was. Two routes reach it: the caller's
+        // allocation is `Reachable` and held in memory, and the call left
+        // the box `stale`. Either mutation alone, `Reachable` not counted
+        // below the first level or `stale` read only at the first level's
+        // containers, leaves it doubted; both together silence it.
+        a_box_of_a_box_holding_the_callers_pointer_handed_on_after_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call writes only the locals it may reach, `Known::exposed_locals`
         // (#643). See ADR-0057.
         //
@@ -4052,7 +4086,7 @@ cases! {
         // rather than `*tab`; two reports. Mutation: ask it in the same pass
         // as each argument's own question; it takes `*tab`'s words.
         a_table_and_what_it_holds_handed_to_one_call_are_both_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // What a pointer handed to a call points at, one level in, is asked
+        // What a pointer handed to a call points at, at every level, is asked
         // about allocations proved freed: through a local's address, and
         // through this function's own memory. See ADR-0042. Mutation: have
         // `handed` never ask `handed_below`; the first two go silent.

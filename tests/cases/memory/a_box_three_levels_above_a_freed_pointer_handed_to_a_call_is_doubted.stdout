@@ -1,0 +1,197 @@
+Target "x86_64-pc-windows-msvc"
+Function a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:3:6 "use4" declared
+  Local "_0" "void" return
+  Local "_1" "int ****" parameter "bbb"
+Function a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:4:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int ****" "c"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int ***" "bb"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int **" "b"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int *" "x"
+  Local "_11" "void *"
+  Local "_12" "int"
+  Local "_13" "int *"
+  Local "_14" "int **"
+  Local "_15" "int ***"
+  Block "bb0" entry
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:4:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:5:17 generated
+    Call a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:5:17 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:5:13 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:5:17 generated
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:6:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:6:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:6:9 generated
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:6:19 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:6:26 generated
+    Return
+  Block "bb3"
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:7:17 generated
+    Call a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:7:17 written "malloc" "bb5"
+      Destination "_5"
+      Constant 8
+  Block "bb5"
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:7:12 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:7:17 generated
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:8:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:8:9 written "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:8:9 generated
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:8:20 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:8:27 generated
+    Return
+  Block "bb7"
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:8:9 generated
+    Goto "bb8"
+  Block "bb8"
+    ArgumentsEvaluated a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:9:15 generated
+    Call a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:9:15 written "malloc" "bb9"
+      Destination "_8"
+      Constant 8
+  Block "bb9"
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:9:11 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:9:15 generated
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:10:9 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_7"
+        Constant 0
+    Branch a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:10:9 written "bb10" "bb11"
+      Copy "_9"
+  Block "bb10"
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:10:9 generated
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:10:19 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:10:26 generated
+    Return
+  Block "bb11"
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:10:9 generated
+    Goto "bb12"
+  Block "bb12"
+    ArgumentsEvaluated a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:11:14 generated
+    Call a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:11:14 written "malloc" "bb13"
+      Destination "_11"
+      Constant 4
+  Block "bb13"
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:11:10 written
+      Destination "_10"
+      Use
+        Copy "_11"
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:11:14 generated
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:12:9 written
+      Destination "_12"
+      Binary "Eq"
+        Copy "_10"
+        Constant 0
+    Branch a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:12:9 written "bb14" "bb15"
+      Copy "_12"
+  Block "bb14"
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:12:9 generated
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:12:19 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:12:26 generated
+    Return
+  Block "bb15"
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:12:9 generated
+    Goto "bb16"
+  Block "bb16"
+    ArgumentsEvaluated a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:13:5 generated
+    Call a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:13:5 written "free" "bb17"
+      Copy "_10"
+  Block "bb17"
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:13:5 generated
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:14:5 written
+      Destination "_7"
+        Deref
+      Use
+        Copy "_10"
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:14:5 written
+      Destination "_13"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:14:5 generated
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:15:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:15:5 written
+      Destination "_14"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:15:5 generated
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:16:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:16:5 written
+      Destination "_15"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:16:5 generated
+    ArgumentsEvaluated a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:17:5 generated
+    Call a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:17:5 written "use4" "bb18"
+      Copy "_1"
+  Block "bb18"
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:17:5 generated
+    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:18:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:18:12 generated
+    Return

@@ -253,7 +253,7 @@ dereference of it would be, so a pointer returned after a call this check
 cannot read, or after its address was taken, is refused as unproven with no
 free in the function at all. The fix is at the return or at the free, which is
 why it is not `SC0402`. A pointer returned live is asked what it points at
-holds, one level in, as `SC0407` asks what a call is handed: `this returns a
+holds, at every level, as `SC0407` asks what a call is handed: `this returns a
 pointer to where a pointer that may have been freed is stored`, always a doubt.
 [ADR-0041](adr/0041-a-pointer-a-function-returns-is-asked-at-its-return-as-a-dereference-of-it-would-be.md)
 is the decision and records what it costs.
@@ -266,7 +266,7 @@ is asked, and doubts what it cannot prove live as a return does. A store into
 memory only the function itself reads back is not, since the read back is. It
 is a code of its own because what to change is what is stored, and the reader
 of it need not be a caller. A pointer stored out live is asked what it points
-at holds, one level in, as a return is. The same ADR records it and what it
+at holds, at every level, as a return is. The same ADR records it and what it
 costs.
 
 **`SC0407` is the other read without a dereference, and the same belief
@@ -284,7 +284,7 @@ expression leaves unordered against it, since C may run that call first:
 encloses it is not such a call, because C orders a call's arguments before it,
 so `free(memset(a, 0, 4))` is not reported
 ([ADR-0043](adr/0043-a-call-is-ordered-after-what-its-own-arguments-read-and-a-span-inside-it-says-which.md)).
-It is asked one level in as well, about an allocation that may have been
+It is asked at every level as well, about an allocation that may have been
 freed: `free(a); use2(&a);` is `SC0407`, `this passes a pointer to where a
 pointer that may have been freed is stored`, since the callee may read the freed pointer out,
 and it is never a proof, since the callee may only write there. The fix is at
