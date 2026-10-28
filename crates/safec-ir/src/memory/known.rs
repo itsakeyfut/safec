@@ -1104,10 +1104,16 @@ impl Known {
     /// memory, and counting it so silenced a read of that array `main`
     /// reported. Found by review.
     ///
-    /// **One part no case holds, measured.** A place with no dereference is
+    /// **Two parts no case holds, measured.** A place with no dereference is
     /// never a store from C: the lowering writes `m[0] = p` through `&m[0]`,
     /// and builds an `Index` only under an address, so landing nowhere at
-    /// zero leaves the suite green.
+    /// zero leaves the suite green. And the last part, kept for a level read
+    /// at the write and for a lost or foreign pointer, leaves it green
+    /// dropped too, for each of the three alone and all together: such a
+    /// pointer's edges carry what the walk would add in every program the
+    /// corpus has, and `**u = 0` with `*u` read from a caller's memory
+    /// beside `*b = m` is silent either way. It stands for an address the
+    /// edges miss, where its absence would be a false report (#648).
     ///
     /// **What the edges miss is now a false report, not a silence.** A
     /// pointer read out of memory lands only where its edges say, so an
