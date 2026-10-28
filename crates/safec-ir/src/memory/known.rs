@@ -935,7 +935,10 @@ impl Known {
         entry.reachable.extend(reachable);
     }
 
-    /// Every site code this check cannot read may reach now.
+    /// Every site code this check cannot read may reach now through the
+    /// memory exposed to it. **Not what a local whose address it holds
+    /// points at**, which it can also reach and this does not walk:
+    /// [`Self::sites_named_by_unknown_code`] is both (#655).
     ///
     /// **The closure, and not [`Self::exposed`] read as it stands.** That is
     /// closed only inside [`Self::expose`], which runs at a call, so a store of
@@ -1018,7 +1021,7 @@ impl Known {
     pub(super) fn expose_locals(&mut self, locals: Vec<usize>) {
         let mut seeds: BTreeSet<usize> = locals.into_iter().collect();
         seeds.extend((0..self.exposed_locals.len()).filter(|&local| self.exposed_locals[local]));
-        for local in self.closed_from(self.reachable_now(), seeds).1 {
+        for local in self.closed_from(self.reachable_now(), seeds).locals {
             self.exposed_locals[local] = true;
         }
     }
@@ -1030,24 +1033,24 @@ impl Known {
     /// address stored there after a pointer was read out of that memory is
     /// counted as one the pointer may be, which silences a read of a local
     /// array the pointer could not reach (#648). See ADR-0057.
-    pub(super) fn named_by_unknown_code(&self) -> BTreeSet<usize> {
-        self.unknown_code_reaches().1
+    pub(super) fn locals_named_by_unknown_code(&self) -> BTreeSet<usize> {
+        self.unknown_code_reaches().locals
     }
 
     /// Every allocation code this check cannot read may reach now: the same
-    /// walk as [`Self::named_by_unknown_code`], answered in sites. That is
+    /// walk as [`Self::locals_named_by_unknown_code`], answered in sites. That is
     /// [`Self::reachable_now`] and what an exposed local points at, at any
     /// depth: `keepp(&slot); slot = b;` puts `b`'s allocation where such code
     /// can find it, though nothing exposed it (#655). See ADR-0041.
     pub(super) fn sites_named_by_unknown_code(&self) -> BTreeSet<usize> {
-        self.unknown_code_reaches().0
+        self.unknown_code_reaches().sites
     }
 
-    /// The walk [`Self::named_by_unknown_code`] and
+    /// The walk [`Self::locals_named_by_unknown_code`] and
     /// [`Self::sites_named_by_unknown_code`] share, from what is exposed and
     /// every exposed local, so the sites and the locals cannot come from two
     /// different walks.
-    fn unknown_code_reaches(&self) -> (BTreeSet<usize>, BTreeSet<usize>) {
+    fn unknown_code_reaches(&self) -> Closed {
         let exposed = (0..self.exposed_locals.len()).filter(|&local| self.exposed_locals[local]);
         self.closed_from(self.reachable_now(), exposed.collect())
     }
@@ -1057,18 +1060,14 @@ impl Known {
     /// for the call that exposes and the write and the store that ask, so
     /// they cannot find different memory. Two finite sets that only grow, so
     /// it ends.
-    fn closed_from(
-        &self,
-        mut sites: BTreeSet<usize>,
-        mut locals: BTreeSet<usize>,
-    ) -> (BTreeSet<usize>, BTreeSet<usize>) {
+    fn closed_from(&self, mut sites: BTreeSet<usize>, mut locals: BTreeSet<usize>) -> Closed {
         loop {
             let (next_sites, next_locals) = self.level_below(&sites, &locals);
             let before = (sites.len(), locals.len());
             sites.extend(next_sites);
             locals.extend(next_locals);
             if (sites.len(), locals.len()) == before {
-                return (sites, locals);
+                return Closed { sites, locals };
             }
         }
     }
@@ -1081,7 +1080,7 @@ impl Known {
     /// - at one, the locals `local`'s address edges name, `*t = x`;
     /// - at more, the locals the level above may be, `**ppq = x`;
     /// - and every local code this check cannot read may name,
-    ///   [`Self::named_by_unknown_code`], where `local` or a pointer the walk
+    ///   [`Self::locals_named_by_unknown_code`], where `local` or a pointer the walk
     ///   passes through on the way down was read out of memory, lost, or
     ///   written by such code, since each of those may hold an address this
     ///   function never recorded.
@@ -1123,7 +1122,7 @@ impl Known {
             _ => self.levels_below(local, dereferences - 1).1,
         };
         if self.through_unnamed(local, dereferences) {
-            lands.extend(self.named_by_unknown_code());
+            lands.extend(self.locals_named_by_unknown_code());
         }
         lands.into_iter().collect()
     }
@@ -1903,4 +1902,11 @@ impl Known {
             }
         }
     }
+}
+
+/// What [`Known::closed_from`] found: the sites and the locals, by name,
+/// since both are indexes and the one taken for the other compiles.
+struct Closed {
+    sites: BTreeSet<usize>,
+    locals: BTreeSet<usize>,
 }
