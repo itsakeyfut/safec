@@ -423,8 +423,11 @@ cases! {
         a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // **A cost, recorded in ADR-0042.** The caller's pointer two boxes in,
         // after a call that may have freed the caller's memory, is doubted;
-        // one box in, it already was. Mutation: `stale` is read only at the
-        // first level's containers; this goes silent.
+        // one box in, it already was. Two routes reach it: the caller's
+        // allocation is `Reachable` and held in memory, and the call left
+        // the box `stale`. Either mutation alone, `Reachable` not counted
+        // below the first level or `stale` read only at the first level's
+        // containers, leaves it doubted; both together silence it.
         a_box_of_a_box_holding_the_callers_pointer_handed_on_after_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call writes only the locals it may reach, `Known::exposed_locals`
         // (#643). See ADR-0057.
