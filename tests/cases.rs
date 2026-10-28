@@ -335,6 +335,17 @@ cases! {
         // one operand rather than through a load. Mutation: such an operand
         // records nothing in `named_at_read`; this gains `SC0411`.
         a_pointer_moved_as_it_is_read_out_of_memory_a_call_wrote_after_a_local_array_left_may_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer a call wrote into a local, before a local array's
+        // address left, cannot be that array, so a write through it does
+        // not write the array (#661). See ADR-0057. Mutation: a pointer a
+        // call wrote lands in what is named at the write again; this goes
+        // silent.
+        a_pointer_a_call_wrote_before_a_local_array_left_does_not_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written after the address left, it may be the array. Two things
+        // say so: the call is taken to write every local it may name, and
+        // what it could name is recorded on the pointer. Mutation: both
+        // dropped; this gains `SC0411`. Either alone leaves it silent.
+        a_pointer_a_call_wrote_after_a_local_array_left_may_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: a library copy whose destination was read out of memory
         // writes every escaped local; this goes silent.
         a_pointer_read_out_of_a_local_array_a_copy_through_caller_memory_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

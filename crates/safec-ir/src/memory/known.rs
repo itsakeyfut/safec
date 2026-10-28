@@ -1086,13 +1086,14 @@ impl Known {
     ///   passes through on the way down was read out of memory, lost, or
     ///   written by such code, since each of those may hold an address this
     ///   function never recorded. **As of the read where only `local`
-    ///   itself was read out of memory**, [`Held::named_at_read`]: asked at
-    ///   the write, it counted locals whose address left only after the
-    ///   read, so `t = *pp; *b = m; *t = 0;` was taken to write `m` and an
-    ///   indeterminate `m[0]` was read in silence (#648). A level between
-    ///   `local` and the one written is read at the write, and a lost or
-    ///   foreign local records no point at which it was fixed, so those
-    ///   still take what is named now.
+    ///   itself was read out of memory, or written by such code**,
+    ///   [`Held::named_at_read`]: asked at the write, it counted locals whose
+    ///   address left only after the read, so `t = *pp; *b = m; *t = 0;` was
+    ///   taken to write `m` and an indeterminate `m[0]` was read in silence
+    ///   (#648), and `get(&t); *b = m; *t = 0;` the same (#661). A level
+    ///   between `local` and the one written is read at the write, and a
+    ///   lost local records no point at which it was fixed, so those still
+    ///   take what is named now.
     ///
     /// A store passes its place's [`derefs`], which is zero for a place that
     /// is not dereferences alone; a library copy passes one more than its
@@ -1108,10 +1109,10 @@ impl Known {
     /// never a store from C: the lowering writes `m[0] = p` through `&m[0]`,
     /// and builds an `Index` only under an address, so landing nowhere at
     /// zero leaves the suite green. And the last part for a level between
-    /// `local` and the one written, for a lost pointer and for a foreign
-    /// one leaves it green dropped too, for each of the three alone and all
-    /// together. It stands for an address the edges miss, where its absence
-    /// would be a false `SC0411` (#648).
+    /// `local` and the one written and for a lost pointer leaves it green
+    /// dropped too, for each alone and both together. It stands for an
+    /// address the edges miss, where its absence would be a false `SC0411`
+    /// (#648).
     ///
     /// **Why the edges are not enough for a pointer read out of memory.**
     /// Memory a call wrote records nothing of what it wrote, so in
@@ -1140,10 +1141,11 @@ impl Known {
             _ => self.levels_below(local, dereferences - 1).1,
         };
         let held = &self.points_to[local.index()];
-        // `holds_unrecorded` with `loaded` taken apart: keep the two in step.
-        if self.unnamed_below(local, dereferences) || held.lost || held.foreign {
+        // `holds_unrecorded` with `loaded` and `foreign` taken apart: keep
+        // the two in step.
+        if self.unnamed_below(local, dereferences) || held.lost {
             lands.extend(self.locals_named_by_unknown_code());
-        } else if held.loaded {
+        } else if held.loaded || held.foreign {
             lands.extend(held.named_at_read.ones());
         }
         lands.into_iter().collect()
@@ -1909,6 +1911,7 @@ impl Known {
         may_hold: impl Fn(usize) -> bool,
         may_write: impl Fn(usize) -> bool,
     ) {
+        let named_now = self.locals_named_by_unknown_code();
         for local in 0..self.escaped.len() {
             if may_hold(local)
                 && self.escaped[local]
@@ -1919,9 +1922,20 @@ impl Known {
             // **Whatever it holds**, since the writer may have put a pointer
             // to memory this check does not model there. A local holding no
             // site is given this and not `lost`, which is the output-parameter
-            // idiom above: the report does not read it. See ADR-0044.
+            // idiom above: the report does not read it. See ADR-0044. **And
+            // what such code could name as it wrote**, taken before the loop
+            // and after the call exposed what it was handed, added rather
+            // than set since it may not have written this local: a write
+            // through it lands there, not in what is named by the time of
+            // the write (#661). See `Held::named_at_read`. **At a call it
+            // decides no case alone, measured**: every local named then is one
+            // the call is taken to write, below, so dropping it leaves the
+            // suite green; dropping it and that write together does not.
             if may_hold(local) && self.escaped[local] {
                 self.points_to[local].foreign = true;
+                for &named in &named_now {
+                    self.points_to[local].named_at_read.set(named);
+                }
             }
             // **And it may have been written**, which is what a write this
             // check cannot read is: `int *q; get(&q); *pq` is the
