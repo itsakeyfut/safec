@@ -1030,8 +1030,9 @@ impl Known {
     /// [`Self::expose_locals`] takes, from the same seeds, without marking
     /// anything. What a pointer such code gave this function, or memory it
     /// can reach, may hold. **Now, not when a pointer was read**, so a write
-    /// through a pointer read out of memory asks what this answered as it
-    /// was read, [`Held::named_at_read`]: asked at the write, an address
+    /// through a pointer read out of memory, or one such code wrote, asks
+    /// what this answered as it was read or written,
+    /// [`Held::named_at_read`]: asked at the write, an address
     /// stored after the read was counted as one the pointer may be, which
     /// silenced a read of a local array it could not reach (#648). See
     /// ADR-0057.
@@ -1070,6 +1071,28 @@ impl Known {
             locals.extend(next_locals);
             if (sites.len(), locals.len()) == before {
                 return Closed { sites, locals };
+            }
+        }
+    }
+
+    /// Add to what each of `landed` records as nameable,
+    /// [`Held::named_at_read`], what code this check cannot read may name
+    /// now, where a store it cannot place may have written that local.
+    ///
+    /// **After the store exposed what it carries**, which
+    /// [`Self::replaced`] runs before: the value it may have put in such a
+    /// local may be an address the store itself just made nameable, so
+    /// `keep(&t); pq = *c; *pq = m; *t = 0;` with `pq` maybe `&t` recorded a
+    /// set without `m` and refused a correct program with a certain
+    /// `SC0411`. Found by review (#661). Only a local the store marked
+    /// `foreign`, since that is what reads this set as of its write.
+    pub(super) fn named_after_a_store(&mut self, landed: &[usize]) {
+        let named = self.locals_named_by_unknown_code();
+        for &local in landed {
+            if self.points_to[local].foreign {
+                for &each in &named {
+                    self.points_to[local].named_at_read.set(each);
+                }
             }
         }
     }
@@ -1159,8 +1182,8 @@ impl Known {
     /// allocation counts as memory. Whether a write leaves this function's
     /// sight asks this whole; where it may land asks [`Self::unnamed_below`]
     /// and the pointer's own marks apart, because a pointer itself read out
-    /// of memory is answered as of its read (#648). See ADR-0057 and
-    /// ADR-0041.
+    /// of memory is answered as of its read (#648), and one a call wrote as
+    /// of the call (#661). See ADR-0057 and ADR-0041.
     pub(super) fn through_unnamed(&self, local: LocalId, dereferences: usize) -> bool {
         holds_unrecorded(&self.points_to[local.index()]) || self.unnamed_below(local, dereferences)
     }
@@ -1922,17 +1945,21 @@ impl Known {
             // **Whatever it holds**, since the writer may have put a pointer
             // to memory this check does not model there. A local holding no
             // site is given this and not `lost`, which is the output-parameter
-            // idiom above: the report does not read it. See ADR-0044. **And
-            // what such code could name as it wrote**, taken before the loop
-            // and after the call exposed what it was handed, added rather
-            // than set since it may not have written this local: a write
-            // through it lands there, not in what is named by the time of
-            // the write (#661). See `Held::named_at_read`. **At a call it
-            // decides no case alone, measured**: every local named then is one
-            // the call is taken to write, below, so dropping it leaves the
-            // suite green; dropping it and that write together does not.
+            // idiom above: the report does not read it. See ADR-0044.
             if may_hold(local) && self.escaped[local] {
                 self.points_to[local].foreign = true;
+            }
+            // **And, where it may have been written, what such code could
+            // name as it wrote**, added rather than set since it may not have
+            // been: a write through it lands there, not in what is named by
+            // the time of the write (#661). See `Held::named_at_read`. Only
+            // where `may_write`: a local the writer cannot reach keeps what
+            // it had, and recording into every escaped local let a store
+            // through a pointer no call could have aimed at `t` count as a
+            // write of what `t` points at. At a call this is taken after the
+            // call exposed what it was handed; a store this check cannot place
+            // adds what it exposes afterwards, `Self::named_after_a_store`.
+            if may_hold(local) && self.escaped[local] && may_write(local) {
                 for &named in &named_now {
                     self.points_to[local].named_at_read.set(named);
                 }
@@ -1961,8 +1988,8 @@ struct Closed {
 
 /// Whether `held` may hold an address this function never recorded: read
 /// out of memory, lost, or written by a call this check cannot read.
-/// [`Known::locals_a_write_may_land_in`] spells it with `loaded` apart, and
-/// follows it.
+/// [`Known::locals_a_write_may_land_in`] spells it with `loaded` and
+/// `foreign` apart, and follows it.
 fn holds_unrecorded(held: &Held) -> bool {
     held.loaded || held.lost || held.foreign
 }

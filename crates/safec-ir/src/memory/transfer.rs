@@ -1608,6 +1608,13 @@ impl Analysis for Allocations<'_> {
                 // while its own corpus case, spelled with a temporary, was
                 // answered. Two review lenses found that independently. See
                 // ADR-0031.
+                // The locals it may land in, asked before it lands, so that
+                // what they record below is about this store. See
+                // `Known::named_after_a_store`.
+                let landed = (!operation.place.projection.is_empty() && !certain).then(|| {
+                    value
+                        .locals_a_write_may_land_in(operation.place.local, derefs(&operation.place))
+                });
                 if !operation.place.projection.is_empty() && !certain {
                     replaced_by(self.unit, function, &operation.place, value);
                 }
@@ -1828,6 +1835,9 @@ impl Analysis for Allocations<'_> {
                             value.noticed(self.sources, Some(operation.origin.span()), &routes);
                         }
                     }
+                }
+                if let Some(landed) = landed {
+                    value.named_after_a_store(&landed);
                 }
 
                 if one_step {
@@ -2114,6 +2124,13 @@ impl Analysis for Allocations<'_> {
                 // the next a write of a new `m`, and a read nothing wrote was
                 // silent. See `Known::exposed_locals`.
                 value.exposed_locals[local.index()] = false;
+                // **Nor does any pointer recorded as able to name it**, for
+                // the same reason: a pointer a call wrote in an earlier turn
+                // named the old object, so a write through it is no write of
+                // the new one (#661). See `Held::named_at_read`.
+                for held in value.points_to.iter_mut() {
+                    held.named_at_read.remove(local.index());
+                }
             }
             Element::StorageDead { origin: _, local } => value.clear(*local),
         }

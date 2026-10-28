@@ -338,14 +338,32 @@ cases! {
         // A pointer a call wrote into a local, before a local array's
         // address left, cannot be that array, so a write through it does
         // not write the array (#661). See ADR-0057. Mutation: a pointer a
-        // call wrote lands in what is named at the write again; this goes
-        // silent.
+        // call wrote lands in what is named at the write again; this loses
+        // its `SC0411`.
         a_pointer_a_call_wrote_before_a_local_array_left_does_not_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written after the address left, it may be the array. Two things
         // say so: the call is taken to write every local it may name, and
         // what it could name is recorded on the pointer. Mutation: both
-        // dropped; this gains `SC0411`. Either alone leaves it silent.
+        // dropped, the second by passing no local as the call's `may_write`;
+        // this gains `SC0411`. Either alone leaves it silent.
         a_pointer_a_call_wrote_after_a_local_array_left_may_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store this check cannot place, through a pointer a call may have
+        // aimed at `t`, may put there the array's address it makes nameable
+        // itself, so a write through `t` after it may write the array. A
+        // correct program. Mutation: a store adds nothing to what such a
+        // local records after it exposes what it carries; this gains
+        // `SC0411`.
+        a_pointer_a_call_kept_written_by_a_store_that_made_a_local_array_nameable_may_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `t`'s address reaches no call, so no store through a pointer read
+        // from the caller can land in it, and `*t = 0` writes `x`, not the
+        // array. Mutation: every escaped local `replaced` marks records
+        // what is named, written or not; this loses its `SC0411`.
+        a_pointer_no_call_can_reach_is_not_written_by_a_store_this_check_cannot_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `t` was written by a call in an earlier turn, which named that
+        // turn's `m`; this turn's `m` is a new object (C17 6.2.4 p2), which
+        // the write through `t` does not reach. Mutation: `StorageLive`
+        // leaves the recorded sets alone; this loses its `SC0411`.
+        a_pointer_a_call_wrote_in_an_earlier_turn_does_not_write_the_next_turns_local_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: a library copy whose destination was read out of memory
         // writes every escaped local; this goes silent.
         a_pointer_read_out_of_a_local_array_a_copy_through_caller_memory_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
