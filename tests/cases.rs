@@ -364,6 +364,26 @@ cases! {
         // the write through `t` does not reach. Mutation: `StorageLive`
         // leaves the recorded sets alone; this loses its `SC0411`.
         a_pointer_a_call_wrote_in_an_earlier_turn_does_not_write_the_next_turns_local_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer copied in an earlier turn, whose edge names that turn's
+        // `m`, is no write of this turn's `m` (C17 6.2.4 p2, #664). See
+        // ADR-0057. Mutation: `StorageLive` leaves pointers' edges to the
+        // local alone; this loses its `SC0411`.
+        a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Copied in this turn, after `*b = m;`, it may be this turn's `m`,
+        // and no `SC0411`. No mutation measured gives it one. Mutation: the
+        // pointer that loses its edge is marked `lost`; this fails on its
+        // doubts about `t`, which change.
+        a_pointer_copied_in_this_turn_may_write_this_turns_local_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write through a pointer kept from an earlier turn, `*p = 0`, is
+        // no write of this turn's `m`, and `m[0]` is read unwritten: a
+        // certain `SC0411`, as on `main`. Mutation: the pointer that loses
+        // its edge is marked `lost`; this loses its `SC0411`, since a write
+        // through a lost pointer lands in every local named (#664).
+        a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `p` may hold this turn's `x` or `a`, and is given `a` back before
+        // the next turn: every read is defined. Mutation: the pointer that
+        // loses its edge is marked `lost`; this gains `SC0402`.
+        a_pointer_that_may_hold_an_earlier_turns_local_is_not_doubted_where_it_holds_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: a library copy whose destination was read out of memory
         // writes every escaped local; this goes silent.
         a_pointer_read_out_of_a_local_array_a_copy_through_caller_memory_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
