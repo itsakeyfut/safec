@@ -2224,9 +2224,9 @@ pub(super) fn stored_away(
 ///   an address this function never recorded, [`Known::through_unnamed`]:
 ///   `**ppp = x`, and `*pp = x` with `pp` read out of a parameter's memory;
 /// - anywhere at all, where the pointer names nothing this check followed,
-///   neither an allocation nor a local: one moved off a local array by
-///   arithmetic (#639), `*a[1] = x`, may be any of them, and taking it to
-///   land nowhere silenced a free;
+///   neither an allocation nor a local: one moved off a local that is not
+///   an array by a non-zero constant (ADR-0019) may be any of them, and
+///   taking it to land nowhere silenced a free;
 /// - an allocation such code can reach, [`Known::sites_named_by_unknown_code`]:
 ///   one exposed to it, which a parameter's memory is from the function's
 ///   start (ADR-0040), or one a local whose address it holds points at, at

@@ -1308,16 +1308,27 @@ impl Held {
         }
     }
 
-    /// What pointer arithmetic leaves of the edge to a local.
+    /// What pointer arithmetic leaves of the edge to a local, where
+    /// `is_array` says which locals are arrays.
     ///
     /// **Kept where the offset may be zero, and dropped where it is known not
-    /// to be.** C17 6.5.6 p8 treats a local as an array of one, so `&slot +
-    /// n` may be dereferenced only for `n` of zero: a pointer this check moved
-    /// by an offset it cannot read may be `slot`, and dereferenced it is
-    /// `slot` or undefined. `po[k - 1]` read nothing of `slot` while `*po`
-    /// read it. A non-zero constant, `pp[1] = q;`, is not `slot`, and
-    /// following that edge reported a proved use after free about an
-    /// allocation nothing had freed.
+    /// to be, for a local that is not an array.** C17 6.5.6 p8 treats such a
+    /// local as an array of one, so `&slot + n` may be dereferenced only for
+    /// `n` of zero: a pointer this check moved by an offset it cannot read may
+    /// be `slot`, and dereferenced it is `slot` or undefined. `po[k - 1]` read
+    /// nothing of `slot` while `*po` read it. A non-zero constant, `pp[1] =
+    /// q;`, is not `slot`, and following that edge reported a proved use after
+    /// free about an allocation nothing had freed.
+    ///
+    /// **Kept for an array whatever the offset**, since the same paragraph
+    /// lets a pointer into an array move to any element of it: `&m[0] + 1` is
+    /// `m[1]`. Dropped, a pointer stored there, freed and read back was not
+    /// named as used after it was freed, and a store through it wrote no
+    /// local, so a read of the array it did write was a certain `SC0411`
+    /// (#639). The edge names the array and not the element, as it does for a
+    /// pointer at its start, so a free through one element is answered for
+    /// the whole array. Past the end is the bounds rule's to report
+    /// (ADR-0060). See ADR-0019.
     ///
     /// **The set is given up on either way**: kept, it is a may-write by
     /// union, never the replacement a certain write is; emptied, an empty set
@@ -1336,13 +1347,19 @@ impl Held {
     ///
     /// **What it does not follow**: a pointer moved off its start and back,
     /// `up = po + 1; back = up - 1;`, since `up` is `Offset::NonZero` and the
-    /// edge is gone before `back` could keep it. And it rests on a local being
-    /// an array of one, which an array local is not: `m[1]` names a real
-    /// element, and the `NonZero` drop loses it, so a use after free through it
-    /// is `Unknown` at the access and not named. That is #639.
-    pub(super) fn moved_by_arithmetic(&mut self) {
+    /// edge is gone before `back` could keep it, for a local that is not an
+    /// array.
+    pub(super) fn moved_by_arithmetic(&mut self, is_array: impl Fn(usize) -> bool) {
         if !matches!(self.offset, Offset::Unknown) {
+            let kept: Vec<usize> = self
+                .writes_to
+                .ones()
+                .filter(|&local| is_array(local))
+                .collect();
             self.writes_to.clear_all();
+            for local in kept {
+                self.writes_to.set(local);
+            }
         }
         self.writes_elsewhere = true;
     }

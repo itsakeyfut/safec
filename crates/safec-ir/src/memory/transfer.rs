@@ -210,7 +210,7 @@ impl Allocations<'_> {
                 );
                 // What the arithmetic leaves of the edge, as the direct
                 // assignment's `Rvalue::Binary` arm asks. See ADR-0019.
-                reached.moved_by_arithmetic();
+                reached.moved_by_arithmetic(|local| self.is_array(function, local));
                 reached
             }
             // A read through a projection is not a pointer this check follows
@@ -226,6 +226,16 @@ impl Allocations<'_> {
                 Held::none(value.points_to.len())
             }
         }
+    }
+
+    /// Whether the local at `index` is an array, which pointer arithmetic
+    /// keeps the edge to (#639). One answer for both places that build a
+    /// value out of operands. See `Held::moved_by_arithmetic`.
+    fn is_array(&self, function: &Function, index: usize) -> bool {
+        function
+            .locals()
+            .nth(index)
+            .is_some_and(|local| matches!(self.unit.ty(function.local(local)), Ty::Array { .. }))
     }
 
     /// Whether this local holds a pointer.
@@ -2006,7 +2016,7 @@ impl Analysis for Allocations<'_> {
                         // [`Held::moved_by_arithmetic`]'s. A literal zero the
                         // lowering did not fold is an offset that may be zero,
                         // and is followed. See ADR-0019 and ADR-0021.
-                        reached.moved_by_arithmetic();
+                        reached.moved_by_arithmetic(|local| self.is_array(function, local));
                         value.points_to[destination.index()] = reached;
                     }
                     // A read through a projection is not a pointer this check
@@ -2818,11 +2828,11 @@ impl Analysis for Allocations<'_> {
                 // address edges name, which `written_through` answers for a
                 // plain local, or, for a place of dereferences, the locals the
                 // level above may be. **An argument naming none hands none**:
-                // a pointer moved off an array by arithmetic has lost its edge
-                // (#639), and one this check lost reads as nothing below it,
-                // so `fill(&m[1] - 1)` leaves `m[0]` reported as nothing wrote
-                // it. That is a report the reader sees, and widening it would
-                // silence every local beside such a call. See ADR-0057.
+                // one this check lost reads as nothing below it. A pointer
+                // moved off an array keeps its edge (#639), so `fill(&m[1] -
+                // 1)` may write `m`. A report from one naming none is one the
+                // reader sees, and widening it would silence every local
+                // beside such a call. See ADR-0057.
                 let mut handed_locals: Vec<usize> = Vec::new();
                 for argument in handed {
                     if let Operand::Copy(place) = argument {

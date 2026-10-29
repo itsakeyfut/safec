@@ -8,6 +8,16 @@ error[SC0412]: this may reach outside the object it points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0402]: this uses a value that may have been freed
+   ╭─[ a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:9:5 ]
+   │
+ 9 │     *a[1] = x;
+   │     ────┬────  
+   │         ╰────── used here, where it may have been freed before
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
 error[SC0412]: this may reach outside the object it points at
    ╭─[ a_freed_pointer_stored_through_a_pointer_moved_off_a_local_array_is_reported.c:9:5 ]
    │

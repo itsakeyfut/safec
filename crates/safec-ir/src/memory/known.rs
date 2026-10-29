@@ -1146,12 +1146,13 @@ impl Known {
     /// read above. It costs a table square in the locals, which
     /// `memory::per_block` counts. See ADR-0057.
     ///
-    /// **A pointer naming no local lands in none.** One moved off an array by
-    /// arithmetic has lost its edge (#639), so `*(&m[1] - 1) = p` leaves
-    /// `m[0]` reported as nothing wrote it. That report is certain and false:
-    /// `--allow-unknown` does not lower it, and a free of what the array
-    /// holds is not doubted after it. ADR-0057 records why it is kept, and
-    /// #647 what would remove it. The store door and a library copy both ask
+    /// **A pointer naming no local lands in none.** One moved off an array
+    /// keeps its edge to the array (#639), so `*(&m[1] - 1) = p` writes `m`;
+    /// what names no local is a pointer moved off a local that is not an
+    /// array, where a write through it is undefined anyway, or one that lost
+    /// its edge for another reason. Such a report is certain: `--allow-unknown`
+    /// does not lower it. ADR-0057 records why it is kept, and #647 what would
+    /// remove what is left of it. The store door and a library copy both ask
     /// this, so the two cannot answer one pointer differently.
     pub(super) fn locals_a_write_may_land_in(
         &self,
