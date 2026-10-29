@@ -108,7 +108,15 @@ one, and the same paragraph lets a pointer into it move to any element, so
 `Unknown` where it was stored and read back rather than named as freed where it
 was used. The edge names the array and not the element, as it does for a
 pointer at the start, so a free through one element is answered for all of it,
-and past the end is the bounds rule's to report (ADR-0060).
+and past the end is the bounds rule's to report (ADR-0060). **Beside the edge,
+the pointer carries the element it points at** where that is known (#667):
+`&m[0]` is element zero, a constant move adds the constant times the elements
+one pointee holds, so `&m[0] + 1` into `int *m[2][2]` is element two, and a
+join keeps it where both paths agree. `Held::element` is what lets a write
+through it be of that element alone, which ADR-0057 decides. `Held::array_edge`
+says the edge survives only by this paragraph's rule, at a move `main`
+dropped it for, so that a write which has since lost the element is one that
+may be of any element rather than of the whole array.
 
 **Where the offset may be zero, the edge survives.** The same paragraph treats a
 local as an array of one, so `&slot + n` may be dereferenced only for `n` of
