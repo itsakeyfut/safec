@@ -251,6 +251,23 @@ pub(super) struct Known {
     /// A local whose address is never taken is `assigned.rs`'s, which reads
     /// it by name. See ADR-0057.
     pub(super) unwritten: Vec<bool>,
+    /// Per local array, whether it was unwritten and has since been written
+    /// only through a pointer moved off its start, so that an element may
+    /// still be unwritten.
+    ///
+    /// **Because one record stands for the whole array.** Such a pointer may
+    /// reach any element (C17 6.5.6 p8), so its write is neither a write of
+    /// every element nor of none: `m[1] = malloc(4); r = m[0];` was a certain
+    /// `SC0411` only while the moved pointer named no local, and silent once
+    /// it named the array (#639). A read at the array's start afterwards is
+    /// doubted rather than proved, by `Allocations::reads_partly` and
+    /// `report::unwritten_read`. A write through the start clears it, as it
+    /// clears [`Self::unwritten`], which is what `main` already did and #667
+    /// is about. A union at a join. Read only where [`Self::unwritten`] is
+    /// clear, so `StorageLive`, which sets that, need not clear this. The join
+    /// of an unwritten array and a written one is not this, which is #668.
+    /// See ADR-0057.
+    pub(super) partly_written: Vec<bool>,
     /// Per local, whether code this check cannot read may hold its address:
     /// what a call may have written, for [`Self::unwritten`], and nothing
     /// else reads it. `lost` and `foreign` are still given to every escaped
@@ -1147,13 +1164,13 @@ impl Known {
     /// `memory::per_block` counts. See ADR-0057.
     ///
     /// **A pointer naming no local lands in none.** One moved off an array
-    /// keeps its edge to the array (#639), so `*(&m[1] - 1) = p` writes `m`;
-    /// what names no local is a pointer moved off a local that is not an
-    /// array, where a write through it is undefined anyway, or one that lost
-    /// its edge for another reason. Such a report is certain: `--allow-unknown`
-    /// does not lower it. ADR-0057 records why it is kept, and #647 what would
-    /// remove what is left of it. The store door and a library copy both ask
-    /// this, so the two cannot answer one pointer differently.
+    /// keeps its edge to the array (#639), so `*(&m[1] - 1) = p` writes `m`,
+    /// in part: [`Self::partly_written`]. What names no local is one moved off
+    /// a local that is not an array: `&slot + 1` and back to `slot` is defined
+    /// (C17 6.5.6 p7 and p8) and still lands nowhere, so a read of `slot` after
+    /// a write through it is a certain `SC0411` that `--allow-unknown` does not
+    /// lower. That is #647. The store door and a library copy both ask this,
+    /// so the two cannot answer one pointer differently.
     pub(super) fn locals_a_write_may_land_in(
         &self,
         local: LocalId,
@@ -1364,6 +1381,7 @@ impl Known {
             // About a local as well: the call that makes the site writes the
             // local it is named by, which the call's destination says.
             unwritten: _,
+            partly_written: _,
             // A local's, as `escaped` is, and a site being reborn is not.
             exposed_locals: _,
         } = self;
@@ -1556,6 +1574,17 @@ impl Known {
     /// to be indeterminate. See [`Self::unwritten`].
     pub(super) fn written_local(&mut self, local: usize) {
         self.unwritten[local] = false;
+        self.partly_written[local] = false;
+    }
+
+    /// Mark `locals` partly written, after a write that cleared them: what
+    /// `built::written_in_part` answered before it. See
+    /// [`Self::partly_written`].
+    pub(super) fn partly_written_now(&mut self, locals: &[usize]) {
+        for &local in locals {
+            self.unwritten[local] = false;
+            self.partly_written[local] = true;
+        }
     }
 
     /// Every exposed allocation still live is unproven, because the call being
@@ -1975,6 +2004,7 @@ impl Known {
             // same locals `may_hold` does.
             if may_write(local) && self.escaped[local] {
                 self.unwritten[local] = false;
+                self.partly_written[local] = false;
             }
         }
     }

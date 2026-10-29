@@ -286,10 +286,76 @@ pub(super) fn replaced_by(
     for local in value.locals_a_write_may_land_in(place.local, derefs(place)) {
         lands[local] = true;
     }
+    // **Through a pointer moved off an array, an element of it**, as the
+    // placed store answers: still a write `replaced` makes of every local it
+    // may land in, then partly written where it was unwritten before. See
+    // `Known::partly_written`.
+    let partial = written_in_part(
+        unit,
+        function,
+        value,
+        place.local,
+        derefs(place),
+        (0..lands.len()).filter(|&local| lands[local] && may_hold[local]),
+    );
     value.replaced(
         |local| may_hold[local],
         |local| may_hold[local] && lands[local],
     );
+    value.partly_written_now(&partial);
+}
+
+/// The arrays among `lands` that a write through `local`, `dereferences`
+/// deep, writes only in part: where the pointer the write goes through may
+/// not be at the array's start, and the array was unwritten or partly
+/// written before. Asked before the write, since the write clears the marks.
+///
+/// **Not at the start** is an offset other than `Zero` on the pointer the
+/// write goes through: `local` itself for one dereference, and for more the
+/// locals that pointer may be, the level above. A pointer read out of memory
+/// there says nothing of where it points and is taken at the start, as a
+/// write through it was before (#639's Q1: only a pointer known to be
+/// moved). One answer for the placed store, a store this check cannot place,
+/// a library copy and a call, so the four cannot drift. See
+/// `Known::partly_written`.
+pub(super) fn written_in_part(
+    unit: &TranslationUnit,
+    function: &Function,
+    value: &Known,
+    local: LocalId,
+    dereferences: usize,
+    lands: impl IntoIterator<Item = usize>,
+) -> Vec<usize> {
+    let moved_off = |held: &super::parts::Held| !matches!(held.offset, super::parts::Offset::Zero);
+    let moved = match dereferences {
+        0 => false,
+        1 => moved_off(&value.points_to[local.index()]),
+        _ => value
+            .levels_below(local, dereferences - 2)
+            .1
+            .into_iter()
+            .any(|held| moved_off(&value.points_to[held])),
+    };
+    if !moved {
+        return Vec::new();
+    }
+    lands
+        .into_iter()
+        .filter(|&each| {
+            is_array(unit, function, each) && (value.unwritten[each] || value.partly_written[each])
+        })
+        .collect()
+}
+
+/// Whether the local at `index` is an array. One answer for the edge a
+/// pointer moved off it keeps and for the write through such a pointer
+/// being of an element. See `Held::moved_by_arithmetic` and
+/// `Known::partly_written`.
+pub(super) fn is_array(unit: &TranslationUnit, function: &Function, index: usize) -> bool {
+    function
+        .locals()
+        .nth(index)
+        .is_some_and(|local| matches!(unit.ty(function.local(local)), Ty::Array { .. }))
 }
 
 /// The sites out of everything a place or an argument reached.

@@ -1,0 +1,50 @@
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_local_array_element_written_and_read_through_a_moved_pointer_is_not_doubted.c:4:5 ]
+   │
+ 4 │     m[1] = &x;
+   │     ────┬────  
+   │         ╰────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_local_array_element_written_and_read_through_a_moved_pointer_is_not_doubted.c:5:10 ]
+   │
+ 5 │     int *q = m[1];
+   │          ────┬───  
+   │              ╰───── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_local_array_element_written_and_read_through_a_moved_pointer_is_not_doubted.c:4:5 ]
+   │
+ 4 │     m[1] = &x;
+   │     ────┬────  
+   │         ╰────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_local_array_element_written_and_read_through_a_moved_pointer_is_not_doubted.c:5:10 ]
+   │
+ 5 │     int *q = m[1];
+   │          ────┬───  
+   │              ╰───── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference `q` while it is null
+   ╭─[ a_local_array_element_written_and_read_through_a_moved_pointer_is_not_doubted.c:6:5 ]
+   │
+ 6 │     return *q;
+   │     ─────┬────  
+   │          ╰────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

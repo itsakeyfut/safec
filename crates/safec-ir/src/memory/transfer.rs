@@ -209,7 +209,11 @@ impl Allocations<'_> {
                     |local, depth| self.reads_caller_memory(local, depth, value),
                 );
                 // What the arithmetic leaves of the edge, as the direct
-                // assignment's `Rvalue::Binary` arm asks. See ADR-0019.
+                // assignment's `Rvalue::Binary` arm asks. See ADR-0019. **No
+                // test holds the array half here**, measured: `|_| false`
+                // leaves the suite green, since no C program reaches this arm,
+                // and `an_offset_that_moves_the_pointer_carries_no_edge` holds
+                // only the non-array half.
                 reached.moved_by_arithmetic(|local| self.is_array(function, local));
                 reached
             }
@@ -232,10 +236,7 @@ impl Allocations<'_> {
     /// keeps the edge to (#639). One answer for both places that build a
     /// value out of operands. See `Held::moved_by_arithmetic`.
     fn is_array(&self, function: &Function, index: usize) -> bool {
-        function
-            .locals()
-            .nth(index)
-            .is_some_and(|local| matches!(self.unit.ty(function.local(local)), Ty::Array { .. }))
+        super::built::is_array(self.unit, function, index)
     }
 
     /// Whether this local holds a pointer.
@@ -593,6 +594,34 @@ impl Allocations<'_> {
     /// measured: a local loses its sites where it is made lost, and no program
     /// found gives a loaded or foreign pointer a fresh site that an exposure
     /// has not already cleared.
+    /// Whether a load reads an array at its start that may still be
+    /// unwritten in part, [`Known::partly_written`], and that nothing else
+    /// it may read is known written: `reads_fresh`'s question, answered as a
+    /// doubt.
+    ///
+    /// **At the start only**, an offset of `Zero`. Through a moved pointer
+    /// the read may be of the element that pointer wrote: asked there, the
+    /// lowering's own read of an assignment's value and `m[1] = p; q = m[1];`
+    /// were doubted. What that leaves silent, a moved read of an element
+    /// nothing wrote, is #667's. See ADR-0057.
+    pub(super) fn reads_partly(&self, function: &Function, source: &Place, value: &Known) -> bool {
+        let through = &value.points_to[source.local.index()];
+        source.projection.as_slice() == [Projection::Deref]
+            && self.may_be_pointer(function, source)
+            && through.writes_to.any()
+            && through.sites().next().is_none()
+            && !(through.lost || through.foreign || through.loaded || through.inner_address)
+            && through
+                .writes_to
+                .ones()
+                .all(|local| value.unwritten[local] || value.partly_written[local])
+            && through
+                .writes_to
+                .ones()
+                .any(|local| value.partly_written[local])
+            && matches!(through.offset, Offset::Zero)
+    }
+
     pub(super) fn reads_fresh(&self, function: &Function, source: &Place, value: &Known) -> bool {
         let through = &value.points_to[source.local.index()];
         source.projection.as_slice() == [Projection::Deref]
@@ -1203,6 +1232,7 @@ impl Analysis for Allocations<'_> {
             // Every local that may hold a pointer, but the parameters, which
             // the caller wrote. See `Known::unwritten`.
             unwritten: self.unwritten_at_entry(),
+            partly_written: vec![false; self.locals],
             // No call has been handed anything yet.
             exposed_locals: vec![false; self.locals],
         };
@@ -1283,8 +1313,14 @@ impl Analysis for Allocations<'_> {
             stored_at_most,
             handed_at_most,
             unwritten,
+            partly_written,
             exposed_locals,
         } = into;
+        // A may-fact, so a union: an element may be unwritten on either
+        // path. See `Known::partly_written`.
+        for (here, there) in partly_written.iter_mut().zip(&from.partly_written) {
+            *here = *here || *there;
+        }
         // A proof, so an intersection, as `fresh` is: unwritten only where
         // no path wrote it.
         for (here, there) in unwritten.iter_mut().zip(&from.unwritten) {
@@ -1580,9 +1616,21 @@ impl Analysis for Allocations<'_> {
                         for site in held.sites().collect::<Vec<_>>() {
                             value.written(site);
                         }
+                        // **Through a pointer moved off an array, an element
+                        // of it**, which may not be the one read later. See
+                        // `built::written_in_part`.
+                        let partial = super::built::written_in_part(
+                            self.unit,
+                            function,
+                            value,
+                            operation.place.local,
+                            1,
+                            edges.iter().copied(),
+                        );
                         for local in edges {
                             value.written_local(local);
                         }
+                        value.partly_written_now(&partial);
                     } else {
                         value.written_all();
                     }
@@ -2705,11 +2753,26 @@ impl Analysis for Allocations<'_> {
                     // other place reaches a call's argument from C.
                     _ => None,
                 };
+                // And through a destination moved off an array, an element of
+                // it, as a store through it answers. See
+                // `built::written_in_part`.
+                let partial = match (arguments.first(), &written) {
+                    (Some(Operand::Copy(dest)), Some(lands)) => super::built::written_in_part(
+                        self.unit,
+                        function,
+                        value,
+                        dest.local,
+                        derefs(dest) + 1,
+                        lands.iter().copied(),
+                    ),
+                    _ => Vec::new(),
+                };
                 let mut may_write = vec![written.is_none(); value.unwritten.len()];
                 for local in written.into_iter().flatten() {
                     may_write[local] = true;
                 }
                 value.replaced(|_| true, |local| may_write[local]);
+                value.partly_written_now(&partial);
             }
             Callee::Opaque => {
                 // **What the caller stored is out of sight from here on**, as
@@ -2843,9 +2906,39 @@ impl Analysis for Allocations<'_> {
                         }
                     }
                 }
+                // And an array handed through a pointer moved off it is
+                // written in part, as a store through that pointer is. See
+                // `built::written_in_part`.
+                let mut partial: Vec<usize> = Vec::new();
+                for argument in handed {
+                    if let Operand::Copy(place) = argument {
+                        let lands = if place.projection.is_empty() {
+                            value
+                                .written_through(place.local)
+                                .into_iter()
+                                .collect::<Vec<_>>()
+                        } else {
+                            value
+                                .levels_below(place.local, derefs(place))
+                                .1
+                                .into_iter()
+                                .collect()
+                        };
+                        partial.extend(super::built::written_in_part(
+                            self.unit,
+                            function,
+                            value,
+                            place.local,
+                            derefs(place) + 1,
+                            lands,
+                        ));
+                    }
+                }
                 value.expose_locals(handed_locals);
                 let may_write = value.exposed_locals.clone();
                 value.replaced(|_| true, |local| may_write[local]);
+                partial.retain(|&local| may_write[local]);
+                value.partly_written_now(&partial);
                 // **And as what each local it reaches was handed**, which is
                 // the most its body can be asked to have written there: a
                 // local reached as a `void *` takes a `void *` store, asked

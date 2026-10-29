@@ -1890,7 +1890,12 @@ pub(super) fn loaded_indeterminate(
         return;
     };
     for place in read {
-        if !analysis.reads_fresh(function, &place, known) {
+        // A proof where nothing wrote what it reads, and a doubt where an
+        // array it reads at its start was written only in part. See
+        // `Known::partly_written`.
+        let certain = analysis.reads_fresh(function, &place, known);
+        let maybe = !certain && analysis.reads_partly(function, &place, known);
+        if !certain && !maybe {
             continue;
         }
         // **Keyed by the pointer read through, not by `*l`.** A dereference
@@ -1920,7 +1925,11 @@ pub(super) fn loaded_indeterminate(
             Finding {
                 function: analysis.function,
                 kind,
-                conclusion: Conclusion::Unsafe,
+                conclusion: if maybe {
+                    Conclusion::Unknown
+                } else {
+                    Conclusion::Unsafe
+                },
                 at,
                 local: Some(local),
                 freed: None,
@@ -1950,8 +1959,11 @@ pub(super) fn unwritten_read(
 ) {
     let function = analysis.unit.function(analysis.function);
     for (local, at) in reads {
+        // **A doubt where an element may still be unwritten**, a proof
+        // where nothing wrote any of it. See `Known::partly_written`.
+        let partly = !known.unwritten[local.index()] && known.partly_written[local.index()];
         if !taken.get(local.index())
-            || !known.unwritten[local.index()]
+            || !(known.unwritten[local.index()] || partly)
             || !analysis.holds_a_pointer(function.local(local))
         {
             continue;
@@ -1971,7 +1983,11 @@ pub(super) fn unwritten_read(
             Finding {
                 function: analysis.function,
                 kind: Kind::IndeterminateLocal,
-                conclusion: Conclusion::Unsafe,
+                conclusion: if partly {
+                    Conclusion::Unknown
+                } else {
+                    Conclusion::Unsafe
+                },
                 at,
                 local: Some(local),
                 freed: None,
