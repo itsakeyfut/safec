@@ -155,8 +155,12 @@ line of Annex J.2 lists using it. A pointer read out of one, through a pointer
 or by name, is `SC0411` at the read: `int *m[1]; int *q = m[0];` and `int *q;
 int **pq = &q; return q == 0;` (#640). Any write that may land in it ends it:
 an assignment to it, a store through a pointer that may point at it, a copy
-into it, a call's result, or a call it was handed. A local written on some
-paths is not reported, and an integer read out of one is not followed.
+into it, a call's result, or a call it was handed. **A local array written
+only through a pointer moved off its start**, `m[1] = p; q = m[0];`, is
+`SC0411` as a doubt where it is read at its start, since this check keeps one
+record per array and the write may have been of another element (#639). A
+local written on some paths is not reported, and an integer read out of one is
+not followed.
 [ADR-0057](adr/0057-a-pointer-read-out-of-fresh-memory-is-reported-where-it-is-read.md)
 is the decision.
 

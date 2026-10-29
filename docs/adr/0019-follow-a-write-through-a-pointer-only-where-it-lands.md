@@ -97,7 +97,7 @@ first answer and not by this one.
 in this crate is, and what a missed arm would mean here is that a write silently
 carries nothing, which is a silence rather than a build error.
 
-**The edge stops at pointer arithmetic that moves the pointer.** C17 6.5.6 p8
+**The edge stops at pointer arithmetic that moves the pointer, unless it points into an array.** C17 6.5.6 p8
 keeps the result of `p + 1` inside the object `p` points into, which is why the
 *allocation* travels through the arithmetic arm. A local's address plus one is
 not that local, so the edge does not: `pp[1] = q;` is an out of bounds write,
