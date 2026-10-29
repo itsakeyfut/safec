@@ -471,6 +471,62 @@ cases! {
         // a new object, handed whole. Mutation: `StorageLive` leaves
         // `Known::exposed_in_part` alone; this gains an `SC0411` doubt.
         a_local_array_handed_whole_after_an_earlier_turn_handed_it_in_part_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `c - 8` with `c` a `char *` moves one pointer, not eight, so the
+        // write is of an element this check cannot count: `m[0]` is an
+        // `SC0411` doubt. Mutation: a byte counts as an element; this goes
+        // silent.
+        a_local_array_written_through_a_byte_pointer_moved_back_by_a_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `c + 8` is `m[1]`, written; `m[8]` is not. Neither is a certain
+        // `SC0411`, the element written being one this check cannot count.
+        // Mutation: a byte counts as an element; `m[1]` is a certain
+        // `SC0411` and `m[8]` goes silent.
+        a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `f = *pe` reads `e = m + 1` back out of `e` itself, which no store
+        // marked, and the write through it may be of any element: `m[0]` is
+        // an `SC0411` doubt. Mutation: a load takes no edge from the local
+        // it reads out of; this goes silent.
+        a_local_array_written_through_a_moved_pointer_read_back_through_its_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same read as an operand, `*pe + 0`. Mutation: such an operand
+        // takes no edge from the local it reads out of; this goes silent.
+        a_local_array_written_through_a_moved_pointer_read_back_through_its_address_as_an_operand_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `fill(h)` reaches `m` only through `*h = m + 1`, stored in an
+        // allocation, and may write any element: `m[0]` is an `SC0411`
+        // doubt. Mutation: a call takes no mark from
+        // `Known::stored_in_part`; this goes silent.
+        a_local_array_reached_by_a_call_through_a_moved_pointer_stored_in_an_allocation_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `**q` writes `m[1]` through `e`, or `m[0]` through what the
+        // allocation holds, so `m[0]` is an `SC0411` doubt. Mutation: a
+        // pointer read out of memory keeps the element of the one beside
+        // it; this is a certain `SC0411`.
+        a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `m[c]` may be `m[0]` or `m[2]`, which nothing wrote, or `m[1]`:
+        // an `SC0411` doubt. Mutation: an element nobody can name is asked
+        // only of an array written in part; this goes silent.
+        an_element_of_a_local_array_read_at_an_offset_this_check_cannot_read_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `f` is `m` or `m + 1`, so its element is lost at the join and
+        // `*f` may read either: an `SC0411` doubt. Mutation: as above; this
+        // goes silent.
+        a_read_through_a_pointer_to_one_of_two_unwritten_elements_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*w` reads `m[0]`, which may be unwritten, or a fresh allocation:
+        // an `SC0411` doubt. Mutation: a read that may reach an allocation
+        // is never doubted; this goes silent.
+        a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*w` reads `m[0]`, which may be unwritten, or `slot`, which is:
+        // an `SC0411` doubt.
+        a_read_through_a_pointer_to_an_array_written_in_part_or_to_an_unwritten_local_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `fill(m)` may write all of `m`, whatever `fill(&m[1])` kept.
+        // Mutation: a call handed an array whole still writes in part what
+        // an earlier call was handed in part; this gains an `SC0411`
+        // doubt.
+        a_local_array_handed_whole_to_a_call_after_one_handed_it_in_part_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `e - 1` with `e = m + 2` is `m[1]`, so `m[3]` read after the write
+        // was written by nothing: a certain `SC0411`. Mutation: a
+        // subtraction moves forwards; this goes silent.
+        an_element_of_a_local_array_past_one_written_through_a_pointer_moved_back_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Sixty-four elements are kept one by one, the most that are. See
+        // `ELEMENTS_KEPT`. Mutation: keep fewer than sixty-four; this goes
+        // silent.
+        an_element_of_a_local_array_of_sixty_four_pointers_nothing_wrote_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A write through a pointer kept from an earlier turn, `*p = 0`, is
         // no write of this turn's `m`, and `m[0]` is read unwritten: a
         // certain `SC0411`, as on `main`. Mutation: the pointer that loses

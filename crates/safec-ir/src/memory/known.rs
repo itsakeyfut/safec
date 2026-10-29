@@ -1673,28 +1673,32 @@ impl Known {
     }
 
     /// Whether `local` may still be unwritten where a read reaches it, so
-    /// that the read is a doubt: partly written, and the element read is
-    /// unwritten, or not known and some element is, where #639's rule
-    /// reached it. A longer array, kept whole, asks this at its start only.
-    /// See [`Self::partly_written`].
+    /// that the read is a doubt: partly written and the element read
+    /// unwritten, or the element not known and some element unwritten. A
+    /// longer array, kept whole, asks this at its start only. See
+    /// [`Self::partly_written`].
+    ///
+    /// **An element nobody can name may be any of them**, whether or not the
+    /// array was written in part: `m[c]` after `m[1] = &x;` may read `m[0]`,
+    /// and so may `*f` with `f` either `m` or `m + 1`. Asking only where the
+    /// array was written in part left both silent, where `main` proved them.
+    /// Found by review of #667.
     pub(super) fn may_be_unwritten(
         &self,
         local: usize,
         element: Option<u64>,
-        array_edge: bool,
         at_start: bool,
     ) -> bool {
-        if !self.partly_written[local] {
-            return false;
-        }
         let elements = &self.unwritten_elements[local];
         if elements.len() == 0 {
-            return at_start;
+            return self.partly_written[local] && at_start;
         }
         match element.and_then(|element| usize::try_from(element).ok()) {
-            Some(element) if element < elements.len() => elements.get(element),
+            Some(element) if element < elements.len() => {
+                self.partly_written[local] && elements.get(element)
+            }
             Some(_) => false,
-            None => array_edge && elements.any(),
+            None => elements.any(),
         }
     }
 

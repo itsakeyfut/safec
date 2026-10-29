@@ -207,6 +207,7 @@ impl Allocations<'_> {
                     |place| self.may_be_pointer(function, place),
                     |place| self.reads_a_byte(function, place),
                     |local, depth| self.reads_caller_memory(local, depth, value),
+                    |local| self.is_array(function, local),
                 );
                 // What the arithmetic leaves of the edge, as the direct
                 // assignment's `Rvalue::Binary` arm asks. See ADR-0019. **No
@@ -236,8 +237,9 @@ impl Allocations<'_> {
     }
 
     /// The per-element record each local starts with: a bit set for every
-    /// element of an array of at most `ELEMENTS_KEPT` that is unwritten at
-    /// entry, and none for any other local. See `Known::unwritten_elements`.
+    /// element of an array of at most `ELEMENTS_KEPT` pointers that is
+    /// unwritten at entry, and none for any other local. See
+    /// `Known::unwritten_elements`.
     fn elements_at_entry(&self) -> Vec<Bits> {
         let function = self.unit.function(self.function);
         let unwritten = self.unwritten_at_entry();
@@ -293,11 +295,16 @@ impl Allocations<'_> {
     }
 
     /// How many innermost elements one object of `ty` holds: an array's
-    /// length times its element's, and one for anything else.
+    /// length times its element's, and one pointer. `None` where the
+    /// innermost element is not a pointer: an element is counted for the
+    /// read [`Self::reads_fresh`] follows, which is of a pointer, and `c - 8`
+    /// with `c` a `char *` into an array of pointers moves one of them, not
+    /// eight. Found by review of #667.
     fn innermost_elements(&self, ty: TyId) -> Option<u64> {
         match self.unit.ty(ty) {
             Ty::Array { element, length } => length.checked_mul(self.innermost_elements(element)?),
-            Ty::Int | Ty::Char | Ty::Void | Ty::Pointer(_) => Some(1),
+            Ty::Pointer(_) => Some(1),
+            Ty::Int | Ty::Char | Ty::Void => None,
         }
     }
 
@@ -579,6 +586,19 @@ impl Allocations<'_> {
                     held.array_edge = true;
                 }
             }
+            // Or read out of a local that holds one, which no store put
+            // there: `e = m + 1; f = *pe;` with `pe = &e`. Not an array,
+            // whose record gathers every store into it, an earlier turn's
+            // too: a store into one marks `stored_in_part`, which a turn
+            // clears. Found by review of #667.
+            if value
+                .levels_below(source.local, depth - 1)
+                .1
+                .into_iter()
+                .any(|local| !self.is_array(function, local) && value.points_to[local].array_edge)
+            {
+                held.array_edge = true;
+            }
             // **Believed only where every local it may be read out of fits
             // what it is read as.** A local is no memory with a door: an
             // assignment to it is asked nowhere, and a `void *` a callee
@@ -683,24 +703,24 @@ impl Allocations<'_> {
 
     /// Whether a load reads an array that may still be unwritten where it
     /// reads, [`Known::partly_written`], and that nothing else it may read is
-    /// known written: `reads_fresh`'s question, answered as a doubt.
+    /// known written: `reads_fresh`'s question, answered as a doubt. A fresh
+    /// allocation beside it is not known written, and is no reason for
+    /// silence. Found by review of #667.
     ///
     /// **At the element the pointer is known to point at**, or, where that is
-    /// not known, wherever #639's rule tied the pointer to the array
-    /// (`Known::may_be_unwritten`). Not through a pointer a store has written
+    /// not known, at any element (`Known::may_be_unwritten`). Not through a
+    /// pointer a store has written
     /// through since it was given its value: that read is of the element
     /// just written, the lowering's own read of an assignment's value among
     /// them. See `Held::stored_through` and ADR-0057.
     pub(super) fn reads_partly(&self, function: &Function, source: &Place, value: &Known) -> bool {
         let through = &value.points_to[source.local.index()];
         let at_start = matches!(through.offset, Offset::Zero);
-        let maybe = |local: usize| {
-            value.may_be_unwritten(local, through.element, through.array_edge, at_start)
-        };
+        let maybe = |local: usize| value.may_be_unwritten(local, through.element, at_start);
         source.projection.as_slice() == [Projection::Deref]
             && self.may_be_pointer(function, source)
             && through.writes_to.any()
-            && through.sites().next().is_none()
+            && through.sites().all(|site| value.fresh[site])
             && !(through.lost
                 || through.foreign
                 || through.loaded
@@ -2174,6 +2194,7 @@ impl Analysis for Allocations<'_> {
                             |place| self.may_be_pointer(function, place),
                             |place| self.reads_a_byte(function, place),
                             |local, depth| self.reads_caller_memory(local, depth, value),
+                            |local| self.is_array(function, local),
                         );
                         // **The sites travel, and the edge only where the offset
                         // may be zero.** C17 6.5.6 p8 keeps the result inside
@@ -3079,11 +3100,23 @@ impl Analysis for Allocations<'_> {
                 // **And an array handed over in part before is written in
                 // part again**: a call this check cannot read may write what
                 // an earlier one kept, and only an element of it was in
-                // reach. See `Known::exposed_in_part`.
+                // reach. See `Known::exposed_in_part`. Not one this call is
+                // handed whole, at its start, which it may write all of:
+                // `fill(m)` after `fill(&m[1])`. Found by review of #667.
+                let handed_whole = |local: usize| {
+                    handed.iter().any(|argument| match argument {
+                        Operand::Copy(place) if place.projection.is_empty() => {
+                            let held = &value.points_to[place.local.index()];
+                            held.writes_to.get(local) && held.element == Some(0) && !held.array_edge
+                        }
+                        _ => false,
+                    })
+                };
                 for (local, &may) in may_write.iter().enumerate() {
                     if may
                         && value.exposed_in_part[local]
                         && !partial.iter().any(|(each, _)| *each == local)
+                        && !handed_whole(local)
                     {
                         partial.push((local, ArrayWrite::Maybe));
                     }

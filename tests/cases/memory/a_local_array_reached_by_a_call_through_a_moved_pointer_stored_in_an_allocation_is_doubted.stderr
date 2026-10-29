@@ -1,0 +1,31 @@
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_local_array_reached_by_a_call_through_a_moved_pointer_stored_in_an_allocation_is_doubted.c:10:5 ]
+    │
+ 10 │     *h = m + 1;
+    │     ─────┬────  
+    │          ╰────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0401]: this frees `h`, which may have been freed already
+    ╭─[ a_local_array_reached_by_a_call_through_a_moved_pointer_stored_in_an_allocation_is_doubted.c:12:5 ]
+    │
+ 12 │     free(h);
+    │     ───┬───  
+    │        ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0411]: this may read an element of an array before anything was assigned to it
+    ╭─[ a_local_array_reached_by_a_call_through_a_moved_pointer_stored_in_an_allocation_is_doubted.c:13:10 ]
+    │
+ 13 │     int *r = m[0];
+    │          ────┬───  
+    │              ╰───── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign every element of the array before reading one

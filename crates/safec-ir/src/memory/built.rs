@@ -31,6 +31,10 @@ use super::transfer::innermost_element;
 /// One function with two callers, because the same question is asked where a
 /// value is assigned and where one is written through a pointer, and one rule
 /// in two places drifts apart inside the change that touches one of them.
+///
+/// Each closure is a question about the function being checked, which this
+/// module has no handle on; bundling them would be a type with one caller.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn built_from(
     op: BinOp,
     operands: [&Operand; 2],
@@ -39,6 +43,7 @@ pub(super) fn built_from(
     may_be_pointer: impl Fn(&Place) -> bool,
     reads_a_byte: impl Fn(&Place) -> bool,
     reads_caller_memory: impl Fn(LocalId, usize) -> bool,
+    is_array: impl Fn(usize) -> bool,
 ) -> Held {
     let followed: Vec<LocalId> = operands
         .iter()
@@ -135,6 +140,16 @@ pub(super) fn built_from(
             if value.stored_in_part[target] {
                 reached.array_edge = true;
             }
+        }
+        // Or read out of a local, not an array, that holds one, as
+        // `read_through` says.
+        if value
+            .levels_below(load.local, derefs(load) - 1)
+            .1
+            .into_iter()
+            .any(|local| !is_array(local) && value.points_to[local].array_edge)
+        {
+            reached.array_edge = true;
         }
         // And lost where the load would be. See ADR-0045.
         if value.stale_below(load.local, derefs(load)) {
@@ -361,7 +376,13 @@ pub(super) fn write_effects(
                 .map(|&pointer| &value.points_to[pointer])
                 .filter(|held| held.writes_to.get(each))
                 .collect();
-            let array_edge = from_memory || naming.iter().any(|held| held.array_edge);
+            // **And a call may read a moved pointer out of memory** a store
+            // put there, which no local it reaches by name holds: `*h = m +
+            // 1; fill(h);` with `h` an allocation. See
+            // `Known::stored_in_part`. Found by review of #667.
+            let array_edge = from_memory
+                || naming.iter().any(|held| held.array_edge)
+                || (call && value.stored_in_part[each]);
             let element = match naming.split_first() {
                 Some((first, rest)) if rest.iter().all(|held| held.element == first.element) => {
                     first.element
@@ -372,7 +393,11 @@ pub(super) fn write_effects(
             match element {
                 Some(0) if call && !array_edge => None,
                 Some(_) if call => Some(ArrayWrite::Maybe),
-                Some(element) if kept => Some(ArrayWrite::Element(element)),
+                // Not where a pointer it goes through was read out of memory,
+                // whose element nobody recorded: `**q` with `q` either `&e`
+                // or an allocation holding `m` writes `m[1]` or `m[0]`.
+                // Found by review of #667.
+                Some(element) if kept && !from_memory => Some(ArrayWrite::Element(element)),
                 _ if array_edge => Some(ArrayWrite::Maybe),
                 _ => None,
             }
