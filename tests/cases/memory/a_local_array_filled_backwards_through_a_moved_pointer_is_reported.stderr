@@ -8,7 +8,7 @@ error[SC0412]: this may reach outside the object `e` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
-error[SC0411]: this may read a pointer out of memory before anything was assigned to it
+error[SC0411]: this may read an element of an array before anything was assigned to it
    ╭─[ a_local_array_filled_backwards_through_a_moved_pointer_is_reported.c:9:10 ]
    │
  9 │     int *q = m[0];

@@ -7,14 +7,14 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::cfg::Cfg;
 use crate::dataflow::Analysis;
 use crate::ir::{
-    BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place, Projection,
-    Rvalue, Terminator, TranslationUnit, Ty, TyId,
+    BinOp, BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place,
+    Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
 };
 use crate::source::{SourceMap, Span};
 
 use super::bits::Bits;
 use super::built::{built_from, named, replaced_by};
-use super::known::Known;
+use super::known::{ArrayWrite, ELEMENTS_KEPT, Known};
 use super::parts::{
     Callee, Extent, Freeing, Held, LIBRARY, Levels, Library, Makes, Offset, PendingRead, Reached,
     Read, Realloced, SiteState, bounded,
@@ -214,7 +214,10 @@ impl Allocations<'_> {
                 // leaves the suite green, since no C program reaches this arm,
                 // and `an_offset_that_moves_the_pointer_carries_no_edge` holds
                 // only the non-array half.
-                reached.moved_by_arithmetic(|local| self.is_array(function, local));
+                reached.moved_by_arithmetic(
+                    |local| self.is_array(function, local),
+                    self.moved_by(function, *op, lhs, rhs),
+                );
                 reached
             }
             // A read through a projection is not a pointer this check follows
@@ -229,6 +232,72 @@ impl Allocations<'_> {
             Rvalue::Use(Operand::Constant(_)) | Rvalue::Unary { .. } | Rvalue::Address(_) => {
                 Held::none(value.points_to.len())
             }
+        }
+    }
+
+    /// The per-element record each local starts with: a bit set for every
+    /// element of an array of at most `ELEMENTS_KEPT` that is unwritten at
+    /// entry, and none for any other local. See `Known::unwritten_elements`.
+    fn elements_at_entry(&self) -> Vec<Bits> {
+        let function = self.unit.function(self.function);
+        let unwritten = self.unwritten_at_entry();
+        function
+            .locals()
+            .map(|local| {
+                let length = match self.unit.ty(function.local(local)) {
+                    Ty::Array { .. } => self.innermost_elements(function.local(local)),
+                    _ => None,
+                };
+                match length {
+                    Some(length) if length <= ELEMENTS_KEPT && unwritten[local.index()] => {
+                        let length = usize::try_from(length).unwrap_or(0);
+                        let mut bits = Bits::new(length);
+                        for element in 0..length {
+                            bits.set(element);
+                        }
+                        bits
+                    }
+                    _ => Bits::new(0),
+                }
+            })
+            .collect()
+    }
+
+    /// How far `lhs op rhs` moves a pointer, counted in the innermost
+    /// elements of the array it points into: a constant times how many of
+    /// those one pointee holds. `None` where the move is not a constant, or
+    /// is not an addition or a subtraction of one from a pointer. See
+    /// `Held::element`.
+    fn moved_by(
+        &self,
+        function: &Function,
+        op: BinOp,
+        lhs: &Operand,
+        rhs: &Operand,
+    ) -> Option<i128> {
+        let (pointer, constant, sign) = match (op, lhs, rhs) {
+            (BinOp::Add, Operand::Copy(place), Operand::Constant(c))
+            | (BinOp::Add, Operand::Constant(c), Operand::Copy(place)) => (place, *c, 1),
+            (BinOp::Sub, Operand::Copy(place), Operand::Constant(c)) => (place, *c, -1),
+            _ => return None,
+        };
+        if !pointer.projection.is_empty() {
+            return None;
+        }
+        let pointee = match self.unit.ty(function.local(pointer.local)) {
+            Ty::Pointer(pointee) => pointee,
+            _ => return None,
+        };
+        let stride = self.innermost_elements(pointee)?;
+        constant.checked_mul(i128::from(stride))?.checked_mul(sign)
+    }
+
+    /// How many innermost elements one object of `ty` holds: an array's
+    /// length times its element's, and one for anything else.
+    fn innermost_elements(&self, ty: TyId) -> Option<u64> {
+        match self.unit.ty(ty) {
+            Ty::Array { element, length } => length.checked_mul(self.innermost_elements(element)?),
+            Ty::Int | Ty::Char | Ty::Void | Ty::Pointer(_) => Some(1),
         }
     }
 
@@ -504,6 +573,11 @@ impl Allocations<'_> {
             for target in locals {
                 held.writes_to.set(target);
                 held.writes_elsewhere = true;
+                // And it may be a pointer that reached an array only by
+                // #639's rule. See `Known::stored_in_part`.
+                if value.stored_in_part[target] {
+                    held.array_edge = true;
+                }
             }
             // **Believed only where every local it may be read out of fits
             // what it is read as.** A local is no memory with a door: an
@@ -594,34 +668,6 @@ impl Allocations<'_> {
     /// measured: a local loses its sites where it is made lost, and no program
     /// found gives a loaded or foreign pointer a fresh site that an exposure
     /// has not already cleared.
-    /// Whether a load reads an array at its start that may still be
-    /// unwritten in part, [`Known::partly_written`], and that nothing else
-    /// it may read is known written: `reads_fresh`'s question, answered as a
-    /// doubt.
-    ///
-    /// **At the start only**, an offset of `Zero`. Through a moved pointer
-    /// the read may be of the element that pointer wrote: asked there, the
-    /// lowering's own read of an assignment's value and `m[1] = p; q = m[1];`
-    /// were doubted. What that leaves silent, a moved read of an element
-    /// nothing wrote, is #667's. See ADR-0057.
-    pub(super) fn reads_partly(&self, function: &Function, source: &Place, value: &Known) -> bool {
-        let through = &value.points_to[source.local.index()];
-        source.projection.as_slice() == [Projection::Deref]
-            && self.may_be_pointer(function, source)
-            && through.writes_to.any()
-            && through.sites().next().is_none()
-            && !(through.lost || through.foreign || through.loaded || through.inner_address)
-            && through
-                .writes_to
-                .ones()
-                .all(|local| value.unwritten[local] || value.partly_written[local])
-            && through
-                .writes_to
-                .ones()
-                .any(|local| value.partly_written[local])
-            && matches!(through.offset, Offset::Zero)
-    }
-
     pub(super) fn reads_fresh(&self, function: &Function, source: &Place, value: &Known) -> bool {
         let through = &value.points_to[source.local.index()];
         source.projection.as_slice() == [Projection::Deref]
@@ -629,7 +675,42 @@ impl Allocations<'_> {
             && (through.sites().next().is_some() || through.writes_to.any())
             && !(through.lost || through.foreign || through.loaded || through.inner_address)
             && through.sites().all(|site| value.fresh[site])
-            && through.writes_to.ones().all(|local| value.unwritten[local])
+            && through
+                .writes_to
+                .ones()
+                .all(|local| value.certainly_unwritten(local, through.element))
+    }
+
+    /// Whether a load reads an array that may still be unwritten where it
+    /// reads, [`Known::partly_written`], and that nothing else it may read is
+    /// known written: `reads_fresh`'s question, answered as a doubt.
+    ///
+    /// **At the element the pointer is known to point at**, or, where that is
+    /// not known, wherever #639's rule tied the pointer to the array
+    /// (`Known::may_be_unwritten`). Not through a pointer a store has written
+    /// through since it was given its value: that read is of the element
+    /// just written, the lowering's own read of an assignment's value among
+    /// them. See `Held::stored_through` and ADR-0057.
+    pub(super) fn reads_partly(&self, function: &Function, source: &Place, value: &Known) -> bool {
+        let through = &value.points_to[source.local.index()];
+        let at_start = matches!(through.offset, Offset::Zero);
+        let maybe = |local: usize| {
+            value.may_be_unwritten(local, through.element, through.array_edge, at_start)
+        };
+        source.projection.as_slice() == [Projection::Deref]
+            && self.may_be_pointer(function, source)
+            && through.writes_to.any()
+            && through.sites().next().is_none()
+            && !(through.lost
+                || through.foreign
+                || through.loaded
+                || through.inner_address
+                || through.stored_through)
+            && through
+                .writes_to
+                .ones()
+                .all(|local| value.certainly_unwritten(local, through.element) || maybe(local))
+            && through.writes_to.ones().any(maybe)
     }
 
     /// Whether a load `depth` dereferences through `local` reads memory a
@@ -1233,6 +1314,9 @@ impl Analysis for Allocations<'_> {
             // the caller wrote. See `Known::unwritten`.
             unwritten: self.unwritten_at_entry(),
             partly_written: vec![false; self.locals],
+            unwritten_elements: self.elements_at_entry(),
+            exposed_in_part: vec![false; self.locals],
+            stored_in_part: vec![false; self.locals],
             // No call has been handed anything yet.
             exposed_locals: vec![false; self.locals],
         };
@@ -1314,8 +1398,26 @@ impl Analysis for Allocations<'_> {
             handed_at_most,
             unwritten,
             partly_written,
+            unwritten_elements,
+            exposed_in_part,
+            stored_in_part,
             exposed_locals,
         } = into;
+        // A proof per element, so an intersection. See
+        // `Known::unwritten_elements`.
+        for (here, there) in unwritten_elements.iter_mut().zip(&from.unwritten_elements) {
+            for element in 0..here.len() {
+                if here.get(element) && !there.get(element) {
+                    here.remove(element);
+                }
+            }
+        }
+        for (here, there) in exposed_in_part.iter_mut().zip(&from.exposed_in_part) {
+            *here = *here || *there;
+        }
+        for (here, there) in stored_in_part.iter_mut().zip(&from.stored_in_part) {
+            *here = *here || *there;
+        }
         // A may-fact, so a union: an element may be unwritten on either
         // path. See `Known::partly_written`.
         for (here, there) in partly_written.iter_mut().zip(&from.partly_written) {
@@ -1618,19 +1720,26 @@ impl Analysis for Allocations<'_> {
                         }
                         // **Through a pointer moved off an array, an element
                         // of it**, which may not be the one read later. See
-                        // `built::written_in_part`.
-                        let partial = super::built::written_in_part(
+                        // `built::write_effects`.
+                        let writes = super::built::write_effects(
                             self.unit,
                             function,
                             value,
                             operation.place.local,
                             1,
                             edges.iter().copied(),
+                            false,
                         );
+                        let pending = value.array_writes_before(writes);
                         for local in edges {
                             value.written_local(local);
                         }
-                        value.partly_written_now(&partial);
+                        value.array_writes_after(pending);
+                        // And what it points at is written now, whichever
+                        // element that is. See `Held::stored_through`.
+                        if operation.place.projection.as_slice() == [Projection::Deref] {
+                            value.points_to[pointer].stored_through = true;
+                        }
                     } else {
                         value.written_all();
                     }
@@ -1693,6 +1802,15 @@ impl Analysis for Allocations<'_> {
                 // until it is recorded inside the local instead. See ADR-0039.
                 if !operation.place.projection.is_empty() {
                     let written = self.carried(function, &operation.value, value);
+                    // **A pointer that reaches an array only by #639's rule,
+                    // stored**, into memory or into a local through its
+                    // address, either of which a load reads back without its
+                    // element. See `Known::stored_in_part`.
+                    if written.array_edge {
+                        for target in written.writes_to.ones() {
+                            value.stored_in_part[target] = true;
+                        }
+                    }
                     let mut carried: Vec<usize> = written.sites().collect();
                     // And what a pointer read out of memory may be, which the
                     // sites above do not name: `*b = *a;` stores in `b` what
@@ -2064,7 +2182,10 @@ impl Analysis for Allocations<'_> {
                         // [`Held::moved_by_arithmetic`]'s. A literal zero the
                         // lowering did not fold is an offset that may be zero,
                         // and is followed. See ADR-0019 and ADR-0021.
-                        reached.moved_by_arithmetic(|local| self.is_array(function, local));
+                        reached.moved_by_arithmetic(
+                            |local| self.is_array(function, local),
+                            self.moved_by(function, *op, lhs, rhs),
+                        );
                         value.points_to[destination.index()] = reached;
                     }
                     // A read through a projection is not a pointer this check
@@ -2131,6 +2252,18 @@ impl Analysis for Allocations<'_> {
                         // holds (#621).
                         value.points_to[destination.index()].writes_elsewhere =
                             !taken.projection.is_empty();
+                        // **The element it points at**, where what was taken
+                        // is an array's start: the lowering builds an index
+                        // only as a constant zero, and every other element
+                        // is reached by arithmetic. See `Held::element`.
+                        if self.is_array(function, taken.local.index())
+                            && taken
+                                .projection
+                                .iter()
+                                .all(|step| matches!(step, Projection::Index(Operand::Constant(0))))
+                        {
+                            value.points_to[destination.index()].element = Some(0);
+                        }
                         // And an access through it is not an access of the
                         // local the edge names, unless what was taken is that
                         // local's own start. See `Held::inner_address`.
@@ -2175,6 +2308,15 @@ impl Analysis for Allocations<'_> {
                 if self.holds_a_pointer(function.local(*local)) {
                     value.unwritten[local.index()] = true;
                 }
+                // And every element of it, with nothing written in part and
+                // nothing handed over. See `Known::unwritten_elements`.
+                let elements = &mut value.unwritten_elements[local.index()];
+                for element in 0..elements.len() {
+                    elements.set(element);
+                }
+                value.partly_written[local.index()] = false;
+                value.exposed_in_part[local.index()] = false;
+                value.stored_in_part[local.index()] = false;
                 // **And no call holds its address yet**: one kept from an
                 // earlier lifetime became indeterminate when that one ended
                 // (C17 6.2.4 p2), so a call is no longer a write of it. Kept
@@ -2755,24 +2897,26 @@ impl Analysis for Allocations<'_> {
                 };
                 // And through a destination moved off an array, an element of
                 // it, as a store through it answers. See
-                // `built::written_in_part`.
-                let partial = match (arguments.first(), &written) {
-                    (Some(Operand::Copy(dest)), Some(lands)) => super::built::written_in_part(
+                // `built::write_effects`.
+                let writes = match (arguments.first(), &written) {
+                    (Some(Operand::Copy(dest)), Some(lands)) => super::built::write_effects(
                         self.unit,
                         function,
                         value,
                         dest.local,
                         derefs(dest) + 1,
                         lands.iter().copied(),
+                        true,
                     ),
                     _ => Vec::new(),
                 };
+                let pending = value.array_writes_before(writes);
                 let mut may_write = vec![written.is_none(); value.unwritten.len()];
                 for local in written.into_iter().flatten() {
                     may_write[local] = true;
                 }
                 value.replaced(|_| true, |local| may_write[local]);
-                value.partly_written_now(&partial);
+                value.array_writes_after(pending);
             }
             Callee::Opaque => {
                 // **What the caller stored is out of sight from here on**, as
@@ -2906,39 +3050,51 @@ impl Analysis for Allocations<'_> {
                         }
                     }
                 }
+                value.expose_locals(handed_locals);
+                let may_write = value.exposed_locals.clone();
                 // And an array handed through a pointer moved off it is
-                // written in part, as a store through that pointer is. See
-                // `built::written_in_part`.
-                let mut partial: Vec<usize> = Vec::new();
+                // written in part, as a store through that pointer is: asked
+                // of every local the call may write, since it may write
+                // through any pointer it reaches, `fill(&e)` through `e = m +
+                // 1`. See `built::write_effects`.
+                let mut partial: Vec<(usize, ArrayWrite)> = Vec::new();
                 for argument in handed {
                     if let Operand::Copy(place) = argument {
-                        let lands = if place.projection.is_empty() {
-                            value
-                                .written_through(place.local)
-                                .into_iter()
-                                .collect::<Vec<_>>()
-                        } else {
-                            value
-                                .levels_below(place.local, derefs(place))
-                                .1
-                                .into_iter()
-                                .collect()
-                        };
-                        partial.extend(super::built::written_in_part(
+                        let lands = (0..may_write.len()).filter(|&local| may_write[local]);
+                        for (local, write) in super::built::write_effects(
                             self.unit,
                             function,
                             value,
                             place.local,
                             derefs(place) + 1,
                             lands,
-                        ));
+                            true,
+                        ) {
+                            if !partial.iter().any(|(each, _)| *each == local) {
+                                partial.push((local, write));
+                            }
+                        }
                     }
                 }
-                value.expose_locals(handed_locals);
-                let may_write = value.exposed_locals.clone();
+                // **And an array handed over in part before is written in
+                // part again**: a call this check cannot read may write what
+                // an earlier one kept, and only an element of it was in
+                // reach. See `Known::exposed_in_part`.
+                for (local, &may) in may_write.iter().enumerate() {
+                    if may
+                        && value.exposed_in_part[local]
+                        && !partial.iter().any(|(each, _)| *each == local)
+                    {
+                        partial.push((local, ArrayWrite::Maybe));
+                    }
+                }
+                partial.retain(|(local, _)| may_write[*local]);
+                for (local, _) in &partial {
+                    value.exposed_in_part[*local] = true;
+                }
+                let pending = value.array_writes_before(partial);
                 value.replaced(|_| true, |local| may_write[local]);
-                partial.retain(|&local| may_write[local]);
-                value.partly_written_now(&partial);
+                value.array_writes_after(pending);
                 // **And as what each local it reaches was handed**, which is
                 // the most its body can be asked to have written there: a
                 // local reached as a `void *` takes a `void *` store, asked

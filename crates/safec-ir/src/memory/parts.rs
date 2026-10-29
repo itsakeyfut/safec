@@ -874,6 +874,43 @@ pub(super) struct Held {
     /// for the frontend that does not fold it, and for the first address of a
     /// member. A may-fact, so a union. See ADR-0060.
     pub(super) inner_address: bool,
+    /// Which element of a local array the edges in [`Self::writes_to`] point
+    /// at, counted in the array's innermost elements, where it is known:
+    /// `&m[c]` with constant indices, and a constant move of such a pointer.
+    /// `None` where it is not, and meaningless where there is no edge.
+    ///
+    /// **What lets one element be written and another stay unwritten**
+    /// (#667). One record per array made a write to `m[0]` a write of `m[1]`,
+    /// and a write through `m + 1` either all of `m` or none of it. A join
+    /// keeps it where both paths agree. See `Known::unwritten_elements` and
+    /// ADR-0057.
+    pub(super) element: Option<u64>,
+    /// Whether an edge to an array in [`Self::writes_to`] survives only by
+    /// the array rule of [`Self::moved_by_arithmetic`], a constant move off
+    /// the array's start that `main` dropped the edge for (#639).
+    ///
+    /// **What a write through it is, once [`Self::element`] is lost**: a
+    /// write that may be of any element, and so leaves the array "may have
+    /// been written" rather than written. Where the edge survives the way it
+    /// always did, through an offset this check cannot read, the write is of
+    /// the whole array, as it always was. That is the line between not losing
+    /// a proof and not doubting every loop that fills an array. A union. See
+    /// `Known::partly_written` and ADR-0057.
+    pub(super) array_edge: bool,
+    /// Whether a store placed through this pointer has written what it
+    /// points at since it was given its value, on every path. A read through
+    /// it then reads the element it wrote, whichever that is.
+    ///
+    /// **What keeps the lowering's own read of an assignment's value from
+    /// being doubted** (#667): `*e = &x;` reads `*e` back as the value of the
+    /// expression, and with `e` moved through a loop the element is not
+    /// known, so the write left the array [`Known::partly_written`] and the
+    /// read back of it was a doubt about the element just written. Held by
+    /// the pointer, so a new value for it clears it and a copy of it keeps
+    /// it. An intersection at a join. See `Known::may_be_unwritten`.
+    ///
+    /// [`Known::partly_written`]: super::known::Known::partly_written
+    pub(super) stored_through: bool,
 }
 
 /// The lower of two bounds, where `None` is no bound: a side that bounds
@@ -1007,6 +1044,9 @@ impl Held {
             believed: None,
             contents_at_most: Levels::default(),
             inner_address: false,
+            element: None,
+            array_edge: false,
+            stored_through: false,
         }
     }
 
@@ -1105,12 +1145,18 @@ impl Held {
             believed,
             contents_at_most,
             inner_address,
+            element,
+            array_edge,
+            stored_through,
         } = self;
         sites.clear_all();
         *fresh_read = false;
         *believed = None;
         *contents_at_most = Levels::default();
         *inner_address = false;
+        *element = None;
+        *array_edge = false;
+        *stored_through = false;
         *from_caller = false;
         *returned_by = None;
         *lost = false;
@@ -1161,6 +1207,9 @@ impl Held {
             believed,
             contents_at_most,
             inner_address,
+            element,
+            array_edge,
+            stored_through,
         } = self;
         *inner_address = *inner_address || other.inner_address;
         // A bound, so the lower of two, and a side with none is no bound.
@@ -1201,6 +1250,11 @@ impl Held {
             (Some(here), Some(there)) => Some(here.joined(there, sources)),
             _ => None,
         };
+        // The element where both paths agree, and a side with no edge
+        // says nothing about it. Before the union below. See `Held::element`.
+        *element = joined_element(writes_to.any(), *element, &other.writes_to, other.element);
+        *array_edge = *array_edge || other.array_edge;
+        *stored_through = *stored_through && other.stored_through;
         writes_to.union_with(&other.writes_to);
     }
 
@@ -1238,6 +1292,9 @@ impl Held {
             believed,
             contents_at_most,
             inner_address,
+            element,
+            array_edge,
+            stored_through,
         } = self;
         *inner_address = *inner_address || other.inner_address;
         // `*tab + 1` points into the same memory, which holds what it held.
@@ -1290,6 +1347,12 @@ impl Held {
         // ADR-0019.
         sites.union_with(&other.sites);
         *lost = *lost || other.lost;
+        // As the join keeps it, before the union. See `Held::element`.
+        *element = joined_element(writes_to.any(), *element, &other.writes_to, other.element);
+        *array_edge = *array_edge || other.array_edge;
+        // A pointer built from others points at an element none of them was
+        // known to have written. See `Held::stored_through`.
+        *stored_through = false;
         writes_to.union_with(&other.writes_to);
         *writes_elsewhere = *writes_elsewhere || other.writes_elsewhere;
     }
@@ -1349,18 +1412,34 @@ impl Held {
     /// `up = po + 1; back = up - 1;`, since `up` is `Offset::NonZero` and the
     /// edge is gone before `back` could keep it, for a local that is not an
     /// array.
-    pub(super) fn moved_by_arithmetic(&mut self, is_array: impl Fn(usize) -> bool) {
+    pub(super) fn moved_by_arithmetic(
+        &mut self,
+        is_array: impl Fn(usize) -> bool,
+        by: Option<i128>,
+    ) {
         if !matches!(self.offset, Offset::Unknown) {
             let kept: Vec<usize> = self
                 .writes_to
                 .ones()
                 .filter(|&local| is_array(local))
                 .collect();
+            // **Kept by the array rule alone**, where the move is known not
+            // to be zero: `main` dropped this edge. See `Held::array_edge`.
+            if matches!(self.offset, Offset::NonZero) && !kept.is_empty() {
+                self.array_edge = true;
+            }
             self.writes_to.clear_all();
             for local in kept {
                 self.writes_to.set(local);
             }
         }
+        // **The element moves by what was added**, where both are known: `by`
+        // is the constant counted in the array's innermost elements. See
+        // `Held::element`.
+        self.element = match (self.element, by) {
+            (Some(element), Some(by)) => u64::try_from(i128::from(element) + by).ok(),
+            _ => None,
+        };
         self.writes_elsewhere = true;
     }
 }
@@ -1477,6 +1556,23 @@ pub(super) struct Realloced {
     pub(super) at: Span,
     /// Each allocation it was handed, with where it was made.
     pub(super) old: Vec<(usize, Option<Span>)>,
+}
+
+/// The element two values point at once joined, where `here` and `there`
+/// are each meaningful only beside an edge: a side with none says nothing,
+/// and two that disagree know nothing. See [`Held::element`].
+fn joined_element(
+    here_has_edge: bool,
+    here: Option<u64>,
+    there_edges: &Bits,
+    there: Option<u64>,
+) -> Option<u64> {
+    match (here_has_edge, there_edges.any()) {
+        (false, _) => there,
+        (true, false) => here,
+        (true, true) if here == there => here,
+        (true, true) => None,
+    }
 }
 
 #[cfg(test)]

@@ -329,10 +329,8 @@ cases! {
         // the union; this gains `SC0411`.
         a_pointer_read_out_of_memory_a_call_wrote_after_a_local_array_left_on_one_path_only_may_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same moved as it is read, `*x + 1`, which reaches the value as
-        // one operand rather than through a load. The read of `m[0]` is an
-        // `SC0411` doubt, `u - 1` being a pointer moved off the array
-        // (#639). Mutation: such an operand records nothing in
-        // `named_at_read`; the `SC0411` is certain.
+        // one operand rather than through a load. Mutation: such an operand
+        // records nothing in `named_at_read`; this gains `SC0411`.
         a_pointer_moved_as_it_is_read_out_of_memory_a_call_wrote_after_a_local_array_left_may_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer a call wrote into a local, before a local array's
         // address left, cannot be that array, so a write through it does
@@ -369,10 +367,9 @@ cases! {
         // local alone; this loses its `SC0411`.
         a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Copied in this turn, after `*b = m;`, it may be this turn's `m`,
-        // so the read of `m[0]` is no certain `SC0411`; it is a doubt, since
-        // `t` says nothing of which element it points at (#639). Mutation:
-        // the pointer that loses its edge is marked `lost`; this fails on
-        // its doubts about `t`, which change.
+        // and no `SC0411`. No mutation measured gives it one. Mutation: the
+        // pointer that loses its edge is marked `lost`; this fails on its
+        // doubts about `t`, which change.
         a_pointer_copied_in_this_turn_may_write_this_turns_local_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer stored into `m[1]`, freed and read back is used after it
         // was freed (#639): `&m[0] + 1` still points into `m` (C17 6.5.6
@@ -385,17 +382,13 @@ cases! {
         // no mutation of #639 moves it, since a store at `m[1]` reached the
         // array as a whole before #639 too.
         a_pointer_stored_into_one_element_and_another_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A write through a pointer moved off an array leaves it partly
-        // written, so `m[0]` read after only `m[1]` was written is an
-        // `SC0411` doubt rather than silence or a proof (#639). See ADR-0057.
-        // Mutation: no write marks an array partly written; this goes
-        // silent. Mutation: a partial write leaves the array unwritten; the
-        // doubt is a proof.
-        a_local_array_written_only_through_a_moved_pointer_is_doubted_where_read_at_its_start: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same written a level down, a store this check cannot place.
-        // Mutation: a write deeper than one dereference is taken at the
-        // array's start; this goes silent.
-        a_local_array_written_through_a_moved_pointer_a_level_down_is_doubted_where_read_at_its_start: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write through `&m[0] + 1` writes `m[1]` alone, so `m[0]` read
+        // after it was written by nothing is a certain `SC0411` (#639,
+        // #667). See ADR-0057.
+        a_local_array_written_only_through_a_moved_pointer_is_reported_where_read_at_its_start: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same written a level down, `**pe` with `pe = &e`, which knows
+        // the element `e` points at too.
+        a_local_array_written_through_a_moved_pointer_a_level_down_is_reported_where_read_at_its_start: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same written by a library copy through `m + 1`. Mutation: no
         // write marks an array partly written; this goes silent.
         a_local_array_copied_into_through_a_moved_pointer_is_doubted_where_read_at_its_start: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -412,6 +405,44 @@ cases! {
         // places, `Known::written_local` and `Known::replaced`, and dropping
         // either alone leaves this green, measured.
         a_local_array_written_in_part_and_then_at_its_start_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `m[0] = &x;` writes `m[0]` alone, so `m[1]` read after it was
+        // written by nothing: a certain `SC0411` (#667). See ADR-0057.
+        // Mutation: a write through a known element clears every element;
+        // this goes silent.
+        an_element_of_a_local_array_nothing_wrote_beside_one_written_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Every element written one at a time is the whole array written.
+        // Mutation: a write through a known element clears none; this gains
+        // `SC0411`.
+        every_element_of_a_local_array_written_one_by_one_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `m[0][1]` and `m[1][0]` are two elements, counted across both
+        // dimensions. Mutation: a pointer moves by its constant alone, not
+        // times the elements one pointee holds; this goes silent.
+        an_element_of_a_two_dimensional_local_array_nothing_wrote_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An array of more than 64 elements is kept whole, as before #667,
+        // so a write to `m[0]` writes it. Mutation: no cap; this gains
+        // `SC0411`.
+        an_element_of_a_local_array_too_long_to_keep_per_element_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `m + 1` stored and read back keeps no element, so the write
+        // through it may be of any element: `m[0]` is an `SC0411` doubt
+        // (#667). Mutation: a stored pointer marks nothing
+        // `Known::stored_in_part`; this goes silent.
+        a_local_array_written_through_a_moved_pointer_read_back_out_of_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `fill(&e, &x)` writes `m` through `e = m + 1`, a level below what
+        // it is handed: an `SC0411` doubt at `m[0]`. Mutation: a call asks
+        // only the pointer it is handed; this goes silent.
+        a_local_array_written_by_a_call_through_a_moved_pointer_a_level_down_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call handed `m + 1` may keep it, and a later call may write
+        // through it: still in part. Mutation: `Known::exposed_in_part`
+        // adds nothing at a later call; the doubt goes.
+        a_local_array_handed_in_part_to_a_call_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `m[i]` in a loop is an offset this check cannot read, which
+        // writes the whole array, as on `main`. Mutation: such a write
+        // leaves the array partly written; this gains an `SC0411` doubt.
+        a_local_array_filled_by_a_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `fill(m)` may write all of `m`, as on `main`. Mutation: a call
+        // handed an array at its start writes it in part; this gains an
+        // `SC0411` doubt.
+        a_local_array_handed_to_a_call_at_its_start_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A write through a pointer kept from an earlier turn, `*p = 0`, is
         // no write of this turn's `m`, and `m[0]` is read unwritten: a
         // certain `SC0411`, as on `main`. Mutation: the pointer that loses

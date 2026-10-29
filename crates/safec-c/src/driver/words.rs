@@ -842,14 +842,14 @@ pub(super) fn memory_finding(
         ),
         // **A doubt where an array may be written only in part**: a write
         // through a pointer moved off it may have been of another element
-        // (#639). Under the same code, in the words `SometimesUnassigned`
-        // uses for a read that may come first. See `Known::partly_written`.
+        // (#639). Under the same code, and naming the element, since only an
+        // array is written in part (#667). See `Known::partly_written`.
         (Kind::IndeterminateLoad { .. }, Conclusion::Unknown, _) => (
             UNASSIGNED,
             said(
                 name,
-                "this may read a pointer out of memory before anything was assigned to it",
-                |name| format!("`*{name}` may be read before anything was assigned to it"),
+                "this may read an element of an array before anything was assigned to it",
+                |name| format!("`*{name}` may be an array element read before anything was assigned to it"),
             ),
             "read here",
             "assign every element of the array before reading one",

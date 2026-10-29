@@ -5,7 +5,7 @@
 use crate::ir::{BinOp, Function, LocalId, Operand, Place, TranslationUnit, Ty};
 
 use super::derefs;
-use super::known::Known;
+use super::known::{ArrayWrite, Known};
 use super::parts::{Held, Offset, Reached};
 use super::transfer::innermost_element;
 
@@ -130,6 +130,11 @@ pub(super) fn built_from(
         // Found by review. See ADR-0019 and ADR-0045.
         for target in locals {
             reached.writes_to.set(target);
+            // And it may be a pointer that reached an array only by #639's
+            // rule. See `Known::stored_in_part`.
+            if value.stored_in_part[target] {
+                reached.array_edge = true;
+            }
         }
         // And lost where the load would be. See ADR-0045.
         if value.stale_below(load.local, derefs(load)) {
@@ -290,59 +295,88 @@ pub(super) fn replaced_by(
     // placed store answers: still a write `replaced` makes of every local it
     // may land in, then partly written where it was unwritten before. See
     // `Known::partly_written`.
-    let partial = written_in_part(
+    let writes = write_effects(
         unit,
         function,
         value,
         place.local,
         derefs(place),
         (0..lands.len()).filter(|&local| lands[local] && may_hold[local]),
+        false,
     );
+    let pending = value.array_writes_before(writes);
     value.replaced(
         |local| may_hold[local],
         |local| may_hold[local] && lands[local],
     );
-    value.partly_written_now(&partial);
+    value.array_writes_after(pending);
 }
 
-/// The arrays among `lands` that a write through `local`, `dereferences`
-/// deep, writes only in part: where the pointer the write goes through may
-/// not be at the array's start, and the array was unwritten or partly
-/// written before. Asked before the write, since the write clears the marks.
+/// What a write through `local`, `dereferences` deep, is to each array among
+/// `lands` that it does not write whole: one element, where every pointer it
+/// goes through that names the array names the same known element, and an
+/// element that may be any of them, where the edge to the array exists only
+/// by #639's rule or the pointer was read out of memory. An array missing
+/// from the answer is written whole, as every array was before #667.
 ///
-/// **Not at the start** is an offset other than `Zero` on the pointer the
-/// write goes through: `local` itself for one dereference, and for more the
-/// locals that pointer may be, the level above. A pointer read out of memory
-/// there says nothing of where it points and is taken at the start, as a
-/// write through it was before (#639's Q1: only a pointer known to be
-/// moved). One answer for the placed store, a store this check cannot place,
-/// a library copy and a call, so the four cannot drift. See
-/// `Known::partly_written`.
-pub(super) fn written_in_part(
+/// **Whole where `main` kept the edge, in part where only the array rule
+/// did**, by the user's decision on #667: every other line measured lost a
+/// proof `main` gives or doubted every loop that fills an array. A `call`,
+/// a library copy or a call this check cannot read, may write past the
+/// element it is handed, so what it is handed at a known element other
+/// than the start is in part too. One answer for the placed store, a store
+/// this check cannot place, a library copy and a call. See
+/// `Known::unwritten_elements` and ADR-0057.
+pub(super) fn write_effects(
     unit: &TranslationUnit,
     function: &Function,
     value: &Known,
     local: LocalId,
     dereferences: usize,
     lands: impl IntoIterator<Item = usize>,
-) -> Vec<usize> {
-    let moved_off = |held: &super::parts::Held| !matches!(held.offset, super::parts::Offset::Zero);
-    let moved = match dereferences {
-        0 => false,
-        1 => moved_off(&value.points_to[local.index()]),
-        _ => value
-            .levels_below(local, dereferences - 2)
-            .1
-            .into_iter()
-            .any(|held| moved_off(&value.points_to[held])),
+    call: bool,
+) -> Vec<(usize, ArrayWrite)> {
+    let lands: Vec<usize> = lands.into_iter().collect();
+    let (mut through, from_memory): (Vec<usize>, bool) = match dereferences {
+        0 => return Vec::new(),
+        1 => (vec![local.index()], false),
+        _ => {
+            let (sites, locals) = value.levels_below(local, dereferences - 2);
+            (locals.into_iter().collect(), !sites.is_empty())
+        }
     };
-    if !moved {
-        return Vec::new();
+    // **A call writes through every pointer it can reach**, not only the
+    // one it is handed: `fill(&e, &x)` with `e = m + 1` writes `m` through
+    // `e`, a level below the argument. Every local it may write is one it
+    // may read a pointer out of, so those are what is asked.
+    if call {
+        through.extend(lands.iter().copied());
     }
     lands
         .into_iter()
-        .filter(|&each| {
-            is_array(unit, function, each) && (value.unwritten[each] || value.partly_written[each])
+        .filter(|&each| is_array(unit, function, each))
+        .filter_map(|each| {
+            let naming: Vec<&super::parts::Held> = through
+                .iter()
+                .map(|&pointer| &value.points_to[pointer])
+                .filter(|held| held.writes_to.get(each))
+                .collect();
+            let array_edge = from_memory || naming.iter().any(|held| held.array_edge);
+            let element = match naming.split_first() {
+                Some((first, rest)) if rest.iter().all(|held| held.element == first.element) => {
+                    first.element
+                }
+                _ => None,
+            };
+            let kept = value.unwritten_elements[each].len() > 0;
+            match element {
+                Some(0) if call && !array_edge => None,
+                Some(_) if call => Some(ArrayWrite::Maybe),
+                Some(element) if kept => Some(ArrayWrite::Element(element)),
+                _ if array_edge => Some(ArrayWrite::Maybe),
+                _ => None,
+            }
+            .map(|write| (each, write))
         })
         .collect()
 }

@@ -268,6 +268,35 @@ pub(super) struct Known {
     /// of an unwritten array and a written one is not this, which is #668.
     /// See ADR-0057.
     pub(super) partly_written: Vec<bool>,
+    /// Per local array of at most [`ELEMENTS_KEPT`] innermost elements, one
+    /// bit per element that nothing may have written: [`Self::unwritten`]
+    /// kept per element. Empty for every other local, which
+    /// [`Self::unwritten`] answers for whole.
+    ///
+    /// **So that a write to one element leaves another unwritten** (#667):
+    /// `m[0] = &x; q = m[1];` read an `m[1]` nothing wrote, in silence, since
+    /// the write to `m[0]` cleared the one record `m` had. A write through a
+    /// pointer whose element is known clears that bit alone; one whose element
+    /// is not known writes the whole array where `main` did, and leaves it
+    /// [`Self::partly_written`] where only #639's rule tied the write to the
+    /// array. An intersection at a join, and set again at `StorageLive`. See
+    /// `built::write_effects` and ADR-0057.
+    pub(super) unwritten_elements: Vec<Bits>,
+    /// Per local array, whether code this check cannot read was handed it
+    /// only through a pointer moved off its start, so that a call writing it
+    /// later writes it only in part (#667). A union at a join, and cleared at
+    /// `StorageLive`. See `built::write_effects`.
+    pub(super) exposed_in_part: Vec<bool>,
+    /// Per local array, whether a pointer that reaches it only by #639's
+    /// rule, [`Held::array_edge`], was stored in memory, so that a pointer
+    /// read back out of memory that names it may be that one (#667). A load
+    /// keeps no element, and without this it wrote the array whole:
+    /// `box[0] = m + 1; f = box[0]; *f = &x;` left `m[0]` believed written.
+    /// Per array rather than per container, so a load from any memory that
+    /// names the array is asked as if it may be that pointer: a doubt the
+    /// reader sees, never a proof. A union at a join, and cleared at
+    /// `StorageLive`. See `built::write_effects`.
+    pub(super) stored_in_part: Vec<bool>,
     /// Per local, whether code this check cannot read may hold its address:
     /// what a call may have written, for [`Self::unwritten`], and nothing
     /// else reads it. `lost` and `foreign` are still given to every escaped
@@ -1382,6 +1411,9 @@ impl Known {
             // local it is named by, which the call's destination says.
             unwritten: _,
             partly_written: _,
+            unwritten_elements: _,
+            exposed_in_part: _,
+            stored_in_part: _,
             // A local's, as `escaped` is, and a site being reborn is not.
             exposed_locals: _,
         } = self;
@@ -1575,15 +1607,94 @@ impl Known {
     pub(super) fn written_local(&mut self, local: usize) {
         self.unwritten[local] = false;
         self.partly_written[local] = false;
+        self.unwritten_elements[local].clear_all();
     }
 
-    /// Mark `locals` partly written, after a write that cleared them: what
-    /// `built::written_in_part` answered before it. See
-    /// [`Self::partly_written`].
-    pub(super) fn partly_written_now(&mut self, locals: &[usize]) {
-        for &local in locals {
+    /// What `writes` leave of the arrays they name, taken before the write
+    /// that would clear them whole and handed to
+    /// [`Self::array_writes_after`] once it has. See `built::write_effects`.
+    pub(super) fn array_writes_before(
+        &self,
+        writes: Vec<(usize, ArrayWrite)>,
+    ) -> Vec<PendingWrite> {
+        writes
+            .into_iter()
+            .map(|(local, write)| PendingWrite {
+                local,
+                write,
+                unwritten: self.unwritten[local],
+                partly: self.partly_written[local],
+                elements: self.unwritten_elements[local].clone(),
+            })
+            .collect()
+    }
+
+    /// Put back what `pending` saved and write it as each says: one element,
+    /// or an element that may be any of them. See
+    /// [`Self::unwritten_elements`].
+    pub(super) fn array_writes_after(&mut self, pending: Vec<PendingWrite>) {
+        for write in pending {
+            let local = write.local;
+            let anything_unwritten = write.unwritten || write.elements.any();
             self.unwritten[local] = false;
-            self.partly_written[local] = true;
+            self.partly_written[local] = write.partly;
+            self.unwritten_elements[local] = write.elements;
+            match write.write {
+                ArrayWrite::Element(element) => {
+                    if let Ok(element) = usize::try_from(element) {
+                        if element < self.unwritten_elements[local].len() {
+                            self.unwritten_elements[local].remove(element);
+                        }
+                    }
+                }
+                ArrayWrite::Maybe => {
+                    self.partly_written[local] = write.partly || anything_unwritten;
+                }
+            }
+        }
+    }
+
+    /// Whether `local` is certainly unwritten where a read reaches it at
+    /// `element`, or anywhere in it where that is not known. See
+    /// [`Self::unwritten_elements`].
+    pub(super) fn certainly_unwritten(&self, local: usize, element: Option<u64>) -> bool {
+        let elements = &self.unwritten_elements[local];
+        if elements.len() == 0 {
+            return self.unwritten[local];
+        }
+        if self.partly_written[local] {
+            return false;
+        }
+        match element.and_then(|element| usize::try_from(element).ok()) {
+            Some(element) if element < elements.len() => elements.get(element),
+            Some(_) => false,
+            None => elements.ones().count() == elements.len(),
+        }
+    }
+
+    /// Whether `local` may still be unwritten where a read reaches it, so
+    /// that the read is a doubt: partly written, and the element read is
+    /// unwritten, or not known and some element is, where #639's rule
+    /// reached it. A longer array, kept whole, asks this at its start only.
+    /// See [`Self::partly_written`].
+    pub(super) fn may_be_unwritten(
+        &self,
+        local: usize,
+        element: Option<u64>,
+        array_edge: bool,
+        at_start: bool,
+    ) -> bool {
+        if !self.partly_written[local] {
+            return false;
+        }
+        let elements = &self.unwritten_elements[local];
+        if elements.len() == 0 {
+            return at_start;
+        }
+        match element.and_then(|element| usize::try_from(element).ok()) {
+            Some(element) if element < elements.len() => elements.get(element),
+            Some(_) => false,
+            None => array_edge && elements.any(),
         }
     }
 
@@ -2003,8 +2114,7 @@ impl Known {
             // the suite green. It is kept so that `may_write` answers for the
             // same locals `may_hold` does.
             if may_write(local) && self.escaped[local] {
-                self.unwritten[local] = false;
-                self.partly_written[local] = false;
+                self.written_local(local);
             }
         }
     }
@@ -2023,4 +2133,29 @@ struct Closed {
 /// `foreign` apart, and follows it.
 fn holds_unrecorded(held: &Held) -> bool {
     held.loaded || held.lost || held.foreign
+}
+
+/// How many innermost elements a local array may have and still be kept
+/// per element in [`Known::unwritten_elements`]. A longer one is kept whole,
+/// as every array was before #667, so the bits a block holds are bounded.
+pub(super) const ELEMENTS_KEPT: u64 = 64;
+
+/// What a write is to one array it may land in, where it is not a write of
+/// the whole of it. See `built::write_effects`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum ArrayWrite {
+    /// The element it lands in is known.
+    Element(u64),
+    /// It may land in any element. See [`Known::partly_written`].
+    Maybe,
+}
+
+/// An [`ArrayWrite`] with what the array held before the write, put back
+/// after it. See [`Known::array_writes_before`].
+pub(super) struct PendingWrite {
+    local: usize,
+    write: ArrayWrite,
+    unwritten: bool,
+    partly: bool,
+    elements: Bits,
 }

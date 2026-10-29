@@ -1,5 +1,5 @@
 error[SC0412]: this may reach outside the object it points at
-   ╭─[ a_local_array_written_only_through_a_moved_pointer_is_doubted_where_read_at_its_start.c:4:5 ]
+   ╭─[ a_local_array_written_only_through_a_moved_pointer_is_reported_where_read_at_its_start.c:4:5 ]
    │
  4 │     m[1] = malloc(4);
    │     ────────┬───────  
@@ -8,8 +8,8 @@ error[SC0412]: this may reach outside the object it points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
-error[SC0411]: this may read a pointer out of memory before anything was assigned to it
-   ╭─[ a_local_array_written_only_through_a_moved_pointer_is_doubted_where_read_at_its_start.c:5:10 ]
+error[SC0411]: this reads a pointer out of memory before anything was assigned to it
+   ╭─[ a_local_array_written_only_through_a_moved_pointer_is_reported_where_read_at_its_start.c:5:10 ]
    │
  5 │     int *r = m[0];
    │          ────┬───  
@@ -17,10 +17,9 @@ error[SC0411]: this may read a pointer out of memory before anything was assigne
 ───╯
   = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
   = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: assign every element of the array before reading one
+  = help: assign to it before reading it
 error[SC0403]: this may dereference a null pointer
-   ╭─[ a_local_array_written_only_through_a_moved_pointer_is_doubted_where_read_at_its_start.c:4:5 ]
+   ╭─[ a_local_array_written_only_through_a_moved_pointer_is_reported_where_read_at_its_start.c:4:5 ]
    │
  4 │     m[1] = malloc(4);
    │     ────────┬───────  

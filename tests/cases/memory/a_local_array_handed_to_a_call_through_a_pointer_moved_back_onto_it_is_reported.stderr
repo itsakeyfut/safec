@@ -8,7 +8,7 @@ error[SC0413]: this lets `d` leave, which may not point at an object as wide as 
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
-error[SC0411]: this may read a pointer out of memory before anything was assigned to it
+error[SC0411]: this may read an element of an array before anything was assigned to it
    ╭─[ a_local_array_handed_to_a_call_through_a_pointer_moved_back_onto_it_is_reported.c:8:10 ]
    │
  8 │     int *q = m[0];
