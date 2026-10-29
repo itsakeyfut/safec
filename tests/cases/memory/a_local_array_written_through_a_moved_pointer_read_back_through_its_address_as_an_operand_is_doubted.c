@@ -3,8 +3,8 @@ int main(void) {
     int *m[2];
     int **e = m + 1;
     int ***pe = &e;
-    int **f = *pe + 0;
+    int **f = *pe - 1;
     *f = &x;
-    int *r = m[0];
+    int *r = m[1];
     return r == 0;
 }

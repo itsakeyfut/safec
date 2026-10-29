@@ -484,7 +484,8 @@ cases! {
         // an `SC0411` doubt. Mutation: a load takes no edge from the local
         // it reads out of; this goes silent.
         a_local_array_written_through_a_moved_pointer_read_back_through_its_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same read as an operand, `*pe + 0`. Mutation: such an operand
+        // The same read as an operand, `*pe - 1`, which moves it back onto
+        // `m[0]`; `m[1]` is an `SC0411` doubt. Mutation: such an operand
         // takes no edge from the local it reads out of; this goes silent.
         a_local_array_written_through_a_moved_pointer_read_back_through_its_address_as_an_operand_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `fill(h)` reaches `m` only through `*h = m + 1`, stored in an
