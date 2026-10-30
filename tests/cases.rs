@@ -264,9 +264,10 @@ cases! {
         // Mutation: `Known::replaced` clears no local; this is reported.
         a_local_a_call_was_handed_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written on one arm only, `m[0]` may be read unwritten on the
-        // other: an `SC0411` doubt (#668). See ADR-0057. Mutation:
-        // `unwritten` joined by union; this is certain. Mutation: a forward
-        // join of unwritten and written gives written; this goes silent.
+        // other: an `SC0411` doubt (#668). See ADR-0057. Mutation: the
+        // proofs per element joined by union; this is certain. The silent
+        // half is the next case's, since this one's unwritten side is the
+        // value joined into.
         a_local_array_written_on_one_arm_only_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same written on the other arm, which reaches the join as the
         // value joined in rather than the one joined into. Mutation: a
