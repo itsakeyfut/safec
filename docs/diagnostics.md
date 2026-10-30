@@ -169,7 +169,9 @@ index this check cannot read writes the whole array. A local written on one
 path into a join and not on the other is `SC0411` as a doubt where it is read
 after the join, `if (c()) m[0] = &x; q = m[0];` (#668), but not across a
 loop's back edge, so a loop that fills an array is not doubted for the path
-that skips it. An integer read out of such a local is not followed.
+that skips it. Nor, then, is any read the loop's head reaches before a
+write, a read in the body before the body writes it among them, which is
+#670. An integer read out of such a local is not followed.
 [ADR-0057](adr/0057-a-pointer-read-out-of-fresh-memory-is-reported-where-it-is-read.md)
 is the decision.
 

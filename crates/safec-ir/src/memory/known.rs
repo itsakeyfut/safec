@@ -270,8 +270,9 @@ pub(super) struct Known {
     /// [`Self::unwritten`] is a proof and joins by intersection. A doubt, read
     /// through a pointer and by name, `report::unwritten_read`. Not at a
     /// loop's back edge, where the path that skips the body would doubt every
-    /// loop that fills an array; what either side already doubted is kept
-    /// there too. A union at every join, and cleared by a write of the whole
+    /// loop that fills an array, which leaves a read in the body before the
+    /// body writes it silent too (#670); what either side already doubted is
+    /// kept there. A union at every join, and cleared by a write of the whole
     /// local and at `StorageLive`. See ADR-0057.
     pub(super) partly_written: Vec<bool>,
     /// Per local array of at most [`ELEMENTS_KEPT`] innermost elements, one
