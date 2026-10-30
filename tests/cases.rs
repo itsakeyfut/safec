@@ -482,6 +482,16 @@ cases! {
         // writes the whole array, as on `main`. Mutation: such a write
         // leaves the array partly written; this gains an `SC0411` doubt.
         a_local_array_filled_by_a_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same fill inside an outer loop that makes `m` again each
+        // turn: the inner head holds what its back edge brought, and the
+        // outer loop's next turn arrives at it from before the loop.
+        // Mutation: a head joins what arrives from before it straight into
+        // what it had; this gains an `SC0411` doubt, which `main` does not
+        // give. Found by review of #668.
+        a_local_array_made_in_an_outer_loop_and_filled_by_an_inner_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same of a pointer local whose address is taken. Mutation: as
+        // above; this gains an `SC0411` doubt.
+        a_pointer_local_made_in_an_outer_loop_and_assigned_in_an_inner_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `fill(m)` may write all of `m`, as on `main`. Mutation: a call
         // handed an array at its start writes it in part; this gains an
         // `SC0411` doubt.
