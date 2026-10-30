@@ -175,6 +175,19 @@ pub trait Analysis {
     /// see. See ADR-0016.
     fn join(&self, into: &mut Self::Value, from: &Self::Value);
 
+    /// Fold `from`, sent along a loop's back edge, into the loop head's
+    /// `into`: an edge from a block at or after the head in `Cfg::drain`.
+    ///
+    /// **The default is [`Self::join`], and it is right for every analysis
+    /// that does not ask which edge a value arrived along**, which is every
+    /// one but the memory check's. That one doubts a local unwritten on one
+    /// path into a join and written on the other, and the path that skips a
+    /// loop's body is such a path into every loop that fills an array, so
+    /// at a back edge it creates no doubt (#668). See ADR-0057.
+    fn join_back(&self, into: &mut Self::Value, from: &Self::Value) {
+        self.join(into, from);
+    }
+
     /// What one element of a block does to what is known.
     ///
     /// The function is handed over rather than held, so that an analysis asking
@@ -536,7 +549,13 @@ pub fn solve_within<A: Analysis>(
                 match &values[successor.index()] {
                     Some(stored) => {
                         let mut folded = stored.clone();
-                        analysis.join(&mut folded, just_sent);
+                        // A back edge only ever reaches a head, so this is
+                        // the one place one is joined.
+                        if cfg.drained_at(block) >= cfg.drained_at(successor) {
+                            analysis.join_back(&mut folded, just_sent);
+                        } else {
+                            analysis.join(&mut folded, just_sent);
+                        }
                         Some(folded)
                     }
                     None => Some(just_sent.clone()),
