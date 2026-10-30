@@ -303,6 +303,39 @@ cases! {
         // Mutation: a back edge does not keep `Known::partly_written`; this
         // goes silent.
         a_pointer_local_doubted_before_a_loop_is_still_doubted_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A doubt the head already holds survives the back edge even where
+        // the loop writes the element, which leaves it nothing to carry
+        // back. Mutation: a back edge keeps only what arrives along it and
+        // what both sides prove; this goes silent.
+        a_local_array_doubted_before_a_loop_that_writes_it_is_still_doubted_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same of a pointer local. Mutation: a back edge keeps only the
+        // `Known::partly_written` it brings; this goes silent.
+        a_pointer_local_doubted_before_a_loop_that_writes_it_is_still_doubted_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The doubt made inside the body reaches the head along its back
+        // edge. Mutation: a back edge drops the `Known::partly_written` it
+        // brings; this goes silent.
+        a_pointer_local_written_on_one_arm_inside_a_loop_is_doubted_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same of an array too long to keep per element. Mutation: as
+        // above; this goes silent.
+        a_long_local_array_written_on_one_arm_inside_a_loop_is_doubted_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The loop-fill exemption for a local with no per-element record.
+        // Mutation: a back edge sets a doubt where `Known::unwritten`
+        // differs; this gains an `SC0411` doubt.
+        a_pointer_local_assigned_by_a_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same of an array too long to keep per element. Mutation: as
+        // above; this gains an `SC0411` doubt.
+        a_long_local_array_filled_by_a_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A doubt on one side of a join and a write on the other, where
+        // `Known::unwritten` differs on neither. Mutation: a forward join
+        // keeps only the side joined into; this goes silent.
+        a_long_local_array_written_in_part_on_one_arm_and_at_its_start_on_the_other_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with the arms the other way round. Mutation: a forward
+        // join keeps only the side joined in; this goes silent.
+        a_long_local_array_written_at_its_start_on_one_arm_and_in_part_on_the_other_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write that may be of any element of an array too long to keep
+        // per element leaves it in doubt (#639). Mutation: such a write
+        // sets no `Known::partly_written`; this goes silent.
+        a_long_local_array_copied_into_through_a_moved_pointer_is_doubted_where_read_at_its_start: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An array too long to keep per element is answered as a pointer
         // local is. Mutation: as above; this goes silent.
         a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

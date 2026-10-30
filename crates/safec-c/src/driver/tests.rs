@@ -2121,6 +2121,27 @@ mod unassigned {
         );
     }
 
+    /// The doubt beside it, a local written on one path into a join and not
+    /// the other (#668), in the words of a doubt that name no array, with a
+    /// name and without one.
+    ///
+    /// Mutation: give it the certain words, or another code, or change the
+    /// nameless words. This fails.
+    #[test]
+    fn a_local_read_by_name_that_may_be_unwritten_is_sc0411_in_the_words_of_a_doubt() {
+        let (code, message, _) = said(Kind::IndeterminateLocal, Conclusion::Unknown);
+        assert_eq!(code, "SC0411");
+        assert_eq!(
+            message,
+            "`p` may be read before anything was assigned to it"
+        );
+        let (_, nameless, _) = said_of(Kind::IndeterminateLocal, Conclusion::Unknown, None);
+        assert_eq!(
+            nameless,
+            "this may read a pointer before anything was assigned to it"
+        );
+    }
+
     /// The same code for a pointer read out of memory nothing wrote, in
     /// words of its own. Mutation: give it another code, or drop the note.
     /// This fails.

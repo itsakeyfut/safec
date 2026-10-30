@@ -1,0 +1,21 @@
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_long_local_array_written_in_part_on_one_arm_and_at_its_start_on_the_other_is_doubted.c:8:9 ]
+   │
+ 8 │         memcpy(m + 1, &v, 8);
+   │         ──────────┬─────────  
+   │                   ╰─────────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0411]: this may read a pointer out of memory before anything was assigned to it
+    ╭─[ a_long_local_array_written_in_part_on_one_arm_and_at_its_start_on_the_other_is_doubted.c:12:10 ]
+    │
+ 12 │     int *r = m[0];
+    │          ────┬───  
+    │              ╰───── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path before it is read
