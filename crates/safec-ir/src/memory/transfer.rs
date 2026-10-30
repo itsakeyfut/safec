@@ -1760,7 +1760,13 @@ impl Analysis for Allocations<'_> {
                 // **What a store that leaves carries is stored out**, asked
                 // before it lands, as the store door asks it: the sites the
                 // stored value holds, and what a pointer read out of memory
-                // may be. See `Known::stored_out`.
+                // may be. See `Known::stored_out`. **Two halves decide no case,
+                // measured**, and are kept so this asks what the store door
+                // does and records what the store records: the pointer test,
+                // since an integer that holds sites is a conversion the
+                // frontend refuses (`SC0302`), and `read_out`, since a pointer
+                // read out of memory reaches a store as an operand whose
+                // sites `carried` already holds.
                 let place = &operation.place;
                 let direct = place.projection.is_empty()
                     && value
