@@ -4830,9 +4830,10 @@ cases! {
         // `SC0414` doubt at the free.
         an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Freeing what the caller's memory holds stores nothing out: only
-        // the free of a pointer this check stopped following is said.
-        // Mutation: a free asks every site it reaches, stored out or not;
-        // this gains an `SC0414` doubt.
+        // the free of a pointer this check stopped following is said. It
+        // says the conclusion chosen rather than guarding a line: the free
+        // reaches no allocation this function made, so no mutation of
+        // `Known::stored_out` moves it, measured.
         a_pointer_the_caller_handed_freed_through_its_memory_gains_no_doubt_for_a_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Correct C, doubted: this check does not follow what one place in
         // the caller's memory holds, so `*pp = 0;` clears nothing (#656).
