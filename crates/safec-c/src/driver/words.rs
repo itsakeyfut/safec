@@ -840,19 +840,20 @@ pub(super) fn memory_finding(
             "read here",
             "assign it where it is declared, `= 0` if nothing else",
         ),
-        // **A doubt where an array may be written only in part**: a write
-        // through a pointer moved off it may have been of another element
-        // (#639). Under the same code, and naming the element, since only an
-        // array is written in part (#667). See `Known::partly_written`.
+        // **A doubt where what is read may be unwritten**: an array a write
+        // through a pointer moved off it may have missed (#639), or a local
+        // written on one path into a join and not the other (#668). Under the
+        // same code, and saying no "array", since a pointer local reaches it
+        // too. See `Known::partly_written`.
         (Kind::IndeterminateLoad { .. }, Conclusion::Unknown, _) => (
             UNASSIGNED,
             said(
                 name,
-                "this may read an element of an array before anything was assigned to it",
-                |name| format!("`*{name}` may be an array element read before anything was assigned to it"),
+                "this may read a pointer out of memory before anything was assigned to it",
+                |name| format!("`*{name}` may be read before anything was assigned to it"),
             ),
             "read here",
-            "assign every element of the array before reading one",
+            "assign it on every path before it is read",
         ),
         // A proof, as `Unassigned` is, and under its code: both are a pointer
         // read before anything was assigned to it.
@@ -880,7 +881,9 @@ pub(super) fn memory_finding(
                 "assign to it before reading it"
             },
         ),
-        // The doubt beside it, for an array written only in part (#639).
+        // The doubt beside it, read by name: a local written on one path
+        // into a join and not the other (#668), which is never an array,
+        // since an array is read through its address.
         (Kind::IndeterminateLocal, Conclusion::Unknown, _) => (
             UNASSIGNED,
             said(
@@ -889,7 +892,7 @@ pub(super) fn memory_finding(
                 |name| format!("`{name}` may be read before anything was assigned to it"),
             ),
             "read here",
-            "assign every element of the array before reading one",
+            "assign it on every path, `= 0` where it is declared if nothing else",
         ),
         // A proof, under the same code: a local whose address is taken, read
         // by name before anything wrote it (#640).

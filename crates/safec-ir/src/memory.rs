@@ -192,8 +192,9 @@ pub enum Kind {
     /// wrote since it was made (C17 6.2.4 p6, 6.7.9 p10, and the same line of
     /// Annex J.2), so each says which storage it reached and the words cite
     /// that storage's clause (#640). See `Known::unwritten`. **`Unknown`
-    /// where an element of a local array may be unwritten**, after a write
-    /// that may have been of any element (#639, #667). See
+    /// where what it reads may be unwritten**: an element of a local array
+    /// after a write that may have been of any element (#639, #667), or a
+    /// local written on one path into a join and not the other (#668). See
     /// `Known::partly_written`.
     IndeterminateLoad {
         /// Whether it may reach an allocation nothing wrote.
@@ -205,7 +206,8 @@ pub enum Kind {
     /// wrote it, on every path: its value is indeterminate (C17 6.2.4 p6,
     /// 6.7.9 p10), and Annex J.2 lists using it as undefined, the reading
     /// ADR-0057 takes. `Unsafe` at the read, and `Unknown` where the local
-    /// may have been written in part (#639). `local` is the local read. A local whose address is never taken is `Unassigned`'s,
+    /// was written on one path into a join and not the other (#668). `local`
+    /// is the local read. A local whose address is never taken is `Unassigned`'s,
     /// which `memory::assigned` builds, and the two never meet (#640). See
     /// `Known::unwritten` and ADR-0057.
     IndeterminateLocal,
@@ -321,8 +323,13 @@ const NAMED_AT_READ: usize = 96;
 /// functions, release build: peak memory grew by 6.5, 6.1, 5.9 and 5.6%,
 /// from 323 to 344 MB at the smallest and 980 to 1,035 MB at the largest,
 /// which is about 110 bytes a local at each size. The bits an array keeps
-/// are at most one word, beside the row's own 32 bytes.
-const ELEMENTS: usize = 112;
+/// are at most one word, beside the row's own 32 bytes. And a row of
+/// `Known::maybe_unwritten_elements` (#668), measured the same way against
+/// `main` after #667: 4.1, 3.4 and 2.9% on the three smaller functions, from
+/// 345 to 359 MB at the smallest and 912 to 938 MB at the largest, which
+/// the 110 bytes above put at 54 to 69 bytes a local; 72 are counted. The
+/// largest of the four is now past the bound on both.
+const ELEMENTS: usize = 184;
 
 /// About how many bytes one block's value takes in a function of this many
 /// locals, whose deepest pointer type is `depth` `*`s deep.
@@ -1224,7 +1231,7 @@ mod tests {
 
     /// Past the bound, a function is one `Unknown` finding at its name and
     /// is not read. Ten locals are `10 * (10 + 3 + LINEAR + NAMED_AT_READ +
-    /// ELEMENTS)` a block, so three blocks are 37,350.
+    /// ELEMENTS)` a block, so three blocks are 39,510.
     ///
     /// Mutation: drop the guard. The function is solved, and no `TooLarge`
     /// finding is made. Mutation: leave out [`NAMED_AT_READ`] or
@@ -1233,13 +1240,13 @@ mod tests {
     #[test]
     fn a_function_past_the_bound_is_one_unknown_finding() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, 37_349, MAX_WORK);
+        let findings = findings_within(&sources, &unit, 39_509, MAX_WORK);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(
             findings[0].kind,
             Kind::TooLarge {
-                bytes: 37_350,
-                max: 37_349
+                bytes: 39_510,
+                max: 39_509
             }
         );
         assert_eq!(findings[0].conclusion, Conclusion::Unknown);
@@ -1252,7 +1259,7 @@ mod tests {
     #[test]
     fn a_function_at_the_bound_is_read() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, 37_350, MAX_WORK);
+        let findings = findings_within(&sources, &unit, 39_510, MAX_WORK);
         assert!(
             findings
                 .iter()
@@ -1264,20 +1271,20 @@ mod tests {
     /// The lists a local's levels take count toward the bound: ten locals,
     /// one of them three `*`s deep, are
     /// `10 * (10 + 3 + LINEAR + NAMED_AT_READ + ELEMENTS + 3 * PER_LEVEL)` a block, so
-    /// three blocks are 40,230, past a bound the same function with no
+    /// three blocks are 42,390, past a bound the same function with no
     /// pointer in it is read under.
     ///
     /// Mutation: leave out [`PER_LEVEL`]. This is read.
     #[test]
     fn a_function_whose_lists_are_too_large_is_unknown_and_not_read() {
         let (sources, unit) = ten_by_three_deep(3);
-        let findings = findings_within(&sources, &unit, 40_229, MAX_WORK);
+        let findings = findings_within(&sources, &unit, 42_389, MAX_WORK);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(
             findings[0].kind,
             Kind::TooLarge {
-                bytes: 40_230,
-                max: 40_229
+                bytes: 42_390,
+                max: 42_389
             }
         );
     }
@@ -1290,20 +1297,20 @@ mod tests {
         assert_eq!(LINEAR, 1024);
         assert_eq!(PER_LEVEL, 32);
         assert_eq!(NAMED_AT_READ, 96);
-        assert_eq!(ELEMENTS, 112);
+        assert_eq!(ELEMENTS, 184);
         assert_eq!(MAX_BYTES, 1_073_741_824);
         assert_eq!(MAX_WORK, 4_294_967_296);
     }
 
     /// Past the work bound, a function is one `Unknown` finding at its name.
-    /// Ten locals are 12,450 a walk, so a bound of 37,349 is two walks, and
+    /// Ten locals are 13,170 a walk, so a bound of 39,509 is two walks, and
     /// the three blocks take three.
     ///
     /// Mutation: solve without the bound. No `TooLong` finding is made.
     #[test]
     fn a_function_past_the_work_bound_is_one_unknown_finding() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, MAX_BYTES, 37_349);
+        let findings = findings_within(&sources, &unit, MAX_BYTES, 39_509);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(findings[0].kind, Kind::TooLong { walks: 2 });
         assert_eq!(findings[0].conclusion, Conclusion::Unknown);
@@ -1316,7 +1323,7 @@ mod tests {
     #[test]
     fn a_function_at_the_work_bound_is_read() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, MAX_BYTES, 37_350);
+        let findings = findings_within(&sources, &unit, MAX_BYTES, 39_510);
         assert!(findings.is_empty(), "{findings:?}");
     }
     /// Where a local's address stored in memory can reach, as a test builds

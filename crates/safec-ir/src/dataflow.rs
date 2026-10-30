@@ -175,6 +175,19 @@ pub trait Analysis {
     /// see. See ADR-0016.
     fn join(&self, into: &mut Self::Value, from: &Self::Value);
 
+    /// Fold `from`, sent along a loop's back edge, into the loop head's
+    /// `into`: an edge from a block at or after the head in `Cfg::drain`.
+    ///
+    /// **The default is [`Self::join`], and it is right for every analysis
+    /// that does not ask which edge a value arrived along**, which is every
+    /// one but the memory check's. That one doubts a local unwritten on one
+    /// path into a join and written on the other, and the path that skips a
+    /// loop's body is such a path into every loop that fills an array, so
+    /// at a back edge it creates no doubt (#668). See ADR-0057.
+    fn join_back(&self, into: &mut Self::Value, from: &Self::Value) {
+        self.join(into, from);
+    }
+
     /// What one element of a block does to what is known.
     ///
     /// The function is handed over rather than held, so that an analysis asking
@@ -374,6 +387,47 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
     solve_within(analysis, function, cfg, usize::MAX).expect("no walk count is past `usize::MAX`")
 }
 
+/// The join of what every edge into `successor` from a predecessor `from`
+/// accepts last sent, as paths meet. An edge that has sent nothing yet adds
+/// nothing, and the first that has is kept rather than joined into anything,
+/// which is what lets an analysis have no bottom. `None` where none has sent.
+/// See ADR-0016.
+fn sent_into<A: Analysis>(
+    analysis: &A,
+    function: &Function,
+    cfg: &Cfg,
+    sent: &[Vec<Option<A::Value>>],
+    successor: BlockId,
+    targets: &mut Vec<BlockId>,
+    from: impl Fn(BlockId) -> bool,
+) -> Option<A::Value> {
+    let mut arrived: Option<A::Value> = None;
+    let mut asked: Vec<BlockId> = Vec::new();
+    for &predecessor in cfg.predecessors(successor) {
+        // A block with two edges into this one is its predecessor twice, and
+        // both edges are read below the first time.
+        if asked.contains(&predecessor) || !from(predecessor) {
+            continue;
+        }
+        asked.push(predecessor);
+        targets.clear();
+        function.block(predecessor).terminator.successors(targets);
+        for (edge, &target) in targets.iter().enumerate() {
+            let Some(Some(value)) = (target == successor)
+                .then(|| sent[predecessor.index()].get(edge))
+                .flatten()
+            else {
+                continue;
+            };
+            match &mut arrived {
+                Some(arrived) => analysis.join(arrived, value),
+                nothing @ None => *nothing = Some(value.clone()),
+            }
+        }
+    }
+    arrived
+}
+
 /// [`solve`], giving up once the walks of every block together pass
 /// `max_walks`, which answers `None`.
 ///
@@ -530,47 +584,56 @@ pub fn solve_within<A: Analysis>(
                 // A head keeps what it had and joins this in. What every other
                 // edge into it sent is in what it had already, because each
                 // was joined in when it arrived, so this is the head's value
-                // joined with all of them, at the cost of one join. The entry
-                // is a head wherever a back edge reaches it, since nothing
-                // drains before it, and what it had is `on_entry`.
+                // joined with all of them. The entry is a head wherever a back
+                // edge reaches it, since nothing drains before it, and what it
+                // had is `on_entry`.
                 match &values[successor.index()] {
                     Some(stored) => {
                         let mut folded = stored.clone();
-                        analysis.join(&mut folded, just_sent);
+                        // **Along a back edge, `join_back`**, which only ever
+                        // reaches a head, so this is the one place one is
+                        // joined. **And what arrives from before the loop is
+                        // joined as paths meet only with the other edges from
+                        // before it**, then folded in as a back edge is:
+                        // what the head had holds what its back edges brought,
+                        // and an arrival compared with that compares one turn
+                        // with the path into the loop. A local made in an
+                        // outer loop's body and filled by an inner loop was
+                        // doubted on the outer loop's second walk, with `main`
+                        // silent. Found by review of #668. For an analysis
+                        // whose `join_back` is its `join` this is the same
+                        // value, joined twice.
+                        if cfg.drained_at(block) >= cfg.drained_at(successor) {
+                            analysis.join_back(&mut folded, just_sent);
+                        } else {
+                            let forward = sent_into(
+                                analysis,
+                                function,
+                                cfg,
+                                &sent,
+                                successor,
+                                &mut targets,
+                                |from| cfg.drained_at(from) < cfg.drained_at(successor),
+                            )
+                            .expect("the edge that just sent is one from before the head");
+                            analysis.join_back(&mut folded, &forward);
+                        }
                         Some(folded)
                     }
                     None => Some(just_sent.clone()),
                 }
             } else {
                 // Anywhere else, the join of what every edge into it last
-                // sent. An edge that has sent nothing yet adds nothing, and
-                // the first that has is kept rather than joined into anything,
-                // which is what lets an analysis have no bottom. See ADR-0016.
-                let mut arrived: Option<A::Value> = None;
-                let mut asked: Vec<BlockId> = Vec::new();
-                for &from in cfg.predecessors(successor) {
-                    // A block with two edges into this one is its predecessor
-                    // twice, and both edges are read below the first time.
-                    if asked.contains(&from) {
-                        continue;
-                    }
-                    asked.push(from);
-                    targets.clear();
-                    function.block(from).terminator.successors(&mut targets);
-                    for (edge, &target) in targets.iter().enumerate() {
-                        let Some(Some(value)) = (target == successor)
-                            .then(|| sent[from.index()].get(edge))
-                            .flatten()
-                        else {
-                            continue;
-                        };
-                        match &mut arrived {
-                            Some(arrived) => analysis.join(arrived, value),
-                            nothing @ None => *nothing = Some(value.clone()),
-                        }
-                    }
-                }
-                arrived
+                // sent. See [`sent_into`] and ADR-0016.
+                sent_into(
+                    analysis,
+                    function,
+                    cfg,
+                    &sent,
+                    successor,
+                    &mut targets,
+                    |_| true,
+                )
             };
 
             // Compared rather than asked. What a clone per edge buys is that

@@ -1,0 +1,11 @@
+int main(void) {
+    int x = 1;
+    int *r = 0;
+    int *q;
+    int **pq = &q;
+    for (int i = 0; i < 2; i++) {
+        q = &x;
+    }
+    r = *pq;
+    return r == 0;
+}

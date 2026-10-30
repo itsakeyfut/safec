@@ -1125,6 +1125,264 @@ impl Allocations<'_> {
             }
         }
     }
+
+    /// [`Analysis::join`], and along a loop's back edge [`Analysis::join_back`]
+    /// where `back` is set: one body, so the two cannot drift apart. They
+    /// differ only in what a local unwritten on one side and written on
+    /// the other becomes. See `Known::partly_written`.
+    fn joined(&self, into: &mut Known, from: &Known, back: bool) {
+        // **Every field named, never `..`.** A lattice value whose join
+        // forgets a field reaches a fixpoint over a value nobody is joining,
+        // and nothing else in the build says so: the field is read, the walk
+        // ends, and the answer is wrong on exactly the programs a join is for.
+        // This is the same as `..` letting a field walk past a match that was
+        // otherwise exhaustive, one type over.
+        let Known {
+            points_to,
+            state,
+            escaped,
+            handed_away,
+            exposed,
+            inside,
+            stale,
+            unreplaced,
+            holds_lost,
+            fresh,
+            from_caller,
+            inside_locals,
+            realloced,
+            pending,
+            calls,
+            exposed_after_call,
+            lost_exposed,
+            extent,
+            stored_at_most,
+            handed_at_most,
+            unwritten,
+            partly_written,
+            unwritten_elements,
+            maybe_unwritten_elements,
+            exposed_in_part,
+            stored_in_part,
+            exposed_locals,
+        } = into;
+        // What may be unwritten, before the proofs below are intersected:
+        // a union, or at a back edge what either side doubted and did not
+        // prove, beside what both prove. See
+        // `Known::maybe_unwritten_elements`.
+        for (index, (here, there)) in maybe_unwritten_elements
+            .iter_mut()
+            .zip(&from.maybe_unwritten_elements)
+            .enumerate()
+        {
+            if back {
+                let proved_here = &unwritten_elements[index];
+                let proved_there = &from.unwritten_elements[index];
+                for element in 0..here.len() {
+                    let doubted_here = here.get(element) && !proved_here.get(element);
+                    let doubted_there = there.get(element) && !proved_there.get(element);
+                    let proved = proved_here.get(element) && proved_there.get(element);
+                    if doubted_here || doubted_there || proved {
+                        here.set(element);
+                    } else {
+                        here.remove(element);
+                    }
+                }
+            } else {
+                here.union_with(there);
+            }
+        }
+        // A proof per element, so an intersection. See
+        // `Known::unwritten_elements`.
+        for (here, there) in unwritten_elements.iter_mut().zip(&from.unwritten_elements) {
+            for element in 0..here.len() {
+                if here.get(element) && !there.get(element) {
+                    here.remove(element);
+                }
+            }
+        }
+        for (here, there) in exposed_in_part.iter_mut().zip(&from.exposed_in_part) {
+            *here = *here || *there;
+        }
+        for (here, there) in stored_in_part.iter_mut().zip(&from.stored_in_part) {
+            *here = *here || *there;
+        }
+        // A may-fact, so a union: an element may be unwritten on either
+        // path. And where one path wrote a local the other left unwritten,
+        // which is the doubt itself, but not at a back edge, before
+        // `unwritten` is intersected below. An array kept per element has
+        // its own doubt above. See `Known::partly_written`.
+        for (index, (here, there)) in partly_written
+            .iter_mut()
+            .zip(&from.partly_written)
+            .enumerate()
+        {
+            let differ = !back
+                && unwritten_elements[index].len() == 0
+                && unwritten[index] != from.unwritten[index];
+            *here = *here || *there || differ;
+        }
+        // A proof, so an intersection, as `fresh` is: unwritten only where
+        // no path wrote it.
+        for (here, there) in unwritten.iter_mut().zip(&from.unwritten) {
+            *here = *here && *there;
+        }
+        // A may-fact, so a union, as `exposed` is: a call on one arm may
+        // have kept the address. See `Known::exposed_locals`.
+        for (here, there) in exposed_locals.iter_mut().zip(&from.exposed_locals) {
+            *here = *here || *there;
+        }
+        // Bounds, so the lower of two, and a side with none is no bound.
+        for (here, there) in stored_at_most.iter_mut().zip(&from.stored_at_most) {
+            here.bound_by(there);
+        }
+        for (here, there) in handed_at_most.iter_mut().zip(&from.handed_at_most) {
+            *here = bounded(*here, *there);
+        }
+        // A may-fact, so a union, as `exposed` is.
+        *lost_exposed |= from.lost_exposed;
+        // A side that never made the site says nothing about it. Two sides
+        // that both did are joined as `Extent::joined` says, which only
+        // narrows, so being wrong here doubts an access rather than proves
+        // one. **`SiteState::Unheld` is not asked**, although it is the
+        // state's identity (ADR-0048): a site is one call's destination or one
+        // parameter, which makes it with the same size every time, so two
+        // sides never bring different sizes for it and there is nothing for
+        // the identity to choose between. Measured: a version that took the
+        // other side's size where one side was `Unheld` answered every test
+        // as this one does. See ADR-0060.
+        for (here, there) in extent.iter_mut().zip(&from.extent) {
+            *here = match (*here, *there) {
+                (Some(ours), Some(theirs)) => Some(ours.joined(theirs)),
+                (Some(only), None) | (None, Some(only)) => Some(only),
+                (None, None) => None,
+            };
+        }
+        // **An intersection**: fresh where every path left it fresh, since a
+        // use of what was read out of it is reported as a proof. A union here
+        // reported `if (c) *box = q; t = *box; *t = 1;`, which C defines when
+        // `c` holds.
+        for (here, there) in fresh.iter_mut().zip(&from.fresh) {
+            *here = *here && *there;
+        }
+        // A may-fact, so a union.
+        for (here, there) in holds_lost.iter_mut().zip(&from.holds_lost) {
+            *here |= there;
+        }
+        // Kept only where both arms remember the same `realloc`: a fact one
+        // arm lacks is one a branch after the join cannot act on. See ADR-0039.
+        for (here, there) in realloced.iter_mut().zip(&from.realloced) {
+            // And where one arm left an old allocation in another state: a
+            // free on one arm leaves it `Unknown` after the join, which the
+            // null arm would read as the `realloc`'s. Found by review. Not
+            // where one arm left it `Unheld`: nothing names it there, so the
+            // join gives it the other arm's state, which is what the fact
+            // then acts on. `n = realloc(p, 8); if (c) p = 0;` reaches the
+            // branch that way, since the fact holds nothing (#494). Mutation:
+            // count `Unheld` as disagreeing;
+            // `a_realloc_fact_survives_a_join_where_one_arm_dropped_the_old_pointer`
+            // reports at the free on the null arm.
+            let disagree = here.as_ref().is_some_and(|fact| {
+                fact.old.iter().any(|&(old, _)| {
+                    state[old] != from.state[old]
+                        && !matches!(state[old], SiteState::Unheld)
+                        && !matches!(from.state[old], SiteState::Unheld)
+                })
+            });
+            if here != there || disagree {
+                *here = None;
+            }
+        }
+        // A local's address stored on one arm may be there where the arms
+        // meet, as a site is. See ADR-0045.
+        for (here, there) in inside_locals.iter_mut().zip(&from.inside_locals) {
+            here.union_with(there);
+        }
+        // Marked on one arm is marked where the arms meet. See ADR-0045.
+        for (here, there) in stale.iter_mut().zip(&from.stale) {
+            *here = *here || *there;
+        }
+        // And so is this mark, for the same reason. See ADR-0047.
+        for (here, there) in unreplaced.iter_mut().zip(&from.unreplaced) {
+            *here = *here || *there;
+        }
+        // And so is what may hold the caller's. See ADR-0040.
+        for (here, there) in from_caller.iter_mut().zip(&from.from_caller) {
+            *here = *here || *there;
+        }
+
+        for (here, there) in points_to.iter_mut().zip(&from.points_to) {
+            here.joined(there, self.sources);
+        }
+
+        // **A site nothing on one side can still name takes the other side's
+        // state**, because `edge` made it `SiteState::Unheld` there, which is
+        // the join's identity. On the arm of `if (c) { free(p); p = 0; }` that
+        // freed it, nothing read again holds the allocation, so whether it was
+        // freed there is about no execution's next use of it, and joining it
+        // in made the other arm's live `p` unproven. See ADR-0048.
+        for (here, there) in state.iter_mut().zip(&from.state) {
+            *here = here.joined(*there, self.sources);
+        }
+
+        // A local whose address escaped on one arm has escaped where the arms
+        // meet: the other arm did not un-take it.
+        for (here, there) in escaped.iter_mut().zip(&from.escaped) {
+            *here = *here || *there;
+        }
+        // **And one handed away on both arms is handed away where they meet,
+        // which is an intersection, not the union above.** The fact exempts a
+        // holder, so it has to hold on every path: a union exempted `a` after
+        // `if (c) stash(pa);` on the path that never handed it, and was
+        // silent there. See ADR-0047.
+        for (here, there) in handed_away.iter_mut().zip(&from.handed_away) {
+            *here = *here && *there;
+        }
+
+        // Exposed on one arm is exposed where the arms meet, and what an
+        // allocation may hold on either arm it may hold after them. A union,
+        // for the reason `escaped` is one. See ADR-0039.
+        for (here, there) in exposed.iter_mut().zip(&from.exposed) {
+            *here = *here || *there;
+        }
+        for (row, other) in inside.iter_mut().zip(&from.inside) {
+            row.union_with(other);
+        }
+
+        // **A union, because a read on either arm is a read some execution
+        // performed.** What this costs when it is wrong is a report about a
+        // read that did not happen, which the reader sees; the other direction
+        // loses the read that did. The arms themselves do not meet before their
+        // join, which is what keeps a read on one arm from being reported
+        // against a free on the other: each arm is walked from the value that
+        // reached it and not from this one.
+        for (key, entry) in &from.pending {
+            let here = pending.entry(key.clone()).or_insert(PendingRead {
+                at: entry.at,
+                sites: BTreeSet::new(),
+                // Whichever arm got here first, since the key's place
+                // decides the kind and two arms cannot disagree about it.
+                // Answering `Read::Dereference` here fails
+                // `a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join`.
+                read: entry.read,
+                reachable: BTreeSet::new(),
+                after_call: false,
+            });
+            here.sites.extend(&entry.sites);
+            here.after_call |= entry.after_call;
+            // Reachable on one arm is reachable where they meet, for the
+            // reason `exposed` is a union.
+            here.reachable.extend(&entry.reachable);
+        }
+        for (key, span) in &from.calls {
+            calls.entry(*key).or_insert(*span);
+        }
+        exposed_after_call.extend(&from.exposed_after_call);
+
+        // And applying it, which the union alone does not do. [`Known::settle`]
+        // says why a join needs this and the assignments do not cover it.
+        into.settle();
+    }
 }
 
 impl Analysis for Allocations<'_> {
@@ -1335,6 +1593,7 @@ impl Analysis for Allocations<'_> {
             unwritten: self.unwritten_at_entry(),
             partly_written: vec![false; self.locals],
             unwritten_elements: self.elements_at_entry(),
+            maybe_unwritten_elements: self.elements_at_entry(),
             exposed_in_part: vec![false; self.locals],
             stored_in_part: vec![false; self.locals],
             // No call has been handed anything yet.
@@ -1389,220 +1648,11 @@ impl Analysis for Allocations<'_> {
     }
 
     fn join(&self, into: &mut Self::Value, from: &Self::Value) {
-        // **Every field named, never `..`.** A lattice value whose join
-        // forgets a field reaches a fixpoint over a value nobody is joining,
-        // and nothing else in the build says so: the field is read, the walk
-        // ends, and the answer is wrong on exactly the programs a join is for.
-        // This is the same as `..` letting a field walk past a match that was
-        // otherwise exhaustive, one type over.
-        let Known {
-            points_to,
-            state,
-            escaped,
-            handed_away,
-            exposed,
-            inside,
-            stale,
-            unreplaced,
-            holds_lost,
-            fresh,
-            from_caller,
-            inside_locals,
-            realloced,
-            pending,
-            calls,
-            exposed_after_call,
-            lost_exposed,
-            extent,
-            stored_at_most,
-            handed_at_most,
-            unwritten,
-            partly_written,
-            unwritten_elements,
-            exposed_in_part,
-            stored_in_part,
-            exposed_locals,
-        } = into;
-        // A proof per element, so an intersection. See
-        // `Known::unwritten_elements`.
-        for (here, there) in unwritten_elements.iter_mut().zip(&from.unwritten_elements) {
-            for element in 0..here.len() {
-                if here.get(element) && !there.get(element) {
-                    here.remove(element);
-                }
-            }
-        }
-        for (here, there) in exposed_in_part.iter_mut().zip(&from.exposed_in_part) {
-            *here = *here || *there;
-        }
-        for (here, there) in stored_in_part.iter_mut().zip(&from.stored_in_part) {
-            *here = *here || *there;
-        }
-        // A may-fact, so a union: an element may be unwritten on either
-        // path. See `Known::partly_written`.
-        for (here, there) in partly_written.iter_mut().zip(&from.partly_written) {
-            *here = *here || *there;
-        }
-        // A proof, so an intersection, as `fresh` is: unwritten only where
-        // no path wrote it.
-        for (here, there) in unwritten.iter_mut().zip(&from.unwritten) {
-            *here = *here && *there;
-        }
-        // A may-fact, so a union, as `exposed` is: a call on one arm may
-        // have kept the address. See `Known::exposed_locals`.
-        for (here, there) in exposed_locals.iter_mut().zip(&from.exposed_locals) {
-            *here = *here || *there;
-        }
-        // Bounds, so the lower of two, and a side with none is no bound.
-        for (here, there) in stored_at_most.iter_mut().zip(&from.stored_at_most) {
-            here.bound_by(there);
-        }
-        for (here, there) in handed_at_most.iter_mut().zip(&from.handed_at_most) {
-            *here = bounded(*here, *there);
-        }
-        // A may-fact, so a union, as `exposed` is.
-        *lost_exposed |= from.lost_exposed;
-        // A side that never made the site says nothing about it. Two sides
-        // that both did are joined as `Extent::joined` says, which only
-        // narrows, so being wrong here doubts an access rather than proves
-        // one. **`SiteState::Unheld` is not asked**, although it is the
-        // state's identity (ADR-0048): a site is one call's destination or one
-        // parameter, which makes it with the same size every time, so two
-        // sides never bring different sizes for it and there is nothing for
-        // the identity to choose between. Measured: a version that took the
-        // other side's size where one side was `Unheld` answered every test
-        // as this one does. See ADR-0060.
-        for (here, there) in extent.iter_mut().zip(&from.extent) {
-            *here = match (*here, *there) {
-                (Some(ours), Some(theirs)) => Some(ours.joined(theirs)),
-                (Some(only), None) | (None, Some(only)) => Some(only),
-                (None, None) => None,
-            };
-        }
-        // **An intersection**: fresh where every path left it fresh, since a
-        // use of what was read out of it is reported as a proof. A union here
-        // reported `if (c) *box = q; t = *box; *t = 1;`, which C defines when
-        // `c` holds.
-        for (here, there) in fresh.iter_mut().zip(&from.fresh) {
-            *here = *here && *there;
-        }
-        // A may-fact, so a union.
-        for (here, there) in holds_lost.iter_mut().zip(&from.holds_lost) {
-            *here |= there;
-        }
-        // Kept only where both arms remember the same `realloc`: a fact one
-        // arm lacks is one a branch after the join cannot act on. See ADR-0039.
-        for (here, there) in realloced.iter_mut().zip(&from.realloced) {
-            // And where one arm left an old allocation in another state: a
-            // free on one arm leaves it `Unknown` after the join, which the
-            // null arm would read as the `realloc`'s. Found by review. Not
-            // where one arm left it `Unheld`: nothing names it there, so the
-            // join gives it the other arm's state, which is what the fact
-            // then acts on. `n = realloc(p, 8); if (c) p = 0;` reaches the
-            // branch that way, since the fact holds nothing (#494). Mutation:
-            // count `Unheld` as disagreeing;
-            // `a_realloc_fact_survives_a_join_where_one_arm_dropped_the_old_pointer`
-            // reports at the free on the null arm.
-            let disagree = here.as_ref().is_some_and(|fact| {
-                fact.old.iter().any(|&(old, _)| {
-                    state[old] != from.state[old]
-                        && !matches!(state[old], SiteState::Unheld)
-                        && !matches!(from.state[old], SiteState::Unheld)
-                })
-            });
-            if here != there || disagree {
-                *here = None;
-            }
-        }
-        // A local's address stored on one arm may be there where the arms
-        // meet, as a site is. See ADR-0045.
-        for (here, there) in inside_locals.iter_mut().zip(&from.inside_locals) {
-            here.union_with(there);
-        }
-        // Marked on one arm is marked where the arms meet. See ADR-0045.
-        for (here, there) in stale.iter_mut().zip(&from.stale) {
-            *here = *here || *there;
-        }
-        // And so is this mark, for the same reason. See ADR-0047.
-        for (here, there) in unreplaced.iter_mut().zip(&from.unreplaced) {
-            *here = *here || *there;
-        }
-        // And so is what may hold the caller's. See ADR-0040.
-        for (here, there) in from_caller.iter_mut().zip(&from.from_caller) {
-            *here = *here || *there;
-        }
+        self.joined(into, from, false);
+    }
 
-        for (here, there) in points_to.iter_mut().zip(&from.points_to) {
-            here.joined(there, self.sources);
-        }
-
-        // **A site nothing on one side can still name takes the other side's
-        // state**, because `edge` made it `SiteState::Unheld` there, which is
-        // the join's identity. On the arm of `if (c) { free(p); p = 0; }` that
-        // freed it, nothing read again holds the allocation, so whether it was
-        // freed there is about no execution's next use of it, and joining it
-        // in made the other arm's live `p` unproven. See ADR-0048.
-        for (here, there) in state.iter_mut().zip(&from.state) {
-            *here = here.joined(*there, self.sources);
-        }
-
-        // A local whose address escaped on one arm has escaped where the arms
-        // meet: the other arm did not un-take it.
-        for (here, there) in escaped.iter_mut().zip(&from.escaped) {
-            *here = *here || *there;
-        }
-        // **And one handed away on both arms is handed away where they meet,
-        // which is an intersection, not the union above.** The fact exempts a
-        // holder, so it has to hold on every path: a union exempted `a` after
-        // `if (c) stash(pa);` on the path that never handed it, and was
-        // silent there. See ADR-0047.
-        for (here, there) in handed_away.iter_mut().zip(&from.handed_away) {
-            *here = *here && *there;
-        }
-
-        // Exposed on one arm is exposed where the arms meet, and what an
-        // allocation may hold on either arm it may hold after them. A union,
-        // for the reason `escaped` is one. See ADR-0039.
-        for (here, there) in exposed.iter_mut().zip(&from.exposed) {
-            *here = *here || *there;
-        }
-        for (row, other) in inside.iter_mut().zip(&from.inside) {
-            row.union_with(other);
-        }
-
-        // **A union, because a read on either arm is a read some execution
-        // performed.** What this costs when it is wrong is a report about a
-        // read that did not happen, which the reader sees; the other direction
-        // loses the read that did. The arms themselves do not meet before their
-        // join, which is what keeps a read on one arm from being reported
-        // against a free on the other: each arm is walked from the value that
-        // reached it and not from this one.
-        for (key, entry) in &from.pending {
-            let here = pending.entry(key.clone()).or_insert(PendingRead {
-                at: entry.at,
-                sites: BTreeSet::new(),
-                // Whichever arm got here first, since the key's place
-                // decides the kind and two arms cannot disagree about it.
-                // Answering `Read::Dereference` here fails
-                // `a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join`.
-                read: entry.read,
-                reachable: BTreeSet::new(),
-                after_call: false,
-            });
-            here.sites.extend(&entry.sites);
-            here.after_call |= entry.after_call;
-            // Reachable on one arm is reachable where they meet, for the
-            // reason `exposed` is a union.
-            here.reachable.extend(&entry.reachable);
-        }
-        for (key, span) in &from.calls {
-            calls.entry(*key).or_insert(*span);
-        }
-        exposed_after_call.extend(&from.exposed_after_call);
-
-        // And applying it, which the union alone does not do. [`Known::settle`]
-        // says why a join needs this and the assignments do not cover it.
-        into.settle();
+    fn join_back(&self, into: &mut Self::Value, from: &Self::Value) {
+        self.joined(into, from, true);
     }
 
     fn element(&self, function: &Function, element: &Element, value: &mut Self::Value) {
@@ -2331,9 +2381,13 @@ impl Analysis for Allocations<'_> {
                 }
                 // And every element of it, with nothing written in part and
                 // nothing handed over. See `Known::unwritten_elements`.
-                let elements = &mut value.unwritten_elements[local.index()];
-                for element in 0..elements.len() {
-                    elements.set(element);
+                for elements in [
+                    &mut value.unwritten_elements[local.index()],
+                    &mut value.maybe_unwritten_elements[local.index()],
+                ] {
+                    for element in 0..elements.len() {
+                        elements.set(element);
+                    }
                 }
                 value.partly_written[local.index()] = false;
                 value.exposed_in_part[local.index()] = false;

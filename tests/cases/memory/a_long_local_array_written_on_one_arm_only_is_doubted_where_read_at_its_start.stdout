@@ -1,0 +1,81 @@
+Target "x86_64-pc-windows-msvc"
+Function a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:1:5 "c" declared
+  Local "_0" "int" return
+Function a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:2:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int" "x"
+  Local "_2" "int *[100]" "m"
+  Local "_3" "int"
+  Local "_4" "int **"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Local "_7" "int *" "r"
+  Local "_8" "int **"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:2:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:3:9 written
+      Destination "_1"
+      Use
+        Constant 1
+    Sequenced a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:3:13 generated
+    ArgumentsEvaluated a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:5:9 generated
+    Call a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:5:9 written "c" "bb1"
+      Destination "_3"
+  Block "bb1"
+    Branch a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:5:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:5:9 generated
+    Operation a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:6:9 generated
+      Destination "_4"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:6:16 written
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:6:9 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:6:9 written
+      Destination "_6"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:6:9 generated
+    Goto "bb4"
+  Block "bb3"
+    Sequenced a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:8:14 generated
+      Destination "_8"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:8:10 written
+      Destination "_7"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:8:14 generated
+    Operation a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:9:12 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_7"
+        Constant 0
+    Operation a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:9:5 written
+      Destination "_0"
+      Use
+        Copy "_9"
+    Sequenced a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start.c:9:12 generated
+    Return
