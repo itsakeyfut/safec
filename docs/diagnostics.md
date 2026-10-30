@@ -165,8 +165,11 @@ element, and a read of one it may not have written is `SC0411` as a doubt
 (#639). So is a read at an element this check cannot name, `m[c]`, where some
 element may be unwritten. A longer array is kept whole: written in part by
 such a pointer, a read of it at its start is the same doubt. A write at an
-index this check cannot read writes the whole array. A local written on some
-paths is not reported, and an integer read out of one is not followed.
+index this check cannot read writes the whole array. A local written on one
+path into a join and not on the other is `SC0411` as a doubt where it is read
+after the join, `if (c()) m[0] = &x; q = m[0];` (#668), but not across a
+loop's back edge, so a loop that fills an array is not doubted for the path
+that skips it. An integer read out of such a local is not followed.
 [ADR-0057](adr/0057-a-pointer-read-out-of-fresh-memory-is-reported-where-it-is-read.md)
 is the decision.
 
