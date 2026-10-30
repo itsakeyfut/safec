@@ -251,22 +251,28 @@ pub(super) struct Known {
     /// A local whose address is never taken is `assigned.rs`'s, which reads
     /// it by name. See ADR-0057.
     pub(super) unwritten: Vec<bool>,
-    /// Per local array, whether it was unwritten and has since been written
-    /// only through a pointer moved off its start, so that an element may
-    /// still be unwritten.
+    /// Per local with no per-element record, whether it may still be
+    /// unwritten though it is not certainly: [`Self::unwritten`]'s doubt.
+    /// An array kept per element answers this in
+    /// [`Self::maybe_unwritten_elements`] instead, and this is not read for
+    /// one.
     ///
-    /// **Because one record stands for the whole array.** Such a pointer may
-    /// reach any element (C17 6.5.6 p8), so its write is neither a write of
-    /// every element nor of none: `m[1] = malloc(4); r = m[0];` was a certain
-    /// `SC0411` only while the moved pointer named no local, and silent once
-    /// it named the array (#639). A read at the array's start afterwards is
-    /// doubted rather than proved, by `Allocations::reads_partly` and
-    /// `report::unwritten_read`. A write through the start clears it, as it
-    /// clears [`Self::unwritten`], which is what `main` already did and #667
-    /// is about. A union at a join. Read only where [`Self::unwritten`] is
-    /// clear, so `StorageLive`, which sets that, need not clear this. The join
-    /// of an unwritten array and a written one is not this, which is #668.
-    /// See ADR-0057.
+    /// **Set by a write that may have missed it**: an array longer than
+    /// [`ELEMENTS_KEPT`] written through a pointer moved off its start, which
+    /// may reach any element (C17 6.5.6 p8), so its write is neither a write
+    /// of every element nor of none (#639). A read at the array's start
+    /// afterwards is doubted rather than proved, by
+    /// `Allocations::reads_partly`.
+    ///
+    /// **And by a join of a path where the local is unwritten with one where
+    /// it was written** (#668): `if (c()) q = &x;` then `*pq` with `pq = &q`
+    /// read an indeterminate `q` on one path in silence, since
+    /// [`Self::unwritten`] is a proof and joins by intersection. A doubt, read
+    /// through a pointer and by name, `report::unwritten_read`. Not at a
+    /// loop's back edge, where the path that skips the body would doubt every
+    /// loop that fills an array; what either side already doubted is kept
+    /// there too. A union at every join, and cleared by a write of the whole
+    /// local and at `StorageLive`. See ADR-0057.
     pub(super) partly_written: Vec<bool>,
     /// Per local array of at most [`ELEMENTS_KEPT`] innermost elements, one
     /// bit per element that nothing may have written: [`Self::unwritten`]
@@ -277,11 +283,25 @@ pub(super) struct Known {
     /// `m[0] = &x; q = m[1];` read an `m[1]` nothing wrote, in silence, since
     /// the write to `m[0]` cleared the one record `m` had. A write through a
     /// pointer whose element is known clears that bit alone; one whose element
-    /// is not known writes the whole array where `main` did, and leaves it
-    /// [`Self::partly_written`] where only #639's rule tied the write to the
-    /// array. An intersection at a join, and set again at `StorageLive`. See
-    /// `built::write_effects` and ADR-0057.
+    /// is not known writes the whole array where `main` did, and where only
+    /// #639's rule tied the write to the array clears every bit, since no
+    /// element is then certainly unwritten, and leaves
+    /// [`Self::maybe_unwritten_elements`] alone. An intersection at a join,
+    /// and set again at `StorageLive`. See `built::write_effects` and
+    /// ADR-0057.
     pub(super) unwritten_elements: Vec<Bits>,
+    /// Per local array kept in [`Self::unwritten_elements`], one bit per
+    /// element that may be unwritten on some path: that set's doubt, and a
+    /// superset of it.
+    ///
+    /// **A second set rather than a mark on the array** (#668), so that
+    /// `if (c()) m[0] = &x; q = m[1];` stays the certain `SC0411` `main`
+    /// gives, while `m[0]` read there is doubted. A union at a join, but at a
+    /// loop's back edge only what either side already doubted is kept, as
+    /// [`Self::partly_written`] says. Cleared where
+    /// [`Self::unwritten_elements`] is, except by a write that may be of any
+    /// element. See ADR-0057.
+    pub(super) maybe_unwritten_elements: Vec<Bits>,
     /// Per local array, whether code this check cannot read was handed it
     /// only through a pointer moved off its start, so that a call writing it
     /// later writes it only in part (#667). A union at a join, and cleared at
@@ -1412,6 +1432,7 @@ impl Known {
             unwritten: _,
             partly_written: _,
             unwritten_elements: _,
+            maybe_unwritten_elements: _,
             exposed_in_part: _,
             stored_in_part: _,
             // A local's, as `escaped` is, and a site being reborn is not.
@@ -1608,6 +1629,7 @@ impl Known {
         self.unwritten[local] = false;
         self.partly_written[local] = false;
         self.unwritten_elements[local].clear_all();
+        self.maybe_unwritten_elements[local].clear_all();
     }
 
     /// What `writes` leave of the arrays they name, taken before the write
@@ -1625,6 +1647,7 @@ impl Known {
                 unwritten: self.unwritten[local],
                 partly: self.partly_written[local],
                 elements: self.unwritten_elements[local].clone(),
+                maybe: self.maybe_unwritten_elements[local].clone(),
             })
             .collect()
     }
@@ -1635,20 +1658,25 @@ impl Known {
     pub(super) fn array_writes_after(&mut self, pending: Vec<PendingWrite>) {
         for write in pending {
             let local = write.local;
-            let anything_unwritten = write.unwritten || write.elements.any();
+            let kept = write.elements.len() > 0;
             self.unwritten[local] = false;
             self.partly_written[local] = write.partly;
             self.unwritten_elements[local] = write.elements;
+            self.maybe_unwritten_elements[local] = write.maybe;
             match write.write {
                 ArrayWrite::Element(element) => {
                     if let Ok(element) = usize::try_from(element) {
                         if element < self.unwritten_elements[local].len() {
                             self.unwritten_elements[local].remove(element);
+                            self.maybe_unwritten_elements[local].remove(element);
                         }
                     }
                 }
+                // No element is certainly unwritten once one nobody can name
+                // may have been written, and each may still be.
+                ArrayWrite::Maybe if kept => self.unwritten_elements[local].clear_all(),
                 ArrayWrite::Maybe => {
-                    self.partly_written[local] = write.partly || anything_unwritten;
+                    self.partly_written[local] = write.partly || write.unwritten;
                 }
             }
         }
@@ -1662,9 +1690,6 @@ impl Known {
         if elements.len() == 0 {
             return self.unwritten[local];
         }
-        if self.partly_written[local] {
-            return false;
-        }
         match element.and_then(|element| usize::try_from(element).ok()) {
             Some(element) if element < elements.len() => elements.get(element),
             Some(_) => false,
@@ -1673,10 +1698,10 @@ impl Known {
     }
 
     /// Whether `local` may still be unwritten where a read reaches it, so
-    /// that the read is a doubt: partly written and the element read
-    /// unwritten, or the element not known and some element unwritten. A
-    /// longer array, kept whole, asks this at its start only. See
-    /// [`Self::partly_written`].
+    /// that the read is a doubt: the element read may be unwritten, or it is
+    /// not known and some element may be. A longer array, kept whole, and a
+    /// local that is no array ask this at their start only. See
+    /// [`Self::partly_written`] and [`Self::maybe_unwritten_elements`].
     ///
     /// **An element nobody can name may be any of them**, whether or not the
     /// array was written in part: `m[c]` after `m[1] = &x;` may read `m[0]`,
@@ -1689,14 +1714,12 @@ impl Known {
         element: Option<u64>,
         at_start: bool,
     ) -> bool {
-        let elements = &self.unwritten_elements[local];
+        let elements = &self.maybe_unwritten_elements[local];
         if elements.len() == 0 {
             return self.partly_written[local] && at_start;
         }
         match element.and_then(|element| usize::try_from(element).ok()) {
-            Some(element) if element < elements.len() => {
-                self.partly_written[local] && elements.get(element)
-            }
+            Some(element) if element < elements.len() => elements.get(element),
             Some(_) => false,
             None => elements.any(),
         }
@@ -2162,4 +2185,5 @@ pub(super) struct PendingWrite {
     unwritten: bool,
     partly: bool,
     elements: Bits,
+    maybe: Bits,
 }
