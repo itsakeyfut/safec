@@ -1782,7 +1782,12 @@ impl Analysis for Allocations<'_> {
                     if let Rvalue::Use(written) = &operation.value {
                         out.extend(self.read_out(function, written, value));
                     }
-                    for site in out {
+                    // **And everything those allocations hold, at every
+                    // level**, as `freed_behind` asks what leaves: a box stored
+                    // out holds what was stored in it before, and `*b = x;
+                    // *pp = b; free(x);` left the caller a freed pointer one
+                    // level down in silence. Found by review of #650.
+                    for site in value.closure(out) {
                         value.stored_out[site] = true;
                     }
                 }

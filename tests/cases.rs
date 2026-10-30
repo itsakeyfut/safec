@@ -4819,6 +4819,11 @@ cases! {
         // Stored out on one arm only, it may be. Mutation: the join
         // intersects `Known::stored_out`; this goes silent.
         an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Stored in a box before the box is stored out, it leaves one level
+        // down, and the free is the same doubt. Mutation: a leaving store
+        // marks only what the stored value itself holds; this goes silent.
+        // Found by review of #650.
+        an_allocation_stored_in_a_box_stored_where_the_caller_reads_it_and_then_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local array nothing outside can name is not memory that leaves.
         // Mutation: every store marks what it carries; this gains an
         // `SC0414` doubt.
