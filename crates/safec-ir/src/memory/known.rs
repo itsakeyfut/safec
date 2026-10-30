@@ -349,6 +349,23 @@ pub(super) struct Known {
     /// reach clears a mark, and a read nothing wrote goes silent. See
     /// ADR-0057.
     pub(super) exposed_locals: Vec<bool>,
+    /// Per site, whether a pointer to it may have been stored where code
+    /// outside this function may read it, by a store [`Self::leaves`] says
+    /// leaves: into a caller's memory through a parameter, into memory or a
+    /// local such code can name, or anywhere a pointer this function never
+    /// recorded may point.
+    ///
+    /// **So that a free of it is asked what such code is left holding**
+    /// (#650): `*pp = x; free(x);` handed the caller a freed pointer in
+    /// silence, since the store was of a live one and a parameter's memory is
+    /// no site this check models, so nothing at the function's exit can be
+    /// asked what it holds. `report::reported` asks it at the free, as a
+    /// doubt under `SC0414`: the other order, `free(x); *pp = x;`, is the store
+    /// door's. A may-fact, so a union at every join, and cleared where the site
+    /// is made again (`Self::reborn`); never cleared by a later store, since
+    /// this check does not follow what one place in such memory holds (#656).
+    /// See ADR-0041.
+    pub(super) stored_out: Vec<bool>,
 }
 
 impl Known {
@@ -1438,7 +1455,11 @@ impl Known {
             stored_in_part: _,
             // A local's, as `escaped` is, and a site being reborn is not.
             exposed_locals: _,
+            // About the allocation the site named, whose address may have
+            // been stored out; the new one's has not been.
+            stored_out,
         } = self;
+        stored_out[site] = false;
 
         // **A local that loses an allocation that is gone may hold one**, so
         // a store of it marks where it lands, as a load out of a marked
@@ -1609,6 +1630,52 @@ impl Known {
     /// doubt a free of what `fill(&t)` wrote raises is kept. See ADR-0057.
     pub(super) fn holds_fresh_read(&self, local: usize) -> bool {
         self.points_to[local].fresh_read && !self.escaped[local]
+    }
+
+    /// Whether a store to `place`, a place of dereferences, may land where code
+    /// outside this function may read it. One answer for the store door,
+    /// `report::stored_away`, and for what [`Self::stored_out`] records, so the
+    /// two orders of a store and a free agree (#650):
+    ///
+    /// - anywhere at all, where the pointer or a level on the way down may hold
+    ///   an address this function never recorded, [`Known::through_unnamed`]:
+    ///   `**ppp = x`, and `*pp = x` with `pp` read out of a parameter's memory;
+    /// - anywhere at all, where the pointer names nothing this check followed,
+    ///   neither an allocation nor a local: one moved off a local that is not
+    ///   an array by a non-zero constant (ADR-0019) may be any of them, and
+    ///   taking it to land nowhere silenced a free;
+    /// - an allocation such code can reach, [`Known::sites_named_by_unknown_code`]:
+    ///   one exposed to it, which a parameter's memory is from the function's
+    ///   start (ADR-0040), or one a local whose address it holds points at, at
+    ///   any depth, `keepp(&slot); slot = b; *b = x;` (#655);
+    /// - a local whose address such code holds, directly or through such a
+    ///   local, [`Known::locals_named_by_unknown_code`] (#655).
+    ///
+    /// **The allocations below the first level, at a store of more than one
+    /// dereference, decide no case, measured**: such a store reaches
+    /// `through_unnamed` or the locals first in every program the corpus has.
+    /// And the first two parts each hold `**ppp = x` alone, so only dropping
+    /// both silences it.
+    pub(super) fn leaves(&self, place: &Place) -> bool {
+        let depth = derefs(place);
+        if self.through_unnamed(place.local, depth) {
+            return true;
+        }
+        let reachable = self.sites_named_by_unknown_code();
+        let into: Vec<usize> = if depth == 1 {
+            self.sites_of(place.local).collect()
+        } else {
+            self.stored_below(place.local, depth - 1)
+                .into_iter()
+                .collect()
+        };
+        let lands = self.locals_a_write_may_land_in(place.local, depth);
+        (into.is_empty() && lands.is_empty())
+            || into.iter().any(|site| reachable.contains(site))
+            || {
+                let named = self.locals_named_by_unknown_code();
+                lands.into_iter().any(|local| named.contains(&local))
+            }
     }
 
     /// Something may have written `site`, so its contents are no longer

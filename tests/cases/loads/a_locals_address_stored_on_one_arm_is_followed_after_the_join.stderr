@@ -1,3 +1,17 @@
+warning[SC0414]: this frees `r`, whose address was stored where code outside this function may read it
+    ╭─[ a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:20:5 ]
+    │
+  5 │     int *r = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 20 │     free(r);
+    │     ───┬───  
+    │        ╰───── freed here, perhaps still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free
 warning[SC0402]: this uses a value that may have been freed
     ╭─[ a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:21:5 ]
     │

@@ -8,6 +8,20 @@ error[SC0412]: this may reach outside the object `w` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0414]: this frees `m`, whose address was stored where code outside this function may read it
+    ╭─[ an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:19:5 ]
+    │
+ 15 │     int *m = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 19 │     free(m);
+    │     ───┬───  
+    │        ╰───── freed here, perhaps still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free
 error[SC0402]: this uses `q`, which may have been freed
     ╭─[ an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller.c:22:5 ]
     │

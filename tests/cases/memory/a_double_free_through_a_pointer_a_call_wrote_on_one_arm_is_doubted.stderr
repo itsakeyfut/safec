@@ -1,3 +1,17 @@
+error[SC0414]: this frees `p`, whose address was stored where code outside this function may read it
+   ╭─[ a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:9:5 ]
+   │
+ 6 │     int *p = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+   │ 
+ 9 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here, perhaps still stored where it may be read
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free
 error[SC0401]: this frees `r`, which may have been freed already
     ╭─[ a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:5 ]
     │

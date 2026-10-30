@@ -511,6 +511,24 @@ pub(super) fn memory_finding(
             "returned here, where it may have been freed before",
             DISAGREEMENT_REMEDY,
         ),
+        // **The other order, asked at the free** (#650): what was stored out
+        // was live, and freeing it leaves code outside holding it. Only ever
+        // `Unknown`, since that code may only write it; `Unsafe` takes the
+        // same words so the match stays exhaustive. See `Known::stored_out`.
+        (Kind::FreedAfterStore, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            STORE_AFTER_FREE,
+            said(
+                name,
+                "this frees an allocation whose address was stored where code outside this function may read it",
+                |name| {
+                    format!(
+                        "this frees `{name}`, whose address was stored where code outside this function may read it"
+                    )
+                },
+            ),
+            "freed here, perhaps still stored where it may be read",
+            "set what was stored there to null once it is freed, or do not store it where it outlives the free",
+        ),
         (Kind::StoreAfterFree, Conclusion::Unsafe, _) => (
             STORE_AFTER_FREE,
             said(

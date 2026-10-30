@@ -1,0 +1,66 @@
+Target "x86_64-pc-windows-msvc"
+Function an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:3:6 "put"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter _Nonnull "pp"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int *" "x"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int *"
+  Block "bb0" entry
+    ArgumentsEvaluated an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:4:14 generated
+    Call an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:4:14 written "malloc" "bb1"
+      Destination "_4"
+      Constant 4
+  Block "bb1"
+    Operation an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:4:10 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:4:14 generated
+    Operation an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:5:9 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:5:9 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:5:9 generated
+    Return
+  Block "bb3"
+    Sequenced an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Branch an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:8:9 written "bb5" "bb6"
+      Copy "_2"
+  Block "bb5"
+    Sequenced an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:8:9 generated
+    Operation an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:9:9 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Operation an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:9:9 written
+      Destination "_6"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:9:9 generated
+    Goto "bb7"
+  Block "bb6"
+    Sequenced an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:8:9 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:11:5 generated
+    Call an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:11:5 written "free" "bb8"
+      Copy "_3"
+  Block "bb8"
+    Sequenced an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted.c:11:5 generated
+    Return

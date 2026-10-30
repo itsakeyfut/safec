@@ -1,0 +1,114 @@
+Target "x86_64-pc-windows-msvc"
+Function an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:3:6 "put"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter _Nonnull "pp"
+  Local "_2" "int" "i"
+  Local "_3" "int"
+  Local "_4" "int *" "x"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int"
+  Local "_8" "int *"
+  Local "_9" "int"
+  Local "_10" "int"
+  Block "bb0" entry
+    StorageLive an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:10 generated "_2"
+    Operation an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:14 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:18 generated
+    Goto "bb1"
+  Block "bb1"
+    Operation an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:21 written
+      Destination "_3"
+      Binary "Lt"
+        Copy "_2"
+        Constant 2
+    Branch an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:21 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:21 generated
+    StorageLive an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:5:9 generated "_4"
+    ArgumentsEvaluated an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:5:18 generated
+    Call an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:5:18 written "malloc" "bb4"
+      Destination "_5"
+      Constant 4
+  Block "bb3"
+    Sequenced an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:21 generated
+    StorageDead an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:14:5 generated "_2"
+    Return
+  Block "bb4"
+    Operation an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:5:14 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:5:18 generated
+    Operation an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:6:13 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:6:13 written "bb5" "bb6"
+      Copy "_6"
+  Block "bb5"
+    Sequenced an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:6:13 generated
+    StorageDead an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:7:13 generated "_4"
+    StorageDead an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:7:13 generated "_2"
+    Return
+  Block "bb6"
+    Sequenced an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:6:13 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:9:13 written
+      Destination "_7"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:9:13 written "bb8" "bb9"
+      Copy "_7"
+  Block "bb8"
+    Sequenced an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:9:13 generated
+    Operation an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:10:13 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:10:13 written
+      Destination "_8"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:10:13 generated
+    Goto "bb10"
+  Block "bb9"
+    Sequenced an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:9:13 generated
+    ArgumentsEvaluated an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:12:13 generated
+    Call an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:12:13 written "free" "bb11"
+      Copy "_4"
+  Block "bb10"
+    StorageDead an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:14:5 generated "_4"
+    Operation an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:28 written
+      Destination "_9"
+      Use
+        Copy "_2"
+    Operation an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:28 written
+      Destination "_10"
+      Binary "Add"
+        Copy "_2"
+        Constant 1
+    Operation an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:28 written
+      Destination "_2"
+      Use
+        Copy "_10"
+    Sequenced an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:28 generated
+    Goto "bb1"
+  Block "bb11"
+    Sequenced an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:12:13 generated
+    Goto "bb10"
