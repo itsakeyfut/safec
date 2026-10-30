@@ -1,0 +1,10 @@
+error[SC0414]: this frees `x`, a pointer that was stored where code outside this function may read it
+    ╭─[ an_allocation_stored_out_from_either_of_two_calls_and_freed_names_neither.c:14:5 ]
+    │
+ 14 │     free(x);
+    │     ───┬───  
+    │        ╰───── freed here, perhaps still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free

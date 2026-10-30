@@ -4824,6 +4824,11 @@ cases! {
         // marks only what the stored value itself holds; this goes silent.
         // Found by review of #650.
         an_allocation_stored_in_a_box_stored_where_the_caller_reads_it_and_then_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Either of two allocations may be what was stored, so the doubt
+        // names neither as where it was made. Mutation: take the last
+        // site's origin rather than the one every site agrees on; this
+        // names the second `malloc`.
+        an_allocation_stored_out_from_either_of_two_calls_and_freed_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local array nothing outside can name is not memory that leaves.
         // Mutation: every store marks what it carries; this gains an
         // `SC0414` doubt.
