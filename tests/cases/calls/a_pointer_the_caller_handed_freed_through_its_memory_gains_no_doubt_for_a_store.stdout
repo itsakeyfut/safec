@@ -1,0 +1,15 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_the_caller_handed_freed_through_its_memory_gains_no_doubt_for_a_store.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_the_caller_handed_freed_through_its_memory_gains_no_doubt_for_a_store.c:2:6 "destroy"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter _Nonnull "pp"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_the_caller_handed_freed_through_its_memory_gains_no_doubt_for_a_store.c:3:5 generated
+    Call a_pointer_the_caller_handed_freed_through_its_memory_gains_no_doubt_for_a_store.c:3:5 written "free" "bb1"
+      Copy "_1"
+        Deref
+  Block "bb1"
+    Sequenced a_pointer_the_caller_handed_freed_through_its_memory_gains_no_doubt_for_a_store.c:3:5 generated
+    Return

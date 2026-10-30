@@ -1,0 +1,14 @@
+error[SC0414]: this frees `x`, a pointer that was stored where code outside this function may read it
+    ╭─[ an_allocation_stored_in_a_box_stored_where_the_caller_reads_it_and_then_freed_is_doubted.c:15:5 ]
+    │
+  4 │     int *x = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 15 │     free(x);
+    │     ───┬───  
+    │        ╰───── freed here, perhaps still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free

@@ -8,6 +8,20 @@ error[SC0412]: this may reach outside the object `s` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0414]: this frees `r`, a pointer that was stored where code outside this function may read it
+    ╭─[ a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:17:5 ]
+    │
+  8 │     int *r = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 17 │     free(r);
+    │     ───┬───  
+    │        ╰───── freed here, perhaps still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free
 error[SC0402]: this uses `slot`, which may have been freed
     ╭─[ a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:21:5 ]
     │

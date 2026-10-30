@@ -225,6 +225,9 @@ fn verdict(
         // the two rows above give, should that change: what leaves leaves
         // after its expression, or is asked as the store runs.
         Kind::FreedBehindReturn | Kind::FreedBehindStore => true,
+        // Never asked: it is built at the free in `reported`, not out of a
+        // verdict, and is always a doubt. See `Known::stored_out`.
+        Kind::FreedAfterStore => true,
         // **Not a `return`'s answer.** A call is not the end of its full
         // expression, so `(free(a), 0) + use(a)` may call `use` before the
         // free, and answering `true` proved a program C defines on that order.
@@ -389,9 +392,41 @@ pub(super) fn reported(
     // second, for the reason above.
     let inside = interior(&reached, offset, known);
 
+    // What it frees that was stored where code outside may read it, asked
+    // before `verdict` takes what was reached. See `Known::stored_out`.
+    let stored_out: Vec<usize> = reached
+        .iter()
+        .filter_map(|reached| match reached {
+            Reached::Site(site) if known.stored_out[*site] => Some(*site),
+            _ => None,
+        })
+        .collect();
+
     let mut found = Vec::new();
     if let Some(verdict) = verdict(analysis.sources, Kind::DoubleFree, reached, known) {
         found.push(finding(Kind::DoubleFree, verdict));
+    } else if !stored_out.is_empty() {
+        // **Only where it is no double free**, which says more about the
+        // same free. A doubt, since whoever reads that memory may only write
+        // it (#650). See ADR-0041.
+        let mut made = None;
+        for (index, &site) in stored_out.iter().enumerate() {
+            let from = match known.state[site] {
+                SiteState::Live(made) | SiteState::Freed { made, .. } => made,
+                SiteState::Unknown | SiteState::Reachable | SiteState::Unheld => None,
+            };
+            made = if index == 0 { from } else { same(made, from) };
+        }
+        found.push(Finding {
+            function: analysis.function,
+            kind: Kind::FreedAfterStore,
+            conclusion: Conclusion::Unknown,
+            at: origin.span(),
+            local,
+            freed: None,
+            made,
+            unproven: None,
+        });
     }
     if let Some(verdict) = inside {
         found.push(finding(Kind::InteriorFree, verdict));
@@ -2140,7 +2175,7 @@ pub(super) fn returned(
 /// [`Departure::Store`] to [`departed_in_element`], which asks it whether
 /// what leaves is whole rather than whether it is live.
 ///
-/// **A store through a pointer that leaves**, [`leaves`], **or a write of a
+/// **A store through a pointer that leaves**, [`Known::leaves`], **or a write of a
 /// local whose address such code holds**, `keep(&slot); slot = x;`, which
 /// is the same store spelled without the pointer: one
 /// [`Known::locals_named_by_unknown_code`] names, which is a local a call
@@ -2191,7 +2226,7 @@ pub(super) fn stored_away(
     if !source.projection.is_empty() && derefs(source) == 0 {
         return;
     }
-    if !direct && !leaves(known, place) {
+    if !direct && !known.leaves(place) {
         return;
     }
 
@@ -2231,49 +2266,6 @@ pub(super) fn stored_away(
             unproven: verdict.unproven,
         },
     );
-}
-
-/// Whether a store to `place`, a place of dereferences, may land where code
-/// outside this function may read it:
-///
-/// - anywhere at all, where the pointer or a level on the way down may hold
-///   an address this function never recorded, [`Known::through_unnamed`]:
-///   `**ppp = x`, and `*pp = x` with `pp` read out of a parameter's memory;
-/// - anywhere at all, where the pointer names nothing this check followed,
-///   neither an allocation nor a local: one moved off a local that is not
-///   an array by a non-zero constant (ADR-0019) may be any of them, and
-///   taking it to land nowhere silenced a free;
-/// - an allocation such code can reach, [`Known::sites_named_by_unknown_code`]:
-///   one exposed to it, which a parameter's memory is from the function's
-///   start (ADR-0040), or one a local whose address it holds points at, at
-///   any depth, `keepp(&slot); slot = b; *b = x;` (#655);
-/// - a local whose address such code holds, directly or through such a
-///   local, [`Known::locals_named_by_unknown_code`] (#655).
-///
-/// **The allocations below the first level, at a store of more than one
-/// dereference, decide no case, measured**: such a store reaches
-/// `through_unnamed` or the locals first in every program the corpus has.
-/// And the first two parts each hold `**ppp = x` alone, so only dropping
-/// both silences it.
-fn leaves(known: &Known, place: &Place) -> bool {
-    let depth = derefs(place);
-    if known.through_unnamed(place.local, depth) {
-        return true;
-    }
-    let reachable = known.sites_named_by_unknown_code();
-    let into: Vec<usize> = if depth == 1 {
-        known.sites_of(place.local).collect()
-    } else {
-        known
-            .stored_below(place.local, depth - 1)
-            .into_iter()
-            .collect()
-    };
-    let lands = known.locals_a_write_may_land_in(place.local, depth);
-    (into.is_empty() && lands.is_empty()) || into.iter().any(|site| reachable.contains(site)) || {
-        let named = known.locals_named_by_unknown_code();
-        lands.into_iter().any(|local| named.contains(&local))
-    }
 }
 
 /// Report a pointer handed to a call where the allocation it points at may

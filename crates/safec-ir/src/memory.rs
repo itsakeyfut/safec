@@ -114,6 +114,14 @@ pub enum Kind {
     /// [`Kind::FreedBehindReturn`] or [`Kind::FreedBehindStore`] where that
     /// memory leaves later. See ADR-0041.
     StoreAfterFree,
+    /// A free of an allocation whose address may have been stored where code
+    /// outside this function may read it: `*out = p; free(p);` (#650).
+    ///
+    /// [`Kind::StoreAfterFree`] in the other order, asked at the free since
+    /// the store was of a live pointer. Always `Unknown`, since whoever reads
+    /// that memory may only write it, as for what a door leaves holding
+    /// behind it. See `Known::stored_out` and ADR-0041.
+    FreedAfterStore,
     /// `free(x); *b = x; return b;`
     ///
     /// Not [`Kind::ReturnAfterFree`], because what is returned is live: it

@@ -1,3 +1,17 @@
+error[SC0414]: this frees `m`, a pointer that was stored where code outside this function may read it
+    ╭─[ a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:12:5 ]
+    │
+  8 │     int *m = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 12 │     free(m);
+    │     ───┬───  
+    │        ╰───── freed here, perhaps still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free
 error[SC0402]: this uses `q`, which may have been freed
     ╭─[ a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:15:5 ]
     │

@@ -4811,6 +4811,44 @@ cases! {
         // sites only; the second does. Mutation: drop it from the copy's
         // condition; the third does.
         a_pointer_stored_through_one_parameter_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*pp = x; free(x);` hands the caller a freed pointer in its own
+        // memory, which `main` reads back: an `SC0414` doubt at the free
+        // (#650). See ADR-0041. Mutation: the free asks nothing of
+        // `Known::stored_out`; this goes silent.
+        an_allocation_stored_where_the_caller_reads_it_and_then_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Stored out on one arm only, it may be. Mutation: the join
+        // intersects `Known::stored_out`; this goes silent.
+        an_allocation_stored_where_the_caller_reads_it_on_one_arm_and_then_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Stored in a box before the box is stored out, it leaves one level
+        // down, and the free is the same doubt. Mutation: a leaving store
+        // marks only what the stored value itself holds; this goes silent.
+        // Found by review of #650.
+        an_allocation_stored_in_a_box_stored_where_the_caller_reads_it_and_then_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Either of two allocations may be what was stored, so the doubt
+        // names neither as where it was made. Mutation: take the last
+        // site's origin rather than the one every site agrees on; this
+        // names the second `malloc`.
+        an_allocation_stored_out_from_either_of_two_calls_and_freed_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local array nothing outside can name is not memory that leaves.
+        // Mutation: every store marks what it carries; this gains an
+        // `SC0414` doubt.
+        an_allocation_stored_in_a_local_and_then_freed_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What one turn stored out is that turn's allocation; the next
+        // turn's `malloc` makes a new one, which is freed and never stored.
+        // The doubt at the store is #651's, about the previous turn's.
+        // Mutation: `Known::reborn` leaves `stored_out` alone; this gains an
+        // `SC0414` doubt at the free.
+        an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Freeing what the caller's memory holds stores nothing out: only
+        // the free of a pointer this check stopped following is said. It
+        // says the conclusion chosen rather than guarding a line: the free
+        // reaches no allocation this function made, so no mutation of
+        // `Known::stored_out` moves it, measured.
+        a_pointer_the_caller_handed_freed_through_its_memory_gains_no_doubt_for_a_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Correct C, doubted: this check does not follow what one place in
+        // the caller's memory holds, so `*pp = 0;` clears nothing (#656).
+        // It says the cost chosen rather than guarding a line.
+        an_allocation_stored_where_the_caller_reads_it_freed_and_then_overwritten_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What a call this check cannot read may store of what it was handed:
         // through an out-parameter, `get(&r, u)`, and into memory it was
         // handed, `put(box, u)`, each then read after `free(u)`, for a named

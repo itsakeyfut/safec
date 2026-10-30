@@ -1165,7 +1165,13 @@ impl Allocations<'_> {
             exposed_in_part,
             stored_in_part,
             exposed_locals,
+            stored_out,
         } = into;
+        // A may-fact, so a union, at both kinds of join. See
+        // `Known::stored_out`.
+        for (here, there) in stored_out.iter_mut().zip(&from.stored_out) {
+            *here = *here || *there;
+        }
         // What may be unwritten, before the proofs below are intersected:
         // a union, or at a back edge what either side doubted and did not
         // prove, beside what both prove. See
@@ -1598,6 +1604,8 @@ impl Analysis for Allocations<'_> {
             stored_in_part: vec![false; self.locals],
             // No call has been handed anything yet.
             exposed_locals: vec![false; self.locals],
+            // Nothing has been stored anywhere yet.
+            stored_out: vec![false; self.locals],
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -1749,6 +1757,43 @@ impl Analysis for Allocations<'_> {
                 origin: _,
             } => {}
             Element::Assign(operation) => {
+                // **What a store that leaves carries is stored out**, asked
+                // before it lands, as the store door asks it: the sites the
+                // stored value holds, and what a pointer read out of memory
+                // may be. See `Known::stored_out`. **Three halves decide no
+                // case, measured**, and are kept so this asks what the store
+                // door does and records what the store records: `direct`,
+                // since a write into a local such code names hands what it
+                // writes away and the free is then a double free's doubt
+                // first; the pointer test, since an integer that holds sites
+                // is a conversion the frontend refuses (`SC0302`); and
+                // `read_out`, since a pointer read out of memory reaches a
+                // store as an operand whose sites `carried` already holds.
+                let place = &operation.place;
+                let direct = place.projection.is_empty()
+                    && value
+                        .locals_named_by_unknown_code()
+                        .contains(&place.local.index());
+                if (direct || (derefs(place) > 0 && value.leaves(place)))
+                    && self.may_be_pointer(function, place)
+                {
+                    let mut out: Vec<usize> = self
+                        .carried(function, &operation.value, value)
+                        .sites()
+                        .collect();
+                    if let Rvalue::Use(written) = &operation.value {
+                        out.extend(self.read_out(function, written, value));
+                    }
+                    // **And everything those allocations hold, at every
+                    // level**, as `freed_behind` asks what leaves: a box stored
+                    // out holds what was stored in it before, and `*b = x;
+                    // *pp = b; free(x);` left the caller a freed pointer one
+                    // level down in silence. Found by review of #650.
+                    for site in value.closure(out) {
+                        value.stored_out[site] = true;
+                    }
+                }
+
                 // An assignment to a local writes it, whatever it writes. See
                 // `Known::unwritten`.
                 if operation.place.projection.is_empty() {

@@ -1,0 +1,10 @@
+error[SC0401]: this frees a pointer this check stopped following
+   ╭─[ a_pointer_the_caller_handed_freed_through_its_memory_gains_no_doubt_for_a_store.c:3:5 ]
+   │
+ 3 │     free(*pp);
+   │     ────┬────  
+   │         ╰────── this was read out of memory, which this check does not follow
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check follows the local an allocation was made into, not what memory holds
