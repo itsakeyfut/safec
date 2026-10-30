@@ -281,8 +281,13 @@ is asked, and doubts what it cannot prove live as a return does. A store into
 memory only the function itself reads back is not, since the read back is. It
 is a code of its own because what to change is what is stored, and the reader
 of it need not be a caller. A pointer stored out live is asked what it points
-at holds, at every level, as a return is. The same ADR records it and what it
-costs.
+at holds, at every level, as a return is. And in the other order, a live
+pointer stored out and freed after, `*pp = x; free(x);`, is `SC0414` as a
+doubt at the free, since the store was of a live pointer and a caller's memory
+is nothing this check can ask at the return (#650). Only a doubt, since
+whoever reads that memory may only write it, so `*pp = 0;` after the free is
+doubted too until this check follows what one place there holds (#656). The
+same ADR records it and what it costs.
 
 **`SC0407` is the other read without a dereference, and the same belief
 arriving by the other door.** A function's body believes its pointer
