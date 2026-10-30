@@ -4839,10 +4839,11 @@ cases! {
         // Nothing was stored out, so nothing is left behind. Mutation: every
         // handed allocation is asked; this gains an `SC0414` doubt.
         an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A call handed nothing frees nothing it is asked about. Mutation:
-        // every allocation exposed so far is asked; this gains an `SC0414`
-        // doubt.
-        an_allocation_stored_out_is_not_doubted_at_a_call_it_is_not_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `keep(x)` is handed what was stored out and is doubted; `tick()`
+        // is handed nothing, and is not, though `keep` may have kept `x`
+        // where `tick` reaches it. Mutation: every allocation exposed so far
+        // is asked; this gains a second `SC0414` doubt, at `tick()`.
+        an_allocation_stored_out_is_doubted_at_the_call_it_is_handed_and_not_at_a_later_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Correct C if `append` keeps `n`, doubted: this check cannot read
         // whether a call frees or keeps what it is handed. It says the cost
         // chosen rather than guarding a line.

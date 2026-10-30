@@ -255,7 +255,7 @@ and `memory/`), applied and measured, and a named case in
   asking only what it is handed by name fails
   `an_allocation_stored_out_and_then_handed_to_a_call_inside_a_box_is_doubted`,
   and asking every exposed allocation fails
-  `an_allocation_stored_out_is_not_doubted_at_a_call_it_is_not_handed`
+  `an_allocation_stored_out_is_doubted_at_the_call_it_is_handed_and_not_at_a_later_one`
   (#672).
 * Not asking `freed_behind` at a return fails
   `a_box_holding_a_freed_pointer_returned_is_doubted` and, for a return of a
