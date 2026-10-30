@@ -268,6 +268,16 @@ cases! {
         // `unwritten` joined by union; this is certain. Mutation: a forward
         // join of unwritten and written gives written; this goes silent.
         a_local_array_written_on_one_arm_only_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same written on the other arm, which reaches the join as the
+        // value joined in rather than the one joined into. Mutation: a
+        // forward join keeps one side's `Known::maybe_unwritten_elements`;
+        // this goes silent.
+        a_local_array_written_on_the_other_arm_only_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Each turn's `m` is a new object (C17 6.2.4 p2), unwritten on the
+        // arm that skips the write whatever the turn before wrote at its
+        // end. Mutation: `StorageLive` leaves
+        // `Known::maybe_unwritten_elements` alone; this goes silent.
+        a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written on every path into the join, it is written. Mutation: a
         // forward join doubts whatever the two sides hold; this gains an
         // `SC0411` doubt.
