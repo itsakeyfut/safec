@@ -515,6 +515,23 @@ pub(super) fn memory_finding(
         // was live, and freeing it leaves code outside holding it. Only ever
         // `Unknown`, since that code may only write it; `Unsafe` takes the
         // same words so the match stays exhaustive. See `Known::stored_out`.
+        // **The same, where a call may be what frees it** (#672). Only ever
+        // `Unknown`, since the call may keep it; `Unsafe` takes the same words
+        // so the match stays exhaustive.
+        (Kind::HandedAfterStore, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            STORE_AFTER_FREE,
+            said(
+                name,
+                "this hands a pointer that was stored where code outside this function may read it to a call that may free it",
+                |name| {
+                    format!(
+                        "this hands `{name}`, a pointer that was stored where code outside this function may read it, to a call that may free it"
+                    )
+                },
+            ),
+            "handed here, perhaps freed while still stored where it may be read",
+            "keep it out of a call that may free it while it is stored there, or set what was stored there to null first",
+        ),
         (Kind::FreedAfterStore, Conclusion::Unknown | Conclusion::Unsafe, _) => (
             STORE_AFTER_FREE,
             said(

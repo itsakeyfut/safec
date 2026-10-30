@@ -1,3 +1,13 @@
+error[SC0414]: this hands a pointer that was stored where code outside this function may read it to a call that may free it
+    ╭─[ a_single_address_read_out_of_memory_another_pointer_may_overwrite_is_asked_with_no_second_holder.c:17:5 ]
+    │
+ 17 │     grow(q);
+    │     ───┬───  
+    │        ╰───── handed here, perhaps freed while still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep it out of a call that may free it while it is stored there, or set what was stored there to null first
 error[SC0407]: this passes a pointer to where a pointer that may have been freed is stored
     ╭─[ a_single_address_read_out_of_memory_another_pointer_may_overwrite_is_asked_with_no_second_holder.c:18:12 ]
     │

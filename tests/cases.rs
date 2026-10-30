@@ -4829,6 +4829,24 @@ cases! {
         // site's origin rather than the one every site agrees on; this
         // names the second `malloc`.
         an_allocation_stored_out_from_either_of_two_calls_and_freed_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `release(x)` may free what the caller is left holding: an `SC0414`
+        // doubt at the call (#672). See ADR-0041. Mutation: the call asks
+        // nothing of `Known::stored_out`; this goes silent.
+        an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Handed in a box, it is still what the call may free. Mutation: the
+        // call asks only what it is handed by name; this goes silent.
+        an_allocation_stored_out_and_then_handed_to_a_call_inside_a_box_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Nothing was stored out, so nothing is left behind. Mutation: every
+        // handed allocation is asked; this gains an `SC0414` doubt.
+        an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call handed nothing frees nothing it is asked about. Mutation:
+        // every allocation exposed so far is asked; this gains an `SC0414`
+        // doubt.
+        an_allocation_stored_out_is_not_doubted_at_a_call_it_is_not_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Correct C if `append` keeps `n`, doubted: this check cannot read
+        // whether a call frees or keeps what it is handed. It says the cost
+        // chosen rather than guarding a line.
+        an_allocation_stored_out_and_handed_to_a_call_that_keeps_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local array nothing outside can name is not memory that leaves.
         // Mutation: every store marks what it carries; this gains an
         // `SC0414` doubt.

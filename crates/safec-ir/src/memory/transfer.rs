@@ -924,6 +924,28 @@ impl Allocations<'_> {
         marks
     }
 
+    /// What a call this check cannot read is handed: what it is handed by
+    /// name or as a load, and what an argument read out of memory may be.
+    /// Every allocation those hold, however deep, `Known::closure` of it, is
+    /// what such a call may have freed. One answer for the call's transfer,
+    /// which marks each `may_be_freed`, and for `report::handed_stored_out`,
+    /// which asks whether any was stored where code outside may read it
+    /// (#672), so the two cannot disagree about what the call may have freed.
+    /// See ADR-0047 and `Known::stored_out`.
+    pub(super) fn handed_to_opaque_call(
+        &self,
+        function: &Function,
+        handed: &[Operand],
+        value: &Known,
+    ) -> Vec<usize> {
+        let touched = Self::touching(handed.iter(), value);
+        let mut handed_memory: Vec<usize> = named(&touched).collect();
+        for argument in handed {
+            handed_memory.extend(self.read_out(function, argument, value));
+        }
+        handed_memory
+    }
+
     /// What the arguments of a call reach, in the order they were written.
     ///
     /// A local that reaches no site, is a load, or may be a local's address
@@ -3063,10 +3085,7 @@ impl Analysis for Allocations<'_> {
                 // proved use after free into a doubt, which a hatch only lists:
                 // `free(p); g(r); return *p;` built in a hatch where `r` may
                 // be `p` (#262).
-                let mut handed_memory: Vec<usize> = sites().collect();
-                for argument in handed {
-                    handed_memory.extend(self.read_out(function, argument, value));
-                }
+                let mut handed_memory = self.handed_to_opaque_call(function, handed, value);
                 for site in value.closure(handed_memory.clone()) {
                     value.state[site].may_be_freed();
                 }
