@@ -1,0 +1,172 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:3:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int" "x"
+  Local "_3" "int *[2]" "m"
+  Local "_4" "int **" "e"
+  Local "_5" "int **"
+  Local "_6" "int **"
+  Local "_7" "int ***" "slot"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int **"
+  Local "_11" "int **"
+  Local "_12" "int ***" "q"
+  Local "_13" "int ***"
+  Local "_14" "int ***"
+  Local "_15" "int *"
+  Local "_16" "int *"
+  Local "_17" "int *" "r"
+  Local "_18" "int **"
+  Local "_19" "int"
+  Block "bb0" entry
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:3:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:4:9 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:4:13 generated
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:6:15 generated
+      Destination "_5"
+      Address
+        Place "_3"
+          Index
+            Constant 0
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:6:15 written
+      Destination "_6"
+      Binary "Add"
+        Copy "_5"
+        Constant 1
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:6:11 written
+      Destination "_4"
+      Use
+        Copy "_6"
+    Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:6:15 generated
+    ArgumentsEvaluated a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:7:19 generated
+    Call a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:7:19 written "malloc" "bb1"
+      Destination "_8"
+      Constant 8
+  Block "bb1"
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:7:12 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:7:19 generated
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:8:9 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_7"
+        Constant 0
+    Branch a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:8:9 written "bb2" "bb3"
+      Copy "_9"
+  Block "bb2"
+    Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:8:9 generated
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:9:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:9:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:8:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:11:13 generated
+      Destination "_10"
+      Address
+        Place "_3"
+          Index
+            Constant 0
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:11:5 written
+      Destination "_7"
+        Deref
+      Use
+        Copy "_10"
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:11:5 written
+      Destination "_11"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:11:5 generated
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:12:12 written
+      Destination "_12"
+      Use
+        Copy "_7"
+    Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:12:16 generated
+    Branch a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:13:9 written "bb5" "bb6"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:13:9 generated
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:14:13 written
+      Destination "_13"
+      Address
+        Place "_4"
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:14:9 written
+      Destination "_12"
+      Use
+        Copy "_13"
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:14:9 written
+      Destination "_14"
+      Use
+        Copy "_12"
+    Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:14:9 generated
+    Goto "bb7"
+  Block "bb6"
+    Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:13:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:16:11 written
+      Destination "_15"
+      Address
+        Place "_2"
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:16:5 written
+      Destination "_12"
+        Deref
+          Deref
+      Use
+        Copy "_15"
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:16:5 written
+      Destination "_16"
+      Use
+        Copy "_12"
+          Deref
+            Deref
+    Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:16:5 generated
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:17:14 generated
+      Destination "_18"
+      Address
+        Place "_3"
+          Index
+            Constant 0
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:17:10 written
+      Destination "_17"
+      Use
+        Copy "_18"
+          Deref
+    Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:17:14 generated
+    ArgumentsEvaluated a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:18:5 generated
+    Call a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:18:5 written "free" "bb8"
+      Copy "_7"
+  Block "bb8"
+    Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:18:5 generated
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:19:12 written
+      Destination "_19"
+      Binary "Eq"
+        Copy "_17"
+        Constant 0
+    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:19:5 written
+      Destination "_0"
+      Use
+        Copy "_19"
+    Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:19:12 generated
+    Return

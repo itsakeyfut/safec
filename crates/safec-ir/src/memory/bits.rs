@@ -94,6 +94,11 @@ impl Bits {
         self.words.fill(0);
     }
 
+    /// How many indices the set is below: the `len` it was made with.
+    pub(super) fn len(&self) -> usize {
+        self.len
+    }
+
     fn check(&self, index: usize) {
         assert!(
             index < self.len,

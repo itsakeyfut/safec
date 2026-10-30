@@ -1890,7 +1890,12 @@ pub(super) fn loaded_indeterminate(
         return;
     };
     for place in read {
-        if !analysis.reads_fresh(function, &place, known) {
+        // A proof where nothing wrote what it reads, and a doubt where an
+        // array it reads at its start was written only in part. See
+        // `Known::partly_written`.
+        let certain = analysis.reads_fresh(function, &place, known);
+        let maybe = !certain && analysis.reads_partly(function, &place, known);
+        if !certain && !maybe {
             continue;
         }
         // **Keyed by the pointer read through, not by `*l`.** A dereference
@@ -1920,7 +1925,11 @@ pub(super) fn loaded_indeterminate(
             Finding {
                 function: analysis.function,
                 kind,
-                conclusion: Conclusion::Unsafe,
+                conclusion: if maybe {
+                    Conclusion::Unknown
+                } else {
+                    Conclusion::Unsafe
+                },
                 at,
                 local: Some(local),
                 freed: None,
@@ -1950,8 +1959,11 @@ pub(super) fn unwritten_read(
 ) {
     let function = analysis.unit.function(analysis.function);
     for (local, at) in reads {
+        // **A doubt where an element may still be unwritten**, a proof
+        // where nothing wrote any of it. See `Known::partly_written`.
+        let partly = !known.unwritten[local.index()] && known.partly_written[local.index()];
         if !taken.get(local.index())
-            || !known.unwritten[local.index()]
+            || !(known.unwritten[local.index()] || partly)
             || !analysis.holds_a_pointer(function.local(local))
         {
             continue;
@@ -1971,7 +1983,11 @@ pub(super) fn unwritten_read(
             Finding {
                 function: analysis.function,
                 kind: Kind::IndeterminateLocal,
-                conclusion: Conclusion::Unsafe,
+                conclusion: if partly {
+                    Conclusion::Unknown
+                } else {
+                    Conclusion::Unsafe
+                },
                 at,
                 local: Some(local),
                 freed: None,
@@ -2224,9 +2240,9 @@ pub(super) fn stored_away(
 ///   an address this function never recorded, [`Known::through_unnamed`]:
 ///   `**ppp = x`, and `*pp = x` with `pp` read out of a parameter's memory;
 /// - anywhere at all, where the pointer names nothing this check followed,
-///   neither an allocation nor a local: one moved off a local array by
-///   arithmetic (#639), `*a[1] = x`, may be any of them, and taking it to
-///   land nowhere silenced a free;
+///   neither an allocation nor a local: one moved off a local that is not
+///   an array by a non-zero constant (ADR-0019) may be any of them, and
+///   taking it to land nowhere silenced a free;
 /// - an allocation such code can reach, [`Known::sites_named_by_unknown_code`]:
 ///   one exposed to it, which a parameter's memory is from the function's
 ///   start (ADR-0040), or one a local whose address it holds points at, at

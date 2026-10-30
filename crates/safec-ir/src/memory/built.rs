@@ -5,7 +5,7 @@
 use crate::ir::{BinOp, Function, LocalId, Operand, Place, TranslationUnit, Ty};
 
 use super::derefs;
-use super::known::Known;
+use super::known::{ArrayWrite, Known};
 use super::parts::{Held, Offset, Reached};
 use super::transfer::innermost_element;
 
@@ -31,6 +31,10 @@ use super::transfer::innermost_element;
 /// One function with two callers, because the same question is asked where a
 /// value is assigned and where one is written through a pointer, and one rule
 /// in two places drifts apart inside the change that touches one of them.
+///
+/// Each closure is a question about the function being checked, which this
+/// module has no handle on; bundling them would be a type with one caller.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn built_from(
     op: BinOp,
     operands: [&Operand; 2],
@@ -39,6 +43,7 @@ pub(super) fn built_from(
     may_be_pointer: impl Fn(&Place) -> bool,
     reads_a_byte: impl Fn(&Place) -> bool,
     reads_caller_memory: impl Fn(LocalId, usize) -> bool,
+    is_array: impl Fn(usize) -> bool,
 ) -> Held {
     let followed: Vec<LocalId> = operands
         .iter()
@@ -130,6 +135,21 @@ pub(super) fn built_from(
         // Found by review. See ADR-0019 and ADR-0045.
         for target in locals {
             reached.writes_to.set(target);
+            // And it may be a pointer that reached an array only by #639's
+            // rule. See `Known::stored_in_part`.
+            if value.stored_in_part[target] {
+                reached.array_edge = true;
+            }
+        }
+        // Or read out of a local, not an array, that holds one, as
+        // `read_through` says.
+        if value
+            .levels_below(load.local, derefs(load) - 1)
+            .1
+            .into_iter()
+            .any(|local| !is_array(local) && value.points_to[local].array_edge)
+        {
+            reached.array_edge = true;
         }
         // And lost where the load would be. See ADR-0045.
         if value.stale_below(load.local, derefs(load)) {
@@ -286,10 +306,115 @@ pub(super) fn replaced_by(
     for local in value.locals_a_write_may_land_in(place.local, derefs(place)) {
         lands[local] = true;
     }
+    // **Through a pointer moved off an array, an element of it**, as the
+    // placed store answers: still a write `replaced` makes of every local it
+    // may land in, then partly written where it was unwritten before. See
+    // `Known::partly_written`.
+    let writes = write_effects(
+        unit,
+        function,
+        value,
+        place.local,
+        derefs(place),
+        (0..lands.len()).filter(|&local| lands[local] && may_hold[local]),
+        false,
+    );
+    let pending = value.array_writes_before(writes);
     value.replaced(
         |local| may_hold[local],
         |local| may_hold[local] && lands[local],
     );
+    value.array_writes_after(pending);
+}
+
+/// What a write through `local`, `dereferences` deep, is to each array among
+/// `lands` that it does not write whole: one element, where every pointer it
+/// goes through that names the array names the same known element, and an
+/// element that may be any of them, where the edge to the array exists only
+/// by #639's rule or the pointer was read out of memory. An array missing
+/// from the answer is written whole, as every array was before #667.
+///
+/// **Whole where `main` kept the edge, in part where only the array rule
+/// did**, by the user's decision on #667: every other line measured lost a
+/// proof `main` gives or doubted every loop that fills an array. A `call`,
+/// a library copy or a call this check cannot read, may write past the
+/// element it is handed, so what it is handed at a known element other
+/// than the start is in part too. One answer for the placed store, a store
+/// this check cannot place, a library copy and a call. See
+/// `Known::unwritten_elements` and ADR-0057.
+pub(super) fn write_effects(
+    unit: &TranslationUnit,
+    function: &Function,
+    value: &Known,
+    local: LocalId,
+    dereferences: usize,
+    lands: impl IntoIterator<Item = usize>,
+    call: bool,
+) -> Vec<(usize, ArrayWrite)> {
+    let lands: Vec<usize> = lands.into_iter().collect();
+    let (mut through, from_memory): (Vec<usize>, bool) = match dereferences {
+        0 => return Vec::new(),
+        1 => (vec![local.index()], false),
+        _ => {
+            let (sites, locals) = value.levels_below(local, dereferences - 2);
+            (locals.into_iter().collect(), !sites.is_empty())
+        }
+    };
+    // **A call writes through every pointer it can reach**, not only the
+    // one it is handed: `fill(&e, &x)` with `e = m + 1` writes `m` through
+    // `e`, a level below the argument. Every local it may write is one it
+    // may read a pointer out of, so those are what is asked.
+    if call {
+        through.extend(lands.iter().copied());
+    }
+    lands
+        .into_iter()
+        .filter(|&each| is_array(unit, function, each))
+        .filter_map(|each| {
+            let naming: Vec<&super::parts::Held> = through
+                .iter()
+                .map(|&pointer| &value.points_to[pointer])
+                .filter(|held| held.writes_to.get(each))
+                .collect();
+            // **And a call may read a moved pointer out of memory** a store
+            // put there, which no local it reaches by name holds: `*h = m +
+            // 1; fill(h);` with `h` an allocation. See
+            // `Known::stored_in_part`. Found by review of #667.
+            let array_edge = from_memory
+                || naming.iter().any(|held| held.array_edge)
+                || (call && value.stored_in_part[each]);
+            let element = match naming.split_first() {
+                Some((first, rest)) if rest.iter().all(|held| held.element == first.element) => {
+                    first.element
+                }
+                _ => None,
+            };
+            let kept = value.unwritten_elements[each].len() > 0;
+            match element {
+                Some(0) if call && !array_edge => None,
+                Some(_) if call => Some(ArrayWrite::Maybe),
+                // Not where a pointer it goes through was read out of memory,
+                // whose element nobody recorded: `**q` with `q` either `&e`
+                // or an allocation holding `m` writes `m[1]` or `m[0]`.
+                // Found by review of #667.
+                Some(element) if kept && !from_memory => Some(ArrayWrite::Element(element)),
+                _ if array_edge => Some(ArrayWrite::Maybe),
+                _ => None,
+            }
+            .map(|write| (each, write))
+        })
+        .collect()
+}
+
+/// Whether the local at `index` is an array. One answer for the edge a
+/// pointer moved off it keeps and for the write through such a pointer
+/// being of an element. See `Held::moved_by_arithmetic` and
+/// `Known::partly_written`.
+pub(super) fn is_array(unit: &TranslationUnit, function: &Function, index: usize) -> bool {
+    function
+        .locals()
+        .nth(index)
+        .is_some_and(|local| matches!(unit.ty(function.local(local)), Ty::Array { .. }))
 }
 
 /// The sites out of everything a place or an argument reached.

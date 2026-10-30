@@ -97,15 +97,26 @@ first answer and not by this one.
 in this crate is, and what a missed arm would mean here is that a write silently
 carries nothing, which is a silence rather than a build error.
 
-**The edge stops at pointer arithmetic that moves the pointer.** C17 6.5.6 p8
+**The edge stops at pointer arithmetic that moves the pointer, unless it points into an array.** C17 6.5.6 p8
 keeps the result of `p + 1` inside the object `p` points into, which is why the
 *allocation* travels through the arithmetic arm. A local's address plus one is
 not that local, so the edge does not: `pp[1] = q;` is an out of bounds write,
 and following it reported a proved use after free about an allocation nothing
-had freed. An array local is not an array of one, since `m + 1` is its second
-element, and the edge is dropped there all the same, so a pointer stored
-through `m[1]` and freed is `Unknown` where it is stored and read back rather
-than named as freed where it is used (#621, #639).
+had freed. **An array local keeps the edge** (#639): it is not an array of
+one, and the same paragraph lets a pointer into it move to any element, so
+`m + 1` is `m[1]`. Dropped there, a pointer stored through `m[1]` and freed was
+`Unknown` where it was stored and read back rather than named as freed where it
+was used. The edge names the array and not the element, as it does for a
+pointer at the start, so a free through one element is answered for all of it,
+and past the end is the bounds rule's to report (ADR-0060). **Beside the edge,
+the pointer carries the element it points at** where that is known (#667):
+`&m[0]` is element zero, a constant move adds the constant times the elements
+one pointee holds, so `&m[0] + 1` into `int *m[2][2]` is element two, and a
+join keeps it where both paths agree. `Held::element` is what lets a write
+through it be of that element alone, which ADR-0057 decides. `Held::array_edge`
+says the edge survives only by this paragraph's rule, at a move `main`
+dropped it for, so that a write which has since lost the element is one that
+may be of any element rather than of the whole array.
 
 **Where the offset may be zero, the edge survives.** The same paragraph treats a
 local as an array of one, so `&slot + n` may be dereferenced only for `n` of
@@ -120,8 +131,7 @@ nothing here could tell one offset from another; ADR-0036 since carries
 edge is a may-write by union, so being wrong about it is a doubt and never a
 proof. Two things it does not follow: a pointer moved off its start and back,
 `up = po + 1; back = up - 1;`, which drops the edge at `up` before `back` could
-keep it; and an array local, where `m + 1` names a real element and the
-`NonZero` drop rests on a premise that does not hold, which is #639.
+keep it, for a local that is not an array.
 
 [ADR-0021](./0021-fold-a-zero-pointer-offset-where-the-ir-is-built.md) still
 folds a zero away when the IR is built, so `pp[0]` and `*pp` are one shape before

@@ -1,0 +1,167 @@
+Target "x86_64-pc-windows-msvc"
+Function a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int" "x"
+  Local "_3" "int *[4]" "m"
+  Local "_4" "int **" "e"
+  Local "_5" "int **"
+  Local "_6" "int **"
+  Local "_7" "int **"
+  Local "_8" "int **"
+  Local "_9" "int *"
+  Local "_10" "int *"
+  Local "_11" "int **" "h"
+  Local "_12" "void *"
+  Local "_13" "int"
+  Local "_14" "int **" "w"
+  Local "_15" "int **"
+  Local "_16" "int **"
+  Local "_17" "int *" "r"
+  Local "_18" "int"
+  Block "bb0" entry
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:4:9 written
+      Destination "_2"
+      Use
+        Constant 1
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:4:13 generated
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:6:15 generated
+      Destination "_5"
+      Address
+        Place "_3"
+          Index
+            Constant 0
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:6:15 written
+      Destination "_6"
+      Binary "Add"
+        Copy "_5"
+        Constant 1
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:6:11 written
+      Destination "_4"
+      Use
+        Copy "_6"
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:6:15 generated
+    Branch a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:7:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:7:9 generated
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:8:13 written
+      Destination "_7"
+      Binary "Add"
+        Copy "_4"
+        Constant 1
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:8:9 written
+      Destination "_4"
+      Use
+        Copy "_7"
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:8:9 written
+      Destination "_8"
+      Use
+        Copy "_4"
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:8:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:7:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:10:10 written
+      Destination "_9"
+      Address
+        Place "_2"
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:10:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_9"
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:10:5 written
+      Destination "_10"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:10:5 generated
+    ArgumentsEvaluated a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:11:15 generated
+    Call a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:11:15 written "malloc" "bb4"
+      Destination "_12"
+      Constant 8
+  Block "bb4"
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:11:11 written
+      Destination "_11"
+      Use
+        Copy "_12"
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:11:15 generated
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:12:9 written
+      Destination "_13"
+      Binary "Eq"
+        Copy "_11"
+        Constant 0
+    Branch a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:12:9 written "bb5" "bb6"
+      Copy "_13"
+  Block "bb5"
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:12:9 generated
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:13:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:13:16 generated
+    Return
+  Block "bb6"
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:12:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:15:11 written
+      Destination "_14"
+      Use
+        Copy "_11"
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:15:15 generated
+    Branch a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:16:9 written "bb8" "bb9"
+      Copy "_1"
+  Block "bb8"
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:16:9 generated
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:17:13 generated
+      Destination "_15"
+      Address
+        Place "_3"
+          Index
+            Constant 0
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:17:9 written
+      Destination "_14"
+      Use
+        Copy "_15"
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:17:9 written
+      Destination "_16"
+      Use
+        Copy "_14"
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:17:9 generated
+    Goto "bb10"
+  Block "bb9"
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:16:9 generated
+    Goto "bb10"
+  Block "bb10"
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:19:10 written
+      Destination "_17"
+      Use
+        Copy "_14"
+          Deref
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:19:14 generated
+    ArgumentsEvaluated a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:20:5 generated
+    Call a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:20:5 written "free" "bb11"
+      Copy "_11"
+  Block "bb11"
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:20:5 generated
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:21:12 written
+      Destination "_18"
+      Binary "Eq"
+        Copy "_17"
+        Constant 0
+    Operation a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:21:5 written
+      Destination "_0"
+      Use
+        Copy "_18"
+    Sequenced a_read_through_a_pointer_to_an_array_written_in_part_or_to_fresh_memory_is_doubted.c:21:12 generated
+    Return

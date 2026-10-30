@@ -1,0 +1,123 @@
+Target "x86_64-pc-windows-msvc"
+Function every_element_of_a_local_array_written_one_by_one_is_not_reported.c:1:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int" "a"
+  Local "_2" "int" "b"
+  Local "_3" "int *[2]" "m"
+  Local "_4" "int **"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Local "_7" "int **"
+  Local "_8" "int **"
+  Local "_9" "int *"
+  Local "_10" "int *"
+  Local "_11" "int *" "q"
+  Local "_12" "int **"
+  Local "_13" "int *" "r"
+  Local "_14" "int **"
+  Local "_15" "int **"
+  Local "_16" "int"
+  Block "bb0" entry
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:1:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:2:9 written
+      Destination "_1"
+      Use
+        Constant 1
+    Sequenced every_element_of_a_local_array_written_one_by_one_is_not_reported.c:2:13 generated
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:3:9 written
+      Destination "_2"
+      Use
+        Constant 2
+    Sequenced every_element_of_a_local_array_written_one_by_one_is_not_reported.c:3:13 generated
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:5:5 generated
+      Destination "_4"
+      Address
+        Place "_3"
+          Index
+            Constant 0
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:5:12 written
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:5:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_5"
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:5:5 written
+      Destination "_6"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced every_element_of_a_local_array_written_one_by_one_is_not_reported.c:5:5 generated
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:6:5 generated
+      Destination "_7"
+      Address
+        Place "_3"
+          Index
+            Constant 0
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:6:5 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_7"
+        Constant 1
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:6:12 written
+      Destination "_9"
+      Address
+        Place "_2"
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:6:5 written
+      Destination "_8"
+        Deref
+      Use
+        Copy "_9"
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:6:5 written
+      Destination "_10"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced every_element_of_a_local_array_written_one_by_one_is_not_reported.c:6:5 generated
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:7:14 generated
+      Destination "_12"
+      Address
+        Place "_3"
+          Index
+            Constant 0
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:7:10 written
+      Destination "_11"
+      Use
+        Copy "_12"
+          Deref
+    Sequenced every_element_of_a_local_array_written_one_by_one_is_not_reported.c:7:14 generated
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:8:14 generated
+      Destination "_14"
+      Address
+        Place "_3"
+          Index
+            Constant 0
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:8:14 written
+      Destination "_15"
+      Binary "Add"
+        Copy "_14"
+        Constant 1
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:8:10 written
+      Destination "_13"
+      Use
+        Copy "_15"
+          Deref
+    Sequenced every_element_of_a_local_array_written_one_by_one_is_not_reported.c:8:14 generated
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:9:12 written
+      Destination "_16"
+      Binary "Add"
+        Copy "_11"
+          Deref
+        Copy "_13"
+          Deref
+    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:9:5 written
+      Destination "_0"
+      Use
+        Copy "_16"
+    Sequenced every_element_of_a_local_array_written_one_by_one_is_not_reported.c:9:12 generated
+    Return

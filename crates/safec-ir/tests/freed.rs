@@ -1654,8 +1654,9 @@ fn offset_into(through: LocalId, from: LocalId, by: i128, at: Span, then: BlockI
 /// hand-built IR reaches this one.
 ///
 /// **The check does not tell one offset from another.** Every
-/// `Rvalue::Binary` drops the edge, a zero included; this name says what its
-/// own program does, not what the rule distinguishes. Where the distinction
+/// `Rvalue::Binary` drops the edge to a local that is not an array, a zero
+/// included, and keeps it to an array (#639); this name says what its own
+/// program does, not what the rule distinguishes. Where the distinction
 /// lives is the lowering, and what is lost without it is
 /// [`an_unfolded_zero_offset_is_followed_as_an_offset_that_may_be_zero`].
 ///
