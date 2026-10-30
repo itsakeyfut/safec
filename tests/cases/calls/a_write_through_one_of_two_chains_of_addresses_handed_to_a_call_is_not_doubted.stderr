@@ -8,7 +8,7 @@ warning[SC0412]: this may reach outside the object `pa` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
-warning[SC0414]: this frees `q`, whose address was stored where code outside this function may read it
+warning[SC0414]: this frees `q`, a pointer that was stored where code outside this function may read it
     ╭─[ a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:10:3 ]
     │
   5 │   int *q = malloc(4); if(!q) { free(a); free(b); return 0; }

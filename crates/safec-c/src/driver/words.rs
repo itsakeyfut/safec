@@ -522,7 +522,7 @@ pub(super) fn memory_finding(
                 "this frees an allocation whose address was stored where code outside this function may read it",
                 |name| {
                     format!(
-                        "this frees `{name}`, whose address was stored where code outside this function may read it"
+                        "this frees `{name}`, a pointer that was stored where code outside this function may read it"
                     )
                 },
             ),

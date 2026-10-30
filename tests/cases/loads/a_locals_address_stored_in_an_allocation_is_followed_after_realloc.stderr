@@ -1,4 +1,4 @@
-warning[SC0414]: this frees `r`, whose address was stored where code outside this function may read it
+warning[SC0414]: this frees `r`, a pointer that was stored where code outside this function may read it
     ╭─[ a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:23:5 ]
     │
   6 │     int *r = malloc(4);

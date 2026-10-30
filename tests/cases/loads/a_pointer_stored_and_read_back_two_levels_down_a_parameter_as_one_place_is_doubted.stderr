@@ -1,4 +1,4 @@
-error[SC0414]: this frees `m`, whose address was stored where code outside this function may read it
+error[SC0414]: this frees `m`, a pointer that was stored where code outside this function may read it
    ╭─[ a_pointer_stored_and_read_back_two_levels_down_a_parameter_as_one_place_is_doubted.c:8:5 ]
    │
  5 │     int *m = malloc(4);

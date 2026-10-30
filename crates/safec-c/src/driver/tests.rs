@@ -2142,6 +2142,28 @@ mod unassigned {
         );
     }
 
+    /// A free of an allocation stored where code outside may read it (#650)
+    /// is `SC0414`, the door it left by, and says what was stored, a pointer,
+    /// with a name and without one. No case reaches the nameless form, since
+    /// a free through a place of dereferences is a double free's doubt first.
+    ///
+    /// Mutation: give it another code, or say `x`'s address was stored, or
+    /// change the nameless words. This fails.
+    #[test]
+    fn a_free_of_an_allocation_stored_out_is_sc0414_and_says_a_pointer_was_stored() {
+        let (code, message, _) = said(Kind::FreedAfterStore, Conclusion::Unknown);
+        assert_eq!(code, "SC0414");
+        assert_eq!(
+            message,
+            "this frees `p`, a pointer that was stored where code outside this function may read it"
+        );
+        let (_, nameless, _) = said_of(Kind::FreedAfterStore, Conclusion::Unknown, None);
+        assert_eq!(
+            nameless,
+            "this frees an allocation whose address was stored where code outside this function may read it"
+        );
+    }
+
     /// The same code for a pointer read out of memory nothing wrote, in
     /// words of its own. Mutation: give it another code, or drop the note.
     /// This fails.
