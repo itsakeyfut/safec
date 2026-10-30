@@ -284,7 +284,9 @@ of it need not be a caller. A pointer stored out live is asked what it points
 at holds, at every level, as a return is. And in the other order, a live
 pointer stored out and freed after, `*pp = x; free(x);`, is `SC0414` as a
 doubt at the free, since the store was of a live pointer and a caller's memory
-is nothing this check can ask at the return (#650). Only a doubt, since
+is nothing this check can ask at the return (#650), and so is a free of what a
+box stored out holds. A call that may free it instead is not asked, which is
+#672. Only a doubt, since
 whoever reads that memory may only write it, so `*pp = 0;` after the free is
 doubted too until this check follows what one place there holds (#656). The
 same ADR records it and what it costs.

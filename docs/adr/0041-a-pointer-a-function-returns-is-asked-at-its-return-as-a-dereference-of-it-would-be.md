@@ -155,8 +155,11 @@ silence: the store door asked a live pointer, and a parameter's memory is no
 site this check models, so at the return nothing can be asked what it holds.
 `Known::stored_out` records, per site, that a pointer to it may have been
 stored by a store `Known::leaves` says leaves, the store door's own rule, a
-union at every join and cleared where the site is made again; a free that
-reaches such a site, where it is no double free, is `FreedAfterStore` under
+union at every join and cleared where the site is made again, and with it
+everything those allocations hold, at every level, as `freed_behind` asks what
+leaves: marking only the value stored left `*b = x; *pp = b; free(x);` silent
+while the same stores the other way round were doubted, found by review. A free
+that reaches such a site, where it is no double free, is `FreedAfterStore` under
 `SC0414`. Asked at the free rather than at the return, which would have had
 the function's name for a caret and could clear nothing either. A doubt, for
 the reason the paragraph above gives, by the user's decision. It costs what
@@ -165,7 +168,9 @@ doubted, since this check does not follow what one place in such memory holds,
 which is #656; in the corpus, 28 programs that already had a report each gained
 this one at their free, and none was newly refused. A library copy out of the
 function marks nothing, as the store door asks nothing of one, which is
-#652.
+#652. And only `free` and `realloc` ask the mark: a call that may free what it
+is handed, `*pp = x; release(x);`, is still silent, since asking every such call
+doubts `*out = n; append(list, n);`, by the user's decision; that is #672.
 
 **What this costs.** What memory holds only gains, so a slot freed and then
 overwritten with null or a new allocation is still doubted at the door,
@@ -230,7 +235,8 @@ and `memory/`), applied and measured, and a named case in
   `an_allocation_stored_in_a_local_and_then_freed_is_not_doubted`, and
   `Known::reborn` leaving it fails
   `an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store`
-  (#650).
+  (#650). Marking only the value stored fails
+  `an_allocation_stored_in_a_box_stored_where_the_caller_reads_it_and_then_freed_is_doubted`.
 * Not asking `freed_behind` at a return fails
   `a_box_holding_a_freed_pointer_returned_is_doubted` and, for a return of a
   dereference, `a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted`;
