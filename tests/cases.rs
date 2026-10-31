@@ -4002,6 +4002,11 @@ cases! {
         // what the arm that called `put` handed it as. Mutation: the join
         // keeps the side joined into; this goes silent.
         a_local_a_callee_wrote_on_one_arm_is_bounded_where_a_later_call_writes_it_again_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `put` may have kept `v`'s address and store through it at any later
+        // call, so `put4`, well typed, does not raise what it was bounded by,
+        // the cost ADR-0060 records. Mutation: each call replaces the record
+        // rather than bounding it; this goes silent.
+        a_local_once_handed_through_a_void_pointer_is_bounded_by_it_at_a_later_well_typed_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Through a `void *` nothing is believed at any level, and the doubts
         // about `v`'s level and its memory's are one report. Mutation: name the
         // doubt about what a value's memory holds by nothing; this is two.
