@@ -1830,10 +1830,12 @@ cases! {
         a_free_through_a_pointer_that_reached_another_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `pp[1] = q;` writes past `p`, which `SC0412` doubts. Read as an array
-        // of one, `p` may have been written, so it is lost, and the free and
-        // the use after it are doubts rather than proofs about an allocation
-        // nothing freed (#647). Mutation: leave such a local unmarked; `*q` is
-        // a proved use after free.
+        // of one, `p` may have been written, so the free and the use after it
+        // are doubts about an allocation nothing freed, the cost #647 chose.
+        // Mutation: keep only an array's edge through a known move; the
+        // `SC0402` doubt goes. Leaving such a local unmarked decides nothing
+        // here, measured, since `p` holds an allocation of its own;
+        // `an_offset_that_moves_the_pointer_proves_no_use_after_free` holds it.
         a_write_through_an_address_plus_one_is_a_doubted_write_of_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local that is not an array is an array of one, so a pointer moved off
         // it and back writes it, and the read after it is no `SC0411` (#647). See
