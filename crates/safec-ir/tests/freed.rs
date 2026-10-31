@@ -1647,25 +1647,16 @@ fn offset_into(through: LocalId, from: LocalId, by: i128, at: Span, then: BlockI
 /// lands.
 ///
 /// **The one place this question is asked that no C program reaches.** `*pp =
-/// qq + 7;` puts a pointer seven past `z` into `p`, so a later write through
-/// `p` does not land in `z`. The arm that answers this carried the edge
-/// through any arithmetic at all, while the arm one level up had just been
-/// taught to drop it, and the two disagreeing was invisible because only a
-/// hand-built IR reaches this one.
-///
-/// **The check does not tell one offset from another.** Every
-/// `Rvalue::Binary` drops the edge to a local that is not an array, a zero
-/// included, and keeps it to an array (#639); this name says what its own
-/// program does, not what the rule distinguishes. Where the distinction
-/// lives is the lowering, and what is lost without it is
-/// [`an_unfolded_zero_offset_is_followed_as_an_offset_that_may_be_zero`].
+/// qq + 7;` puts a pointer seven past `z` into `p`, and a later write through
+/// `p` is asked whether it lands in `z`. Only a hand-built IR reaches this
+/// arm, so the arm one level up and this one agreeing is held here.
 ///
 /// **Observed through `q` rather than through `z`.** `z` had its address
 /// taken, so ADR-0017 answers `Reached::Lost` for it wherever a report is
 /// made and it can never be the subject of a proof; a test that asked about
 /// `z` could not tell the two answers apart. `q` escaped nowhere, so what it
-/// holds is provable, and carrying the edge is what would put `q`'s
-/// allocation into `z` for `free(z)` to take.
+/// holds is provable, and the edge kept is what puts `q`'s allocation into
+/// `z` for `free(z)` to take.
 ///
 /// **Seven past `z` may be `z`, read as an array of one, and so `z` is lost**
 /// (#647): the edge survives a known move for every local, so `free(z)` may

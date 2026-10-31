@@ -113,8 +113,7 @@ three places:
   `keepp(&slot); slot = &t; t = x;`, before any later call marks it (#655);
 - anywhere, where the pointer or a level on the way down may hold an
   address this function never recorded (`Known::through_unnamed`), or where
-  the pointer names nothing this check followed, as one moved off a local
-  that is not an array by a non-zero constant does (ADR-0019).
+  the pointer names nothing this check followed.
 
 A write of such a local without a pointer, `keep(&slot); slot = x;`, is the
 same store and is asked the same way. Every route is the same proof, which
