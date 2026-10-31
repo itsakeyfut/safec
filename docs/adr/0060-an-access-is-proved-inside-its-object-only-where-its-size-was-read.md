@@ -116,15 +116,18 @@ address is memory holding its value, so below its own level it is asked, and
 read, by what that value believes (#634). The list is no longer than the
 deepest pointer type among the function's locals, which a store cannot
 lengthen, so the lattice it sits in has a finite height, and both bounds on
-one function count it. What a call writes into a local is bounded at every
-level, by what the types it was handed through say there,
-`Known::handed_contents_at_most`, and nothing at any level through a `void *`,
-which may store any pointer at any type: bounded at the local's own level only,
-`put(pv)` with `put` taking `void ***` left `v` an `int ***` believing whole
-`int`s two levels down, and `use(v)` handed a one-byte allocation on in silence
-(#636). The doubt about what a departing local's memory holds is named by that
-local, so it and a doubt about the local's own level at the same call are one
-report. Each only lowers a belief, so
+one function count it. What a call writes into a local it was handed as a
+pointer is bounded at every level, by what the types it was handed through
+say there, `Known::handed_contents_at_most`, through an array to its element,
+and nothing at any level through a `void *`, which may store any pointer at
+any type: bounded at the local's own level only, `put(pv)` with `put` taking
+`void ***` left `v` an `int ***` believing whole `int`s two levels down, and
+`use(v)` handed a one-byte allocation on in silence (#636). A local handed as
+bytes is bounded at no level, since a typed store puts no pointer there and a
+`memcpy` into one is asked nothing of it, which is #675. The doubt about what a
+departing local's memory holds is named by that local and says what is narrow
+is what its memory holds, and a doubt about the local's own level at the same
+call stands over it, so the two are one report. Each only lowers a belief, so
 being wrong is a false `Unknown`, and it is paid by conforming code: a
 `void **` that does point at an `int *` is refused when read through an
 `int **`, a well-typed store does not raise a bound an earlier one set, and a
@@ -274,7 +277,15 @@ Each mutation applied on its own, the workspace run, and the file restored.
   `a_local_a_callee_wrote_as_its_own_type_is_not_doubted_when_handed_on`, and
   naming that doubt by nothing makes
   `a_local_handed_through_a_void_pointer_is_doubted_once_when_handed_on_deeper`
-  two reports (#636).
+  two reports. Bounding nothing below a `void *` silences the reads in
+  `a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back`,
+  taking an array's levels rather than its element's doubts
+  `a_local_array_a_callee_wrote_as_its_own_type_is_not_doubted_when_handed_on`,
+  a call's write replacing what the value believed silences
+  `a_local_a_callee_wrote_keeps_its_own_bound_where_a_later_call_may_write_it_again`,
+  and the join taking either side alone silences one of the two
+  `a_local_a_callee_wrote_on_..._arm_is_bounded_where_a_later_call_writes_it_again_after_the_join`
+  (#636).
 * memory believed wider than it arrived as below its first level: a load
   taking the type it is read as alone silences
   `a_void_pointer_three_levels_deep_converted_whole_is_believed_below_its_first_level`;
