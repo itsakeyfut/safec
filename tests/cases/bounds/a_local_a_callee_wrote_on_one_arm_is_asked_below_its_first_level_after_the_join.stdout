@@ -1,0 +1,208 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:2:6 "put"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "p"
+  Local "_2" "int"
+  Local "_3" "char *" "cc"
+  Local "_4" "void *"
+  Local "_5" "void **" "m"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "void *"
+  Local "_9" "void **"
+  Block "bb0" entry
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:3:9 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:3:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:3:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:6:16 generated
+    Call a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:6:16 written "malloc" "bb4"
+      Destination "_4"
+      Constant 1
+  Block "bb4"
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:6:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:6:16 generated
+    ArgumentsEvaluated a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:7:16 generated
+    Call a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:7:16 written "malloc" "bb5"
+      Destination "_6"
+      Constant 8
+  Block "bb5"
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:7:12 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:7:16 generated
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:8:9 written
+      Destination "_7"
+      Binary "Ne"
+        Copy "_5"
+        Constant 0
+    Branch a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:8:9 written "bb6" "bb7"
+      Copy "_7"
+  Block "bb6"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:8:9 generated
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:9:9 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:9:9 written
+      Destination "_8"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:9:9 generated
+    Goto "bb8"
+  Block "bb7"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:8:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:11:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:11:5 written
+      Destination "_9"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:11:5 generated
+    Return
+Function a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:13:6 "use"
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "p"
+  Local "_2" "int"
+  Local "_3" "int **" "q"
+  Local "_4" "int"
+  Local "_5" "int *" "r"
+  Local "_6" "int"
+  Local "_7" "int"
+  Block "bb0" entry
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:14:9 written
+      Destination "_2"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:14:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:14:9 generated
+    StorageLive a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:15:9 generated "_3"
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:15:15 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:15:19 generated
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:16:13 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_3"
+        Constant 0
+    Branch a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:16:13 written "bb4" "bb5"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:14:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+  Block "bb4"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:16:13 generated
+    StorageLive a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:17:13 generated "_5"
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:17:18 written
+      Destination "_5"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:17:22 generated
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:18:17 written
+      Destination "_6"
+      Binary "Ne"
+        Copy "_5"
+        Constant 0
+    Branch a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:18:17 written "bb7" "bb8"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:16:13 generated
+    Goto "bb6"
+  Block "bb6"
+    StorageDead a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:22:5 generated "_3"
+    Goto "bb3"
+  Block "bb7"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:18:17 generated
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:19:17 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 1
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:19:17 written
+      Destination "_7"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:19:17 generated
+    Goto "bb9"
+  Block "bb8"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:18:17 generated
+    Goto "bb9"
+  Block "bb9"
+    StorageDead a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:21:9 generated "_5"
+    Goto "bb6"
+Function a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:24:6 "run"
+  Local "_0" "void" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int ***" "v"
+  Local "_3" "void *" "pv"
+  Local "_4" "int ****"
+  Block "bb0" entry
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:25:12 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:25:16 generated
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:26:16 written
+      Destination "_4"
+      Address
+        Place "_2"
+    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:26:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:26:16 generated
+    Branch a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:27:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:27:9 generated
+    ArgumentsEvaluated a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:28:9 generated
+    Call a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:28:9 written "put" "bb4"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:27:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:30:5 generated
+    Call a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:30:5 written "use" "bb5"
+      Copy "_2"
+  Block "bb4"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:28:9 generated
+    Goto "bb3"
+  Block "bb5"
+    Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:30:5 generated
+    Return

@@ -1199,6 +1199,7 @@ impl Allocations<'_> {
             extent,
             stored_at_most,
             handed_at_most,
+            handed_contents_at_most,
             unwritten,
             partly_written,
             unwritten_elements,
@@ -1281,6 +1282,14 @@ impl Allocations<'_> {
         }
         // Bounds, so the lower of two, and a side with none is no bound.
         for (here, there) in stored_at_most.iter_mut().zip(&from.stored_at_most) {
+            here.bound_by(there);
+        }
+        // Bounds, so the lower of two at every level. See
+        // `Known::handed_contents_at_most`.
+        for (here, there) in handed_contents_at_most
+            .iter_mut()
+            .zip(&from.handed_contents_at_most)
+        {
             here.bound_by(there);
         }
         for (here, there) in handed_at_most.iter_mut().zip(&from.handed_at_most) {
@@ -1574,13 +1583,15 @@ impl Analysis for Allocations<'_> {
         // value is believed to point at, `Held::believed`, is a proof a join
         // only lowers or drops, and the slack above covers it. See ADR-0060.
         //
-        // **What a local's value believes of its memory and what was stored in
-        // a site, one [`Levels`] each, are a list of [`Self::deepest_pointer`] entries
+        // **What a local's value believes of its memory, what was stored in
+        // a site, and what a call it was handed to may have written there,
+        // one [`Levels`] each, are a list of [`Self::deepest_pointer`] entries
         // apiece**, and a join only lowers an entry: from no bound to a
         // width, and from a width to a smaller one. Every width is a type's
         // size or `0`, so at most one per local and one more, and the list
         // may also grow to its full length once, which changes no bound but
-        // is a step to `Eq`: `locals + 2` steps an entry, two lists a local.
+        // is a step to `Eq`: `locals + 2` steps an entry, three lists a local
+        // (#636).
         // Found by review, which measured a loop head visited 255 times at
         // 256 `*`s where the bound had not counted these (#634).
         let positions: usize = function
@@ -1600,7 +1611,7 @@ impl Analysis for Allocations<'_> {
             + positions * (2 * locals + 3)
             + locals
             + locals * (positions + locals + 2)
-            + 2 * locals * self.deepest_pointer * (locals + 2)
+            + 3 * locals * self.deepest_pointer * (locals + 2)
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -1635,6 +1646,7 @@ impl Analysis for Allocations<'_> {
             // Nothing stored and nothing handed to a call yet.
             stored_at_most: vec![Levels::default(); self.locals],
             handed_at_most: vec![None; self.locals],
+            handed_contents_at_most: vec![Levels::default(); self.locals],
             // Every local that may hold a pointer, but the parameters, which
             // the caller wrote. See `Known::unwritten`.
             unwritten: self.unwritten_at_entry(),
@@ -3310,6 +3322,19 @@ impl Analysis for Allocations<'_> {
                         };
                         value.handed_at_most[local.index()] =
                             bounded(value.handed_at_most[local.index()], Some(width));
+                        // **And below it, at every level**, as the type it
+                        // was reached as says: through a `void *`, nothing
+                        // at any level. See `Known::handed_contents_at_most`.
+                        // Through an array to its element, as the width
+                        // above reads it: `fill(&a)` with `a` an `int **[2]`
+                        // took `a` as reached through a `void *`. Found by
+                        // review.
+                        let levels = self
+                            .type_levels(innermost_element(self.unit, read_as))
+                            .unwrap_or_else(|| {
+                                Levels::from_bounds(vec![Some(0); self.deepest_pointer])
+                            });
+                        value.handed_contents_at_most[local.index()].bound_by(&levels);
                     }
                 }
                 // **And what it wrote there, or into memory it was handed, may
@@ -3393,8 +3418,14 @@ impl Analysis for Allocations<'_> {
                     // As of this load, and before the borrow below. See
                     // `Held::named_at_read`.
                     let named_now = value.locals_named_by_unknown_code();
+                    let handed_contents = value.handed_contents_at_most[local].clone();
                     let held = &mut value.points_to[local];
                     held.believed = believed;
+                    // **And what its memory holds, no more than it was
+                    // handed as at every level below** (#636), bounding what
+                    // it held, since a callee that writes nothing leaves
+                    // that. See `Known::handed_contents_at_most`.
+                    held.contents_at_most.bound_by(&handed_contents);
                     for &site in &stored {
                         if !(holds_an_address && deep[site]) {
                             held.hold(site, Offset::Unknown);

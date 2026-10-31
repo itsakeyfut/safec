@@ -1,0 +1,10 @@
+error[SC0413]: this lets `v` leave, and what it points at may hold a pointer to an object narrower than it is read as
+    ╭─[ a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:30:5 ]
+    │
+ 30 │     use(v);
+    │     ───┬──  
+    │        ╰──── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

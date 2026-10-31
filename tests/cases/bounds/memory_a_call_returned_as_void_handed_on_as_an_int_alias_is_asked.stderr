@@ -1,4 +1,4 @@
-error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+error[SC0413]: this lets `pm` leave, and what it points at may hold a pointer to an object narrower than it is read as
     ╭─[ memory_a_call_returned_as_void_handed_on_as_an_int_alias_is_asked.c:23:5 ]
     │
  23 │     use(pm);
