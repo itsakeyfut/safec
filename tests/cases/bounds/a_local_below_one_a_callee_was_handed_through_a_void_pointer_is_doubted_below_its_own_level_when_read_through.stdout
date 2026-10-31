@@ -1,0 +1,67 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:1:6 "put" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:2:6 "use1" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+Function a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:3:6 "run"
+  Local "_0" "void" return
+  Local "_1" "int **" "w"
+  Local "_2" "int ***" "v"
+  Local "_3" "int ***"
+  Local "_4" "int ****"
+  Local "_5" "int"
+  Local "_6" "int *" "r"
+  Block "bb0" entry
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:4:11 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:4:15 generated
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:5:16 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:5:12 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:5:16 generated
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:6:9 written
+      Destination "_4"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:6:5 generated
+    Call a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:6:5 written "put" "bb1"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:6:5 generated
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:7:9 written
+      Destination "_5"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:7:9 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:7:9 generated
+    StorageLive a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:8:9 generated "_6"
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:8:14 written
+      Destination "_6"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:8:18 generated
+    ArgumentsEvaluated a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:9:9 generated
+    Call a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:9:9 written "use1" "bb5"
+      Copy "_6"
+  Block "bb3"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:7:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Return
+  Block "bb5"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:9:9 generated
+    StorageDead a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:10:5 generated "_6"
+    Goto "bb4"

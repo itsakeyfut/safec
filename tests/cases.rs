@@ -4056,10 +4056,12 @@ cases! {
         a_local_below_one_a_callee_was_handed_as_bytes_is_asked_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same through a `void *`. Mutation: as above; this goes silent.
         a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_asked_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `put` stores into `w` a `void **` whose memory holds a one-byte `char *`,
-        // so what is narrow is below `w`'s own level. Mutation: bound such a local
-        // at its own level only; this goes silent.
-        a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What `r` reads out of `w` is believed nothing either, since `put` may
+        // have stored any pointer where `w` points. Mutation: bound such a local
+        // at its own level only; the `SC0413` at `use1(r)` goes. Handing `w`
+        // itself on guards no such line, since the doubt at its own level
+        // stands over the one below.
+        a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Through an `int ***` the callee may store only an `int *` into `w`, as
         // wide as `use1` believes. It says the conclusion rather than guarding a
         // line: the walk reaches `w` as an `int *`, which the arm changed for #677
