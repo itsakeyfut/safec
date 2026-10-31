@@ -1988,6 +1988,10 @@ pub(super) fn departed_at_call(
 /// is a use of an indeterminate value (C17 7.22.3.1 p2, 7.22.3.4 p2, Annex
 /// J.2), once per place per caret. The later uses of what it read are not
 /// reported again. See ADR-0057.
+///
+/// `doubt_only` where `known` is a loop's first turn at a read that turn may
+/// not run, which says no more than a doubt (#670).
+#[allow(clippy::too_many_arguments)]
 pub(super) fn loaded_indeterminate(
     sources: &SourceMap,
     findings: &mut Vec<Finding>,
@@ -1996,6 +2000,7 @@ pub(super) fn loaded_indeterminate(
     function: &Function,
     at: Option<(Span, Vec<Place>)>,
     known: &Known,
+    doubt_only: bool,
 ) {
     let Some((at, read)) = at else {
         return;
@@ -2036,7 +2041,7 @@ pub(super) fn loaded_indeterminate(
             Finding {
                 function: analysis.function,
                 kind,
-                conclusion: if maybe {
+                conclusion: if maybe || doubt_only {
                     Conclusion::Unknown
                 } else {
                     Conclusion::Unsafe
@@ -2059,6 +2064,9 @@ pub(super) fn loaded_indeterminate(
 /// `taken` is `assigned::address_taken`, so a local is asked here exactly
 /// where `memory::assigned` does not ask it: that analysis follows no write
 /// through an address and this one does ([`Known::unwritten`]). See ADR-0057.
+///
+/// `doubt_only` as [`loaded_indeterminate`] takes it.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn unwritten_read(
     sources: &SourceMap,
     findings: &mut Vec<Finding>,
@@ -2067,6 +2075,7 @@ pub(super) fn unwritten_read(
     reads: Vec<(LocalId, Span)>,
     taken: &Bits,
     known: &Known,
+    doubt_only: bool,
 ) {
     let function = analysis.unit.function(analysis.function);
     for (local, at) in reads {
@@ -2094,7 +2103,7 @@ pub(super) fn unwritten_read(
             Finding {
                 function: analysis.function,
                 kind: Kind::IndeterminateLocal,
-                conclusion: if partly {
+                conclusion: if partly || doubt_only {
                     Conclusion::Unknown
                 } else {
                     Conclusion::Unsafe

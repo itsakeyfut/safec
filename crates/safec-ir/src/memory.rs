@@ -61,7 +61,7 @@ mod transfer;
 
 use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
-use crate::dataflow::{Analysis, solve_within};
+use crate::dataflow::{Analysis, solve_first_turn_within, solve_within};
 use crate::ir::{
     Between, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
     TranslationUnit, Ty,
@@ -725,6 +725,39 @@ fn findings_within(
         // The locals whose address is taken, which a read by name of asks
         // `Known::unwritten` and `memory::assigned` does not. See #640.
         let taken = assigned::address_taken(function);
+        // **And every read inside a loop, as of that loop's first turn**
+        // (#670): whatever turn reaches a read, the first ran before it, and
+        // what it sees is what arrived from before the loop. The join at the
+        // head creates no doubt along a back edge, so a loop that fills an
+        // array is not doubted for the path that skips it (#668), and with
+        // nothing else every read the head reached before a write went
+        // silent, `r = m[0]; m[0] = &x;` in the body among them. Per loop
+        // rather than every back edge at once, which doubted a local made in
+        // an outer loop and filled by an inner one wherever it was read after
+        // the inner loop. Past the bound, the bound's doubt rather than
+        // silence. See ADR-0057.
+        let loops = cfg.loops();
+        let dominators = cfg.dominators();
+        let mut first_turns = Vec::new();
+        for each in &loops {
+            match solve_first_turn_within(&analysis, function, &cfg, each.head(), max_walks) {
+                Some(solution) => first_turns.push((each, solution)),
+                None => {
+                    findings.push(Finding {
+                        function: func,
+                        kind: Kind::TooLong { walks: max_walks },
+                        conclusion: Conclusion::Unknown,
+                        at: function.name,
+                        local: None,
+                        freed: None,
+                        made: None,
+                        unproven: None,
+                    });
+                    first_turns.clear();
+                    break;
+                }
+            }
+        }
 
         for &id in cfg.order() {
             // `Cfg::order` holds exactly the reachable blocks and `solve` gives
@@ -737,6 +770,27 @@ fn findings_within(
             };
 
             let block = function.block(id);
+            // What each loop holding this block sees here on its first turn,
+            // and whether that says no more than a doubt: **a proof only
+            // where the block dominates every block the loop's back edges
+            // leave from**, so that every turn that comes round passed it and
+            // the first did too. A read on an arm, `if (k == 1) q = *t2;`,
+            // may not run on the first turn, and C defines it reading last
+            // turn's value, so it is a doubt, by the user's decision. The
+            // proofs first, so that a doubt from another loop does not stand
+            // at the caret before them.
+            let mut turns: Vec<(known::Known, bool)> = first_turns
+                .iter()
+                .filter(|(each, _)| each.contains(id))
+                .filter_map(|(each, solution)| {
+                    let doubt_only = !each
+                        .latches()
+                        .iter()
+                        .all(|&latch| dominators.dominates(id, latch));
+                    Some((solution.value(id)?.clone(), doubt_only))
+                })
+                .collect();
+            turns.sort_by_key(|&(_, doubt_only)| doubt_only);
             for element in &block.elements {
                 // Before `used`, so that the proof stands at the caret and a
                 // doubt about the same place there does not replace it.
@@ -748,6 +802,7 @@ fn findings_within(
                     function,
                     read_out_of_memory_in_element(element),
                     &known,
+                    false,
                 );
                 unwritten_read(
                     sources,
@@ -757,7 +812,33 @@ fn findings_within(
                     assigned::element_reads(element),
                     &taken,
                     &known,
+                    false,
                 );
+                // After the two above, so that a proof the every-turn state
+                // gives stands at the caret: asked first, a first turn's
+                // doubt took the place of five such proofs, measured.
+                for (turn, doubt_only) in &turns {
+                    loaded_indeterminate(
+                        sources,
+                        &mut findings,
+                        &mut said,
+                        &analysis,
+                        function,
+                        read_out_of_memory_in_element(element),
+                        turn,
+                        *doubt_only,
+                    );
+                    unwritten_read(
+                        sources,
+                        &mut findings,
+                        &mut said,
+                        &analysis,
+                        assigned::element_reads(element),
+                        &taken,
+                        turn,
+                        *doubt_only,
+                    );
+                }
                 // Before the transfer, which is what the element does: the
                 // question is what was true where it runs.
                 used(
@@ -848,6 +929,9 @@ fn findings_within(
                     });
                 }
                 analysis.element(function, element, &mut known);
+                for (turn, _) in &mut turns {
+                    analysis.element(function, element, turn);
+                }
             }
 
             loaded_indeterminate(
@@ -858,6 +942,7 @@ fn findings_within(
                 function,
                 read_out_of_memory_in_terminator(&block.terminator),
                 &known,
+                false,
             );
             unwritten_read(
                 sources,
@@ -867,7 +952,30 @@ fn findings_within(
                 assigned::terminator_reads(&block.terminator),
                 &taken,
                 &known,
+                false,
             );
+            for (turn, doubt_only) in &turns {
+                loaded_indeterminate(
+                    sources,
+                    &mut findings,
+                    &mut said,
+                    &analysis,
+                    function,
+                    read_out_of_memory_in_terminator(&block.terminator),
+                    turn,
+                    *doubt_only,
+                );
+                unwritten_read(
+                    sources,
+                    &mut findings,
+                    &mut said,
+                    &analysis,
+                    assigned::terminator_reads(&block.terminator),
+                    &taken,
+                    turn,
+                    *doubt_only,
+                );
+            }
             // Before the terminator's own transfer, which is what turns a live
             // allocation into a freed one: the question is what was true when
             // the call was reached.
