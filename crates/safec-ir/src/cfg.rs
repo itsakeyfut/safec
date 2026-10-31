@@ -335,7 +335,7 @@ pub struct Dominators {
 impl Dominators {
     /// Whether every path from the entry to `block` passes `dominator`. A
     /// block dominates itself, and a block the entry does not reach is
-    /// dominated by nothing.
+    /// dominated by nothing else.
     pub fn dominates(&self, dominator: BlockId, block: BlockId) -> bool {
         let mut at = block;
         loop {
@@ -897,6 +897,70 @@ mod tests {
         assert!(dominators.dominates(head, exit));
         assert!(!dominators.dominates(body, exit));
         assert!(!dominators.dominates(body, head));
+    }
+
+    /// Where control enters a cycle at two blocks, neither dominates the
+    /// other, and what both reach is dominated only by the block before
+    /// them: a graph one pass over the order does not settle, since the pass
+    /// meets a block before the predecessor that moves its answer.
+    ///
+    /// Mutation: stop after one pass, whatever moved. This fails.
+    #[test]
+    fn a_cycle_entered_at_two_blocks_is_dominated_by_what_comes_before_it() {
+        let (_sources, span) = spans();
+        let (_unit, mut function) = a_function(span);
+
+        // The graph of Cooper, Harvey and Kennedy's second example, its
+        // blocks named by their numbers there.
+        let six = function.reserve_block();
+        let five = function.reserve_block();
+        let four = function.reserve_block();
+        let three = function.reserve_block();
+        let two = function.reserve_block();
+        let one = function.reserve_block();
+        let exit = function.reserve_block();
+
+        let go = |to| Block {
+            elements: Vec::new(),
+            terminator: Terminator::Goto(to),
+        };
+        let branch = |then, otherwise| Block {
+            elements: Vec::new(),
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(0),
+                then,
+                otherwise,
+                origin: Origin::Written(span),
+            },
+        };
+        function.fill_block(six, branch(five, four));
+        function.fill_block(five, go(one));
+        function.fill_block(four, branch(two, three));
+        function.fill_block(one, branch(two, exit));
+        function.fill_block(two, branch(one, three));
+        function.fill_block(three, go(two));
+        function.fill_block(
+            exit,
+            Block {
+                elements: Vec::new(),
+                terminator: Terminator::Return,
+            },
+        );
+
+        let dominators = Cfg::of(&function).dominators();
+        for block in [one, two, three] {
+            assert!(dominators.dominates(six, block), "{}", block.index());
+            for other in [one, two, three, four, five] {
+                if other != block {
+                    assert!(
+                        !dominators.dominates(other, block),
+                        "{} {}",
+                        other.index(),
+                        block.index()
+                    );
+                }
+            }
+        }
     }
 
     /// A loop whose back edge leaves from two blocks into its body is one
