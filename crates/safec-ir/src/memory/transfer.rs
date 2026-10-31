@@ -210,15 +210,10 @@ impl Allocations<'_> {
                     |local| self.is_array(function, local),
                 );
                 // What the arithmetic leaves of the edge, as the direct
-                // assignment's `Rvalue::Binary` arm asks. See ADR-0019. **No
-                // test holds the array half here**, measured: `|_| false`
-                // leaves the suite green, since no C program reaches this arm,
-                // and `an_offset_that_moves_the_pointer_carries_no_edge` holds
-                // only the non-array half.
-                reached.moved_by_arithmetic(
-                    |local| self.is_array(function, local),
-                    self.moved_by(function, *op, lhs, rhs),
-                );
+                // assignment's `Rvalue::Binary` arm asks. See ADR-0019. No C
+                // program reaches this arm, measured: the lowering puts the
+                // sum in a temporary first.
+                reached.moved_by_arithmetic(self.moved_by(function, *op, lhs, rhs));
                 reached
             }
             // A read through a projection is not a pointer this check follows
@@ -2069,6 +2064,22 @@ impl Analysis for Allocations<'_> {
                 });
                 if !operation.place.projection.is_empty() && !certain {
                     replaced_by(self.unit, function, &operation.place, value);
+                    // **And a local that is not an array, reached only by the
+                    // rule that keeps an edge through a known move, is lost**
+                    // (#647): the write may be of the local, `&slot + 1 - 1`,
+                    // or past it, `pp[1] = q;`, which is undefined and the
+                    // bounds rule's to report. Kept as a may-write alone, a
+                    // local that held nothing held only what was stored, so
+                    // `free(z)` after `*(&z + 7) = q;` certainly freed `q`'s
+                    // allocation and `*q` was a proved use after free.
+                    // Measured. See `Held::moved_by_arithmetic`.
+                    if one_step && value.points_to[pointer].array_edge {
+                        for &target in &targets {
+                            if !self.is_array(function, target) {
+                                value.points_to[target].lost = true;
+                            }
+                        }
+                    }
                 }
 
                 // **Into the allocations the pointer holds, what the write
@@ -2468,10 +2479,7 @@ impl Analysis for Allocations<'_> {
                         // [`Held::moved_by_arithmetic`]'s. A literal zero the
                         // lowering did not fold is an offset that may be zero,
                         // and is followed. See ADR-0019 and ADR-0021.
-                        reached.moved_by_arithmetic(
-                            |local| self.is_array(function, local),
-                            self.moved_by(function, *op, lhs, rhs),
-                        );
+                        reached.moved_by_arithmetic(self.moved_by(function, *op, lhs, rhs));
                         value.points_to[destination.index()] = reached;
                     }
                     // A read through a projection is not a pointer this check

@@ -1829,7 +1829,21 @@ cases! {
         a_pointer_written_through_an_alias_this_check_follows: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_through_a_pointer_that_reached_another_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_write_through_an_address_plus_one_is_not_a_write_to_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `pp[1] = q;` writes past `p`, which `SC0412` doubts. Read as an array
+        // of one, `p` may have been written, so it is lost, and the free and
+        // the use after it are doubts rather than proofs about an allocation
+        // nothing freed (#647). Mutation: leave such a local unmarked; `*q` is
+        // a proved use after free.
+        a_write_through_an_address_plus_one_is_a_doubted_write_of_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local that is not an array is an array of one, so a pointer moved off
+        // it and back writes it, and the read after it is no `SC0411` (#647). See
+        // ADR-0019. Mutation: keep only an array's edge through a known move; this
+        // is a certain `SC0411` at the read.
+        a_pointer_moved_off_a_local_and_back_writes_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same handed to a call. Mutation: as above; the same.
+        a_pointer_moved_off_a_local_and_back_writes_it_through_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through a library copy. Mutation: as above; the same.
+        a_pointer_moved_off_a_local_and_back_writes_it_through_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_subscript_write_is_the_write_it_is_defined_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And `*(pp + (1 - 1))`, whose offset is a constant expression rather
         // than the literal: it lowers to the constant it is, so the zero is
