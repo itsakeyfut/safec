@@ -1647,32 +1647,27 @@ fn offset_into(through: LocalId, from: LocalId, by: i128, at: Span, then: BlockI
 /// lands.
 ///
 /// **The one place this question is asked that no C program reaches.** `*pp =
-/// qq + 7;` puts a pointer seven past `z` into `p`, so a later write through
-/// `p` does not land in `z`. The arm that answers this carried the edge
-/// through any arithmetic at all, while the arm one level up had just been
-/// taught to drop it, and the two disagreeing was invisible because only a
-/// hand-built IR reaches this one.
-///
-/// **The check does not tell one offset from another.** Every
-/// `Rvalue::Binary` drops the edge to a local that is not an array, a zero
-/// included, and keeps it to an array (#639); this name says what its own
-/// program does, not what the rule distinguishes. Where the distinction
-/// lives is the lowering, and what is lost without it is
-/// [`an_unfolded_zero_offset_is_followed_as_an_offset_that_may_be_zero`].
+/// qq + 7;` puts a pointer seven past `z` into `p`, and a later write through
+/// `p` is asked whether it lands in `z`. Only a hand-built IR reaches this
+/// arm, so the arm one level up and this one agreeing is held here.
 ///
 /// **Observed through `q` rather than through `z`.** `z` had its address
 /// taken, so ADR-0017 answers `Reached::Lost` for it wherever a report is
 /// made and it can never be the subject of a proof; a test that asked about
 /// `z` could not tell the two answers apart. `q` escaped nowhere, so what it
-/// holds is provable, and carrying the edge is what would put `q`'s
-/// allocation into `z` for `free(z)` to take.
+/// holds is provable, and the edge kept is what puts `q`'s allocation into
+/// `z` for `free(z)` to take.
 ///
-/// Mutation: drop the `reached.writes_to.fill(false);` from the
-/// `Rvalue::Binary` arm of the `written` match in `Allocations::element`.
-/// `free(z)` then frees what `q` holds, the read through `q` is a proved use
-/// after free, and this fails on the kind.
+/// **Seven past `z` may be `z`, read as an array of one, and so `z` is lost**
+/// (#647): the edge survives a known move for every local, so `free(z)` may
+/// free what `q` holds, and both it and the read through `q` are doubts. A
+/// proof either way would be about an allocation nothing put in `z`.
+///
+/// Mutation: leave a local that is not an array, written through a pointer
+/// that reached it only by that rule, unmarked. `*q` is then a proved use
+/// after free, and this fails on the conclusion.
 #[test]
-fn an_offset_that_moves_the_pointer_carries_no_edge() {
+fn an_offset_that_moves_the_pointer_proves_no_use_after_free() {
     let (sources, names) = sources();
     let (unit, mut function, types, callees) = a_unit(&names, 0);
     let z = function.push_local(types.ptr);
@@ -1706,19 +1701,19 @@ fn an_offset_that_moves_the_pointer_carries_no_edge() {
 
     let found = concluded(unit, &sources, function);
 
-    // One finding about the free, and which one is the whole of this test.
-    // `free(z)` frees something this check was not following, which it
-    // cannot rule out; what it must not do is free the allocation `q` holds,
-    // because nothing put that allocation in `z`. Nothing writes `z` here, so
-    // reading it at the free is also reported, as indeterminate (#640), and
-    // that report is about the read and not about this question.
+    // Nothing here is proved: `free(z)` frees something this check was not
+    // following, and may be what `q` holds, so the read through `q` is a
+    // doubt too. A read of `z` at the free is about the read and not about
+    // this question (#640).
     let found: Vec<_> = found
         .into_iter()
         .filter(|finding| finding.kind != Kind::IndeterminateLocal)
         .collect();
-    assert_eq!(found.len(), 1, "{found:?}");
-    assert_eq!(found[0].kind, Kind::DoubleFree, "not a use after free");
-    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert!(!found.is_empty(), "{found:?}");
+    for finding in &found {
+        assert_eq!(finding.conclusion, Conclusion::Unknown, "{found:?}");
+    }
+    assert_eq!(found[0].kind, Kind::DoubleFree, "{found:?}");
     assert_eq!(found[0].at, names.at[5]);
 }
 

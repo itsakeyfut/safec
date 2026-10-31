@@ -210,15 +210,10 @@ impl Allocations<'_> {
                     |local| self.is_array(function, local),
                 );
                 // What the arithmetic leaves of the edge, as the direct
-                // assignment's `Rvalue::Binary` arm asks. See ADR-0019. **No
-                // test holds the array half here**, measured: `|_| false`
-                // leaves the suite green, since no C program reaches this arm,
-                // and `an_offset_that_moves_the_pointer_carries_no_edge` holds
-                // only the non-array half.
-                reached.moved_by_arithmetic(
-                    |local| self.is_array(function, local),
-                    self.moved_by(function, *op, lhs, rhs),
-                );
+                // assignment's `Rvalue::Binary` arm asks. See ADR-0019. No C
+                // program reaches this arm, measured: the lowering puts the
+                // sum in a temporary first.
+                reached.moved_by_arithmetic(self.moved_by(function, *op, lhs, rhs));
                 reached
             }
             // A read through a projection is not a pointer this check follows
@@ -490,6 +485,32 @@ impl Allocations<'_> {
             Ty::Pointer(_) => true,
             Ty::Int | Ty::Char | Ty::Void => false,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
+        }
+    }
+
+    /// **A local that is not an array, written through a pointer that reached
+    /// it only by the rule that keeps an edge through a known move, is lost,
+    /// and in doubt where it was unwritten** (#647): the write may be of the
+    /// local, `&slot + 1 - 1`, or past it, `pp[1] = q;`, which is undefined
+    /// and the bounds rule's to report. Kept as a may-write alone, a local
+    /// that held nothing held only what was stored, so `free(z)` after
+    /// `*(&z + 7) = q;` certainly freed `q`'s allocation and `*q` was a proved
+    /// use after free; and a read of it after a store past it, which C leaves
+    /// indeterminate, was silent where it had been a certain `SC0411`, found
+    /// by review. Measured, both. See `Held::moved_by_arithmetic`.
+    fn written_past_its_end(
+        &self,
+        function: &Function,
+        value: &mut Known,
+        target: usize,
+        unwritten_before: &[bool],
+    ) {
+        if self.is_array(function, target) {
+            return;
+        }
+        value.points_to[target].lost = true;
+        if unwritten_before[target] {
+            value.partly_written[target] = true;
         }
     }
 
@@ -1978,6 +1999,9 @@ impl Analysis for Allocations<'_> {
                 // projection.
                 let one_step = operation.place.projection.as_slice() == [Projection::Deref];
                 let pointer = operation.place.local.index();
+                // What was unwritten before this store, for a local it may
+                // have written past. See `Allocations::written_past_its_end`.
+                let unwritten_before = value.unwritten.clone();
                 // **A write through a pointer may write an allocation**, of
                 // any type, and what it wrote is no longer indeterminate.
                 // Placed only for one dereference through a pointer that
@@ -2069,6 +2093,11 @@ impl Analysis for Allocations<'_> {
                 });
                 if !operation.place.projection.is_empty() && !certain {
                     replaced_by(self.unit, function, &operation.place, value);
+                    if one_step && value.points_to[pointer].array_edge {
+                        for &target in &targets {
+                            self.written_past_its_end(function, value, target, &unwritten_before);
+                        }
+                    }
                 }
 
                 // **Into the allocations the pointer holds, what the write
@@ -2133,7 +2162,21 @@ impl Analysis for Allocations<'_> {
                     } else {
                         Vec::new()
                     };
+                    // And as through one dereference, where a level above
+                    // reached them only by the rule that keeps an edge through
+                    // a known move: `**ppp = q;` with `*ppp = &z + 7` proved a
+                    // use after free once the one-step store was marked and
+                    // this was not. Found by review.
+                    let moved_above = deep > 1
+                        && value
+                            .levels_below(operation.place.local, deep - 2)
+                            .1
+                            .into_iter()
+                            .any(|local| value.points_to[local].array_edge);
                     for &target in &deep_targets {
+                        if moved_above {
+                            self.written_past_its_end(function, value, target, &unwritten_before);
+                        }
                         // Where it starts survives, as below.
                         let offset = value.points_to[target].offset.joined(written.offset);
                         value.points_to[target].accumulated(&written);
@@ -2468,10 +2511,7 @@ impl Analysis for Allocations<'_> {
                         // [`Held::moved_by_arithmetic`]'s. A literal zero the
                         // lowering did not fold is an offset that may be zero,
                         // and is followed. See ADR-0019 and ADR-0021.
-                        reached.moved_by_arithmetic(
-                            |local| self.is_array(function, local),
-                            self.moved_by(function, *op, lhs, rhs),
-                        );
+                        reached.moved_by_arithmetic(self.moved_by(function, *op, lhs, rhs));
                         value.points_to[destination.index()] = reached;
                     }
                     // A read through a projection is not a pointer this check
