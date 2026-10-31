@@ -97,14 +97,20 @@ first answer and not by this one.
 in this crate is, and what a missed arm would mean here is that a write silently
 carries nothing, which is a silence rather than a build error.
 
-**The edge stops at pointer arithmetic that moves the pointer, unless it points into an array.** C17 6.5.6 p8
-keeps the result of `p + 1` inside the object `p` points into, which is why the
-*allocation* travels through the arithmetic arm. A local's address plus one is
-not that local, so the edge does not: `pp[1] = q;` is an out of bounds write,
-and following it reported a proved use after free about an allocation nothing
-had freed. **An array local keeps the edge** (#639): it is not an array of
-one, and the same paragraph lets a pointer into it move to any element, so
-`m + 1` is `m[1]`. Dropped there, a pointer stored through `m[1]` and freed was
+**The edge survives pointer arithmetic, for every local.** C17 6.5.6 p8
+keeps the result of `p + 1` inside the object `p` points into, or one past it,
+which is why the *allocation* travels through the arithmetic arm, and p7 makes
+a local that is not an array an array of one. **An array local keeps the edge**
+(#639), since the same paragraph lets a pointer into it move to any element, so
+`m + 1` is `m[1]`. **So does any other local** (#647): dropped where the move
+was known not to be zero, `pp = &slot; pp = pp + 1; pp = pp - 1; *pp = p;`
+wrote no local, and the read of `slot` after it was a certain `SC0411` about a
+program C defines. Kept so, `pp[1] = q;`, an out of bounds write the bounds rule
+doubts (ADR-0060), may be a write of `p`, and as a may-write alone it put `q`'s
+allocation in a local that held nothing and proved a use after free about an
+allocation nothing had freed, measured; so a local that is not an array,
+written through a pointer that reached it only by this rule, is lost, and both
+are doubts. Dropped there, a pointer stored through `m[1]` and freed was
 `Unknown` where it was stored and read back rather than named as freed where it
 was used. The edge names the array and not the element, as it does for a
 pointer at the start, so a free through one element is answered for all of it,
@@ -129,9 +135,7 @@ nothing here could tell one offset from another; ADR-0036 since carries
 `slot` while `*po` read it (#308), and so does a load moved the same way,
 `(*ppo)[k]`, whose edge `built_from` now carries as `read_through` does. A kept
 edge is a may-write by union, so being wrong about it is a doubt and never a
-proof. Two things it does not follow: a pointer moved off its start and back,
-`up = po + 1; back = up - 1;`, which drops the edge at `up` before `back` could
-keep it, for a local that is not an array.
+proof.
 
 [ADR-0021](./0021-fold-a-zero-pointer-offset-where-the-ir-is-built.md) still
 folds a zero away when the IR is built, so `pp[0]` and `*pp` are one shape before
@@ -154,7 +158,8 @@ and the file restored.
 | the write unproves the target, as a direct assignment does | `a_write_through_an_alias_leaves_a_sharer_s_proof_alone` and `a_write_through_an_alias_keeps_what_it_carried_proved`, whose proved reports drop to suspicions, and three cases whose diagnostics lose the `allocated here` label |
 | a write this check cannot follow carries every allocation instead of none | `a_write_through_an_alias_that_carries_no_allocation` |
 | a variant added to `Rvalue` | does not compile: `error[E0004]` here and at four other readers |
-| the edge survives pointer arithmetic whose offset is known not to be zero | `a_write_through_an_address_plus_one_is_not_a_write_to_the_local`, which gains `SC0402` about an allocation nothing freed: proved when this record first measured it, unproven now that a kept edge is a union |
+| the edge dropped for a local that is not an array where the move is known not to be zero | `a_pointer_moved_off_a_local_and_back_writes_it` and its forms through a call and a copy, each a certain `SC0411` (#647) |
+| a local that is not an array, written through a pointer that reached it only by that rule, not lost | `a_write_through_an_address_plus_one_is_a_doubted_write_of_the_local` and `an_offset_that_moves_the_pointer_proves_no_use_after_free`, each a proved use after free about an allocation nothing freed |
 | the edge dropped whatever the offset | `a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds` and `an_unfolded_zero_offset_is_followed_as_an_offset_that_may_be_zero` |
 | `built_from` carrying no locals for a load moved by arithmetic | `a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds` and `a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds` |
 | a kept edge without `writes_elsewhere` | nothing, measured: the local it names escaped, so what it holds is unproven and a read of it is doubted whether the write replaced or unioned |
