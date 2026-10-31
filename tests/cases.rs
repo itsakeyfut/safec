@@ -4036,16 +4036,19 @@ cases! {
         // nothing below a local believed nothing at its own level; the reads
         // through `q` and `r` go silent.
         a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A local that holds no pointer, filled as bytes and handed on as bytes,
-        // believes nothing a callee could have narrowed. It says the conclusion
-        // rather than guarding a line: bounding every local reached as bytes,
-        // pointer or not, leaves it green, measured, since a bound on a local
-        // that holds no pointer is read by nothing.
+        // A byte buffer filled as bytes and handed on as bytes believes no
+        // pointer width a callee could have narrowed. It says the conclusion
+        // rather than guarding a line.
         a_byte_array_handed_to_a_callee_as_bytes_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Correct C if `clear` only zeroes the bytes, doubted: this check cannot
-        // read what a callee does with bytes. It says the cost chosen rather than
-        // guarding a line.
+        // read what a callee does with bytes, the cost chosen in #675. Mutation:
+        // a local reached as bytes is skipped again; this goes silent.
         a_local_handed_to_a_callee_that_only_clears_its_bytes_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `char` buffer a callee filled as bytes, read back as a pointer
+        // through a `void *`, is asked as one handed through a `void *` is.
+        // Mutation: skip a local reached as bytes that holds no pointer by its
+        // type; this goes silent. Found by review of #675.
+        a_byte_buffer_a_callee_filled_as_bytes_is_asked_when_read_back_as_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Through a `void *`, the doubts about `v`'s level and its memory's
         // are one report, and the one about its own level stands. Mutation:
         // name the doubt about what a value's memory holds by nothing; this
