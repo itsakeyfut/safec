@@ -194,6 +194,160 @@ impl Cfg {
     pub fn reaches(&self, block: BlockId) -> bool {
         self.reachable[block.index()]
     }
+
+    /// Every loop, one per head: a block a back edge reaches, and every block
+    /// that reaches one of those edges' sources backwards without passing the
+    /// head.
+    ///
+    /// **A back edge is the solver's**: an edge from a block at or after its
+    /// target in [`Cfg::drain`], which is what `dataflow::solve` joins as one.
+    /// Read the same way here so that "the first turn of this loop", which the
+    /// memory check asks a loop's reads against, ignores exactly the edges the
+    /// solver treats as coming round again. Two readings of which edge is a
+    /// back edge would answer two different loops.
+    pub fn loops(&self) -> Vec<Loop> {
+        let mut loops = Vec::new();
+        for &head in &self.drain {
+            let mut latches: Vec<BlockId> = Vec::new();
+            for &from in self.predecessors(head) {
+                if self.drained_at(from) >= self.drained_at(head) && !latches.contains(&from) {
+                    latches.push(from);
+                }
+            }
+            if latches.is_empty() {
+                continue;
+            }
+            // Backwards from each latch, marking the head first so the walk
+            // stops there rather than leaving the loop by its entry.
+            let mut body = vec![false; self.reachable.len()];
+            body[head.index()] = true;
+            let mut stack = latches.clone();
+            while let Some(block) = stack.pop() {
+                if std::mem::replace(&mut body[block.index()], true) {
+                    continue;
+                }
+                stack.extend(self.predecessors(block).iter().copied());
+            }
+            loops.push(Loop {
+                head,
+                body,
+                latches,
+            });
+        }
+        loops
+    }
+
+    /// Which reachable block dominates which: every path from the entry to a
+    /// block passes through each of its dominators.
+    ///
+    /// Iterative over [`Cfg::order`], which is a reverse postorder, folding
+    /// each block's predecessors by walking both up the tree to where they
+    /// meet; it settles once no immediate dominator moves.
+    pub fn dominators(&self) -> Dominators {
+        let count = self.reachable.len();
+        let mut position = vec![usize::MAX; count];
+        for (at, &block) in self.order.iter().enumerate() {
+            position[block.index()] = at;
+        }
+        let mut immediate: Vec<Option<BlockId>> = vec![None; count];
+        let Some(&entry) = self.order.first() else {
+            return Dominators {
+                immediate,
+                entry: None,
+            };
+        };
+        immediate[entry.index()] = Some(entry);
+        let meet = |immediate: &[Option<BlockId>], mut one: BlockId, mut two: BlockId| {
+            while one != two {
+                while position[one.index()] > position[two.index()] {
+                    one = immediate[one.index()].expect("a processed block has one");
+                }
+                while position[two.index()] > position[one.index()] {
+                    two = immediate[two.index()].expect("a processed block has one");
+                }
+            }
+            one
+        };
+        let mut moved = true;
+        while moved {
+            moved = false;
+            for &block in &self.order[1..] {
+                let mut new: Option<BlockId> = None;
+                for &from in self.predecessors(block) {
+                    if immediate[from.index()].is_none() {
+                        continue;
+                    }
+                    new = Some(match new {
+                        None => from,
+                        Some(sofar) => meet(&immediate, sofar, from),
+                    });
+                }
+                if new.is_some() && immediate[block.index()] != new {
+                    immediate[block.index()] = new;
+                    moved = true;
+                }
+            }
+        }
+        Dominators {
+            immediate,
+            entry: Some(entry),
+        }
+    }
+}
+
+/// One loop of a function, as [`Cfg::loops`] finds it.
+#[derive(Debug)]
+pub struct Loop {
+    head: BlockId,
+    /// Whether each block is in the loop, its head included, indexed by
+    /// [`BlockId::index`].
+    body: Vec<bool>,
+    /// The blocks a back edge into the head leaves from.
+    latches: Vec<BlockId>,
+}
+
+impl Loop {
+    /// The block every turn starts at.
+    pub fn head(&self) -> BlockId {
+        self.head
+    }
+
+    /// Whether `block` is in the loop, its head included.
+    pub fn contains(&self, block: BlockId) -> bool {
+        self.body[block.index()]
+    }
+
+    /// The blocks a back edge into the head leaves from.
+    pub fn latches(&self) -> &[BlockId] {
+        &self.latches
+    }
+}
+
+/// What [`Cfg::dominators`] answers.
+#[derive(Debug)]
+pub struct Dominators {
+    /// Each reachable block's immediate dominator, the entry its own, indexed
+    /// by [`BlockId::index`]. `None` for a block the entry does not reach.
+    immediate: Vec<Option<BlockId>>,
+    entry: Option<BlockId>,
+}
+
+impl Dominators {
+    /// Whether every path from the entry to `block` passes `dominator`. A
+    /// block dominates itself, and a block the entry does not reach is
+    /// dominated by nothing.
+    pub fn dominates(&self, dominator: BlockId, block: BlockId) -> bool {
+        let mut at = block;
+        loop {
+            if at == dominator {
+                return true;
+            }
+            match self.immediate[at.index()] {
+                Some(up) if Some(at) != self.entry => at = up,
+                _ => return false,
+            }
+        }
+    }
 }
 
 /// The reachable blocks in an order where every loop, nested ones included,
@@ -602,6 +756,147 @@ mod tests {
             "{:?}",
             cfg.drain()
         );
+    }
+
+    /// Each loop holds its own blocks and no block outside it, and an inner
+    /// loop is a loop of its own inside the outer one.
+    ///
+    /// Mutation: leave the head unmarked before walking back from the latches.
+    /// The walk passes the head and takes in the entry, and this fails.
+    /// Mutation: take only the first latch of a head. The outer loop's second
+    /// latch is lost and this fails.
+    #[test]
+    fn a_loop_holds_its_own_blocks_and_an_inner_loop_is_its_own() {
+        let (_sources, span) = spans();
+        let (_unit, mut function) = a_function(span);
+
+        let entry = function.reserve_block();
+        let outer = function.reserve_block();
+        let inner = function.reserve_block();
+        let inner_body = function.reserve_block();
+        let after_inner = function.reserve_block();
+        let other_latch = function.reserve_block();
+        let exit = function.reserve_block();
+
+        let go = |to| Block {
+            elements: Vec::new(),
+            terminator: Terminator::Goto(to),
+        };
+        let branch = |then, otherwise| Block {
+            elements: Vec::new(),
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(0),
+                then,
+                otherwise,
+                origin: Origin::Written(span),
+            },
+        };
+        function.fill_block(entry, go(outer));
+        function.fill_block(outer, branch(inner, exit));
+        function.fill_block(inner, branch(inner_body, after_inner));
+        function.fill_block(inner_body, go(inner));
+        function.fill_block(after_inner, branch(outer, other_latch));
+        function.fill_block(other_latch, go(outer));
+        function.fill_block(
+            exit,
+            Block {
+                elements: Vec::new(),
+                terminator: Terminator::Return,
+            },
+        );
+
+        let cfg = Cfg::of(&function);
+        let loops = cfg.loops();
+        assert_eq!(loops.len(), 2, "{loops:?}");
+        let outer_loop = loops
+            .iter()
+            .find(|l| l.head() == outer)
+            .expect("the outer loop");
+        let inner_loop = loops
+            .iter()
+            .find(|l| l.head() == inner)
+            .expect("the inner loop");
+        for block in [outer, inner, inner_body, after_inner, other_latch] {
+            assert!(outer_loop.contains(block), "{}", block.index());
+        }
+        for block in [entry, exit] {
+            assert!(!outer_loop.contains(block), "{}", block.index());
+        }
+        assert_eq!(outer_loop.latches().len(), 2, "{outer_loop:?}");
+        for block in [inner, inner_body] {
+            assert!(inner_loop.contains(block), "{}", block.index());
+        }
+        for block in [entry, outer, after_inner, other_latch, exit] {
+            assert!(!inner_loop.contains(block), "{}", block.index());
+        }
+    }
+
+    /// A block dominates what every path to it passes, and an arm of a branch
+    /// dominates nothing after the join.
+    ///
+    /// Mutation: take a block's first processed predecessor as its immediate
+    /// dominator, without meeting the others. The `then` arm dominates the
+    /// join and this fails.
+    #[test]
+    fn a_block_dominates_what_every_path_to_it_passes() {
+        let (_sources, span) = spans();
+        let (_unit, mut function) = a_function(span);
+
+        let entry = function.reserve_block();
+        let then = function.reserve_block();
+        let otherwise = function.reserve_block();
+        let join = function.reserve_block();
+        let head = function.reserve_block();
+        let body = function.reserve_block();
+        let exit = function.reserve_block();
+
+        let go = |to| Block {
+            elements: Vec::new(),
+            terminator: Terminator::Goto(to),
+        };
+        let branch = |then, otherwise| Block {
+            elements: Vec::new(),
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(0),
+                then,
+                otherwise,
+                origin: Origin::Written(span),
+            },
+        };
+        function.fill_block(entry, branch(then, otherwise));
+        function.fill_block(then, go(join));
+        function.fill_block(otherwise, go(join));
+        function.fill_block(join, go(head));
+        function.fill_block(head, branch(body, exit));
+        function.fill_block(body, go(head));
+        function.fill_block(
+            exit,
+            Block {
+                elements: Vec::new(),
+                terminator: Terminator::Return,
+            },
+        );
+
+        let dominators = Cfg::of(&function).dominators();
+        for block in [entry, then, otherwise, join, head, body, exit] {
+            assert!(dominators.dominates(entry, block), "{}", block.index());
+            assert!(dominators.dominates(block, block), "{}", block.index());
+        }
+        for arm in [then, otherwise] {
+            for after in [join, head, body, exit] {
+                assert!(
+                    !dominators.dominates(arm, after),
+                    "{} {}",
+                    arm.index(),
+                    after.index()
+                );
+            }
+        }
+        assert!(dominators.dominates(join, body));
+        assert!(dominators.dominates(head, body));
+        assert!(dominators.dominates(head, exit));
+        assert!(!dominators.dominates(body, exit));
+        assert!(!dominators.dominates(body, head));
     }
 
     /// A loop whose back edge leaves from two blocks into its body is one
