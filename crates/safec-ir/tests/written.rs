@@ -29,7 +29,7 @@
 //! and one copy is fixed without the other, or every test moves. They moved.
 
 use safec_ir::cfg::Cfg;
-use safec_ir::dataflow::{Analysis, solve};
+use safec_ir::dataflow::{Analysis, solve, solve_first_turn_within};
 use safec_ir::ir::{
     BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin, Place,
     Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
@@ -469,6 +469,61 @@ fn the_back_edge_changes_the_answer_after_the_loop() {
     let solution = solve(&Written(function.locals().len()), &function, &cfg);
 
     assert_eq!(solution.value(exit), Some(&vec![false, false]));
+}
+
+/// As of a loop's first turn, its head holds what arrived from before the
+/// loop: the storage the body ends is not ended yet, so the local written
+/// before the loop is written at the head and in the body, where solving with
+/// the back edge says it is not.
+///
+/// Mutation: in `solved`, join the back edge into the head whatever
+/// `first_turn_of` says. The head is answered unwritten and this fails.
+#[test]
+fn as_of_a_loops_first_turn_its_head_holds_what_arrived_from_before_it() {
+    let (_sources, at) = spans();
+    let (_unit, mut function, int) = a_function(at);
+    let origin = Origin::Written(at);
+    let a = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let header = function.reserve_block();
+    let body = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(entry, goto(header, vec![write(a, origin)]));
+    function.fill_block(
+        header,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(1),
+                then: body,
+                otherwise: exit,
+                origin,
+            },
+        },
+    );
+    function.fill_block(
+        body,
+        goto(header, vec![Element::StorageDead { origin, local: a }]),
+    );
+    function.fill_block(
+        exit,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Return,
+        },
+    );
+
+    let cfg = Cfg::of(&function);
+    let analysis = Written(function.locals().len());
+    let every_turn = solve(&analysis, &function, &cfg);
+    let first_turn = solve_first_turn_within(&analysis, &function, &cfg, header, usize::MAX)
+        .expect("no walk count is past `usize::MAX`");
+
+    assert_eq!(every_turn.value(header), Some(&vec![false, false]));
+    assert_eq!(first_turn.value(header), Some(&vec![false, true]));
+    assert_eq!(first_turn.value(body), Some(&vec![false, true]));
 }
 
 /// A local written on one arm of a branch and not the other is not written

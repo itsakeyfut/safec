@@ -323,9 +323,18 @@ pub struct Solution<V> {
     /// the walk is over: every reachable block is arrived at, because the walk
     /// starts at the entry and follows the same edges that made it reachable.
     values: Vec<Option<V>>,
+    /// How many walks of a block it took, which a caller bounding several
+    /// solves together takes from what it has left.
+    walks: usize,
 }
 
 impl<V> Solution<V> {
+    /// How many walks of a block this took, never more than the bound it was
+    /// solved within.
+    pub fn walks(&self) -> usize {
+        self.walks
+    }
+
     /// What holds where this block starts, or nothing if the entry cannot
     /// reach it.
     ///
@@ -443,6 +452,38 @@ pub fn solve_within<A: Analysis>(
     function: &Function,
     cfg: &Cfg,
     max_walks: usize,
+) -> Option<Solution<A::Value>> {
+    solved(analysis, function, cfg, max_walks, None)
+}
+
+/// [`solve_within`] as of the first turn of the loop whose head is `head`:
+/// no back edge into `head` is joined, so every block of that loop holds what
+/// its first turn sees, and every other loop is followed as usual.
+///
+/// **Whatever turn reaches a point in a loop, the first turn ran before it**,
+/// so what holds there on the first turn is what a check asks of a read that
+/// runs on every turn (#670). An edge into the head from before the loop is
+/// joined as it is anywhere; only the turns that come round again are left
+/// out.
+pub fn solve_first_turn_within<A: Analysis>(
+    analysis: &A,
+    function: &Function,
+    cfg: &Cfg,
+    head: BlockId,
+    max_walks: usize,
+) -> Option<Solution<A::Value>> {
+    solved(analysis, function, cfg, max_walks, Some(head))
+}
+
+/// The one walk behind [`solve_within`] and [`solve_first_turn_within`], so
+/// the two cannot settle a loop differently except at the one edge the second
+/// leaves out.
+fn solved<A: Analysis>(
+    analysis: &A,
+    function: &Function,
+    cfg: &Cfg,
+    max_walks: usize,
+    first_turn_of: Option<BlockId>,
 ) -> Option<Solution<A::Value>> {
     let mut walks = 0usize;
     let mut values: Vec<Option<A::Value>> = (0..function.blocks().len()).map(|_| None).collect();
@@ -604,7 +645,11 @@ pub fn solve_within<A: Analysis>(
                         // whose `join_back` is its `join` this is the same
                         // value, joined twice.
                         if cfg.drained_at(block) >= cfg.drained_at(successor) {
-                            analysis.join_back(&mut folded, just_sent);
+                            // Left out as of a first turn: the head keeps
+                            // what arrived from before the loop.
+                            if first_turn_of != Some(successor) {
+                                analysis.join_back(&mut folded, just_sent);
+                            }
                         } else {
                             let forward = sent_into(
                                 analysis,
@@ -653,5 +698,5 @@ pub fn solve_within<A: Analysis>(
         }
     }
 
-    Some(Solution { values })
+    Some(Solution { values, walks })
 }

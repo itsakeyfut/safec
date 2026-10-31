@@ -33,7 +33,7 @@
 
 use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
-use crate::dataflow::{Analysis, solve};
+use crate::dataflow::{Analysis, solve, solve_first_turn_within};
 use crate::ir::{
     BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Operation, Place,
     Projection, Rvalue, Terminator, TranslationUnit, Ty,
@@ -411,26 +411,66 @@ pub(super) fn findings(
             unproven: None,
         });
     };
+    // **And every read a loop runs on every turn, as of its first turn**
+    // (#670): whatever turn reaches it, the first passed it, so `r = q; q =
+    // &x;` in the body is a proof. Only where the read's block dominates every
+    // block the loop's back edges leave from. A read on an arm stays silent,
+    // as the module comment says a loop that runs at least once and a flag
+    // set beside the assignment are, by the user's decision, where the memory
+    // check doubts it: `if (i > 0) use(p); p = find(i);` is C this check
+    // reads as defined. Not bounded, for the reason this analysis's own walk
+    // is not. See ADR-0057.
+    let loops = cfg.loops();
+    let dominators = cfg.dominators();
+    let first_turns: Vec<_> = loops
+        .iter()
+        .map(|each| {
+            let solution =
+                solve_first_turn_within(&analysis, function, &cfg, each.head(), usize::MAX)
+                    .expect("no walk count is past `usize::MAX`");
+            (each, solution)
+        })
+        .collect();
     for &id in cfg.order() {
         let Some(start) = solution.value(id) else {
             continue;
         };
         let mut value = start.clone();
         let block = function.block(id);
+        let mut turns: Vec<State> = first_turns
+            .iter()
+            .filter(|(each, _)| {
+                each.contains(id)
+                    && each
+                        .latches()
+                        .iter()
+                        .all(|&latch| dominators.dominates(id, latch))
+            })
+            .filter_map(|(_, solution)| solution.value(id).cloned())
+            .collect();
         for (index, element) in block.elements.iter().enumerate() {
             for (local, at) in element_reads(element) {
                 if value[local.index()] {
                     doubted.push((local, at, (id, index)));
                 }
                 report(local, at, value[local.index()], findings);
+                for turn in &turns {
+                    report(local, at, turn[local.index()], findings);
+                }
             }
             analysis.element(function, element, &mut value);
+            for turn in &mut turns {
+                analysis.element(function, element, turn);
+            }
         }
         for (local, at) in terminator_reads(&block.terminator) {
             if value[local.index()] {
                 doubted.push((local, at, (id, block.elements.len())));
             }
             report(local, at, value[local.index()], findings);
+            for turn in &turns {
+                report(local, at, turn[local.index()], findings);
+            }
         }
         at_end[id.index()] = Some(value);
     }

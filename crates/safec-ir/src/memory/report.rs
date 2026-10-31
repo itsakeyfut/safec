@@ -1988,6 +1988,10 @@ pub(super) fn departed_at_call(
 /// is a use of an indeterminate value (C17 7.22.3.1 p2, 7.22.3.4 p2, Annex
 /// J.2), once per place per caret. The later uses of what it read are not
 /// reported again. See ADR-0057.
+///
+/// `doubt_only` where `known` is a loop's first turn at a read that turn may
+/// not run, which says no more than a doubt (#670).
+#[allow(clippy::too_many_arguments)]
 pub(super) fn loaded_indeterminate(
     sources: &SourceMap,
     findings: &mut Vec<Finding>,
@@ -1996,6 +2000,7 @@ pub(super) fn loaded_indeterminate(
     function: &Function,
     at: Option<(Span, Vec<Place>)>,
     known: &Known,
+    doubt_only: bool,
 ) {
     let Some((at, read)) = at else {
         return;
@@ -2022,10 +2027,12 @@ pub(super) fn loaded_indeterminate(
             reaches_local: through.writes_to.any(),
         };
         let root = Place::local(local);
-        if said
-            .iter()
-            .any(|(said_at, said_place, _)| *said_at == at && *said_place == root)
-        {
+        let conclusion = if maybe || doubt_only {
+            Conclusion::Unknown
+        } else {
+            Conclusion::Unsafe
+        };
+        if !may_say(findings, said, at, &root, conclusion) {
             continue;
         }
         say(
@@ -2036,11 +2043,7 @@ pub(super) fn loaded_indeterminate(
             Finding {
                 function: analysis.function,
                 kind,
-                conclusion: if maybe {
-                    Conclusion::Unknown
-                } else {
-                    Conclusion::Unsafe
-                },
+                conclusion,
                 at,
                 local: Some(local),
                 freed: None,
@@ -2048,6 +2051,31 @@ pub(super) fn loaded_indeterminate(
                 unproven: None,
             },
         );
+    }
+}
+
+/// Whether a read reported indeterminate at `at` through `root` may be said:
+/// where nothing stands there yet, or where what stands is a doubt and this
+/// is a proof. **A proof gives way to nothing, and takes the place of a doubt**
+/// (#670): a loop's first turn proves a read the every-turn walk only doubted,
+/// `r = q; if (c) q = &x;` in a body, and skipping whatever stood left that
+/// proof a warning `--allow-unknown` lowers. Found by review. Not handed to
+/// [`say`] for every pair, whose `supersedes` takes two proofs to name a free.
+fn may_say(
+    findings: &[Finding],
+    said: &[(Span, Place, usize)],
+    at: Span,
+    root: &Place,
+    conclusion: Conclusion,
+) -> bool {
+    match said
+        .iter()
+        .find(|(said_at, said_place, _)| *said_at == at && said_place == root)
+    {
+        None => true,
+        Some(&(_, _, index)) => {
+            findings[index].conclusion == Conclusion::Unknown && conclusion == Conclusion::Unsafe
+        }
     }
 }
 
@@ -2059,6 +2087,9 @@ pub(super) fn loaded_indeterminate(
 /// `taken` is `assigned::address_taken`, so a local is asked here exactly
 /// where `memory::assigned` does not ask it: that analysis follows no write
 /// through an address and this one does ([`Known::unwritten`]). See ADR-0057.
+///
+/// `doubt_only` as [`loaded_indeterminate`] takes it.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn unwritten_read(
     sources: &SourceMap,
     findings: &mut Vec<Finding>,
@@ -2067,6 +2098,7 @@ pub(super) fn unwritten_read(
     reads: Vec<(LocalId, Span)>,
     taken: &Bits,
     known: &Known,
+    doubt_only: bool,
 ) {
     let function = analysis.unit.function(analysis.function);
     for (local, at) in reads {
@@ -2080,10 +2112,12 @@ pub(super) fn unwritten_read(
             continue;
         }
         let root = Place::local(local);
-        if said
-            .iter()
-            .any(|(said_at, said_place, _)| *said_at == at && *said_place == root)
-        {
+        let conclusion = if partly || doubt_only {
+            Conclusion::Unknown
+        } else {
+            Conclusion::Unsafe
+        };
+        if !may_say(findings, said, at, &root, conclusion) {
             continue;
         }
         say(
@@ -2094,11 +2128,7 @@ pub(super) fn unwritten_read(
             Finding {
                 function: analysis.function,
                 kind: Kind::IndeterminateLocal,
-                conclusion: if partly {
-                    Conclusion::Unknown
-                } else {
-                    Conclusion::Unsafe
-                },
+                conclusion,
                 at,
                 local: Some(local),
                 freed: None,

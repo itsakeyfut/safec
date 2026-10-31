@@ -87,6 +87,10 @@ cases! {
         // holds it: drop (a) together with (b) or (c), or join with `&&`, and
         // it is refused.
         a_pointer_read_in_a_loop_only_after_its_first_turn_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read by name on every turn before the body assigns it: a proof, as
+        // of the loop's first turn (#670). Mutation: ask no read in
+        // `memory::assigned` as of a first turn; this goes silent.
+        a_pointer_local_read_in_a_loop_before_the_body_assigns_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The read is under `saved`, so `c`'s false edge does not lead to it
         // on every path. Mutation: drop (c). It is refused.
         a_pointer_assigned_beside_a_flag_is_read_under_it_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -522,6 +526,46 @@ cases! {
         // what it had; this gains an `SC0411` doubt, which `main` does not
         // give. Found by review of #668.
         a_local_array_made_in_an_outer_loop_and_filled_by_an_inner_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read on every turn before the body writes it, so the first turn reads it
+        // unwritten: `SC0411`, a proof (#670). See ADR-0057. Mutation: ask no read
+        // as of a loop's first turn; this goes silent.
+        a_pointer_read_out_of_a_local_array_in_a_loop_before_the_body_writes_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through a local's address. Mutation: as above; this goes
+        // silent.
+        a_pointer_read_through_an_address_in_a_loop_before_the_body_writes_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read in the loop's own condition, which its head runs first. Mutation:
+        // leave a loop's head out of its body; this goes silent.
+        a_pointer_read_in_a_loops_condition_before_its_body_writes_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // On an arm, which the first turn may not take: a doubt. Mutation: take
+        // every read as of the first turn as a proof; this becomes one.
+        a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read in an inner loop the outer body writes after. Only the outer loop's
+        // first turn has it unwritten there, and the inner loop may not run, so a
+        // doubt. Mutation: ask a read as of its innermost loop only; this goes
+        // silent.
+        a_pointer_read_in_an_inner_loop_before_the_outer_body_writes_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read as a call's argument, at the call: `SC0411`, a proof (#670).
+        // Mutation: ask a block's terminator nothing as of the first turn; this
+        // goes back to what `main` says. Found by review.
+        a_pointer_freed_out_of_a_local_array_in_a_loop_before_the_body_writes_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read as a branch's condition, which runs on every turn. Mutation: as
+        // above; this goes silent. Found by review.
+        a_pointer_tested_in_a_loops_body_before_the_body_writes_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same at a call by name, in `memory::assigned`. Mutation: ask a
+        // terminator nothing as of the first turn there; this goes silent. Found
+        // by review.
+        a_pointer_local_freed_in_a_loop_before_the_body_assigns_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read by name, its address taken, so the memory check's: a proof.
+        // Mutation: ask no read by name as of the first turn; this goes silent.
+        // Found by review.
+        a_pointer_local_whose_address_is_taken_read_in_a_loop_before_the_body_writes_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same on an arm: a doubt. Mutation: a read by name as of the first
+        // turn ignores where it is; this becomes a proof. Found by review.
+        a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Every turn after the first may have assigned it, a doubt; the first did
+        // not, a proof, which takes the doubt's place. Mutation: let what stands
+        // at a caret keep it whatever comes; this stays a doubt. Found by review.
+        a_pointer_local_doubted_every_turn_is_proved_as_of_the_first: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same of a pointer local whose address is taken. Mutation: as
         // above; this gains an `SC0411` doubt.
         a_pointer_local_made_in_an_outer_loop_and_assigned_in_an_inner_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -3546,10 +3590,14 @@ cases! {
         // the read. Mutation: run the rule after the free's own arm, which
         // returns early for such a pointer; the same.
         a_free_of_a_pointer_read_out_of_a_parameter_doubts_a_read_through_the_parameter: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
-        // Silent: a loop that keeps last turn's allocation alive, and one that
-        // stores and reads within a turn with nothing freed. Mutation: have
-        // `reborn` mark whatever the old allocation's state; both report.
-        a_pointer_kept_alive_last_turn_is_read_in_silence_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // Not freed: a loop that keeps last turn's allocation alive, and one
+        // that stores and reads within a turn with nothing freed. Mutation: have
+        // `reborn` mark whatever the old allocation's state; both report it.
+        // The first reads `*t2` on an arm only a later turn takes, which the
+        // first turn has unwritten, so it is an `SC0411` doubt, the cost #670
+        // chose. Mutation: ask a read as of the first turn only where it runs
+        // on every turn; the doubt goes.
+        a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // What ADR-0045 accepts as its cost: a loop that stores, reads and
         // frees within one turn is doubted on the next, since a store does not

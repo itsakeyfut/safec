@@ -169,9 +169,14 @@ index this check cannot read writes the whole array. A local written on one
 path into a join and not on the other is `SC0411` as a doubt where it is read
 after the join, `if (c()) m[0] = &x; q = m[0];` (#668), but not across a
 loop's back edge, so a loop that fills an array is not doubted for the path
-that skips it. Nor, then, is any read the loop's head reaches before a
-write, a read in the body before the body writes it among them, which is
-#670. An integer read out of such a local is not followed.
+that skips it. A read inside a loop is asked as of the loop's first turn as
+well, since every turn that reaches it ran the first (#670): `r = m[0]; m[0] =
+&x;` in the body, and a read in the loop's own condition, are `SC0411` where
+the read runs on every turn, and a doubt on an arm, which costs a doubt about
+a read on an arm of last turn's value, `if (k == 1) q = *t2;`. A pointer local
+whose address is never taken is asked the same where the read runs on every
+turn, `r = q; q = &x;`, and stays silent on an arm. An integer read out of
+such a local is not followed.
 [ADR-0057](adr/0057-a-pointer-read-out-of-fresh-memory-is-reported-where-it-is-read.md)
 is the decision.
 

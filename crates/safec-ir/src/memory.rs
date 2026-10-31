@@ -61,7 +61,7 @@ mod transfer;
 
 use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
-use crate::dataflow::{Analysis, solve_within};
+use crate::dataflow::{Analysis, solve_first_turn_within, solve_within};
 use crate::ir::{
     Between, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
     TranslationUnit, Ty,
@@ -725,7 +725,6 @@ fn findings_within(
         // The locals whose address is taken, which a read by name of asks
         // `Known::unwritten` and `memory::assigned` does not. See #640.
         let taken = assigned::address_taken(function);
-
         for &id in cfg.order() {
             // `Cfg::order` holds exactly the reachable blocks and `solve` gives
             // every reachable block a value, so nothing skips here today. It is
@@ -748,6 +747,7 @@ fn findings_within(
                     function,
                     read_out_of_memory_in_element(element),
                     &known,
+                    false,
                 );
                 unwritten_read(
                     sources,
@@ -757,6 +757,7 @@ fn findings_within(
                     assigned::element_reads(element),
                     &taken,
                     &known,
+                    false,
                 );
                 // Before the transfer, which is what the element does: the
                 // question is what was true where it runs.
@@ -858,6 +859,7 @@ fn findings_within(
                 function,
                 read_out_of_memory_in_terminator(&block.terminator),
                 &known,
+                false,
             );
             unwritten_read(
                 sources,
@@ -867,6 +869,7 @@ fn findings_within(
                 assigned::terminator_reads(&block.terminator),
                 &taken,
                 &known,
+                false,
             );
             // Before the terminator's own transfer, which is what turns a live
             // allocation into a freed one: the question is what was true when
@@ -957,6 +960,111 @@ fn findings_within(
             );
             if matches!(block.terminator, Terminator::Return) {
                 after_a_call(sources, &mut findings, &mut said, &known, func);
+            }
+        }
+
+        // **And every read inside a loop, as of that loop's first turn**
+        // (#670): whatever turn reaches a read, the first ran before it, and
+        // what it sees is what arrived from before the loop. The join at the
+        // head creates no doubt along a back edge, so a loop that fills an
+        // array is not doubted for the path that skips it (#668), and with
+        // nothing else every read the head reached before a write went
+        // silent, `r = m[0]; m[0] = &x;` in the body among them. Per loop
+        // rather than every back edge at once, which doubted a local made in
+        // an outer loop and filled by an inner one wherever it was read after
+        // the inner loop. After the every-turn walk above, so that a proof it
+        // gave stands at the caret, and a doubt it gave gives way to a proof
+        // here: asked first, a first turn's doubt took the place of four such
+        // proofs, measured. See ADR-0057.
+        //
+        // **One loop at a time, its solution dropped before the next, and
+        // every first turn together within one more bound**, by the user's
+        // decision: each solved within the whole bound and all kept to the
+        // end, a nest of thirty loops took twenty-five times as long as
+        // `main` and sixty loops in sequence held 5.4 GB, with nothing
+        // printed. Found by review. Past it, the bound's doubt.
+        let dominators = cfg.dominators();
+        let mut left = max_walks;
+        for each in cfg.loops() {
+            let Some(solution) =
+                solve_first_turn_within(&analysis, function, &cfg, each.head(), left)
+            else {
+                findings.push(Finding {
+                    function: func,
+                    kind: Kind::TooLong { walks: max_walks },
+                    conclusion: Conclusion::Unknown,
+                    at: function.name,
+                    local: None,
+                    freed: None,
+                    made: None,
+                    unproven: None,
+                });
+                break;
+            };
+            left -= solution.walks();
+            for &id in cfg.order() {
+                if !each.contains(id) {
+                    continue;
+                }
+                let Some(mut turn) = solution.value(id).cloned() else {
+                    continue;
+                };
+                // **A proof only where the block dominates every block the
+                // loop's back edges leave from**, so that every turn that
+                // comes round passed it and the first did too. A read on an
+                // arm, `if (k == 1) q = *t2;`, may not run on the first turn,
+                // and C defines it reading last turn's value, so it is a
+                // doubt, by the user's decision. Every latch and not any: no
+                // case tells the two apart, measured, since a loop this C can
+                // write has one, and `continue` is the first that will not.
+                let doubt_only = !each
+                    .latches()
+                    .iter()
+                    .all(|&latch| dominators.dominates(id, latch));
+                let block = function.block(id);
+                for element in &block.elements {
+                    loaded_indeterminate(
+                        sources,
+                        &mut findings,
+                        &mut said,
+                        &analysis,
+                        function,
+                        read_out_of_memory_in_element(element),
+                        &turn,
+                        doubt_only,
+                    );
+                    unwritten_read(
+                        sources,
+                        &mut findings,
+                        &mut said,
+                        &analysis,
+                        assigned::element_reads(element),
+                        &taken,
+                        &turn,
+                        doubt_only,
+                    );
+                    analysis.element(function, element, &mut turn);
+                }
+                loaded_indeterminate(
+                    sources,
+                    &mut findings,
+                    &mut said,
+                    &analysis,
+                    function,
+                    read_out_of_memory_in_terminator(&block.terminator),
+                    &turn,
+                    doubt_only,
+                );
+                unwritten_read(
+                    sources,
+                    &mut findings,
+                    &mut said,
+                    &analysis,
+                    assigned::terminator_reads(&block.terminator),
+                    &taken,
+                    &turn,
+                    doubt_only,
+                );
             }
         }
     }
@@ -1347,6 +1455,74 @@ mod tests {
         assert_eq!(findings[0].kind, Kind::TooLong { walks: 2 });
         assert_eq!(findings[0].conclusion, Conclusion::Unknown);
         assert_eq!(sources.snippet(findings[0].at), "f");
+    }
+
+    /// Within the work bound, with its first turns past one more of it, a
+    /// function is the same `Unknown` finding: two loops in sequence solve
+    /// as of each one's first turn, each walking the whole function, so the
+    /// two together take more walks than the every-turn solve the bound was
+    /// set to (#670).
+    ///
+    /// Mutation: leave a first turn past the bound unreported. Nothing is
+    /// found, and this fails.
+    #[test]
+    fn a_function_whose_first_turns_pass_one_more_bound_is_one_unknown_finding() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "f");
+        let mut unit = TranslationUnit::new(
+            Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+        );
+        let int = unit.push_type(Ty::Int);
+        let mut function = Function::new(Span::new(file, 0, 1), int, []);
+        let at = Span::new(file, 0, 1);
+        let entry = function.reserve_block();
+        let first = function.reserve_block();
+        let first_body = function.reserve_block();
+        let second = function.reserve_block();
+        let second_body = function.reserve_block();
+        let exit = function.reserve_block();
+        let go = |to| Block {
+            elements: vec![],
+            terminator: Terminator::Goto(to),
+        };
+        let branch = |then, otherwise| Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(1),
+                then,
+                otherwise,
+                origin: Origin::Written(at),
+            },
+        };
+        function.fill_block(entry, go(first));
+        function.fill_block(first, branch(first_body, second));
+        function.fill_block(first_body, go(first));
+        function.fill_block(second, branch(second_body, exit));
+        function.fill_block(second_body, go(second));
+        function.fill_block(
+            exit,
+            Block {
+                elements: vec![],
+                terminator: Terminator::Return,
+            },
+        );
+        let locals = function.locals().len();
+        let func = unit.push_function(function);
+        let walks = crate::dataflow::solve(
+            &analysis(&sources, &unit, func),
+            unit.function(func),
+            &Cfg::of(unit.function(func)),
+        )
+        .walks();
+        let findings = findings_within(
+            &sources,
+            &unit,
+            MAX_BYTES,
+            u64::try_from(walks * per_block(locals, 0)).expect("small"),
+        );
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].kind, Kind::TooLong { walks });
+        assert_eq!(findings[0].conclusion, Conclusion::Unknown);
     }
 
     /// At the work bound, three walks for three, the function is read.
