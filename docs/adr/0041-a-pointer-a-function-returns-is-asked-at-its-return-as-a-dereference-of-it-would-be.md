@@ -173,11 +173,15 @@ function marks nothing, as the store door asks nothing of one, which is
 **And a call this check cannot read handed it is asked too** (#672).
 `*pp = x; release(x);` was silent where `release(x); *pp = x;` was doubted,
 since only `free` and `realloc` asked the mark. A call this check cannot read
-is asked of what its transfer takes it to have freed, what it is handed by
-name or as a load, what an argument read out of memory may be, and every
-allocation those hold, one set from `Allocations::handed_to_opaque_call` for
-both, and is `HandedAfterStore` under `SC0414` where any of it is
-`stored_out`. Only what it is handed: asking every allocation exposed before
+is asked of what its transfer takes it to have freed, `report::freed_by_opaque_call`:
+what it is handed by name or as a load and what an argument read out of memory
+may be, `Allocations::handed_to_opaque_call`, which the transfer marks
+`may_be_freed`; what the locals it is handed the address of hold,
+`Allocations::locals_handed_to_opaque_call`, which it leaves `Reachable`; every
+allocation those hold; and at a hatch every allocation, as the hatch's transfer
+doubts them all (ADR-0038). It is `HandedAfterStore` under `SC0414` where any
+of it is `stored_out`. Asking only the first of those let `release_pp(&x)`, a
+local array and a hatch go silent, found by review. Only what it is handed: asking every allocation exposed before
 would doubt every call after a store out. A doubt, by the user's decision,
 since the call may keep what it is handed; that costs `*out = n;
 append(list, n);`, a correct program now doubted, which `--allow-unknown`
@@ -255,7 +259,13 @@ and `memory/`), applied and measured, and a named case in
   asking only what it is handed by name fails
   `an_allocation_stored_out_and_then_handed_to_a_call_inside_a_box_is_doubted`,
   and asking every exposed allocation fails
-  `an_allocation_stored_out_is_doubted_at_the_call_it_is_handed_and_not_at_a_later_one`
+  `an_allocation_stored_out_is_doubted_at_the_call_it_is_handed_and_not_at_a_later_one`.
+  Asking nothing of the locals handed by address fails
+  `an_allocation_stored_out_and_handed_to_a_call_by_the_address_of_its_local_is_doubted`,
+  asking a hatch only what it is handed fails
+  `an_allocation_stored_out_is_doubted_at_a_hatch_called_after`, and keying
+  the doubt by the first argument fails
+  `an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported`
   (#672).
 * Not asking `freed_behind` at a return fails
   `a_box_holding_a_freed_pointer_returned_is_doubted` and, for a return of a
