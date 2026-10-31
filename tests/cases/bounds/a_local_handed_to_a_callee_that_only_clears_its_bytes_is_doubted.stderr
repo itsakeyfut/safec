@@ -1,0 +1,10 @@
+error[SC0413]: this lets `v` leave, which may not point at an object as wide as its type
+   ╭─[ a_local_handed_to_a_callee_that_only_clears_its_bytes_is_doubted.c:7:5 ]
+   │
+ 7 │     use(v);
+   │     ───┬──  
+   │        ╰──── passed here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

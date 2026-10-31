@@ -1,0 +1,36 @@
+Target "x86_64-pc-windows-msvc"
+Function a_byte_array_handed_to_a_callee_as_bytes_is_not_doubted.c:1:6 "fill" declared
+  Local "_0" "void" return
+  Local "_1" "char *" parameter "p"
+Function a_byte_array_handed_to_a_callee_as_bytes_is_not_doubted.c:2:6 "use_char" declared
+  Local "_0" "void" return
+  Local "_1" "char *" parameter "p"
+Function a_byte_array_handed_to_a_callee_as_bytes_is_not_doubted.c:3:6 "run"
+  Local "_0" "void" return
+  Local "_1" "char[8]" "buf"
+  Local "_2" "char *"
+  Local "_3" "char *"
+  Block "bb0" entry
+    Operation a_byte_array_handed_to_a_callee_as_bytes_is_not_doubted.c:5:10 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_byte_array_handed_to_a_callee_as_bytes_is_not_doubted.c:5:5 generated
+    Call a_byte_array_handed_to_a_callee_as_bytes_is_not_doubted.c:5:5 written "fill" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_byte_array_handed_to_a_callee_as_bytes_is_not_doubted.c:5:5 generated
+    Operation a_byte_array_handed_to_a_callee_as_bytes_is_not_doubted.c:6:14 generated
+      Destination "_3"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_byte_array_handed_to_a_callee_as_bytes_is_not_doubted.c:6:5 generated
+    Call a_byte_array_handed_to_a_callee_as_bytes_is_not_doubted.c:6:5 written "use_char" "bb2"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_byte_array_handed_to_a_callee_as_bytes_is_not_doubted.c:6:5 generated
+    Return

@@ -210,11 +210,12 @@ pub(super) struct Known {
     /// Per local, how many bytes a pointer a call may write into it is
     /// believed to point at, at most: the narrowest width the parameters
     /// it was handed through believe at its level, and `0` where one was a
-    /// `void *`. That is what this check asks of a callee's body, which is
-    /// asked at the types it stores through: through a `void *` it may have
-    /// stored any pointer at any type. C allows no more through one than
-    /// through an `int **` (C17 6.5 p7), so this is a limit of the asking
-    /// and not of the language. `None` where no call was handed it.
+    /// `void *` or bytes (#675). That is what this check asks of a callee's
+    /// body, which is asked at the types it stores through: through a
+    /// `void *` it may have stored any pointer at any type, and through bytes
+    /// by `memcpy`. C allows no more through one than through an `int **`
+    /// (C17 6.5 p7), so this is a limit of the asking and not of the
+    /// language. `None` where no call was handed it.
     ///
     /// **What a callee wrote is believed as it was handed**, not as the
     /// local is declared: `int *v` handed to `put(void **slot, char *c)`
@@ -226,7 +227,10 @@ pub(super) struct Known {
     /// value's memory, below its own level: [`Self::handed_at_most`] one
     /// level further down and every level after, as
     /// [`Held::contents_at_most`] reads them. Every level `0` where it was
-    /// handed through a `void *`, which may store any pointer at any type.
+    /// handed through a `void *` or as bytes, either of which may store any
+    /// pointer at any type (#675). Of reads through this local only: a local
+    /// whose address its value holds, read by name, is bounded by nothing
+    /// (#677).
     ///
     /// **So that what a callee wrote is believed as it was handed at every
     /// level** (#636): `put(pv)` with `pv = &v` and `put` taking `void ***`

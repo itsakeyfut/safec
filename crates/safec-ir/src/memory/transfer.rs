@@ -3305,17 +3305,27 @@ impl Analysis for Allocations<'_> {
                         // Reached as a pointer, the body stores one of that
                         // type; reached as `void`, through a `void *`, it may
                         // store any pointer, so nothing is believed; reached
-                        // as no pointer, or below one, a typed store puts no
-                        // pointer there, and bounding that doubted a local
-                        // whose own address a callee may have stored in it.
+                        // below one, a typed store puts no pointer there, and
+                        // bounding that doubted a local whose own address a
+                        // callee may have stored in it.
+                        //
+                        // **Reached as bytes, a local is `void`'s case**
+                        // (#675): `memcpy` puts any pointer in bytes, and is
+                        // asked nothing of their type, so `put(pv)` with `put`
+                        // taking `char (*)[8]` left `v` believing its declared
+                        // type at every level, and a one-byte allocation was
+                        // handed on in silence. Whatever the local is declared
+                        // as: a `char` buffer filled so and read back as a
+                        // pointer through a `void *` was silent too, where a
+                        // `void *` callee was doubted. Found by review. See
+                        // ADR-0060.
                         let Some(read_as) = read_as else {
                             continue;
                         };
                         // An array of pointers holds pointers, as `type_levels` reads it.
                         let width = match self.unit.ty(innermost_element(self.unit, read_as)) {
                             Ty::Pointer(pointee) => self.unit.size_of(pointee).unwrap_or(0),
-                            Ty::Void => 0,
-                            Ty::Int | Ty::Char => continue,
+                            Ty::Void | Ty::Int | Ty::Char => 0,
                             Ty::Array { .. } => {
                                 unreachable!("`innermost_element` strips every array")
                             }

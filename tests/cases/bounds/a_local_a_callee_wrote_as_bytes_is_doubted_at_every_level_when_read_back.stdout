@@ -1,0 +1,195 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:2:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:3:6 "put"
+  Local "_0" "void" return
+  Local "_1" "char (*)[8]" parameter "p"
+  Local "_2" "int"
+  Local "_3" "char *" "cc"
+  Local "_4" "void *"
+  Local "_5" "void **" "m"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "void *"
+  Local "_9" "void ***"
+  Local "_10" "void *"
+  Block "bb0" entry
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:4:9 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:4:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:4:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:4:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:7:16 generated
+    Call a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:7:16 written "malloc" "bb4"
+      Destination "_4"
+      Constant 1
+  Block "bb4"
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:7:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:7:16 generated
+    ArgumentsEvaluated a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:8:16 generated
+    Call a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:8:16 written "malloc" "bb5"
+      Destination "_6"
+      Constant 8
+  Block "bb5"
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:8:12 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:8:16 generated
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:9:9 written
+      Destination "_7"
+      Binary "Eq"
+        Copy "_5"
+        Constant 0
+    Branch a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:9:9 written "bb6" "bb7"
+      Copy "_7"
+  Block "bb6"
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:9:9 generated
+    Return
+  Block "bb7"
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:9:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:12:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:12:5 written
+      Destination "_8"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:12:5 generated
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:13:15 written
+      Destination "_9"
+      Address
+        Place "_5"
+    ArgumentsEvaluated a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:13:5 generated
+    Call a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:13:5 written "memcpy" "bb9"
+      Destination "_10"
+      Copy "_1"
+      Copy "_9"
+      Constant 8
+  Block "bb9"
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:13:5 generated
+    Return
+Function a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:15:6 "run"
+  Local "_0" "void" return
+  Local "_1" "int ***" "v"
+  Local "_2" "void *" "pv"
+  Local "_3" "int ****"
+  Local "_4" "int"
+  Local "_5" "int **" "q"
+  Local "_6" "int"
+  Local "_7" "int *" "r"
+  Local "_8" "int"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:16:12 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:16:16 generated
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:17:16 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:17:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:17:16 generated
+    ArgumentsEvaluated a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:18:5 generated
+    Call a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:18:5 written "put" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:18:5 generated
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:19:9 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:19:9 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:19:9 generated
+    StorageLive a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:20:9 generated "_5"
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:20:15 written
+      Destination "_5"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:20:19 generated
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:21:13 written
+      Destination "_6"
+      Binary "Ne"
+        Copy "_5"
+        Constant 0
+    Branch a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:21:13 written "bb5" "bb6"
+      Copy "_6"
+  Block "bb3"
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:19:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Return
+  Block "bb5"
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:21:13 generated
+    StorageLive a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:22:13 generated "_7"
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:22:18 written
+      Destination "_7"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:22:22 generated
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:23:17 written
+      Destination "_8"
+      Binary "Ne"
+        Copy "_7"
+        Constant 0
+    Branch a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:23:17 written "bb8" "bb9"
+      Copy "_8"
+  Block "bb6"
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:21:13 generated
+    Goto "bb7"
+  Block "bb7"
+    StorageDead a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:27:5 generated "_5"
+    Goto "bb4"
+  Block "bb8"
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:23:17 generated
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:24:17 written
+      Destination "_7"
+        Deref
+      Use
+        Constant 1
+    Operation a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:24:17 written
+      Destination "_9"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:24:17 generated
+    Goto "bb10"
+  Block "bb9"
+    Sequenced a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:23:17 generated
+    Goto "bb10"
+  Block "bb10"
+    StorageDead a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:26:9 generated "_7"
+    Goto "bb7"
