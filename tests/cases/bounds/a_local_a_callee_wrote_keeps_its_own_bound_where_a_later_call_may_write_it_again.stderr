@@ -1,0 +1,30 @@
+error[SC0414]: this stores `t` where code outside this function may read it, and it may point to a freed allocation
+   ╭─[ a_local_a_callee_wrote_keeps_its_own_bound_where_a_later_call_may_write_it_again.c:8:5 ]
+   │
+ 8 │     v = t;
+   │     ──┬──  
+   │       ╰──── stored here, where it may have been freed before
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0413]: this lets `v` leave, and what it points at may hold a pointer to an object narrower than it is read as
+    ╭─[ a_local_a_callee_wrote_keeps_its_own_bound_where_a_later_call_may_write_it_again.c:10:5 ]
+    │
+ 10 │     use(v);
+    │     ───┬──  
+    │        ╰──── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0407]: this passes `v`, which may point to a freed allocation
+    ╭─[ a_local_a_callee_wrote_keeps_its_own_bound_where_a_later_call_may_write_it_again.c:10:5 ]
+    │
+ 10 │     use(v);
+    │     ───┬──  
+    │        ╰──── passed here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

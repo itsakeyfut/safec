@@ -276,6 +276,10 @@ pub enum Kind {
         /// How many bytes the object takes, where it is shown narrower and
         /// every object it may reach agrees.
         extent: Option<u64>,
+        /// Whether the doubt is about what the memory it points at holds,
+        /// below its own level, rather than about what it points at itself,
+        /// which the words then say (#636).
+        below: bool,
     },
 }
 

@@ -1583,13 +1583,15 @@ impl Analysis for Allocations<'_> {
         // value is believed to point at, `Held::believed`, is a proof a join
         // only lowers or drops, and the slack above covers it. See ADR-0060.
         //
-        // **What a local's value believes of its memory and what was stored in
-        // a site, one [`Levels`] each, are a list of [`Self::deepest_pointer`] entries
+        // **What a local's value believes of its memory, what was stored in
+        // a site, and what a call it was handed to may have written there,
+        // one [`Levels`] each, are a list of [`Self::deepest_pointer`] entries
         // apiece**, and a join only lowers an entry: from no bound to a
         // width, and from a width to a smaller one. Every width is a type's
         // size or `0`, so at most one per local and one more, and the list
         // may also grow to its full length once, which changes no bound but
-        // is a step to `Eq`: `locals + 2` steps an entry, two lists a local.
+        // is a step to `Eq`: `locals + 2` steps an entry, three lists a local
+        // (#636).
         // Found by review, which measured a loop head visited 255 times at
         // 256 `*`s where the bound had not counted these (#634).
         let positions: usize = function
@@ -1609,7 +1611,7 @@ impl Analysis for Allocations<'_> {
             + positions * (2 * locals + 3)
             + locals
             + locals * (positions + locals + 2)
-            + 2 * locals * self.deepest_pointer * (locals + 2)
+            + 3 * locals * self.deepest_pointer * (locals + 2)
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -3323,9 +3325,15 @@ impl Analysis for Allocations<'_> {
                         // **And below it, at every level**, as the type it
                         // was reached as says: through a `void *`, nothing
                         // at any level. See `Known::handed_contents_at_most`.
-                        let levels = self.type_levels(read_as).unwrap_or_else(|| {
-                            Levels::from_bounds(vec![Some(0); self.deepest_pointer])
-                        });
+                        // Through an array to its element, as the width
+                        // above reads it: `fill(&a)` with `a` an `int **[2]`
+                        // took `a` as reached through a `void *`. Found by
+                        // review.
+                        let levels = self
+                            .type_levels(innermost_element(self.unit, read_as))
+                            .unwrap_or_else(|| {
+                                Levels::from_bounds(vec![Some(0); self.deepest_pointer])
+                            });
                         value.handed_contents_at_most[local.index()].bound_by(&levels);
                     }
                 }

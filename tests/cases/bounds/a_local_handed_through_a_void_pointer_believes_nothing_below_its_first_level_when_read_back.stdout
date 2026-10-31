@@ -1,0 +1,99 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:1:6 "put_any" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:2:6 "run"
+  Local "_0" "void" return
+  Local "_1" "int ***" "v"
+  Local "_2" "int ****"
+  Local "_3" "int"
+  Local "_4" "int **" "q"
+  Local "_5" "int"
+  Local "_6" "int *" "r"
+  Local "_7" "int"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:3:12 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:3:16 generated
+    Operation a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:4:13 written
+      Destination "_2"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:4:5 generated
+    Call a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:4:5 written "put_any" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:4:5 generated
+    Operation a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:5:9 written
+      Destination "_3"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:5:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:5:9 generated
+    StorageLive a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:6:9 generated "_4"
+    Operation a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:6:15 written
+      Destination "_4"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:6:19 generated
+    Operation a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:7:13 written
+      Destination "_5"
+      Binary "Ne"
+        Copy "_4"
+        Constant 0
+    Branch a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:7:13 written "bb5" "bb6"
+      Copy "_5"
+  Block "bb3"
+    Sequenced a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Return
+  Block "bb5"
+    Sequenced a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:7:13 generated
+    StorageLive a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:8:13 generated "_6"
+    Operation a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:8:18 written
+      Destination "_6"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:8:22 generated
+    Operation a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:9:17 written
+      Destination "_7"
+      Binary "Ne"
+        Copy "_6"
+        Constant 0
+    Branch a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:9:17 written "bb8" "bb9"
+      Copy "_7"
+  Block "bb6"
+    Sequenced a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:7:13 generated
+    Goto "bb7"
+  Block "bb7"
+    StorageDead a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:13:5 generated "_4"
+    Goto "bb4"
+  Block "bb8"
+    Sequenced a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:9:17 generated
+    Operation a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:10:17 written
+      Destination "_6"
+        Deref
+      Use
+        Constant 1
+    Operation a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:10:17 written
+      Destination "_8"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:10:17 generated
+    Goto "bb10"
+  Block "bb9"
+    Sequenced a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:9:17 generated
+    Goto "bb10"
+  Block "bb10"
+    StorageDead a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:12:9 generated "_6"
+    Goto "bb7"

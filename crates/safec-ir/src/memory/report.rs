@@ -1339,6 +1339,7 @@ fn say_leaving(
     analysis: &Allocations<'_>,
     left: (Span, Departure, u64),
     answer: Option<(Fit, Option<LocalId>)>,
+    below: bool,
 ) {
     let (at, how, width) = left;
     let Some((fit, local)) = answer else {
@@ -1358,6 +1359,7 @@ fn say_leaving(
             width,
             narrower,
             extent,
+            below,
         },
         conclusion: Conclusion::Unknown,
         at,
@@ -1384,7 +1386,14 @@ fn say_leaving(
                 findings[index].kind,
                 Kind::HandedOnNarrow { narrower: true, .. }
             );
-            if narrower && !shown {
+            // **And a doubt about the pointer's own level stands over one
+            // about the memory below it**, whichever was asked first, since
+            // it is the one to fix first (#636).
+            let standing_below = matches!(
+                findings[index].kind,
+                Kind::HandedOnNarrow { below: true, .. }
+            );
+            if (narrower && !shown) || (standing_below && !below && !shown) {
                 findings[index] = finding;
             }
             return;
@@ -1518,6 +1527,7 @@ fn contents_leaving(
                 analysis,
                 (at, how, width),
                 Some((Fit::Unknown, leaving)),
+                true,
             );
         }
     }
@@ -1552,7 +1562,14 @@ fn contents_leaving(
             _ => fit,
         };
         let answer = fit.map(|fit| (fit, Some(local)));
-        say_leaving(findings, departed, analysis, (at, how, width), answer);
+        say_leaving(
+            findings,
+            departed,
+            analysis,
+            (at, how, width),
+            answer,
+            false,
+        );
     }
     for (site, read_as) in sites {
         // A `void *` receiver believes only a start, which the store that put
@@ -1608,6 +1625,7 @@ fn contents_leaving(
             analysis,
             (at, how, width),
             Some((fit, None)),
+            false,
         );
     }
 }
@@ -1771,7 +1789,14 @@ pub(super) fn departed_in_element(
         return;
     };
     let answer = leaving(analysis, function, &operation.value, width, known);
-    say_leaving(findings, departed, analysis, (at, how, width), answer);
+    say_leaving(
+        findings,
+        departed,
+        analysis,
+        (at, how, width),
+        answer,
+        false,
+    );
 }
 
 /// Report a pointer this call is handed where this check cannot show it
@@ -1911,6 +1936,7 @@ pub(super) fn departed_at_call(
             analysis,
             (at, Departure::Argument, width),
             answer,
+            false,
         );
     }
 }

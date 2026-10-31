@@ -1015,6 +1015,7 @@ pub(super) fn memory_finding(
                 width,
                 narrower,
                 extent,
+                below,
             },
             Conclusion::Unknown | Conclusion::Unsafe,
             _,
@@ -1042,6 +1043,19 @@ pub(super) fn memory_finding(
                         format!(
                             "this lets `{name}` leave, which may not point at the start of an \
                              object"
+                        )
+                    },
+                ),
+                // **Below its own level**, where what is narrow is what the
+                // memory it points at holds, not what it points at (#636).
+                (false, _) if below => said(
+                    name,
+                    "this lets a pointer leave whose memory may hold a pointer to an object narrower \
+                     than it is read as",
+                    |name| {
+                        format!(
+                            "this lets `{name}` leave, and what it points at may hold a pointer to \
+                             an object narrower than it is read as"
                         )
                     },
                 ),

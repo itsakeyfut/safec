@@ -1,0 +1,40 @@
+error[SC0412]: this may reach outside the object `v` points at
+   ╭─[ a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:6:15 ]
+   │
+ 6 │         int **q = *v;
+   │               ───┬──  
+   │                  ╰──── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object `q` points at
+   ╭─[ a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:8:18 ]
+   │
+ 8 │             int *r = *q;
+   │                  ───┬──  
+   │                     ╰──── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object `r` points at
+    ╭─[ a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:10:17 ]
+    │
+ 10 │                 *r = 1;
+    │                 ───┬──  
+    │                    ╰──── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0403]: this may dereference `v` while it is null
+   ╭─[ a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back.c:6:15 ]
+   │
+ 6 │         int **q = *v;
+   │               ───┬──  
+   │                  ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

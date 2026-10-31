@@ -1,0 +1,35 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_array_a_callee_wrote_as_its_own_type_is_not_doubted_when_handed_on.c:1:6 "fill" declared
+  Local "_0" "void" return
+  Local "_1" "int **(*)[2]" parameter "p"
+Function a_local_array_a_callee_wrote_as_its_own_type_is_not_doubted_when_handed_on.c:2:6 "use" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "p"
+Function a_local_array_a_callee_wrote_as_its_own_type_is_not_doubted_when_handed_on.c:3:6 "run"
+  Local "_0" "void" return
+  Local "_1" "int **[2]" "a"
+  Local "_2" "int **(*)[2]"
+  Local "_3" "int ***"
+  Block "bb0" entry
+    Operation a_local_array_a_callee_wrote_as_its_own_type_is_not_doubted_when_handed_on.c:5:10 written
+      Destination "_2"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_local_array_a_callee_wrote_as_its_own_type_is_not_doubted_when_handed_on.c:5:5 generated
+    Call a_local_array_a_callee_wrote_as_its_own_type_is_not_doubted_when_handed_on.c:5:5 written "fill" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_local_array_a_callee_wrote_as_its_own_type_is_not_doubted_when_handed_on.c:5:5 generated
+    Operation a_local_array_a_callee_wrote_as_its_own_type_is_not_doubted_when_handed_on.c:6:9 generated
+      Destination "_3"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_local_array_a_callee_wrote_as_its_own_type_is_not_doubted_when_handed_on.c:6:5 generated
+    Call a_local_array_a_callee_wrote_as_its_own_type_is_not_doubted_when_handed_on.c:6:5 written "use" "bb2"
+      Copy "_3"
+        Deref
+  Block "bb2"
+    Sequenced a_local_array_a_callee_wrote_as_its_own_type_is_not_doubted_when_handed_on.c:6:5 generated
+    Return

@@ -4007,9 +4007,27 @@ cases! {
         // the cost ADR-0060 records. Mutation: each call replaces the record
         // rather than bounding it; this goes silent.
         a_local_once_handed_through_a_void_pointer_is_bounded_by_it_at_a_later_well_typed_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Through a `void *` nothing is believed at any level, and the doubts
-        // about `v`'s level and its memory's are one report. Mutation: name the
-        // doubt about what a value's memory holds by nothing; this is two.
+        // A well-typed out-parameter of array type: `fill` wrote `a` as the
+        // `int **[2]` it is. Mutation: take the levels of the array rather than
+        // of its element; this gains an `SC0413` doubt. Found by review of #636.
+        a_local_array_a_callee_wrote_as_its_own_type_is_not_doubted_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `v = t` believes nothing below its first level, and `tick()`, which may
+        // write `v` or leave it, does not raise that. Mutation: a call's write
+        // replaces what the local's value believed rather than bounding it; this
+        // loses the `SC0413` at `use(v)`. Found by review of #636.
+        a_local_a_callee_wrote_keeps_its_own_bound_where_a_later_call_may_write_it_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read back through `v` at every level, each is doubted. Mutation: a
+        // local handed through a `void *` is bounded at no level below its own;
+        // the reads through `q` and `r` go silent. Found by review of #636.
+        a_local_handed_through_a_void_pointer_believes_nothing_below_its_first_level_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with `put` on the arm joined in rather than into. Mutation:
+        // the join takes the side joined in; this goes silent. Found by review of
+        // #636.
+        a_local_a_callee_wrote_on_the_other_arm_is_bounded_where_a_later_call_writes_it_again_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Through a `void *`, the doubts about `v`'s level and its memory's
+        // are one report, and the one about its own level stands. Mutation:
+        // name the doubt about what a value's memory holds by nothing; this
+        // is two. What is believed below is held by the read-back case.
         a_local_handed_through_a_void_pointer_is_doubted_once_when_handed_on_deeper: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: a store records level 0 alone.
         a_parameter_stored_in_memory_and_read_back_is_believed_as_it_arrived_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

@@ -1,4 +1,4 @@
-error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+error[SC0413]: this lets a pointer leave whose memory may hold a pointer to an object narrower than it is read as
     ╭─[ a_pointer_read_out_of_a_void_parameter_and_handed_straight_on_is_asked.c:11:9 ]
     │
  11 │         use(*m);

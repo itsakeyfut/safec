@@ -1,4 +1,4 @@
-error[SC0413]: this lets `v` leave, which may not point at an object as wide as its type
+error[SC0413]: this lets `v` leave, and what it points at may hold a pointer to an object narrower than it is read as
     ╭─[ a_local_once_handed_through_a_void_pointer_is_bounded_by_it_at_a_later_well_typed_call.c:10:5 ]
     │
  10 │     use(v);
