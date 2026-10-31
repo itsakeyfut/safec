@@ -228,8 +228,7 @@ pub(super) struct Known {
     /// level further down and every level after, as
     /// [`Held::contents_at_most`] reads them. Every level `0` where it was
     /// handed through a `void *` or as bytes, either of which may store any
-    /// pointer at any type (#675). Of reads through this local only: a local
-    /// whose address its value holds, read by name, is bounded by nothing
+    /// pointer at any type (#675), and so is every local reached below either
     /// (#677).
     ///
     /// **So that what a callee wrote is believed as it was handed at every

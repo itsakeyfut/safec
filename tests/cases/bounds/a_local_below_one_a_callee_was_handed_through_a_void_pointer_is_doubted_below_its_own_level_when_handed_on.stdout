@@ -1,0 +1,207 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:2:6 "put"
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+  Local "_2" "int"
+  Local "_3" "char *" "c"
+  Local "_4" "void *"
+  Local "_5" "void ***" "t"
+  Local "_6" "void **" "u"
+  Local "_7" "int"
+  Local "_8" "void **" "m"
+  Local "_9" "void *"
+  Local "_10" "int"
+  Local "_11" "void *"
+  Local "_12" "void *"
+  Block "bb0" entry
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:3:9 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:3:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:3:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:6:15 generated
+    Call a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:6:15 written "malloc" "bb4"
+      Destination "_4"
+      Constant 1
+  Block "bb4"
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:6:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:6:15 generated
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:7:13 written
+      Destination "_5"
+      Use
+        Copy "_1"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:7:17 generated
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:8:12 written
+      Destination "_6"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:8:16 generated
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:9:9 written
+      Destination "_7"
+      Binary "Eq"
+        Copy "_6"
+        Constant 0
+    Branch a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:9:9 written "bb5" "bb6"
+      Copy "_7"
+  Block "bb5"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:9:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:9:9 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:12:16 generated
+    Call a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:12:16 written "malloc" "bb8"
+      Destination "_9"
+      Constant 8
+  Block "bb8"
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:12:12 written
+      Destination "_8"
+      Use
+        Copy "_9"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:12:16 generated
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:13:9 written
+      Destination "_10"
+      Binary "Eq"
+        Copy "_8"
+        Constant 0
+    Branch a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:13:9 written "bb9" "bb10"
+      Copy "_10"
+  Block "bb9"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:13:9 generated
+    Return
+  Block "bb10"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:13:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:16:5 written
+      Destination "_8"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:16:5 written
+      Destination "_11"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:16:5 generated
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:17:5 written
+      Destination "_6"
+        Deref
+      Use
+        Copy "_8"
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:17:5 written
+      Destination "_12"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:17:5 generated
+    Return
+Function a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:19:6 "use"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "p"
+  Local "_2" "int"
+  Local "_3" "int *" "r"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:20:9 written
+      Destination "_2"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:20:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:20:9 generated
+    StorageLive a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:21:9 generated "_3"
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:21:14 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:21:18 generated
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:22:13 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_3"
+        Constant 0
+    Branch a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:22:13 written "bb4" "bb5"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:20:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+  Block "bb4"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:22:13 generated
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:23:13 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:23:13 written
+      Destination "_5"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:23:13 generated
+    Goto "bb6"
+  Block "bb5"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:22:13 generated
+    Goto "bb6"
+  Block "bb6"
+    StorageDead a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:25:5 generated "_3"
+    Goto "bb3"
+Function a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:27:6 "run"
+  Local "_0" "void" return
+  Local "_1" "int **" "w"
+  Local "_2" "int ***" "v"
+  Local "_3" "int ***"
+  Local "_4" "int ****"
+  Block "bb0" entry
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:28:11 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:28:15 generated
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:29:16 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:29:12 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:29:16 generated
+    Operation a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:30:9 written
+      Destination "_4"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:30:5 generated
+    Call a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:30:5 written "put" "bb1"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:30:5 generated
+    ArgumentsEvaluated a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:31:5 generated
+    Call a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:31:5 written "use" "bb2"
+      Copy "_1"
+  Block "bb2"
+    Sequenced a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on.c:31:5 generated
+    Return

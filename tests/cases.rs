@@ -4049,6 +4049,22 @@ cases! {
         // Mutation: skip a local reached as bytes that holds no pointer by its
         // type; this goes silent. Found by review of #675.
         a_byte_buffer_a_callee_filled_as_bytes_is_asked_when_read_back_as_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `put` was handed `v` as bytes, so it may read `&w` back out of `v` and
+        // store any pointer into `w`: an `SC0413` doubt at `use1(w)` (#677). See
+        // ADR-0060. Mutation: a local reached below a type that stops being a
+        // pointer is skipped again; this goes silent.
+        a_local_below_one_a_callee_was_handed_as_bytes_is_asked_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through a `void *`. Mutation: as above; this goes silent.
+        a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_asked_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `put` stores into `w` a `void **` whose memory holds a one-byte `char *`,
+        // so what is narrow is below `w`'s own level. Mutation: bound such a local
+        // at its own level only; this goes silent.
+        a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Through an `int ***` the callee may store only an `int *` into `w`, as
+        // wide as `use1` believes. It says the conclusion rather than guarding a
+        // line: the walk reaches `w` as an `int *`, which the arm changed for #677
+        // never sees.
+        a_local_below_one_a_callee_was_handed_through_a_typed_pointer_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Through a `void *`, the doubts about `v`'s level and its memory's
         // are one report, and the one about its own level stands. Mutation:
         // name the doubt about what a value's memory holds by nothing; this
@@ -4712,7 +4728,11 @@ cases! {
         // no site, the rejected half-measure; the second builds. The second's
         // report at `release_ref(&b)` is a false one C defines whatever the
         // callees do: `stash` saw null, yet `inside_locals` still puts `a` in
-        // every call's reach, the cost #345 is about. See ADR-0047.
+        // every call's reach, the cost #345 is about. See ADR-0047. So is its
+        // `SC0413` at `use2(&a)`: `a` is reached below `b`'s `int` memory,
+        // which `release_ref` was handed, and a local reached below a type that
+        // stops being a pointer is believed nothing (#677). Mutation: skip such
+        // a local again; this report goes.
         an_address_memory_may_hold_does_not_hand_its_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Nor is an address a store puts in memory this check does not model:

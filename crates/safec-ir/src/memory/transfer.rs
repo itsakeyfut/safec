@@ -3304,10 +3304,7 @@ impl Analysis for Allocations<'_> {
                     for (local, read_as) in locals {
                         // Reached as a pointer, the body stores one of that
                         // type; reached as `void`, through a `void *`, it may
-                        // store any pointer, so nothing is believed; reached
-                        // below one, a typed store puts no pointer there, and
-                        // bounding that doubted a local whose own address a
-                        // callee may have stored in it.
+                        // store any pointer, so nothing is believed.
                         //
                         // **Reached as bytes, a local is `void`'s case**
                         // (#675): `memcpy` puts any pointer in bytes, and is
@@ -3319,7 +3316,23 @@ impl Analysis for Allocations<'_> {
                         // pointer through a `void *` was silent too, where a
                         // `void *` callee was doubted. Found by review. See
                         // ADR-0060.
+                        // **And reached below a type that stops being a
+                        // pointer, the same** (#677): a callee handed `&v` as
+                        // bytes or through a `void *` may read `&w` back out
+                        // of `v` and store any pointer into `w`, so `use1(w)`
+                        // handed a one-byte allocation on in silence while
+                        // `use1(*v)` was doubted. The walk does not say
+                        // whether the type was reached through a typed
+                        // pointer, so one reached below memory a typed callee
+                        // holds an `int` in, which a may-set says may hold a
+                        // local's address, is doubted too, by the user's
+                        // decision. See ADR-0060.
                         let Some(read_as) = read_as else {
+                            value.handed_at_most[local.index()] =
+                                bounded(value.handed_at_most[local.index()], Some(0));
+                            value.handed_contents_at_most[local.index()].bound_by(
+                                &Levels::from_bounds(vec![Some(0); self.deepest_pointer]),
+                            );
                             continue;
                         };
                         // An array of pointers holds pointers, as `type_levels` reads it.
