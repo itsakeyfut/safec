@@ -122,9 +122,17 @@ say there, `Known::handed_contents_at_most`, through an array to its element,
 and nothing at any level through a `void *`, which may store any pointer at
 any type: bounded at the local's own level only, `put(pv)` with `put` taking
 `void ***` left `v` an `int ***` believing whole `int`s two levels down, and
-`use(v)` handed a one-byte allocation on in silence (#636). A local handed as
-bytes is bounded at no level, since a typed store puts no pointer there and a
-`memcpy` into one is asked nothing of it, which is #675. The doubt about what a
+`use(v)` handed a one-byte allocation on in silence (#636). **A local that
+holds a pointer, handed as bytes, is believed nothing at any level**, as one
+handed through a `void *` is (#675): a `memcpy` into bytes puts any pointer
+there and is asked nothing of their type, so `put(pv)` with `put` taking `char
+(*)[8]` handed a one-byte allocation on in silence, and only the caller can
+answer a callee that is only declared. It reverses, for such a local only, the
+reading that a typed store puts no pointer there; a local of no pointer type
+handed as bytes is bounded as before. It costs a doubt where a callee only
+reads or clears the bytes and the local is handed on or read through after,
+`clear(pv); use(v);`, which a `void *` callee already costs, by the user's
+decision; a doubt at the `memcpy` in the callee was not taken. The doubt about what a
 departing local's memory holds is named by that local and says what is narrow
 is what its memory holds, and a doubt about the local's own level at the same
 call stands over it, so the two are one report. Each only lowers a belief, so
