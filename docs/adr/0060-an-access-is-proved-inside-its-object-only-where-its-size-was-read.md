@@ -116,9 +116,15 @@ address is memory holding its value, so below its own level it is asked, and
 read, by what that value believes (#634). The list is no longer than the
 deepest pointer type among the function's locals, which a store cannot
 lengthen, so the lattice it sits in has a finite height, and both bounds on
-one function count it. What a call writes into a local is still bounded at
-the local's own level only, so below it a local a callee filled is handed on
-believing its declared type, which is #636. Each only lowers a belief, so
+one function count it. What a call writes into a local is bounded at every
+level, by what the types it was handed through say there,
+`Known::handed_contents_at_most`, and nothing at any level through a `void *`,
+which may store any pointer at any type: bounded at the local's own level only,
+`put(pv)` with `put` taking `void ***` left `v` an `int ***` believing whole
+`int`s two levels down, and `use(v)` handed a one-byte allocation on in silence
+(#636). The doubt about what a departing local's memory holds is named by that
+local, so it and a doubt about the local's own level at the same call are one
+report. Each only lowers a belief, so
 being wrong is a false `Unknown`, and it is paid by conforming code: a
 `void **` that does point at an `int *` is refused when read through an
 `int **`, a well-typed store does not raise a bound an earlier one set, and a
@@ -261,7 +267,14 @@ Each mutation applied on its own, the workspace run, and the file restored.
   recording nothing stored silences
   `a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on`
   (#632). The other mutations of #632 are beside their cases in
-  `tests/cases.rs`.
+  `tests/cases.rs`. Bounding what a call writes at the local's own level
+  alone silences
+  `a_local_a_callee_wrote_through_a_void_pointer_three_levels_deep_is_asked_below_its_first_level_when_handed_on`
+  and its declared-only form, believing nothing whatever the type doubts
+  `a_local_a_callee_wrote_as_its_own_type_is_not_doubted_when_handed_on`, and
+  naming that doubt by nothing makes
+  `a_local_handed_through_a_void_pointer_is_doubted_once_when_handed_on_deeper`
+  two reports (#636).
 * memory believed wider than it arrived as below its first level: a load
   taking the type it is read as alone silences
   `a_void_pointer_three_levels_deep_converted_whole_is_believed_below_its_first_level`;
