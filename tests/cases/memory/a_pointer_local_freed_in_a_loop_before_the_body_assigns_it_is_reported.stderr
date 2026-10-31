@@ -1,0 +1,10 @@
+error[SC0411]: `q` is read before anything was assigned to it
+   ╭─[ a_pointer_local_freed_in_a_loop_before_the_body_assigns_it_is_reported.c:6:9 ]
+   │
+ 6 │         free(q);
+   │         ───┬───  
+   │            ╰───── read here
+───╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else

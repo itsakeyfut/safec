@@ -544,6 +544,28 @@ cases! {
         // doubt. Mutation: ask a read as of its innermost loop only; this goes
         // silent.
         a_pointer_read_in_an_inner_loop_before_the_outer_body_writes_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read as a call's argument, at the call: `SC0411`, a proof (#670).
+        // Mutation: ask a block's terminator nothing as of the first turn; this
+        // goes back to what `main` says. Found by review.
+        a_pointer_freed_out_of_a_local_array_in_a_loop_before_the_body_writes_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read as a branch's condition, which runs on every turn. Mutation: as
+        // above; this goes silent. Found by review.
+        a_pointer_tested_in_a_loops_body_before_the_body_writes_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same at a call by name, in `memory::assigned`. Mutation: ask a
+        // terminator nothing as of the first turn there; this goes silent. Found
+        // by review.
+        a_pointer_local_freed_in_a_loop_before_the_body_assigns_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read by name, its address taken, so the memory check's: a proof.
+        // Mutation: ask no read by name as of the first turn; this goes silent.
+        // Found by review.
+        a_pointer_local_whose_address_is_taken_read_in_a_loop_before_the_body_writes_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same on an arm: a doubt. Mutation: a read by name as of the first
+        // turn ignores where it is; this becomes a proof. Found by review.
+        a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Every turn after the first may have assigned it, a doubt; the first did
+        // not, a proof, which takes the doubt's place. Mutation: let what stands
+        // at a caret keep it whatever comes; this stays a doubt. Found by review.
+        a_pointer_local_doubted_every_turn_is_proved_as_of_the_first: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same of a pointer local whose address is taken. Mutation: as
         // above; this gains an `SC0411` doubt.
         a_pointer_local_made_in_an_outer_loop_and_assigned_in_an_inner_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

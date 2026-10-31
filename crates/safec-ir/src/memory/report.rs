@@ -2027,10 +2027,12 @@ pub(super) fn loaded_indeterminate(
             reaches_local: through.writes_to.any(),
         };
         let root = Place::local(local);
-        if said
-            .iter()
-            .any(|(said_at, said_place, _)| *said_at == at && *said_place == root)
-        {
+        let conclusion = if maybe || doubt_only {
+            Conclusion::Unknown
+        } else {
+            Conclusion::Unsafe
+        };
+        if !may_say(findings, said, at, &root, conclusion) {
             continue;
         }
         say(
@@ -2041,11 +2043,7 @@ pub(super) fn loaded_indeterminate(
             Finding {
                 function: analysis.function,
                 kind,
-                conclusion: if maybe || doubt_only {
-                    Conclusion::Unknown
-                } else {
-                    Conclusion::Unsafe
-                },
+                conclusion,
                 at,
                 local: Some(local),
                 freed: None,
@@ -2053,6 +2051,31 @@ pub(super) fn loaded_indeterminate(
                 unproven: None,
             },
         );
+    }
+}
+
+/// Whether a read reported indeterminate at `at` through `root` may be said:
+/// where nothing stands there yet, or where what stands is a doubt and this
+/// is a proof. **A proof gives way to nothing, and takes the place of a doubt**
+/// (#670): a loop's first turn proves a read the every-turn walk only doubted,
+/// `r = q; if (c) q = &x;` in a body, and skipping whatever stood left that
+/// proof a warning `--allow-unknown` lowers. Found by review. Not handed to
+/// [`say`] for every pair, whose `supersedes` takes two proofs to name a free.
+fn may_say(
+    findings: &[Finding],
+    said: &[(Span, Place, usize)],
+    at: Span,
+    root: &Place,
+    conclusion: Conclusion,
+) -> bool {
+    match said
+        .iter()
+        .find(|(said_at, said_place, _)| *said_at == at && said_place == root)
+    {
+        None => true,
+        Some(&(_, _, index)) => {
+            findings[index].conclusion == Conclusion::Unknown && conclusion == Conclusion::Unsafe
+        }
     }
 }
 
@@ -2089,10 +2112,12 @@ pub(super) fn unwritten_read(
             continue;
         }
         let root = Place::local(local);
-        if said
-            .iter()
-            .any(|(said_at, said_place, _)| *said_at == at && *said_place == root)
-        {
+        let conclusion = if partly || doubt_only {
+            Conclusion::Unknown
+        } else {
+            Conclusion::Unsafe
+        };
+        if !may_say(findings, said, at, &root, conclusion) {
             continue;
         }
         say(
@@ -2103,11 +2128,7 @@ pub(super) fn unwritten_read(
             Finding {
                 function: analysis.function,
                 kind: Kind::IndeterminateLocal,
-                conclusion: if partly || doubt_only {
-                    Conclusion::Unknown
-                } else {
-                    Conclusion::Unsafe
-                },
+                conclusion,
                 at,
                 local: Some(local),
                 freed: None,

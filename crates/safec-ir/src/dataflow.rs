@@ -323,9 +323,18 @@ pub struct Solution<V> {
     /// the walk is over: every reachable block is arrived at, because the walk
     /// starts at the entry and follows the same edges that made it reachable.
     values: Vec<Option<V>>,
+    /// How many walks of a block it took, which a caller bounding several
+    /// solves together takes from what it has left.
+    walks: usize,
 }
 
 impl<V> Solution<V> {
+    /// How many walks of a block this took, never more than the bound it was
+    /// solved within.
+    pub fn walks(&self) -> usize {
+        self.walks
+    }
+
     /// What holds where this block starts, or nothing if the entry cannot
     /// reach it.
     ///
@@ -689,5 +698,5 @@ fn solved<A: Analysis>(
         }
     }
 
-    Some(Solution { values })
+    Some(Solution { values, walks })
 }
