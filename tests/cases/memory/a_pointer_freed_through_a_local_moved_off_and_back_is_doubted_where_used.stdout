@@ -1,0 +1,116 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:3:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *" "z"
+  Local "_2" "void *"
+  Local "_3" "int *" "q"
+  Local "_4" "void *"
+  Local "_5" "int **" "pp"
+  Local "_6" "int **"
+  Local "_7" "int **"
+  Local "_8" "int **"
+  Local "_9" "int **"
+  Local "_10" "int **"
+  Local "_11" "int *"
+  Local "_12" "int"
+  Block "bb0" entry
+    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:3:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:4:14 generated
+    Call a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:4:14 written "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:4:14 generated
+    ArgumentsEvaluated a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:5:14 generated
+    Call a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:5:14 written "malloc" "bb2"
+      Destination "_4"
+      Constant 8
+  Block "bb2"
+    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:5:10 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:5:14 generated
+    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:6:16 written
+      Destination "_6"
+      Address
+        Place "_1"
+    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:6:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:6:16 generated
+    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:7:10 written
+      Destination "_7"
+      Binary "Add"
+        Copy "_5"
+        Constant 1
+    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:7:5 written
+      Destination "_5"
+      Use
+        Copy "_7"
+    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:7:5 written
+      Destination "_8"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:7:5 generated
+    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:8:10 written
+      Destination "_9"
+      Binary "Sub"
+        Copy "_5"
+        Constant 1
+    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:8:5 written
+      Destination "_5"
+      Use
+        Copy "_9"
+    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:8:5 written
+      Destination "_10"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:8:5 generated
+    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:9:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:9:5 written
+      Destination "_11"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:9:5 generated
+    ArgumentsEvaluated a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:10:5 generated
+    Call a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:10:5 written "free" "bb3"
+      Copy "_1"
+  Block "bb3"
+    Sequenced a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:10:5 generated
+    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:11:5 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:11:5 written
+      Destination "_12"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:11:5 generated
+    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:12:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:12:12 generated
+    Return

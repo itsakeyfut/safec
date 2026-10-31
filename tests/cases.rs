@@ -1838,10 +1838,26 @@ cases! {
         // `an_offset_that_moves_the_pointer_proves_no_use_after_free` holds it.
         a_write_through_an_address_plus_one_is_a_doubted_write_of_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local that is not an array is an array of one, so a pointer moved off
-        // it and back writes it, and the read after it is no `SC0411` (#647). See
-        // ADR-0019. Mutation: keep only an array's edge through a known move; this
-        // is a certain `SC0411` at the read.
-        a_pointer_moved_off_a_local_and_back_writes_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // it and back may write it, and the read after it is `SC0411` as a doubt
+        // rather than certain (#647), the cost the user chose. See ADR-0019.
+        // Mutation: keep only an array's edge through a known move; this is a
+        // certain `SC0411` at the read.
+        a_local_written_through_a_pointer_moved_off_it_and_back_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The store goes past `z`, which `SC0412` doubts, and `z` is still
+        // indeterminate: its read is `SC0411` as a doubt. Mutation: leave such a
+        // local that was unwritten without a doubt; this goes silent. Found by
+        // review of #647.
+        a_local_read_after_a_store_past_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `**ppp = q;` stores seven past `z`, so nothing put `q`'s allocation in
+        // `z`, and `*q` after `free(z)` is a doubt, not a proof. Mutation: mark
+        // such a local lost only through one dereference; `*q` is a proved use
+        // after free. Found by review of #647.
+        a_pointer_stored_two_levels_past_a_local_proves_no_use_after_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*pp = q;` through `&z + 1 - 1` writes `z`, so `free(z)` may free `q`'s
+        // allocation and `*q` is `SC0402` as a doubt, where a dropped edge left it
+        // silent. Mutation: keep only an array's edge through a known move; this
+        // loses the `SC0402`. Found by review of #647.
+        a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same handed to a call. Mutation: as above; the same.
         a_pointer_moved_off_a_local_and_back_writes_it_through_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same through a library copy. Mutation: as above; the same.

@@ -488,6 +488,32 @@ impl Allocations<'_> {
         }
     }
 
+    /// **A local that is not an array, written through a pointer that reached
+    /// it only by the rule that keeps an edge through a known move, is lost,
+    /// and in doubt where it was unwritten** (#647): the write may be of the
+    /// local, `&slot + 1 - 1`, or past it, `pp[1] = q;`, which is undefined
+    /// and the bounds rule's to report. Kept as a may-write alone, a local
+    /// that held nothing held only what was stored, so `free(z)` after
+    /// `*(&z + 7) = q;` certainly freed `q`'s allocation and `*q` was a proved
+    /// use after free; and a read of it after a store past it, which C leaves
+    /// indeterminate, was silent where it had been a certain `SC0411`, found
+    /// by review. Measured, both. See `Held::moved_by_arithmetic`.
+    fn written_past_its_end(
+        &self,
+        function: &Function,
+        value: &mut Known,
+        target: usize,
+        unwritten_before: &[bool],
+    ) {
+        if self.is_array(function, target) {
+            return;
+        }
+        value.points_to[target].lost = true;
+        if unwritten_before[target] {
+            value.partly_written[target] = true;
+        }
+    }
+
     /// Bound what a call this check cannot read may write into `local`,
     /// reached on the walk a departure takes as `read_as`, at its own level
     /// and below, and record it where that type is untyped somewhere below,
@@ -1973,6 +1999,9 @@ impl Analysis for Allocations<'_> {
                 // projection.
                 let one_step = operation.place.projection.as_slice() == [Projection::Deref];
                 let pointer = operation.place.local.index();
+                // What was unwritten before this store, for a local it may
+                // have written past. See `Allocations::written_past_its_end`.
+                let unwritten_before = value.unwritten.clone();
                 // **A write through a pointer may write an allocation**, of
                 // any type, and what it wrote is no longer indeterminate.
                 // Placed only for one dereference through a pointer that
@@ -2064,20 +2093,9 @@ impl Analysis for Allocations<'_> {
                 });
                 if !operation.place.projection.is_empty() && !certain {
                     replaced_by(self.unit, function, &operation.place, value);
-                    // **And a local that is not an array, reached only by the
-                    // rule that keeps an edge through a known move, is lost**
-                    // (#647): the write may be of the local, `&slot + 1 - 1`,
-                    // or past it, `pp[1] = q;`, which is undefined and the
-                    // bounds rule's to report. Kept as a may-write alone, a
-                    // local that held nothing held only what was stored, so
-                    // `free(z)` after `*(&z + 7) = q;` certainly freed `q`'s
-                    // allocation and `*q` was a proved use after free.
-                    // Measured. See `Held::moved_by_arithmetic`.
                     if one_step && value.points_to[pointer].array_edge {
                         for &target in &targets {
-                            if !self.is_array(function, target) {
-                                value.points_to[target].lost = true;
-                            }
+                            self.written_past_its_end(function, value, target, &unwritten_before);
                         }
                     }
                 }
@@ -2144,7 +2162,21 @@ impl Analysis for Allocations<'_> {
                     } else {
                         Vec::new()
                     };
+                    // And as through one dereference, where a level above
+                    // reached them only by the rule that keeps an edge through
+                    // a known move: `**ppp = q;` with `*ppp = &z + 7` proved a
+                    // use after free once the one-step store was marked and
+                    // this was not. Found by review.
+                    let moved_above = deep > 1
+                        && value
+                            .levels_below(operation.place.local, deep - 2)
+                            .1
+                            .into_iter()
+                            .any(|local| value.points_to[local].array_edge);
                     for &target in &deep_targets {
+                        if moved_above {
+                            self.written_past_its_end(function, value, target, &unwritten_before);
+                        }
                         // Where it starts survives, as below.
                         let offset = value.points_to[target].offset.joined(written.offset);
                         value.points_to[target].accumulated(&written);

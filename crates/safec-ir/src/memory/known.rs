@@ -1281,13 +1281,11 @@ impl Known {
     /// read above. It costs a table square in the locals, which
     /// `memory::per_block` counts. See ADR-0057.
     ///
-    /// **A pointer naming no local lands in none.** One moved off an array
-    /// keeps its edge to the array (#639), so `*(&m[1] - 1) = p` writes `m`,
-    /// in part: [`Self::partly_written`]. What names no local is one moved off
-    /// a local that is not an array: `&slot + 1` and back to `slot` is defined
-    /// (C17 6.5.6 p7 and p8) and still lands nowhere, so a read of `slot` after
-    /// a write through it is a certain `SC0411` that `--allow-unknown` does not
-    /// lower. That is #647. The store door and a library copy both ask this,
+    /// **A pointer naming no local lands in none.** One moved off a local by
+    /// arithmetic keeps its edge to it, an array (#639) or a local that is
+    /// not one, read as an array of one (#647), so `*(&m[1] - 1) = p` writes
+    /// `m`, in part, [`Self::partly_written`], and `&slot + 1` and back to
+    /// `slot` writes `slot`. The store door and a library copy both ask this,
     /// so the two cannot answer one pointer differently.
     pub(super) fn locals_a_write_may_land_in(
         &self,
