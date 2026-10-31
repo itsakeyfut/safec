@@ -147,8 +147,22 @@ doubted too, and a departure that reaches a local only through such a may-set
 names it in a report of its own; a second walk following only locals from a
 local handed as bytes or `void *` was not taken, by the user's decision, since
 it reads a call's arguments a second way and left a local below such memory
-bounded by nothing. A local put below such a local after the call, and written
-by a later one, is believed as before, which is #679. The doubt about what a
+bounded by nothing. **And so is a local put below such a local or memory
+later**, at every later call this check cannot read (#679): the callee may have
+kept the address, so `keep(&v); v = &w; other(); use1(w);` handed a one-byte
+allocation on in silence where `v = &w` before `keep(&v)` was doubted. Each
+type a call reaches a local or site as is recorded where it is untyped
+somewhere below, `Known::handed_untyped`, and every such call after it walks
+the same walk from each at that type: the type and not only the fact, since
+`keep(void **)` reaches `v` as a pointer and only the type says what is below
+it is untyped, which a mark alone left silent, found by review. Not a chain
+that ends in `int`, which a well-typed `int **` out-parameter is, since walking
+from those doubted locals a may-set puts below a typed callee's memory at every
+later call; a pun through such a chain is not seen. Bounding `w` at the
+store that puts `&w` there was not taken, by the user's decision, since every
+way an address lands needs a hook of its own and one missed is a silence. It
+costs a doubt about whatever is put below a marked local or memory and handed
+on after any later call, for the rest of its lifetime. The doubt about what a
 departing local's memory holds is named by that local and says what is narrow
 is what its memory holds, and a doubt about the local's own level at the same
 call stands over it, so the two are one report. Each only lowers a belief, so

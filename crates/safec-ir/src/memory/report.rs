@@ -1531,7 +1531,7 @@ fn contents_leaving(
             );
         }
     }
-    let (locals, sites) = slots_leaving(analysis, function, read_as, value, known);
+    let (locals, sites, _) = slots_leaving(analysis, function, read_as, value, known);
     for (local, read_as) in locals {
         // A local that holds no pointer, read as none, has nothing a reader
         // believes of it; a `void *` is asked whether it starts an object.
@@ -1630,10 +1630,11 @@ fn contents_leaving(
     }
 }
 
-/// What [`slots_leaving`] finds: each local with the type the receiver reads
-/// it as, or `None` below a type that stops being a pointer, and each site
-/// with the type the receiver reads what it holds as.
-pub(super) type Slots = (Vec<(LocalId, Option<TyId>)>, Vec<(usize, TyId)>);
+/// What [`slots_from`] finds: each local with the type the receiver reads it
+/// as, or `None` below a type that stops being a pointer; each site with the
+/// type the receiver reads what it holds as; and each site it reached below
+/// such a type, which a departure asks nothing of and a call marks (#679).
+pub(super) type Slots = (Vec<(LocalId, Option<TyId>)>, Vec<(usize, TyId)>, Vec<usize>);
 
 /// Every slot a pointer leaving as a pointer to `read_as` lets leave with it,
 /// with the type the receiver reads each as: the locals it may point at, at
@@ -1677,14 +1678,31 @@ pub(super) fn slots_leaving(
             (Vec::new(), locals_reached(function, value, known))
         }
     };
-    let mut locals: Vec<(LocalId, Option<TyId>)> = seed_locals
+    let locals: Vec<(LocalId, Option<TyId>)> = seed_locals
         .into_iter()
         .map(|local| (local, Some(read_as)))
         .collect();
-    let mut sites: Vec<(usize, Option<TyId>)> = seed_sites
+    let sites: Vec<(usize, Option<TyId>)> = seed_sites
         .into_iter()
         .map(|site| (site, Some(read_as)))
         .collect();
+    slots_from(analysis, function, known, locals, sites)
+}
+
+/// The walk [`slots_leaving`] takes, from slots already seeded with the type
+/// the receiver reads each as: what each local and site may point at, and so
+/// on down, each read as the type below the one it was reached at.
+///
+/// **Seeded directly as well**, at `None`, by a call that walks below what an
+/// earlier call was handed untyped (`Known::handed_untyped`, #679), so the
+/// two read memory the same way.
+pub(super) fn slots_from(
+    analysis: &Allocations<'_>,
+    function: &Function,
+    known: &Known,
+    mut locals: Vec<(LocalId, Option<TyId>)>,
+    mut sites: Vec<(usize, Option<TyId>)>,
+) -> Slots {
     let mut asked_locals: Vec<(LocalId, Option<TyId>)> = Vec::new();
     let mut asked_sites: Vec<(usize, TyId)> = Vec::new();
     let mut untyped_sites: Vec<usize> = Vec::new();
@@ -1749,7 +1767,7 @@ pub(super) fn slots_leaving(
             break;
         }
     }
-    (asked_locals, asked_sites)
+    (asked_locals, asked_sites, untyped_sites)
 }
 
 /// The type `ty` points to, where it is a pointer or an array of them, and

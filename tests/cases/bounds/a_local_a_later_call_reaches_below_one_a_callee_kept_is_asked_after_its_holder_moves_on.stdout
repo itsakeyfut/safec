@@ -1,0 +1,107 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:1:6 "keep" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:2:6 "other" declared
+  Local "_0" "void" return
+Function a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:3:6 "other2" declared
+  Local "_0" "void" return
+Function a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:4:6 "use1" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+Function a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:5:6 "run"
+  Local "_0" "void" return
+  Local "_1" "int" "z"
+  Local "_2" "int *" "y"
+  Local "_3" "int *"
+  Local "_4" "int **" "w"
+  Local "_5" "int ***" "v"
+  Local "_6" "int ****"
+  Local "_7" "int ***"
+  Local "_8" "int ***"
+  Local "_9" "int ***"
+  Local "_10" "int **"
+  Local "_11" "int **"
+  Block "bb0" entry
+    Operation a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:6:9 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:6:13 generated
+    Operation a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:7:14 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:7:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:7:14 generated
+    Operation a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:8:11 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:8:15 generated
+    Operation a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:9:12 written
+      Destination "_5"
+      Use
+        Constant 0
+    Sequenced a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:9:16 generated
+    Operation a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:10:10 written
+      Destination "_6"
+      Address
+        Place "_5"
+    ArgumentsEvaluated a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:10:5 generated
+    Call a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:10:5 written "keep" "bb1"
+      Copy "_6"
+  Block "bb1"
+    Sequenced a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:10:5 generated
+    Operation a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:11:9 written
+      Destination "_7"
+      Address
+        Place "_4"
+    Operation a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:11:5 written
+      Destination "_5"
+      Use
+        Copy "_7"
+    Operation a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:11:5 written
+      Destination "_8"
+      Use
+        Copy "_5"
+    Sequenced a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:11:5 generated
+    ArgumentsEvaluated a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:12:5 generated
+    Call a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:12:5 written "other" "bb2"
+  Block "bb2"
+    Sequenced a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:12:5 generated
+    Operation a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:13:5 written
+      Destination "_5"
+      Use
+        Constant 0
+    Operation a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:13:5 written
+      Destination "_9"
+      Use
+        Copy "_5"
+    Sequenced a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:13:5 generated
+    Operation a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:14:9 written
+      Destination "_10"
+      Address
+        Place "_2"
+    Operation a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:14:5 written
+      Destination "_4"
+      Use
+        Copy "_10"
+    Operation a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:14:5 written
+      Destination "_11"
+      Use
+        Copy "_4"
+    Sequenced a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:14:5 generated
+    ArgumentsEvaluated a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:15:5 generated
+    Call a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:15:5 written "other2" "bb3"
+  Block "bb3"
+    Sequenced a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:15:5 generated
+    ArgumentsEvaluated a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:16:5 generated
+    Call a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:16:5 written "use1" "bb4"
+      Copy "_2"
+  Block "bb4"
+    Sequenced a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on.c:16:5 generated
+    Return
