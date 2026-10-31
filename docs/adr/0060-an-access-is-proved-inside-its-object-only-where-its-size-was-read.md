@@ -134,9 +134,21 @@ silent, found by review. It reverses the reading that a typed store puts no
 pointer there for bytes, and costs a doubt where a callee only reads or clears
 the bytes and the local is handed on or read through after, `clear(pv);
 use(v);`, which a `void *` callee already costs, by the user's decision; a
-doubt at the `memcpy` in the callee was not taken. A local whose address such a
-local holds, read by its own name, is bounded by nothing, through bytes and
-through a `void *` alike, which is #677. The doubt about what a
+doubt at the `memcpy` in the callee was not taken. **So is a local the call
+reaches below either**, whose address such a local or its memory holds (#677):
+`v = &w; put(&v); use1(w);` handed a one-byte allocation on in silence while
+`use1(*v)` was doubted, since the callee may read `&w` back out of `v`, and so
+did `*c = &w; put(&c);`. The walk reads an array through to its element, as the
+width does, and below a type that stops being a pointer still reaches the
+locals memory may hold. It is the walk a departure takes, which does not say
+whether the type that stopped being a pointer was reached through a typed one,
+so a local a may-set puts in memory holding an `int` behind a typed callee is
+doubted too, and a departure that reaches a local only through such a may-set
+names it in a report of its own; a second walk following only locals from a
+local handed as bytes or `void *` was not taken, by the user's decision, since
+it reads a call's arguments a second way and left a local below such memory
+bounded by nothing. A local put below such a local after the call, and written
+by a later one, is believed as before, which is #679. The doubt about what a
 departing local's memory holds is named by that local and says what is narrow
 is what its memory holds, and a doubt about the local's own level at the same
 call stands over it, so the two are one report. Each only lowers a belief, so

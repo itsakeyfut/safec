@@ -1,0 +1,30 @@
+error[SC0412]: this may reach outside the object `w` points at
+   ╭─[ a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:8:14 ]
+   │
+ 8 │         int *r = *w;
+   │              ───┬──  
+   │                 ╰──── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0413]: this lets `r` leave, which may not point at an object as wide as its type
+   ╭─[ a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:9:9 ]
+   │
+ 9 │         use1(r);
+   │         ───┬───  
+   │            ╰───── passed here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0403]: this may dereference `w` while it is null
+   ╭─[ a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_below_its_own_level_when_read_through.c:8:14 ]
+   │
+ 8 │         int *r = *w;
+   │              ───┬──  
+   │                 ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

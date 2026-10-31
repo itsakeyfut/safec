@@ -8,6 +8,16 @@ error[SC0407]: this passes a pointer to where a pointer that may have been freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this one
+error[SC0413]: this lets `a` leave, which may not point at an object as wide as its type
+    ╭─[ an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:20:12 ]
+    │
+ 20 │     return use2(&a);
+    │            ────┬───  
+    │                ╰───── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0407]: this passes a pointer to where a pointer that may have been freed is stored
     ╭─[ an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:20:12 ]
     │
