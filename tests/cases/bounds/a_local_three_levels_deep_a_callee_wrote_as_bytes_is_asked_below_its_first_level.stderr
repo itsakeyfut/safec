@@ -1,0 +1,20 @@
+error[SC0413]: this lets `v` leave, which may not point at an object as wide as its type
+    ╭─[ a_local_three_levels_deep_a_callee_wrote_as_bytes_is_asked_below_its_first_level.c:30:5 ]
+    │
+ 30 │     use(v);
+    │     ───┬──  
+    │        ╰──── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0403]: this may dereference `m` while it is null
+    ╭─[ a_local_three_levels_deep_a_callee_wrote_as_bytes_is_asked_below_its_first_level.c:12:5 ]
+    │
+ 12 │     *m = cc;
+    │     ───┬───  
+    │        ╰───── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

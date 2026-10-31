@@ -4024,6 +4024,25 @@ cases! {
         // the join takes the side joined in; this goes silent. Found by review of
         // #636.
         a_local_a_callee_wrote_on_the_other_arm_is_bounded_where_a_later_call_writes_it_again_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `put` was handed `v` as bytes and `memcpy`s a one-byte allocation's
+        // address into them: an `SC0413` doubt at `use(v)` (#675). See ADR-0060.
+        // Mutation: a local reached as bytes is skipped again; this goes silent.
+        a_local_a_callee_wrote_as_bytes_is_asked_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with both callees only declared. Mutation: as above; this goes
+        // silent.
+        a_local_a_callee_only_declared_was_handed_as_bytes_is_asked_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The bytes hold a `void **` whose memory holds the one-byte `char *`, so
+        // what is narrow is two levels down. Mutation: bound nothing below a local
+        // believed nothing at its own level; this goes silent.
+        a_local_three_levels_deep_a_callee_wrote_as_bytes_is_asked_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local that holds no pointer, filled as bytes and handed on as bytes,
+        // believes nothing a callee could have narrowed. Mutation: bound every
+        // local reached as bytes, pointer or not; this gains a doubt.
+        a_byte_array_handed_to_a_callee_as_bytes_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Correct C if `clear` only zeroes the bytes, doubted: this check cannot
+        // read what a callee does with bytes. It says the cost chosen rather than
+        // guarding a line.
+        a_local_handed_to_a_callee_that_only_clears_its_bytes_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Through a `void *`, the doubts about `v`'s level and its memory's
         // are one report, and the one about its own level stands. Mutation:
         // name the doubt about what a value's memory holds by nothing; this
