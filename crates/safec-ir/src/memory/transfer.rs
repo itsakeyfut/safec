@@ -2527,7 +2527,10 @@ impl Analysis for Allocations<'_> {
                 // silent. See `Known::exposed_locals`.
                 value.exposed_locals[local.index()] = false;
                 // Nor was it handed to one untyped, for the same reason.
-                // See `Known::handed_untyped`.
+                // See `Known::handed_untyped`. No case tells this from
+                // keeping the mark, measured: what the mark reaches is
+                // written only where it is exposed, and that is cleared just
+                // above.
                 value.handed_untyped[local.index()] = false;
                 // **Nor does any pointer recorded as able to name it**, for
                 // the same reason: a pointer a call wrote in an earlier turn

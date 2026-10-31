@@ -4088,9 +4088,12 @@ cases! {
         // The same with `v` handed as bytes. Mutation: a local reached as bytes is
         // not marked; this goes silent.
         a_local_put_below_one_a_callee_kept_as_bytes_is_asked_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same with `keep` on one arm. Mutation: the join takes the side
-        // joined in; this goes silent.
+        // The same with `keep` on one arm. Mutation: the join keeps its own
+        // side; this goes silent.
         a_local_put_below_one_a_callee_kept_on_one_arm_is_asked_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And on the other arm. Mutation: the join takes the side joined in;
+        // this goes silent.
+        a_local_put_below_one_a_callee_kept_on_the_other_arm_is_asked_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same with memory handed rather than a local. Mutation: a site is
         // not marked; the `SC0413` at `use1(w)` goes.
         a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
