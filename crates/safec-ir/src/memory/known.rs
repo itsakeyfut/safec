@@ -222,6 +222,20 @@ pub(super) struct Known {
     /// body, and was believed a whole `int` (#632). A bound, so the lower of
     /// two at a join. See ADR-0060.
     pub(super) handed_at_most: Vec<Option<u64>>,
+    /// Per local, what the types a call was handed it through say of its
+    /// value's memory, below its own level: [`Self::handed_at_most`] one
+    /// level further down and every level after, as
+    /// [`Held::contents_at_most`] reads them. Every level `0` where it was
+    /// handed through a `void *`, which may store any pointer at any type.
+    ///
+    /// **So that what a callee wrote is believed as it was handed at every
+    /// level** (#636): `put(pv)` with `pv = &v` and `put` taking `void ***`
+    /// left `v` an `int ***` believing whole `int`s two levels down, so
+    /// `use(v)` with `use` writing `**(*p)` handed a one-byte `char`'s
+    /// address on in silence. A bound, so the lower of two at every level
+    /// and at a join, and kept when the site is made again as
+    /// [`Self::handed_at_most`] is. See ADR-0060.
+    pub(super) handed_contents_at_most: Vec<Levels>,
     /// Per local, whether nothing may have written it since it was made, on
     /// every path: its value is indeterminate (C17 6.2.4 p6, 6.7.9 p10), and
     /// Annex J.2 lists using it as undefined. That line of J.2 names no
@@ -1445,6 +1459,8 @@ impl Known {
             stored_at_most: _,
             // About a local, not a site.
             handed_at_most: _,
+            // About a local, as `handed_at_most` is.
+            handed_contents_at_most: _,
             // About a local as well: the call that makes the site writes the
             // local it is named by, which the call's destination says.
             unwritten: _,

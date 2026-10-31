@@ -313,14 +313,15 @@ pub enum Departure {
 const LINEAR: usize = 1024;
 
 /// How many bytes each level of a [`Levels`](parts::Levels) a local may
-/// carry adds to one block's value: two lists a local, what its value
-/// believes of its memory and what was stored in it as a site, of one
-/// `Option<u64>` a level, which takes 16 bytes. Read off the layout rather
+/// carry adds to one block's value: three lists a local, what its value
+/// believes of its memory, what was stored in it as a site, and what a call
+/// it was handed to may have written there (#636), of one `Option<u64>` a
+/// level, which takes 16 bytes. Read off the layout rather
 /// than fitted, since [`LINEAR`] was fitted before the lists existed: a
 /// function at the parser's 256 `*`s takes about 8 KB a local more than
 /// [`LINEAR`] counts, and ran to about twice the memory that bound allows
 /// with nothing printed. Found by review (#634).
-const PER_LEVEL: usize = 32;
+const PER_LEVEL: usize = 48;
 
 /// How many bytes [`Held::named_at_read`](parts::Held::named_at_read) adds to
 /// each local beside what it adds a pair, which `per_block` counts as three
@@ -1298,20 +1299,20 @@ mod tests {
     /// The lists a local's levels take count toward the bound: ten locals,
     /// one of them three `*`s deep, are
     /// `10 * (10 + 3 + LINEAR + NAMED_AT_READ + ELEMENTS + 3 * PER_LEVEL)` a block, so
-    /// three blocks are 42,390, past a bound the same function with no
+    /// three blocks are 43,830, past a bound the same function with no
     /// pointer in it is read under.
     ///
     /// Mutation: leave out [`PER_LEVEL`]. This is read.
     #[test]
     fn a_function_whose_lists_are_too_large_is_unknown_and_not_read() {
         let (sources, unit) = ten_by_three_deep(3);
-        let findings = findings_within(&sources, &unit, 42_389, MAX_WORK);
+        let findings = findings_within(&sources, &unit, 43_829, MAX_WORK);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(
             findings[0].kind,
             Kind::TooLarge {
-                bytes: 42_390,
-                max: 42_389
+                bytes: 43_830,
+                max: 43_829
             }
         );
     }
@@ -1322,7 +1323,7 @@ mod tests {
     #[test]
     fn the_bounds_are_two_to_the_thirtieth_and_thirty_second_over_1024_a_local() {
         assert_eq!(LINEAR, 1024);
-        assert_eq!(PER_LEVEL, 32);
+        assert_eq!(PER_LEVEL, 48);
         assert_eq!(NAMED_AT_READ, 96);
         assert_eq!(ELEMENTS, 184);
         assert_eq!(MAX_BYTES, 1_073_741_824);

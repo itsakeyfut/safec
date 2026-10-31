@@ -3981,6 +3981,25 @@ cases! {
         // Mutation: `contents_leaving` compares the departing value at level
         // 0 alone.
         a_void_pointer_three_levels_deep_handed_on_whole_is_asked_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `put` wrote into `v` as a `void **`, whose memory holds pointers nobody
+        // was asked the width of, and `use(v)` reads `int`s two levels down: an
+        // `SC0413` doubt at the call (#636). See ADR-0060. Mutation: bound what a
+        // call writes at the local's own level alone; this goes silent.
+        a_local_a_callee_wrote_through_a_void_pointer_three_levels_deep_is_asked_below_its_first_level_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with both callees only declared. Mutation: as above; this goes
+        // silent.
+        a_local_a_callee_only_declared_wrote_through_a_void_pointer_is_asked_below_its_first_level_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A well-typed out-parameter: `put` wrote `v` as the `int ***` it is.
+        // Mutation: believe nothing at any level whatever the type; this gains an
+        // `SC0413` doubt.
+        a_local_a_callee_wrote_as_its_own_type_is_not_doubted_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written on one arm, the bound holds where the arms meet. Mutation: the
+        // join keeps the side joined into; this goes silent.
+        a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Through a `void *` nothing is believed at any level, and the doubts
+        // about `v`'s level and its memory's are one report. Mutation: name the
+        // doubt about what a value's memory holds by nothing; this is two.
+        a_local_handed_through_a_void_pointer_is_doubted_once_when_handed_on_deeper: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: a store records level 0 alone.
         a_parameter_stored_in_memory_and_read_back_is_believed_as_it_arrived_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: a store records level 0 alone. Mutation:

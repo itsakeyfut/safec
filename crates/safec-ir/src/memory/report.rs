@@ -1499,12 +1499,25 @@ fn contents_leaving(
         (analysis.type_levels(ty), pointee_width(analysis, read_as))
     {
         if arrived.narrower_than(&receiver) {
+            // **Named by the local that leaves, where one does**, so that
+            // this and a doubt about the local's own level at the same
+            // call are one report, `use2(v)` after `put_any(&v)`, rather
+            // than two (#636).
+            let leaving = match value {
+                Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
+                    Some(place.local)
+                }
+                Rvalue::Use(_)
+                | Rvalue::Address(_)
+                | Rvalue::Unary { .. }
+                | Rvalue::Binary { .. } => None,
+            };
             say_leaving(
                 findings,
                 departed,
                 analysis,
                 (at, how, width),
-                Some((Fit::Unknown, None)),
+                Some((Fit::Unknown, leaving)),
             );
         }
     }
