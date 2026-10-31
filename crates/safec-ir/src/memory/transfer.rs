@@ -924,14 +924,33 @@ impl Allocations<'_> {
         marks
     }
 
+    /// The locals a call this check cannot read is handed the address of: what
+    /// an argument by name may point at, and the locals a place of
+    /// dereferences may be. One answer for what the call exposes and for
+    /// `report::handed_stored_out`, which asks what those locals hold, since
+    /// `release_pp(&x)` hands the call `x`'s allocation where no argument
+    /// names it (#672, found by review). See `Known::expose_locals`.
+    pub(super) fn locals_handed_to_opaque_call(handed: &[Operand], value: &Known) -> Vec<usize> {
+        let mut handed_locals: Vec<usize> = Vec::new();
+        for argument in handed {
+            if let Operand::Copy(place) = argument {
+                if place.projection.is_empty() {
+                    handed_locals.extend(value.written_through(place.local));
+                } else {
+                    handed_locals.extend(value.levels_below(place.local, derefs(place)).1);
+                }
+            }
+        }
+        handed_locals
+    }
+
     /// What a call this check cannot read is handed: what it is handed by
     /// name or as a load, and what an argument read out of memory may be.
     /// Every allocation those hold, however deep, `Known::closure` of it, is
-    /// what such a call may have freed. One answer for the call's transfer,
-    /// which marks each `may_be_freed`, and for `report::handed_stored_out`,
-    /// which asks whether any was stored where code outside may read it
-    /// (#672), so the two cannot disagree about what the call may have freed.
-    /// See ADR-0047 and `Known::stored_out`.
+    /// what the call's transfer marks `may_be_freed`, and
+    /// `report::handed_stored_out` asks the same set whether any was stored
+    /// where code outside may read it (#672). See ADR-0047 and
+    /// `Known::stored_out`.
     pub(super) fn handed_to_opaque_call(
         &self,
         function: &Function,
@@ -3179,16 +3198,7 @@ impl Analysis for Allocations<'_> {
                 // 1)` may write `m`. A report from one naming none is one the
                 // reader sees, and widening it would silence every local
                 // beside such a call. See ADR-0057.
-                let mut handed_locals: Vec<usize> = Vec::new();
-                for argument in handed {
-                    if let Operand::Copy(place) = argument {
-                        if place.projection.is_empty() {
-                            handed_locals.extend(value.written_through(place.local));
-                        } else {
-                            handed_locals.extend(value.levels_below(place.local, derefs(place)).1);
-                        }
-                    }
-                }
+                let handed_locals = Self::locals_handed_to_opaque_call(handed, value);
                 value.expose_locals(handed_locals);
                 let may_write = value.exposed_locals.clone();
                 // And an array handed through a pointer moved off it is

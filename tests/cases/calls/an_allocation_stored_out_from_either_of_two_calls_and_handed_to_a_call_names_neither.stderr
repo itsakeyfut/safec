@@ -1,0 +1,10 @@
+error[SC0414]: this hands `x`, a pointer that was stored where code outside this function may read it, to a call that may free it
+    ╭─[ an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:14:5 ]
+    │
+ 14 │     release(x);
+    │     ─────┬────  
+    │          ╰────── handed here, perhaps freed while still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep it out of a call that may free it while it is stored there, or set what was stored there to null first

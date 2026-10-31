@@ -511,13 +511,9 @@ pub(super) fn memory_finding(
             "returned here, where it may have been freed before",
             DISAGREEMENT_REMEDY,
         ),
-        // **The other order, asked at the free** (#650): what was stored out
-        // was live, and freeing it leaves code outside holding it. Only ever
-        // `Unknown`, since that code may only write it; `Unsafe` takes the
-        // same words so the match stays exhaustive. See `Known::stored_out`.
-        // **The same, where a call may be what frees it** (#672). Only ever
-        // `Unknown`, since the call may keep it; `Unsafe` takes the same words
-        // so the match stays exhaustive.
+        // **The stored-out free below, where a call may be what frees it**
+        // (#672). Only ever `Unknown`, since the call may keep it; `Unsafe`
+        // takes the same words so the match stays exhaustive.
         (Kind::HandedAfterStore, Conclusion::Unknown | Conclusion::Unsafe, _) => (
             STORE_AFTER_FREE,
             said(
@@ -532,6 +528,10 @@ pub(super) fn memory_finding(
             "handed here, perhaps freed while still stored where it may be read",
             "keep it out of a call that may free it while it is stored there, or set what was stored there to null first",
         ),
+        // **The other order, asked at the free** (#650): what was stored out
+        // was live, and freeing it leaves code outside holding it. Only ever
+        // `Unknown`, since that code may only write it; `Unsafe` takes the
+        // same words so the match stays exhaustive. See `Known::stored_out`.
         (Kind::FreedAfterStore, Conclusion::Unknown | Conclusion::Unsafe, _) => (
             STORE_AFTER_FREE,
             said(

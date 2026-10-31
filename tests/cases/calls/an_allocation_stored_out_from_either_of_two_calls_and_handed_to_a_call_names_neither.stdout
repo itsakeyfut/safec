@@ -1,0 +1,87 @@
+Target "x86_64-pc-windows-msvc"
+Function an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:2:6 "release" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+Function an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:3:6 "put"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter _Nonnull "pp"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int *" "x"
+  Local "_4" "void *"
+  Local "_5" "int *"
+  Local "_6" "void *"
+  Local "_7" "int *"
+  Local "_8" "int"
+  Local "_9" "int *"
+  Block "bb0" entry
+    Branch an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:5:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:5:9 generated
+    ArgumentsEvaluated an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:6:13 generated
+    Call an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:6:13 written "malloc" "bb4"
+      Destination "_4"
+      Constant 4
+  Block "bb2"
+    Sequenced an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:5:9 generated
+    ArgumentsEvaluated an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:8:13 generated
+    Call an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:8:13 written "malloc" "bb5"
+      Destination "_6"
+      Constant 8
+  Block "bb3"
+    Operation an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:10:9 written
+      Destination "_8"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:10:9 written "bb6" "bb7"
+      Copy "_8"
+  Block "bb4"
+    Operation an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:6:9 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Operation an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:6:9 written
+      Destination "_5"
+      Use
+        Copy "_3"
+    Sequenced an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:6:9 generated
+    Goto "bb3"
+  Block "bb5"
+    Operation an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:8:9 written
+      Destination "_3"
+      Use
+        Copy "_6"
+    Operation an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:8:9 written
+      Destination "_7"
+      Use
+        Copy "_3"
+    Sequenced an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:8:9 generated
+    Goto "bb3"
+  Block "bb6"
+    Sequenced an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:10:9 generated
+    Return
+  Block "bb7"
+    Sequenced an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:10:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:13:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Operation an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:13:5 written
+      Destination "_9"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:13:5 generated
+    ArgumentsEvaluated an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:14:5 generated
+    Call an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:14:5 written "release" "bb9"
+      Copy "_3"
+  Block "bb9"
+    Sequenced an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither.c:14:5 generated
+    Return
