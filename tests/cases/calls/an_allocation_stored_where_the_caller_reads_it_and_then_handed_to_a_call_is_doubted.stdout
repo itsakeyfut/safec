@@ -1,0 +1,117 @@
+Target "x86_64-pc-windows-msvc"
+Function an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:2:6 "release" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+Function an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:3:6 "put"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter _Nonnull "pp"
+  Local "_2" "int *" "x"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int *"
+  Block "bb0" entry
+    ArgumentsEvaluated an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:4:14 generated
+    Call an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:4:14 written "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:4:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:4:14 generated
+    Operation an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:5:9 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:5:9 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:5:9 generated
+    Return
+  Block "bb3"
+    Sequenced an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:8:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_2"
+    Operation an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:8:5 written
+      Destination "_5"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:8:5 generated
+    ArgumentsEvaluated an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:9:5 generated
+    Call an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:9:5 written "release" "bb5"
+      Copy "_2"
+  Block "bb5"
+    Sequenced an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:9:5 generated
+    Return
+Function an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:11:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *[1]" "m"
+  Local "_2" "int **"
+  Local "_3" "int *" "q"
+  Local "_4" "int **"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:11:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:13:9 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    ArgumentsEvaluated an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:13:5 generated
+    Call an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:13:5 written "put" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:13:5 generated
+    Operation an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:14:14 generated
+      Destination "_4"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:14:10 written
+      Destination "_3"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:14:14 generated
+    Operation an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:15:9 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:15:9 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:15:9 generated
+    Operation an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:16:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:16:16 generated
+    Return
+  Block "bb3"
+    Sequenced an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:15:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:18:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted.c:18:12 generated
+    Return

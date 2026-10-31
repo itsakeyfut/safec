@@ -225,9 +225,10 @@ fn verdict(
         // the two rows above give, should that change: what leaves leaves
         // after its expression, or is asked as the store runs.
         Kind::FreedBehindReturn | Kind::FreedBehindStore => true,
-        // Never asked: it is built at the free in `reported`, not out of a
+        // Never asked: each is built where it is said, at the free in
+        // `reported` and at the call in `handed_stored_out`, not out of a
         // verdict, and is always a doubt. See `Known::stored_out`.
-        Kind::FreedAfterStore => true,
+        Kind::FreedAfterStore | Kind::HandedAfterStore => true,
         // **Not a `return`'s answer.** A call is not the end of its full
         // expression, so `(free(a), 0) + use(a)` may call `use` before the
         // free, and answering `true` proved a program C defines on that order.
@@ -409,14 +410,7 @@ pub(super) fn reported(
         // **Only where it is no double free**, which says more about the
         // same free. A doubt, since whoever reads that memory may only write
         // it (#650). See ADR-0041.
-        let mut made = None;
-        for (index, &site) in stored_out.iter().enumerate() {
-            let from = match known.state[site] {
-                SiteState::Live(made) | SiteState::Freed { made, .. } => made,
-                SiteState::Unknown | SiteState::Reachable | SiteState::Unheld => None,
-            };
-            made = if index == 0 { from } else { same(made, from) };
-        }
+        let made = made_where_all_agree(&stored_out, known);
         found.push(Finding {
             function: analysis.function,
             kind: Kind::FreedAfterStore,
@@ -2264,6 +2258,154 @@ pub(super) fn stored_away(
             freed: verdict.freed,
             made: verdict.made,
             unproven: verdict.unproven,
+        },
+    );
+}
+
+/// Where every one of `sites` was made, where they all agree, and nothing
+/// where they do not or one was not made where this check saw it. One answer
+/// for the two stored-out doubts, at a free and at a call, so neither names
+/// one `malloc` for an allocation that may be either of two.
+fn made_where_all_agree(sites: &[usize], known: &Known) -> Option<Span> {
+    let mut made = None;
+    for (index, &site) in sites.iter().enumerate() {
+        let from = match known.state[site] {
+            SiteState::Live(made) | SiteState::Freed { made, .. } => made,
+            SiteState::Unknown | SiteState::Reachable | SiteState::Unheld => None,
+        };
+        made = if index == 0 { from } else { same(made, from) };
+    }
+    made
+}
+
+/// What a call this check cannot read may have freed, as its transfer takes
+/// it: every allocation `Allocations::handed_to_opaque_call` names and they
+/// hold, which the transfer marks `may_be_freed`; what the locals it is handed
+/// the address of hold, `Allocations::locals_handed_to_opaque_call`, which it
+/// leaves `Reachable`, so `release_pp(&x)` and `release_all(a)` with `a` a
+/// local array are asked; and, at a hatch, every allocation, as the hatch's
+/// transfer doubts them all (ADR-0038). Not an allocation exposed to an
+/// earlier call and not handed to this one, which would doubt every call after
+/// a store out. Found by review of #672.
+fn freed_by_opaque_call(
+    analysis: &Allocations<'_>,
+    function: &Function,
+    callee: FuncId,
+    handed: &[Operand],
+    known: &Known,
+) -> BTreeSet<usize> {
+    if analysis.frees_anything(callee) {
+        return (0..known.state.len()).collect();
+    }
+    let mut sites = analysis.handed_to_opaque_call(function, handed, known);
+    for local in Allocations::locals_handed_to_opaque_call(handed, known) {
+        sites.extend(known.points_to[local].sites());
+    }
+    known.closure(sites)
+}
+
+/// Report a call this check cannot read handed an allocation whose address
+/// was stored where code outside this function may read it (#672): `*pp = x;
+/// release(x);` may free what the caller is left holding.
+///
+/// **What the call may free is what its transfer takes it to have**,
+/// [`freed_by_opaque_call`].
+/// Only a doubt, since the call may keep what it is handed rather than free
+/// it: `*out = n; append(list, n);` is doubted by that decision. The other
+/// order, `release(x); *pp = x;`, is the store door's. See
+/// `Known::stored_out` and ADR-0041.
+pub(super) fn handed_stored_out(
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    analysis: &Allocations<'_>,
+    function: &Function,
+    terminator: &Terminator,
+    known: &Known,
+) {
+    let Terminator::Call {
+        callee,
+        arguments,
+        destination: _,
+        then: _,
+        origin,
+    } = terminator
+    else {
+        return;
+    };
+    // Written out, so that a kind of callee nobody has added yet answers
+    // here whether what it is handed may be freed.
+    match analysis.callee(*callee) {
+        Callee::Opaque => {}
+        Callee::Frees
+        | Callee::Reallocates
+        | Callee::Allocates
+        | Callee::ReturnsFirst
+        | Callee::Copies
+        | Callee::Ends => return,
+    }
+    let stored: Vec<usize> = freed_by_opaque_call(analysis, function, *callee, arguments, known)
+        .into_iter()
+        .filter(|&site| known.stored_out[site])
+        .collect();
+    if stored.is_empty() {
+        return;
+    }
+    // **Keyed by an argument that holds one by name**, which the words then
+    // name, **and otherwise by one that reaches one**, asked one argument at
+    // a time as the call is and named by nothing, since what it holds rather
+    // than itself was stored out. Not merely the first argument: a report
+    // already at this call about another one keeps that key, and `rel2(y,
+    // *q)` with `y` doubted freed and `*q` stored out lost the second doubt
+    // to the first. Found by review.
+    let by_name = arguments.iter().find_map(|argument| match argument {
+        Operand::Copy(place)
+            if place.projection.is_empty()
+                && known.points_to[place.local.index()]
+                    .sites()
+                    .any(|site| known.stored_out[site]) =>
+        {
+            Some(place)
+        }
+        Operand::Copy(_) | Operand::Constant(_) => None,
+    });
+    let reaching = || {
+        arguments.iter().find_map(|argument| match argument {
+            Operand::Copy(place)
+                if freed_by_opaque_call(
+                    analysis,
+                    function,
+                    *callee,
+                    std::slice::from_ref(argument),
+                    known,
+                )
+                .into_iter()
+                .any(|site| known.stored_out[site]) =>
+            {
+                Some(place)
+            }
+            Operand::Copy(_) | Operand::Constant(_) => None,
+        })
+    };
+    // **A hatch is handed nothing it frees**, and every allocation is what it
+    // may free, so no argument need reach what was stored out; its key is the
+    // return place, which no other finding at a call takes. Only a hatch
+    // reaches it, since every other call's set is its arguments' together.
+    let unhanded = Place::local(function.return_place());
+    let place = by_name.or_else(reaching).unwrap_or(&unhanded);
+    say(
+        analysis.sources,
+        findings,
+        said,
+        place,
+        Finding {
+            function: analysis.function,
+            kind: Kind::HandedAfterStore,
+            conclusion: Conclusion::Unknown,
+            at: origin.span(),
+            local: by_name.and_then(own_local),
+            freed: None,
+            made: made_where_all_agree(&stored, known),
+            unproven: None,
         },
     );
 }

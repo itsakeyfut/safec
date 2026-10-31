@@ -4829,6 +4829,47 @@ cases! {
         // site's origin rather than the one every site agrees on; this
         // names the second `malloc`.
         an_allocation_stored_out_from_either_of_two_calls_and_freed_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `release(x)` may free what the caller is left holding: an `SC0414`
+        // doubt at the call (#672). See ADR-0041. Mutation: the call asks
+        // nothing of `Known::stored_out`; this goes silent.
+        an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Handed in a box, it is still what the call may free. Mutation: the
+        // call asks only what it is handed by name; this goes silent.
+        an_allocation_stored_out_and_then_handed_to_a_call_inside_a_box_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Nothing was stored out, so nothing is left behind. Mutation: every
+        // handed allocation is asked; this gains an `SC0414` doubt.
+        an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `keep(x)` is handed what was stored out and is doubted; `tick()`
+        // is handed nothing, and is not, though `keep` may have kept `x`
+        // where `tick` reaches it. Mutation: every allocation exposed so far
+        // is asked; this gains a second `SC0414` doubt, at `tick()`.
+        an_allocation_stored_out_is_doubted_at_the_call_it_is_handed_and_not_at_a_later_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Correct C if `append` keeps `n`, doubted: this check cannot read
+        // whether a call frees or keeps what it is handed. It says the cost
+        // chosen rather than guarding a line.
+        an_allocation_stored_out_and_handed_to_a_call_that_keeps_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `y` may be freed and `*q` was stored out: both are said at the call.
+        // Mutation: key the doubt by the first argument; the `SC0407` about `y`
+        // keeps the key and this loses its `SC0414`. Found by review of #672.
+        an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `release_pp(&x)` reaches `x`'s allocation through `x`'s address, which
+        // no argument names. Mutation: the call asks nothing of the locals it is
+        // handed the address of; this goes silent. Found by review of #672.
+        an_allocation_stored_out_and_handed_to_a_call_by_the_address_of_its_local_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through a local array of pointers. Mutation: as above; this
+        // goes silent.
+        an_allocation_stored_out_and_handed_to_a_call_in_a_local_array_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A hatch may free every allocation, handed or not (ADR-0038). Mutation:
+        // a hatch is asked only what it is handed; this goes silent. Found by
+        // review of #672.
+        an_allocation_stored_out_is_doubted_at_a_hatch_called_after: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Either of two allocations may be what was stored. Mutation: take the
+        // first site's origin at the call; this names the first `malloc`.
+        an_allocation_stored_out_from_either_of_two_calls_and_handed_to_a_call_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Handed as a load, `release(*b)` names nothing and reaches `x` through
+        // what `b` holds. Mutation: the call asks nothing of what an argument
+        // read out of memory may be; this goes silent.
+        an_allocation_stored_out_and_handed_to_a_call_as_a_load_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local array nothing outside can name is not memory that leaves.
         // Mutation: every store marks what it carries; this gains an
         // `SC0414` doubt.

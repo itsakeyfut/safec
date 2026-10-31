@@ -1,0 +1,24 @@
+error[SC0407]: this passes `y`, which may point to a freed allocation
+    ╭─[ an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:18:5 ]
+    │
+ 18 │     rel2(y, *q);
+    │     ─────┬─────  
+    │          ╰─────── passed here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0414]: this hands a pointer that was stored where code outside this function may read it to a call that may free it
+    ╭─[ an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:18:5 ]
+    │
+  5 │     int *x = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 18 │     rel2(y, *q);
+    │     ─────┬─────  
+    │          ╰─────── handed here, perhaps freed while still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep it out of a call that may free it while it is stored there, or set what was stored there to null first

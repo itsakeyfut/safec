@@ -1,0 +1,14 @@
+error[SC0414]: this hands a pointer that was stored where code outside this function may read it to a call that may free it
+    ╭─[ an_allocation_stored_out_and_then_handed_to_a_call_inside_a_box_is_doubted.c:16:5 ]
+    │
+  5 │     int *x = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 16 │     release_all(b);
+    │     ───────┬──────  
+    │            ╰──────── handed here, perhaps freed while still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep it out of a call that may free it while it is stored there, or set what was stored there to null first

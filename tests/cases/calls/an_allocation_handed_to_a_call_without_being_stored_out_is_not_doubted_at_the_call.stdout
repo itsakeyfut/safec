@@ -1,0 +1,43 @@
+Target "x86_64-pc-windows-msvc"
+Function an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call.c:2:6 "release" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+Function an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call.c:3:6 "put"
+  Local "_0" "void" return
+  Local "_1" "int *" "x"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call.c:4:14 generated
+    Call an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call.c:4:14 written "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call.c:4:14 generated
+    Operation an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call.c:5:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call.c:5:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call.c:5:9 generated
+    Return
+  Block "bb3"
+    Sequenced an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call.c:8:5 generated
+    Call an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call.c:8:5 written "release" "bb5"
+      Copy "_1"
+  Block "bb5"
+    Sequenced an_allocation_handed_to_a_call_without_being_stored_out_is_not_doubted_at_the_call.c:8:5 generated
+    Return

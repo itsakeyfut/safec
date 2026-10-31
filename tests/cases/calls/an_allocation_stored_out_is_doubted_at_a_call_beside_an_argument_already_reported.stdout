@@ -1,0 +1,117 @@
+Target "x86_64-pc-windows-msvc"
+Function an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:3:6 "rel2" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "a"
+  Local "_2" "int *" parameter "b"
+Function an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:4:6 "put"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter _Nonnull "pp"
+  Local "_2" "int **" parameter _Nonnull "q"
+  Local "_3" "int" parameter "c"
+  Local "_4" "int *" "x"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *" "y"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int *"
+  Local "_11" "int *"
+  Block "bb0" entry
+    ArgumentsEvaluated an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:5:14 generated
+    Call an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:5:14 written "malloc" "bb1"
+      Destination "_5"
+      Constant 4
+  Block "bb1"
+    Operation an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:5:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:5:14 generated
+    Operation an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:6:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:6:9 written "bb2" "bb3"
+      Copy "_6"
+  Block "bb2"
+    Sequenced an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:6:9 generated
+    Return
+  Block "bb3"
+    Sequenced an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:9:14 generated
+    Call an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:9:14 written "malloc" "bb5"
+      Destination "_8"
+      Constant 4
+  Block "bb5"
+    Operation an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:9:10 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:9:14 generated
+    Operation an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:10:9 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_7"
+        Constant 0
+    Branch an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:10:9 written "bb6" "bb7"
+      Copy "_9"
+  Block "bb6"
+    Sequenced an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:10:9 generated
+    Return
+  Block "bb7"
+    Sequenced an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:10:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Branch an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:13:9 written "bb9" "bb10"
+      Copy "_3"
+  Block "bb9"
+    Sequenced an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:13:9 generated
+    ArgumentsEvaluated an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:14:9 generated
+    Call an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:14:9 written "free" "bb12"
+      Copy "_7"
+  Block "bb10"
+    Sequenced an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:13:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:16:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:16:5 written
+      Destination "_10"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:16:5 generated
+    Operation an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:17:5 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_4"
+    Operation an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:17:5 written
+      Destination "_11"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:17:5 generated
+    ArgumentsEvaluated an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:18:5 generated
+    Call an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:18:5 written "rel2" "bb13"
+      Copy "_7"
+      Copy "_2"
+        Deref
+  Block "bb12"
+    Sequenced an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:14:9 generated
+    Goto "bb11"
+  Block "bb13"
+    Sequenced an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:18:5 generated
+    Return

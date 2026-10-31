@@ -168,9 +168,26 @@ doubted, since this check does not follow what one place in such memory holds,
 which is #656; in the corpus, 28 programs that already had a report each gained
 this one at their free, and none was newly refused. A library copy out of the
 function marks nothing, as the store door asks nothing of one, which is
-#652. And only `free` and `realloc` ask the mark: a call that may free what it
-is handed, `*pp = x; release(x);`, is still silent, since asking every such call
-doubts `*out = n; append(list, n);`, by the user's decision; that is #672.
+#652.
+
+**And a call this check cannot read handed it is asked too** (#672).
+`*pp = x; release(x);` was silent where `release(x); *pp = x;` was doubted,
+since only `free` and `realloc` asked the mark. A call this check cannot read
+is asked of what its transfer takes it to have freed, `report::freed_by_opaque_call`:
+what it is handed by name or as a load and what an argument read out of memory
+may be, `Allocations::handed_to_opaque_call`, which the transfer marks
+`may_be_freed`; what the locals it is handed the address of hold,
+`Allocations::locals_handed_to_opaque_call`, which it leaves `Reachable`; every
+allocation those hold; and at a hatch every allocation, as the hatch's transfer
+doubts them all (ADR-0038). It is `HandedAfterStore` under `SC0414` where any
+of it is `stored_out`. Asking only the first of those let `release_pp(&x)`, a
+local array and a hatch go silent, found by review. Only what it is handed: asking every allocation exposed before
+would doubt every call after a store out. A doubt, by the user's decision,
+since the call may keep what it is handed; that costs `*out = n;
+append(list, n);`, a correct program now doubted, which `--allow-unknown`
+lowers. In the corpus three programs that already had a report gained it, and
+none was newly refused. A call this check reads by name and that frees nothing
+is not asked.
 
 **What this costs.** What memory holds only gains, so a slot freed and then
 overwritten with null or a new allocation is still doubted at the door,
@@ -237,6 +254,19 @@ and `memory/`), applied and measured, and a named case in
   `an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store`
   (#650). Marking only the value stored fails
   `an_allocation_stored_in_a_box_stored_where_the_caller_reads_it_and_then_freed_is_doubted`.
+  A call not asking the mark fails
+  `an_allocation_stored_where_the_caller_reads_it_and_then_handed_to_a_call_is_doubted`,
+  asking only what it is handed by name fails
+  `an_allocation_stored_out_and_then_handed_to_a_call_inside_a_box_is_doubted`,
+  and asking every exposed allocation fails
+  `an_allocation_stored_out_is_doubted_at_the_call_it_is_handed_and_not_at_a_later_one`.
+  Asking nothing of the locals handed by address fails
+  `an_allocation_stored_out_and_handed_to_a_call_by_the_address_of_its_local_is_doubted`,
+  asking a hatch only what it is handed fails
+  `an_allocation_stored_out_is_doubted_at_a_hatch_called_after`, and keying
+  the doubt by the first argument fails
+  `an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported`
+  (#672).
 * Not asking `freed_behind` at a return fails
   `a_box_holding_a_freed_pointer_returned_is_doubted` and, for a return of a
   dereference, `a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted`;

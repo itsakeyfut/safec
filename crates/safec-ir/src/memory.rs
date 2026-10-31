@@ -72,8 +72,8 @@ use crate::source::{SourceMap, Span};
 use built::named;
 use report::{
     after_a_call, departed_at_call, departed_in_element, derefs, freed_after_its_read_was_reported,
-    handed, handed_places, inside, loaded_indeterminate, may_not_fit, reached_by_library, reported,
-    returned, stored_away, unwritten_read, used, used_before,
+    handed, handed_places, handed_stored_out, inside, loaded_indeterminate, may_not_fit,
+    reached_by_library, reported, returned, stored_away, unwritten_read, used, used_before,
 };
 use transfer::Allocations;
 
@@ -122,6 +122,14 @@ pub enum Kind {
     /// that memory may only write it, as for what a door leaves holding
     /// behind it. See `Known::stored_out` and ADR-0041.
     FreedAfterStore,
+    /// A call this check cannot read handed an allocation whose address may
+    /// have been stored where code outside this function may read it:
+    /// `*out = p; release(p);` (#672).
+    ///
+    /// [`Kind::FreedAfterStore`] where the call, not `free`, may be what frees
+    /// it. Always `Unknown`, since the call may keep what it is handed. See
+    /// `Known::stored_out` and ADR-0041.
+    HandedAfterStore,
     /// `free(x); *b = x; return b;`
     ///
     /// Not [`Kind::ReturnAfterFree`], because what is returned is live: it
@@ -894,6 +902,17 @@ fn findings_within(
             // reads `SC0402` above `SC0407`, and before the transfer, for the
             // reason above.
             handed(
+                &mut findings,
+                &mut said,
+                &analysis,
+                function,
+                &block.terminator,
+                &known,
+            );
+            // And whether it is handed what was stored out, before the
+            // transfer marks it as what the call may have freed. See
+            // `report::handed_stored_out`.
+            handed_stored_out(
                 &mut findings,
                 &mut said,
                 &analysis,

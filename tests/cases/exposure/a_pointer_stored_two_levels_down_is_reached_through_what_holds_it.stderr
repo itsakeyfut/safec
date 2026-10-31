@@ -1,3 +1,17 @@
+error[SC0414]: this hands a pointer that was stored where code outside this function may read it to a call that may free it
+    ╭─[ a_pointer_stored_two_levels_down_is_reached_through_what_holds_it.c:20:5 ]
+    │
+ 15 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 20 │     drop_all(hh);
+    │     ──────┬─────  
+    │           ╰─────── handed here, perhaps freed while still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep it out of a call that may free it while it is stored there, or set what was stored there to null first
 error[SC0402]: this uses `p`, which may have been freed
     ╭─[ a_pointer_stored_two_levels_down_is_reached_through_what_holds_it.c:21:5 ]
     │
