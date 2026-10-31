@@ -12,9 +12,12 @@ void put(char (*p)[8]) {
     *m = cc;
     memcpy(p, &m, 8);
 }
-void use(int ***p) {
-    if (p != 0) {
-        int **q = *p;
+void run(void) {
+    int ***v = 0;
+    void *pv = &v;
+    put(pv);
+    if (v != 0) {
+        int **q = *v;
         if (q != 0) {
             int *r = *q;
             if (r != 0) {
@@ -22,10 +25,4 @@ void use(int ***p) {
             }
         }
     }
-}
-void run(void) {
-    int ***v = 0;
-    void *pv = &v;
-    put(pv);
-    use(v);
 }

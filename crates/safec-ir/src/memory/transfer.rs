@@ -3316,8 +3316,9 @@ impl Analysis for Allocations<'_> {
                         // believing its declared type at every level, and a
                         // one-byte allocation was handed on in silence. A
                         // local that holds none is skipped as before, since
-                        // nothing it is read as believes a width there. See
-                        // ADR-0060.
+                        // nothing it is read as believes a width there; that
+                        // half decides no case, measured, since a bound on
+                        // such a local is read by nothing. See ADR-0060.
                         let Some(read_as) = read_as else {
                             continue;
                         };
