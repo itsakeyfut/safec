@@ -1,0 +1,40 @@
+error[SC0402]: this uses `m`, which may have been freed
+    ╭─[ a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call.c:14:5 ]
+    │
+ 14 │     *m = &w;
+    │     ───┬───  
+    │        ╰───── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0414]: this stores a pointer where code outside this function may read it, and it points to where a pointer that may have been freed is stored
+    ╭─[ a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call.c:14:5 ]
+    │
+ 14 │     *m = &w;
+    │     ───┬───  
+    │        ╰───── stored here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this
+error[SC0413]: this lets `w` leave, which may not point at an object as wide as its type
+    ╭─[ a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call.c:16:5 ]
+    │
+ 16 │     use1(w);
+    │     ───┬───  
+    │        ╰───── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0407]: this passes a pointer to where a pointer that may have been freed is stored
+    ╭─[ a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call.c:16:5 ]
+    │
+ 16 │     use1(w);
+    │     ───┬───  
+    │        ╰───── passed here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this one

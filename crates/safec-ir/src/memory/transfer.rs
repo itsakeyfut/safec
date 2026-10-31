@@ -19,7 +19,7 @@ use super::parts::{
     Callee, Extent, Freeing, Held, LIBRARY, Levels, Library, Makes, Offset, PendingRead, Reached,
     Read, Realloced, SiteState, bounded,
 };
-use super::report::{Fit, fits, slots_leaving};
+use super::report::{Fit, fits, slots_from, slots_leaving};
 use super::{
     LostReason, dereferenced_in_element, dereferenced_in_terminator, derefs, handed_places,
 };
@@ -491,6 +491,19 @@ impl Allocations<'_> {
             Ty::Int | Ty::Char | Ty::Void => false,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         }
+    }
+
+    /// Believe nothing of what a call this check cannot read may write into
+    /// `local`, at its own level or below, and mark it so a later call does
+    /// the same below it: what [`Known::handed_at_most`] and
+    /// [`Known::handed_contents_at_most`] say for a local a call reaches
+    /// untyped. One place for the call's own arguments and for what an
+    /// earlier call kept (#679), so the two cannot drift.
+    fn believe_nothing_handed(&self, value: &mut Known, local: LocalId) {
+        value.handed_untyped[local.index()] = true;
+        value.handed_at_most[local.index()] = bounded(value.handed_at_most[local.index()], Some(0));
+        value.handed_contents_at_most[local.index()]
+            .bound_by(&Levels::from_bounds(vec![Some(0); self.deepest_pointer]));
     }
 
     /// Per local, whether it is made unwritten where the function starts:
@@ -1208,7 +1221,20 @@ impl Allocations<'_> {
             stored_in_part,
             exposed_locals,
             stored_out,
+            handed_untyped,
+            handed_untyped_sites,
         } = into;
+        // May-facts, so a union, as `exposed_locals` is. See
+        // `Known::handed_untyped`.
+        for (here, there) in handed_untyped.iter_mut().zip(&from.handed_untyped) {
+            *here = *here || *there;
+        }
+        for (here, there) in handed_untyped_sites
+            .iter_mut()
+            .zip(&from.handed_untyped_sites)
+        {
+            *here = *here || *there;
+        }
         // A may-fact, so a union, at both kinds of join. See
         // `Known::stored_out`.
         for (here, there) in stored_out.iter_mut().zip(&from.stored_out) {
@@ -1659,6 +1685,9 @@ impl Analysis for Allocations<'_> {
             exposed_locals: vec![false; self.locals],
             // Nothing has been stored anywhere yet.
             stored_out: vec![false; self.locals],
+            // No call has been handed anything yet.
+            handed_untyped: vec![false; self.locals],
+            handed_untyped_sites: vec![false; self.locals],
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -2497,6 +2526,9 @@ impl Analysis for Allocations<'_> {
                 // the next a write of a new `m`, and a read nothing wrote was
                 // silent. See `Known::exposed_locals`.
                 value.exposed_locals[local.index()] = false;
+                // Nor was it handed to one untyped, for the same reason.
+                // See `Known::handed_untyped`.
+                value.handed_untyped[local.index()] = false;
                 // **Nor does any pointer recorded as able to name it**, for
                 // the same reason: a pointer a call wrote in an earlier turn
                 // named the old object, so a write through it is no write of
@@ -3294,7 +3326,7 @@ impl Analysis for Allocations<'_> {
                     let Ty::Pointer(read_as) = self.unit.ty(ty) else {
                         continue;
                     };
-                    let (locals, _) = slots_leaving(
+                    let (locals, sites, untyped_sites) = slots_leaving(
                         self,
                         function,
                         read_as,
@@ -3330,17 +3362,18 @@ impl Analysis for Allocations<'_> {
                         // named in a report of its own, by the user's
                         // decision. See ADR-0060.
                         let Some(read_as) = read_as else {
-                            value.handed_at_most[local.index()] =
-                                bounded(value.handed_at_most[local.index()], Some(0));
-                            value.handed_contents_at_most[local.index()].bound_by(
-                                &Levels::from_bounds(vec![Some(0); self.deepest_pointer]),
-                            );
+                            self.believe_nothing_handed(value, local);
                             continue;
                         };
                         // An array of pointers holds pointers, as `type_levels` reads it.
                         let width = match self.unit.ty(innermost_element(self.unit, read_as)) {
                             Ty::Pointer(pointee) => self.unit.size_of(pointee).unwrap_or(0),
-                            Ty::Void | Ty::Int | Ty::Char => 0,
+                            // Marked, so a later call walks below it. See
+                            // `Known::handed_untyped`.
+                            Ty::Void | Ty::Int | Ty::Char => {
+                                value.handed_untyped[local.index()] = true;
+                                0
+                            }
                             Ty::Array { .. } => {
                                 unreachable!("`innermost_element` strips every array")
                             }
@@ -3360,6 +3393,45 @@ impl Analysis for Allocations<'_> {
                                 Levels::from_bounds(vec![Some(0); self.deepest_pointer])
                             });
                         value.handed_contents_at_most[local.index()].bound_by(&levels);
+                    }
+                    // And the memory it reached untyped, as the locals are.
+                    // See `Known::handed_untyped_sites`.
+                    for (site, read_as) in sites {
+                        if !self.holds_a_pointer(read_as) {
+                            value.handed_untyped_sites[site] = true;
+                        }
+                    }
+                    for site in untyped_sites {
+                        value.handed_untyped_sites[site] = true;
+                    }
+                }
+                // **And below whatever an earlier call was handed untyped**,
+                // as it is now (#679): that callee may have kept the address
+                // and store through it at this call, so `keep(&v); v = &w;
+                // other(); use1(w);` handed a one-byte allocation on in
+                // silence. The same walk, from what is marked, read as below
+                // a type that stops being a pointer. It costs a doubt about
+                // whatever is put below a marked local or memory and handed
+                // on after any later call, by the user's decision. See
+                // `Known::handed_untyped` and ADR-0060.
+                let marked_locals: Vec<(LocalId, Option<TyId>)> = function
+                    .locals()
+                    .filter(|local| value.handed_untyped[local.index()])
+                    .map(|local| (local, None))
+                    .collect();
+                let marked_sites: Vec<(usize, Option<TyId>)> =
+                    (0..value.handed_untyped_sites.len())
+                        .filter(|&site| value.handed_untyped_sites[site])
+                        .map(|site| (site, None))
+                        .collect();
+                if !marked_locals.is_empty() || !marked_sites.is_empty() {
+                    let (locals, _, untyped_sites) =
+                        slots_from(self, function, value, marked_locals, marked_sites);
+                    for (local, _) in locals {
+                        self.believe_nothing_handed(value, local);
+                    }
+                    for site in untyped_sites {
+                        value.handed_untyped_sites[site] = true;
                     }
                 }
                 // **And what it wrote there, or into memory it was handed, may

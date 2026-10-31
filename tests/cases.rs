@@ -4080,6 +4080,26 @@ cases! {
         // The same two levels down. Mutation: bound such a local one level below
         // its own only; the `SC0413` at `use1(r)` goes. Found by review of #677.
         a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_two_levels_below_its_own_when_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `keep` may have kept `&v` and `other` read `&w` back out of it and stored
+        // any pointer into `w`: an `SC0413` doubt at `use1(w)` (#679). See ADR-0060.
+        // Mutation: a later call walks nothing below what was marked; this goes
+        // silent.
+        a_local_put_below_one_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with `v` handed as bytes. Mutation: a local reached as bytes is
+        // not marked; this goes silent.
+        a_local_put_below_one_a_callee_kept_as_bytes_is_asked_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with `keep` on one arm. Mutation: the join takes the side
+        // joined in; this goes silent.
+        a_local_put_below_one_a_callee_kept_on_one_arm_is_asked_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with memory handed rather than a local. Mutation: a site is
+        // not marked; the `SC0413` at `use1(w)` goes.
+        a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // No call between `v = &w` and `use1(w)` can have written `w`. It says the
+        // conclusion rather than guarding a line.
+        a_local_below_one_a_callee_kept_is_not_doubted_where_no_call_follows: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Through an `int ***` the callee may store only an `int *` into `w`. It
+        // says the conclusion rather than guarding a line: nothing typed is marked.
+        a_local_put_below_one_a_callee_kept_through_a_typed_pointer_is_not_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Through a `void *`, the doubts about `v`'s level and its memory's
         // are one report, and the one about its own level stands. Mutation:
         // name the doubt about what a value's memory holds by nothing; this
