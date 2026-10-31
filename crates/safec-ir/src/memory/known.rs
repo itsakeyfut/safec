@@ -7,7 +7,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::ir::{LocalId, Operand, Place};
+use crate::ir::{LocalId, Operand, Place, TyId};
 use crate::source::{SourceMap, Span};
 
 use super::bits::Bits;
@@ -384,33 +384,39 @@ pub(super) struct Known {
     /// this check does not follow what one place in such memory holds (#656).
     /// See ADR-0041.
     pub(super) stored_out: Vec<bool>,
-    /// Per local, whether a call this check cannot read reached it untyped:
-    /// as `void`, as `char` or `int` bytes, or below a type that stops being
-    /// a pointer, on the walk a departure takes. [`Self::handed_untyped_sites`]
-    /// is the same for memory.
+    /// Per local, each type a call this check cannot read reached it as on
+    /// the walk a departure takes, where that type is untyped somewhere
+    /// below: `void`, `char` or `int` bytes, a pointer whose chain ends in
+    /// `void` or `char`, or `None` below a type that stops being a pointer.
+    /// [`Self::handed_untyped_sites`] is the same for memory.
     ///
     /// **So that a later call bounds what is below it then** (#679): such a
     /// callee may keep the address and store any pointer through it at any
     /// later call, and `keep(&v); v = &w; other(); use1(w);` handed a
     /// one-byte allocation on in silence, where `v = &w` before `keep(&v)`
-    /// was doubted. Every call this check cannot read walks from what is
-    /// marked and believes nothing of what it reaches, as
-    /// [`Self::handed_at_most`] says for a local a call reaches untyped. A
-    /// union at a join, never cleared while the local lives, and cleared at
-    /// its `StorageLive`, as [`Self::exposed_locals`] is.
+    /// was doubted. Every call this check cannot read walks again from each
+    /// local at each type recorded here, and bounds what it reaches as a call
+    /// handed it so. **The type and not only the fact**, since `keep(void
+    /// **)` handed `&v` reaches `v` as a pointer, and only the type says what
+    /// is below it is untyped: a mark alone left that route silent, found by
+    /// review. Not a chain that ends in `int`, which a well-typed `int **`
+    /// out-parameter is: walking from those doubted locals a may-set puts
+    /// below a typed callee's memory at every later call. A union at a join,
+    /// never cleared while the local lives, and cleared at its
+    /// `StorageLive`, as [`Self::exposed_locals`] is.
     ///
     /// **Wrong in both directions, and the two are not alike.** A mark
     /// missed leaves a local below it believed whole, and a program is
     /// silent. A mark set where no call kept anything doubts what is put
     /// below that local after any later call, which the reader sees. See
     /// ADR-0060.
-    pub(super) handed_untyped: Vec<bool>,
-    /// Per site, whether a call this check cannot read reached the memory it
-    /// names untyped, as [`Self::handed_untyped`] is for a local: `keep(m);
-    /// *m = &w; other();` may write `w`. Cleared where the site is made
-    /// again (`Self::reborn`), since the new allocation's address has been
-    /// handed to nobody.
-    pub(super) handed_untyped_sites: Vec<bool>,
+    pub(super) handed_untyped: Vec<Vec<Option<TyId>>>,
+    /// Per site, each type a call this check cannot read reached the memory
+    /// it names as, as [`Self::handed_untyped`] is for a local: `keep(m);
+    /// *m = &w; other();` may write `w`. Kept where the site is made again
+    /// (`Self::reborn`), as `inside` is, since the old allocation's address
+    /// may still be held and the slots of the two are not told apart.
+    pub(super) handed_untyped_sites: Vec<Vec<Option<TyId>>>,
 }
 
 impl Known {
@@ -1507,12 +1513,12 @@ impl Known {
             stored_out,
             // About a local, as `exposed_locals` is.
             handed_untyped: _,
-            // About the allocation the site named, which a call may have
-            // kept; nobody has been handed the new one's address.
-            handed_untyped_sites,
+            // Kept, as `inside` is: a call may still hold the old
+            // allocation's address, and the slots of the new one are not told
+            // apart from the old one's. Found by review.
+            handed_untyped_sites: _,
         } = self;
         stored_out[site] = false;
-        handed_untyped_sites[site] = false;
 
         // **A local that loses an allocation that is gone may hold one**, so
         // a store of it marks where it lands, as a load out of a marked

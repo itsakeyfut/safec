@@ -493,17 +493,103 @@ impl Allocations<'_> {
         }
     }
 
-    /// Believe nothing of what a call this check cannot read may write into
-    /// `local`, at its own level or below, and mark it so a later call does
-    /// the same below it: what [`Known::handed_at_most`] and
-    /// [`Known::handed_contents_at_most`] say for a local a call reaches
-    /// untyped. One place for the call's own arguments and for what an
-    /// earlier call kept (#679), so the two cannot drift.
-    fn believe_nothing_handed(&self, value: &mut Known, local: LocalId) {
-        value.handed_untyped[local.index()] = true;
-        value.handed_at_most[local.index()] = bounded(value.handed_at_most[local.index()], Some(0));
-        value.handed_contents_at_most[local.index()]
-            .bound_by(&Levels::from_bounds(vec![Some(0); self.deepest_pointer]));
+    /// Bound what a call this check cannot read may write into `local`,
+    /// reached on the walk a departure takes as `read_as`, at its own level
+    /// and below, and record it where that type is untyped somewhere below,
+    /// so a later call walks there again ([`Known::handed_untyped`]). One
+    /// place for the call's own arguments and for what an earlier call kept
+    /// (#679), so the two cannot read a local differently.
+    fn handed(&self, value: &mut Known, local: LocalId, read_as: Option<TyId>) {
+        // Reached as a pointer, the body stores one of that type; reached as
+        // `void`, through a `void *`, it may store any pointer, so nothing is
+        // believed.
+        //
+        // **Reached as bytes, a local is `void`'s case** (#675): `memcpy` puts
+        // any pointer in bytes, and is asked nothing of their type, so
+        // `put(pv)` with `put` taking `char (*)[8]` left `v` believing its
+        // declared type at every level, and a one-byte allocation was handed on
+        // in silence. Whatever the local is declared as: a `char` buffer filled
+        // so and read back as a pointer through a `void *` was silent too,
+        // where a `void *` callee was doubted. Found by review. See ADR-0060.
+        //
+        // **And reached below a type that stops being a pointer, the same**
+        // (#677): a callee handed `&v` as bytes or through a `void *` may read
+        // `&w` back out of `v` and store any pointer into `w`, so `use1(w)`
+        // handed a one-byte allocation on in silence while `use1(*v)` was
+        // doubted. The walk does not say whether the type was reached through a
+        // typed pointer, so one reached below memory a typed callee holds an
+        // `int` in, which a may-set says may hold a local's address, is doubted
+        // too, and so is one a later departure reaches only through such a
+        // may-set, named in a report of its own, by the user's decision. See
+        // ADR-0060.
+        let Some(read_as) = read_as else {
+            remember(&mut value.handed_untyped[local.index()], None);
+            value.handed_at_most[local.index()] =
+                bounded(value.handed_at_most[local.index()], Some(0));
+            value.handed_contents_at_most[local.index()]
+                .bound_by(&Levels::from_bounds(vec![Some(0); self.deepest_pointer]));
+            return;
+        };
+        // Recorded, so a later call walks below it again. See
+        // `Known::handed_untyped`.
+        if self.untyped_below(read_as) {
+            remember(&mut value.handed_untyped[local.index()], Some(read_as));
+        }
+        // An array of pointers holds pointers, as `type_levels` reads it.
+        let width = match self.unit.ty(innermost_element(self.unit, read_as)) {
+            Ty::Pointer(pointee) => self.unit.size_of(pointee).unwrap_or(0),
+            Ty::Void | Ty::Int | Ty::Char => 0,
+            Ty::Array { .. } => {
+                unreachable!("`innermost_element` strips every array")
+            }
+        };
+        value.handed_at_most[local.index()] =
+            bounded(value.handed_at_most[local.index()], Some(width));
+        // **And below it, at every level**, as the type it was reached as says:
+        // through a `void *`, nothing at any level. See
+        // `Known::handed_contents_at_most`. Through an array to its element, as
+        // the width above reads it: `fill(&a)` with `a` an `int **[2]` took `a`
+        // as reached through a `void *`. Found by review.
+        let levels = self
+            .type_levels(innermost_element(self.unit, read_as))
+            .unwrap_or_else(|| Levels::from_bounds(vec![Some(0); self.deepest_pointer]));
+        value.handed_contents_at_most[local.index()].bound_by(&levels);
+    }
+
+    /// Record memory a call this check cannot read reached as `read_as`,
+    /// where that type is untyped somewhere below. See
+    /// [`Known::handed_untyped_sites`].
+    fn handed_site(&self, value: &mut Known, site: usize, read_as: Option<TyId>) {
+        if read_as.is_none_or(|ty| self.untyped_below(ty)) {
+            remember(&mut value.handed_untyped_sites[site], read_as);
+        }
+    }
+
+    /// Whether a callee handed a pointer to `ty` may store any pointer
+    /// somewhere below it: `ty` holds no pointer, or is a pointer whose chain
+    /// ends in `void` or `char`. Not one that ends in `int`, which a
+    /// well-typed `int **` out-parameter does. See [`Known::handed_untyped`].
+    ///
+    /// Written out rather than as a `matches!`, so a kind of type added later
+    /// is asked what it is.
+    fn untyped_below(&self, ty: TyId) -> bool {
+        match self.unit.ty(innermost_element(self.unit, ty)) {
+            Ty::Pointer(pointee) => {
+                let mut below = innermost_element(self.unit, pointee);
+                while let Ty::Pointer(next) = self.unit.ty(below) {
+                    below = innermost_element(self.unit, next);
+                }
+                match self.unit.ty(below) {
+                    Ty::Void | Ty::Char => true,
+                    Ty::Int => false,
+                    Ty::Pointer(_) | Ty::Array { .. } => {
+                        unreachable!("the loop strips every pointer and array")
+                    }
+                }
+            }
+            Ty::Void | Ty::Int | Ty::Char => true,
+            Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
+        }
     }
 
     /// Per local, whether it is made unwritten where the function starts:
@@ -1226,14 +1312,16 @@ impl Allocations<'_> {
         } = into;
         // May-facts, so a union, as `exposed_locals` is. See
         // `Known::handed_untyped`.
-        for (here, there) in handed_untyped.iter_mut().zip(&from.handed_untyped) {
-            *here = *here || *there;
-        }
-        for (here, there) in handed_untyped_sites
+        for (here, there) in handed_untyped
             .iter_mut()
-            .zip(&from.handed_untyped_sites)
+            .chain(handed_untyped_sites.iter_mut())
+            .zip(from.handed_untyped.iter().chain(&from.handed_untyped_sites))
         {
-            *here = *here || *there;
+            for ty in there {
+                if !here.contains(ty) {
+                    here.push(*ty);
+                }
+            }
         }
         // A may-fact, so a union, at both kinds of join. See
         // `Known::stored_out`.
@@ -1686,8 +1774,8 @@ impl Analysis for Allocations<'_> {
             // Nothing has been stored anywhere yet.
             stored_out: vec![false; self.locals],
             // No call has been handed anything yet.
-            handed_untyped: vec![false; self.locals],
-            handed_untyped_sites: vec![false; self.locals],
+            handed_untyped: vec![Vec::new(); self.locals],
+            handed_untyped_sites: vec![Vec::new(); self.locals],
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -2531,7 +2619,7 @@ impl Analysis for Allocations<'_> {
                 // keeping the mark, measured: what the mark reaches is
                 // written only where it is exposed, and that is cleared just
                 // above.
-                value.handed_untyped[local.index()] = false;
+                value.handed_untyped[local.index()].clear();
                 // **Nor does any pointer recorded as able to name it**, for
                 // the same reason: a pointer a call wrote in an earlier turn
                 // named the old object, so a write through it is no write of
@@ -3337,104 +3425,53 @@ impl Analysis for Allocations<'_> {
                         value,
                     );
                     for (local, read_as) in locals {
-                        // Reached as a pointer, the body stores one of that
-                        // type; reached as `void`, through a `void *`, it may
-                        // store any pointer, so nothing is believed.
-                        //
-                        // **Reached as bytes, a local is `void`'s case**
-                        // (#675): `memcpy` puts any pointer in bytes, and is
-                        // asked nothing of their type, so `put(pv)` with `put`
-                        // taking `char (*)[8]` left `v` believing its declared
-                        // type at every level, and a one-byte allocation was
-                        // handed on in silence. Whatever the local is declared
-                        // as: a `char` buffer filled so and read back as a
-                        // pointer through a `void *` was silent too, where a
-                        // `void *` callee was doubted. Found by review. See
-                        // ADR-0060.
-                        // **And reached below a type that stops being a
-                        // pointer, the same** (#677): a callee handed `&v` as
-                        // bytes or through a `void *` may read `&w` back out
-                        // of `v` and store any pointer into `w`, so `use1(w)`
-                        // handed a one-byte allocation on in silence while
-                        // `use1(*v)` was doubted. The walk does not say
-                        // whether the type was reached through a typed
-                        // pointer, so one reached below memory a typed callee
-                        // holds an `int` in, which a may-set says may hold a
-                        // local's address, is doubted too, and so is one a
-                        // later departure reaches only through such a may-set,
-                        // named in a report of its own, by the user's
-                        // decision. See ADR-0060.
-                        let Some(read_as) = read_as else {
-                            self.believe_nothing_handed(value, local);
-                            continue;
-                        };
-                        // An array of pointers holds pointers, as `type_levels` reads it.
-                        let width = match self.unit.ty(innermost_element(self.unit, read_as)) {
-                            Ty::Pointer(pointee) => self.unit.size_of(pointee).unwrap_or(0),
-                            // Marked, so a later call walks below it. See
-                            // `Known::handed_untyped`.
-                            Ty::Void | Ty::Int | Ty::Char => {
-                                value.handed_untyped[local.index()] = true;
-                                0
-                            }
-                            Ty::Array { .. } => {
-                                unreachable!("`innermost_element` strips every array")
-                            }
-                        };
-                        value.handed_at_most[local.index()] =
-                            bounded(value.handed_at_most[local.index()], Some(width));
-                        // **And below it, at every level**, as the type it
-                        // was reached as says: through a `void *`, nothing
-                        // at any level. See `Known::handed_contents_at_most`.
-                        // Through an array to its element, as the width
-                        // above reads it: `fill(&a)` with `a` an `int **[2]`
-                        // took `a` as reached through a `void *`. Found by
-                        // review.
-                        let levels = self
-                            .type_levels(innermost_element(self.unit, read_as))
-                            .unwrap_or_else(|| {
-                                Levels::from_bounds(vec![Some(0); self.deepest_pointer])
-                            });
-                        value.handed_contents_at_most[local.index()].bound_by(&levels);
+                        self.handed(value, local, read_as);
                     }
-                    // And the memory it reached untyped, as the locals are.
-                    // See `Known::handed_untyped_sites`.
+                    // And the memory it reached, as the locals are. See
+                    // `Known::handed_untyped_sites`.
                     for (site, read_as) in sites {
-                        if !self.holds_a_pointer(read_as) {
-                            value.handed_untyped_sites[site] = true;
-                        }
+                        self.handed_site(value, site, Some(read_as));
                     }
                     for site in untyped_sites {
-                        value.handed_untyped_sites[site] = true;
+                        self.handed_site(value, site, None);
                     }
                 }
                 // **And below whatever an earlier call was handed untyped**,
                 // as it is now (#679): that callee may have kept the address
                 // and store through it at this call, so `keep(&v); v = &w;
                 // other(); use1(w);` handed a one-byte allocation on in
-                // silence. The same walk, from what is marked, read as below
-                // a type that stops being a pointer. It costs a doubt about
+                // silence. The same walk, from each local and memory at each
+                // type it was recorded at. It costs a doubt about
                 // whatever is put below a marked local or memory and handed
                 // on after any later call, by the user's decision. See
                 // `Known::handed_untyped` and ADR-0060.
                 let marked_locals: Vec<(LocalId, Option<TyId>)> = function
                     .locals()
-                    .filter(|local| value.handed_untyped[local.index()])
-                    .map(|local| (local, None))
+                    .flat_map(|local| {
+                        value.handed_untyped[local.index()]
+                            .iter()
+                            .map(move |&read_as| (local, read_as))
+                    })
                     .collect();
                 let marked_sites: Vec<(usize, Option<TyId>)> =
                     (0..value.handed_untyped_sites.len())
-                        .filter(|&site| value.handed_untyped_sites[site])
-                        .map(|site| (site, None))
+                        .flat_map(|site| {
+                            value.handed_untyped_sites[site]
+                                .iter()
+                                .map(move |&read_as| (site, read_as))
+                        })
                         .collect();
                 if !marked_locals.is_empty() || !marked_sites.is_empty() {
-                    let (locals, _, untyped_sites) =
+                    let (locals, sites, untyped_sites) =
                         slots_from(self, function, value, marked_locals, marked_sites);
-                    for (local, _) in locals {
-                        self.believe_nothing_handed(value, local);
+                    for (local, read_as) in locals {
+                        self.handed(value, local, read_as);
+                    }
+                    for (site, read_as) in sites {
+                        self.handed_site(value, site, Some(read_as));
                     }
                     for site in untyped_sites {
-                        value.handed_untyped_sites[site] = true;
+                        self.handed_site(value, site, None);
                     }
                 }
                 // **And what it wrote there, or into memory it was handed, may
@@ -3830,6 +3867,13 @@ impl Analysis for Allocations<'_> {
         // what a C program goes through. Another frontend need not, and
         // `a_call_into_a_local_whose_address_escaped` builds the shape by hand.
         value.unproved(site);
+    }
+}
+
+/// Add `ty` to the types `kept` records, once. See `Known::handed_untyped`.
+fn remember(kept: &mut Vec<Option<TyId>>, ty: Option<TyId>) {
+    if !kept.contains(&ty) {
+        kept.push(ty);
     }
 }
 

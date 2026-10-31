@@ -4103,6 +4103,27 @@ cases! {
         // Through an `int ***` the callee may store only an `int *` into `w`. It
         // says the conclusion rather than guarding a line: nothing typed is marked.
         a_local_put_below_one_a_callee_kept_through_a_typed_pointer_is_not_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `keep` reaches `v` as a `void *`, a pointer, and what is below it is
+        // untyped. Mutation: record only a type that holds no pointer; this goes
+        // silent. Found by review of #679.
+        a_local_put_below_one_a_callee_kept_through_a_pointer_to_void_pointer_is_asked_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through a `char **`. Mutation: a chain that ends in `char` is
+        // not recorded; this goes silent. Found by review of #679.
+        a_local_put_below_one_a_callee_kept_as_a_pointer_to_bytes_is_asked_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with `v` handed as `int` bytes. Mutation: an `int` reached
+        // is not recorded; this goes silent. Found by review of #679.
+        a_local_put_below_one_a_callee_kept_as_int_bytes_is_asked_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `other` may have kept `&w`, read out of `v`, so `other2` may write `y`
+        // after `v` stops pointing at `w`. Mutation: what a later call reaches is
+        // bounded and not recorded; this goes silent. Found by review of #679.
+        a_local_a_later_call_reaches_below_one_a_callee_kept_is_asked_after_its_holder_moves_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Memory kept on one arm. Mutation: the join of what memory was kept as
+        // keeps its own side; the `SC0413` at `use1(w)` goes. Found by review of
+        // #679.
+        a_local_put_in_memory_a_callee_kept_on_one_arm_is_asked_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And on the other arm. Mutation: the join of what memory was kept as
+        // takes the side joined in; the `SC0413` at `use1(w)` goes.
+        a_local_put_in_memory_a_callee_kept_on_the_other_arm_is_asked_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Through a `void *`, the doubts about `v`'s level and its memory's
         // are one report, and the one about its own level stands. Mutation:
         // name the doubt about what a value's memory holds by nothing; this
