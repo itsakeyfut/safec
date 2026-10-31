@@ -816,7 +816,7 @@ fn findings_within(
                 );
                 // After the two above, so that a proof the every-turn state
                 // gives stands at the caret: asked first, a first turn's
-                // doubt took the place of five such proofs, measured.
+                // doubt took the place of four such proofs, measured.
                 for (turn, doubt_only) in &turns {
                     loaded_indeterminate(
                         sources,
