@@ -19,7 +19,7 @@ use super::known::Known;
 use super::parts::{
     Callee, Extent, Freeing, Levels, Offset, Reach, Reached, Read, SiteState, earlier, same,
 };
-use super::transfer::Allocations;
+use super::transfer::{Allocations, innermost_element};
 use super::{Departure, Finding, Kind, LostReason, Unproven};
 
 /// What a set of sites says about whatever touched them.
@@ -1639,7 +1639,8 @@ pub(super) type Slots = (Vec<(LocalId, Option<TyId>)>, Vec<(usize, TyId)>);
 /// with the type the receiver reads each as: the locals it may point at, at
 /// `read_as`, and so on down, with `None` below a type that stops being a
 /// pointer; and the memory it may point at, at `read_as`, and so on down
-/// while the receiver's type is a pointer.
+/// while the receiver's type is a pointer, and below that only for the
+/// locals it may hold.
 ///
 /// **One walk for every question about what a call or a store lets leave**:
 /// [`contents_leaving`] asks each slot whether it fits, and
@@ -1686,6 +1687,7 @@ pub(super) fn slots_leaving(
         .collect();
     let mut asked_locals: Vec<(LocalId, Option<TyId>)> = Vec::new();
     let mut asked_sites: Vec<(usize, TyId)> = Vec::new();
+    let mut untyped_sites: Vec<usize> = Vec::new();
     // Each pair is expanded once, behind `asked_locals` and `asked_sites`,
     // and there are finitely many: the locals, the sites, and the types the
     // departing one points through. So the walk ends.
@@ -1713,7 +1715,22 @@ pub(super) fn slots_leaving(
         } else if let Some((site, read_as)) = sites.pop() {
             // Below a type that is not a pointer the receiver believes
             // nothing of this memory, and its stores were asked at theirs.
+            // **But the locals it may hold are still reached** (#677): a
+            // callee handed `&c` as bytes, with `c` an allocation holding
+            // `&w`, may store any pointer into `w`, and `use1(w)` was
+            // silent. Each such site is expanded once, behind
+            // `untyped_sites`, so the walk still ends.
             let Some(read_as) = read_as else {
+                if !untyped_sites.contains(&site) {
+                    untyped_sites.push(site);
+                    sites.extend(known.inside[site].ones().map(|next| (next, None)));
+                    locals.extend(
+                        function
+                            .locals()
+                            .filter(|local| known.inside_locals[site].get(local.index()))
+                            .map(|next| (next, None)),
+                    );
+                }
                 continue;
             };
             if asked_sites.contains(&(site, read_as)) {
@@ -1735,11 +1752,19 @@ pub(super) fn slots_leaving(
     (asked_locals, asked_sites)
 }
 
-/// The type `ty` points to, where it is a pointer, and `None` otherwise.
+/// The type `ty` points to, where it is a pointer or an array of them, and
+/// `None` otherwise.
+///
+/// **Through an array to its element**, as the call's transfer reads one:
+/// `put(&a)` with `a` an `int **[1]` holding `&w` and `put` taking
+/// `int **(*)[1]` reached `w` below a type that stopped being a pointer, and
+/// a well-typed out-parameter was doubted once such a local is believed
+/// nothing (#677). Found by review.
 fn pointee(analysis: &Allocations<'_>, ty: TyId) -> Option<TyId> {
-    match analysis.unit.ty(ty) {
+    match analysis.unit.ty(innermost_element(analysis.unit, ty)) {
         Ty::Pointer(pointee) => Some(pointee),
-        Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => None,
+        Ty::Int | Ty::Char | Ty::Void => None,
+        Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
     }
 }
 

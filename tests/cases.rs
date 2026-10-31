@@ -4067,6 +4067,19 @@ cases! {
         // line: the walk reaches `w` as an `int *`, which the arm changed for #677
         // never sees.
         a_local_below_one_a_callee_was_handed_through_a_typed_pointer_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `stash` was handed `c` as bytes, and `c`'s memory holds `&w`, so it may
+        // store any pointer into `w`. `w = 0; later();` takes away the doubt a call
+        // handed what memory holds already raises, so only this one is left.
+        // Mutation: memory reached below a type that stops being a pointer is not
+        // walked for the locals it holds; this goes silent. Found by review of #677.
+        a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Through `int **(*)[1]` the callee may store only an `int *` into `w`.
+        // Mutation: the walk stops at an array rather than reading its element;
+        // this gains an `SC0413` doubt. Found by review of #677.
+        a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same two levels down. Mutation: bound such a local one level below
+        // its own only; the `SC0413` at `use1(r)` goes. Found by review of #677.
+        a_local_below_one_a_callee_was_handed_through_a_void_pointer_is_doubted_two_levels_below_its_own_when_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Through a `void *`, the doubts about `v`'s level and its memory's
         // are one report, and the one about its own level stands. Mutation:
         // name the doubt about what a value's memory holds by nothing; this

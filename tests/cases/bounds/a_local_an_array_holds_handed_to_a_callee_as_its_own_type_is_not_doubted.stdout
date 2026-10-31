@@ -1,0 +1,57 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:1:6 "put" declared
+  Local "_0" "void" return
+  Local "_1" "int **(*)[1]" parameter "p"
+Function a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:2:6 "use1" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+Function a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:3:6 "run"
+  Local "_0" "void" return
+  Local "_1" "int *" "w"
+  Local "_2" "int **[1]" "a"
+  Local "_3" "int ***"
+  Local "_4" "int **"
+  Local "_5" "int **"
+  Local "_6" "int **(*)[1]"
+  Block "bb0" entry
+    Operation a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:4:10 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:4:14 generated
+    Operation a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:6:5 generated
+      Destination "_3"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:6:12 written
+      Destination "_4"
+      Address
+        Place "_1"
+    Operation a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:6:5 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:6:5 written
+      Destination "_5"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:6:5 generated
+    Operation a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:7:9 written
+      Destination "_6"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:7:5 generated
+    Call a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:7:5 written "put" "bb1"
+      Copy "_6"
+  Block "bb1"
+    Sequenced a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:7:5 generated
+    ArgumentsEvaluated a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:8:5 generated
+    Call a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:8:5 written "use1" "bb2"
+      Copy "_1"
+  Block "bb2"
+    Sequenced a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:8:5 generated
+    Return

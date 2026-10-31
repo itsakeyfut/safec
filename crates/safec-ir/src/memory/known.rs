@@ -228,8 +228,9 @@ pub(super) struct Known {
     /// level further down and every level after, as
     /// [`Held::contents_at_most`] reads them. Every level `0` where it was
     /// handed through a `void *` or as bytes, either of which may store any
-    /// pointer at any type (#675), and so is every local reached below either
-    /// (#677).
+    /// pointer at any type (#675), and so is every local that call reaches
+    /// below either (#677). One put there after the call, and written by a
+    /// later one, is not, which is #679.
     ///
     /// **So that what a callee wrote is believed as it was handed at every
     /// level** (#636): `put(pv)` with `pv = &v` and `put` taking `void ***`

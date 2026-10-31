@@ -3325,7 +3325,9 @@ impl Analysis for Allocations<'_> {
                         // whether the type was reached through a typed
                         // pointer, so one reached below memory a typed callee
                         // holds an `int` in, which a may-set says may hold a
-                        // local's address, is doubted too, by the user's
+                        // local's address, is doubted too, and so is one a
+                        // later departure reaches only through such a may-set,
+                        // named in a report of its own, by the user's
                         // decision. See ADR-0060.
                         let Some(read_as) = read_as else {
                             value.handed_at_most[local.index()] =
