@@ -16,8 +16,8 @@ use super::bits::Bits;
 use super::built::{built_from, named, replaced_by};
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known};
 use super::parts::{
-    Callee, Extent, Freeing, Held, LIBRARY, Levels, Library, Makes, Offset, PendingRead, Reached,
-    Read, Realloced, SiteState, bounded,
+    Callee, Contents, Extent, Freeing, Held, LIBRARY, Levels, Library, Makes, Offset, PendingRead,
+    Reached, Read, Realloced, SiteState, bounded,
 };
 use super::report::{Fit, fits, slots_from, slots_leaving};
 use super::{LostReason, derefs, handed_places};
@@ -754,12 +754,12 @@ impl Allocations<'_> {
             // Read out of an allocation that may hold a slot a call could not
             // replace, which is asked where it is handed by address and
             // nowhere else. See ADR-0047.
-            if value.marked_below(source.local, depth, &value.unreplaced) {
+            if value.marked_below(source.local, depth, |contents| contents.unreplaced) {
                 held.unreplaced_read = true;
             }
             // Read out of an allocation that may hold a lost value, which is
             // made lost if a lost value goes. See `Held::lost_read`.
-            if value.marked_below(source.local, depth, &value.holds_lost) {
+            if value.marked_below(source.local, depth, |contents| contents.holds_lost) {
                 held.lost_read = true;
             }
             // Read through a pointer to a local this check lost, carrying
@@ -862,7 +862,7 @@ impl Allocations<'_> {
     /// one level further in, `q = **ppp` spelled `pp = *ppp; q = *pp;`, and
     /// without it `q` held nothing a call could make lost; the third is the
     /// same read after a store, `*box = q; r = *box;` or `r = **bb;`, which
-    /// [`Known::from_caller`] marks. Below the first level a load also reads
+    /// [`Contents::from_caller`] marks. Below the first level a load also reads
     /// what is reachable to code this check cannot read, in
     /// [`Known::levels_below`] (#486), which doubts `r = **bb;` without the
     /// third; the third still decides whether `free(**bb)` frees what a
@@ -877,7 +877,7 @@ impl Allocations<'_> {
         // At least the local's own allocations, which a load with no
         // dereference in its place, an element, still reads through.
         held.from_caller
-            || value.marked_below(local, depth.max(1), &value.from_caller)
+            || value.marked_below(local, depth.max(1), |contents| contents.from_caller)
             || value.caller_through(local, depth)
             // **Only for a local this check lost**, measured: an exposed
             // parameter's site is marked `from_caller` where the function
@@ -965,7 +965,7 @@ impl Allocations<'_> {
         {
             return held
                 .sites()
-                .flat_map(|container| known.inside[container].ones())
+                .flat_map(|container| known.contents[container].inside.ones())
                 .collect();
         }
         known.stored()
@@ -1303,20 +1303,14 @@ impl Allocations<'_> {
             escaped,
             handed_away,
             exposed,
-            inside,
-            stale,
-            unreplaced,
-            holds_lost,
+            contents,
             fresh,
-            from_caller,
-            inside_locals,
             realloced,
             pending,
             calls,
             exposed_after_call,
             lost_exposed,
             extent,
-            stored_at_most,
             handed_at_most,
             handed_contents_at_most,
             unwritten,
@@ -1414,10 +1408,6 @@ impl Allocations<'_> {
         for (here, there) in exposed_locals.iter_mut().zip(&from.exposed_locals) {
             *here = *here || *there;
         }
-        // Bounds, so the lower of two, and a side with none is no bound.
-        for (here, there) in stored_at_most.iter_mut().zip(&from.stored_at_most) {
-            here.bound_by(there);
-        }
         // Bounds, so the lower of two at every level. See
         // `Known::handed_contents_at_most`.
         for (here, there) in handed_contents_at_most
@@ -1455,10 +1445,6 @@ impl Allocations<'_> {
         for (here, there) in fresh.iter_mut().zip(&from.fresh) {
             *here = *here && *there;
         }
-        // A may-fact, so a union.
-        for (here, there) in holds_lost.iter_mut().zip(&from.holds_lost) {
-            *here |= there;
-        }
         // Kept only where both arms remember the same `realloc`: a fact one
         // arm lacks is one a branch after the join cannot act on. See ADR-0039.
         for (here, there) in realloced.iter_mut().zip(&from.realloced) {
@@ -1482,23 +1468,6 @@ impl Allocations<'_> {
             if here != there || disagree {
                 *here = None;
             }
-        }
-        // A local's address stored on one arm may be there where the arms
-        // meet, as a site is. See ADR-0045.
-        for (here, there) in inside_locals.iter_mut().zip(&from.inside_locals) {
-            here.union_with(there);
-        }
-        // Marked on one arm is marked where the arms meet. See ADR-0045.
-        for (here, there) in stale.iter_mut().zip(&from.stale) {
-            *here = *here || *there;
-        }
-        // And so is this mark, for the same reason. See ADR-0047.
-        for (here, there) in unreplaced.iter_mut().zip(&from.unreplaced) {
-            *here = *here || *there;
-        }
-        // And so is what may hold the caller's. See ADR-0040.
-        for (here, there) in from_caller.iter_mut().zip(&from.from_caller) {
-            *here = *here || *there;
         }
 
         for (here, there) in points_to.iter_mut().zip(&from.points_to) {
@@ -1535,8 +1504,10 @@ impl Allocations<'_> {
         for (here, there) in exposed.iter_mut().zip(&from.exposed) {
             *here = *here || *there;
         }
-        for (row, other) in inside.iter_mut().zip(&from.inside) {
-            row.union_with(other);
+        // What each allocation may contain, every field at once. See
+        // `Contents::absorbed`.
+        for (here, there) in contents.iter_mut().zip(&from.contents) {
+            here.absorbed(there);
         }
 
         // **A union, because a read on either arm is a read some execution
@@ -1760,15 +1731,10 @@ impl Analysis for Allocations<'_> {
             escaped: vec![false; self.locals],
             handed_away: vec![false; self.locals],
             exposed: vec![false; self.locals],
-            inside: vec![Bits::new(self.locals); self.locals],
-            stale: vec![false; self.locals],
-            unreplaced: vec![false; self.locals],
-            holds_lost: vec![false; self.locals],
+            contents: vec![Contents::none(self.locals); self.locals],
             // A parameter's memory is the caller's, which may have written it.
             fresh: vec![false; self.locals],
-            inside_locals: vec![Bits::new(self.locals); self.locals],
             realloced: vec![None; self.locals],
-            from_caller: vec![false; self.locals],
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
             pending: BTreeMap::new(),
@@ -1778,7 +1744,6 @@ impl Analysis for Allocations<'_> {
             // Nothing is made yet but the parameters, below.
             extent: vec![None; self.locals],
             // Nothing stored and nothing handed to a call yet.
-            stored_at_most: vec![Levels::default(); self.locals],
             handed_at_most: vec![None; self.locals],
             handed_contents_at_most: vec![Levels::default(); self.locals],
             // Every local that may hold a pointer, but the parameters, which
@@ -1839,7 +1804,7 @@ impl Analysis for Allocations<'_> {
         // following. Unmarked, `q = *pp; free(q); q = *pp; return *q;` read
         // `*pp` again as a fresh value and was believed (#482). See ADR-0040.
         for parameter in &self.exposed_parameters {
-            known.from_caller[parameter.index()] = true;
+            known.contents[parameter.index()].from_caller = true;
         }
 
         known
@@ -2231,7 +2196,7 @@ impl Analysis for Allocations<'_> {
                     // `*w = m; free(m); q = *pp; return *q;` with `f(&x, &x)`
                     // read back nothing at `*pp` and was believed (#489).
                     // Reachable to code this check cannot read, which is what
-                    // another parameter can name, and not `Known::from_caller`,
+                    // another parameter can name, and not `Contents::from_caller`,
                     // which a buffer of this function's own gains by holding
                     // a caller's pointer. Found by review.
                     let reachable = value.reachable_now();
@@ -2280,7 +2245,7 @@ impl Analysis for Allocations<'_> {
                         // parameter, read back through an `int ***`, believed
                         // whole `int`s two levels down (#634). A local's
                         // address and an allocation believe nothing here, so
-                        // record nothing. See `Known::stored_at_most`.
+                        // record nothing. See `Contents::stored_at_most`.
                         //
                         // Mutation: record level 0 alone, and
                         // `a_parameter_stored_in_memory_and_read_back_is_believed_as_it_arrived_below_its_first_level`
@@ -2289,14 +2254,14 @@ impl Analysis for Allocations<'_> {
                             .contents_at_most
                             .stored_under(bound, self.deepest_pointer);
                         for container in &containers {
-                            value.stored_at_most[*container].bound_by(&stored);
+                            value.contents[*container].stored_at_most.bound_by(&stored);
                             for &site in &carried {
-                                value.inside[*container].set(site);
+                                value.contents[*container].inside.set(site);
                             }
                             // And the locals whose address it carries, which
                             // are no site. See ADR-0045.
                             for target in written.writes_to.ones() {
-                                value.inside_locals[*container].set(target);
+                                value.contents[*container].inside_locals.set(target);
                             }
                             // **A load out of a marked allocation is one still
                             // when it is stored**, so the allocation it is
@@ -2306,23 +2271,23 @@ impl Analysis for Allocations<'_> {
                             // lost value, for the reason `Held::stale_read`
                             // gives. See ADR-0045.
                             if written.stale_read {
-                                value.stale[*container] = true;
+                                value.contents[*container].stale = true;
                             }
                             // And this mark, for the same reason. See
                             // ADR-0047.
                             if written.unreplaced_read {
-                                value.unreplaced[*container] = true;
+                                value.contents[*container].unreplaced = true;
                             }
                             // **And a lost value**, which records nothing in
                             // the container, so that a later free of a lost
                             // value can find it (#503). See ADR-0045.
                             if written.lost || written.lost_read {
-                                value.holds_lost[*container] = true;
+                                value.contents[*container].holds_lost = true;
                             }
                             // And a pointer read out of caller memory keeps
                             // that fact where it is stored. See ADR-0040.
                             if written.from_caller {
-                                value.from_caller[*container] = true;
+                                value.contents[*container].from_caller = true;
                             }
                         }
                         // Stored where code this check cannot read already
@@ -2869,7 +2834,9 @@ impl Analysis for Allocations<'_> {
                 Operand::Copy(place) => {
                     may_hold_lost(&value.points_to[place.local.index()])
                         || (!place.projection.is_empty()
-                            && value.marked_below(place.local, derefs(place), &value.holds_lost))
+                            && value.marked_below(place.local, derefs(place), |contents| {
+                                contents.holds_lost
+                            }))
                         || value
                             .written_through(place.local)
                             .into_iter()
@@ -2879,7 +2846,7 @@ impl Analysis for Allocations<'_> {
             }) || value
                 .closure(handed_memory)
                 .into_iter()
-                .any(|site| value.holds_lost[site])
+                .any(|site| value.contents[site].holds_lost)
                 || (0..value.escaped.len())
                     .any(|local| value.escaped[local] && may_hold_lost(&value.points_to[local]))
         };
@@ -3070,7 +3037,9 @@ impl Analysis for Allocations<'_> {
                             // And a slot a call could not replace, copied.
                             // See ADR-0047.
                             let unreplaced =
-                                value.marked_below(source.local, from_depth + 1, &value.unreplaced);
+                                value.marked_below(source.local, from_depth + 1, |contents| {
+                                    contents.unreplaced
+                                });
                             // And what was read out of caller memory, as a
                             // store of a load of the source would carry it:
                             // `memcpy(box, pp, 8)` is `*box = *pp;`. Found by
@@ -3081,9 +3050,11 @@ impl Analysis for Allocations<'_> {
                             // as a store of a load of the source would carry
                             // it: `*box = u; memcpy(box2, box, 8); free(u);
                             // r = *box2;` read `*r` in silence. Found by review.
-                            // See `Known::holds_lost`.
+                            // See `Contents::holds_lost`.
                             let holds_lost =
-                                value.marked_below(source.local, from_depth + 1, &value.holds_lost);
+                                value.marked_below(source.local, from_depth + 1, |contents| {
+                                    contents.holds_lost
+                                });
                             let into: Vec<usize> = if into_depth == 0 {
                                 value.sites_of(dest.local).collect()
                             } else {
@@ -3175,26 +3146,28 @@ impl Analysis for Allocations<'_> {
                                 self.deepest_pointer,
                             ));
                             for container in into {
-                                value.stored_at_most[container].bound_by(&copied_bound);
+                                value.contents[container]
+                                    .stored_at_most
+                                    .bound_by(&copied_bound);
                                 for &site in &copied {
-                                    value.inside[container].set(site);
+                                    value.contents[container].inside.set(site);
                                 }
                                 // And the locals whose address it copies.
                                 // See ADR-0045.
                                 for &target in &copied_locals {
-                                    value.inside_locals[container].set(target);
+                                    value.contents[container].inside_locals.set(target);
                                 }
                                 if marked {
-                                    value.stale[container] = true;
+                                    value.contents[container].stale = true;
                                 }
                                 if unreplaced {
-                                    value.unreplaced[container] = true;
+                                    value.contents[container].unreplaced = true;
                                 }
                                 if caller {
-                                    value.from_caller[container] = true;
+                                    value.contents[container].from_caller = true;
                                 }
                                 if holds_lost {
-                                    value.holds_lost[container] = true;
+                                    value.contents[container].holds_lost = true;
                                 }
                             }
                         }
@@ -3619,7 +3592,7 @@ impl Analysis for Allocations<'_> {
                 }
                 for &container in &stored {
                     for &site in &stored {
-                        value.inside[container].set(site);
+                        value.contents[container].inside.set(site);
                     }
                 }
                 // **What it wrote there it handed over**, as a callee's
@@ -3786,37 +3759,41 @@ impl Analysis for Allocations<'_> {
                             let handed = value.points_to[source.local.index()]
                                 .contents_at_most
                                 .clone();
-                            value.stored_at_most[site].bound_by(&handed);
+                            value.contents[site].stored_at_most.bound_by(&handed);
                         }
                     }
                 }
                 for old in old {
-                    let (inside, inside_locals) =
-                        (value.inside[old].clone(), value.inside_locals[old].clone());
-                    value.inside[site].union_with(&inside);
-                    value.inside_locals[site].union_with(&inside_locals);
-                    let held = value.stored_at_most[old].clone();
-                    value.stored_at_most[site].bound_by(&held);
+                    let (inside, inside_locals) = (
+                        value.contents[old].inside.clone(),
+                        value.contents[old].inside_locals.clone(),
+                    );
+                    value.contents[site].inside.union_with(&inside);
+                    value.contents[site]
+                        .inside_locals
+                        .union_with(&inside_locals);
+                    let held = value.contents[old].stored_at_most.clone();
+                    value.contents[site].stored_at_most.bound_by(&held);
                     // And the mark with the row: what the old allocation may
                     // hold of a reborn site is what the new one holds after
                     // the copy. See ADR-0045.
-                    if value.stale[old] {
-                        value.stale[site] = true;
+                    if value.contents[old].stale {
+                        value.contents[site].stale = true;
                     }
-                    if value.unreplaced[old] {
-                        value.unreplaced[site] = true;
+                    if value.contents[old].unreplaced {
+                        value.contents[site].unreplaced = true;
                     }
                     // And the caller's mark, for the same reason. See
                     // ADR-0040.
-                    if value.from_caller[old] {
-                        value.from_caller[site] = true;
+                    if value.contents[old].from_caller {
+                        value.contents[site].from_caller = true;
                     }
                     // And whether a lost value was stored in it, or a free of
                     // one after `box = realloc(box, 16);` finds nothing in the
                     // new allocation to mark. Found by review. See
-                    // `Known::holds_lost`.
-                    if value.holds_lost[old] {
-                        value.holds_lost[site] = true;
+                    // `Contents::holds_lost`.
+                    if value.contents[old].holds_lost {
+                        value.contents[site].holds_lost = true;
                     }
                 }
                 if let Some(old) = realloced {
@@ -3857,7 +3834,7 @@ impl Analysis for Allocations<'_> {
                 // because a site's allocations are not told apart. So a load
                 // out of each turn's result is doubted, a false report the
                 // reader can see. See ADR-0040.
-                value.from_caller[site] = true;
+                value.contents[site].from_caller = true;
                 // **And it may be the lost value it was handed**, `id(*box)`
                 // returning `u` (#508), **or one an earlier call was handed**,
                 // as it holds every exposed site: `stash(u); r = fetch();`

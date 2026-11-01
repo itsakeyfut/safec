@@ -158,12 +158,12 @@ pub(super) fn built_from(
         }
         // And read out of a slot a call could not replace, as `read_through`
         // says. See ADR-0047.
-        if value.marked_below(load.local, derefs(load), &value.unreplaced) {
+        if value.marked_below(load.local, derefs(load), |contents| contents.unreplaced) {
             reached.unreplaced_read = true;
         }
         // And read out of memory a lost value may be in, as `read_through`
         // says. See `Held::lost_read`.
-        if value.marked_below(load.local, derefs(load), &value.holds_lost) {
+        if value.marked_below(load.local, derefs(load), |contents| contents.holds_lost) {
             reached.lost_read = true;
         }
         if value.lost_through(load.local, derefs(load)) {

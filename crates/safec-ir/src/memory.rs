@@ -1454,7 +1454,9 @@ mod tests {
             let function = self.unit.function(func);
             let solution = crate::dataflow::solve(&analysis, function, &Cfg::of(function));
             let known = solution.value(at).expect("the last block is reached");
-            known.inside_locals[container.index()].get(self.x.index())
+            known.contents[container.index()]
+                .inside_locals
+                .get(self.x.index())
         }
     }
 
