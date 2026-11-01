@@ -15,6 +15,7 @@
 //! a record is accepted: its status line, its Confirmation, and its pointers to
 //! code and to other documents. See [`reasoning`].
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
@@ -22,8 +23,9 @@ use std::path::Path;
 ///
 /// In this order:
 ///
-/// 1. CRLF becomes LF, since a Windows checkout under `core.autocrlf` and a
-///    Linux runner must hash the same record the same way.
+/// 1. The text is read line by line with `str::lines`, which ends a line at
+///    CRLF as at LF, since a Windows checkout under `core.autocrlf` and a Linux
+///    runner must hash the same record the same way.
 /// 2. The front matter's `status:` line goes. `date:` and `decision-makers:`
 ///    stay.
 /// 3. The `### Confirmation` subsection goes, from its heading to the next
@@ -37,8 +39,6 @@ use std::path::Path;
 /// 6. Every run of whitespace becomes one space, so rewrapping a paragraph is
 ///    not a change of reasoning.
 fn reasoning(text: &str) -> String {
-    let text = text.replace("\r\n", "\n");
-
     let mut kept = Vec::new();
     let mut front = 0;
     let mut in_confirmation = false;
@@ -157,19 +157,11 @@ fn status(text: &str) -> Option<String> {
         .map(|value| value.trim().trim_matches('"').to_owned())
 }
 
-/// Mutations, each failing this test alone:
-///
-/// - the hash comparison dropped, so a changed word in ADR-0060's Decision
-///   Outcome passes;
-/// - a settled record with no line in `frozen.txt` passing;
-/// - a line naming a record that does not exist passing.
-#[test]
-fn a_settled_record_s_reasoning_is_what_it_was_when_it_was_settled() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let adr = root.join("docs/adr");
-    let lock = fs::read_to_string(adr.join("frozen.txt")).expect("docs/adr/frozen.txt reads");
-
-    let mut locked = std::collections::BTreeMap::new();
+/// Every problem with the records against the lock: a settled record with no
+/// line, a line whose hash differs, a line for a record that does not exist,
+/// and a record with no status. `records` is each record's file name and text.
+fn check(records: &[(String, String)], lock: &str) -> Vec<String> {
+    let mut locked = BTreeMap::new();
     for line in lock.lines() {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
@@ -182,27 +174,18 @@ fn a_settled_record_s_reasoning_is_what_it_was_when_it_was_settled() {
     }
 
     let mut problems = Vec::new();
-    let mut seen = std::collections::BTreeSet::new();
-    let mut names: Vec<_> = fs::read_dir(&adr)
-        .expect("docs/adr lists")
-        .map(|entry| entry.expect("an entry of docs/adr").file_name())
-        .filter_map(|name| name.into_string().ok())
-        .filter(|name| name.len() > 5 && name[..4].bytes().all(|b| b.is_ascii_digit()))
-        .collect();
-    names.sort();
-
-    for name in names {
+    let mut seen = BTreeSet::new();
+    for (name, text) in records {
         let number = name[..4].to_owned();
         seen.insert(number.clone());
-        let text = fs::read_to_string(adr.join(&name)).expect("a record reads");
-        let Some(status) = status(&text) else {
+        let Some(status) = status(text) else {
             problems.push(format!("{name} has no status line"));
             continue;
         };
         if status == "proposed" {
             continue;
         }
-        let hash = hash_of(&text);
+        let hash = hash_of(text);
         match locked.get(&number) {
             None => problems.push(format!(
                 "ADR-{number} is {status} and has no line in docs/adr/frozen.txt. \
@@ -225,8 +208,96 @@ fn a_settled_record_s_reasoning_is_what_it_was_when_it_was_settled() {
             ));
         }
     }
+    problems
+}
 
+/// The tree's own records against the tree's own lock. What `check` decides
+/// is held by the tests after it, over records written in the test; this one
+/// fails when a record in `docs/adr` is edited.
+#[test]
+fn a_settled_record_s_reasoning_is_what_it_was_when_it_was_settled() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let adr = root.join("docs/adr");
+    let lock = fs::read_to_string(adr.join("frozen.txt")).expect("docs/adr/frozen.txt reads");
+
+    let mut names: Vec<_> = fs::read_dir(&adr)
+        .expect("docs/adr lists")
+        .map(|entry| entry.expect("an entry of docs/adr").file_name())
+        .filter_map(|name| name.into_string().ok())
+        .filter(|name| name.len() > 5 && name[..4].bytes().all(|b| b.is_ascii_digit()))
+        .collect();
+    names.sort();
+    let records: Vec<_> = names
+        .into_iter()
+        .map(|name| {
+            let text = fs::read_to_string(adr.join(&name)).expect("a record reads");
+            (name, text)
+        })
+        .collect();
+
+    let problems = check(&records, &lock);
     assert!(problems.is_empty(), "\n{}", problems.join("\n"));
+}
+
+/// The lock line `check` wants for a record.
+fn line_for(number: &str, text: &str) -> String {
+    format!("{number} {}\n", hash_of(text))
+}
+
+/// Mutation: the hash comparison dropped, so a record whose reasoning moved
+/// passes.
+#[test]
+fn a_settled_record_whose_reasoning_moved_is_named() {
+    let lock = line_for("0001", RECORD);
+    let edited = RECORD.replace("asks it once", "asks it twice");
+    let problems = check(&[("0001-a.md".to_owned(), edited)], &lock);
+    assert_eq!(problems.len(), 1, "{problems:?}");
+    assert!(
+        problems[0].starts_with("ADR-0001's reasoning has changed"),
+        "{problems:?}"
+    );
+}
+
+/// Mutation: a settled record with no line taken to have the line it wants,
+/// `locked.get(&number).or(Some(&hash))`.
+#[test]
+fn a_settled_record_with_no_line_is_named_with_the_line_to_add() {
+    let problems = check(&[("0001-a.md".to_owned(), RECORD.to_owned())], "");
+    let want = format!("`{}`", line_for("0001", RECORD).trim_end());
+    assert_eq!(problems.len(), 1, "{problems:?}");
+    assert!(problems[0].ends_with(&want), "{problems:?}");
+}
+
+/// Mutation: the walk over the lock's own lines dropped, so a line for a
+/// record that is gone passes.
+#[test]
+fn a_line_for_a_record_that_does_not_exist_is_named() {
+    let problems = check(&[], &line_for("0999", RECORD));
+    assert_eq!(
+        problems,
+        ["docs/adr/frozen.txt has a line for ADR-0999, and there is no such record"]
+    );
+}
+
+/// Mutation: `proposed` checked like any other status, so a record still
+/// being written needs a line.
+#[test]
+fn a_proposed_record_needs_no_line() {
+    let proposed = RECORD.replace("status: \"accepted\"", "status: \"proposed\"");
+    assert_eq!(
+        check(&[("0001-a.md".to_owned(), proposed)], ""),
+        Vec::<String>::new()
+    );
+}
+
+/// Mutation: the status read from anywhere in the record rather than from its
+/// front matter, so a line of prose starting with `status:` decides it.
+#[test]
+fn a_status_is_read_from_the_front_matter_alone() {
+    let proposed = RECORD
+        .replace("status: \"accepted\"", "")
+        .replace("# A title\n", "# A title\n\nstatus: accepted, as prose\n");
+    assert_eq!(status(&proposed), None);
 }
 
 /// A small record in the shape the template gives, for the tests below.
@@ -297,38 +368,37 @@ fn a_rewrapped_paragraph_leaves_the_reasoning_as_it_was() {
     assert_eq!(reasoning(&edited), reasoning(RECORD));
 }
 
-/// Mutation: step 1 left out, so a CRLF checkout hashes differently.
+/// Mutation: `str::lines` replaced by `split('\n')` and step 6 left out, so
+/// the carriage return stays in what is hashed.
 #[test]
 fn a_record_checked_out_with_crlf_has_the_reasoning_it_has_with_lf() {
     assert_eq!(reasoning(&RECORD.replace('\n', "\r\n")), reasoning(RECORD));
 }
 
-/// Mutation: `reasoning` answers the empty string, or step 3 drops every
-/// section after the first `###` rather than Confirmation alone.
+/// Mutation: `reasoning` answers the empty string.
 #[test]
 fn a_changed_word_in_the_decision_outcome_changes_the_reasoning() {
     let edited = RECORD.replace("asks it once", "asks it twice");
     assert_ne!(reasoning(&edited), reasoning(RECORD));
 }
 
-/// Mutation: step 3 drops from `## Decision Outcome` to the end rather than
-/// Confirmation alone, so Consequences goes with it.
+/// Mutation: step 3 never ends, so everything after Confirmation goes with
+/// it.
 #[test]
 fn a_changed_word_in_the_consequences_changes_the_reasoning() {
     let edited = RECORD.replace("it is one place", "it is two places");
     assert_ne!(reasoning(&edited), reasoning(RECORD));
 }
 
-/// Mutation: the text of the considered options is dropped along with its
-/// code span, rather than the span alone.
+/// Mutation: a line holding a code span is dropped whole, rather than the
+/// span alone.
 #[test]
 fn a_changed_word_in_the_considered_options_changes_the_reasoning() {
     let edited = RECORD.replace("keep `old_name` where it is", "move `old_name` elsewhere");
     assert_ne!(reasoning(&edited), reasoning(RECORD));
 }
 
-/// Mutation: a fenced block's lines go through step 4 and 5 like prose, or are
-/// dropped.
+/// Mutation: a fenced block's lines dropped.
 #[test]
 fn a_changed_line_in_a_fenced_block_changes_the_reasoning() {
     let edited = RECORD.replace("free(p);", "free(q);");
