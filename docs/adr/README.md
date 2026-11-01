@@ -194,9 +194,27 @@ is a sign the bar has slipped rather than a sign of progress.
   understates its own guards sends the next reader to redo finished work. It is
   the same obligation as the pointers below, in the section that matters most.
 * When code a record names moves or is renamed, update the record's pointers to
-  it. The reasoning is a record of what was thought at the time and is not
-  rewritten, but the pointers are navigation rather than history, and a record
-  whose pointers are dead is a record nobody can check.
+  it: its code spans and its link targets. The reasoning is a record of what was
+  thought at the time and is not rewritten, but the pointers are navigation
+  rather than history, and a record whose pointers are dead is a record nobody
+  can check.
+* **A settled record's reasoning is frozen.** Once a record's status is anything
+  but `proposed`, its line in [`frozen.txt`](./frozen.txt) holds a hash of the
+  record with its status line, its Confirmation, its code spans and its link
+  targets taken out, and `tests/records.rs` fails where the record no longer
+  matches it. Those four may still change; every other word may not. A record
+  being accepted adds its own line, which the test prints. A changed line in
+  `frozen.txt` is the rule being set aside, and is read as that in review.
+* What used to be appended to a settled record goes elsewhere:
+  * a decision reversed or extended is a new record that supersedes it, as above;
+  * a decision applied to one more route is a row in that decision's route
+    table, kept in `docs/` and edited freely (its shape is #696's to settle);
+  * why that route needed it lives in the doc comment where the rule is applied,
+    and in the pull request.
+
+  Until a decision has a route table, the doc comment and the pull request carry
+  it. The memory records that grew a paragraph per issue (0039, 0041, 0042,
+  0045, 0057, 0060) are frozen as they stand, and #696 supersedes them.
 * Prose here uses no em dashes.
 
 ## More Information
