@@ -3468,6 +3468,23 @@ cases! {
         a_lost_pointer_freed_through_a_load_of_its_box_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A lost value stored through a pointer that may alias other reachable
+        // memory, freed, and read back by another name: the store lands its
+        // marks in every place it may land, so the allocation read back may
+        // hold the lost value and is stale once it goes, `SC0402` (#705).
+        // The same through `memcpy`. Mutation: the landing pours with
+        // `holds_lost` taken `false`, and the first goes silent at the read;
+        // with `stale` taken `false`, the second does, since what the copy
+        // reads is a lost local.
+        a_lost_value_stored_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And the bound the store carries: `*w = c;` with `c` a `char *` read
+        // out of caller memory, then `int *r = *box;` under `f(&p, &cp, (int
+        // **)&p)`, reads four bytes of one. The landing is given the store's
+        // bound, so `*r` is `SC0412`; on main it built. Mutation: the
+        // landing pours with no bound; this goes silent. Found by review of
+        // #705.
+        a_narrow_pointer_stored_through_an_unplaced_pointer_is_doubted_where_read_back_wider_by_another_name: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And what a lost value read back before its free, or released by a
         // call this check cannot read, still left read in silence (#505): a
         // load out of the box made before `free(u)`; that load stored into a
