@@ -2194,10 +2194,13 @@ impl Analysis for Allocations<'_> {
                         .stored_under(bound, self.deepest_pointer);
                     // **What the store carries, poured into each allocation it
                     // lands in**, every field named so that a mark added to
-                    // `Contents` is answered here. Before the landing and the
-                    // exposure below, which only add to what may be inside
-                    // what it carries, so the order decides nothing. See
-                    // `Known::pour`.
+                    // `Contents` is answered here, and poured below. **After
+                    // the landing and the exposure**, as it always was: poured
+                    // first, a container already reachable makes what it
+                    // carries reachable too, and the landing then records it
+                    // inside itself: a pointer this check cannot place cannot
+                    // point into what it carries when only this store made
+                    // that reachable. See `Known::pour`.
                     //
                     // The marks, each for its reason: **a load out of a marked
                     // allocation is one still when it is stored**, so the
@@ -2229,7 +2232,6 @@ impl Analysis for Allocations<'_> {
                         holds_lost: written.lost || written.lost_read,
                         from_caller: written.from_caller,
                     };
-                    value.pour(&containers, &poured, &in_part);
                     if (unplaced || unnamed || handed_over)
                         && self.may_be_pointer(function, &operation.place)
                     {
@@ -2237,6 +2239,9 @@ impl Analysis for Allocations<'_> {
                         value.landed_where_unknown_code_points(&carried, &locals);
                     }
                     if unplaced {
+                        // No container, so what is poured is the arrays it
+                        // marks alone.
+                        value.pour(&[], &poured, &in_part);
                         value.expose(self.sources, carried, Some(operation.origin.span()));
                     } else {
                         if unnamed {
@@ -2246,6 +2251,7 @@ impl Analysis for Allocations<'_> {
                                 Some(operation.origin.span()),
                             );
                         }
+                        value.pour(&containers, &poured, &in_part);
                         // Stored where code this check cannot read already
                         // reaches is reachable to it from now on, which no
                         // call marks until the next one: a read before this
