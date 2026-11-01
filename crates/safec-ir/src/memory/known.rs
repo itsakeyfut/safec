@@ -1548,6 +1548,33 @@ impl Known {
             // apart from the old one's. Found by review.
             handed_untyped_sites: _,
         } = self;
+        // **What the site's own record keeps when it names a new
+        // allocation**, field by field, so that a field added to `Contents`
+        // is asked here what a site made again does to it.
+        let Contents {
+            // Kept: what the old allocation may hold stays in the row, below.
+            // See ADR-0045.
+            inside: _,
+            // Kept, as `inside` is. See ADR-0045.
+            inside_locals: _,
+            // Kept, as `inside` is: the slots of the new allocation are not
+            // told apart from the old one's, and a bound kept only doubts.
+            stored_at_most: _,
+            // Kept, and set below in every container that held the site.
+            stale: _,
+            // Kept, as `stale` is: the slots of the new allocation are not
+            // told apart from the old one's.
+            unreplaced: _,
+            // Kept, as `stale` is: the slots of the new allocation are not
+            // told apart from the old one's.
+            holds_lost: _,
+            // Kept, as the entry and `stale` are: the slots of the new
+            // allocation are not told apart from the old one's. No case
+            // tells this from clearing it, measured: every other local
+            // holding the site is lost a few lines below, so a load out of
+            // it is doubted either way.
+            from_caller: _,
+        } = &contents[site];
         stored_out[site] = false;
 
         // **A local that loses an allocation that is gone may hold one**, so
