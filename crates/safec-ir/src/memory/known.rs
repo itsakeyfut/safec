@@ -894,9 +894,14 @@ impl Known {
     /// it holds below its own level what the value carries. `void ***pt =
     /// &t; ... int **a = *pi;` with `t` a load out of a `void ***` read `a`
     /// believing whole `int`s two levels down, where the sites alone said
-    /// nothing (#634). What the local's value points at itself is asked by
-    /// the local's own fit where it is read, so its own level is no bound
-    /// here. `depth_cap` is [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer),
+    /// nothing (#634). **Its own level too, as a store of its value records
+    /// it**: what a load believes, and no bound for any other value, read
+    /// from the same two fields the store's bound is. The pointer read out
+    /// of the local is that value, and a load asks the local's own fit where
+    /// it is read, but a copy stores it into memory, which a later read
+    /// believes: `memcpy(m, &c, 8)` with `c` a `char *` load, read back
+    /// through an `int **`, was believed whole where `*cm = c;` was doubted
+    /// (#711). `depth_cap` is [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer),
     /// which the list that puts it one level down is cut to.
     ///
     /// **The one walk a load, a departure and a copy take**, so that the
@@ -912,9 +917,9 @@ impl Known {
                 levels.bound_by(&self.contents[site].stored_at_most.below(depth - 1 - level));
             }
             for slot in locals {
-                let held = self.points_to[slot]
-                    .contents_at_most
-                    .stored_under(None, depth_cap);
+                let own = &self.points_to[slot];
+                let first = own.loaded.then(|| own.believed.unwrap_or(0));
+                let held = own.contents_at_most.stored_under(first, depth_cap);
                 levels.bound_by(&held.below(depth - 1 - level));
             }
         }

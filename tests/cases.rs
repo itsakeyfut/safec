@@ -3485,6 +3485,17 @@ cases! {
         // landing pours with no bound; this goes silent. Found by review of
         // #705.
         a_narrow_pointer_stored_through_an_unplaced_pointer_is_doubted_where_read_back_wider_by_another_name: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy of a local carries the local's own bound, as a store of
+        // its value records it: `memcpy(m, &c, 8)` with `c` a `char *` load,
+        // read back through an `int **`, is `SC0412` at `*r` as `*cm = c;`
+        // is, into an allocation and where the copy lands unplaced. A whole
+        // `int`'s copied and read back as one says nothing. Mutation: give
+        // the local no bound at its own level in `Known::memory_levels`; the
+        // first two go silent. Mutation: bound it at zero whatever it
+        // holds; the third reports (#711).
+        a_narrow_pointer_copied_out_of_a_local_is_doubted_where_read_back_wider: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_narrow_pointer_copied_out_of_a_local_through_an_unplaced_pointer_is_doubted_where_read_back_wider: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_whole_int_pointer_copied_out_of_a_local_and_read_back_as_one_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And what a lost value read back before its free, or released by a
         // call this check cannot read, still left read in silence (#505): a
         // load out of the box made before `free(u)`; that load stored into a

@@ -2170,7 +2170,10 @@ impl Analysis for Allocations<'_> {
                     // bounding it at zero doubted a lost pointer to whole
                     // allocations read back, which this issue is not
                     // about. A load that believes nothing is bounded at
-                    // zero, which is what it was asked. See ADR-0060.
+                    // zero, which is what it was asked. `Known::memory_levels`
+                    // reads a local's own level the same way, so that a
+                    // copy of the local carries what this store would
+                    // (#711). See ADR-0060.
                     let bound = (self.may_be_pointer(function, &operation.place) && written.loaded)
                         .then(|| written.believed.unwrap_or(0));
                     // **And below it, what the stored pointer believes of
