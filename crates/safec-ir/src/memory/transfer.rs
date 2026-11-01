@@ -2232,8 +2232,7 @@ impl Analysis for Allocations<'_> {
                     if (unplaced || unnamed || handed_over)
                         && self.may_be_pointer(function, &operation.place)
                     {
-                        let locals: Vec<usize> = written.writes_to.ones().collect();
-                        value.landed_where_unknown_code_points(&carried, &locals);
+                        value.landed_where_unknown_code_points(&poured);
                     }
                     if unplaced {
                         // No container, so what is poured is the arrays it
@@ -3122,11 +3121,8 @@ impl Analysis for Allocations<'_> {
                             let reachable = value.reachable_now();
                             let handed_over =
                                 into.iter().any(|container| reachable.contains(container));
-                            if unnamed || handed_over || (into.is_empty() && targets.is_empty()) {
-                                let copied: Vec<usize> = copied.iter().copied().collect();
-                                let locals: Vec<usize> = copied_locals.iter().copied().collect();
-                                value.landed_where_unknown_code_points(&copied, &locals);
-                            }
+                            let lands_unplaced =
+                                unnamed || handed_over || (into.is_empty() && targets.is_empty());
                             // **And the bound on what it copies**, which a copy
                             // carries as a store of a load would: what the
                             // source's memory is believed to hold, from the
@@ -3168,6 +3164,12 @@ impl Analysis for Allocations<'_> {
                                 holds_lost,
                                 from_caller: caller,
                             };
+                            // Where it lands unplaced, with what it carries, as a
+                            // store's landing is given. See
+                            // `Known::landed_where_unknown_code_points`.
+                            if lands_unplaced {
+                                value.landed_where_unknown_code_points(&poured);
+                            }
                             value.pour(&into, &poured, &in_part);
                         }
                     }

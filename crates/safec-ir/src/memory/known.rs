@@ -1036,16 +1036,24 @@ impl Known {
         closed
     }
 
-    /// Record that a store this check cannot place may have put `carried`
-    /// in any memory code it cannot read can name: every exposed allocation
-    /// and every allocation reachable from one, since a pointer this check
-    /// cannot place may point at any of them.
+    /// Record that a store this check cannot place may have put what it
+    /// carries in any memory code it cannot read can name: every exposed
+    /// allocation and every allocation reachable from one, since a pointer
+    /// this check cannot place may point at any of them.
     ///
     /// Reachable rather than exposed, because a store into exposed memory
-    /// records what it stores there and does not mark it: `*a = t;` leaves
-    /// `t` unmarked. One function for the store and for the copy `memcpy`
+    /// records what it stores there and does not expose it: `*a = t;` leaves
+    /// `t` unexposed. One function for the store and for the copy `memcpy`
     /// makes, so the two spellings cannot land in different places. See
     /// ADR-0044.
+    ///
+    /// **Each landing is given `poured`**, the record the door pours into the
+    /// containers it can name, with every mark and the bound: a landing is
+    /// another place the same store may land, and may hold what it carried
+    /// as much as a named container does. Given the sites and locals alone, a
+    /// lost value stored through a pointer that may alias other reachable
+    /// memory was marked `holds_lost` only where the store named, so its free
+    /// left a pointer read back by the other name believed (#705).
     ///
     /// **And the locals whose address it carries**, in what each landing may
     /// contain, which is not exposing them: a load out of that memory reaches
@@ -1054,32 +1062,9 @@ impl Known {
     /// the null it started as and was believed, found by review. ADR-0047
     /// keeps a local's address out of what is exposed, so that a holder is
     /// still asked; this records where it may be and exempts nobody.
-    pub(super) fn landed_where_unknown_code_points(&mut self, carried: &[usize], locals: &[usize]) {
-        let mut landed = Contents::none(self.points_to.len());
-        for &site in carried {
-            landed.inside.set(site);
-        }
-        for &local in locals {
-            landed.inside_locals.set(local);
-        }
-        // Every other field written out, so that a field added to
-        // `Contents` is answered here too: no bound, since nothing says what
-        // such a store's pointer believes, and no mark, since a store into
-        // exposed memory records what it stores there and does not mark it,
-        // as above. See ADR-0044.
-        let Contents {
-            inside: _,
-            inside_locals: _,
-            stored_at_most,
-            stale,
-            unreplaced,
-            holds_lost,
-            from_caller,
-        } = &mut landed;
-        *stored_at_most = Levels::default();
-        (*stale, *unreplaced, *holds_lost, *from_caller) = (false, false, false, false);
+    pub(super) fn landed_where_unknown_code_points(&mut self, poured: &Contents) {
         let landings: Vec<usize> = self.reachable_now().into_iter().collect();
-        self.pour(&landings, &landed, &[]);
+        self.pour(&landings, poured, &[]);
     }
 
     /// Whether `local` certainly holds a null pointer as far as this value
