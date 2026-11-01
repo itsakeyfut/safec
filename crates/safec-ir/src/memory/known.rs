@@ -1090,13 +1090,16 @@ impl Known {
     ///
     /// **The one way a door that moves a value into memory writes it**: the
     /// store, the library copy, `realloc` and a store this check cannot
-    /// place. Each builds a [`Contents`] naming every field, so a field added
-    /// there and not answered at a door fails to compile at that door, and
-    /// what each door carries is taken in by [`Contents::absorbed`], as the
-    /// join takes it. Four fixes each once carried a mark into one door after
-    /// another already had it. A place where an event rather than a value
-    /// sets one mark (a site reborn, a slot a call could not replace, a lost
-    /// value gone, caller memory at entry) sets that field directly.
+    /// place. The store, the copy and the unplaced store each build a
+    /// [`Contents`] naming every field, so a field added there and not
+    /// answered at one of them fails to compile there; `realloc` pours the
+    /// old allocation's record whole, so a field added is carried with the
+    /// rest and asks it nothing. What each door carries is taken in by
+    /// [`Contents::absorbed`], as the join takes it. A place where an event
+    /// rather than a value sets one mark (a site reborn, a slot a call could
+    /// not replace, a lost value gone, caller memory at entry) sets that
+    /// field directly, and so does a call this check cannot read where it
+    /// writes into what it was handed, which records the sites alone.
     pub(super) fn pour(&mut self, containers: &[usize], poured: &Contents, in_part: &[usize]) {
         for &container in containers {
             self.contents[container].absorbed(poured);
@@ -1115,9 +1118,15 @@ impl Known {
     ///
     /// **One function for both loads**, `Allocations::read_through` for a
     /// load assigned to a local and `built::built_from` for one that reaches
-    /// an operator or a call as an operand, which each kept a copy of these
-    /// six tests. `is_array` and `from_caller` are the two answers the caller
-    /// has from the function and the analysis. See ADR-0040 and ADR-0045.
+    /// an operator or a call as an operand, which each kept a copy of what
+    /// follows before #687. `is_array` and `from_caller` are the two answers
+    /// the caller has from the function and the analysis. See ADR-0040 and
+    /// ADR-0045.
+    ///
+    /// `depth` is at least one: a load reads through a dereference, and the
+    /// level a load reads its value out of is `depth - 1`. Both callers hold
+    /// that: `read_through` by its own test, and `built_from` because it
+    /// takes as a load only a place with at least one dereference.
     pub(super) fn load_into(
         &self,
         held: &mut Held,

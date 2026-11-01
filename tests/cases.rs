@@ -3349,11 +3349,11 @@ cases! {
         // And through a store into this function's own memory, which marks
         // the allocation: read back after a call, or read back and then a
         // call, it is doubted; with no call it is not. See ADR-0040.
-        // Mutation: have the store never mark `Known::from_caller`; the first
+        // Mutation: have the store never mark `Contents::from_caller`; the first
         // two go silent. Mutation: have the call never make a marked
-        // allocation `Known::stale`; the first goes silent. Mutation: have
+        // allocation `Contents::stale`; the first goes silent. Mutation: have
         // `reads_caller_memory` ignore a marked site; the second goes silent.
-        // Mutation: have the store mark `Known::stale` at once; the third
+        // Mutation: have the store mark `Contents::stale` at once; the third
         // reports. Mutation: have the join drop the mark; the fourth goes
         // silent. Mutation: have `realloc` drop it; the fifth goes silent.
         a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
@@ -3363,7 +3363,7 @@ cases! {
         a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And read back through more than one level, as one place or moved by
         // arithmetic, and copied by `memcpy` rather than stored. Found by
-        // review. Mutation: have `memcpy` carry no `Known::from_caller`; the
+        // review. Mutation: have `memcpy` carry no `Contents::from_caller`; the
         // last two go silent. Having `reads_caller_memory` ask the local's
         // own allocations only silenced the first two until #486, and no
         // longer does: see that function's doc. It silences the use at
@@ -3422,7 +3422,7 @@ cases! {
         // value names no site and any of them may be the one freed (#503):
         // stored before the free, copied before it, freed through the box it
         // was stored in, and handed to a `realloc` that succeeded. Each reads
-        // freed memory at `*r`. Mutation: do not record `Known::holds_lost` at
+        // freed memory at `*r`. Mutation: do not record `Contents::holds_lost` at
         // a store; the first goes quiet. Mutation: mark only the local handed
         // to `free`; the second. Mutation: no trigger for a place read through
         // memory; the third. Mutation: no trigger for `realloc`; the fourth.
@@ -3431,7 +3431,7 @@ cases! {
         a_lost_pointer_freed_through_memory_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_reallocated_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Found by review: the store on one arm of a join, which holds the
-        // mark only if the join unions `Known::holds_lost`; the free spelled
+        // mark only if the join unions `Contents::holds_lost`; the free spelled
         // through a load of the box, `t = *box; free(t);`, which triggers as
         // `free(*box)` does; and the box copied by `memcpy` or grown by
         // `realloc` before the free, which carry the mark as they carry
@@ -3572,7 +3572,7 @@ cases! {
         // read through `***t3`, read back as `m` and written through, and
         // written two levels down into the local. Silent with `r` live. See
         // ADR-0045. Mutation: have the store never mark
-        // `Known::inside_locals`; the first three go silent. Mutation: have a
+        // `Contents::inside_locals`; the first three go silent. Mutation: have a
         // load carry no edges; the second goes silent. Mutation: have a store
         // two levels down land in no local; the third goes silent.
         a_locals_address_stored_in_an_allocation_is_followed_by_a_read_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
@@ -4830,7 +4830,7 @@ cases! {
         // And where paths meet and where the allocation is copied or grown.
         // Mutation:
         // have `Held::joined` intersect `unreplaced_read`; the first builds.
-        // Mutation: have the join intersect `Known::unreplaced`; the second
+        // Mutation: have the join intersect `Contents::unreplaced`; the second
         // builds. Mutation: drop the mark where `built_from` reads a load;
         // the third builds. Mutation: drop it in the `memcpy` arm, or where
         // `realloc` carries a row to the new site; the fourth and fifth build.
@@ -5060,7 +5060,7 @@ cases! {
         // Every exposed parameter is marked, not the first, and a mark made on
         // one arm survives the join. Mutation: mark only the first of
         // `exposed_parameters`; the first of these goes silent at the use.
-        // Mutation: join `Known::from_caller` as an intersection; the second
+        // Mutation: join `Contents::from_caller` as an intersection; the second
         // does, since each call's result is marked on its own arm only.
         a_pointer_read_again_out_of_a_second_parameter_after_a_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -5201,7 +5201,7 @@ cases! {
         // Memory a parameter can name is memory reachable to code this check
         // cannot read, not memory that holds a caller's pointer: a buffer
         // this function allocated and stored `*pp` in is no parameter's, and
-        // asking `Known::from_caller` landed `m` stored there in every
+        // asking `Contents::from_caller` landed `m` stored there in every
         // parameter's memory and reported a use at `*q` that cannot happen.
         // Found by review. Mutation: ask `from_caller` of the containers of
         // the store; the first reports. Of the copy `memcpy` makes; the

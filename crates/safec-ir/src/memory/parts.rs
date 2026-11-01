@@ -1668,8 +1668,9 @@ impl Contents {
     /// lower of the two bounds at every level, and every mark either has.
     /// What a join does where two paths meet and what a door does where a
     /// value is poured in, so that the two cannot drift. `other` is
-    /// destructured with no `..`, so a field added and not taken here is
-    /// `error[E0027]`.
+    /// destructured with no `..`, so a field added and not bound here is
+    /// `error[E0027]`, and one bound and not taken is an unused variable,
+    /// which the lints refuse.
     pub(super) fn absorbed(&mut self, other: &Contents) {
         let Contents {
             inside,
