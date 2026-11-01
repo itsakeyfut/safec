@@ -28,8 +28,11 @@ pub(super) struct Store<'a> {
     /// Which kind of write it is.
     pub(super) kind: StoreKind,
     /// Whether code outside this function may read what it writes: for a
-    /// direct write, whether such code names the local; otherwise
-    /// [`Known::leaves`] of [`Self::into`].
+    /// direct write, whether such code names the local; for a write through
+    /// at least one dereference and for a copy, [`Known::leaves`] of
+    /// [`Self::into`]; and `false` for a projection with no dereference,
+    /// which lands in this function's own object and which `Known::leaves`
+    /// cannot be asked of.
     pub(super) leaves: bool,
     /// Where it is, which a finding about it points at.
     pub(super) at: Span,
@@ -50,19 +53,24 @@ pub(super) enum StoreKind {
     /// An assignment to a local by name.
     Direct,
     /// An assignment through `derefs` dereferences, or through a projection
-    /// with none.
+    /// with none. No C reaches `derefs: 0` today, since the lowering reaches
+    /// an element or a member through its address; it is here for a
+    /// frontend that does not, and every reader that asks of a store that
+    /// leaves asks for at least one dereference.
     Through {
         /// How many dereferences the destination goes through.
         derefs: usize,
     },
     /// A library copy, `memcpy` or `memmove`, of bytes C defines to copy
-    /// (C17 7.24.2.1, 6.2.6.1 p4), and so asked as a doubt and never as a
-    /// proof (#652).
+    /// (C17 7.24.2.1, 7.24.2.2, 6.2.6.1 p4), and so asked as a doubt and
+    /// never as a proof (#652).
     Copy,
 }
 
 impl Allocations<'_> {
-    /// The store an element is, if it is one: an assignment.
+    /// The store an element is, if it is one: an assignment, of kind
+    /// [`StoreKind::Direct`] or [`StoreKind::Through`] and never
+    /// [`StoreKind::Copy`].
     pub(super) fn store_in<'e>(&self, element: &'e Element, known: &Known) -> Option<Store<'e>> {
         let Element::Assign(operation) = element else {
             return None;
@@ -91,7 +99,9 @@ impl Allocations<'_> {
 
     /// The store a terminator is, if it is one: a call to an undefined
     /// [`Callee::Copies`] function handed a place for each of its first two
-    /// arguments. A body defined here is what runs, whatever it is called,
+    /// arguments, always of kind [`StoreKind::Copy`]. A copy whose
+    /// destination is no place makes none, so a reader that asks only of the
+    /// source does not come here (`report::departed_at_call`). A body defined here is what runs, whatever it is called,
     /// as the departure door reads one.
     pub(super) fn store_at<'t>(
         &self,

@@ -1865,8 +1865,9 @@ impl Analysis for Allocations<'_> {
                 // stored value holds, and what a pointer read out of memory
                 // may be. See `Known::stored_out`. **Three halves decide no
                 // case, measured**, and are kept so this asks what the store
-                // door does and records what the store records: `direct`,
-                // since a write into a local such code names hands what it
+                // door does and records what the store records: the
+                // `StoreKind::Direct` arm, since a write into a local such code
+                // names hands what it
                 // writes away and the free is then a double free's doubt
                 // first; the pointer test, since an integer that holds sites
                 // is a conversion the frontend refuses (`SC0302`); and
@@ -1877,7 +1878,8 @@ impl Analysis for Allocations<'_> {
                     let kind = match store.kind {
                         StoreKind::Direct => true,
                         StoreKind::Through { derefs } => derefs > 0,
-                        // An element is no call.
+                        // `store_in` makes no copy; listed so that a kind
+                        // added is answered here.
                         StoreKind::Copy => false,
                     };
                     kind && store.leaves && self.may_be_pointer(function, &store.into)
@@ -2996,7 +2998,8 @@ impl Analysis for Allocations<'_> {
                             let marks = self.store_at(terminator, value).is_some_and(|store| {
                                 match store.kind {
                                     StoreKind::Copy => store.leaves,
-                                    // A call is no assignment.
+                                    // `store_at` makes a copy alone; listed so
+                                    // that a kind added is answered here.
                                     StoreKind::Direct | StoreKind::Through { .. } => false,
                                 }
                             });

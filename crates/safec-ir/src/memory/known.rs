@@ -292,8 +292,8 @@ pub(super) struct Known {
     /// ADR-0057.
     pub(super) exposed_locals: Vec<bool>,
     /// Per site, whether a pointer to it may have been stored where code
-    /// outside this function may read it, by a store [`Self::leaves`] says
-    /// leaves: into a caller's memory through a parameter, into memory or a
+    /// outside this function may read it, by a store or a library copy whose
+    /// `store::Store` leaves (#684): into a caller's memory through a parameter, into memory or a
     /// local such code can name, or anywhere a pointer this function never
     /// recorded may point.
     ///

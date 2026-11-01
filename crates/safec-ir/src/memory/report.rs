@@ -1815,12 +1815,13 @@ pub(super) fn departed_in_element(
     } else {
         match store.kind {
             StoreKind::Through { .. } => Departure::Store,
-            // A copy into a local leaves nothing: it is asked where the
-            // local's value or its address leaves. Whether a write into a
-            // local that code this check cannot read names is asked here is
-            // #690's.
+            // A write to a local by name is not asked here: it is asked where
+            // the local's value or its address leaves. That leaves a write to
+            // a local whose address code this check cannot read holds asked
+            // nowhere, which is #690.
             StoreKind::Direct => return,
-            // An element is no call.
+            // `store_in` makes no copy; listed so that a kind added is
+            // answered here.
             StoreKind::Copy => return,
         }
     };
