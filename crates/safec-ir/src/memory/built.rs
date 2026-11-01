@@ -125,55 +125,16 @@ pub(super) fn built_from(
     // from proving anything with it, so `t3[i][i]` is asked as `t3[0][0]` is.
     // See ADR-0045.
     for load in loads.iter().chain(&bytes) {
-        let (sites, locals) = value.levels_below(load.local, derefs(load));
-        for site in sites {
-            reached.hold(site, Offset::Unknown);
-        }
-        // **And the locals whose address it may be**, as `read_through`
-        // carries them, so `(*ppo)[k]` keeps the edge `*ppo` does where the
-        // arithmetic leaves it, [`Held::moved_by_arithmetic`]'s to decide.
-        // Found by review. See ADR-0019 and ADR-0045.
-        for target in locals {
-            reached.writes_to.set(target);
-            // And it may be a pointer that reached an array only by #639's
-            // rule. See `Known::stored_in_part`.
-            if value.stored_in_part[target] {
-                reached.array_edge = true;
-            }
-        }
-        // Or read out of a local, not an array, that holds one, as
-        // `read_through` says.
-        if value
-            .levels_below(load.local, derefs(load) - 1)
-            .1
-            .into_iter()
-            .any(|local| !is_array(local) && value.points_to[local].array_edge)
-        {
-            reached.array_edge = true;
-        }
-        // And lost where the load would be. See ADR-0045.
-        if value.stale_below(load.local, derefs(load)) {
-            reached.lost = true;
-            reached.stale_read = true;
-        }
-        // And read out of a slot a call could not replace, as `read_through`
-        // says. See ADR-0047.
-        if value.marked_below(load.local, derefs(load), |contents| contents.unreplaced) {
-            reached.unreplaced_read = true;
-        }
-        // And read out of memory a lost value may be in, as `read_through`
-        // says. See `Held::lost_read`.
-        if value.marked_below(load.local, derefs(load), |contents| contents.holds_lost) {
-            reached.lost_read = true;
-        }
-        if value.lost_through(load.local, derefs(load)) {
-            reached.lost = true;
-            reached.stale_read |= value.stale_through(load.local, derefs(load));
-        }
-        // And what the caller stored, as `read_through` says. See ADR-0040.
-        if reads_caller_memory(load.local, derefs(load)) {
-            reached.from_caller = true;
-        }
+        // What memory holds there and the marks a load out of it carries,
+        // as `Allocations::read_through` takes them for a load assigned to a
+        // local. See `Known::load_into`.
+        value.load_into(
+            &mut reached,
+            load.local,
+            derefs(load),
+            &is_array,
+            reads_caller_memory(load.local, derefs(load)),
+        );
     }
 
     // **A read through a projection is not followed, and is still a load.**

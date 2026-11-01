@@ -12,8 +12,8 @@ use crate::source::{SourceMap, Span};
 
 use super::bits::Bits;
 use super::parts::{
-    Contents, Extent, Held, Levels, PendingRead, Reached, Read, ReadKey, Realloced, SiteState,
-    read_key,
+    Contents, Extent, Held, Levels, Offset, PendingRead, Reached, Read, ReadKey, Realloced,
+    SiteState, read_key,
 };
 use super::{LostReason, derefs, inside, named};
 
@@ -1055,14 +1055,133 @@ impl Known {
     /// keeps a local's address out of what is exposed, so that a holder is
     /// still asked; this records where it may be and exempts nobody.
     pub(super) fn landed_where_unknown_code_points(&mut self, carried: &[usize], locals: &[usize]) {
-        for landing in self.reachable_now() {
-            for &site in carried {
-                self.contents[landing].inside.set(site);
-            }
-            for &local in locals {
-                self.contents[landing].inside_locals.set(local);
+        let mut landed = Contents::none(self.points_to.len());
+        for &site in carried {
+            landed.inside.set(site);
+        }
+        for &local in locals {
+            landed.inside_locals.set(local);
+        }
+        // Every other field written out, so that a field added to
+        // `Contents` is answered here too: no bound, since nothing says what
+        // such a store's pointer believes, and no mark, since a store into
+        // exposed memory records what it stores there and does not mark it,
+        // as above. See ADR-0044.
+        let Contents {
+            inside: _,
+            inside_locals: _,
+            stored_at_most,
+            stale,
+            unreplaced,
+            holds_lost,
+            from_caller,
+        } = &mut landed;
+        *stored_at_most = Levels::default();
+        (*stale, *unreplaced, *holds_lost, *from_caller) = (false, false, false, false);
+        let landings: Vec<usize> = self.reachable_now().into_iter().collect();
+        self.pour(&landings, &landed, &[]);
+    }
+
+    /// Pour `poured` into each of `containers`, and mark every array in
+    /// `in_part` as one a pointer reaching it only by #639's rule was stored
+    /// into memory for, whether or not there is a container: a store into a
+    /// local through its address is read back without its element too. See
+    /// [`Self::stored_in_part`].
+    ///
+    /// **The one way a door that moves a value into memory writes it**: the
+    /// store, the library copy, `realloc` and a store this check cannot
+    /// place. Each builds a [`Contents`] naming every field, so a field added
+    /// there and not answered at a door fails to compile at that door, and
+    /// what each door carries is taken in by [`Contents::absorbed`], as the
+    /// join takes it. Four fixes each once carried a mark into one door after
+    /// another already had it. A place where an event rather than a value
+    /// sets one mark (a site reborn, a slot a call could not replace, a lost
+    /// value gone, caller memory at entry) sets that field directly.
+    pub(super) fn pour(&mut self, containers: &[usize], poured: &Contents, in_part: &[usize]) {
+        for &container in containers {
+            self.contents[container].absorbed(poured);
+        }
+        for &array in in_part {
+            self.stored_in_part[array] = true;
+        }
+    }
+
+    /// What a load through `local`, `depth` dereferences deep, takes from the
+    /// memory it reads, onto `held`: the sites it may hold, at an offset
+    /// nobody said; the locals whose address it may be, as edges, and
+    /// whether it may be a pointer that reached an array only by #639's
+    /// rule; and the stale, unreplaced, lost and caller marks. Answers
+    /// whether it named any local, which `Allocations::read_through` asks.
+    ///
+    /// **One function for both loads**, `Allocations::read_through` for a
+    /// load assigned to a local and `built::built_from` for one that reaches
+    /// an operator or a call as an operand, which each kept a copy of these
+    /// six tests. `is_array` and `from_caller` are the two answers the caller
+    /// has from the function and the analysis. See ADR-0040 and ADR-0045.
+    pub(super) fn load_into(
+        &self,
+        held: &mut Held,
+        local: LocalId,
+        depth: usize,
+        is_array: &dyn Fn(usize) -> bool,
+        from_caller: bool,
+    ) -> bool {
+        let (sites, locals) = self.levels_below(local, depth);
+        for site in sites {
+            held.hold(site, Offset::Unknown);
+        }
+        // **And the locals whose address it may be**, as edges, so a write
+        // through it lands there: `m = *t3; *m = r;` with `*t3 = &slot`. Not
+        // all of them, since the set is a lower bound. See ADR-0045.
+        let named_a_local = !locals.is_empty();
+        for target in locals {
+            held.writes_to.set(target);
+            // And it may be a pointer that reached an array only by #639's
+            // rule. See `Known::stored_in_part`.
+            if self.stored_in_part[target] {
+                held.array_edge = true;
             }
         }
+        // Or read out of a local that holds one, which no store put there:
+        // `e = m + 1; f = *pe;` with `pe = &e`. Not an array, whose record
+        // gathers every store into it, an earlier turn's too: a store into
+        // one marks `stored_in_part`, which a turn clears. Found by review of
+        // #667.
+        if self
+            .levels_below(local, depth - 1)
+            .1
+            .into_iter()
+            .any(|read_from| !is_array(read_from) && self.points_to[read_from].array_edge)
+        {
+            held.array_edge = true;
+        }
+        // Read out of an allocation that may hold one that is gone. See
+        // ADR-0045.
+        if self.stale_below(local, depth) {
+            held.lost = true;
+            held.stale_read = true;
+        }
+        // Read out of an allocation that may hold a slot a call could not
+        // replace, which is asked where it is handed by address and nowhere
+        // else. See ADR-0047.
+        if self.marked_below(local, depth, |contents| contents.unreplaced) {
+            held.unreplaced_read = true;
+        }
+        // Read out of an allocation that may hold a lost value, which is made
+        // lost if a lost value goes. See `Held::lost_read`.
+        if self.marked_below(local, depth, |contents| contents.holds_lost) {
+            held.lost_read = true;
+        }
+        // Read through a pointer to a local this check lost, carrying whether
+        // what it lost may be gone, as the local does. See ADR-0045.
+        if self.lost_through(local, depth) {
+            held.lost = true;
+            held.stale_read |= self.stale_through(local, depth);
+        }
+        if from_caller {
+            held.from_caller = true;
+        }
+        named_a_local
     }
 
     /// Record that a call this check cannot read was handed the address of
