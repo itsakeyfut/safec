@@ -936,6 +936,19 @@ cases! {
         // call to `loaded_indeterminate` for an element. It builds. See
         // ADR-0057.
         a_pointer_read_out_of_fresh_memory_and_only_compared_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `realloc` handed a null pointer behaves as `malloc` for the size
+        // (C17 7.22.3.5 p3), so what it returns is fresh too, handed a
+        // constant `0` or a local that names nothing; handed a live block,
+        // its contents are the old ones (p2) and nothing is reported. The
+        // name `malloc` alone was read as fresh (#689). Mutations: read
+        // `Leaves::TheOld` as never fresh, and the first two go silent; take
+        // a constant alone as null, and the second does; read it as always
+        // fresh, and the third is `SC0411`. The fourth is the first turn of a
+        // buffer grown from null, asked as of the state before the loop.
+        a_pointer_read_out_of_what_realloc_of_null_returns_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_what_realloc_of_a_null_local_returns_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_what_realloc_of_a_live_block_returns_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read and the value thrown away. Mutation: as above. It builds.
         a_pointer_read_out_of_fresh_memory_and_discarded_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read as an operand of a comparison, with no temporary. Mutation:

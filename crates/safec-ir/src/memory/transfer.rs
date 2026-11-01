@@ -16,8 +16,8 @@ use super::bits::Bits;
 use super::built::{built_from, named, replaced_by};
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known};
 use super::parts::{
-    Callee, Contents, Extent, Freeing, Held, LIBRARY, Levels, Library, Makes, Offset, PendingRead,
-    Reached, Read, Realloced, SiteState, bounded,
+    Callee, Contents, Extent, Freeing, Held, LIBRARY, Leaves, Levels, Library, Makes, Offset,
+    PendingRead, Reached, Read, Realloced, SiteState, bounded,
 };
 use super::report::{Fit, fits, slots_from, slots_leaving};
 use super::{LostReason, derefs, handed_places};
@@ -82,15 +82,6 @@ pub(super) struct Allocations<'a> {
 }
 
 impl Allocations<'_> {
-    /// Whether what this function returns is an allocation whose contents
-    /// are indeterminate. See [`Known::fresh`].
-    fn leaves_indeterminate(&self, id: FuncId) -> bool {
-        matches!(
-            self.sources.snippet(self.unit.function(id).name),
-            "malloc" | "aligned_alloc"
-        )
-    }
-
     /// How many bytes the object a call's result names takes, as far as this
     /// check can read it.
     ///
@@ -3707,11 +3698,24 @@ impl Analysis for Allocations<'_> {
                 .and_then(|ty| self.type_levels(ty))
                 .unwrap_or_default();
         }
-        // **Its contents are indeterminate**, C17 7.22.3.4 p2 and 7.22.3.1
-        // p2, for `malloc` and `aligned_alloc` alone: `calloc`'s are zero
-        // bits (7.22.3.2 p2), which is a null pointer on every target here, and
-        // `realloc`'s are the old object's (7.22.3.5 p2).
-        if self.leaves_indeterminate(*callee) {
+        // **Its contents are indeterminate** where its row says so, and for
+        // `realloc` where it was handed a pointer that is certainly null, as
+        // `malloc` for the size (C17 7.22.3.5 p3): a constant `0`, or a local
+        // that names nothing. The row says it rather than a name read here,
+        // which had read `realloc(NULL, n)` as copying an old object (#689).
+        // See `Leaves`.
+        let fresh = match self.library(*callee).and_then(|row| row.leaves) {
+            Some(Leaves::Indeterminate) => true,
+            Some(Leaves::TheOld) => match arguments.first() {
+                Some(Operand::Constant(0)) => true,
+                Some(Operand::Copy(handed)) => {
+                    handed.projection.is_empty() && value.names_nothing(handed.local)
+                }
+                Some(Operand::Constant(_)) | None => false,
+            },
+            Some(Leaves::ZeroBits) | None => false,
+        };
+        if fresh {
             value.fresh[site] = true;
         }
         // **`realloc`'s new object holds what the old one held**, C17 7.22.3.5

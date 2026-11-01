@@ -1082,6 +1082,30 @@ impl Known {
         self.pour(&landings, &landed, &[]);
     }
 
+    /// Whether `local` certainly holds a null pointer as far as this value
+    /// says: it names no allocation and no local, and nothing this check
+    /// lost, read out of memory, or that a caller or code this check cannot
+    /// read may have written there. Such a pointer is null or indeterminate,
+    /// and handing an indeterminate one to a library function is undefined
+    /// already, so reading it as null reports nothing a correct program
+    /// does. A pointer null on one path only names what the other path
+    /// names, since a join unions them, and is not this. Not
+    /// `Held::writes_elsewhere`, which starts `true` as the answer that
+    /// gives up and so holds of a null local too. See
+    /// `parts::Leaves::TheOld`.
+    pub(super) fn names_nothing(&self, local: LocalId) -> bool {
+        let held = &self.points_to[local.index()];
+        !held.sites.any()
+            && !held.writes_to.any()
+            && !held.lost
+            && !held.loaded
+            && !held.foreign
+            && !held.from_caller
+            && !held.lost_read
+            && !held.stale_read
+            && !held.unreplaced_read
+    }
+
     /// Pour `poured` into each of `containers`, and mark every array in
     /// `in_part` as one a pointer reaching it only by #639's rule was stored
     /// into memory for, whether or not there is a container: a store into a
