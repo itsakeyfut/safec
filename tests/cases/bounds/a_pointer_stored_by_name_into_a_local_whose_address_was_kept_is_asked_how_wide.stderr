@@ -1,0 +1,13 @@
+error[SC0413]: this lets a pointer to 1 byte leave where 4 bytes are believed
+   ╭─[ a_pointer_stored_by_name_into_a_local_whose_address_was_kept_is_asked_how_wide.c:8:5 ]
+   │
+ 7 │     void *v = malloc(1);
+   │               ────┬────  
+   │                   ╰────── allocated here
+ 8 │     slot = v;
+   │     ────┬───  
+   │         ╰───── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

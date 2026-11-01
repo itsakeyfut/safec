@@ -301,7 +301,8 @@ pub enum Departure {
     /// Handed back by a `return`.
     Return,
     /// Written through a projection, into memory through a pointer and into
-    /// an element of a local array (#621); or copied into
+    /// an element of a local array (#621); written by name into a local code
+    /// this check cannot read may read (#690); or copied into
     /// memory by `memcpy` or `memmove`. A later read believes what it finds
     /// there, as it believes a load.
     Store,

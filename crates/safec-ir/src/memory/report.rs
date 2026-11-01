@@ -1815,10 +1815,13 @@ pub(super) fn departed_in_element(
     } else {
         match store.kind {
             StoreKind::Through { .. } => Departure::Store,
-            // A write to a local by name is not asked here: it is asked where
-            // the local's value or its address leaves. That leaves a write to
-            // a local whose address code this check cannot read holds asked
-            // nowhere, which is #690.
+            // A write to a local by name is asked here where code this check
+            // cannot read may read the local, which is what `leaves` says of
+            // a direct write: `keep(&slot); slot = v;` is a store a later
+            // read through the kept address believes, as `*ps = v;` is. Any
+            // other is asked where the local's value or its address leaves
+            // (#690). See ADR-0060.
+            StoreKind::Direct if store.leaves => Departure::Store,
             StoreKind::Direct => return,
             // `store_in` makes no copy; listed so that a kind added is
             // answered here.
