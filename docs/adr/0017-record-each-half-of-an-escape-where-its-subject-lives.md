@@ -66,6 +66,18 @@ still live. One already freed stays freed, as no call un-frees one
 (ADR-0039). Marking it too forgot the free, so a call handed `&a` after
 `free(a)` could not tell it from one handed a live `a`'s address (#271).
 
+**An address handed only to a library copy's source is no escape** (#652).
+`memcpy(pp, &x, 8)` takes `&x`, and with the bit set what `x` holds was
+unproven, so a copy of a freed `x` out of the function was a doubt where `*pp =
+x;` is a proof, and a copy of a live one was doubted too. A copy reads its
+source and neither writes it nor keeps its address (C17 7.24.2.1, 7.24.2.2),
+so where an address is read nowhere in the function but as the second argument
+of `memcpy` or `memmove`, `Allocations::copy_sources`, the bit is not set. The
+test is syntactic and strict, since one taken wrongly proves what code may have
+written: `px = &x; look(px); memcpy(pp, px, 8);` keeps it, and the copy is a
+doubt. Five copies the corpus held lost a doubt at a later `free` they had only
+for the address the copy took.
+
 **A local reaching no site answers nothing, escaped or not.** `used` already
 says nothing about a place it follows no allocation for, however it came to
 follow none, and an address taken is not a reason to break that: a pointer this

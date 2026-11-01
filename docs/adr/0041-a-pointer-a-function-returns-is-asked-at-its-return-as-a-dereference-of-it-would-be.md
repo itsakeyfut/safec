@@ -123,8 +123,11 @@ parameter, a freed pointer stored there is a use of an indeterminate value
 nothing reads `*b` before it is overwritten. A store into memory only this
 function reads is not asked there, since a load of it carries what it held;
 where that memory leaves, it is asked what it holds, as the next paragraph
-says. A library copy out of the function is the doubt `SC0407` raises rather
-than this proof, which is #652. It has a code of its own because what
+says. **A library copy out of the function is asked the same** (#652):
+`memcpy(pp, &x, 8)` stores what `*pp = x;` stores, so it is `SC0414` too, and
+the `SC0407` `handed` raised about the copy's source is not raised beside the
+proof, one defect one report; this needs `x` not escaped for the copy's sake,
+which ADR-0017 records. It has a code of its own because what
 to change is what is stored, and because code that is not a caller may read
 it. A live pointer stored and freed after is not this rule, since the store is
 of what was live as it ran; the next paragraph but one is.
@@ -166,8 +169,8 @@ the paragraph above's shape costs: `*pp = x; free(x); *pp = 0;` is correct and
 doubted, since this check does not follow what one place in such memory holds,
 which is #656; in the corpus, 28 programs that already had a report each gained
 this one at their free, and none was newly refused. A library copy out of the
-function marks nothing, as the store door asks nothing of one, which is
-#652.
+function marks nothing, though the store door asks one what it carries, which
+is #684.
 
 **And a call this check cannot read handed it is asked too** (#672).
 `*pp = x; release(x);` was silent where `release(x); *pp = x;` was doubted,
