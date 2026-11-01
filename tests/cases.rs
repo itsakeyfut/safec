@@ -5064,8 +5064,8 @@ cases! {
         // store gets, where the copy marked nothing (#688, #684). Mutation:
         // the copy marks nothing stored out; both go silent. Copied into
         // memory only this function reads it is not stored out, and the
-        // third has no `SC0414`; mutation: mark what a copy carries whether
-        // or not it leaves, and it does.
+        // third reports nothing; mutation: mark what a copy carries whether
+        // or not it leaves, and the third is `SC0414`.
         a_pointer_copied_out_of_memory_by_memcpy_and_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_into_memory_only_this_function_reads_and_freed_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -5075,6 +5075,15 @@ cases! {
         // `Allocations::store_at`, which needs a place for the destination;
         // this builds. Found by review of #688.
         a_pointer_to_too_little_copied_by_memcpy_to_a_null_destination_is_still_asked_how_wide: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What a copy out stores out is what the sites it copies hold too, at
+        // every level: `*box = x; *b = box; memcpy(pp, b, 8); free(x);` is
+        // `SC0414`. Mutation: mark the sites a load of the source reads
+        // alone, not their closure; this goes silent. And a `memcpy` defined
+        // here is its body, not a library copy, so nothing is stored out by
+        // name. Mutation: let `Allocations::store_at` ignore whether the
+        // callee is defined; the second is `SC0414`. Found by review of #688.
+        a_pointer_held_by_a_box_copied_out_by_memcpy_and_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_out_by_a_memcpy_defined_here_is_not_asked_as_a_library_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What `malloc` returns is this function's, not handed over, so a
         // pointer read out of it is not doubted at a later call; the
         // `SC0403`s are the nullability check's. Mutation: count
