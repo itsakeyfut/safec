@@ -192,21 +192,39 @@ fn status(text: &str) -> Option<String> {
 
 /// Every problem with the records against the lock: a settled record with no
 /// line, a line whose hash differs, a line for a record that does not exist,
-/// and a record with no status. `records` is each record's file name and text.
+/// a record with no status, and a line of the lock that is not exactly
+/// `NNNN <16 lowercase hex digits>` or repeats a number. `records` is each
+/// record's file name and text.
+///
+/// The lock is read strictly because a line it misreads is reported as a
+/// change of reasoning, which sends a reader to a record that did not move.
 fn check(records: &[(String, String)], lock: &str) -> Vec<String> {
+    let mut problems = Vec::new();
     let mut locked = BTreeMap::new();
-    for line in lock.lines() {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('#') {
+    for (index, line) in lock.lines().enumerate() {
+        if line.trim().is_empty() || line.starts_with('#') {
             continue;
         }
-        let (number, hash) = line
-            .split_once(' ')
-            .unwrap_or_else(|| panic!("a line of frozen.txt is not `NNNN <hash>`: {line:?}"));
-        locked.insert(number.to_owned(), hash.trim().to_owned());
+        let parsed = line.split_once(' ').filter(|(number, hash)| {
+            number.len() == 4
+                && number.bytes().all(|b| b.is_ascii_digit())
+                && hash.len() == 16
+                && hash.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+        });
+        let Some((number, hash)) = parsed else {
+            problems.push(format!(
+                "line {} of docs/adr/frozen.txt is not `NNNN <16 lowercase hex digits>`: {line:?}",
+                index + 1
+            ));
+            continue;
+        };
+        if locked.insert(number.to_owned(), hash.to_owned()).is_some() {
+            problems.push(format!(
+                "docs/adr/frozen.txt has two lines for ADR-{number}"
+            ));
+        }
     }
 
-    let mut problems = Vec::new();
     let mut seen = BTreeSet::new();
     for (name, text) in records {
         let number = name[..4].to_owned();
@@ -257,7 +275,7 @@ fn a_settled_record_s_reasoning_is_what_it_was_when_it_was_settled() {
         .expect("docs/adr lists")
         .map(|entry| entry.expect("an entry of docs/adr").file_name())
         .filter_map(|name| name.into_string().ok())
-        .filter(|name| name.len() > 5 && name[..4].bytes().all(|b| b.is_ascii_digit()))
+        .filter(|name| is_record(name) && adr.join(name).is_file())
         .collect();
     names.sort();
     let records: Vec<_> = names
@@ -270,6 +288,53 @@ fn a_settled_record_s_reasoning_is_what_it_was_when_it_was_settled() {
 
     let problems = check(&records, &lock);
     assert!(problems.is_empty(), "\n{}", problems.join("\n"));
+}
+
+/// Whether a file in `docs/adr` is a record: four digits, a dash, and `.md`.
+/// An editor's backup beside a record, `0003-x.md.orig`, is not one.
+fn is_record(name: &str) -> bool {
+    name.len() > 8
+        && name[..4].bytes().all(|b| b.is_ascii_digit())
+        && name.as_bytes()[4] == b'-'
+        && name.ends_with(".md")
+}
+
+/// Mutation: the `.md` test dropped from `is_record`, so a backup beside a
+/// record is hashed against that record's line.
+#[test]
+fn only_a_numbered_markdown_file_is_a_record() {
+    assert!(is_record("0060-an-access-is-proved.md"));
+    assert!(!is_record("0060-an-access-is-proved.md.orig"));
+    assert!(!is_record("0060-an-access-is-proved.md~"));
+    assert!(!is_record("adr-template.md"));
+    assert!(!is_record("frozen.txt"));
+}
+
+/// Mutation: the length and the digits of the hash both left unchecked, so a
+/// note after it is taken as part of the hash and reported as a change of
+/// reasoning. Either check alone refuses this line.
+#[test]
+fn a_lock_line_with_anything_after_its_hash_is_named_as_malformed() {
+    let lock = format!("{} # a note\n", line_for("0001", RECORD).trim_end());
+    let problems = check(&[("0001-a.md".to_owned(), RECORD.to_owned())], &lock);
+    // The malformed line, then the record it was meant for, which has none.
+    assert_eq!(problems.len(), 2, "{problems:?}");
+    assert!(problems[1].contains("has no line"), "{problems:?}");
+    assert!(
+        problems[0].starts_with("line 1 of docs/adr/frozen.txt is not"),
+        "{problems:?}"
+    );
+}
+
+/// Mutation: a repeated number let through, so the later line silently
+/// replaces the earlier.
+#[test]
+fn a_number_with_two_lock_lines_is_named() {
+    let lock = format!("{}{}", line_for("0001", RECORD), line_for("0001", RECORD));
+    assert_eq!(
+        check(&[("0001-a.md".to_owned(), RECORD.to_owned())], &lock),
+        ["docs/adr/frozen.txt has two lines for ADR-0001"]
+    );
 }
 
 /// The lock line `check` wants for a record.
