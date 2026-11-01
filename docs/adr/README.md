@@ -201,12 +201,13 @@ is a sign the bar has slipped rather than a sign of progress.
 * **A settled record's reasoning is frozen.** Once a record's status is anything
   but `proposed`, its line in [`frozen.txt`](./frozen.txt) holds a hash of the
   record with its status line, its Confirmation, its code spans and its link
-  targets taken out, and `tests/records.rs` fails where the record no longer
-  matches it. Those four may still change; every other word may not, so prose
-  written inside one of the four is not frozen either, and a reviewer reads a
-  long new code span or Confirmation with that in mind. A record being accepted
-  adds its own line, which the test prints. A changed line in `frozen.txt` is
-  the rule being set aside, and is read as that in review.
+  targets taken out, and `.github/scripts/frozen_records.py`, which CI runs as
+  its own job, fails where the record no longer matches it. Those four may
+  still change; every other word may not, so prose written inside one of the
+  four is not frozen either, and a reviewer reads a long new code span or
+  Confirmation with that in mind. A record being accepted adds its own line,
+  which the script prints. A changed line in `frozen.txt` is the rule being set
+  aside, and is read as that in review.
 * What used to be appended to a settled record goes elsewhere:
   * a decision reversed or extended is a new record that supersedes it, as above;
   * a decision applied to one more route is a row in that decision's route

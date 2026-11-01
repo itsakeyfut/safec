@@ -1,5 +1,5 @@
 # Each settled record in docs/adr and a hash of its reasoning, which
-# tests/records.rs recomputes. A line is added once, when its record is
+# .github/scripts/frozen_records.py recomputes. A line is added once, when its record is
 # settled, and never changed: a decision reversed or extended is a new record
 # that supersedes the old one. See docs/adr/README.md.
 0001 3f8ec21bfe6de35f

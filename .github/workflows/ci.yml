@@ -123,6 +123,20 @@ jobs:
           RUSTDOCFLAGS: -D warnings
 
   # --------------------------------------------------------------------------
+  # Records: a settled record's reasoning is what it was when it was settled,
+  # held by a hash per record in `docs/adr/frozen.txt`. A job of its own rather
+  # than a test in the suite, since it checks the repository's records and not
+  # the compiler. The script runs its own tests before it reads the records,
+  # and needs nothing but Python's standard library.
+  # --------------------------------------------------------------------------
+  records:
+    name: Records
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - run: python3 -I .github/scripts/frozen_records.py
+
+  # --------------------------------------------------------------------------
   # Aggregation gate: the single required check for branch protection. Passes
   # only if every job above succeeded. Referencing just this check keeps branch
   # protection stable as jobs are added or renamed.
@@ -135,6 +149,7 @@ jobs:
       - test
       - msrv
       - docs
+      - records
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any dependency failed or was cancelled
