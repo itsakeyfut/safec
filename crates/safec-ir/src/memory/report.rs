@@ -1903,24 +1903,23 @@ pub(super) fn departed_at_call(
         // their source reaches leave into the destination as a store would
         // put them there. Found by review.
         (false, Callee::Copies) => {
-            // What the copy reads is its source's bytes, as `store_at` says,
-            // asked as a store of them would be. See `store::StoreKind`.
-            let source = analysis.store_at(terminator, known).and_then(|store| {
-                match (store.kind, store.from) {
-                    (StoreKind::Copy, Written::Bytes(source)) => Some(source),
-                    (StoreKind::Copy, Written::Value(_))
-                    | (StoreKind::Direct | StoreKind::Through { .. }, _) => None,
-                }
-            });
-            let source_ty = source.and_then(|place| analysis.unit.place_ty(function, place));
-            if let (Some(source), Some(source_ty)) = (source, source_ty) {
+            // **The source alone, whatever the destination is**, and so not
+            // through `store_at`, which makes a `Store` only where both are
+            // places: what this asks is how wide what the source points at
+            // is, and `memcpy(0, b, 8)`, undefined for its destination, asked
+            // nothing and built where main refused it. Found by review.
+            let source_ty = match arguments.get(1) {
+                Some(Operand::Copy(place)) => analysis.unit.place_ty(function, place),
+                Some(Operand::Constant(_)) | None => None,
+            };
+            if let (Some(source), Some(source_ty)) = (arguments.get(1), source_ty) {
                 contents_leaving(
                     findings,
                     departed,
                     analysis,
                     function,
                     (at, Departure::Store, source_ty),
-                    &Rvalue::Use(Operand::Copy(source.clone())),
+                    &Rvalue::Use(source.clone()),
                     known,
                 );
             }

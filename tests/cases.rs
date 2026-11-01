@@ -5069,6 +5069,12 @@ cases! {
         a_pointer_copied_out_of_memory_by_memcpy_and_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_into_memory_only_this_function_reads_and_freed_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy is asked how wide what its source points at is whatever its
+        // destination is: `memcpy(0, b, 8)` with `b` pointing at a pointer to
+        // one byte is `SC0413`, as on main. Mutation: ask the source through
+        // `Allocations::store_at`, which needs a place for the destination;
+        // this builds. Found by review of #688.
+        a_pointer_to_too_little_copied_by_memcpy_to_a_null_destination_is_still_asked_how_wide: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What `malloc` returns is this function's, not handed over, so a
         // pointer read out of it is not doubted at a later call; the
         // `SC0403`s are the nullability check's. Mutation: count
