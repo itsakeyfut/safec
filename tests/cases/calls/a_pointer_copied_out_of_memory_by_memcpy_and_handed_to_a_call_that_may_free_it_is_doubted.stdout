@@ -1,0 +1,111 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:3:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:4:6 "release" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+Function a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:6:6 "put"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter _Nonnull "pp"
+  Local "_2" "int *" "x"
+  Local "_3" "void *"
+  Local "_4" "int **" "b"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "int *"
+  Local "_10" "void *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:7:14 generated
+    Call a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:7:14 written "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:7:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:7:14 generated
+    ArgumentsEvaluated a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:8:15 generated
+    Call a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:8:15 written "malloc" "bb2"
+      Destination "_5"
+      Constant 8
+  Block "bb2"
+    Operation a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:8:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:8:15 generated
+    Operation a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:9:9 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_2"
+    Operation a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:9:9 written
+      Destination "_7"
+      Binary "Ne"
+        Copy "_6"
+        Constant 0
+    Branch a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:9:9 written "bb5" "bb4"
+      Copy "_7"
+  Block "bb3"
+    Branch a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:9:9 written "bb5" "bb6"
+      Copy "_7"
+  Block "bb4"
+    Sequenced a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:9:9 generated
+    Operation a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:9:15 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_4"
+    Operation a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:9:15 written
+      Destination "_7"
+      Binary "Ne"
+        Copy "_8"
+        Constant 0
+    Goto "bb3"
+  Block "bb5"
+    Sequenced a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:9:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:9:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:10:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_2"
+    Operation a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:10:5 written
+      Destination "_9"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:10:5 generated
+    ArgumentsEvaluated a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:11:5 generated
+    Call a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:11:5 written "memcpy" "bb8"
+      Destination "_10"
+      Copy "_1"
+      Copy "_4"
+      Constant 8
+  Block "bb8"
+    Sequenced a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:11:5 generated
+    ArgumentsEvaluated a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:12:5 generated
+    Call a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:12:5 written "free" "bb9"
+      Copy "_4"
+  Block "bb9"
+    Sequenced a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:12:5 generated
+    ArgumentsEvaluated a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:13:5 generated
+    Call a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:13:5 written "release" "bb10"
+      Copy "_2"
+  Block "bb10"
+    Sequenced a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted.c:13:5 generated
+    Return

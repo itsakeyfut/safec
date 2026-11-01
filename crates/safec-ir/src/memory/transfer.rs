@@ -2987,6 +2987,24 @@ impl Analysis for Allocations<'_> {
                         if placed {
                             let (copied, copied_locals) =
                                 value.levels_below(source.local, from_depth + 1);
+                            // **What a copy that leaves carries is stored out**,
+                            // as a store's is, asked before it lands: the sites
+                            // a load of the source reads, and everything they
+                            // hold. Without it `memcpy(pp, b, 8); free(x);`
+                            // with `*b = x` was silent where `*pp = *b;` is
+                            // `SC0414` (#684). See `Known::stored_out`.
+                            let marks = self.store_at(terminator, value).is_some_and(|store| {
+                                match store.kind {
+                                    StoreKind::Copy => store.leaves,
+                                    // A call is no assignment.
+                                    StoreKind::Direct | StoreKind::Through { .. } => false,
+                                }
+                            });
+                            if marks {
+                                for site in value.closure(copied.iter().copied().collect()) {
+                                    value.stored_out[site] = true;
+                                }
+                            }
                             // The second half has no case: a lost local copied
                             // is doubted by its own escape first, measured.
                             let marked = value.stale_below(source.local, from_depth + 1)

@@ -5058,6 +5058,17 @@ cases! {
         // carries. Mutation: let an address handed only to a copy's source not
         // escape; this goes silent, found by review of #652.
         a_live_pointer_copied_out_through_a_parameter_and_freed_after_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A live pointer copied out of memory, `*b = x; memcpy(pp, b, 8);`,
+        // is stored out as `*pp = *b;` stores it, so freeing it after, or
+        // handing it to a call that may free it, is the `SC0414` doubt the
+        // store gets, where the copy marked nothing (#688, #684). Mutation:
+        // the copy marks nothing stored out; both go silent. Copied into
+        // memory only this function reads it is not stored out, and the
+        // third has no `SC0414`; mutation: mark what a copy carries whether
+        // or not it leaves, and it does.
+        a_pointer_copied_out_of_memory_by_memcpy_and_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_out_of_memory_by_memcpy_and_handed_to_a_call_that_may_free_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_into_memory_only_this_function_reads_and_freed_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What `malloc` returns is this function's, not handed over, so a
         // pointer read out of it is not doubted at a later call; the
         // `SC0403`s are the nullability check's. Mutation: count
