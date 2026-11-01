@@ -1005,7 +1005,7 @@ impl Known {
     /// The sites arrive ascending, because [`Held::sites`] walks a row of a
     /// table in order, and stay that way.
     ///
-    /// It takes what [`dereferenced_in_element`](super::dereferenced_in_element) answers rather than one place,
+    /// It takes what [`dereferenced_in_element`](crate::reads::dereferenced_in_element) answers rather than one place,
     /// so that what the walk carries forwards and what [`used`](super::report::used) reports on are
     /// decided by one function with two callers. One rule written in two places
     /// drifts apart inside the change that touches one of them.

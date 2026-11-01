@@ -20,9 +20,8 @@ use super::parts::{
     Read, Realloced, SiteState, bounded,
 };
 use super::report::{Fit, fits, slots_from, slots_leaving};
-use super::{
-    LostReason, dereferenced_in_element, dereferenced_in_terminator, derefs, handed_places,
-};
+use super::{LostReason, derefs, handed_places};
+use crate::reads::{dereferenced_in_element, dereferenced_in_terminator};
 
 /// The analysis: where an allocation is, and whether it has been freed.
 pub(super) struct Allocations<'a> {
