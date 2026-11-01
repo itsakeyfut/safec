@@ -2297,8 +2297,8 @@ pub(super) fn returned(
 /// of what was live as it ran. Where the memory it lands in leaves later,
 /// by a return or a store of its address, that door asks what it holds;
 /// where it is the caller's own, through a parameter, no door is left,
-/// which is #650. And a library copy out of the function is still the
-/// doubt [`handed`] raises, which is #652.
+/// which is #650. A library copy out of the function is asked the same, by
+/// [`copied_away`] (#652).
 ///
 /// **Like a return, it doubts what it cannot prove live**: a pointer a call
 /// this check cannot read returned, stored out after another such call, is
@@ -2335,7 +2335,107 @@ pub(super) fn stored_away(
     if !direct && !known.leaves(place) {
         return;
     }
+    asked_as_stored(
+        findings,
+        said,
+        analysis,
+        source,
+        operation.origin.span(),
+        known,
+    );
+}
 
+/// Report a library copy that stores where code outside this function may
+/// read it a pointer that may have been freed, as [`stored_away`] reports the
+/// store it is: `memcpy(pp, &x, 8)` after `free(x)`, with `pp` a parameter,
+/// puts in `*pp` what `*pp = x;` puts there (C17 7.24.2.1, 7.24.2.2), and was
+/// only the doubt [`handed`] raises about what the call is handed (#652).
+///
+/// **What the copy carries is the local its source names**, where the source
+/// is that local's address and nothing else, `&x`, so that `x` is asked by
+/// name as the store asks it; otherwise what the source points at. And `x`
+/// is not escaped for being handed to the copy, since a copy reads its
+/// source and keeps no address of it: see `Allocations::copy_sources`.
+///
+/// Answers the source argument where what it said is a proof, which
+/// [`handed`] then asks nothing of, so that one defect is one report, the
+/// proof (ADR-0057's rule for a read already reported).
+pub(super) fn copied_away(
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    analysis: &Allocations<'_>,
+    terminator: &Terminator,
+    known: &Known,
+) -> Option<Place> {
+    let Terminator::Call {
+        callee,
+        arguments,
+        destination: _,
+        then: _,
+        origin,
+    } = terminator
+    else {
+        return None;
+    };
+    // A body here is what runs, as the departure door reads one.
+    if analysis.unit.function(*callee).is_defined()
+        || !matches!(analysis.callee(*callee), Callee::Copies)
+    {
+        return None;
+    }
+    let (Some(Operand::Copy(to)), Some(Operand::Copy(from))) =
+        (arguments.first(), arguments.get(1))
+    else {
+        return None;
+    };
+    let mut place = to.clone();
+    place.projection.push(Projection::Deref);
+    if !known.leaves(&place) {
+        return None;
+    }
+    let function = analysis.unit.function(analysis.function);
+    let held = &known.points_to[from.local.index()];
+    let named: Vec<usize> = held.writes_to.ones().collect();
+    let source = match named.as_slice() {
+        [only]
+            if from.projection.is_empty()
+                && held.sites().next().is_none()
+                && matches!(held.offset, Offset::Zero)
+                && !(held.lost || held.loaded || held.foreign) =>
+        {
+            Place::local(
+                function
+                    .locals()
+                    .nth(*only)
+                    .expect("an edge names a local of this function"),
+            )
+        }
+        _ => {
+            let mut source = from.clone();
+            source.projection.push(Projection::Deref);
+            source
+        }
+    };
+    let before = findings.len();
+    asked_as_stored(findings, said, analysis, &source, origin.span(), known);
+    findings[before..]
+        .iter()
+        .any(|finding| finding.conclusion == Conclusion::Unsafe)
+        .then(|| from.clone())
+}
+
+/// What [`stored_away`] and [`copied_away`] ask of what a store or a copy
+/// carries out, one place for the two doors so that they cannot ask it
+/// differently: whether it may have been freed, and below it at every
+/// level by [`freed_behind`].
+fn asked_as_stored(
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    analysis: &Allocations<'_>,
+    source: &Place,
+    at: Span,
+    known: &Known,
+) {
     let Some(verdict) = verdict(
         analysis.sources,
         Kind::StoreAfterFree,
@@ -2350,7 +2450,7 @@ pub(super) fn stored_away(
             said,
             analysis,
             source,
-            operation.origin.span(),
+            at,
             Kind::FreedBehindStore,
             known,
         );
@@ -2365,7 +2465,7 @@ pub(super) fn stored_away(
             function: analysis.function,
             kind: Kind::StoreAfterFree,
             conclusion: verdict.conclusion,
-            at: operation.origin.span(),
+            at,
             local: own_local(source),
             freed: verdict.freed,
             made: verdict.made,
@@ -2554,6 +2654,7 @@ pub(super) fn handed(
     function: &Function,
     terminator: &Terminator,
     known: &Known,
+    proved_copied: Option<&Place>,
 ) {
     let Terminator::Call {
         callee,
@@ -2571,6 +2672,11 @@ pub(super) fn handed(
     // freed pointer passed, which says more than what `tab` holds behind it.
     let mut silent: Vec<&Place> = Vec::new();
     for place in handed_places(analysis, function, *callee, arguments) {
+        // Not a copy's source [`copied_away`] proved stores a freed pointer:
+        // that is the one report (#652).
+        if proved_copied == Some(place) {
+            continue;
+        }
         let Some(verdict) = verdict(
             analysis.sources,
             Kind::ArgumentAfterFree,

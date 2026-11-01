@@ -1,0 +1,16 @@
+error[SC0414]: this stores `x` where code outside this function may read it, and it points to an allocation that was freed
+    ╭─[ a_freed_pointer_copied_out_through_a_parameter_by_memmove_is_reported.c:10:5 ]
+    │
+  5 │     int *x = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+  9 │     free(x);
+    │     ───┬───  
+    │        ╰───── freed here
+ 10 │     memmove(pp, &x, 8);
+    │     ─────────┬────────  
+    │              ╰────────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = help: store a pointer that is still allocated, or do not free this one before storing it
