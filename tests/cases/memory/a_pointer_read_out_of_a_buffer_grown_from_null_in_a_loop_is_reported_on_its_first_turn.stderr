@@ -1,0 +1,40 @@
+error[SC0401]: this frees `buf`, which may have been freed already
+   ╭─[ a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:8:23 ]
+   │
+ 8 │         int **grown = realloc(buf, 8);
+   │                       ───────┬───────  
+   │                              ╰───────── this may be its second free
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0401]: this frees `buf`, which this check stopped following
+   ╭─[ a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:9:23 ]
+   │
+ 9 │         if (!grown) { free(buf); return 1; }
+   │                       ────┬────  
+   │                           ╰────── this check cannot say what this points at
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0411]: `*buf` is read before anything was assigned to it
+    ╭─[ a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:11:14 ]
+    │
+ 11 │         int *p = *buf;
+    │              ────┬───  
+    │                  ╰───── read here
+────╯
+  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = help: assign to it before reading it, or allocate with `calloc`
+error[SC0401]: this frees `buf`, which may have been freed already
+    ╭─[ a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:16:5 ]
+    │
+ 16 │     free(buf);
+    │     ────┬────  
+    │         ╰────── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

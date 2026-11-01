@@ -1082,6 +1082,62 @@ impl Known {
         self.pour(&landings, &landed, &[]);
     }
 
+    /// Whether `local` certainly holds a null pointer as far as this value
+    /// says: it names no allocation, and nothing else, by
+    /// [`Self::names_no_more_than_its_sites`]. Such a pointer is null or
+    /// indeterminate, and handing an indeterminate one to a library function
+    /// is undefined already, so reading it as null reports nothing a correct
+    /// program does. A pointer null on one path only names what the other
+    /// path names, since a join unions them, and is not this. See
+    /// `parts::Leaves::TheOld`.
+    ///
+    /// Mutation: drop the test of `sites`, and
+    /// `a_pointer_read_out_of_what_realloc_of_a_live_block_returns_is_not_reported`
+    /// is `SC0411`.
+    pub(super) fn names_nothing(&self, local: LocalId) -> bool {
+        !self.points_to[local.index()].sites.any() && self.names_no_more_than_its_sites(local)
+    }
+
+    /// Whether every allocation `local` may name is [`Self::fresh`], it names
+    /// at least one, and it names nothing else, by
+    /// [`Self::names_no_more_than_its_sites`]. `realloc` handed it copies
+    /// indeterminate bytes into what it returns, which is fresh then, and if
+    /// the pointer is null after all it is fresh by C17 7.22.3.5 p3 too.
+    ///
+    /// Mutation: answer `false`, and
+    /// `a_pointer_read_out_of_what_realloc_of_a_block_nothing_wrote_returns_is_reported`
+    /// goes silent.
+    pub(super) fn names_only_fresh(&self, local: LocalId) -> bool {
+        let held = &self.points_to[local.index()];
+        held.sites.any()
+            && held.sites.ones().all(|site| self.fresh[site])
+            && self.names_no_more_than_its_sites(local)
+    }
+
+    /// Whether what `local` may hold is the allocations it names and nothing
+    /// else: no local's address, and nothing this check lost, read out of
+    /// memory, or that a caller or code this check cannot read may have
+    /// written there. Not `Held::writes_elsewhere`, which starts `true` as
+    /// the answer that gives up and so holds of a null local too.
+    ///
+    /// **The tests guard one another**: a pointer read out of memory is
+    /// `loaded` and, out of a caller's, `from_caller` as well, and one a call
+    /// this check cannot read may have written is `lost` and `foreign`, so
+    /// each dropped alone decides no case, measured. Dropped together,
+    /// `a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_fresh`
+    /// is `SC0411` about two correct programs.
+    fn names_no_more_than_its_sites(&self, local: LocalId) -> bool {
+        let held = &self.points_to[local.index()];
+        !held.writes_to.any()
+            && !held.lost
+            && !held.loaded
+            && !held.foreign
+            && !held.from_caller
+            && !held.lost_read
+            && !held.stale_read
+            && !held.unreplaced_read
+    }
+
     /// Pour `poured` into each of `containers`, and mark every array in
     /// `in_part` as one a pointer reaching it only by #639's rule was stored
     /// into memory for, whether or not there is a container: a store into a

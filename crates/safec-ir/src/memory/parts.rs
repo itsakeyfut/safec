@@ -104,12 +104,35 @@ pub(super) enum Makes {
     Product(usize, usize),
 }
 
+/// What an allocation function leaves in the object it makes.
+#[derive(Clone, Copy)]
+pub(super) enum Leaves {
+    /// Indeterminate bytes: `malloc` (C17 7.22.3.4 p2) and `aligned_alloc`
+    /// (7.22.3.1 p2). The allocation is `Known::fresh`. See ADR-0057.
+    Indeterminate,
+    /// Zero bits, which is a null pointer on every target here: `calloc`
+    /// (7.22.3.2 p2).
+    ZeroBits,
+    /// What the object it was handed held, up to the lesser of the two
+    /// sizes (7.22.3.5 p2), and indeterminate bytes where it was handed a
+    /// null pointer, since it then behaves as `malloc` for the size (p3):
+    /// `realloc`. Null is what this check's value can say certainly, a
+    /// constant `0` or a local that names nothing (`Known::names_nothing`);
+    /// a pointer null on one path only is read as the old object, because
+    /// the value has no "may be null" to tell it by (#689).
+    TheOld,
+}
+
 /// A library function this check reads by name.
 ///
 /// **One row says everything that is read about the name**, and a row that
 /// leaves a field out is `error[E0063]`: what it does to what it is handed,
 /// for the memory transfer; how far it reaches through which argument, for
-/// whether an access fits; and what it makes, where it allocates. Kept as
+/// whether an access fits; what it makes, where it allocates; and what it
+/// leaves in what it makes. A fact about a name read outside the table is a
+/// second reader to drift: `realloc(NULL, n)` was read as copying an old
+/// object while the name `malloc` alone was read as leaving indeterminate
+/// bytes (#689). Kept as
 /// three readers matching names of their own, adding a function that takes
 /// a length to the first and forgetting the second left `memmove(p, q, 64)`
 /// on four bytes silent with every test green. Found by review. See
@@ -123,6 +146,8 @@ pub(super) struct Library {
     pub(super) reaches: &'static [(usize, Reach)],
     /// How many bytes it makes, where it makes an allocation.
     pub(super) makes: Option<Makes>,
+    /// What it leaves in what it makes: `Some` exactly where `makes` is.
+    pub(super) leaves: Option<Leaves>,
 }
 
 /// Every library function this check reads by name, with what each is read
@@ -143,120 +168,140 @@ pub(super) const LIBRARY: &[Library] = &[
         callee: Callee::Frees,
         reaches: &[],
         makes: None,
+        leaves: None,
     },
     Library {
         name: "malloc",
         callee: Callee::Allocates,
         reaches: &[],
         makes: Some(Makes::Argument(0)),
+        leaves: Some(Leaves::Indeterminate),
     },
     Library {
         name: "calloc",
         callee: Callee::Allocates,
         reaches: &[],
         makes: Some(Makes::Product(0, 1)),
+        leaves: Some(Leaves::ZeroBits),
     },
     Library {
         name: "aligned_alloc",
         callee: Callee::Allocates,
         reaches: &[],
         makes: Some(Makes::Argument(1)),
+        leaves: Some(Leaves::Indeterminate),
     },
     Library {
         name: "realloc",
         callee: Callee::Reallocates,
         reaches: &[],
         makes: Some(Makes::Argument(1)),
+        leaves: Some(Leaves::TheOld),
     },
     Library {
         name: "memcpy",
         callee: Callee::Copies,
         reaches: &[(0, Reach::Length(2)), (1, Reach::Length(2))],
         makes: None,
+        leaves: None,
     },
     Library {
         name: "memmove",
         callee: Callee::Copies,
         reaches: &[(0, Reach::Length(2)), (1, Reach::Length(2))],
         makes: None,
+        leaves: None,
     },
     Library {
         name: "memset",
         callee: Callee::ReturnsFirst,
         reaches: &[(0, Reach::Length(2))],
         makes: None,
+        leaves: None,
     },
     Library {
         name: "strcpy",
         callee: Callee::ReturnsFirst,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         makes: None,
+        leaves: None,
     },
     Library {
         name: "strncpy",
         callee: Callee::ReturnsFirst,
         reaches: &[(0, Reach::Length(2)), (1, Reach::String)],
         makes: None,
+        leaves: None,
     },
     Library {
         name: "strcat",
         callee: Callee::ReturnsFirst,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         makes: None,
+        leaves: None,
     },
     Library {
         name: "strncat",
         callee: Callee::ReturnsFirst,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         makes: None,
+        leaves: None,
     },
     Library {
         name: "memcmp",
         callee: Callee::Opaque,
         reaches: &[(0, Reach::Length(2)), (1, Reach::Length(2))],
         makes: None,
+        leaves: None,
     },
     Library {
         name: "memchr",
         callee: Callee::Opaque,
         reaches: &[(0, Reach::Length(2))],
         makes: None,
+        leaves: None,
     },
     Library {
         name: "strlen",
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String)],
         makes: None,
+        leaves: None,
     },
     Library {
         name: "strcmp",
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         makes: None,
+        leaves: None,
     },
     Library {
         name: "strncmp",
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         makes: None,
+        leaves: None,
     },
     Library {
         name: "strchr",
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String)],
         makes: None,
+        leaves: None,
     },
     Library {
         name: "strrchr",
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String)],
         makes: None,
+        leaves: None,
     },
     Library {
         name: "strstr",
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         makes: None,
+        leaves: None,
     },
 ];
 
