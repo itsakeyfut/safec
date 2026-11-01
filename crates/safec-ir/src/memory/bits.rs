@@ -3,8 +3,8 @@
 /// A set of indices below `len`, a bit each.
 ///
 /// **What the memory check's square tables are made of**: [`Held::sites`],
-/// [`Held::writes_to`], [`Held::named_at_read`], [`Known::inside`] and
-/// [`Known::inside_locals`] each
+/// [`Held::writes_to`], [`Held::named_at_read`], [`Contents::inside`] and
+/// [`Contents::inside_locals`] each
 /// hold a bit per local for every local, and as `Vec<bool>` they spent a byte
 /// on each. Hand-written because this crate takes no dependencies
 /// (ADR-0011), and dense rather than a sorted list of indices so that its size
@@ -23,8 +23,8 @@
 /// [`Held::sites`]: super::parts::Held::sites
 /// [`Held::writes_to`]: super::parts::Held::writes_to
 /// [`Held::named_at_read`]: super::parts::Held::named_at_read
-/// [`Known::inside`]: super::known::Known::inside
-/// [`Known::inside_locals`]: super::known::Known::inside_locals
+/// [`Contents::inside`]: super::parts::Contents::inside
+/// [`Contents::inside_locals`]: super::parts::Contents::inside_locals
 #[derive(Clone, PartialEq, Eq)]
 pub(super) struct Bits {
     len: usize,

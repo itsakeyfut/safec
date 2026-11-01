@@ -1456,13 +1456,13 @@ fn locals_reached(function: &Function, value: &Rvalue, known: &Known) -> Vec<Loc
 /// stores were asked at the type they stored, and the receiver may read a
 /// wider one: `*m = c; use(pm);` with `m` a `void **` and `c` one `char` is
 /// asked what `m` holds, the objects the pointers stored there point at
-/// ([`Known::inside`], [`Known::inside_locals`]) by their size. What the
+/// ([`Contents::inside`](super::parts::Contents::inside), [`Contents::inside_locals`](super::parts::Contents::inside_locals)) by their size. What the
 /// record does not hold is not asked by its record, since asking it would
 /// doubt every pointer to a parameter's memory handed on (#627); it is
 /// asked by what it is believed to hold instead, from the type the
 /// departing value arrived as and from what was stored there
 /// ([`Held::contents_at_most`](super::parts::Held::contents_at_most),
-/// [`Known::stored_at_most`], #632). See ADR-0060.
+/// [`Contents::stored_at_most`](super::parts::Contents::stored_at_most), #632). See ADR-0060.
 fn contents_leaving(
     findings: &mut Vec<Finding>,
     departed: &mut Vec<(Span, Departure, Option<LocalId>, usize)>,
@@ -1578,13 +1578,14 @@ fn contents_leaving(
         let Some(width) = pointee_width(analysis, read_as).filter(|&width| width > 0) else {
             continue;
         };
-        let extents: Vec<Extent> = known.inside[site]
+        let extents: Vec<Extent> = known.contents[site]
+            .inside
             .ones()
             .map(|held| known.extent[held].unwrap_or(Extent::AtLeast(0)))
             .chain(
                 function
                     .locals()
-                    .filter(|local| known.inside_locals[site].get(local.index()))
+                    .filter(|local| known.contents[site].inside_locals.get(local.index()))
                     .map(|held| {
                         analysis
                             .unit
@@ -1594,7 +1595,7 @@ fn contents_leaving(
             )
             .collect();
         // And what was stored there that the record does not name, by what it
-        // was believed ([`Known::stored_at_most`], #632).
+        // was believed ([`Contents::stored_at_most`](super::parts::Contents::stored_at_most), #632).
         // A narrower stored bound is unknown even beside a record that
         // proves: the record names the objects the pointers it holds point
         // at, and the bound stands for a pointer it holds that names none,
@@ -1609,7 +1610,7 @@ fn contents_leaving(
             .type_levels(read_as)
             .unwrap_or_default()
             .stored_under(Some(width), analysis.deepest_pointer);
-        let stored_narrower = known.stored_at_most[site].narrower_than(&receiver);
+        let stored_narrower = known.contents[site].stored_at_most.narrower_than(&receiver);
         let fit = match (extents.is_empty(), stored_narrower) {
             (true, false) => continue,
             (true, true) => Fit::Unknown,
@@ -1741,11 +1742,11 @@ pub(super) fn slots_from(
             let Some(read_as) = read_as else {
                 if !untyped_sites.contains(&site) {
                     untyped_sites.push(site);
-                    sites.extend(known.inside[site].ones().map(|next| (next, None)));
+                    sites.extend(known.contents[site].inside.ones().map(|next| (next, None)));
                     locals.extend(
                         function
                             .locals()
-                            .filter(|local| known.inside_locals[site].get(local.index()))
+                            .filter(|local| known.contents[site].inside_locals.get(local.index()))
                             .map(|next| (next, None)),
                     );
                 }
@@ -1756,11 +1757,11 @@ pub(super) fn slots_from(
             }
             asked_sites.push((site, read_as));
             let below = pointee(analysis, read_as);
-            sites.extend(known.inside[site].ones().map(|next| (next, below)));
+            sites.extend(known.contents[site].inside.ones().map(|next| (next, below)));
             locals.extend(
                 function
                     .locals()
-                    .filter(|local| known.inside_locals[site].get(local.index()))
+                    .filter(|local| known.contents[site].inside_locals.get(local.index()))
                     .map(|next| (next, below)),
             );
         } else {

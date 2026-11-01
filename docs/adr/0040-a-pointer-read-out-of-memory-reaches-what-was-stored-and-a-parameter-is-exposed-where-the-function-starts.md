@@ -76,7 +76,7 @@ one bit per local; and a pointer parameter exposed at entry.**
 of a library function that returns its first argument, may be a pointer read
 out of memory, the call reaches what that memory may hold: for a read through
 one `Deref` of a local holding sites and nothing it lost, the union of
-`Known::inside` over those sites; otherwise every site any allocation's
+`Contents::inside` over those sites; otherwise every site any allocation's
 `inside` row holds, which this record calls *what is stored*. The same answer is
 recorded as the contents of an allocation a write stores such a pointer into,
 and is exposed at once by a write this check cannot place. The report is not
@@ -117,8 +117,8 @@ reason the parameter's own site is exposed. A load through a local that carries
 it carries it too, so `pp = *ppp; q = *pp;` is `q = **ppp`. The cost is the same
 one level in: such a pointer read after any call this check cannot read is
 doubted (#281). Stored into an allocation this function made, it marks the
-allocation, `Known::from_caller`: a load out of it carries the mark, and a call
-this check cannot read makes the allocation `Known::stale`, so a load out of it
+allocation, `Contents::from_caller`: a load out of it carries the mark, and a call
+this check cannot read makes the allocation `Contents::stale`, so a load out of it
 afterwards is one this check stopped following, whether or not the call can
 reach the allocation, since what it may free is the caller's (#302). A load
 is asked about every allocation it reads through, so `r = **bb;` is `b = *bb;
@@ -162,9 +162,9 @@ nothing about one read after it: `q = *pp; free(q); q = *pp; return *q;`
 reads `*pp` again, gets the pointer it just freed, and that load was a fresh
 value the use was believed for, on every execution a use after free
 ([#482](https://github.com/itsakeyfut/safec/issues/482)). So the memory itself
-is marked, `Known::from_caller` on a pointer parameter's site where the function
+is marked, `Contents::from_caller` on a pointer parameter's site where the function
 starts and on an opaque call's result once the call returns, and the free or
-call makes it `Known::stale` as it does an allocation such a pointer was stored
+call makes it `Contents::stale` as it does an allocation such a pointer was stored
 in; a load out of it afterwards is one this check stopped following. The
 result is marked after its call rather than from the start, because the call
 that returns it cannot have freed through it, and marked from the start it
@@ -198,7 +198,7 @@ Reading a container that may itself hold a load as though it did not fails
 Leaving `memset`'s arguments out fails
 `what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call` alone.
 
-**Contents.** The block that records into `Known::inside` ignoring `read_out`
+**Contents.** The block that records into `Contents::inside` ignoring `read_out`
 fails `a_pointer_copied_from_one_table_to_another_is_inside_both` alone.
 
 **The bit.** Never setting it in the direct assignment fails
@@ -257,11 +257,11 @@ Marking only the first of several parameters fails
 `a_pointer_read_again_out_of_a_second_parameter_after_a_free_is_doubted`, and
 joining the mark as an intersection fails
 `a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted`.
-Through a store: the store never marking `Known::from_caller` fails
+Through a store: the store never marking `Contents::from_caller` fails
 `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call`
 and `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_before_a_call`; the call never making a marked
-allocation `Known::stale` fails the first; `reads_caller_memory` ignoring a
-marked site fails the second; the store marking `Known::stale` at once fails
+allocation `Contents::stale` fails the first; `reads_caller_memory` ignoring a
+marked site fails the second; the store marking `Contents::stale` at once fails
 `a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence`;
 the join dropping the mark fails `a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call`;
 and `realloc` dropping it fails `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call`.

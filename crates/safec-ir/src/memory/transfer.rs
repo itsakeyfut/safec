@@ -16,8 +16,8 @@ use super::bits::Bits;
 use super::built::{built_from, named, replaced_by};
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known};
 use super::parts::{
-    Callee, Extent, Freeing, Held, LIBRARY, Levels, Library, Makes, Offset, PendingRead, Reached,
-    Read, Realloced, SiteState, bounded,
+    Callee, Contents, Extent, Freeing, Held, LIBRARY, Levels, Library, Makes, Offset, PendingRead,
+    Reached, Read, Realloced, SiteState, bounded,
 };
 use super::report::{Fit, fits, slots_from, slots_leaving};
 use super::{LostReason, derefs, handed_places};
@@ -688,35 +688,18 @@ impl Allocations<'_> {
         // possibly incomplete for every reader. See ADR-0045.
         let depth = derefs(source);
         if held.loaded && depth > 0 {
-            let (sites, locals) = value.levels_below(source.local, depth);
-            for site in sites {
-                held.hold(site, Offset::Unknown);
-            }
-            // **And the locals whose address it may be**, as edges, so a
-            // write through it lands there: `m = *t3; *m = r;` with `*t3 =
-            // &slot`. Not all of them, since the set is a lower bound.
-            // See ADR-0045.
-            for target in locals {
-                held.writes_to.set(target);
+            // What memory holds there, and the marks a load out of it
+            // carries, read as `built::built_from` reads them. See
+            // `Known::load_into`.
+            let named_a_local = value.load_into(
+                &mut held,
+                source.local,
+                depth,
+                &|local| self.is_array(function, local),
+                self.reads_caller_memory(source.local, depth, value),
+            );
+            if named_a_local {
                 held.writes_elsewhere = true;
-                // And it may be a pointer that reached an array only by
-                // #639's rule. See `Known::stored_in_part`.
-                if value.stored_in_part[target] {
-                    held.array_edge = true;
-                }
-            }
-            // Or read out of a local that holds one, which no store put
-            // there: `e = m + 1; f = *pe;` with `pe = &e`. Not an array,
-            // whose record gathers every store into it, an earlier turn's
-            // too: a store into one marks `stored_in_part`, which a turn
-            // clears. Found by review of #667.
-            if value
-                .levels_below(source.local, depth - 1)
-                .1
-                .into_iter()
-                .any(|local| !self.is_array(function, local) && value.points_to[local].array_edge)
-            {
-                held.array_edge = true;
             }
             // **Believed only where every local it may be read out of fits
             // what it is read as.** A local is no memory with a door: an
@@ -744,33 +727,6 @@ impl Allocations<'_> {
                 if !fits_each {
                     held.believed = None;
                 }
-            }
-            // Read out of an allocation that may hold one that is gone.
-            // See ADR-0045.
-            if value.stale_below(source.local, depth) {
-                held.lost = true;
-                held.stale_read = true;
-            }
-            // Read out of an allocation that may hold a slot a call could not
-            // replace, which is asked where it is handed by address and
-            // nowhere else. See ADR-0047.
-            if value.marked_below(source.local, depth, &value.unreplaced) {
-                held.unreplaced_read = true;
-            }
-            // Read out of an allocation that may hold a lost value, which is
-            // made lost if a lost value goes. See `Held::lost_read`.
-            if value.marked_below(source.local, depth, &value.holds_lost) {
-                held.lost_read = true;
-            }
-            // Read through a pointer to a local this check lost, carrying
-            // whether what it lost may be gone, as the local does. See
-            // ADR-0045.
-            if value.lost_through(source.local, depth) {
-                held.lost = true;
-                held.stale_read |= value.stale_through(source.local, depth);
-            }
-            if self.reads_caller_memory(source.local, depth, value) {
-                held.from_caller = true;
             }
             // The question the report asks at this read, so that a value
             // carrying the mark is always one reported where it was read.
@@ -862,7 +818,7 @@ impl Allocations<'_> {
     /// one level further in, `q = **ppp` spelled `pp = *ppp; q = *pp;`, and
     /// without it `q` held nothing a call could make lost; the third is the
     /// same read after a store, `*box = q; r = *box;` or `r = **bb;`, which
-    /// [`Known::from_caller`] marks. Below the first level a load also reads
+    /// [`Contents::from_caller`] marks. Below the first level a load also reads
     /// what is reachable to code this check cannot read, in
     /// [`Known::levels_below`] (#486), which doubts `r = **bb;` without the
     /// third; the third still decides whether `free(**bb)` frees what a
@@ -877,7 +833,7 @@ impl Allocations<'_> {
         // At least the local's own allocations, which a load with no
         // dereference in its place, an element, still reads through.
         held.from_caller
-            || value.marked_below(local, depth.max(1), &value.from_caller)
+            || value.marked_below(local, depth.max(1), |contents| contents.from_caller)
             || value.caller_through(local, depth)
             // **Only for a local this check lost**, measured: an exposed
             // parameter's site is marked `from_caller` where the function
@@ -965,7 +921,7 @@ impl Allocations<'_> {
         {
             return held
                 .sites()
-                .flat_map(|container| known.inside[container].ones())
+                .flat_map(|container| known.contents[container].inside.ones())
                 .collect();
         }
         known.stored()
@@ -1303,20 +1259,14 @@ impl Allocations<'_> {
             escaped,
             handed_away,
             exposed,
-            inside,
-            stale,
-            unreplaced,
-            holds_lost,
+            contents,
             fresh,
-            from_caller,
-            inside_locals,
             realloced,
             pending,
             calls,
             exposed_after_call,
             lost_exposed,
             extent,
-            stored_at_most,
             handed_at_most,
             handed_contents_at_most,
             unwritten,
@@ -1414,10 +1364,6 @@ impl Allocations<'_> {
         for (here, there) in exposed_locals.iter_mut().zip(&from.exposed_locals) {
             *here = *here || *there;
         }
-        // Bounds, so the lower of two, and a side with none is no bound.
-        for (here, there) in stored_at_most.iter_mut().zip(&from.stored_at_most) {
-            here.bound_by(there);
-        }
         // Bounds, so the lower of two at every level. See
         // `Known::handed_contents_at_most`.
         for (here, there) in handed_contents_at_most
@@ -1455,10 +1401,6 @@ impl Allocations<'_> {
         for (here, there) in fresh.iter_mut().zip(&from.fresh) {
             *here = *here && *there;
         }
-        // A may-fact, so a union.
-        for (here, there) in holds_lost.iter_mut().zip(&from.holds_lost) {
-            *here |= there;
-        }
         // Kept only where both arms remember the same `realloc`: a fact one
         // arm lacks is one a branch after the join cannot act on. See ADR-0039.
         for (here, there) in realloced.iter_mut().zip(&from.realloced) {
@@ -1482,23 +1424,6 @@ impl Allocations<'_> {
             if here != there || disagree {
                 *here = None;
             }
-        }
-        // A local's address stored on one arm may be there where the arms
-        // meet, as a site is. See ADR-0045.
-        for (here, there) in inside_locals.iter_mut().zip(&from.inside_locals) {
-            here.union_with(there);
-        }
-        // Marked on one arm is marked where the arms meet. See ADR-0045.
-        for (here, there) in stale.iter_mut().zip(&from.stale) {
-            *here = *here || *there;
-        }
-        // And so is this mark, for the same reason. See ADR-0047.
-        for (here, there) in unreplaced.iter_mut().zip(&from.unreplaced) {
-            *here = *here || *there;
-        }
-        // And so is what may hold the caller's. See ADR-0040.
-        for (here, there) in from_caller.iter_mut().zip(&from.from_caller) {
-            *here = *here || *there;
         }
 
         for (here, there) in points_to.iter_mut().zip(&from.points_to) {
@@ -1535,8 +1460,10 @@ impl Allocations<'_> {
         for (here, there) in exposed.iter_mut().zip(&from.exposed) {
             *here = *here || *there;
         }
-        for (row, other) in inside.iter_mut().zip(&from.inside) {
-            row.union_with(other);
+        // What each allocation may contain, every field at once. See
+        // `Contents::absorbed`.
+        for (here, there) in contents.iter_mut().zip(&from.contents) {
+            here.absorbed(there);
         }
 
         // **A union, because a read on either arm is a read some execution
@@ -1760,15 +1687,10 @@ impl Analysis for Allocations<'_> {
             escaped: vec![false; self.locals],
             handed_away: vec![false; self.locals],
             exposed: vec![false; self.locals],
-            inside: vec![Bits::new(self.locals); self.locals],
-            stale: vec![false; self.locals],
-            unreplaced: vec![false; self.locals],
-            holds_lost: vec![false; self.locals],
+            contents: vec![Contents::none(self.locals); self.locals],
             // A parameter's memory is the caller's, which may have written it.
             fresh: vec![false; self.locals],
-            inside_locals: vec![Bits::new(self.locals); self.locals],
             realloced: vec![None; self.locals],
-            from_caller: vec![false; self.locals],
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
             pending: BTreeMap::new(),
@@ -1778,7 +1700,6 @@ impl Analysis for Allocations<'_> {
             // Nothing is made yet but the parameters, below.
             extent: vec![None; self.locals],
             // Nothing stored and nothing handed to a call yet.
-            stored_at_most: vec![Levels::default(); self.locals],
             handed_at_most: vec![None; self.locals],
             handed_contents_at_most: vec![Levels::default(); self.locals],
             // Every local that may hold a pointer, but the parameters, which
@@ -1839,7 +1760,7 @@ impl Analysis for Allocations<'_> {
         // following. Unmarked, `q = *pp; free(q); q = *pp; return *q;` read
         // `*pp` again as a fresh value and was believed (#482). See ADR-0040.
         for parameter in &self.exposed_parameters {
-            known.from_caller[parameter.index()] = true;
+            known.contents[parameter.index()].from_caller = true;
         }
 
         known
@@ -2118,12 +2039,12 @@ impl Analysis for Allocations<'_> {
                     // **A pointer that reaches an array only by #639's rule,
                     // stored**, into memory or into a local through its
                     // address, either of which a load reads back without its
-                    // element. See `Known::stored_in_part`.
-                    if written.array_edge {
-                        for target in written.writes_to.ones() {
-                            value.stored_in_part[target] = true;
-                        }
-                    }
+                    // element. Poured below. See `Known::stored_in_part`.
+                    let in_part: Vec<usize> = if written.array_edge {
+                        written.writes_to.ones().collect()
+                    } else {
+                        Vec::new()
+                    };
                     let mut carried: Vec<usize> = written.sites().collect();
                     // And what a pointer read out of memory may be, which the
                     // sites above do not name: `*b = *a;` stores in `b` what
@@ -2231,13 +2152,86 @@ impl Analysis for Allocations<'_> {
                     // `*w = m; free(m); q = *pp; return *q;` with `f(&x, &x)`
                     // read back nothing at `*pp` and was believed (#489).
                     // Reachable to code this check cannot read, which is what
-                    // another parameter can name, and not `Known::from_caller`,
+                    // another parameter can name, and not `Contents::from_caller`,
                     // which a buffer of this function's own gains by holding
                     // a caller's pointer. Found by review.
                     let reachable = value.reachable_now();
                     let handed_over = containers
                         .iter()
                         .any(|container| reachable.contains(container));
+                    // **A pointer read out of memory is bounded by what it
+                    // is believed**, whatever the record says it names:
+                    // the sites a load holds are what the walk every load
+                    // takes found there, at an offset nobody said, and may
+                    // be the caller's memory or another allocation rather
+                    // than what it points at. `char *c = *cc; *m = c;`
+                    // handed `m` on as an `int **` with nothing asked, and
+                    // so did the same with `*m = malloc(4);` first, whose
+                    // site the load also named (#632). **Only a load**,
+                    // which is what `written.loaded` asks: a pointer this
+                    // check lost or a call wrote believes nothing too, and
+                    // bounding it at zero doubted a lost pointer to whole
+                    // allocations read back, which this issue is not
+                    // about. A load that believes nothing is bounded at
+                    // zero, which is what it was asked. See ADR-0060.
+                    let bound = (self.may_be_pointer(function, &operation.place) && written.loaded)
+                        .then(|| written.believed.unwrap_or(0));
+                    // **And below it, what the stored pointer believes of
+                    // its own memory, whatever it is**: a parameter or a
+                    // call's result too, which name a site the record
+                    // holds and leave what that site holds to what they
+                    // arrived as. `*box = m;` with `m` a `void **`
+                    // parameter, read back through an `int ***`, believed
+                    // whole `int`s two levels down (#634). A local's
+                    // address and an allocation believe nothing here, so
+                    // record nothing. See `Contents::stored_at_most`.
+                    //
+                    // Mutation: record level 0 alone, and
+                    // `a_parameter_stored_in_memory_and_read_back_is_believed_as_it_arrived_below_its_first_level`
+                    // goes silent.
+                    let stored = written
+                        .contents_at_most
+                        .stored_under(bound, self.deepest_pointer);
+                    // **What the store carries, poured into each allocation it
+                    // lands in**, every field named so that a mark added to
+                    // `Contents` is answered here, and poured below. **After
+                    // the landing and the exposure**, as it always was: poured
+                    // first, a container already reachable makes what it
+                    // carries reachable too, and the landing then records it
+                    // inside itself: a pointer this check cannot place cannot
+                    // point into what it carries when only this store made
+                    // that reachable. See `Known::pour`.
+                    //
+                    // The marks, each for its reason: **a load out of a marked
+                    // allocation is one still when it is stored**, so the
+                    // allocation it is stored in is marked too: `*t4 = *t2;`,
+                    // or the same through a local, was followed as nothing and
+                    // read in silence, found by review, and not any lost
+                    // value, for the reason `Held::stale_read` gives
+                    // (ADR-0045); the slot a call could not replace, for the
+                    // same reason (ADR-0047); **a lost value**, which records
+                    // nothing in the container, so that a later free of a lost
+                    // value can find it (#503, ADR-0045); and a pointer read
+                    // out of caller memory keeps that fact where it is stored
+                    // (ADR-0040).
+                    let mut poured = Contents::none(value.points_to.len());
+                    for &site in &carried {
+                        poured.inside.set(site);
+                    }
+                    // And the locals whose address it carries, which are no
+                    // site. See ADR-0045.
+                    for target in written.writes_to.ones() {
+                        poured.inside_locals.set(target);
+                    }
+                    let poured = Contents {
+                        inside: poured.inside,
+                        inside_locals: poured.inside_locals,
+                        stored_at_most: stored,
+                        stale: written.stale_read,
+                        unreplaced: written.unreplaced_read,
+                        holds_lost: written.lost || written.lost_read,
+                        from_caller: written.from_caller,
+                    };
                     if (unplaced || unnamed || handed_over)
                         && self.may_be_pointer(function, &operation.place)
                     {
@@ -2245,6 +2239,9 @@ impl Analysis for Allocations<'_> {
                         value.landed_where_unknown_code_points(&carried, &locals);
                     }
                     if unplaced {
+                        // No container, so what is poured is the arrays it
+                        // marks alone.
+                        value.pour(&[], &poured, &in_part);
                         value.expose(self.sources, carried, Some(operation.origin.span()));
                     } else {
                         if unnamed {
@@ -2254,77 +2251,7 @@ impl Analysis for Allocations<'_> {
                                 Some(operation.origin.span()),
                             );
                         }
-                        // **A pointer read out of memory is bounded by what it
-                        // is believed**, whatever the record says it names:
-                        // the sites a load holds are what the walk every load
-                        // takes found there, at an offset nobody said, and may
-                        // be the caller's memory or another allocation rather
-                        // than what it points at. `char *c = *cc; *m = c;`
-                        // handed `m` on as an `int **` with nothing asked, and
-                        // so did the same with `*m = malloc(4);` first, whose
-                        // site the load also named (#632). **Only a load**,
-                        // which is what `written.loaded` asks: a pointer this
-                        // check lost or a call wrote believes nothing too, and
-                        // bounding it at zero doubted a lost pointer to whole
-                        // allocations read back, which this issue is not
-                        // about. A load that believes nothing is bounded at
-                        // zero, which is what it was asked. See ADR-0060.
-                        let bound = (self.may_be_pointer(function, &operation.place)
-                            && written.loaded)
-                            .then(|| written.believed.unwrap_or(0));
-                        // **And below it, what the stored pointer believes of
-                        // its own memory, whatever it is**: a parameter or a
-                        // call's result too, which name a site the record
-                        // holds and leave what that site holds to what they
-                        // arrived as. `*box = m;` with `m` a `void **`
-                        // parameter, read back through an `int ***`, believed
-                        // whole `int`s two levels down (#634). A local's
-                        // address and an allocation believe nothing here, so
-                        // record nothing. See `Known::stored_at_most`.
-                        //
-                        // Mutation: record level 0 alone, and
-                        // `a_parameter_stored_in_memory_and_read_back_is_believed_as_it_arrived_below_its_first_level`
-                        // goes silent.
-                        let stored = written
-                            .contents_at_most
-                            .stored_under(bound, self.deepest_pointer);
-                        for container in &containers {
-                            value.stored_at_most[*container].bound_by(&stored);
-                            for &site in &carried {
-                                value.inside[*container].set(site);
-                            }
-                            // And the locals whose address it carries, which
-                            // are no site. See ADR-0045.
-                            for target in written.writes_to.ones() {
-                                value.inside_locals[*container].set(target);
-                            }
-                            // **A load out of a marked allocation is one still
-                            // when it is stored**, so the allocation it is
-                            // stored in is marked too: `*t4 = *t2;`, or the
-                            // same through a local, was followed as nothing
-                            // and read in silence. Found by review. Not any
-                            // lost value, for the reason `Held::stale_read`
-                            // gives. See ADR-0045.
-                            if written.stale_read {
-                                value.stale[*container] = true;
-                            }
-                            // And this mark, for the same reason. See
-                            // ADR-0047.
-                            if written.unreplaced_read {
-                                value.unreplaced[*container] = true;
-                            }
-                            // **And a lost value**, which records nothing in
-                            // the container, so that a later free of a lost
-                            // value can find it (#503). See ADR-0045.
-                            if written.lost || written.lost_read {
-                                value.holds_lost[*container] = true;
-                            }
-                            // And a pointer read out of caller memory keeps
-                            // that fact where it is stored. See ADR-0040.
-                            if written.from_caller {
-                                value.from_caller[*container] = true;
-                            }
-                        }
+                        value.pour(&containers, &poured, &in_part);
                         // Stored where code this check cannot read already
                         // reaches is reachable to it from now on, which no
                         // call marks until the next one: a read before this
@@ -2869,7 +2796,9 @@ impl Analysis for Allocations<'_> {
                 Operand::Copy(place) => {
                     may_hold_lost(&value.points_to[place.local.index()])
                         || (!place.projection.is_empty()
-                            && value.marked_below(place.local, derefs(place), &value.holds_lost))
+                            && value.marked_below(place.local, derefs(place), |contents| {
+                                contents.holds_lost
+                            }))
                         || value
                             .written_through(place.local)
                             .into_iter()
@@ -2879,7 +2808,7 @@ impl Analysis for Allocations<'_> {
             }) || value
                 .closure(handed_memory)
                 .into_iter()
-                .any(|site| value.holds_lost[site])
+                .any(|site| value.contents[site].holds_lost)
                 || (0..value.escaped.len())
                     .any(|local| value.escaped[local] && may_hold_lost(&value.points_to[local]))
         };
@@ -3070,7 +2999,9 @@ impl Analysis for Allocations<'_> {
                             // And a slot a call could not replace, copied.
                             // See ADR-0047.
                             let unreplaced =
-                                value.marked_below(source.local, from_depth + 1, &value.unreplaced);
+                                value.marked_below(source.local, from_depth + 1, |contents| {
+                                    contents.unreplaced
+                                });
                             // And what was read out of caller memory, as a
                             // store of a load of the source would carry it:
                             // `memcpy(box, pp, 8)` is `*box = *pp;`. Found by
@@ -3081,9 +3012,11 @@ impl Analysis for Allocations<'_> {
                             // as a store of a load of the source would carry
                             // it: `*box = u; memcpy(box2, box, 8); free(u);
                             // r = *box2;` read `*r` in silence. Found by review.
-                            // See `Known::holds_lost`.
+                            // See `Contents::holds_lost`.
                             let holds_lost =
-                                value.marked_below(source.local, from_depth + 1, &value.holds_lost);
+                                value.marked_below(source.local, from_depth + 1, |contents| {
+                                    contents.holds_lost
+                                });
                             let into: Vec<usize> = if into_depth == 0 {
                                 value.sites_of(dest.local).collect()
                             } else {
@@ -3120,6 +3053,25 @@ impl Analysis for Allocations<'_> {
                             // usual source is a `void *`, through which a load
                             // has no pointer type to be one; asking a load for
                             // it carried nothing from one. Found by review.
+                            // **And whether what it copies may be a pointer
+                            // that reaches an array only by #639's rule**, as a
+                            // store of it says: the locals it may be read out
+                            // of, one level below the source, asked as a load
+                            // of the source asks them. Into memory it marks the
+                            // arrays it reaches, `Known::stored_in_part`, below;
+                            // into a local's address the local carries it, as a
+                            // store through the address gives it. Without either
+                            // `e = m + 1; memcpy(box, &e, 8); f = box[0]; *f =
+                            // &x;`, and the same into `&f`, left `m[0]` believed
+                            // written where the store form is doubted.
+                            let moved = value
+                                .levels_below(source.local, from_depth)
+                                .1
+                                .into_iter()
+                                .any(|local| {
+                                    !self.is_array(function, local)
+                                        && value.points_to[local].array_edge
+                                });
                             if !targets.is_empty() {
                                 let mut held = Held::none(value.points_to.len());
                                 for &site in &copied {
@@ -3138,6 +3090,7 @@ impl Analysis for Allocations<'_> {
                                 held.unreplaced_read = unreplaced;
                                 held.lost_read = holds_lost;
                                 held.from_caller = caller;
+                                held.array_edge = moved;
                                 for &target in &targets {
                                     value.points_to[target].accumulated(&held);
                                 }
@@ -3174,29 +3127,32 @@ impl Analysis for Allocations<'_> {
                                 from_depth + 1,
                                 self.deepest_pointer,
                             ));
-                            for container in into {
-                                value.stored_at_most[container].bound_by(&copied_bound);
-                                for &site in &copied {
-                                    value.inside[container].set(site);
-                                }
-                                // And the locals whose address it copies.
-                                // See ADR-0045.
-                                for &target in &copied_locals {
-                                    value.inside_locals[container].set(target);
-                                }
-                                if marked {
-                                    value.stale[container] = true;
-                                }
-                                if unreplaced {
-                                    value.unreplaced[container] = true;
-                                }
-                                if caller {
-                                    value.from_caller[container] = true;
-                                }
-                                if holds_lost {
-                                    value.holds_lost[container] = true;
-                                }
+                            let mut poured = Contents::none(value.points_to.len());
+                            for &site in &copied {
+                                poured.inside.set(site);
                             }
+                            // And the locals whose address it copies. See
+                            // ADR-0045.
+                            for &target in &copied_locals {
+                                poured.inside_locals.set(target);
+                            }
+                            let in_part: Vec<usize> = if moved {
+                                copied_locals.iter().copied().collect()
+                            } else {
+                                Vec::new()
+                            };
+                            // Every field named, as a store's are. See
+                            // `Known::pour`.
+                            let poured = Contents {
+                                inside: poured.inside,
+                                inside_locals: poured.inside_locals,
+                                stored_at_most: copied_bound,
+                                stale: marked,
+                                unreplaced,
+                                holds_lost,
+                                from_caller: caller,
+                            };
+                            value.pour(&into, &poured, &in_part);
                         }
                     }
                 }
@@ -3619,7 +3575,7 @@ impl Analysis for Allocations<'_> {
                 }
                 for &container in &stored {
                     for &site in &stored {
-                        value.inside[container].set(site);
+                        value.contents[container].inside.set(site);
                     }
                 }
                 // **What it wrote there it handed over**, as a callee's
@@ -3786,38 +3742,21 @@ impl Analysis for Allocations<'_> {
                             let handed = value.points_to[source.local.index()]
                                 .contents_at_most
                                 .clone();
-                            value.stored_at_most[site].bound_by(&handed);
+                            value.contents[site].stored_at_most.bound_by(&handed);
                         }
                     }
                 }
+                // **What the old allocation held, the new one holds after the
+                // copy**: its record poured whole, the marks with the rows,
+                // since what the old allocation may hold of a reborn site is
+                // what the new one holds (ADR-0045), the caller's mark for the
+                // same reason (ADR-0040), and whether a lost value was stored
+                // in it, or a free of one after `box = realloc(box, 16);`
+                // finds nothing in the new allocation to mark, found by
+                // review (`Contents::holds_lost`). See `Known::pour`.
                 for old in old {
-                    let (inside, inside_locals) =
-                        (value.inside[old].clone(), value.inside_locals[old].clone());
-                    value.inside[site].union_with(&inside);
-                    value.inside_locals[site].union_with(&inside_locals);
-                    let held = value.stored_at_most[old].clone();
-                    value.stored_at_most[site].bound_by(&held);
-                    // And the mark with the row: what the old allocation may
-                    // hold of a reborn site is what the new one holds after
-                    // the copy. See ADR-0045.
-                    if value.stale[old] {
-                        value.stale[site] = true;
-                    }
-                    if value.unreplaced[old] {
-                        value.unreplaced[site] = true;
-                    }
-                    // And the caller's mark, for the same reason. See
-                    // ADR-0040.
-                    if value.from_caller[old] {
-                        value.from_caller[site] = true;
-                    }
-                    // And whether a lost value was stored in it, or a free of
-                    // one after `box = realloc(box, 16);` finds nothing in the
-                    // new allocation to mark. Found by review. See
-                    // `Known::holds_lost`.
-                    if value.holds_lost[old] {
-                        value.holds_lost[site] = true;
-                    }
+                    let held = value.contents[old].clone();
+                    value.pour(&[site], &held, &[]);
                 }
                 if let Some(old) = realloced {
                     value.realloced[site] = Some(Realloced {
@@ -3857,7 +3796,7 @@ impl Analysis for Allocations<'_> {
                 // because a site's allocations are not told apart. So a load
                 // out of each turn's result is doubted, a false report the
                 // reader can see. See ADR-0040.
-                value.from_caller[site] = true;
+                value.contents[site].from_caller = true;
                 // **And it may be the lost value it was handed**, `id(*box)`
                 // returning `u` (#508), **or one an earlier call was handed**,
                 // as it holds every exposed site: `stash(u); r = fetch();`

@@ -12,7 +12,8 @@ use crate::source::{SourceMap, Span};
 
 use super::bits::Bits;
 use super::parts::{
-    Extent, Held, Levels, PendingRead, Reached, Read, ReadKey, Realloced, SiteState, read_key,
+    Contents, Extent, Held, Levels, Offset, PendingRead, Reached, Read, ReadKey, Realloced,
+    SiteState, read_key,
 };
 use super::{LostReason, derefs, inside, named};
 
@@ -54,60 +55,15 @@ pub(super) struct Known {
     /// unproves every exposed allocation still live, and may return any of
     /// them. See ADR-0039.
     pub(super) exposed: Vec<bool>,
-    /// Per site, the sites a pointer stored in that allocation may hold.
-    ///
-    /// What lets a pointer stored in the heap stay proved until something
-    /// that can reach the allocation holding it is handed to code this check
-    /// cannot read: `*tab = p; log_line();` leaves `p` alone, because nothing
-    /// exposed `tab`. Square in the locals, so a bit a pair, for the reason
-    /// [`Held::sites`] gives. See ADR-0039.
-    pub(super) inside: Vec<Bits>,
-    /// Per site, the locals whose address a pointer stored in that allocation
-    /// may hold: [`Self::inside`] for what is not a site.
-    ///
-    /// **A local's address is an edge, not a site** ([`Held::writes_to`],
-    /// ADR-0019), so a store of one recorded nothing and `*t3 = &slot; **t3
-    /// = r; free(r); return ***t3;` read nothing through `*t3`. Written by a
-    /// store of a value carrying edges, read by [`Known::levels_below`], so
-    /// a load out of the allocation carries the edges and a store two levels
-    /// down lands in the local. A table of its own because a site and a local
-    /// share an index. See ADR-0045.
-    pub(super) inside_locals: Vec<Bits>,
+    /// Per site, what the memory it names may contain: what a pointer stored
+    /// there may hold, how wide it is believed, and the marks a load out of it
+    /// carries. One record per site so that a door moving a value into memory
+    /// answers for every field at once. See [`Contents`].
+    pub(super) contents: Vec<Contents>,
     /// Per site, what a `realloc` that returned it was handed, until a branch
     /// on a pointer holding it says whether it succeeded. See [`Realloced`]
     /// and ADR-0039.
     pub(super) realloced: Vec<Option<Realloced>>,
-    /// Per site, whether what it contains may include an allocation that is
-    /// gone and whose site now names a new one.
-    ///
-    /// **[`Self::inside`]'s column, where [`Held::lose`] is a local's.** A
-    /// loop makes every allocation one `malloc` makes under one site, so `*t2 =
-    /// p; free(p);` on one turn and the next turn's `malloc` leave `t2`'s entry
-    /// naming the new, live allocation, and a load out of `t2` read it in
-    /// silence. Set where the site is reborn, the entry kept for what a call
-    /// reaches through it, and read by a
-    /// load out of the allocation as a pointer this check stopped following.
-    /// Set too where such a load is stored into another allocation, through
-    /// [`Held::stale_read`].
-    /// Nothing clears it: slots are not told apart, so a store into one may
-    /// leave the old pointer in another. See ADR-0045.
-    pub(super) stale: Vec<bool>,
-    /// Per site, whether it may contain a slot holding an allocation a call
-    /// this check cannot read reached through another route and could not
-    /// replace there. Set by [`Self::held_out_of_reach`], carried where what
-    /// a load out of it holds is stored or copied, and read through
-    /// [`Held::unreplaced_read`] by [`Self::handed_below`] alone. Nothing
-    /// clears it, since slots are not told apart. See ADR-0047.
-    pub(super) unreplaced: Vec<bool>,
-    /// Per site, whether a value this check lost may have been stored in it.
-    ///
-    /// **A lost value names no site**, so the free that releases it cannot
-    /// say which allocation went, and nothing links it to where it was
-    /// stored before: `*box = u; free(u); r = *box;` with `u` lost to a
-    /// rebirth read `*r` in silence (#503). [`Self::lost_may_be_gone`] reads
-    /// this to mark every such allocation `stale`. Nothing clears it, as
-    /// nothing clears `stale`. See ADR-0045.
-    pub(super) holds_lost: Vec<bool>,
     /// Per site, whether it is an allocation `malloc` or `aligned_alloc` made
     /// and nothing has written since, on every path: its contents are
     /// indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2). An intersection at a join, and
@@ -120,21 +76,6 @@ pub(super) struct Known {
     /// taking a fresh block's contents as empty is the unsound starting set
     /// #579 met.
     pub(super) fresh: Vec<bool>,
-    /// Per site, whether what it contains may include a pointer a caller or
-    /// a callee handed over: one [`Held::from_caller`] marks, stored here.
-    ///
-    /// **The mark lived on locals only**, so a store recorded the sites such
-    /// a pointer holds, which are none, and `*box = q; release_all(); r =
-    /// *box; return *r;` built where `return *q;` was reported. A load out of
-    /// a marked allocation reads caller memory, and a call this check cannot
-    /// read makes it [`Self::stale`]. Nothing clears it, for `stale`'s
-    /// reason. See ADR-0040.
-    ///
-    /// **A store is not the only producer.** A pointer parameter's site is
-    /// marked where the function starts, since what it points at is the
-    /// caller's memory, and a call this check cannot read marks its result's
-    /// site once it returns, since that is the callee's (#482).
-    pub(super) from_caller: Vec<bool>,
     /// What has been read through a pointer since the last sequence point.
     ///
     /// **Ordered containers because a lattice value has to be canonical, and
@@ -190,23 +131,6 @@ pub(super) struct Known {
     /// where it returns, and read by the question whether an access fits the
     /// object it reaches. See ADR-0060.
     pub(super) extent: Vec<Option<Extent>>,
-    /// Per site, how many bytes a pointer stored there that names nothing
-    /// [`Self::inside`] or [`Self::inside_locals`] records is believed to
-    /// point at, at most, at level 0, and what each pointer stored there
-    /// believed of its own memory at the levels below, with no bound where
-    /// no such pointer was stored. See [`Levels`].
-    ///
-    /// **What the record cannot say**: `char *c = *cc; *m = c;` stores a
-    /// pointer read out of the caller's memory, whose object nothing here
-    /// records, and `m` handed on as an `int **` was believed to hold whole
-    /// `int`s (#632). **And what the stored pointer arrived as**: `*box =
-    /// m;` with `m` a `void **` parameter names `m`'s site, which the record
-    /// holds, and left behind on `m` that what `m` points at holds pointers
-    /// nobody was asked the width of, so `box` read back through an `int
-    /// ***` believed whole `int`s two levels down (#634). A bound, so the
-    /// lower of two at a join, and kept when the site is made again, as
-    /// `inside` is. See ADR-0060.
-    pub(super) stored_at_most: Vec<Levels>,
     /// Per local, how many bytes a pointer a call may write into it is
     /// believed to point at, at most: the narrowest width the parameters
     /// it was handed through believe at its level, and `0` where one was a
@@ -551,13 +475,13 @@ impl Known {
     /// since nothing about the call made it so: `*t = a; release(a); use2(t);`
     /// was silent. And a reachable one is asked where the address handed
     /// passes through a pointer read out of an allocation
-    /// [`Self::unreplaced`] marks: `c = *h; use2(&c);` after a call that
+    /// [`Contents::unreplaced`] marks: `c = *h; use2(&c);` after a call that
     /// reached what `*h` holds through another route. **Never a proof**:
     /// [`Reached::Partial`] is always beside them, since the callee may only
     /// write there. See ADR-0042.
     ///
     /// **And a pointer this check lost, where the memory pointed at is
-    /// [`Self::stale`]**: it held an allocation a loop has since made again
+    /// [`Contents::stale`]**: it held an allocation a loop has since made again
     /// at the same site, so what it holds may be the old one, freed, while
     /// the site reads `Live` for the new one. A box filled on one turn and
     /// freed through on the next was returned, stored out or handed to a call
@@ -581,7 +505,7 @@ impl Known {
         let through_memory: BTreeSet<usize> = sites
             .iter()
             .copied()
-            .flat_map(|container| self.inside[container].ones().collect::<Vec<_>>())
+            .flat_map(|container| self.contents[container].inside.ones().collect::<Vec<_>>())
             .collect();
         let through_address: BTreeSet<usize> = locals
             .iter()
@@ -625,7 +549,7 @@ impl Known {
             let in_memory: BTreeSet<usize> = frontier
                 .0
                 .iter()
-                .flat_map(|&container| self.inside[container].ones().collect::<Vec<_>>())
+                .flat_map(|&container| self.contents[container].inside.ones().collect::<Vec<_>>())
                 .collect();
             let (next_sites, next_locals) = self.level_below(&frontier.0, &frontier.1);
             let new_sites: BTreeSet<usize> = next_sites.difference(&below).copied().collect();
@@ -648,7 +572,10 @@ impl Known {
             seen_locals.extend(new_locals.iter().copied());
             frontier = (new_sites, new_locals);
         }
-        if walked.iter().any(|&container| self.stale[container]) {
+        if walked
+            .iter()
+            .any(|&container| self.contents[container].stale)
+        {
             reached.push(Reached::Lost(LostReason::Other));
         }
         if !reached.is_empty() {
@@ -766,30 +693,35 @@ impl Known {
     }
 
     /// Whether a pointer read `depth` dereferences below `local` may be one
-    /// [`Self::stale`] says this check stopped following: whether any
+    /// [`Contents::stale`] says this check stopped following: whether any
     /// allocation the chain reads through, at any level, is marked.
     ///
     /// Walked as [`Self::stored_below`] walks what the levels contain, so the
     /// two answer the same places. Not for a lost local, whose load is
     /// answered by [`Self::stored`]. See ADR-0045.
     pub(super) fn stale_below(&self, local: LocalId, depth: usize) -> bool {
-        self.marked_below(local, depth, &self.stale)
+        self.marked_below(local, depth, |contents| contents.stale)
     }
 
     /// Whether any allocation a pointer read `depth` dereferences below
     /// `local` reads through, at any level, is set in `marks`, a per-site
-    /// column: [`Self::stale`] or [`Self::from_caller`].
+    /// column: [`Contents::stale`] or [`Contents::from_caller`].
     ///
     /// **One walk for both**, so that `r = **bb;` and `b = *bb; r = *b;` are
     /// asked about the same allocations: asked about the local's own sites
     /// alone, the first read `bb`'s allocation and never the one `*bb` names,
     /// and built in silence where the second was doubted. Found by review.
-    pub(super) fn marked_below(&self, local: LocalId, depth: usize, marks: &[bool]) -> bool {
+    pub(super) fn marked_below(
+        &self,
+        local: LocalId,
+        depth: usize,
+        marked: impl Fn(&Contents) -> bool,
+    ) -> bool {
         let Some((mut sites, mut locals)) = self.level_zero(local) else {
             return false;
         };
         for _ in 0..depth {
-            if sites.iter().any(|&site| marks[site]) {
+            if sites.iter().any(|&site| marked(&self.contents[site])) {
                 return true;
             }
             (sites, locals) = self.level_below(&sites, &locals);
@@ -820,7 +752,7 @@ impl Known {
     }
 
     /// One dereference further: what the allocations may contain
-    /// ([`Self::inside`], [`Self::inside_locals`]) and what the locals hold,
+    /// ([`Contents::inside`], [`Contents::inside_locals`]) and what the locals hold,
     /// their sites and the locals their own address edges name.
     ///
     /// **A local is stepped through as an allocation is**, the read half of
@@ -839,8 +771,8 @@ impl Known {
         let mut next_sites = BTreeSet::new();
         let mut next_locals = BTreeSet::new();
         for &container in sites {
-            next_sites.extend(self.inside[container].ones());
-            next_locals.extend(self.inside_locals[container].ones());
+            next_sites.extend(self.contents[container].inside.ones());
+            next_locals.extend(self.contents[container].inside_locals.ones());
         }
         for &held in locals {
             next_sites.extend(self.points_to[held].sites());
@@ -872,12 +804,12 @@ impl Known {
         for level in 0..depth {
             (sites, locals) = self.level_below(&sites, &locals);
             // **What memory this check cannot place may hold**, beside what
-            // `Known::inside` recorded. At the first dereference, `level ==
+            // `Contents::inside` recorded. At the first dereference, `level ==
             // 0`, only when `local` is a load or a pointer a call wrote. At
             // every later one whatever `local` is, because the pointer
             // dereferenced there was read out of memory and is a load: `q =
             // **ppp;` reads what `t = *ppp; q = *t;` reads through `t`.
-            // Through `Known::inside` alone, `**ppp = m; free(m); q = **ppp;
+            // Through `Contents::inside` alone, `**ppp = m; free(m); q = **ppp;
             // return *q;` was believed at `*q` (#486). It reads more than a
             // chain of this function's own allocations can hold, a doubt the
             // reader sees, and the same one the chain written through locals
@@ -891,7 +823,7 @@ impl Known {
             // store there recorded: `*a = &x;` through a load `a` puts
             // `x` where `t = *b;` through another load may read it.
             for &site in &reached {
-                locals.extend(self.inside_locals[site].ones());
+                locals.extend(self.contents[site].inside_locals.ones());
             }
             sites.extend(reached);
         }
@@ -935,7 +867,7 @@ impl Known {
     /// contain, from [`Self::level_zero`].
     ///
     /// **A chain written as one place is the chain written through locals**:
-    /// `q = **t3` is `q2 = *t3; q = *q2;`, and each step reads [`Self::inside`]
+    /// `q = **t3` is `q2 = *t3; q = *q2;`, and each step reads [`Contents::inside`]
     /// as a load through a load does, so the two spellings of a **read** cannot
     /// be answered differently, and a **store** written as one place, `**t3 =
     /// r`, is recorded where the level above may be, so it is here to be read.
@@ -977,7 +909,7 @@ impl Known {
         for level in 0..depth {
             let (sites, locals) = self.levels_below(local, level);
             for site in sites {
-                levels.bound_by(&self.stored_at_most[site].below(depth - 1 - level));
+                levels.bound_by(&self.contents[site].stored_at_most.below(depth - 1 - level));
             }
             for slot in locals {
                 let held = self.points_to[slot]
@@ -1077,7 +1009,7 @@ impl Known {
     ///
     /// **The closure, and not [`Self::exposed`] read as it stands.** That is
     /// closed only inside [`Self::expose`], which runs at a call, so a store of
-    /// `a` into an allocation already exposed records `a` in [`Self::inside`]
+    /// `a` into an allocation already exposed records `a` in [`Contents::inside`]
     /// and leaves its bit unset until the next call. Its readers run after
     /// that call and are right to trust it; a pending read is recorded, and
     /// told what became reachable, between calls.
@@ -1095,7 +1027,7 @@ impl Known {
         let mut closed: BTreeSet<usize> = sites.iter().copied().collect();
         let mut pending = sites;
         while let Some(site) = pending.pop() {
-            for held in self.inside[site].ones() {
+            for held in self.contents[site].inside.ones() {
                 if closed.insert(held) {
                     pending.push(held);
                 }
@@ -1123,14 +1055,142 @@ impl Known {
     /// keeps a local's address out of what is exposed, so that a holder is
     /// still asked; this records where it may be and exempts nobody.
     pub(super) fn landed_where_unknown_code_points(&mut self, carried: &[usize], locals: &[usize]) {
-        for landing in self.reachable_now() {
-            for &site in carried {
-                self.inside[landing].set(site);
-            }
-            for &local in locals {
-                self.inside_locals[landing].set(local);
+        let mut landed = Contents::none(self.points_to.len());
+        for &site in carried {
+            landed.inside.set(site);
+        }
+        for &local in locals {
+            landed.inside_locals.set(local);
+        }
+        // Every other field written out, so that a field added to
+        // `Contents` is answered here too: no bound, since nothing says what
+        // such a store's pointer believes, and no mark, since a store into
+        // exposed memory records what it stores there and does not mark it,
+        // as above. See ADR-0044.
+        let Contents {
+            inside: _,
+            inside_locals: _,
+            stored_at_most,
+            stale,
+            unreplaced,
+            holds_lost,
+            from_caller,
+        } = &mut landed;
+        *stored_at_most = Levels::default();
+        (*stale, *unreplaced, *holds_lost, *from_caller) = (false, false, false, false);
+        let landings: Vec<usize> = self.reachable_now().into_iter().collect();
+        self.pour(&landings, &landed, &[]);
+    }
+
+    /// Pour `poured` into each of `containers`, and mark every array in
+    /// `in_part` as one a pointer reaching it only by #639's rule was stored
+    /// into memory for, whether or not there is a container: a store into a
+    /// local through its address is read back without its element too. See
+    /// [`Self::stored_in_part`].
+    ///
+    /// **The one way a door that moves a value into memory writes it**: the
+    /// store, the library copy, `realloc` and a store this check cannot
+    /// place. The store, the copy and the unplaced store each build a
+    /// [`Contents`] naming every field, so a field added there and not
+    /// answered at one of them fails to compile there; `realloc` pours the
+    /// old allocation's record whole, so a field added is carried with the
+    /// rest and asks it nothing. What each door carries is taken in by
+    /// [`Contents::absorbed`], as the join takes it. A place where an event
+    /// rather than a value sets one mark (a site reborn, a slot a call could
+    /// not replace, a lost value gone, caller memory at entry) sets that
+    /// field directly, and so does a call this check cannot read where it
+    /// writes into what it was handed, which records the sites alone.
+    pub(super) fn pour(&mut self, containers: &[usize], poured: &Contents, in_part: &[usize]) {
+        for &container in containers {
+            self.contents[container].absorbed(poured);
+        }
+        for &array in in_part {
+            self.stored_in_part[array] = true;
+        }
+    }
+
+    /// What a load through `local`, `depth` dereferences deep, takes from the
+    /// memory it reads, onto `held`: the sites it may hold, at an offset
+    /// nobody said; the locals whose address it may be, as edges, and
+    /// whether it may be a pointer that reached an array only by #639's
+    /// rule; and the stale, unreplaced, lost and caller marks. Answers
+    /// whether it named any local, which `Allocations::read_through` asks.
+    ///
+    /// **One function for both loads**, `Allocations::read_through` for a
+    /// load assigned to a local and `built::built_from` for one that reaches
+    /// an operator or a call as an operand, which each kept a copy of what
+    /// follows before #687. `is_array` and `from_caller` are the two answers
+    /// the caller has from the function and the analysis. See ADR-0040 and
+    /// ADR-0045.
+    ///
+    /// `depth` is at least one: a load reads through a dereference, and the
+    /// level a load reads its value out of is `depth - 1`. Both callers hold
+    /// that: `read_through` by its own test, and `built_from` because it
+    /// takes as a load only a place with at least one dereference.
+    pub(super) fn load_into(
+        &self,
+        held: &mut Held,
+        local: LocalId,
+        depth: usize,
+        is_array: &dyn Fn(usize) -> bool,
+        from_caller: bool,
+    ) -> bool {
+        let (sites, locals) = self.levels_below(local, depth);
+        for site in sites {
+            held.hold(site, Offset::Unknown);
+        }
+        // **And the locals whose address it may be**, as edges, so a write
+        // through it lands there: `m = *t3; *m = r;` with `*t3 = &slot`. Not
+        // all of them, since the set is a lower bound. See ADR-0045.
+        let named_a_local = !locals.is_empty();
+        for target in locals {
+            held.writes_to.set(target);
+            // And it may be a pointer that reached an array only by #639's
+            // rule. See `Known::stored_in_part`.
+            if self.stored_in_part[target] {
+                held.array_edge = true;
             }
         }
+        // Or read out of a local that holds one, which no store put there:
+        // `e = m + 1; f = *pe;` with `pe = &e`. Not an array, whose record
+        // gathers every store into it, an earlier turn's too: a store into
+        // one marks `stored_in_part`, which a turn clears. Found by review of
+        // #667.
+        if self
+            .levels_below(local, depth - 1)
+            .1
+            .into_iter()
+            .any(|read_from| !is_array(read_from) && self.points_to[read_from].array_edge)
+        {
+            held.array_edge = true;
+        }
+        // Read out of an allocation that may hold one that is gone. See
+        // ADR-0045.
+        if self.stale_below(local, depth) {
+            held.lost = true;
+            held.stale_read = true;
+        }
+        // Read out of an allocation that may hold a slot a call could not
+        // replace, which is asked where it is handed by address and nowhere
+        // else. See ADR-0047.
+        if self.marked_below(local, depth, |contents| contents.unreplaced) {
+            held.unreplaced_read = true;
+        }
+        // Read out of an allocation that may hold a lost value, which is made
+        // lost if a lost value goes. See `Held::lost_read`.
+        if self.marked_below(local, depth, |contents| contents.holds_lost) {
+            held.lost_read = true;
+        }
+        // Read through a pointer to a local this check lost, carrying whether
+        // what it lost may be gone, as the local does. See ADR-0045.
+        if self.lost_through(local, depth) {
+            held.lost = true;
+            held.stale_read |= self.stale_through(local, depth);
+        }
+        if from_caller {
+            held.from_caller = true;
+        }
+        named_a_local
     }
 
     /// Record that a call this check cannot read was handed the address of
@@ -1460,27 +1520,11 @@ impl Known {
             // A local's, as `escaped` is, and a site being reborn is not.
             handed_away: _,
             exposed,
-            inside,
-            // Kept, as `inside` is: what the old allocation may hold stays
-            // in the row. See ADR-0045.
-            inside_locals: _,
+            contents,
             realloced,
-            stale,
-            // Kept, as `stale` is: the slots of the new allocation are not
-            // told apart from the old one's.
-            unreplaced: _,
-            // Kept, as `stale` is: the slots of the new allocation are not
-            // told apart from the old one's.
-            holds_lost: _,
             // Not fresh, whatever it was: the caller says whether the new
             // allocation is, since only it knows which function made it.
             fresh,
-            // Kept, as the entry and `stale` are: the slots of the new
-            // allocation are not told apart from the old one's. No case
-            // tells this from clearing it, measured: every other local
-            // holding the site is lost a few lines below, so a load out of
-            // it is doubted either way.
-            from_caller: _,
             pending,
             calls: _,
             exposed_after_call,
@@ -1489,9 +1533,6 @@ impl Known {
             // Left to the caller, which writes what the new allocation takes
             // on the line after this, since only it knows what made it.
             extent: _,
-            // Kept, as `inside` is: the slots of the new allocation are not
-            // told apart from the old one's, and a bound kept only doubts.
-            stored_at_most: _,
             // About a local, not a site.
             handed_at_most: _,
             // About a local, as `handed_at_most` is.
@@ -1516,6 +1557,33 @@ impl Known {
             // apart from the old one's. Found by review.
             handed_untyped_sites: _,
         } = self;
+        // **What the site's own record keeps when it names a new
+        // allocation**, field by field, so that a field added to `Contents`
+        // is asked here what a site made again does to it.
+        let Contents {
+            // Kept: what the old allocation may hold stays in the row, below.
+            // See ADR-0045.
+            inside: _,
+            // Kept, as `inside` is. See ADR-0045.
+            inside_locals: _,
+            // Kept, as `inside` is: the slots of the new allocation are not
+            // told apart from the old one's, and a bound kept only doubts.
+            stored_at_most: _,
+            // Kept, and set below in every container that held the site.
+            stale: _,
+            // Kept, as `stale` is: the slots of the new allocation are not
+            // told apart from the old one's.
+            unreplaced: _,
+            // Kept, as `stale` is: the slots of the new allocation are not
+            // told apart from the old one's.
+            holds_lost: _,
+            // Kept, as the entry and `stale` are: the slots of the new
+            // allocation are not told apart from the old one's. No case
+            // tells this from clearing it, measured: every other local
+            // holding the site is lost a few lines below, so a load out of
+            // it is doubted either way.
+            from_caller: _,
+        } = &contents[site];
         stored_out[site] = false;
 
         // **A local that loses an allocation that is gone may hold one**, so
@@ -1565,9 +1633,9 @@ impl Known {
         // dropping it left a pointer the old allocation held live across a
         // call that may free it, which built where `main` refused it. Found by
         // review; `a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held`.
-        for container in 0..inside.len() {
-            if gone && inside[container].get(site) {
-                stale[container] = true;
+        for row in contents.iter_mut() {
+            if gone && row.inside.get(site) {
+                row.stale = true;
             }
         }
         state[site] = SiteState::Live(made);
@@ -1890,7 +1958,7 @@ impl Known {
     /// liveness to say whether it is read again, so turning the site
     /// `Unknown` for one refused `*h = a; grow(&a); use2(&a);` with `*h`
     /// never read. Each allocation that may contain the site is marked
-    /// [`Self::unreplaced`] instead, and a pointer later read out of it is
+    /// [`Contents::unreplaced`] instead, and a pointer later read out of it is
     /// asked about where it is handed by address, which
     /// [`Self::handed_below`] does. Every such allocation, not only those the
     /// call did not reach: a load out of one it reached is doubted already.
@@ -1901,9 +1969,9 @@ impl Known {
             if self.state[site] != SiteState::Reachable {
                 continue;
             }
-            for container in 0..self.inside.len() {
-                if self.inside[container].get(site) {
-                    self.unreplaced[container] = true;
+            for container in 0..self.contents.len() {
+                if self.contents[container].inside.get(site) {
+                    self.contents[container].unreplaced = true;
                 }
             }
             let out_of_reach = (0..self.points_to.len()).any(|holder| {
@@ -1935,7 +2003,7 @@ impl Known {
     /// silence: `grow(*k); grow(*k);` is asked at the second call.
     ///
     /// **Not what memory the call can reach may hold**, for the same reason:
-    /// what a slot was given stays in [`Self::inside_locals`] after the slot
+    /// what a slot was given stays in [`Contents::inside_locals`] after the slot
     /// is given something else, so `*t = &a; *t = 0; stash(t);` exempted `a`
     /// though `stash` saw only null. The in-out idiom through memory a call
     /// can reach is asked for it. See ADR-0047.
@@ -1976,7 +2044,7 @@ impl Known {
     /// `*box = u; free(u);`, are no more or less likely to be what went than
     /// the local handed to `free`. So every lost local carries
     /// [`Held::stale_read`] from here, and a store of it marks where it
-    /// lands, and every allocation [`Self::holds_lost`] marks is `stale`, so
+    /// lands, and every allocation [`Contents::holds_lost`] marks is `stale`, so
     /// a load out of it is one this check stopped following. Marking too much
     /// is a doubt; marking only the local handed over left the other three
     /// spellings read in silence (#503). See ADR-0045.
@@ -1991,9 +2059,9 @@ impl Known {
                 held.stale_read = true;
             }
         }
-        for (stale, &holds) in self.stale.iter_mut().zip(&self.holds_lost) {
-            if holds {
-                *stale = true;
+        for contents in &mut self.contents {
+            if contents.holds_lost {
+                contents.stale = true;
             }
         }
     }
@@ -2018,9 +2086,9 @@ impl Known {
                 held.stale_read = true;
             }
         }
-        for (stale, &from_caller) in self.stale.iter_mut().zip(&self.from_caller) {
-            if from_caller {
-                *stale = true;
+        for contents in &mut self.contents {
+            if contents.from_caller {
+                contents.stale = true;
             }
         }
         self.unproved_exposed();
@@ -2108,8 +2176,8 @@ impl Known {
                 held[site] = true;
             }
         }
-        for contents in &self.inside {
-            for site in contents.ones() {
+        for contents in &self.contents {
+            for site in contents.inside.ones() {
                 held[site] = true;
             }
         }
@@ -2142,15 +2210,15 @@ impl Known {
     ///
     /// What a pointer read out of memory this check cannot say which may be:
     /// wherever it was read from, it was stored there, and a store into an
-    /// allocation is recorded in [`Self::inside`] or exposed at once, and the
+    /// allocation is recorded in [`Contents::inside`] or exposed at once, and the
     /// exposed half is read by [`Self::levels_below`] rather than here, for a
     /// load through memory this check cannot place (#484). One read
     /// out of a local through its address is not here and need not be: that
     /// local escaped, so what it holds is in every call's reach already. See
     /// ADR-0040.
     pub(super) fn stored(&self) -> Vec<usize> {
-        (0..self.inside.len())
-            .filter(|&held| self.inside.iter().any(|row| row.get(held)))
+        (0..self.contents.len())
+            .filter(|&held| self.contents.iter().any(|row| row.inside.get(held)))
             .collect()
     }
 
