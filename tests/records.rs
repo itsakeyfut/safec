@@ -28,45 +28,68 @@ use std::path::Path;
 ///    runner must hash the same record the same way.
 /// 2. The front matter's `status:` line goes. `date:` and `decision-makers:`
 ///    stay.
-/// 3. The `### Confirmation` subsection goes, from its heading to the next
-///    `##` or `###` heading: what guards a decision is a fact about the tree
-///    now, which the README obliges the record to keep current.
+/// 3. The `### Confirmation` subsection goes, from that exact heading to the
+///    next `##` or `###` heading outside a fenced block: what guards a decision
+///    is a fact about the tree now, which the README obliges the record to keep
+///    current.
 /// 4. Every inline code span becomes an empty one, since the README obliges a
-///    pointer to code to follow the code when it moves. A fenced block is left
-///    as it is: a C program in a record is evidence, not a pointer.
+///    pointer to code to follow the code when it moves. Spans are read over a
+///    whole paragraph, the lines between two blank lines, headings or fences,
+///    joined by spaces as Markdown joins them: a span may wrap a line, and read
+///    a line at a time the closing backtick of one span pairs with the opening
+///    backtick of the next and the prose between them goes unhashed. A fenced
+///    block is left as it is: a C program in a record is evidence, not a
+///    pointer.
 /// 5. Every link target becomes empty, for the same reason. A link's text
 ///    stays.
 /// 6. Every run of whitespace becomes one space, so rewrapping a paragraph is
 ///    not a change of reasoning.
+///
+/// So prose written inside a code span, a link target or Confirmation is not
+/// frozen. That is the price of letting pointers and guards move, and it is
+/// in the README, where a reviewer reads what may still change.
 fn reasoning(text: &str) -> String {
     let mut kept = Vec::new();
+    let mut paragraph: Vec<&str> = Vec::new();
     let mut front = 0;
     let mut in_confirmation = false;
     let mut in_fence = false;
     for line in text.lines() {
         if line == "---" && front < 2 {
             front += 1;
+            flush(&mut paragraph, &mut kept);
             kept.push(line.to_owned());
             continue;
         }
         if front == 1 && line.starts_with("status:") {
             continue;
         }
-        if line.starts_with("```") {
-            in_fence = !in_fence;
-        }
-        if !in_fence && (line.starts_with("## ") || line.starts_with("### ")) {
+        let fence = line.starts_with("```");
+        if !in_fence && !fence && (line.starts_with("## ") || line.starts_with("### ")) {
             in_confirmation = line.trim_end() == "### Confirmation";
         }
         if in_confirmation {
+            // Still followed through Confirmation, so a heading inside a
+            // fence there does not end it.
+            if fence {
+                in_fence = !in_fence;
+            }
             continue;
         }
-        if in_fence || line.starts_with("```") {
+        if fence || in_fence {
+            flush(&mut paragraph, &mut kept);
+            kept.push(line.to_owned());
+            if fence {
+                in_fence = !in_fence;
+            }
+        } else if line.trim().is_empty() || line.starts_with('#') {
+            flush(&mut paragraph, &mut kept);
             kept.push(line.to_owned());
         } else {
-            kept.push(without_link_targets(&without_code_spans(line)));
+            paragraph.push(line);
         }
     }
+    flush(&mut paragraph, &mut kept);
 
     kept.join("\n")
         .split_whitespace()
@@ -74,7 +97,16 @@ fn reasoning(text: &str) -> String {
         .join(" ")
 }
 
-/// The line with every inline code span emptied, however many backticks
+/// The paragraph so far, its spans and link targets emptied, onto `kept`.
+fn flush(paragraph: &mut Vec<&str>, kept: &mut Vec<String>) {
+    if !paragraph.is_empty() {
+        let joined = paragraph.join(" ");
+        kept.push(without_link_targets(&without_code_spans(&joined)));
+        paragraph.clear();
+    }
+}
+
+/// The text with every inline code span emptied, however many backticks
 /// delimit it. A run of backticks with no closing run of the same length is
 /// text, as Markdown reads it.
 fn without_code_spans(line: &str) -> String {
@@ -107,7 +139,7 @@ fn without_code_spans(line: &str) -> String {
     out
 }
 
-/// The line with every link target, `](...)`, emptied.
+/// The text with every link target, `](...)`, emptied.
 fn without_link_targets(line: &str) -> String {
     let mut out = String::new();
     let mut rest = line;
@@ -445,6 +477,75 @@ fn a_changed_word_in_the_consequences_changes_the_reasoning() {
 fn a_changed_word_in_the_considered_options_changes_the_reasoning() {
     let edited = RECORD.replace("keep `old_name` where it is", "move `old_name` elsewhere");
     assert_ne!(reasoning(&edited), reasoning(RECORD));
+}
+
+/// Mutation: spans read a line at a time, as they were before review, so a
+/// span that wraps a line keeps what is in it.
+#[test]
+fn a_renamed_code_span_that_wraps_a_line_leaves_the_reasoning_as_it_was() {
+    let with = RECORD.replace(
+        "the walk in `memory::report`",
+        "the walk in `memory::\nreport`",
+    );
+    let edited = with.replace("`memory::\nreport`", "`reads::\nwalk`");
+    assert_eq!(reasoning(&edited), reasoning(&with));
+}
+
+/// Mutation: spans read a line at a time, so the closing backtick of a span
+/// that wraps pairs with the opening one of the next span on its line and the
+/// words between them are not hashed.
+#[test]
+fn prose_between_a_wrapped_span_and_the_next_changes_the_reasoning() {
+    let with = RECORD.replace(
+        "the walk in `memory::report` asks it once,",
+        "the walk in `memory::\nreport` and then `known` asks it once,",
+    );
+    let edited = with.replace("and then", "but never");
+    assert_ne!(reasoning(&edited), reasoning(&with));
+}
+
+/// Mutation: a heading inside a fenced block read as a heading, so a `###`
+/// line in a code sample ends Confirmation or starts one.
+#[test]
+fn a_heading_inside_a_fenced_block_is_not_one() {
+    let with = RECORD.replace(
+        "`a_test_name` fails.",
+        "`a_test_name` fails.\n\n```text\n### Consequences\n```\n\nStill Confirmation.",
+    );
+    let edited = with.replace("Still Confirmation.", "Edited, and still Confirmation.");
+    assert_eq!(reasoning(&edited), reasoning(&with));
+}
+
+/// Mutation: any heading starting `### Confirmation` taken as Confirmation,
+/// so `### Confirmation of the premise` goes unhashed.
+#[test]
+fn only_the_confirmation_heading_itself_starts_confirmation() {
+    let with = RECORD.replace(
+        "### Consequences",
+        "### Confirmation of the premise\n\nWhat was believed.\n\n### Consequences",
+    );
+    let edited = with.replace("What was believed.", "What is believed now.");
+    assert_ne!(reasoning(&edited), reasoning(&with));
+}
+
+/// Mutation: an opening run matched by a longer closing run, so `a``b` closes
+/// at the double backtick; or a span emptied to one pair of backticks whatever
+/// delimited it.
+#[test]
+fn a_span_closes_only_at_a_run_as_long_as_the_one_that_opened_it() {
+    assert_eq!(without_code_spans("`a``b`"), "``");
+    assert_eq!(without_code_spans("``a`b``"), "````");
+}
+
+/// Mutation: only the first link target on a line emptied.
+#[test]
+fn every_link_target_on_a_line_is_emptied() {
+    let with = RECORD.replace(
+        "see [the record](./0017-a.md).",
+        "see [the record](./0017-a.md) and [the other](./0018-b.md).",
+    );
+    let edited = with.replace("./0018-b.md", "./0018-renamed.md");
+    assert_eq!(reasoning(&edited), reasoning(&with));
 }
 
 /// Mutation: a fenced block's lines dropped.
