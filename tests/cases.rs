@@ -3491,8 +3491,10 @@ cases! {
         // is, into an allocation and where the copy lands unplaced. A whole
         // `int`'s copied and read back as one says nothing. Mutation: give
         // the local no bound at its own level in `Known::memory_levels`; the
-        // first two go silent. Mutation: bound it at zero whatever it
-        // holds; the third reports (#711).
+        // first two go silent. Mutation: bound a load there at zero rather
+        // than at what it believed; the third reports. Mutation: bound a
+        // local that is no load as well; 79 cases move, which hold that
+        // only a load is bounded there, as a store bounds only a load (#711).
         a_narrow_pointer_copied_out_of_a_local_is_doubted_where_read_back_wider: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_narrow_pointer_copied_out_of_a_local_through_an_unplaced_pointer_is_doubted_where_read_back_wider: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_whole_int_pointer_copied_out_of_a_local_and_read_back_as_one_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
