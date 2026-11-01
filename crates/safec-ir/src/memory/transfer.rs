@@ -20,6 +20,7 @@ use super::parts::{
     PendingRead, Reached, Read, Realloced, SiteState, bounded,
 };
 use super::report::{Fit, fits, slots_from, slots_leaving};
+use super::store::StoreKind;
 use super::{LostReason, derefs, handed_places};
 use crate::reads::{dereferenced_in_element, dereferenced_in_terminator};
 
@@ -1864,21 +1865,26 @@ impl Analysis for Allocations<'_> {
                 // stored value holds, and what a pointer read out of memory
                 // may be. See `Known::stored_out`. **Three halves decide no
                 // case, measured**, and are kept so this asks what the store
-                // door does and records what the store records: `direct`,
-                // since a write into a local such code names hands what it
+                // door does and records what the store records: the
+                // `StoreKind::Direct` arm, since a write into a local such code
+                // names hands what it
                 // writes away and the free is then a double free's doubt
                 // first; the pointer test, since an integer that holds sites
                 // is a conversion the frontend refuses (`SC0302`); and
                 // `read_out`, since a pointer read out of memory reaches a
                 // store as an operand whose sites `carried` already holds.
-                let place = &operation.place;
-                let direct = place.projection.is_empty()
-                    && value
-                        .locals_named_by_unknown_code()
-                        .contains(&place.local.index());
-                if (direct || (derefs(place) > 0 && value.leaves(place)))
-                    && self.may_be_pointer(function, place)
-                {
+                let store = self.store_in(element, value);
+                let marks = store.as_ref().is_some_and(|store| {
+                    let kind = match store.kind {
+                        StoreKind::Direct => true,
+                        StoreKind::Through { derefs } => derefs > 0,
+                        // `store_in` makes no copy; listed so that a kind
+                        // added is answered here.
+                        StoreKind::Copy => false,
+                    };
+                    kind && store.leaves && self.may_be_pointer(function, &store.into)
+                });
+                if marks {
                     let mut out: Vec<usize> = self
                         .carried(function, &operation.value, value)
                         .sites()
@@ -2983,6 +2989,25 @@ impl Analysis for Allocations<'_> {
                         if placed {
                             let (copied, copied_locals) =
                                 value.levels_below(source.local, from_depth + 1);
+                            // **What a copy that leaves carries is stored out**,
+                            // as a store's is, asked before it lands: the sites
+                            // a load of the source reads, and everything they
+                            // hold. Without it `memcpy(pp, b, 8); free(x);`
+                            // with `*b = x` was silent where `*pp = *b;` is
+                            // `SC0414` (#684). See `Known::stored_out`.
+                            let marks = self.store_at(terminator, value).is_some_and(|store| {
+                                match store.kind {
+                                    StoreKind::Copy => store.leaves,
+                                    // `store_at` makes a copy alone; listed so
+                                    // that a kind added is answered here.
+                                    StoreKind::Direct | StoreKind::Through { .. } => false,
+                                }
+                            });
+                            if marks {
+                                for site in value.closure(copied.iter().copied().collect()) {
+                                    value.stored_out[site] = true;
+                                }
+                            }
                             // The second half has no case: a lost local copied
                             // is doubted by its own escape first, measured.
                             let marked = value.stale_below(source.local, from_depth + 1)

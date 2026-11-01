@@ -58,6 +58,7 @@ mod built;
 mod known;
 mod parts;
 mod report;
+mod store;
 mod transfer;
 
 use crate::analysis::Conclusion;

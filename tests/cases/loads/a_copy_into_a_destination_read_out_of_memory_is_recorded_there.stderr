@@ -1,3 +1,17 @@
+warning[SC0414]: this frees `r`, a pointer that was stored where code outside this function may read it
+    ╭─[ a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:34:5 ]
+    │
+ 16 │     int *r = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 34 │     free(r);
+    │     ───┬───  
+    │        ╰───── freed here, perhaps still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free
 warning[SC0402]: this uses `q`, which may have been freed
     ╭─[ a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:39:5 ]
     │
