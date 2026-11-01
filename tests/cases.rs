@@ -3498,6 +3498,11 @@ cases! {
         a_narrow_pointer_copied_out_of_a_local_is_doubted_where_read_back_wider: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_narrow_pointer_copied_out_of_a_local_through_an_unplaced_pointer_is_doubted_where_read_back_wider: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_whole_int_pointer_copied_out_of_a_local_and_read_back_as_one_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A byte read out of memory is a load too, so one copied and read
+        // back as a pointer is doubted, though its store into a `char *`
+        // records no bound. Mutation: give the local no bound at its own
+        // level; this goes silent, as it was on main. Found by review.
+        a_byte_copied_out_of_a_local_is_doubted_where_read_back_as_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And what a lost value read back before its free, or released by a
         // call this check cannot read, still left read in silence (#505): a
         // load out of the box made before `free(u)`; that load stored into a

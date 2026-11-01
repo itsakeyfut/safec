@@ -894,14 +894,19 @@ impl Known {
     /// it holds below its own level what the value carries. `void ***pt =
     /// &t; ... int **a = *pi;` with `t` a load out of a `void ***` read `a`
     /// believing whole `int`s two levels down, where the sites alone said
-    /// nothing (#634). **Its own level too, as a store of its value records
-    /// it**: what a load believes, and no bound for any other value, read
-    /// from the same two fields the store's bound is. The pointer read out
-    /// of the local is that value, and a load asks the local's own fit where
-    /// it is read, but a copy stores it into memory, which a later read
-    /// believes: `memcpy(m, &c, 8)` with `c` a `char *` load, read back
-    /// through an `int **`, was believed whole where `*cm = c;` was doubted
-    /// (#711). `depth_cap` is [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer),
+    /// nothing (#634). **Its own level too, from the two fields a store of
+    /// its value reads**: what a load believes, and no bound for any other
+    /// value. The pointer read out of the local is that value, and a load
+    /// asks the local's own fit where it is read, but a copy stores it into
+    /// memory, which a later read believes: `memcpy(m, &c, 8)` with `c` a
+    /// `char *` load, read back through an `int **`, was believed whole
+    /// where `*cm = c;` was doubted (#711). **Not the store's other
+    /// condition**, that its destination may hold a pointer: a byte read out
+    /// of memory is a load too, so `memcpy(m, &b, 1)` with `b` such a `char`,
+    /// read back as a pointer, is doubted, where `*cm = b;` into a `char *`
+    /// records no bound. A bound here only narrows what is believed, and a
+    /// pointer read out of bytes a `char` filled is not shown to be whole.
+    /// Found by review. `depth_cap` is [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer),
     /// which the list that puts it one level down is cut to.
     ///
     /// **The one walk a load, a departure and a copy take**, so that the
