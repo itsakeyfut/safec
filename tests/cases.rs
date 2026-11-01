@@ -5018,8 +5018,10 @@ cases! {
         // an `SC0414` doubt.
         a_live_pointer_copied_out_through_a_parameter_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // `look` may have written `x` through `px`, so what the copy stores is a
-        // doubt, not a proof. Mutation: take an address as a copy's source whatever
-        // else reads it; this is a certain `SC0414`.
+        // doubt, not a proof. Mutation: ask a copy nothing as a store; the `SC0414`
+        // doubt goes. Taking an address as a copy's source whatever
+        // else reads it decides nothing here, measured: `look` handed `px` exposes
+        // `x` all the same.
         a_local_whose_address_is_handed_on_as_well_as_copied_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // What `malloc` returns is this function's, not handed over, so a
         // pointer read out of it is not doubted at a later call; the

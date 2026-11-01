@@ -85,7 +85,11 @@ pub(super) struct Allocations<'a> {
     /// writes it nor keeps its address (C17 7.24.2.1, 7.24.2.2). **Strict, and
     /// syntactic**: any other read of the address, anywhere in the function,
     /// keeps the escape, since one taken wrongly proves what code may have
-    /// written. See ADR-0017.
+    /// written. No case tells this from taking it whatever else reads it,
+    /// measured: each other read that may write the local, a call it is
+    /// handed or a store through it, exposes it or names it by an edge this
+    /// check follows. It stays the guard for a read that does neither. See
+    /// ADR-0017.
     pub(super) copy_sources: Vec<bool>,
     /// Per block, the locals read from its entry before they are written:
     /// what [`live_in`] answers, once per function. See ADR-0048.
