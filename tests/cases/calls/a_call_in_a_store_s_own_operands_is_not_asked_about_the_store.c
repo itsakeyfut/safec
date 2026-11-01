@@ -25,6 +25,6 @@ int f(int **out) {
     }
     a[0] = 1;
     b[0] = 2;
-    r = (x = a[0]) + (cursor = a + now(), 0);
+    r = (x = a[0]) + (cursor = (now(), a), 0);
     return r;
 }

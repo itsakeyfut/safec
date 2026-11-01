@@ -3874,6 +3874,14 @@ cases! {
         a_pointer_moved_past_its_allocation_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_moved_off_its_start_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_moved_off_its_start_stored_into_memory: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write by name into a local whose address code this check cannot
+        // read kept is the same store door, since a read through the kept
+        // address believes it (#690). Mutation: drop the
+        // `StoreKind::Direct if store.leaves` arm in `departed_in_element`, or
+        // answer `leaves: false` for a direct write in `store_in`; this goes
+        // silent. Asking every direct write moves 324 cases, which hold that
+        // a local whose address never left is not asked.
+        a_pointer_stored_by_name_into_a_local_whose_address_was_kept_is_asked_how_wide: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same three doors, each handed a whole allocation. Mutation:
         // answer every departure unknown in `say_leaving`; this is reported
         // three times.
