@@ -1,0 +1,17 @@
+warning[SC0414]: this stores `x` where code outside this function may read it, and it may point to a freed allocation
+    ╭─[ a_freed_pointer_copied_out_through_a_parameter_by_memcpy_is_reported.c:10:5 ]
+    │
+  5 │     int *x = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+  9 │     free(x);
+    │     ───┬───  
+    │        ╰───── freed here
+ 10 │     memcpy(pp, &x, 8);
+    │     ────────┬────────  
+    │             ╰────────── stored here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

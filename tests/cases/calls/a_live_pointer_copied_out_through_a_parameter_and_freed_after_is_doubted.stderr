@@ -1,0 +1,10 @@
+warning[SC0401]: this frees `x`, which may have been freed already
+    ╭─[ a_live_pointer_copied_out_through_a_parameter_and_freed_after_is_doubted.c:10:5 ]
+    │
+ 10 │     free(x);
+    │     ───┬───  
+    │        ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

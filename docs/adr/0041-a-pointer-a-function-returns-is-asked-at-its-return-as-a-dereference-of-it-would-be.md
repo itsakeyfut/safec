@@ -123,8 +123,16 @@ parameter, a freed pointer stored there is a use of an indeterminate value
 nothing reads `*b` before it is overwritten. A store into memory only this
 function reads is not asked there, since a load of it carries what it held;
 where that memory leaves, it is asked what it holds, as the next paragraph
-says. A library copy out of the function is the doubt `SC0407` raises rather
-than this proof, which is #652. It has a code of its own because what
+says. **A library copy out of the function is asked too, as a doubt** (#652):
+`memcpy(pp, &x, 8)` after `free(x)` puts in `*pp` what `*pp = x;` does, so it
+is `SC0414`, in place of the `SC0407` raised about what the call is handed. Not
+the store's proof: the copy reads `x`'s bytes, which C defines (C17 6.2.6.1
+p4), and what is undefined is a later read of them as a pointer, which may be
+another function's (ADR-0027). Only of what was certainly freed, since `&x`
+taken for the copy leaves the rest of `x` unproven (ADR-0017). Making it a
+proof was built and taken back, found by review: it needed `&x` handed only to
+a copy not to escape, which made `memcpy(pp, &x, 8); free(x);` silent where
+the escape had doubted the free, and it was certain of a copy of no bytes. It has a code of its own because what
 to change is what is stored, and because code that is not a caller may read
 it. A live pointer stored and freed after is not this rule, since the store is
 of what was live as it ran; the next paragraph but one is.
@@ -166,8 +174,9 @@ the paragraph above's shape costs: `*pp = x; free(x); *pp = 0;` is correct and
 doubted, since this check does not follow what one place in such memory holds,
 which is #656; in the corpus, 28 programs that already had a report each gained
 this one at their free, and none was newly refused. A library copy out of the
-function marks nothing, as the store door asks nothing of one, which is
-#652.
+function marks nothing, though the store door asks one what it carries; a
+live pointer copied out and freed after is doubted at the free only through
+the address the copy took, and in other words, which is #684.
 
 **And a call this check cannot read handed it is asked too** (#672).
 `*pp = x; release(x);` was silent where `release(x); *pp = x;` was doubted,

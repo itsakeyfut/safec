@@ -1,0 +1,100 @@
+Target "x86_64-pc-windows-msvc"
+Function a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:3:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "s1"
+  Local "_2" "void *" parameter "s2"
+  Local "_3" "int" parameter "n"
+Function a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:4:6 "keep" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "p"
+Function a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:5:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *" "slot"
+  Local "_2" "int **"
+  Local "_3" "int *" "x"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int **"
+  Local "_7" "int **"
+  Local "_8" "void *"
+  Block "bb0" entry
+    Operation a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:5:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:6:10 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:6:17 generated
+    Operation a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:7:10 written
+      Destination "_2"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:7:5 generated
+    Call a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:7:5 written "keep" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:7:5 generated
+    ArgumentsEvaluated a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:8:14 generated
+    Call a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:8:14 written "malloc" "bb2"
+      Destination "_4"
+      Constant 4
+  Block "bb2"
+    Operation a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:8:10 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:8:14 generated
+    Operation a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:9:9 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:9:9 written "bb3" "bb4"
+      Copy "_5"
+  Block "bb3"
+    Sequenced a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:9:9 generated
+    Operation a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:10:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:10:16 generated
+    Return
+  Block "bb4"
+    Sequenced a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:9:9 generated
+    Goto "bb5"
+  Block "bb5"
+    ArgumentsEvaluated a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:12:5 generated
+    Call a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:12:5 written "free" "bb6"
+      Copy "_3"
+  Block "bb6"
+    Sequenced a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:12:5 generated
+    Operation a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:13:12 written
+      Destination "_6"
+      Address
+        Place "_1"
+    Operation a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:13:19 written
+      Destination "_7"
+      Address
+        Place "_3"
+    ArgumentsEvaluated a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:13:5 generated
+    Call a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:13:5 written "memcpy" "bb7"
+      Destination "_8"
+      Copy "_6"
+      Copy "_7"
+      Constant 8
+  Block "bb7"
+    Sequenced a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:13:5 generated
+    Operation a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:14:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_freed_pointer_copied_into_a_local_a_call_kept_is_reported.c:14:12 generated
+    Return

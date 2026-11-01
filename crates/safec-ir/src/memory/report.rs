@@ -2297,8 +2297,8 @@ pub(super) fn returned(
 /// of what was live as it ran. Where the memory it lands in leaves later,
 /// by a return or a store of its address, that door asks what it holds;
 /// where it is the caller's own, through a parameter, no door is left,
-/// which is #650. And a library copy out of the function is still the
-/// doubt [`handed`] raises, which is #652.
+/// which is #650. A library copy out of the function is asked by
+/// [`copied_away`], as a doubt (#652).
 ///
 /// **Like a return, it doubts what it cannot prove live**: a pointer a call
 /// this check cannot read returned, stored out after another such call, is
@@ -2372,6 +2372,119 @@ pub(super) fn stored_away(
             unproven: verdict.unproven,
         },
     );
+}
+
+/// Report a library copy that puts where code outside this function may
+/// read it a pointer that may have been freed, as the doubt about the store
+/// it makes: `memcpy(pp, &x, 8)` after `free(x)`, with `pp` a parameter,
+/// puts in `*pp` what `*pp = x;` puts there (C17 7.24.2.1, 7.24.2.2), and was
+/// only the doubt [`handed`] raises about what the call is handed (#652).
+///
+/// **Only ever a doubt.** The store reads `x`, whose value C makes
+/// indeterminate once what it points at is freed (6.2.4 p2), so the store is
+/// undefined in this function and [`stored_away`] proves it. The copy reads
+/// `x`'s bytes, which C defines (6.2.6.1 p4): what is undefined is a later
+/// read of what the copy put there as a pointer, which may be another
+/// function's, so a proof would claim an undefined execution of this one
+/// that it does not have (ADR-0027). Measured as a proof, it was also
+/// certain of a copy of no bytes.
+///
+/// **What the copy carries is the local its source names**, where the source
+/// is that local's address and nothing else, `&x`, so that `x` is asked by
+/// name as the store asks it; otherwise what the source points at. **And
+/// only of what was certainly freed**: taking `&x` for the copy makes `x`
+/// escaped (ADR-0017), so whatever else it may hold is unproven, and asking
+/// that doubted a copy of a live `x`, measured. Anything less is left to
+/// [`handed`]'s doubt about what the call is handed, as before.
+///
+/// Answers whether it said anything, which [`handed`] then asks the copy's
+/// source nothing of, so that one defect is one report.
+pub(super) fn copied_away(
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    analysis: &Allocations<'_>,
+    terminator: &Terminator,
+    known: &Known,
+) -> Option<Place> {
+    let Terminator::Call {
+        callee,
+        arguments,
+        destination: _,
+        then: _,
+        origin,
+    } = terminator
+    else {
+        return None;
+    };
+    // A body here is what runs, as the departure door reads one.
+    if analysis.unit.function(*callee).is_defined()
+        || !matches!(analysis.callee(*callee), Callee::Copies)
+    {
+        return None;
+    }
+    let (Some(Operand::Copy(to)), Some(Operand::Copy(from))) =
+        (arguments.first(), arguments.get(1))
+    else {
+        return None;
+    };
+    let mut place = to.clone();
+    place.projection.push(Projection::Deref);
+    if !known.leaves(&place) {
+        return None;
+    }
+    let function = analysis.unit.function(analysis.function);
+    let held = &known.points_to[from.local.index()];
+    let named: Vec<usize> = held.writes_to.ones().collect();
+    let source = match named.as_slice() {
+        [only]
+            if from.projection.is_empty()
+                && held.sites().next().is_none()
+                && matches!(held.offset, Offset::Zero)
+                && !(held.lost || held.loaded || held.foreign) =>
+        {
+            Place::local(
+                function
+                    .locals()
+                    .nth(*only)
+                    .expect("an edge names a local of this function"),
+            )
+        }
+        _ => {
+            let mut source = from.clone();
+            source.projection.push(Projection::Deref);
+            source
+        }
+    };
+    let reached: Vec<Reached> = known
+        .handed_reached(&source)
+        .into_iter()
+        .filter(|reached| match reached {
+            Reached::Site(site) => matches!(known.state[*site], SiteState::Freed { .. }),
+            Reached::SetFreed(_) => true,
+            Reached::Lost(_) | Reached::Partial => false,
+        })
+        .collect();
+    if reached.is_empty() {
+        return None;
+    }
+    let verdict = verdict(analysis.sources, Kind::StoreAfterFree, reached, known)?;
+    say(
+        analysis.sources,
+        findings,
+        said,
+        &source,
+        Finding {
+            function: analysis.function,
+            kind: Kind::StoreAfterFree,
+            conclusion: Conclusion::Unknown,
+            at: origin.span(),
+            local: own_local(&source),
+            freed: verdict.freed,
+            made: verdict.made,
+            unproven: verdict.unproven,
+        },
+    );
+    Some(from.clone())
 }
 
 /// Where every one of `sites` was made, where they all agree, and nothing
@@ -2554,6 +2667,7 @@ pub(super) fn handed(
     function: &Function,
     terminator: &Terminator,
     known: &Known,
+    copied: Option<&Place>,
 ) {
     let Terminator::Call {
         callee,
@@ -2571,6 +2685,11 @@ pub(super) fn handed(
     // freed pointer passed, which says more than what `tab` holds behind it.
     let mut silent: Vec<&Place> = Vec::new();
     for place in handed_places(analysis, function, *callee, arguments) {
+        // Not a copy's source [`copied_away`] has said, which is the one
+        // report about it (#652).
+        if copied == Some(place) {
+            continue;
+        }
         let Some(verdict) = verdict(
             analysis.sources,
             Kind::ArgumentAfterFree,

@@ -5002,6 +5002,27 @@ cases! {
         a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_s_address_copied_by_memcpy_carries_a_store_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memmove_into_a_local_is_asked_after_its_allocation_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `memcpy` stores in `*pp` what `*pp = x;` stores, a freed pointer the caller
+        // reads: `SC0414`, and no `SC0407` beside it (#652). A doubt, not the
+        // store's proof: C defines copying a freed pointer's bytes (C17 6.2.6.1 p4),
+        // and what is undefined is the caller's read of it. Mutation: ask a copy
+        // nothing as a store; this is `SC0407` alone. Mutation: have `handed` ask
+        // the copy's source anyway; `SC0407` is back beside it.
+        a_freed_pointer_copied_out_through_a_parameter_by_memcpy_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // The same through `memmove`. Mutation: as the first above; the same.
+        a_freed_pointer_copied_out_through_a_parameter_by_memmove_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // Into a local whose address a call kept, the store door's other half.
+        // Mutation: as the first above; the same.
+        a_freed_pointer_copied_into_a_local_a_call_kept_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A live pointer copied out is what `*pp = x;` is: nothing to report.
+        // Mutation: ask a copy of whatever this check lost, not only of what was
+        // certainly freed; this is an `SC0414` doubt.
+        a_live_pointer_copied_out_through_a_parameter_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A live pointer copied out and freed after: the caller is left holding
+        // a freed pointer, a doubt at the free, which the address the copy took
+        // carries. Mutation: let an address handed only to a copy's source not
+        // escape; this goes silent, found by review of #652.
+        a_live_pointer_copied_out_through_a_parameter_and_freed_after_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // What `malloc` returns is this function's, not handed over, so a
         // pointer read out of it is not doubted at a later call; the
         // `SC0403`s are the nullability check's. Mutation: count
