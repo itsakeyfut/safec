@@ -46,7 +46,8 @@
 //! element, terminator and edge does to the value, and `report.rs` what is asked
 //! once the walk has settled. This file keeps what a caller names: [`findings`],
 //! [`Finding`], [`Kind`] and [`Unproven`]. What an element dereferences and
-//! loads is read in `crate::reads`, which the nullability check reads too.
+//! loads is read in `crate::reads`, whose readers of a dereference the
+//! nullability check asks too.
 //!
 //! [the safety model]: https://github.com/itsakeyfut/safec/blob/main/docs/safety-model.md
 //! [`LocalId`]: crate::ir::LocalId

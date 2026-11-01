@@ -1,10 +1,13 @@
 //! What an element or a terminator reads through a pointer, and what it reads
 //! out of memory as a value.
 //!
-//! These answer a question about the IR rather than about any one check, and
-//! both the memory check and the nullability check ask it. Kept apart from
-//! either so that neither depends on the other for it, and a change made for
-//! one of them is visibly a change to both.
+//! These answer a question about the IR rather than about any one check, so
+//! they live apart from either. The two readers of a dereference are asked by
+//! both the memory check and the nullability check, and a change made to them
+//! for one is a change to both. The two readers of a load are asked by the
+//! memory check alone, and sit here beside the others because they answer the
+//! same kind of question; the nullability check's own test of a load is
+//! `nullability::read_out_of_memory`, which is a different rule.
 
 use crate::ir::{Element, Operand, Place, Projection, Rvalue, Terminator};
 use crate::source::Span;
