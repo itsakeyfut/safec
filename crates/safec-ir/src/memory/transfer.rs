@@ -3700,16 +3700,23 @@ impl Analysis for Allocations<'_> {
         }
         // **Its contents are indeterminate** where its row says so, and for
         // `realloc` where it was handed a pointer that is certainly null, as
-        // `malloc` for the size (C17 7.22.3.5 p3): a constant `0`, or a local
-        // that names nothing. The row says it rather than a name read here,
-        // which had read `realloc(NULL, n)` as copying an old object (#689).
-        // See `Leaves`.
+        // `malloc` for the size (C17 7.22.3.5 p3), a constant `0` or a local
+        // that names nothing, or one that names only allocations nothing has
+        // written, whose indeterminate bytes it copies (p2). The row says it
+        // rather than a name read here, which had read `realloc(NULL, n)` as
+        // copying an old object (#689). See `Leaves`.
+        //
+        // A nonzero constant, or a place reached through a dereference, is
+        // read as the old object: neither is null in a defined program, and
+        // the null a dereference could read is undefined to read already.
         let fresh = match self.library(*callee).and_then(|row| row.leaves) {
             Some(Leaves::Indeterminate) => true,
             Some(Leaves::TheOld) => match arguments.first() {
                 Some(Operand::Constant(0)) => true,
                 Some(Operand::Copy(handed)) => {
-                    handed.projection.is_empty() && value.names_nothing(handed.local)
+                    handed.projection.is_empty()
+                        && (value.names_nothing(handed.local)
+                            || value.names_only_fresh(handed.local))
                 }
                 Some(Operand::Constant(_)) | None => false,
             },

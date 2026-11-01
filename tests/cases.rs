@@ -949,6 +949,18 @@ cases! {
         a_pointer_read_out_of_what_realloc_of_a_null_local_returns_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_what_realloc_of_a_live_block_returns_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Handed a block nothing wrote, `realloc` copies its indeterminate
+        // bytes, so what it returns is fresh as well (C17 7.22.3.5 p2), found
+        // by review. Mutation: `Known::names_only_fresh` answers `false`; this
+        // goes silent.
+        a_pointer_read_out_of_what_realloc_of_a_block_nothing_wrote_returns_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a pointer read out of memory, or one a call this check cannot
+        // read may have written, names what this check cannot see, and its
+        // `realloc` is not read as fresh. Mutation: every test of
+        // `Known::names_no_more_than_its_sites` dropped together; both reads
+        // of `*pp` are `SC0411`. Each dropped alone decides nothing, since
+        // the two routes each carry two marks. Found by review.
+        a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_fresh: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read and the value thrown away. Mutation: as above. It builds.
         a_pointer_read_out_of_fresh_memory_and_discarded_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read as an operand of a comparison, with no temporary. Mutation:
