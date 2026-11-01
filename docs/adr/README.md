@@ -202,19 +202,23 @@ is a sign the bar has slipped rather than a sign of progress.
   but `proposed`, its line in [`frozen.txt`](./frozen.txt) holds a hash of the
   record with its status line, its Confirmation, its code spans and its link
   targets taken out, and `tests/records.rs` fails where the record no longer
-  matches it. Those four may still change; every other word may not. A record
-  being accepted adds its own line, which the test prints. A changed line in
-  `frozen.txt` is the rule being set aside, and is read as that in review.
+  matches it. Those four may still change; every other word may not, so prose
+  written inside one of the four is not frozen either, and a reviewer reads a
+  long new code span or Confirmation with that in mind. A record being accepted
+  adds its own line, which the test prints. A changed line in `frozen.txt` is
+  the rule being set aside, and is read as that in review.
 * What used to be appended to a settled record goes elsewhere:
   * a decision reversed or extended is a new record that supersedes it, as above;
   * a decision applied to one more route is a row in that decision's route
-    table, kept in `docs/` and edited freely (its shape is #696's to settle);
+    table, kept in `docs/` and edited freely, whose shape is settled when the
+    first one is written;
   * why that route needed it lives in the doc comment where the rule is applied,
     and in the pull request.
 
   Until a decision has a route table, the doc comment and the pull request carry
   it. The memory records that grew a paragraph per issue (0039, 0041, 0042,
-  0045, 0057, 0060) are frozen as they stand, and #696 supersedes them.
+  0045, 0057, 0060) are frozen as they stand, and are to be superseded by
+  records that state each decision once beside its route table.
 * Prose here uses no em dashes.
 
 ## More Information

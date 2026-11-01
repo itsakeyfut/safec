@@ -264,7 +264,9 @@ fn check(records: &[(String, String)], lock: &str) -> Vec<String> {
 
 /// The tree's own records against the tree's own lock. What `check` decides
 /// is held by the tests after it, over records written in the test; this one
-/// fails when a record in `docs/adr` is edited.
+/// fails when a word of a settled record's reasoning in `docs/adr` is edited,
+/// or a line of `frozen.txt` is, measured by changing one word of ADR-0060's
+/// Decision Outcome.
 #[test]
 fn a_settled_record_s_reasoning_is_what_it_was_when_it_was_settled() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -514,8 +516,9 @@ fn a_rewrapped_paragraph_leaves_the_reasoning_as_it_was() {
     assert_eq!(reasoning(&edited), reasoning(RECORD));
 }
 
-/// Mutation: `str::lines` replaced by `split('\n')` and step 6 left out, so
-/// the carriage return stays in what is hashed.
+/// Mutation: `str::lines` replaced by `split('\n')` and step 6 left out, both
+/// at once, since step 6 alone takes a stray carriage return away as
+/// whitespace: the carriage return then stays in what is hashed.
 #[test]
 fn a_record_checked_out_with_crlf_has_the_reasoning_it_has_with_lf() {
     assert_eq!(reasoning(&RECORD.replace('\n', "\r\n")), reasoning(RECORD));
