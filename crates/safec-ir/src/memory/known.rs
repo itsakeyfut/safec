@@ -1055,6 +1055,16 @@ impl Known {
     /// memory was marked `holds_lost` only where the store named, so its free
     /// left a pointer read back by the other name believed (#705).
     ///
+    /// Mutation: give the landings `holds_lost` taken `false`, and
+    /// `a_lost_value_stored_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name`
+    /// goes silent at the read; `stale` taken `false`, and its `memcpy`
+    /// spelling does, since the copy's source is a lost local. **The other
+    /// fields decide no case found, measured**: a landing is memory code this
+    /// check cannot read can reach, which every call such code makes already
+    /// doubts, and the caller's and the unreplaced marks and the bound each
+    /// add a doubt to what such a call doubts. They are given all the same,
+    /// so a landing does not have to be argued about field by field.
+    ///
     /// **And the locals whose address it carries**, in what each landing may
     /// contain, which is not exposing them: a load out of that memory reaches
     /// the local, and a write through the load lands in it. `*ppp = &x; t =

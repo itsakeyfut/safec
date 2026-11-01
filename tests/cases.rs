@@ -3473,7 +3473,9 @@ cases! {
         // marks in every place it may land, so the allocation read back may
         // hold the lost value and is stale once it goes, `SC0402` (#705).
         // The same through `memcpy`. Mutation: the landing pours with
-        // `holds_lost` taken `false`; both go silent at the read.
+        // `holds_lost` taken `false`, and the first goes silent at the read;
+        // with `stale` taken `false`, the second does, since what the copy
+        // reads is a lost local.
         a_lost_value_stored_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And what a lost value read back before its free, or released by a
