@@ -142,7 +142,8 @@ fn hash_of(text: &str) -> String {
     format!("{:016x}", fnv1a64(reasoning(text).as_bytes()))
 }
 
-/// The status in the record's front matter, without its quotes. Only the
+/// The status in the record's front matter, without its quotes, single or
+/// double as YAML allows either. Only the
 /// front matter is read: a record's prose may well start a line with
 /// "status".
 fn status(text: &str) -> Option<String> {
@@ -154,7 +155,7 @@ fn status(text: &str) -> Option<String> {
     lines
         .take_while(|line| *line != "---")
         .find_map(|line| line.strip_prefix("status:"))
-        .map(|value| value.trim().trim_matches('"').to_owned())
+        .map(|value| value.trim().trim_matches(['"', '\'']).to_owned())
 }
 
 /// Every problem with the records against the lock: a settled record with no
@@ -182,11 +183,11 @@ fn check(records: &[(String, String)], lock: &str) -> Vec<String> {
             problems.push(format!("{name} has no status line"));
             continue;
         };
-        if status == "proposed" {
-            continue;
-        }
+        // A record with a line is held to it whatever its status now says:
+        // setting a settled record back to `proposed` does not unfreeze it.
         let hash = hash_of(text);
         match locked.get(&number) {
+            None if status == "proposed" => {}
             None => problems.push(format!(
                 "ADR-{number} is {status} and has no line in docs/adr/frozen.txt. \
                  A record settled now adds its own line: `{number} {hash}`"
@@ -290,6 +291,45 @@ fn a_proposed_record_needs_no_line() {
     );
 }
 
+/// Mutation: a record with a line skipped when its status is `proposed`, as
+/// it was before review, so setting a settled record back to `proposed` and
+/// then editing it passes.
+#[test]
+fn a_settled_record_set_back_to_proposed_is_still_held_to_its_line() {
+    let lock = line_for("0001", RECORD);
+    let edited = RECORD
+        .replace("status: \"accepted\"", "status: \"proposed\"")
+        .replace("asks it once", "asks it twice");
+    let problems = check(&[("0001-a.md".to_owned(), edited)], &lock);
+    assert_eq!(problems.len(), 1, "{problems:?}");
+    assert!(
+        problems[0].starts_with("ADR-0001's reasoning has changed"),
+        "{problems:?}"
+    );
+}
+
+/// Mutation: a record with no status skipped in silence, so damaged front
+/// matter unfreezes it.
+#[test]
+fn a_record_with_no_status_is_named() {
+    let broken = RECORD.replace("status: \"accepted\"\n", "");
+    assert_eq!(
+        check(
+            &[("0001-a.md".to_owned(), broken)],
+            &line_for("0001", RECORD)
+        ),
+        ["0001-a.md has no status line"]
+    );
+}
+
+/// Mutation: only double quotes taken off, so `'proposed'` is a status of its
+/// own and is asked for a line.
+#[test]
+fn a_status_in_single_quotes_is_read_as_one_in_double_quotes() {
+    let single = RECORD.replace("status: \"accepted\"", "status: 'proposed'");
+    assert_eq!(status(&single).as_deref(), Some("proposed"));
+}
+
 /// Mutation: the status read from anywhere in the record rather than from its
 /// front matter, so a line of prose starting with `status:` decides it.
 #[test]
@@ -338,6 +378,15 @@ fn an_edit_inside_confirmation_leaves_the_reasoning_as_it_was() {
         "`a_test_name` fails, and so does `another_test_name`.",
     );
     assert_eq!(reasoning(&edited), reasoning(RECORD));
+}
+
+/// Mutation: step 2 drops a `status:` line anywhere rather than in the front
+/// matter alone, so prose starting with it is no longer reasoning.
+#[test]
+fn a_status_line_in_the_body_is_reasoning() {
+    let with = RECORD.replace("# A title\n", "# A title\n\nstatus: what was believed\n");
+    let edited = with.replace("what was believed", "what is believed now");
+    assert_ne!(reasoning(&edited), reasoning(&with));
 }
 
 /// Mutation: step 2 left out, so the status line is hashed.
