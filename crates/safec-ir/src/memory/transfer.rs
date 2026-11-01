@@ -20,6 +20,7 @@ use super::parts::{
     PendingRead, Reached, Read, Realloced, SiteState, bounded,
 };
 use super::report::{Fit, fits, slots_from, slots_leaving};
+use super::store::StoreKind;
 use super::{LostReason, derefs, handed_places};
 use crate::reads::{dereferenced_in_element, dereferenced_in_terminator};
 
@@ -1871,14 +1872,17 @@ impl Analysis for Allocations<'_> {
                 // is a conversion the frontend refuses (`SC0302`); and
                 // `read_out`, since a pointer read out of memory reaches a
                 // store as an operand whose sites `carried` already holds.
-                let place = &operation.place;
-                let direct = place.projection.is_empty()
-                    && value
-                        .locals_named_by_unknown_code()
-                        .contains(&place.local.index());
-                if (direct || (derefs(place) > 0 && value.leaves(place)))
-                    && self.may_be_pointer(function, place)
-                {
+                let store = self.store_in(element, value);
+                let marks = store.as_ref().is_some_and(|store| {
+                    let kind = match store.kind {
+                        StoreKind::Direct => true,
+                        StoreKind::Through { derefs } => derefs > 0,
+                        // An element is no call.
+                        StoreKind::Copy => false,
+                    };
+                    kind && store.leaves && self.may_be_pointer(function, &store.into)
+                });
+                if marks {
                     let mut out: Vec<usize> = self
                         .carried(function, &operation.value, value)
                         .sites()

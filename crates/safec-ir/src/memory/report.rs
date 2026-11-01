@@ -19,6 +19,7 @@ use super::known::Known;
 use super::parts::{
     Callee, Extent, Freeing, Levels, Offset, Reach, Reached, Read, SiteState, earlier, same,
 };
+use super::store::{StoreKind, Written};
 use super::transfer::{Allocations, innermost_element};
 use super::{Departure, Finding, Kind, LostReason, Unproven};
 
@@ -1806,14 +1807,22 @@ pub(super) fn departed_in_element(
     let Element::Assign(operation) = element else {
         return;
     };
-    let how = if operation.place == Place::local(function.return_place()) {
-        Departure::Return
-    } else if !operation.place.projection.is_empty() {
-        Departure::Store
-    } else {
-        // A copy into a local leaves nothing: it is asked where the local's
-        // value or its address leaves.
+    let Some(store) = analysis.store_in(element, known) else {
         return;
+    };
+    let how = if store.into == Place::local(function.return_place()) {
+        Departure::Return
+    } else {
+        match store.kind {
+            StoreKind::Through { .. } => Departure::Store,
+            // A copy into a local leaves nothing: it is asked where the
+            // local's value or its address leaves. Whether a write into a
+            // local that code this check cannot read names is asked here is
+            // #690's.
+            StoreKind::Direct => return,
+            // An element is no call.
+            StoreKind::Copy => return,
+        }
     };
     let Some(ty) = analysis.unit.place_ty(function, &operation.place) else {
         return;
@@ -1894,18 +1903,24 @@ pub(super) fn departed_at_call(
         // their source reaches leave into the destination as a store would
         // put them there. Found by review.
         (false, Callee::Copies) => {
-            let source_ty = match arguments.get(1) {
-                Some(Operand::Copy(place)) => analysis.unit.place_ty(function, place),
-                Some(Operand::Constant(_)) | None => None,
-            };
-            if let (Some(source), Some(source_ty)) = (arguments.get(1), source_ty) {
+            // What the copy reads is its source's bytes, as `store_at` says,
+            // asked as a store of them would be. See `store::StoreKind`.
+            let source = analysis.store_at(terminator, known).and_then(|store| {
+                match (store.kind, store.from) {
+                    (StoreKind::Copy, Written::Bytes(source)) => Some(source),
+                    (StoreKind::Copy, Written::Value(_))
+                    | (StoreKind::Direct | StoreKind::Through { .. }, _) => None,
+                }
+            });
+            let source_ty = source.and_then(|place| analysis.unit.place_ty(function, place));
+            if let (Some(source), Some(source_ty)) = (source, source_ty) {
                 contents_leaving(
                     findings,
                     departed,
                     analysis,
                     function,
                     (at, Departure::Store, source_ty),
-                    &Rvalue::Use(source.clone()),
+                    &Rvalue::Use(Operand::Copy(source.clone())),
                     known,
                 );
             }
@@ -2312,28 +2327,28 @@ pub(super) fn stored_away(
     element: &Element,
     known: &Known,
 ) {
-    let Element::Assign(operation) = element else {
+    let Some(store) = analysis.store_in(element, known) else {
         return;
     };
-    let place = &operation.place;
-    let direct = place.projection.is_empty()
-        && known
-            .locals_named_by_unknown_code()
-            .contains(&place.local.index());
-    if !(direct || derefs(place) > 0) || !analysis.may_be_pointer(function, place) {
+    // An assignment by name or through a dereference; a library copy is
+    // `copied_away`'s, and a projection with no dereference lands in this
+    // function's own object. See `store::StoreKind`.
+    match store.kind {
+        StoreKind::Direct => {}
+        StoreKind::Through { derefs } if derefs > 0 => {}
+        StoreKind::Through { .. } | StoreKind::Copy => return,
+    }
+    if !store.leaves || !analysis.may_be_pointer(function, &store.into) {
         return;
     }
     // A constant holds no allocation, and a place with an `Index` is an
     // array's element, which this does not follow, as at a return. **No case
     // holds this guard, measured**: the lowering reads an element through
     // its address, so no source of that shape reaches here from C.
-    let Rvalue::Use(Operand::Copy(source)) = &operation.value else {
+    let Written::Value(Rvalue::Use(Operand::Copy(source))) = store.from else {
         return;
     };
     if !source.projection.is_empty() && derefs(source) == 0 {
-        return;
-    }
-    if !direct && !known.leaves(place) {
         return;
     }
 
@@ -2351,7 +2366,7 @@ pub(super) fn stored_away(
             said,
             analysis,
             source,
-            operation.origin.span(),
+            store.at,
             Kind::FreedBehindStore,
             known,
         );
@@ -2366,7 +2381,7 @@ pub(super) fn stored_away(
             function: analysis.function,
             kind: Kind::StoreAfterFree,
             conclusion: verdict.conclusion,
-            at: operation.origin.span(),
+            at: store.at,
             local: own_local(source),
             freed: verdict.freed,
             made: verdict.made,
@@ -2407,30 +2422,15 @@ pub(super) fn copied_away(
     terminator: &Terminator,
     known: &Known,
 ) -> Option<Place> {
-    let Terminator::Call {
-        callee,
-        arguments,
-        destination: _,
-        then: _,
-        origin,
-    } = terminator
-    else {
-        return None;
+    let store = analysis.store_at(terminator, known)?;
+    // A library copy alone; an assignment is `stored_away`'s. See
+    // `store::StoreKind`.
+    let from = match (store.kind, &store.from) {
+        (StoreKind::Copy, Written::Bytes(from)) => *from,
+        (StoreKind::Copy, Written::Value(_))
+        | (StoreKind::Direct | StoreKind::Through { .. }, _) => return None,
     };
-    // A body here is what runs, as the departure door reads one.
-    if analysis.unit.function(*callee).is_defined()
-        || !matches!(analysis.callee(*callee), Callee::Copies)
-    {
-        return None;
-    }
-    let (Some(Operand::Copy(to)), Some(Operand::Copy(from))) =
-        (arguments.first(), arguments.get(1))
-    else {
-        return None;
-    };
-    let mut place = to.clone();
-    place.projection.push(Projection::Deref);
-    if !known.leaves(&place) {
+    if !store.leaves {
         return None;
     }
     let function = analysis.unit.function(analysis.function);
@@ -2478,7 +2478,7 @@ pub(super) fn copied_away(
             function: analysis.function,
             kind: Kind::StoreAfterFree,
             conclusion: Conclusion::Unknown,
-            at: origin.span(),
+            at: store.at,
             local: own_local(&source),
             freed: verdict.freed,
             made: verdict.made,
