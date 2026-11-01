@@ -622,10 +622,8 @@ fn analysis<'a>(
         live_in: transfer::live_in(function),
         cfg: Cfg::of(function),
         opaque_results: Vec::new(),
-        copy_sources: Vec::new(),
     };
     analysis.opaque_results = analysis.opaque_results_of(function);
-    analysis.copy_sources = analysis.copy_sources_of(function);
     analysis
 }
 
@@ -915,7 +913,7 @@ fn findings_within(
             // A library copy asked as the store it is, before what it is
             // handed, which then asks nothing of a source it proved. See
             // `report::copied_away`.
-            let proved_copied = copied_away(
+            let copied = copied_away(
                 &mut findings,
                 &mut said,
                 &analysis,
@@ -929,7 +927,7 @@ fn findings_within(
                 function,
                 &block.terminator,
                 &known,
-                proved_copied.as_ref(),
+                copied.as_ref(),
             );
             // And whether it is handed what was stored out, before the
             // transfer marks it as what the call may have freed. See

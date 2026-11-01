@@ -1,3 +1,13 @@
+error[SC0401]: this frees `r`, which may have been freed already
+    ╭─[ a_pointer_copied_by_memmove_into_a_local_is_asked_after_its_allocation_is_freed.c:11:5 ]
+    │
+ 11 │     free(r);
+    │     ───┬───  
+    │        ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
 error[SC0402]: this uses `s`, which may have been freed
     ╭─[ a_pointer_copied_by_memmove_into_a_local_is_asked_after_its_allocation_is_freed.c:12:5 ]
     │

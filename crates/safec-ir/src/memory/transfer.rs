@@ -73,24 +73,6 @@ pub(super) struct Allocations<'a> {
     /// what a parameter points at is memory the caller did, so a pointer read
     /// out of it is one a later such call may free. See ADR-0040.
     pub(super) opaque_results: Vec<bool>,
-    /// Per local, whether it is read nowhere in the function but as the
-    /// source a library copy is handed, unprojected:
-    /// [`Self::copy_sources_of`] answers it, once per function.
-    ///
-    /// **So that a local whose address goes only there is not escaped**
-    /// (#652): `memcpy(pp, &x, 8)` takes `&x`, and ADR-0017 leaves what an
-    /// escaped local holds unproven, so a copy of a freed `x` out of the
-    /// function was a doubt where `*pp = x;` is a proof, and a copy of a live
-    /// one was doubted too, measured. A copy reads its source and neither
-    /// writes it nor keeps its address (C17 7.24.2.1, 7.24.2.2). **Strict, and
-    /// syntactic**: any other read of the address, anywhere in the function,
-    /// keeps the escape, since one taken wrongly proves what code may have
-    /// written. No case tells this from taking it whatever else reads it,
-    /// measured: each other read that may write the local, a call it is
-    /// handed or a store through it, exposes it or names it by an edge this
-    /// check follows. It stays the guard for a read that does neither. See
-    /// ADR-0017.
-    pub(super) copy_sources: Vec<bool>,
     /// Per block, the locals read from its entry before they are written:
     /// what [`live_in`] answers, once per function. See ADR-0048.
     pub(super) live_in: Vec<Vec<bool>>,
@@ -1021,57 +1003,6 @@ impl Allocations<'_> {
     /// listed rather than reported. See ADR-0038.
     pub(super) fn frees_anything(&self, callee: FuncId) -> bool {
         self.unit.function(callee).hatch()
-    }
-
-    /// Which locals are read nowhere but as a library copy's source, for
-    /// [`Self::copy_sources`]: every read of each, by an element or a
-    /// terminator, is the second argument of a call to an undefined
-    /// [`Callee::Copies`], and there is at least one.
-    pub(super) fn copy_sources_of(&self, function: &Function) -> Vec<bool> {
-        let locals = function.locals().len();
-        let mut copied = vec![false; locals];
-        let mut elsewhere = vec![false; locals];
-        for block in function.blocks() {
-            for element in &block.elements {
-                for (local, _) in super::assigned::element_reads(element) {
-                    elsewhere[local.index()] = true;
-                }
-            }
-            match &block.terminator {
-                Terminator::Call {
-                    callee, arguments, ..
-                } if !self.unit.function(*callee).is_defined()
-                    && matches!(self.callee(*callee), Callee::Copies) =>
-                {
-                    for (index, argument) in arguments.iter().enumerate() {
-                        if let Operand::Copy(place) = argument {
-                            if index == 1 && place.projection.is_empty() {
-                                copied[place.local.index()] = true;
-                            } else {
-                                elsewhere[place.local.index()] = true;
-                            }
-                        }
-                    }
-                    if let Terminator::Call {
-                        destination: Some(place),
-                        ..
-                    } = &block.terminator
-                    {
-                        if !place.projection.is_empty() {
-                            elsewhere[place.local.index()] = true;
-                        }
-                    }
-                }
-                terminator => {
-                    for (local, _) in super::assigned::terminator_reads(terminator) {
-                        elsewhere[local.index()] = true;
-                    }
-                }
-            }
-        }
-        (0..locals)
-            .map(|local| copied[local] && !elsewhere[local])
-            .collect()
     }
 
     /// Which locals a call this check cannot read writes its result into,
@@ -2666,12 +2597,7 @@ impl Analysis for Allocations<'_> {
                             .projection
                             .iter()
                             .all(|step| matches!(step, Projection::Index(Operand::Constant(0))));
-                        // **Not where the address goes only to a library
-                        // copy's source**, which reads it and keeps nothing
-                        // (#652). See `Allocations::copy_sources`.
-                        if !self.copy_sources[destination.index()] {
-                            value.escaped[taken.local.index()] = true;
-                        }
+                        value.escaped[taken.local.index()] = true;
                         value.unproved(taken.local.index());
                         // What the local holds is reachable to every call from
                         // here, as an exposure is. See ADR-0042.

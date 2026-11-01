@@ -1,3 +1,13 @@
+warning[SC0401]: this frees `r`, which may have been freed already
+    ╭─[ a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:29:5 ]
+    │
+ 29 │     free(r);
+    │     ───┬───  
+    │        ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
 warning[SC0402]: this uses `q`, which may have been freed
     ╭─[ a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:34:5 ]
     │
