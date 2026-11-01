@@ -3110,6 +3110,26 @@ impl Analysis for Allocations<'_> {
                             for &target in &copied_locals {
                                 poured.inside_locals.set(target);
                             }
+                            // **And whether what it copies may be a pointer
+                            // that reaches an array only by #639's rule**, as a
+                            // store of it marks: the locals it may be read out
+                            // of, one level below the source, asked as a load
+                            // of the source asks them. Without it `e = m + 1;
+                            // memcpy(box, &e, 8); f = box[0]; *f = &x;` left
+                            // `m[0]` believed written where the store form is
+                            // doubted. See `Known::stored_in_part`.
+                            let in_part: Vec<usize> = if value
+                                .levels_below(source.local, from_depth)
+                                .1
+                                .into_iter()
+                                .any(|local| {
+                                    !self.is_array(function, local)
+                                        && value.points_to[local].array_edge
+                                }) {
+                                copied_locals.iter().copied().collect()
+                            } else {
+                                Vec::new()
+                            };
                             // Every field named, as a store's are. See
                             // `Known::pour`.
                             let poured = Contents {
@@ -3121,7 +3141,7 @@ impl Analysis for Allocations<'_> {
                                 holds_lost,
                                 from_caller: caller,
                             };
-                            value.pour(&into, &poured, &[]);
+                            value.pour(&into, &poured, &in_part);
                         }
                     }
                 }

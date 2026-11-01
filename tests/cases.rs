@@ -507,6 +507,11 @@ cases! {
         // (#667). Mutation: a stored pointer marks nothing
         // `Known::stored_in_part`; this goes silent.
         a_local_array_written_through_a_moved_pointer_read_back_out_of_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And copied there by `memcpy` rather than stored, which marked
+        // nothing until the copy poured what it carries as a store does
+        // (#687). Mutation: the copy pours with no array in part; this loses
+        // its `SC0411`.
+        a_local_array_written_through_a_moved_pointer_copied_into_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `fill(&e, &x)` writes `m` through `e = m + 1`, a level below what
         // it is handed: an `SC0411` doubt at `m[0]`. Mutation: a call asks
         // only the pointer it is handed; this goes silent.
