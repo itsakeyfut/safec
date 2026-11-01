@@ -1058,12 +1058,15 @@ impl Known {
     /// Mutation: give the landings `holds_lost` taken `false`, and
     /// `a_lost_value_stored_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name`
     /// goes silent at the read; `stale` taken `false`, and its `memcpy`
-    /// spelling does, since the copy's source is a lost local. **The other
-    /// fields decide no case found, measured**: a landing is memory code this
-    /// check cannot read can reach, which every call such code makes already
-    /// doubts, and the caller's and the unreplaced marks and the bound each
-    /// add a doubt to what such a call doubts. They are given all the same,
-    /// so a landing does not have to be argued about field by field.
+    /// spelling does, since the copy's source is a lost local; the bound
+    /// dropped, and
+    /// `a_narrow_pointer_stored_through_an_unplaced_pointer_is_doubted_where_read_back_wider_by_another_name`
+    /// believes a `char` read back as an `int` whole, found by review.
+    /// **The caller's and the unreplaced marks decide no case found,
+    /// measured**: a landing is memory code this check cannot read can reach,
+    /// which every call such code makes already doubts, and each adds a doubt
+    /// to what such a call doubts. They are given all the same, so a landing
+    /// does not have to be argued about field by field.
     ///
     /// **And the locals whose address it carries**, in what each landing may
     /// contain, which is not exposing them: a load out of that memory reaches
