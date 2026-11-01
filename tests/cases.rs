@@ -512,6 +512,11 @@ cases! {
         // (#687). Mutation: the copy pours with no array in part; this loses
         // its `SC0411`.
         a_local_array_written_through_a_moved_pointer_copied_into_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And copied into a local through its address, which carries the
+        // mark as a store through the address gives it. Mutation: the copy
+        // into a local's address leaves `Held::array_edge` unset; this loses
+        // its `SC0411`.
+        a_local_array_written_through_a_moved_pointer_copied_into_a_local_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `fill(&e, &x)` writes `m` through `e = m + 1`, a level below what
         // it is handed: an `SC0411` doubt at `m[0]`. Mutation: a call asks
         // only the pointer it is handed; this goes silent.

@@ -3053,6 +3053,25 @@ impl Analysis for Allocations<'_> {
                             // usual source is a `void *`, through which a load
                             // has no pointer type to be one; asking a load for
                             // it carried nothing from one. Found by review.
+                            // **And whether what it copies may be a pointer
+                            // that reaches an array only by #639's rule**, as a
+                            // store of it says: the locals it may be read out
+                            // of, one level below the source, asked as a load
+                            // of the source asks them. Into memory it marks the
+                            // arrays it reaches, `Known::stored_in_part`, below;
+                            // into a local's address the local carries it, as a
+                            // store through the address gives it. Without either
+                            // `e = m + 1; memcpy(box, &e, 8); f = box[0]; *f =
+                            // &x;`, and the same into `&f`, left `m[0]` believed
+                            // written where the store form is doubted.
+                            let moved = value
+                                .levels_below(source.local, from_depth)
+                                .1
+                                .into_iter()
+                                .any(|local| {
+                                    !self.is_array(function, local)
+                                        && value.points_to[local].array_edge
+                                });
                             if !targets.is_empty() {
                                 let mut held = Held::none(value.points_to.len());
                                 for &site in &copied {
@@ -3071,6 +3090,7 @@ impl Analysis for Allocations<'_> {
                                 held.unreplaced_read = unreplaced;
                                 held.lost_read = holds_lost;
                                 held.from_caller = caller;
+                                held.array_edge = moved;
                                 for &target in &targets {
                                     value.points_to[target].accumulated(&held);
                                 }
@@ -3116,22 +3136,7 @@ impl Analysis for Allocations<'_> {
                             for &target in &copied_locals {
                                 poured.inside_locals.set(target);
                             }
-                            // **And whether what it copies may be a pointer
-                            // that reaches an array only by #639's rule**, as a
-                            // store of it marks: the locals it may be read out
-                            // of, one level below the source, asked as a load
-                            // of the source asks them. Without it `e = m + 1;
-                            // memcpy(box, &e, 8); f = box[0]; *f = &x;` left
-                            // `m[0]` believed written where the store form is
-                            // doubted. See `Known::stored_in_part`.
-                            let in_part: Vec<usize> = if value
-                                .levels_below(source.local, from_depth)
-                                .1
-                                .into_iter()
-                                .any(|local| {
-                                    !self.is_array(function, local)
-                                        && value.points_to[local].array_edge
-                                }) {
+                            let in_part: Vec<usize> = if moved {
                                 copied_locals.iter().copied().collect()
                             } else {
                                 Vec::new()
