@@ -43,7 +43,7 @@ use crate::ir::{
     BinOp, BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place,
     Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, UnOp,
 };
-use crate::memory::{dereferenced_in_element, dereferenced_in_terminator};
+use crate::reads::{dereferenced_in_element, dereferenced_in_terminator};
 use crate::source::{SourceMap, Span};
 
 /// What is known about whether a pointer is null.
