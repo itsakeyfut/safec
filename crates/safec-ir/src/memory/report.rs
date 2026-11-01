@@ -1788,9 +1788,10 @@ fn pointee(analysis: &Allocations<'_>, ty: TyId) -> Option<TyId> {
     }
 }
 
-/// Report a pointer this element hands back by a `return` or stores through
-/// a pointer, where this check cannot show it points at one whole object of
-/// the type it leaves as.
+/// Report a pointer this element hands back by a `return`, stores through
+/// a pointer, or writes by name into a local code this check cannot read
+/// may read (#690), where this check cannot show it points at one whole
+/// object of the type it leaves as.
 ///
 /// **The departure half of ADR-0060.** A caller believes what it is handed
 /// back, and a later load believes what it reads, so this is where either
