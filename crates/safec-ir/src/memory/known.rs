@@ -1093,6 +1093,15 @@ impl Known {
     /// `Held::writes_elsewhere`, which starts `true` as the answer that
     /// gives up and so holds of a null local too. See
     /// `parts::Leaves::TheOld`.
+    ///
+    /// Mutation: drop the test of `sites`, and
+    /// `a_pointer_read_out_of_what_realloc_of_a_live_block_returns_is_not_reported`
+    /// is `SC0411`. **The other tests decide no case found, measured**, each
+    /// dropped alone and `loaded` with `from_caller` together: a pointer read
+    /// out of memory or a caller's memory names a site already, and an
+    /// address or a lost value handed to `realloc` is undefined whatever this
+    /// answers. They are kept so that what "names nothing" means does not
+    /// rest on that.
     pub(super) fn names_nothing(&self, local: LocalId) -> bool {
         let held = &self.points_to[local.index()];
         !held.sites.any()
