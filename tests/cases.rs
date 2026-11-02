@@ -3540,6 +3540,11 @@ cases! {
         // is `SC0412`. Mutation: drop the offset test in
         // `Held::names_nothing`; this builds. Found by review.
         a_null_moved_by_arithmetic_on_one_path_does_not_carry_the_other_paths_belief: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Nor does a local left unwritten on one path, whose read through a
+        // copy of its address nothing else asks. Mutation: ignore
+        // `Known::unwritten` in the values' join; this builds. Found by
+        // review.
+        a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_whole_int_pointer_a_call_wrote_copied_and_read_back_as_one_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_a_call_wrote_through_a_void_pointer_copied_and_read_back_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And what a lost value read back before its free, or released by a

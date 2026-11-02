@@ -1272,6 +1272,10 @@ impl Allocations<'_> {
             handed_untyped,
             handed_untyped_sites,
         } = into;
+        // Which locals this side left unwritten, before `unwritten` is
+        // intersected below: such a local is no null, and the values' join
+        // asks it (#719). See `Held::joined`.
+        let unwritten_here = unwritten.clone();
         // May-facts, so a union, as `exposed_locals` is. See
         // `Known::handed_untyped`.
         for (here, there) in handed_untyped
@@ -1418,8 +1422,12 @@ impl Allocations<'_> {
             }
         }
 
-        for (here, there) in points_to.iter_mut().zip(&from.points_to) {
-            here.joined(there, self.sources);
+        for (local, (here, there)) in points_to.iter_mut().zip(&from.points_to).enumerate() {
+            here.joined(
+                there,
+                self.sources,
+                (unwritten_here[local], from.unwritten[local]),
+            );
         }
 
         // **A site nothing on one side can still name takes the other side's

@@ -1,0 +1,20 @@
+error[SC0413]: this lets `t` leave, which may not point at an object as wide as its type
+   ╭─[ a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:9:5 ]
+   │
+ 9 │     memcpy(m, &t, 8);
+   │     ────────┬───────  
+   │             ╰───────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0412]: this may reach outside the object `r` points at
+    ╭─[ a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:13:5 ]
+    │
+ 13 │     return *r;
+    │     ─────┬────  
+    │          ╰────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

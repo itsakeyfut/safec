@@ -869,13 +869,15 @@ pub(super) struct Held {
     /// result is and no wider than the local was handed as. A store or a
     /// copy of what the call wrote reads it there, so the width moves with
     /// the value (#715). **A null on the other path keeps it**, at the join:
-    /// it points at no object, so it neither widens nor narrows what the
+    /// a null points at no object, so it neither widens nor narrows what the
     /// other path believes, and whether the pointer may be null is the
-    /// nullability check's question (ADR-0027). Dropped there, `if (k)
+    /// nullability check's question (ADR-0027). A local left unwritten on
+    /// the other path, or a null moved by arithmetic, is no null and drops
+    /// it, as every other path that lacks it does, so a proof is never
+    /// carried onto a path that proved nothing. Dropped at a null, `if (k)
     /// get(&c); char *t = c;` stored or copied and read back as an `int *`
     /// was believed whole, since for such a value no belief is no bound
-    /// (#719). Any other path that lacks it still drops it, so a proof is
-    /// never carried onto a path that proved nothing.
+    /// (#719).
     ///
     /// **The size of what the pointer read points to, and not of what the
     /// local it lands in points to.** `void **pp; ... int *q = *pp;` reads a
@@ -1064,7 +1066,8 @@ impl Levels {
 impl Held {
     /// Whether this value names nothing at all: no allocation, no local's
     /// address, and none of the marks that say it may hold what this check
-    /// did not follow. A null, or a local nothing was assigned. The test
+    /// did not follow: a null, or a local nothing was assigned, which
+    /// [`Self::joined`] tells apart from the null by `Known::unwritten`. The test
     /// `Known::names_no_more_than_its_sites` makes, with no site either, on
     /// one value rather than on a local: a field added to one is a field
     /// to answer in the other. What [`Self::joined`] asks of a path before
@@ -1266,10 +1269,18 @@ impl Held {
     /// is that [`Held::none`] is the identity for three of these fields and the
     /// zero for the fourth, so building a value up from nothing cleared a proof
     /// every time.
-    pub(super) fn joined(&mut self, other: &Held, sources: &SourceMap) {
+    ///
+    /// `unwritten` is whether each side left the local unwritten
+    /// (`Known::unwritten`), which no field here says: such a local names
+    /// nothing and is no null, and `memcpy(m, &t, 8)` of a `t` written on one
+    /// arm only, read back as an `int *`, was believed whole once it was
+    /// taken for one. Found by review.
+    pub(super) fn joined(&mut self, other: &Held, sources: &SourceMap, unwritten: (bool, bool)) {
         // Asked of each path as it arrived, before any field below is joined.
-        let (self_names_nothing, other_names_nothing) =
-            (self.names_nothing(), other.names_nothing());
+        let (self_names_nothing, other_names_nothing) = (
+            self.names_nothing() && !unwritten.0,
+            other.names_nothing() && !unwritten.1,
+        );
         // Every field named, never `..`, in this method and in its neighbour
         // alike: a field added to this struct is `error[E0027]` in both and has
         // to say what it means in each. ADR-0024 is why there are two places
