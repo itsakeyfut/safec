@@ -306,7 +306,9 @@ cases! {
         a_pointer_read_out_of_memory_that_names_a_written_block_is_not_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Any place a read may reach that may be unwritten is enough for a
         // doubt, a block or a local, whatever else it may reach (#749).
-        // Mutations, measured at the commit that guards them.
+        // Mutation: ask every local to be unwritten again; the first goes
+        // silent. Count only a maybe-unwritten local; the second goes
+        // silent. Doubt whatever the locals hold; the third is doubted.
         a_pointer_that_may_name_a_block_nothing_wrote_or_a_written_local_is_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_that_may_name_an_unwritten_local_or_a_written_block_is_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_that_may_name_a_written_local_or_a_written_block_is_not_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -333,8 +335,9 @@ cases! {
         a_pointer_read_out_of_memory_a_loaded_pointer_wrote_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read through a pointer that may be `p`'s address, which holds a
         // value, or `box`, which nothing wrote: a doubt, since the read is of
-        // `box` on one path (#749). Mutations, measured at the commit that
-        // guards them.
+        // `box` on one path (#749). Mutation: ask every local to be
+        // unwritten in `reads_partly` again; it goes silent. Drop the
+        // clause over locals in `reads_fresh`; it is certain.
         a_pointer_read_through_what_may_be_a_locals_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read out of fresh memory, and then handed by address to a call
         // that may have written another pointer into it, so the doubt at its
