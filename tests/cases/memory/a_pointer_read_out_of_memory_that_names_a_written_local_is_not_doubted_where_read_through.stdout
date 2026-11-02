@@ -1,0 +1,78 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "x"
+  Local "_2" "int *" "loc"
+  Local "_3" "int **" "p"
+  Local "_4" "int **"
+  Local "_5" "int ***" "pp"
+  Local "_6" "int ***"
+  Local "_7" "int **" "u"
+  Local "_8" "int"
+  Local "_9" "int *" "r"
+  Local "_10" "int"
+  Block "bb0" entry
+    Operation a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:2:10 written
+      Destination "_2"
+      Use
+        Copy "_1"
+    Sequenced a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:2:16 generated
+    Operation a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:3:15 written
+      Destination "_4"
+      Address
+        Place "_2"
+    Operation a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:3:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:3:15 generated
+    Operation a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:4:17 written
+      Destination "_6"
+      Address
+        Place "_3"
+    Operation a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:4:12 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:4:17 generated
+    Operation a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:5:11 written
+      Destination "_7"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:5:15 generated
+    Operation a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:6:9 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_7"
+    Branch a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:6:9 written "bb1" "bb2"
+      Copy "_8"
+  Block "bb1"
+    Sequenced a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:6:9 generated
+    Operation a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:6:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:6:20 generated
+    Return
+  Block "bb2"
+    Sequenced a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:6:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:7:10 written
+      Destination "_9"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:7:14 generated
+    Operation a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:8:12 written
+      Destination "_10"
+      Binary "Eq"
+        Copy "_9"
+        Copy "_1"
+    Operation a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:8:5 written
+      Destination "_0"
+      Use
+        Copy "_10"
+    Sequenced a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through.c:8:12 generated
+    Return
