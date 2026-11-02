@@ -868,7 +868,9 @@ pub(super) struct Held {
     /// local through its address by such a call, believed whole as its
     /// result is and no wider than the local was handed as. A store or a
     /// copy of what the call wrote reads it there, so the width moves with
-    /// the value (#715).
+    /// the value (#715), until a join with a path that does not believe it
+    /// drops it, which for such a value lifts the bound rather than keeping
+    /// it (#719).
     ///
     /// **The size of what the pointer read points to, and not of what the
     /// local it lands in points to.** `void **pp; ... int *q = *pp;` reads a
