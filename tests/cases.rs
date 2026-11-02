@@ -250,6 +250,23 @@ cases! {
         // still doubted (#739). Mutation: mark `h` as stored through for a
         // deep destination too; the read after the copy goes silent.
         a_copy_through_a_deep_destination_leaves_the_level_it_reads_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A library copy reads its length where it writes part of a pointer:
+        // at what it stores (#717) and at what it leaves unwritten (#745).
+        // Mutation: ask nothing for a partial length; the first goes
+        // silent. Ask at every constant length; the second is doubted.
+        // Clear the mark where no pointer was written whole; the third
+        // goes silent. Read a length ending part way through a pointer as
+        // whole; the fourth loses its doubt. Read every length as writing
+        // no pointer whole; the fifth is reported.
+        a_copy_of_part_of_a_pointer_into_caller_memory_is_asked_at_the_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_of_whole_pointers_into_caller_memory_is_not_asked_its_length: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_shorter_than_a_pointer_leaves_a_fresh_block_fresh: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_ending_part_way_through_a_pointer_leaves_the_block_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_of_whole_pointers_into_a_fresh_block_writes_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same ask by the source's type where the destination is a
+        // `void *`. Mutation: ask by the destination's type alone; it goes
+        // silent.
+        a_copy_of_part_of_a_pointer_through_a_void_pointer_destination_is_asked_by_its_source: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store this check cannot place writes only where it may land:
         // what its landing names and what code it cannot read can reach. An
         // allocation nothing reaches stays unwritten, `SC0411`. Mutation:

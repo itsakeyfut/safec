@@ -110,12 +110,30 @@ enum Wrote<'a> {
         targets: &'a [usize],
         unwritten_before: &'a [bool],
     },
-    /// A library copy handed `dest` first, which exposes `reach`.
+    /// A library copy handed `dest` first, which exposes `reach`, and
+    /// whose length covers the pointers it writes as `length` says.
     Copy {
         dest: Option<&'a Operand>,
         reach: Vec<usize>,
         span: Span,
+        length: CopiedPointers,
     },
+}
+
+/// How a library copy's length covers the pointers it writes, which
+/// [`Allocations::copied_pointers`] answers once for the two doors that ask:
+/// what the copy leaves (`report::departed_at_call`) and what it writes of
+/// what is unwritten ([`Allocations::initialised_by`]). One answer, so that
+/// neither door reads the length differently from the other (#717, #745).
+pub(super) enum CopiedPointers {
+    /// A whole number of pointers, or a length this check cannot read,
+    /// which `report::reached_by_library` already reports at the copy
+    /// wherever the destination holds anything.
+    Whole,
+    /// At least one whole pointer, and part of the next.
+    LastInPart,
+    /// Less than one pointer.
+    NoneWhole,
 }
 
 impl Allocations<'_> {
@@ -176,6 +194,21 @@ impl Allocations<'_> {
         let parameter = declared.parameters().nth(index)?;
         let integer = self.unit.integer(declared.local(parameter))?;
         u64::try_from(integer.convert(*value)).ok()
+    }
+
+    /// How the length a library copy is handed, its third argument, covers
+    /// the pointers it writes, counted in the target's pointer width: a
+    /// copy of four bytes where pointers take eight writes half of one, and
+    /// a reader of it reads a pointer built from four new bytes and four
+    /// old ones (#717), or from four and four nothing wrote (#745).
+    pub(super) fn copied_pointers(&self, callee: FuncId, arguments: &[Operand]) -> CopiedPointers {
+        let target = self.unit.target();
+        let pointer = u64::from(target.pointer_bits() / target.char().bits());
+        match self.constant_argument(callee, arguments, 2) {
+            Some(length) if length < pointer => CopiedPointers::NoneWhole,
+            Some(length) if length % pointer != 0 => CopiedPointers::LastInPart,
+            Some(_) | None => CopiedPointers::Whole,
+        }
     }
 
     /// What this check can read in the name of the function being called.
@@ -771,7 +804,12 @@ impl Allocations<'_> {
                     }
                 }
             }
-            Wrote::Copy { dest, reach, span } => {
+            Wrote::Copy {
+                dest,
+                reach,
+                span,
+                length,
+            } => {
                 // **And a local it may write past the end of**, as a store
                 // through the same pointer marks it: lost, and in doubt where
                 // it was unwritten. `pp = &z + 1; memcpy(pp, &px, 8); q = z;`
@@ -867,11 +905,24 @@ impl Allocations<'_> {
                 let maybe_before = value.maybe_fresh.clone();
                 value.expose(self.sources, reach, Some(span));
                 if let Some((may_land, several)) = may_land {
+                    // **And only as far as its length writes a pointer
+                    // whole**: a copy shorter than one writes no pointer in
+                    // the block, so a block that was fresh is still fresh,
+                    // and a read of it is certain; one that ends part way
+                    // through a later pointer wrote some and not others, and
+                    // the mark, one per block, cannot say which a read is of,
+                    // so it is a doubt, as a copy that may have missed the
+                    // block is (#745). See `CopiedPointers`.
+                    let (unwritten, doubted) = match length {
+                        CopiedPointers::Whole => (false, several),
+                        CopiedPointers::LastInPart => (false, true),
+                        CopiedPointers::NoneWhole => (true, false),
+                    };
                     for site in 0..value.fresh.len() {
-                        if !may_land.contains(&site) {
+                        if !may_land.contains(&site) || unwritten {
                             value.fresh[site] = fresh_before[site];
                             value.maybe_fresh[site] = maybe_before[site];
-                        } else if several && (fresh_before[site] || maybe_before[site]) {
+                        } else if doubted && (fresh_before[site] || maybe_before[site]) {
                             value.maybe_fresh[site] = true;
                         }
                     }
@@ -3582,6 +3633,7 @@ impl Analysis for Allocations<'_> {
                         dest: arguments.first(),
                         reach,
                         span: origin.span(),
+                        length: self.copied_pointers(*callee, arguments),
                     },
                 );
             }
