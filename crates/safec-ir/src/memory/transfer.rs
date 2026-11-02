@@ -719,12 +719,15 @@ impl Allocations<'_> {
                         // `SC0411` (#726). Taken as written, the may-be-fresh
                         // mark not kept, since keeping it doubted a write
                         // through a pointer read out of memory that certainly
-                        // reached its block, by the user's decision. **What
-                        // such code can reach decides no case found,
-                        // measured**: a block it can reach was cleared by the
-                        // call that exposed it, or is in a loaded pointer's
-                        // landing already. It is kept so that the set is the
-                        // one the contents land in. See ADR-0044 and ADR-0057.
+                        // reached its block, by the user's decision. **And
+                        // what such code can name through a local whose
+                        // address it holds**, `Known::sites_named_by_unknown_code`,
+                        // and not only what is reachable from exposed memory:
+                        // `keep(&p); p = m; **t = x;` with `t` read out of a
+                        // parameter may write `m` through `p`, and reading it
+                        // as reachable only refused that correct program with
+                        // a certain `SC0411`. Found by review. See ADR-0044 and
+                        // ADR-0057.
                         let deep = derefs(place);
                         let landing = self.landing(
                             value,
@@ -735,7 +738,7 @@ impl Allocations<'_> {
                         );
                         let mut may_land: BTreeSet<usize> =
                             landing.containers.iter().copied().collect();
-                        may_land.extend(value.reachable_now());
+                        may_land.extend(value.sites_named_by_unknown_code());
                         for site in may_land {
                             value.written(site);
                         }
