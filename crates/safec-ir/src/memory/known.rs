@@ -894,9 +894,19 @@ impl Known {
     /// it holds below its own level what the value carries. `void ***pt =
     /// &t; ... int **a = *pi;` with `t` a load out of a `void ***` read `a`
     /// believing whole `int`s two levels down, where the sites alone said
-    /// nothing (#634). What the local's value points at itself is asked by
-    /// the local's own fit where it is read, so its own level is no bound
-    /// here. `depth_cap` is [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer),
+    /// nothing (#634). **Its own level too, from the two fields a store of
+    /// its value reads**: what a load believes, and no bound for any other
+    /// value. The pointer read out of the local is that value, and a load
+    /// asks the local's own fit where it is read, but a copy stores it into
+    /// memory, which a later read believes: `memcpy(m, &c, 8)` with `c` a
+    /// `char *` load, read back through an `int **`, was believed whole
+    /// where `*cm = c;` was doubted (#711). **Not the store's other
+    /// condition**, that its destination may hold a pointer: a byte read out
+    /// of memory is a load too, so `memcpy(m, &b, 1)` with `b` such a `char`,
+    /// read back as a pointer, is doubted, where `*cm = b;` into a `char *`
+    /// records no bound. A bound here only narrows what is believed, and a
+    /// pointer read out of bytes a `char` filled is not shown to be whole.
+    /// Found by review. `depth_cap` is [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer),
     /// which the list that puts it one level down is cut to.
     ///
     /// **The one walk a load, a departure and a copy take**, so that the
@@ -912,9 +922,9 @@ impl Known {
                 levels.bound_by(&self.contents[site].stored_at_most.below(depth - 1 - level));
             }
             for slot in locals {
-                let held = self.points_to[slot]
-                    .contents_at_most
-                    .stored_under(None, depth_cap);
+                let own = &self.points_to[slot];
+                let first = own.loaded.then(|| own.believed.unwrap_or(0));
+                let held = own.contents_at_most.stored_under(first, depth_cap);
                 levels.bound_by(&held.below(depth - 1 - level));
             }
         }
