@@ -8,6 +8,16 @@ error[SC0412]: this may reach outside the object `pp` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0413]: this lets `pp` leave, and what it points at may hold a pointer to an object narrower than it is read as
+   ╭─[ a_pointer_copied_by_memcpy_out_of_a_void_pointer_parameter_is_doubted_after_a_call.c:8:5 ]
+   │
+ 8 │     memcpy(&r, pp, 8);
+   │     ────────┬────────  
+   │             ╰────────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0402]: this uses `s`, which this check stopped following
     ╭─[ a_pointer_copied_by_memcpy_out_of_a_void_pointer_parameter_is_doubted_after_a_call.c:14:5 ]
     │
