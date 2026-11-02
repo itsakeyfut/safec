@@ -139,3 +139,117 @@ impl Allocations<'_> {
         })
     }
 }
+
+/// Where one write lands: the allocations and the locals it may write, and
+/// whether it may land where this check cannot place it. Computed by
+/// [`Allocations::landing`] for a store and for a library copy alike, since
+/// a copy into `*dest` is a store at one dereference more, so that the two
+/// doors cannot answer one destination differently (#737).
+pub(super) struct Landing {
+    /// The allocations it may land in, recorded there by `Known::pour`.
+    pub(super) containers: Vec<usize>,
+    /// The locals it may land in by an edge: the pointer's own edges at
+    /// one exact dereference, and the locals the level above may be deeper.
+    pub(super) targets: Vec<usize>,
+    /// Whether it is one exact dereference through the pointer: then
+    /// [`Self::targets`] are the pointer's own edges.
+    pub(super) one_step: bool,
+    /// The pointer the write goes through, and how many dereferences down
+    /// it lands.
+    pub(super) pointer: crate::ir::LocalId,
+    pub(super) deep: usize,
+    /// Which kind of write it is, which the doors' differences are matched on.
+    pub(super) kind: StoreKind,
+}
+
+impl Landing {
+    /// Whether the pointer may hold what this check did not follow, or the
+    /// write is deep enough that it is taken as unplaced. See ADR-0044.
+    ///
+    /// **Asked where each door asks it**, as `Allocations::land_contents`
+    /// begins, and not when the landing is made: a copy and a deeper store
+    /// have written into their targets by then, which may change the
+    /// pointer's own value, and a store through one dereference writes its
+    /// targets after.
+    ///
+    /// **The depth at which a write is unnamed differs between the doors**,
+    /// and is kept as it was: a store deeper than one dereference, a copy
+    /// deeper than two, which is a copy whose destination itself has more
+    /// than one dereference. Found while designing #737, and not shown to
+    /// decide a case; this match is where a change to either answers.
+    pub(super) fn unnamed(&self, value: &Known) -> bool {
+        let deep_enough = match self.kind {
+            StoreKind::Direct | StoreKind::Through { .. } => self.deep > 1,
+            StoreKind::Copy => self.deep > 2,
+        };
+        let held = &value.points_to[self.pointer.index()];
+        held.loaded || held.lost || held.foreign || deep_enough
+    }
+
+    /// Whether it lands nowhere this check names: no allocation and no local.
+    ///
+    /// **Which locals count differs between the doors**, and is kept as it
+    /// was: a store counts only the pointer's own edges, at one exact
+    /// dereference, and a copy counts the locals the level above may be as
+    /// well. Found while implementing #737, and not shown to decide a case.
+    pub(super) fn unplaced(&self) -> bool {
+        let no_local = match self.kind {
+            StoreKind::Direct | StoreKind::Through { .. } => {
+                !self.one_step || self.targets.is_empty()
+            }
+            StoreKind::Copy => self.targets.is_empty(),
+        };
+        self.containers.is_empty() && no_local
+    }
+
+    /// Whether an allocation it lands in is reachable to code this check
+    /// cannot read, which another parameter may name (#489). As of when it
+    /// is asked, for the reason [`Self::unnamed`] gives.
+    pub(super) fn handed_over(&self, value: &Known) -> bool {
+        let reachable = value.reachable_now();
+        self.containers
+            .iter()
+            .any(|container| reachable.contains(container))
+    }
+}
+
+impl Allocations<'_> {
+    /// Where a write of `kind` through `pointer`, `deep` dereferences down,
+    /// lands. `one_step` is whether the place is exactly one dereference of
+    /// the local; a copy's destination with no projection is that.
+    pub(super) fn landing(
+        &self,
+        value: &Known,
+        pointer: crate::ir::LocalId,
+        deep: usize,
+        one_step: bool,
+        kind: StoreKind,
+    ) -> Landing {
+        let containers: Vec<usize> = if one_step {
+            value.sites_of(pointer).collect()
+        } else if deep > 1 {
+            value.stored_below(pointer, deep - 1).into_iter().collect()
+        } else {
+            Vec::new()
+        };
+        let targets: Vec<usize> = if one_step {
+            value.written_through(pointer)
+        } else if deep > 1 {
+            value
+                .levels_below(pointer, deep - 1)
+                .1
+                .into_iter()
+                .collect()
+        } else {
+            Vec::new()
+        };
+        Landing {
+            containers,
+            targets,
+            one_step,
+            pointer,
+            deep,
+            kind,
+        }
+    }
+}
