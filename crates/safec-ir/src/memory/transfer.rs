@@ -12,12 +12,11 @@ use crate::ir::{
 };
 use crate::source::{SourceMap, Span};
 
-use super::bits::Bits;
 use super::built::{built_from, named, replaced_by};
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known};
 use super::parts::{
-    Callee, Contents, Extent, Freeing, Held, Init, LIBRARY, Leaves, Levels, Library, Makes, Offset,
-    PendingRead, Reached, Read, Realloced, SiteState, bounded,
+    Callee, Contents, Extent, Freeing, Held, Init, Inits, LIBRARY, Leaves, Levels, Library, Makes,
+    Offset, PendingRead, Reached, Read, Realloced, SiteState, bounded,
 };
 use super::report::{Fit, fits, slots_from, slots_leaving};
 use super::store::{Landing, StoreKind};
@@ -297,8 +296,8 @@ impl Allocations<'_> {
     /// The per-element record each local starts with: a bit set for every
     /// element of an array of at most `ELEMENTS_KEPT` pointers that is
     /// unwritten at entry, and none for any other local. See
-    /// `Known::unwritten_elements`.
-    fn elements_at_entry(&self) -> Vec<Bits> {
+    /// `Known::element_init`.
+    fn elements_at_entry(&self) -> Vec<Inits> {
         let function = self.unit.function(self.function);
         let unwritten = self.unwritten_at_entry();
         function
@@ -310,14 +309,9 @@ impl Allocations<'_> {
                 };
                 match length {
                     Some(length) if length <= ELEMENTS_KEPT && unwritten[local.index()] => {
-                        let length = usize::try_from(length).unwrap_or(0);
-                        let mut bits = Bits::new(length);
-                        for element in 0..length {
-                            bits.set(element);
-                        }
-                        bits
+                        Inits::unwritten(usize::try_from(length).unwrap_or(0))
                     }
-                    _ => Bits::new(0),
+                    _ => Inits::written(0),
                 }
             })
             .collect()
@@ -1848,8 +1842,7 @@ impl Allocations<'_> {
             handed_at_most,
             handed_contents_at_most,
             local_init,
-            unwritten_elements,
-            maybe_unwritten_elements,
+            element_init,
             exposed_in_part,
             stored_in_part,
             exposed_locals,
@@ -1879,40 +1872,10 @@ impl Allocations<'_> {
         for (here, there) in stored_out.iter_mut().zip(&from.stored_out) {
             *here = *here || *there;
         }
-        // What may be unwritten, before the proofs below are intersected:
-        // a union, or at a back edge what either side doubted and did not
-        // prove, beside what both prove. See
-        // `Known::maybe_unwritten_elements`.
-        for (index, (here, there)) in maybe_unwritten_elements
-            .iter_mut()
-            .zip(&from.maybe_unwritten_elements)
-            .enumerate()
-        {
-            if back {
-                let proved_here = &unwritten_elements[index];
-                let proved_there = &from.unwritten_elements[index];
-                for element in 0..here.len() {
-                    let doubted_here = here.get(element) && !proved_here.get(element);
-                    let doubted_there = there.get(element) && !proved_there.get(element);
-                    let proved = proved_here.get(element) && proved_there.get(element);
-                    if doubted_here || doubted_there || proved {
-                        here.set(element);
-                    } else {
-                        here.remove(element);
-                    }
-                }
-            } else {
-                here.union_with(there);
-            }
-        }
-        // A proof per element, so an intersection. See
-        // `Known::unwritten_elements`.
-        for (here, there) in unwritten_elements.iter_mut().zip(&from.unwritten_elements) {
-            for element in 0..here.len() {
-                if here.get(element) && !there.get(element) {
-                    here.remove(element);
-                }
-            }
+        // Per element, joined as `Init::joined` says. See
+        // `Known::element_init`.
+        for (here, there) in element_init.iter_mut().zip(&from.element_init) {
+            here.join(there, back);
         }
         for (here, there) in exposed_in_part.iter_mut().zip(&from.exposed_in_part) {
             *here = *here || *there;
@@ -1927,7 +1890,7 @@ impl Allocations<'_> {
         // record here gains none, at either kind of join. See
         // `Known::local_init`.
         for (index, (here, there)) in local_init.iter_mut().zip(&from.local_init).enumerate() {
-            let kept = unwritten_elements[index].len() > 0;
+            let kept = element_init[index].len() > 0;
             *here = here.joined(*there, back || kept);
         }
         // A may-fact, so a union, as `exposed` is: a call on one arm may
@@ -2309,8 +2272,7 @@ impl Analysis for Allocations<'_> {
                     }
                 })
                 .collect(),
-            unwritten_elements: self.elements_at_entry(),
-            maybe_unwritten_elements: self.elements_at_entry(),
+            element_init: self.elements_at_entry(),
             exposed_in_part: vec![false; self.locals],
             stored_in_part: vec![false; self.locals],
             // No call has been handed anything yet.
@@ -3120,15 +3082,8 @@ impl Analysis for Allocations<'_> {
                     value.local_init[local.index()] = Init::Written;
                 }
                 // And every element of it, with nothing written in part and
-                // nothing handed over. See `Known::unwritten_elements`.
-                for elements in [
-                    &mut value.unwritten_elements[local.index()],
-                    &mut value.maybe_unwritten_elements[local.index()],
-                ] {
-                    for element in 0..elements.len() {
-                        elements.set(element);
-                    }
-                }
+                // nothing handed over. See `Known::element_init`.
+                value.element_init[local.index()].unwrite_all();
                 value.exposed_in_part[local.index()] = false;
                 value.stored_in_part[local.index()] = false;
                 // **And no call holds its address yet**: one kept from an

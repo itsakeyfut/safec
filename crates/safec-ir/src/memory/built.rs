@@ -302,7 +302,7 @@ pub(super) fn replaced_by(
 /// element it is handed, so what it is handed at a known element other
 /// than the start is in part too. One answer for the placed store, a store
 /// this check cannot place, a library copy and a call. See
-/// `Known::unwritten_elements` and ADR-0057.
+/// `Known::element_init` and ADR-0057.
 pub(super) fn write_effects(
     unit: &TranslationUnit,
     function: &Function,
@@ -350,7 +350,7 @@ pub(super) fn write_effects(
                 }
                 _ => None,
             };
-            let kept = value.unwritten_elements[each].len() > 0;
+            let kept = value.element_init[each].len() > 0;
             match element {
                 Some(0) if call && !array_edge => None,
                 Some(_) if call => Some(ArrayWrite::Maybe),

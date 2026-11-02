@@ -631,6 +631,107 @@ impl Init {
     }
 }
 
+/// An [`Init`] per element of a local array of at most `ELEMENTS_KEPT`
+/// innermost elements, or of none for every other local.
+///
+/// **Two sets of bits behind one value**, so that it takes no more than the
+/// record it replaced and `memory::per_block` counts the same: `proved`, the
+/// elements [`Init::Unwritten`], and `doubted`, the elements that are not
+/// [`Init::Written`], a superset of `proved`. Nothing outside reads the bits,
+/// so the superset is this type's to keep (#733).
+#[derive(Clone, PartialEq, Eq)]
+pub(super) struct Inits {
+    proved: Bits,
+    doubted: Bits,
+}
+
+impl Inits {
+    /// `len` elements, each [`Init::Written`]. A local kept whole has none.
+    pub(super) fn written(len: usize) -> Self {
+        Self {
+            proved: Bits::new(len),
+            doubted: Bits::new(len),
+        }
+    }
+
+    /// `len` elements, each [`Init::Unwritten`].
+    pub(super) fn unwritten(len: usize) -> Self {
+        let mut inits = Self::written(len);
+        inits.unwrite_all();
+        inits
+    }
+
+    /// How many elements it keeps: none for a local kept whole.
+    pub(super) fn len(&self) -> usize {
+        self.proved.len()
+    }
+
+    /// What `element` is.
+    pub(super) fn get(&self, element: usize) -> Init {
+        if self.proved.get(element) {
+            Init::Unwritten
+        } else if self.doubted.get(element) {
+            Init::Maybe
+        } else {
+            Init::Written
+        }
+    }
+
+    /// Make `element` what `init` says.
+    pub(super) fn set(&mut self, element: usize, init: Init) {
+        match init {
+            Init::Unwritten => {
+                self.proved.set(element);
+                self.doubted.set(element);
+            }
+            Init::Maybe => {
+                self.proved.remove(element);
+                self.doubted.set(element);
+            }
+            Init::Written => {
+                self.proved.remove(element);
+                self.doubted.remove(element);
+            }
+        }
+    }
+
+    /// Every element [`Init::Written`].
+    pub(super) fn write_all(&mut self) {
+        self.proved.clear_all();
+        self.doubted.clear_all();
+    }
+
+    /// Every element as [`Init::may_write`] leaves it.
+    pub(super) fn may_write_all(&mut self) {
+        self.proved.clear_all();
+    }
+
+    /// Every element [`Init::Unwritten`], as a new object's are.
+    pub(super) fn unwrite_all(&mut self) {
+        for element in 0..self.len() {
+            self.set(element, Init::Unwritten);
+        }
+    }
+
+    /// Whether every element is [`Init::Unwritten`].
+    pub(super) fn all_unwritten(&self) -> bool {
+        self.proved.ones().count() == self.len()
+    }
+
+    /// Whether some element may be unwritten.
+    pub(super) fn any_may_be_unwritten(&self) -> bool {
+        self.doubted.any()
+    }
+
+    /// Each element joined with the other's as [`Init::joined`] says.
+    pub(super) fn join(&mut self, other: &Self, back: bool) {
+        for element in 0..self.len() {
+            let joined = self.get(element).joined(other.get(element), back);
+            self.set(element, joined);
+        }
+    }
+}
+
 /// Where an allocation came from, where two paths agree about it.
 ///
 /// `None` where they do not, which only ever loses what was known and so cannot
@@ -1009,7 +1110,7 @@ pub(super) struct Held {
     /// **What lets one element be written and another stay unwritten**
     /// (#667). One record per array made a write to `m[0]` a write of `m[1]`,
     /// and a write through `m + 1` either all of `m` or none of it. A join
-    /// keeps it where both paths agree. See `Known::unwritten_elements` and
+    /// keeps it where both paths agree. See `Known::element_init` and
     /// ADR-0057.
     pub(super) element: Option<u64>,
     /// Whether an edge in [`Self::writes_to`] survives only by the rule of
@@ -1929,6 +2030,42 @@ mod tests {
         assert_eq!(written, Init::Written);
     }
 
+    /// Every element of an `Inits` is the `Init` it was set to, joins as
+    /// `Init::joined` says, and a write that may be of any element leaves
+    /// each as `Init::may_write` does. Mutation: let `Inits::set` leave the
+    /// doubt bit alone for `Written`; the first assertion fails.
+    #[test]
+    fn inits_keep_an_init_per_element_and_join_each_as_one() {
+        for back in [false, true] {
+            for a in INITS {
+                for b in INITS {
+                    let mut here = Inits::written(2);
+                    here.set(0, a);
+                    here.set(1, b);
+                    assert_eq!(
+                        (here.get(0), here.get(1)),
+                        (a, b),
+                        "set then get: {a:?} {b:?}"
+                    );
+                    let mut there = Inits::written(2);
+                    there.set(0, b);
+                    there.set(1, a);
+                    here.join(&there, back);
+                    assert_eq!(here.get(0), a.joined(b, back), "join: {a:?} {b:?}");
+                    assert_eq!(here.get(1), b.joined(a, back), "join: {b:?} {a:?}");
+                }
+                let mut all = Inits::written(1);
+                all.set(0, a);
+                all.may_write_all();
+                let mut one = a;
+                one.may_write();
+                assert_eq!(all.get(0), one, "may_write_all: {a:?}");
+            }
+        }
+        assert!(Inits::unwritten(3).all_unwritten());
+        assert!(!Inits::written(3).any_may_be_unwritten());
+    }
+
     #[test]
     fn a_doubt_leaves_a_proof_and_reopens_a_write() {
         let mut init = Init::Unwritten;
@@ -1939,7 +2076,7 @@ mod tests {
         assert_eq!(written, Init::Maybe);
     }
 
-    use super::{Extent, Freeing, Held, Init, Levels, Offset, SiteState, earlier};
+    use super::{Extent, Freeing, Held, Init, Inits, Levels, Offset, SiteState, earlier};
     use crate::memory::report::inside;
     use crate::source::{FileId, SourceMap, Span};
 

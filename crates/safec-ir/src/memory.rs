@@ -346,13 +346,13 @@ const NAMED_AT_READ: usize = 96;
 
 /// How many bytes the per-element record of a local array adds to each
 /// local (#667): [`Held::element`](parts::Held::element) and its two flags
-/// beside it, and a row of `Known::unwritten_elements` with the two flags
+/// beside it, and a row of `Known::element_init` with the two flags
 /// beside that. Measured as [`NAMED_AT_READ`] was, on the same four
 /// functions, release build: peak memory grew by 6.5, 6.1, 5.9 and 5.6%,
 /// from 323 to 344 MB at the smallest and 980 to 1,035 MB at the largest,
 /// which is about 110 bytes a local at each size. The bits an array keeps
 /// are at most one word, beside the row's own 32 bytes. And a row of
-/// `Known::maybe_unwritten_elements` (#668), measured the same way against
+/// `Known::element_init` (#668), measured the same way against
 /// `main` after #667: 4.1, 3.4 and 2.9% on the three smaller functions, from
 /// 345 to 359 MB at the smallest and 912 to 938 MB at the largest, which
 /// the 110 bytes above put at 54 to 69 bytes a local; 72 are counted. The
