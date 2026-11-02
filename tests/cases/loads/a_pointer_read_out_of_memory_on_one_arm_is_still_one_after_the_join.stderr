@@ -1,3 +1,14 @@
+error[SC0411]: `*t` may be read before anything was assigned to it
+    ╭─[ a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:30:5 ]
+    │
+ 30 │     show(*t);
+    │     ────┬───  
+    │         ╰───── read here
+────╯
+  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path before it is read
 error[SC0412]: this may reach outside the object `t` points at
     ╭─[ a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:30:5 ]
     │

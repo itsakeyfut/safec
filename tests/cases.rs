@@ -297,6 +297,11 @@ cases! {
         a_copy_this_check_cannot_place_out_of_a_block_nothing_wrote_does_not_make_a_written_block_certain: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_shorter_than_its_destination_out_of_a_block_nothing_wrote_leaves_the_rest_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read out of memory is doubted about a block it names
+        // that may still be fresh, and is no proof (#728). Mutations,
+        // measured at the commit that guards them.
+        a_pointer_read_out_of_memory_that_names_a_block_nothing_wrote_is_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_memory_that_names_a_written_block_is_not_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store this check cannot place writes only where it may land:
         // what its landing names and what code it cannot read can reach. An
         // allocation nothing reaches stays unwritten, `SC0411`. Mutation:
