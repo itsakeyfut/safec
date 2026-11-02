@@ -20,7 +20,7 @@ use super::parts::{
     PendingRead, Reached, Read, Realloced, SiteState, bounded,
 };
 use super::report::{Fit, fits, slots_from, slots_leaving};
-use super::store::StoreKind;
+use super::store::{Landing, StoreKind};
 use super::{LostReason, derefs, handed_places};
 use crate::reads::{dereferenced_in_element, dereferenced_in_terminator};
 
@@ -80,6 +80,20 @@ pub(super) struct Allocations<'a> {
     /// [`tested_against_null`](crate::nullability::tested_against_null)
     /// makes back across a `Goto`.
     pub(super) cfg: Cfg,
+}
+
+/// What [`Allocations::land_contents`] is told of one write beyond where it
+/// lands.
+enum Pours {
+    /// An assignment: whether what it stores may be a pointer, the
+    /// allocations what it stores holds, and where it is.
+    Store {
+        pointer_stored: bool,
+        carried: Vec<usize>,
+        span: Span,
+    },
+    /// A library copy.
+    Copy,
 }
 
 /// What [`Allocations::initialised_by`] is told of one write.
@@ -524,6 +538,73 @@ impl Allocations<'_> {
         value.points_to[target].lost = true;
         if unwritten_before[target] {
             value.partly_written[target] = true;
+        }
+    }
+
+    /// **What a write pours into memory**, at the store and at the library
+    /// copy: what it carries, into the allocations it lands in, and, where it
+    /// may land where this check cannot place it, into every allocation code
+    /// this check cannot read can name. One function with one arm per kind
+    /// of write where the doors differ, so that a rule changed for one is
+    /// read beside the other (#737).
+    ///
+    /// A store that may land unplaced lands so only where it stores a
+    /// pointer; a copy lands so whatever its type, since it copies bytes. A
+    /// store exposes what it carries where it is unplaced or its pointer is
+    /// unnamed, and tells a pending read where what it lands in is already
+    /// reachable; a copy exposes what it was handed afterwards, in
+    /// [`Self::initialised_by`]. Each as that door did. See ADR-0044.
+    fn land_contents(
+        &self,
+        value: &mut Known,
+        landing: &Landing,
+        poured: &Contents,
+        in_part: &[usize],
+        pours: Pours,
+    ) {
+        let unplaced = landing.unplaced();
+        let unnamed = landing.unnamed(value);
+        let elsewhere = unplaced || unnamed || landing.handed_over(value);
+        match pours {
+            Pours::Store {
+                pointer_stored,
+                carried,
+                span,
+            } => {
+                if elsewhere && pointer_stored {
+                    value.landed_where_unknown_code_points(poured);
+                }
+                if unplaced {
+                    // No container, so what is poured is the arrays it marks
+                    // alone.
+                    value.pour(&[], poured, in_part);
+                    value.expose(self.sources, carried, Some(span));
+                } else {
+                    if unnamed {
+                        value.expose(self.sources, carried.clone(), Some(span));
+                    }
+                    value.pour(&landing.containers, poured, in_part);
+                    // Stored where code this check cannot read already
+                    // reaches is reachable to it from now on, which no call
+                    // marks until the next one: a read before this store in
+                    // the same expression is told here.
+                    let reachable = value.reachable_now();
+                    if landing
+                        .containers
+                        .iter()
+                        .any(|container| reachable.contains(container))
+                    {
+                        let routes = value.closure(carried);
+                        value.noticed(self.sources, Some(span), &routes);
+                    }
+                }
+            }
+            Pours::Copy => {
+                if elsewhere {
+                    value.landed_where_unknown_code_points(poured);
+                }
+                value.pour(&landing.containers, poured, in_part);
+            }
         }
     }
 
@@ -2252,7 +2333,6 @@ impl Analysis for Allocations<'_> {
                         one_step,
                         StoreKind::Through { derefs: deep },
                     );
-                    let containers = landing.containers.clone();
                     // **And in the locals the level above may be**, `**t3 = r`
                     // with `*t3 = &slot` in `slot`, as a write through an
                     // alias that may land in several locals: by union, the
@@ -2286,9 +2366,6 @@ impl Analysis for Allocations<'_> {
                         // reason: keeping the proof is the confident direction.
                         value.points_to[target].freed = None;
                     }
-                    // With a target, what it carries is in that local now, and
-                    // the local's address escaped: every call reaches it.
-                    let unplaced = containers.is_empty() && targets.is_empty();
                     // Written into locals whose addresses escaped, which every
                     // call reaches, so a pending read is told, as at an
                     // exposure. See ADR-0042.
@@ -2304,7 +2381,6 @@ impl Analysis for Allocations<'_> {
                     // what it carries is exposed as well as recorded in the
                     // sites: `t = c ? s : *tab; *t = a;` stored `a` only in
                     // `s` and was silent after a later call. See ADR-0044.
-                    let unnamed = landing.unnamed(value);
                     // **Not a local whose address it carries**, though code
                     // this check cannot read may find it there: the slot may
                     // be written again before any such code runs, and an
@@ -2334,7 +2410,6 @@ impl Analysis for Allocations<'_> {
                     // another parameter can name, and not `Contents::from_caller`,
                     // which a buffer of this function's own gains by holding
                     // a caller's pointer. Found by review.
-                    let handed_over = landing.handed_over(value);
                     // **A pointer read out of memory is bounded by what it
                     // is believed**, whatever the record says it names:
                     // the sites a load holds are what the walk every load
@@ -2441,38 +2516,17 @@ impl Analysis for Allocations<'_> {
                         holds_lost: written.lost || written.lost_read,
                         from_caller: written.from_caller,
                     };
-                    if (unplaced || unnamed || handed_over)
-                        && self.may_be_pointer(function, &operation.place)
-                    {
-                        value.landed_where_unknown_code_points(&poured);
-                    }
-                    if unplaced {
-                        // No container, so what is poured is the arrays it
-                        // marks alone.
-                        value.pour(&[], &poured, &in_part);
-                        value.expose(self.sources, carried, Some(operation.origin.span()));
-                    } else {
-                        if unnamed {
-                            value.expose(
-                                self.sources,
-                                carried.clone(),
-                                Some(operation.origin.span()),
-                            );
-                        }
-                        value.pour(&containers, &poured, &in_part);
-                        // Stored where code this check cannot read already
-                        // reaches is reachable to it from now on, which no
-                        // call marks until the next one: a read before this
-                        // store in the same expression is told here.
-                        let reachable = value.reachable_now();
-                        if containers
-                            .iter()
-                            .any(|container| reachable.contains(container))
-                        {
-                            let routes = value.closure(carried.clone());
-                            value.noticed(self.sources, Some(operation.origin.span()), &routes);
-                        }
-                    }
+                    self.land_contents(
+                        value,
+                        &landing,
+                        &poured,
+                        &in_part,
+                        Pours::Store {
+                            pointer_stored: self.may_be_pointer(function, &operation.place),
+                            carried,
+                            span: operation.origin.span(),
+                        },
+                    );
                 }
                 if let Some(landed) = landed {
                     value.named_after_a_store(&landed);
@@ -3253,7 +3307,6 @@ impl Analysis for Allocations<'_> {
                                 into_depth == 0,
                                 StoreKind::Copy,
                             );
-                            let into = landing.containers.clone();
                             // **Into a local's address, the copy lands in the
                             // local**: `memcpy(&s, &r, n)` stores into `s`
                             // what `r` holds, every mark with it, since C17
@@ -3320,12 +3373,6 @@ impl Analysis for Allocations<'_> {
                             // where a store there would**: `memcpy(w, s, 8)`
                             // with `w` a load was believed where `*w = *s;`
                             // was doubted. Found by review. See ADR-0044.
-                            let unnamed = landing.unnamed(value);
-                            // And into handed-over memory, as for a store
-                            // (#489).
-                            let handed_over = landing.handed_over(value);
-                            let lands_unplaced =
-                                unnamed || handed_over || (into.is_empty() && targets.is_empty());
                             // **And the bound on what it copies**, which a copy
                             // carries as a store of a load would: what the
                             // source's memory is believed to hold, from the
@@ -3367,13 +3414,10 @@ impl Analysis for Allocations<'_> {
                                 holds_lost,
                                 from_caller: caller,
                             };
-                            // Where it lands unplaced, with what it carries, as a
-                            // store's landing is given. See
-                            // `Known::landed_where_unknown_code_points`.
-                            if lands_unplaced {
-                                value.landed_where_unknown_code_points(&poured);
-                            }
-                            value.pour(&into, &poured, &in_part);
+                            // Where it lands, unplaced too, with what it
+                            // carries, as a store's landing is given. See
+                            // `Allocations::land_contents`.
+                            self.land_contents(value, &landing, &poured, &in_part, Pours::Copy);
                         }
                     }
                 }

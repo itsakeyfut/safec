@@ -151,6 +151,9 @@ pub(super) struct Landing {
     /// The locals it may land in by an edge: the pointer's own edges at
     /// one exact dereference, and the locals the level above may be deeper.
     pub(super) targets: Vec<usize>,
+    /// Whether it is one exact dereference through the pointer: then
+    /// [`Self::targets`] are the pointer's own edges.
+    one_step: bool,
     pointer: crate::ir::LocalId,
     deep: usize,
     kind: StoreKind,
@@ -181,6 +184,22 @@ impl Landing {
     /// Whether an allocation it lands in is reachable to code this check
     /// cannot read, which another parameter may name (#489). As of when it
     /// is asked, for the reason [`Self::unnamed`] gives.
+    /// Whether it lands nowhere this check names: no allocation and no local.
+    ///
+    /// **Which locals count differs between the doors**, and is kept as it
+    /// was: a store counts only the pointer's own edges, at one exact
+    /// dereference, and a copy counts the locals the level above may be as
+    /// well. Found while implementing #737, and not shown to decide a case.
+    pub(super) fn unplaced(&self) -> bool {
+        let no_local = match self.kind {
+            StoreKind::Direct | StoreKind::Through { .. } => {
+                !self.one_step || self.targets.is_empty()
+            }
+            StoreKind::Copy => self.targets.is_empty(),
+        };
+        self.containers.is_empty() && no_local
+    }
+
     pub(super) fn handed_over(&self, value: &Known) -> bool {
         let reachable = value.reachable_now();
         self.containers
@@ -222,6 +241,7 @@ impl Allocations<'_> {
         Landing {
             containers,
             targets,
+            one_step,
             pointer,
             deep,
             kind,
