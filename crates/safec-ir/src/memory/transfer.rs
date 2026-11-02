@@ -709,7 +709,32 @@ impl Allocations<'_> {
                             value.points_to[pointer].stored_through = true;
                         }
                     } else {
-                        value.written_all();
+                        // **Only where it may land**: what its landing names
+                        // and what code this check cannot read can reach,
+                        // which is where its contents land too
+                        // (`Known::landed_where_unknown_code_points`). Every
+                        // allocation let `*w = x;` through a pointer read out
+                        // of a parameter clear one nothing could reach, read
+                        // after it in silence where its `memcpy` spelling is
+                        // `SC0411` (#726). Taken as written, the may-be-fresh
+                        // mark not kept, since keeping it doubted a write
+                        // through a pointer read out of memory that certainly
+                        // reached its block, by the user's decision. See
+                        // ADR-0044 and ADR-0057.
+                        let deep = derefs(place);
+                        let landing = self.landing(
+                            value,
+                            place.local,
+                            deep,
+                            one_step,
+                            StoreKind::Through { derefs: deep },
+                        );
+                        let mut may_land: BTreeSet<usize> =
+                            landing.containers.iter().copied().collect();
+                        may_land.extend(value.reachable_now());
+                        for site in may_land {
+                            value.written(site);
+                        }
                     }
                 }
                 if !place.projection.is_empty() && !certain {
