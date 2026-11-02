@@ -2191,10 +2191,8 @@ impl Analysis for Allocations<'_> {
                         Some(written.believed.unwrap_or(0))
                     } else if written.foreign {
                         // And what the local was handed as, which a join
-                        // keeps where `believed` does not: `if (k) get(&c);`
-                        // with `c` null on the other arm. Found while
-                        // implementing. Kept for the local the call wrote,
-                        // so it does not follow a move after the join (#719).
+                        // keeps where `believed` does not. A join with a null
+                        // keeps `believed` too (#719).
                         let handed = match &operation.value {
                             Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
                                 value.handed_at_most[place.local.index()]

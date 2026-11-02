@@ -926,9 +926,7 @@ impl Known {
                 // A pointer a call wrote at what it was handed as, on the
                 // value or, where a join dropped that, on the local, and no
                 // bound where it was handed nothing, as the store reads it
-                // (#715). The local's record is the one the call wrote, so a
-                // join and then a move to another local reach neither, which
-                // is #719.
+                // (#715). A join with a null keeps the value's (#719).
                 let first = if own.loaded {
                     Some(own.believed.unwrap_or(0))
                 } else if own.foreign {
