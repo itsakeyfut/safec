@@ -1,0 +1,185 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:1:28 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:2:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "k"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int **" parameter "pp"
+  Local "_4" "int"
+  Local "_5" "int **" "m"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int **" "o"
+  Local "_9" "void *"
+  Local "_10" "int"
+  Local "_11" "int *"
+  Local "_12" "int **" "p"
+  Local "_13" "int **"
+  Local "_14" "void *"
+  Local "_15" "int *" "r"
+  Local "_16" "int"
+  Block "bb0" entry
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:3:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_3"
+    Branch a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:3:9 written "bb1" "bb2"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:3:9 generated
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:3:14 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:3:21 generated
+    Return
+  Block "bb2"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:4:15 generated
+    Call a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:4:15 written "malloc" "bb4"
+      Destination "_6"
+      Constant 8
+  Block "bb4"
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:4:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:4:15 generated
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:4:30 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_5"
+    Branch a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:4:30 written "bb5" "bb6"
+      Copy "_7"
+  Block "bb5"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:4:30 generated
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:4:34 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:4:41 generated
+    Return
+  Block "bb6"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:4:30 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:5:15 generated
+    Call a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:5:15 written "malloc" "bb8"
+      Destination "_9"
+      Constant 8
+  Block "bb8"
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:5:11 written
+      Destination "_8"
+      Use
+        Copy "_9"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:5:15 generated
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:5:30 written
+      Destination "_10"
+      Unary "Not"
+        Copy "_8"
+    Branch a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:5:30 written "bb9" "bb10"
+      Copy "_10"
+  Block "bb9"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:5:30 generated
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:5:34 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:5:41 generated
+    Return
+  Block "bb10"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:5:30 generated
+    Goto "bb11"
+  Block "bb11"
+    Branch a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:6:9 written "bb12" "bb13"
+      Copy "_1"
+  Block "bb12"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:6:9 generated
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:6:12 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_3"
+          Deref
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:6:12 written
+      Destination "_11"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:6:12 generated
+    Goto "bb14"
+  Block "bb13"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:6:9 generated
+    Goto "bb14"
+  Block "bb14"
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:7:11 written
+      Destination "_12"
+      Use
+        Copy "_8"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:7:15 generated
+    Branch a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:8:9 written "bb15" "bb16"
+      Copy "_2"
+  Block "bb15"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:8:9 generated
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:8:12 written
+      Destination "_12"
+      Use
+        Copy "_5"
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:8:12 written
+      Destination "_13"
+      Use
+        Copy "_12"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:8:12 generated
+    Goto "bb17"
+  Block "bb16"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:8:9 generated
+    Goto "bb17"
+  Block "bb17"
+    ArgumentsEvaluated a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:9:5 generated
+    Call a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:9:5 written "memcpy" "bb18"
+      Destination "_14"
+      Copy "_12"
+      Copy "_3"
+      Constant 8
+  Block "bb18"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:9:5 generated
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:10:10 written
+      Destination "_15"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:10:14 generated
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:11:9 written
+      Destination "_16"
+      Unary "Not"
+        Copy "_15"
+    Branch a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:11:9 written "bb19" "bb20"
+      Copy "_16"
+  Block "bb19"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:11:9 generated
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:11:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:11:20 generated
+    Return
+  Block "bb20"
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:11:9 generated
+    Goto "bb21"
+  Block "bb21"
+    Operation a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:12:5 written
+      Destination "_0"
+      Use
+        Copy "_15"
+          Deref
+    Sequenced a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:12:12 generated
+    Return
