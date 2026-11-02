@@ -1908,11 +1908,13 @@ pub(super) fn departed_at_call(
         // their source reaches leave into the destination as a store would
         // put them there. Found by review.
         (false, Callee::Copies) => {
-            // **The source alone, whatever the destination is**, and so not
-            // through `store_at`, which makes a `Store` only where both are
-            // places: what this asks is how wide what the source points at
-            // is, and `memcpy(0, b, 8)`, undefined for its destination, asked
-            // nothing and built where main refused it. Found by review.
+            // **What the source points at, whatever the destination is**,
+            // and so not through `store_at`, which makes a `Store` only where
+            // both are places: what this asks is how wide what the source
+            // points at is, and `memcpy(0, b, 8)`, undefined for its
+            // destination, asked nothing and built where main refused it.
+            // Found by review. The destination is read for its type alone,
+            // below, where it is a place.
             let source_ty = match arguments.get(1) {
                 Some(Operand::Copy(place)) => analysis.unit.place_ty(function, place),
                 Some(Operand::Constant(_)) | None => None,
@@ -1924,6 +1926,29 @@ pub(super) fn departed_at_call(
                     analysis,
                     function,
                     (at, Departure::Store, source_ty),
+                    &Rvalue::Use(source.clone()),
+                    known,
+                );
+            }
+            // **And at the destination's type**, which is what a later read
+            // of the destination believes: `memcpy(out, &v, 8)` with `v` a
+            // `void *` and `out` an `int **` let a one-byte allocation leave
+            // as a whole `int`'s, where `*out = v;` is asked at `int *`
+            // (#713). After the source's ask, which stays, so a destination
+            // narrower than the source asks no less than before. A `void **`
+            // destination asks a `void *`'s start, as the source's type
+            // does. See ADR-0060.
+            let into_ty = match arguments.first() {
+                Some(Operand::Copy(place)) => analysis.unit.place_ty(function, place),
+                Some(Operand::Constant(_)) | None => None,
+            };
+            if let (Some(source), Some(into_ty)) = (arguments.get(1), into_ty) {
+                contents_leaving(
+                    findings,
+                    departed,
+                    analysis,
+                    function,
+                    (at, Departure::Store, into_ty),
                     &Rvalue::Use(source.clone()),
                     known,
                 );

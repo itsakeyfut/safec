@@ -3900,6 +3900,13 @@ cases! {
         // silent. Asking every direct write moves 324 cases, which hold that
         // a local whose address never left is not asked.
         a_pointer_stored_by_name_into_a_local_whose_address_was_kept_is_asked_how_wide: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy is asked at its destination's type as well as its source's,
+        // as a store into the destination is: a `void *` copied into an
+        // `int **` is `SC0413`, and into a `void **` asks only its start.
+        // Mutation: drop the destination's ask in `departed_at_call`; the
+        // first goes silent (#713).
+        a_void_pointer_copied_by_memcpy_into_an_int_pointer_s_slot_is_asked_how_wide: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_void_pointer_copied_by_memcpy_into_a_void_pointer_s_slot_is_asked_no_width: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same three doors, each handed a whole allocation. Mutation:
         // answer every departure unknown in `say_leaving`; this is reported
         // three times.
