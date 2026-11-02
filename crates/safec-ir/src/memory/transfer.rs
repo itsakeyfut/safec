@@ -2176,8 +2176,38 @@ impl Analysis for Allocations<'_> {
                     // would; it does not ask `may_be_pointer`, so a byte
                     // copied is bounded where its store is not (#711). See
                     // ADR-0060.
-                    let bound = (self.may_be_pointer(function, &operation.place) && written.loaded)
-                        .then(|| written.believed.unwrap_or(0));
+                    //
+                    // **And a pointer a call this check cannot read wrote, at
+                    // what it is believed**, which the opaque call's write
+                    // puts in `believed`, no wider than it was handed as: `get(&c); *cm = c;` with `get`
+                    // taking `char **`, read back through an `int **`, was
+                    // believed four bytes wide where `*pv` of `c`'s address
+                    // was doubted (#715). Where it was handed nothing, no
+                    // bound, as ADR-0017 believes an output: bounding such a
+                    // pointer at zero doubted 34 cases, measured.
+                    let bound = if !self.may_be_pointer(function, &operation.place) {
+                        None
+                    } else if written.loaded {
+                        Some(written.believed.unwrap_or(0))
+                    } else if written.foreign {
+                        // And what the local was handed as, which a join
+                        // keeps where `believed` does not: `if (k) get(&c);`
+                        // with `c` null on the other arm. Found while
+                        // implementing. Kept for the local the call wrote,
+                        // so it does not follow a move after the join (#719).
+                        let handed = match &operation.value {
+                            Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
+                                value.handed_at_most[place.local.index()]
+                            }
+                            Rvalue::Use(_)
+                            | Rvalue::Address(_)
+                            | Rvalue::Unary { .. }
+                            | Rvalue::Binary { .. } => None,
+                        };
+                        written.believed.or(handed)
+                    } else {
+                        None
+                    };
                     // **And below it, what the stored pointer believes of
                     // its own memory, whatever it is**: a parameter or a
                     // call's result too, which name a site the record

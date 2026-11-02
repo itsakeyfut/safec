@@ -3503,6 +3503,25 @@ cases! {
         // records no bound. Mutation: give the local no bound at its own
         // level; this goes silent, as it was on main. Found by review.
         a_byte_copied_out_of_a_local_is_doubted_where_read_back_as_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer a call this check cannot read wrote is bounded where it
+        // is copied or stored at the width it was handed as: `get(&c)` with
+        // `get` taking `char **`, copied, stored, moved to another local
+        // first, or written on one arm only, read back as an `int *`, is
+        // `SC0412`; handed as an `int **` and read back as one, nothing; handed
+        // through a `void *`, doubted. Mutation: the walk's arm for a
+        // callee-written value answers `None`; the copies go silent. The
+        // store's arm; the store goes silent. Either arm's fallback to
+        // `Known::handed_at_most` dropped; its one-arm case goes silent.
+        // The opaque call's write believes nothing; the moved case goes
+        // silent, among 22. A callee-written value nothing bounds bounded at
+        // zero; 34 cases move (#715).
+        a_narrow_pointer_a_call_wrote_copied_and_read_back_wider_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_narrow_pointer_a_call_wrote_stored_and_read_back_wider_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_narrow_pointer_a_call_wrote_on_one_arm_copied_and_read_back_wider_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_narrow_pointer_a_call_wrote_on_one_arm_stored_and_read_back_wider_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_whole_int_pointer_a_call_wrote_copied_and_read_back_as_one_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_a_call_wrote_through_a_void_pointer_copied_and_read_back_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And what a lost value read back before its free, or released by a
         // call this check cannot read, still left read in silence (#505): a
         // load out of the box made before `free(u)`; that load stored into a
