@@ -228,6 +228,28 @@ cases! {
         // `Held::stored_through` unset at the copy; this is doubted. Found by
         // review.
         a_read_back_through_a_copy_s_own_destination_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write clears the fresh mark only where it may land, and keeps
+        // the doubt about each block where it may land in more than one place,
+        // at the copy and at the store: through a deep destination, through a
+        // pointer that may be a block or a local, and not at a block the copy's
+        // destination only holds or at its source (#739). Mutation: restore
+        // nothing after the copy's exposure; the last two build. Keep no mark
+        // through a copy's deep destination; the first builds. Keep none at a
+        // deep store; the second. Count blocks alone at the copy; the third.
+        // Count blocks alone at the one-step store; the fourth. Keep the mark
+        // whatever a copy names;
+        // `a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it`
+        // is doubted.
+        a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_through_a_deep_place_naming_two_blocks_keeps_the_doubt_about_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_whose_pointer_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_does_not_write_a_block_its_destination_only_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_does_not_write_its_source: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `memcpy(*h, pp, 8)` writes `**h`, so a read of `*h` after it is
+        // still doubted (#739). Mutation: mark `h` as stored through for a
+        // deep destination too; the read after the copy goes silent.
+        a_copy_through_a_deep_destination_leaves_the_level_it_reads_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store this check cannot place writes only where it may land:
         // what its landing names and what code it cannot read can reach. An
         // allocation nothing reaches stays unwritten, `SC0411`. Mutation:
