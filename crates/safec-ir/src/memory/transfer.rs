@@ -2096,26 +2096,20 @@ impl Analysis for Allocations<'_> {
                     // bound. Unplaced, `**t3 = r; free(r); ***t3` read nothing
                     // of it. See ADR-0045.
                     let deep = derefs(&operation.place);
-                    let containers: Vec<usize> = if one_step {
-                        value.sites_of(operation.place.local).collect()
-                    } else if deep > 1 {
-                        value
-                            .stored_below(operation.place.local, deep - 1)
-                            .into_iter()
-                            .collect()
-                    } else {
-                        Vec::new()
-                    };
+                    let landing = self.landing(
+                        value,
+                        operation.place.local,
+                        deep,
+                        one_step,
+                        StoreKind::Through { derefs: deep },
+                    );
+                    let containers = landing.containers.clone();
                     // **And in the locals the level above may be**, `**t3 = r`
                     // with `*t3 = &slot` in `slot`, as a write through an
                     // alias that may land in several locals: by union, the
                     // proof dropped. See ADR-0045 and ADR-0019.
                     let deep_targets: Vec<usize> = if deep > 1 {
-                        value
-                            .levels_below(operation.place.local, deep - 1)
-                            .1
-                            .into_iter()
-                            .collect()
+                        landing.targets.clone()
                     } else {
                         Vec::new()
                     };
@@ -2161,8 +2155,7 @@ impl Analysis for Allocations<'_> {
                     // what it carries is exposed as well as recorded in the
                     // sites: `t = c ? s : *tab; *t = a;` stored `a` only in
                     // `s` and was silent after a later call. See ADR-0044.
-                    let held = &value.points_to[pointer];
-                    let unnamed = held.loaded || held.lost || held.foreign || deep > 1;
+                    let unnamed = landing.unnamed(value);
                     // **Not a local whose address it carries**, though code
                     // this check cannot read may find it there: the slot may
                     // be written again before any such code runs, and an
@@ -2192,10 +2185,7 @@ impl Analysis for Allocations<'_> {
                     // another parameter can name, and not `Contents::from_caller`,
                     // which a buffer of this function's own gains by holding
                     // a caller's pointer. Found by review.
-                    let reachable = value.reachable_now();
-                    let handed_over = containers
-                        .iter()
-                        .any(|container| reachable.contains(container));
+                    let handed_over = landing.handed_over(value);
                     // **A pointer read out of memory is bounded by what it
                     // is believed**, whatever the record says it names:
                     // the sites a load holds are what the walk every load
@@ -3105,14 +3095,16 @@ impl Analysis for Allocations<'_> {
                                 value.marked_below(source.local, from_depth + 1, |contents| {
                                     contents.holds_lost
                                 });
-                            let into: Vec<usize> = if into_depth == 0 {
-                                value.sites_of(dest.local).collect()
-                            } else {
-                                value
-                                    .stored_below(dest.local, into_depth)
-                                    .into_iter()
-                                    .collect()
-                            };
+                            // Where it lands, as a store one dereference
+                            // further would. See `store::Landing`.
+                            let landing = self.landing(
+                                value,
+                                dest.local,
+                                into_depth + 1,
+                                into_depth == 0,
+                                StoreKind::Copy,
+                            );
+                            let into = landing.containers.clone();
                             // **Into a local's address, the copy lands in the
                             // local**: `memcpy(&s, &r, n)` stores into `s`
                             // what `r` holds, every mark with it, since C17
@@ -3124,15 +3116,7 @@ impl Analysis for Allocations<'_> {
                             // may copy part of a pointer and a replacement
                             // would prove things about a value nobody wrote
                             // (#395). See ADR-0039 and ADR-0040.
-                            let targets: Vec<usize> = if into_depth == 0 {
-                                value.written_through(dest.local)
-                            } else {
-                                value
-                                    .levels_below(dest.local, into_depth)
-                                    .1
-                                    .into_iter()
-                                    .collect()
-                            };
+                            let targets = landing.targets.clone();
                             // What lands is what the allocation path above
                             // writes, read the same way: the sites and
                             // addresses one level below the source and the
@@ -3187,13 +3171,10 @@ impl Analysis for Allocations<'_> {
                             // where a store there would**: `memcpy(w, s, 8)`
                             // with `w` a load was believed where `*w = *s;`
                             // was doubted. Found by review. See ADR-0044.
-                            let to = &value.points_to[dest.local.index()];
-                            let unnamed = to.loaded || to.lost || to.foreign || into_depth > 1;
+                            let unnamed = landing.unnamed(value);
                             // And into handed-over memory, as for a store
                             // (#489).
-                            let reachable = value.reachable_now();
-                            let handed_over =
-                                into.iter().any(|container| reachable.contains(container));
+                            let handed_over = landing.handed_over(value);
                             let lands_unplaced =
                                 unnamed || handed_over || (into.is_empty() && targets.is_empty());
                             // **And the bound on what it copies**, which a copy
