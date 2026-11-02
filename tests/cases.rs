@@ -196,11 +196,16 @@ cases! {
         // Mutation: have an exposure leave its sites fresh, in both of
         // `Known::expose`'s loops. It is reported.
         a_pointer_read_out_of_memory_memcpy_wrote_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Written on one arm only, which is undefined on the other and not
-        // reported: a slot is asked only for a proof. Mutation: join the mark
-        // with `||`.
-        // It is reported.
-        a_pointer_read_out_of_memory_written_on_one_arm_is_not_asked_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written on one arm only, which is undefined on the other: doubted,
+        // as a local written on one arm is (#668, #721). Mutation: join
+        // `Known::fresh` with `||`; the doubt becomes certain. Mutation: never
+        // set `Known::maybe_fresh` at a join; the first two go silent. Set
+        // whatever the two sides hold; the third is doubted. Set at a back
+        // edge too; the fourth is.
+        a_pointer_read_out_of_memory_written_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_an_allocation_written_on_one_arm_only_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_an_allocation_written_on_both_arms_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_allocation_filled_by_a_loop_is_not_doubted_as_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written through a pointer read out of memory, which this check
         // does not place. Mutation: have such a store clear no site. It is
         // reported.
@@ -3789,6 +3794,9 @@ cases! {
         // Reported, copied into a table, into a local whose address escaped,
         // and through a `char` temporary. Mutation: drop the byte from
         // `read_through`'s `loaded`; all three go silent.
+        // Each also doubts `*other` as maybe unwritten, since the byte copy
+        // sits under null tests that always hold, which a join cannot tell
+        // from tests that may fail: the cost #668 recorded for a local (#721).
         a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
