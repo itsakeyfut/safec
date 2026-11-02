@@ -79,7 +79,7 @@ pub(super) struct Known {
     /// **[`Init::Maybe`] where it may still be so on some path**: set at a
     /// forward join where one side left the site fresh and the other did not. A load out
     /// of it is the doubt `Allocations::reads_partly` reports, as one out of
-    /// a local [`Self::partly_written`] is (#668): `if (k) *m = *pp; r =
+    /// a local [`Self::local_init`] is (#668): `if (k) *m = *pp; r =
     /// *m;` with `m` from `malloc` built in silence, where the same without
     /// the `if` is certain (#721). **Not at a loop's back edge**, so a loop
     /// that fills an allocation is not doubted for the path that skips the
@@ -203,10 +203,10 @@ pub(super) struct Known {
     /// read, `int *q = m[0];` with `m` a local array nothing wrote (#640).
     /// A local whose address is never taken is `assigned.rs`'s, which reads
     /// it by name. See ADR-0057.
-    pub(super) unwritten: Vec<bool>,
-    /// Per local with no per-element record, whether it may still be
-    /// unwritten though it is not certainly: [`Self::unwritten`]'s doubt.
-    /// An array kept per element answers this in
+    ///
+    /// **[`Init::Maybe`], for a local with no per-element record, where it
+    /// may still be unwritten though it is not certainly.** An array kept per
+    /// element answers this in
     /// [`Self::maybe_unwritten_elements`] instead, and this is not read for
     /// one.
     ///
@@ -220,18 +220,19 @@ pub(super) struct Known {
     /// **And by a join of a path where the local is unwritten with one where
     /// it was written** (#668): `if (c()) q = &x;` then `*pq` with `pq = &q`
     /// read an indeterminate `q` on one path in silence, since
-    /// [`Self::unwritten`] is a proof and joins by intersection. A doubt, read
+    /// its proof joined by intersection. A doubt, read
     /// through a pointer and by name, `report::unwritten_read`. Not at a
     /// loop's back edge, where the path that skips the body would doubt every
     /// loop that fills an array, which leaves a read in the body before the
     /// body writes it silent too (#670); what either side already doubted is
-    /// kept there. A union at every join, and cleared by a write of the whole
-    /// local and at `StorageLive`. See ADR-0057.
-    pub(super) partly_written: Vec<bool>,
+    /// kept there. An array kept per element gains no such doubt at any
+    /// join, its elements carrying it. Written by a write of the whole local,
+    /// and unwritten again at `StorageLive`. See ADR-0057.
+    pub(super) local_init: Vec<Init>,
     /// Per local array of at most [`ELEMENTS_KEPT`] innermost elements, one
-    /// bit per element that nothing may have written: [`Self::unwritten`]
+    /// bit per element that nothing may have written: [`Self::local_init`]
     /// kept per element. Empty for every other local, which
-    /// [`Self::unwritten`] answers for whole.
+    /// [`Self::local_init`] answers for whole.
     ///
     /// **So that a write to one element leaves another unwritten** (#667):
     /// `m[0] = &x; q = m[1];` read an `m[1]` nothing wrote, in silence, since
@@ -252,7 +253,7 @@ pub(super) struct Known {
     /// `if (c()) m[0] = &x; q = m[1];` stays the certain `SC0411` `main`
     /// gives, while `m[0]` read there is doubted. A union at a join, but at a
     /// loop's back edge only what either side already doubted is kept, as
-    /// [`Self::partly_written`] says. Cleared where
+    /// [`Self::local_init`] says. Cleared where
     /// [`Self::unwritten_elements`] is, except by a write that may be of any
     /// element. See ADR-0057.
     pub(super) maybe_unwritten_elements: Vec<Bits>,
@@ -272,7 +273,7 @@ pub(super) struct Known {
     /// `StorageLive`. See `built::write_effects`.
     pub(super) stored_in_part: Vec<bool>,
     /// Per local, whether code this check cannot read may hold its address:
-    /// what a call may have written, for [`Self::unwritten`], and nothing
+    /// what a call may have written, for [`Self::local_init`], and nothing
     /// else reads it. `lost` and `foreign` are still given to every escaped
     /// local, since a route missed there would be a free in silence
     /// (ADR-0029).
@@ -1391,7 +1392,7 @@ impl Known {
     }
 
     /// Every local a write this check cannot place may land in, for
-    /// [`Self::unwritten`], where the write goes through `dereferences`
+    /// [`Self::local_init`], where the write goes through `dereferences`
     /// dereferences of `local`:
     ///
     /// - at none, `local` itself, `m[0] = p`;
@@ -1442,7 +1443,7 @@ impl Known {
     /// **A pointer naming no local lands in none.** One moved off a local by
     /// arithmetic keeps its edge to it, an array (#639) or a local that is
     /// not one, read as an array of one (#647), so `*(&m[1] - 1) = p` writes
-    /// `m`, in part, [`Self::partly_written`], and `&slot + 1` and back to
+    /// `m`, in part, [`Self::local_init`], and `&slot + 1` and back to
     /// `slot` writes `slot`. The store door and a library copy both ask this,
     /// so the two cannot answer one pointer differently.
     pub(super) fn locals_a_write_may_land_in(
@@ -1637,8 +1638,7 @@ impl Known {
             handed_contents_at_most: _,
             // About a local as well: the call that makes the site writes the
             // local it is named by, which the call's destination says.
-            unwritten: _,
-            partly_written: _,
+            local_init: _,
             unwritten_elements: _,
             maybe_unwritten_elements: _,
             exposed_in_part: _,
@@ -1914,11 +1914,20 @@ impl Known {
         self.block_init.fill(Init::Written);
     }
 
+    /// Which locals are certainly unwritten, [`Init::Unwritten`], as of now:
+    /// what a write that may land past its target asks of the moment before
+    /// it. See `Allocations::written_past_its_end`.
+    pub(super) fn unwritten_locals(&self) -> Vec<bool> {
+        self.local_init
+            .iter()
+            .map(|init| init.is_unwritten())
+            .collect()
+    }
+
     /// Something may have written `local`, so its value is no longer known
-    /// to be indeterminate. See [`Self::unwritten`].
+    /// to be indeterminate. See [`Self::local_init`].
     pub(super) fn written_local(&mut self, local: usize) {
-        self.unwritten[local] = false;
-        self.partly_written[local] = false;
+        self.local_init[local] = Init::Written;
         self.unwritten_elements[local].clear_all();
         self.maybe_unwritten_elements[local].clear_all();
     }
@@ -1935,8 +1944,7 @@ impl Known {
             .map(|(local, write)| PendingWrite {
                 local,
                 write,
-                unwritten: self.unwritten[local],
-                partly: self.partly_written[local],
+                init: self.local_init[local],
                 elements: self.unwritten_elements[local].clone(),
                 maybe: self.maybe_unwritten_elements[local].clone(),
             })
@@ -1950,8 +1958,12 @@ impl Known {
         for write in pending {
             let local = write.local;
             let kept = write.elements.len() > 0;
-            self.unwritten[local] = false;
-            self.partly_written[local] = write.partly;
+            // Written, keeping a doubt it held: the write is of one element,
+            // or of one nobody can name, and is no write of the rest.
+            self.local_init[local] = match write.init {
+                Init::Maybe => Init::Maybe,
+                Init::Unwritten | Init::Written => Init::Written,
+            };
             self.unwritten_elements[local] = write.elements;
             self.maybe_unwritten_elements[local] = write.maybe;
             match write.write {
@@ -1967,7 +1979,9 @@ impl Known {
                 // may have been written, and each may still be.
                 ArrayWrite::Maybe if kept => self.unwritten_elements[local].clear_all(),
                 ArrayWrite::Maybe => {
-                    self.partly_written[local] = write.partly || write.unwritten;
+                    let mut init = write.init;
+                    init.may_write();
+                    self.local_init[local] = init;
                 }
             }
         }
@@ -1979,7 +1993,7 @@ impl Known {
     pub(super) fn certainly_unwritten(&self, local: usize, element: Option<u64>) -> bool {
         let elements = &self.unwritten_elements[local];
         if elements.len() == 0 {
-            return self.unwritten[local];
+            return self.local_init[local].is_unwritten();
         }
         match element.and_then(|element| usize::try_from(element).ok()) {
             Some(element) if element < elements.len() => elements.get(element),
@@ -1992,7 +2006,7 @@ impl Known {
     /// that the read is a doubt: the element read may be unwritten, or it is
     /// not known and some element may be. A longer array, kept whole, and a
     /// local that is no array ask this at their start only. See
-    /// [`Self::partly_written`] and [`Self::maybe_unwritten_elements`].
+    /// [`Self::local_init`] and [`Self::maybe_unwritten_elements`].
     ///
     /// **An element nobody can name may be any of them**, whether or not the
     /// array was written in part: `m[c]` after `m[1] = &x;` may read `m[0]`,
@@ -2007,7 +2021,7 @@ impl Known {
     ) -> bool {
         let elements = &self.maybe_unwritten_elements[local];
         if elements.len() == 0 {
-            return self.partly_written[local] && at_start;
+            return self.local_init[local] == Init::Maybe && at_start;
         }
         match element.and_then(|element| usize::try_from(element).ok()) {
             Some(element) if element < elements.len() => elements.get(element),
@@ -2381,7 +2395,7 @@ impl Known {
     /// only until a later call that may free what it was handed (#394).
     ///
     /// **Which it may have written is a second answer, `may_write`**, about
-    /// [`Self::unwritten`] alone. A store this check cannot pin down answers
+    /// [`Self::local_init`] alone. A store this check cannot pin down answers
     /// it with the locals its place may land in, of the type it stores; a
     /// call answers it with what it may reach,
     /// [`Self::exposed_locals`], which is narrower than every escaped local,
@@ -2426,7 +2440,7 @@ impl Known {
             // **And it may have been written**, which is what a write this
             // check cannot read is: `int *q; get(&q); *pq` is the
             // output-parameter idiom, and believing `q` unwritten after it
-            // reported a correct program. See `Self::unwritten`. The escape
+            // reported a correct program. See `Self::local_init`. The escape
             // decides nothing here, measured: a mark is read only of a local
             // whose address is taken, which is escaped, so dropping it leaves
             // the suite green. It is kept so that `may_write` answers for the
@@ -2464,7 +2478,7 @@ pub(super) const ELEMENTS_KEPT: u64 = 64;
 pub(super) enum ArrayWrite {
     /// The element it lands in is known.
     Element(u64),
-    /// It may land in any element. See [`Known::partly_written`].
+    /// It may land in any element. See [`Known::local_init`].
     Maybe,
 }
 
@@ -2473,8 +2487,7 @@ pub(super) enum ArrayWrite {
 pub(super) struct PendingWrite {
     local: usize,
     write: ArrayWrite,
-    unwritten: bool,
-    partly: bool,
+    init: Init,
     elements: Bits,
     maybe: Bits,
 }

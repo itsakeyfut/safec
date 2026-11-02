@@ -330,11 +330,11 @@ fn reaches_certainly(
 
 /// Every local whose own address is taken anywhere in `function`: what this
 /// analysis does not watch, since a write through that address is not
-/// followed here, and what the memory check's [`Known::unwritten`] asks by
+/// followed here, and what the memory check's [`Known::local_init`] asks by
 /// name instead, since it does follow one. One answer for both, so that a
 /// local is asked by exactly one of them (#640).
 ///
-/// [`Known::unwritten`]: super::known::Known::unwritten
+/// [`Known::local_init`]: super::known::Known::local_init
 pub(super) fn address_taken(function: &Function) -> Bits {
     let mut taken = Bits::new(function.locals().len());
     for block in function.blocks() {

@@ -101,7 +101,7 @@ enum Wrote<'a> {
     /// An assignment to `place`, any assignment: one with no dereference
     /// changes nothing here, and the arm asks that itself. `targets` are the locals one exact
     /// dereference may land in, and `certain` whether it lands in one alone
-    /// (ADR-0028). `unwritten_before` is `Known::unwritten` as it was before
+    /// (ADR-0028). `unwritten_before` is `Known::local_init` as it was before
     /// the store, for a local it may write past.
     Store {
         place: &'a Place,
@@ -537,7 +537,7 @@ impl Allocations<'_> {
     }
 
     /// Whether an object of type `ty` holds a pointer: a pointer, or an array
-    /// of them through every dimension. What [`Known::unwritten`] watches,
+    /// of them through every dimension. What [`Known::local_init`] watches,
     /// since a pointer is what ADR-0057 reports read out of memory nothing
     /// wrote, and an integer or a byte is not followed there either.
     ///
@@ -573,7 +573,7 @@ impl Allocations<'_> {
         }
         value.points_to[target].lost = true;
         if unwritten_before[target] {
-            value.partly_written[target] = true;
+            value.local_init[target].doubt();
         }
     }
 
@@ -706,7 +706,7 @@ impl Allocations<'_> {
                     // **And a local it may land in**, the local its edges name
                     // where the store is placed: `m[0] = p;` writes `m`. Where
                     // it is not placed, `replaced_by` below clears the
-                    // locals it may land in. See `Known::unwritten`.
+                    // locals it may land in. See `Known::local_init`.
                     if one_step && !(held.loaded || held.lost || held.foreign) {
                         let edges: Vec<usize> = held.writes_to.ones().collect();
                         let sites: Vec<usize> = held.sites().collect();
@@ -825,7 +825,7 @@ impl Allocations<'_> {
                 // where the destination itself was moved off a local, and
                 // deeper where a level above was, as the store asks it. See
                 // `Allocations::written_past_its_end`.
-                let unwritten_before = value.unwritten.clone();
+                let unwritten_before = value.unwritten_locals();
                 let past_end: Vec<usize> = match dest {
                     Some(Operand::Copy(dest))
                         if dest
@@ -1017,7 +1017,7 @@ impl Allocations<'_> {
                 // cleared every local array's mark, and so did `memcpy(*pa,
                 // &b, 4)` (#643), and so did a copy through a pointer read out
                 // of the caller's memory (#645). It keeps nothing, so it
-                // exposes no local. See `Known::unwritten` and ADR-0057.
+                // exposes no local. See `Known::local_init` and ADR-0057.
                 let written: Option<Vec<usize>> = match dest {
                     Some(Operand::Copy(dest))
                         if dest
@@ -1047,7 +1047,7 @@ impl Allocations<'_> {
                     _ => Vec::new(),
                 };
                 let pending = value.array_writes_before(writes);
-                let mut may_write = vec![written.is_none(); value.unwritten.len()];
+                let mut may_write = vec![written.is_none(); value.local_init.len()];
                 for local in written.into_iter().flatten() {
                     may_write[local] = true;
                 }
@@ -1161,7 +1161,7 @@ impl Allocations<'_> {
 
     /// Per local, whether it is made unwritten where the function starts:
     /// every local that holds a pointer but the parameters, which the caller
-    /// wrote. See [`Known::unwritten`].
+    /// wrote. See [`Known::local_init`].
     fn unwritten_at_entry(&self) -> Vec<bool> {
         let function = self.unit.function(self.function);
         function
@@ -1293,7 +1293,7 @@ impl Allocations<'_> {
     /// **A pointer, by its type.** A byte or an integer read out of fresh
     /// memory is not followed.
     ///
-    /// **A local reached by its address is memory too** ([`Known::unwritten`]):
+    /// **A local reached by its address is memory too** ([`Known::local_init`]):
     /// `int *q = m[0];` with `m` a local array nothing wrote reads an
     /// indeterminate pointer, as `*box` does out of `malloc`'s block (#640).
     /// `writes_elsewhere` is not asked. `Address(a[0])` sets it for every
@@ -1331,7 +1331,7 @@ impl Allocations<'_> {
     }
 
     /// Whether a load may read an array that may still be unwritten where it
-    /// reads, [`Known::partly_written`]: `reads_fresh`'s question, answered as
+    /// reads, [`Known::local_init`]: `reads_fresh`'s question, answered as
     /// a doubt. A fresh
     /// allocation beside it is not known written, and is no reason for
     /// silence. Found by review of #667. **Or an allocation that may still be
@@ -1823,7 +1823,7 @@ impl Allocations<'_> {
     /// [`Analysis::join`], and along a loop's back edge [`Analysis::join_back`]
     /// where `back` is set: one body, so the two cannot drift apart. They
     /// differ only in what a local unwritten on one side and written on
-    /// the other becomes. See `Known::partly_written`.
+    /// the other becomes. See `Known::local_init`.
     fn joined(&self, into: &mut Known, from: &Known, back: bool) {
         // **Every field named, never `..`.** A lattice value whose join
         // forgets a field reaches a fixpoint over a value nobody is joining,
@@ -1847,8 +1847,7 @@ impl Allocations<'_> {
             extent,
             handed_at_most,
             handed_contents_at_most,
-            unwritten,
-            partly_written,
+            local_init,
             unwritten_elements,
             maybe_unwritten_elements,
             exposed_in_part,
@@ -1861,7 +1860,7 @@ impl Allocations<'_> {
         // Which locals this side left unwritten, before `unwritten` is
         // intersected below: such a local is no null, and the values' join
         // asks it (#719). See `Held::joined`.
-        let unwritten_here = unwritten.clone();
+        let unwritten_here: Vec<bool> = local_init.iter().map(|init| init.is_unwritten()).collect();
         // May-facts, so a union, as `exposed_locals` is. See
         // `Known::handed_untyped`.
         for (here, there) in handed_untyped
@@ -1921,25 +1920,15 @@ impl Allocations<'_> {
         for (here, there) in stored_in_part.iter_mut().zip(&from.stored_in_part) {
             *here = *here || *there;
         }
-        // A may-fact, so a union: an element may be unwritten on either
-        // path. And where one path wrote a local the other left unwritten,
-        // which is the doubt itself, but not at a back edge, before
-        // `unwritten` is intersected below. An array kept per element has
-        // its own doubt above. See `Known::partly_written`.
-        for (index, (here, there)) in partly_written
-            .iter_mut()
-            .zip(&from.partly_written)
-            .enumerate()
-        {
-            let differ = !back
-                && unwritten_elements[index].len() == 0
-                && unwritten[index] != from.unwritten[index];
-            *here = *here || *there || differ;
-        }
-        // A proof, so an intersection, as `fresh` is: unwritten only where
-        // no path wrote it.
-        for (here, there) in unwritten.iter_mut().zip(&from.unwritten) {
-            *here = *here && *there;
+        // **Joined as `Init::joined` says**: unwritten only where no path
+        // wrote it, and maybe unwritten where one path wrote it and the other
+        // left it unwritten, which is the doubt itself, but not at a back
+        // edge. An array kept per element has its own doubt above, and its
+        // record here gains none, at either kind of join. See
+        // `Known::local_init`.
+        for (index, (here, there)) in local_init.iter_mut().zip(&from.local_init).enumerate() {
+            let kept = unwritten_elements[index].len() > 0;
+            *here = here.joined(*there, back || kept);
         }
         // A may-fact, so a union, as `exposed` is: a call on one arm may
         // have kept the address. See `Known::exposed_locals`.
@@ -2031,7 +2020,7 @@ impl Allocations<'_> {
             here.joined(
                 there,
                 self.sources,
-                (unwritten_here[local], from.unwritten[local]),
+                (unwritten_here[local], from.local_init[local].is_unwritten()),
             );
         }
 
@@ -2308,9 +2297,18 @@ impl Analysis for Allocations<'_> {
             handed_at_most: vec![None; self.locals],
             handed_contents_at_most: vec![Levels::default(); self.locals],
             // Every local that may hold a pointer, but the parameters, which
-            // the caller wrote. See `Known::unwritten`.
-            unwritten: self.unwritten_at_entry(),
-            partly_written: vec![false; self.locals],
+            // the caller wrote. See `Known::local_init`.
+            local_init: self
+                .unwritten_at_entry()
+                .into_iter()
+                .map(|unwritten| {
+                    if unwritten {
+                        Init::Unwritten
+                    } else {
+                        Init::Written
+                    }
+                })
+                .collect(),
             unwritten_elements: self.elements_at_entry(),
             maybe_unwritten_elements: self.elements_at_entry(),
             exposed_in_part: vec![false; self.locals],
@@ -2516,7 +2514,7 @@ impl Analysis for Allocations<'_> {
                 }
 
                 // An assignment to a local writes it, whatever it writes. See
-                // `Known::unwritten`.
+                // `Known::local_init`.
                 if operation.place.projection.is_empty() {
                     value.written_local(operation.place.local.index());
                 }
@@ -2531,7 +2529,7 @@ impl Analysis for Allocations<'_> {
                 let pointer = operation.place.local.index();
                 // What was unwritten before this store, for a local it may
                 // have written past. See `Allocations::written_past_its_end`.
-                let unwritten_before = value.unwritten.clone();
+                let unwritten_before = value.unwritten_locals();
                 let targets = if one_step {
                     value.written_through(operation.place.local)
                 } else {
@@ -3115,9 +3113,11 @@ impl Analysis for Allocations<'_> {
                 value.clear(*local);
                 // **A new object, indeterminate again** (C17 6.2.4 p6), so an
                 // array written late in one turn of a loop is unwritten at
-                // the start of the next. See `Known::unwritten`.
+                // the start of the next. See `Known::local_init`.
                 if self.holds_a_pointer(function.local(*local)) {
-                    value.unwritten[local.index()] = true;
+                    value.local_init[local.index()] = Init::Unwritten;
+                } else if value.local_init[local.index()] == Init::Maybe {
+                    value.local_init[local.index()] = Init::Written;
                 }
                 // And every element of it, with nothing written in part and
                 // nothing handed over. See `Known::unwritten_elements`.
@@ -3129,7 +3129,6 @@ impl Analysis for Allocations<'_> {
                         elements.set(element);
                     }
                 }
-                value.partly_written[local.index()] = false;
                 value.exposed_in_part[local.index()] = false;
                 value.stored_in_part[local.index()] = false;
                 // **And no call holds its address yet**: one kept from an
@@ -4146,12 +4145,12 @@ impl Analysis for Allocations<'_> {
                 value.written_all();
             }
             // And an escaped local it may land in, as an unplaced store
-            // does. See `Known::unwritten`.
+            // does. See `Known::local_init`.
             replaced_by(self.unit, function, place, value);
             return;
         }
         // The call's result writes the local it lands in. See
-        // `Known::unwritten`.
+        // `Known::local_init`.
         value.written_local(place.local.index());
 
         match kind {
