@@ -1306,10 +1306,15 @@ impl Allocations<'_> {
     ///
     /// Mutation: weaken `all` to `any` over the sites, and
     /// `a_pointer_read_through_either_of_two_allocations_one_written_is_doubted`
-    /// is reported as certain. **The `lost`, `foreign` and `loaded` clauses have no case**,
-    /// measured: a local loses its sites where it is made lost, and no program
-    /// found gives a loaded or foreign pointer a fresh site that an exposure
-    /// has not already cleared.
+    /// is reported as certain. **The `loaded` clause is held** by
+    /// `a_pointer_no_call_can_reach_is_not_written_by_a_store_this_check_cannot_place`,
+    /// which gains a false certain report without it, and by
+    /// `a_pointer_read_out_of_memory_that_names_a_block_nothing_wrote_is_doubted_where_read_through`,
+    /// whose doubt becomes certain: such a pointer is a doubt, in
+    /// `reads_partly` (#728). **The
+    /// `lost` and `foreign` clauses have no case**, measured: a local loses
+    /// its sites where it is made lost, and no program found gives a foreign
+    /// pointer a fresh site that an exposure has not already cleared.
     pub(super) fn reads_fresh(&self, function: &Function, source: &Place, value: &Known) -> bool {
         let through = &value.points_to[source.local.index()];
         source.projection.as_slice() == [Projection::Deref]
@@ -1351,16 +1356,23 @@ impl Allocations<'_> {
         source.projection.as_slice() == [Projection::Deref]
             && self.may_be_pointer(function, source)
             && (through.writes_to.any() || through.sites().next().is_some())
-            && !(through.lost
-                || through.foreign
-                || through.loaded
-                || through.inner_address
-                || through.stored_through)
-            && through
-                .writes_to
-                .ones()
-                .all(|local| value.certainly_unwritten(local, through.element) || maybe(local))
-            && (through.writes_to.ones().any(maybe) || through.sites().any(site_maybe))
+            && !(through.lost || through.foreign || through.inner_address || through.stored_through)
+            // **A pointer read out of memory is asked about its blocks
+            // alone**: it may name what it does not show, so what it shows is
+            // no proof (`reads_fresh` refuses it), and a block it names that
+            // may still be fresh is a doubt. `u = *t; r = *u;` with `*t = m`
+            // read `m` nothing wrote in silence (#728). Not about the local
+            // arrays it names, whose element rules (#639, #667) decide what
+            // such a pointer writes and reads, by the user's decision.
+            && if through.loaded {
+                through.sites().any(site_maybe)
+            } else {
+                through
+                    .writes_to
+                    .ones()
+                    .all(|local| value.certainly_unwritten(local, through.element) || maybe(local))
+                    && (through.writes_to.ones().any(maybe) || through.sites().any(site_maybe))
+            }
     }
 
     /// Whether a load `depth` dereferences through `local` reads memory a
