@@ -76,6 +76,18 @@ pub(super) struct Known {
     /// taking a fresh block's contents as empty is the unsound starting set
     /// #579 met.
     pub(super) fresh: Vec<bool>,
+    /// Per site, whether it may still be as [`Self::fresh`] says on some
+    /// path: a may-fact, so a union at a join, and set at a forward join
+    /// where one side left the site fresh and the other did not. A load out
+    /// of it is the doubt `Allocations::reads_partly` reports, as one out of
+    /// a local [`Self::partly_written`] is (#668): `if (k) *m = *pp; r =
+    /// *m;` with `m` from `malloc` built in silence, where the same without
+    /// the `if` is certain (#721). **Not at a loop's back edge**, so a loop
+    /// that fills an allocation is not doubted for the path that skips the
+    /// body, as for a local. Cleared wherever `fresh` is. A test that always
+    /// holds, `if (d != 0) *d = *s;`, is a doubt it cannot tell from one
+    /// that may fail, the cost #668 recorded for a local. See ADR-0057.
+    pub(super) maybe_fresh: Vec<bool>,
     /// What has been read through a pointer since the last sequence point.
     ///
     /// **Ordered containers because a lattice value has to be canonical, and
@@ -1599,6 +1611,8 @@ impl Known {
             // Not fresh, whatever it was: the caller says whether the new
             // allocation is, since only it knows which function made it.
             fresh,
+            // As `fresh` is.
+            maybe_fresh,
             pending,
             calls: _,
             exposed_after_call,
@@ -1671,6 +1685,7 @@ impl Known {
         // settled the old fact is about another. See ADR-0039.
         realloced[site] = None;
         fresh[site] = false;
+        maybe_fresh[site] = false;
         for fact in realloced.iter_mut() {
             if fact
                 .as_ref()
@@ -1882,12 +1897,14 @@ impl Known {
     /// this check cannot read may do with it. See [`Self::fresh`].
     pub(super) fn written(&mut self, site: usize) {
         self.fresh[site] = false;
+        self.maybe_fresh[site] = false;
     }
 
     /// Something may have written any allocation: a write this check cannot
     /// place, or a library call it reads only by name. See [`Self::fresh`].
     pub(super) fn written_all(&mut self) {
         self.fresh.fill(false);
+        self.maybe_fresh.fill(false);
     }
 
     /// Something may have written `local`, so its value is no longer known

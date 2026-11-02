@@ -196,11 +196,30 @@ cases! {
         // Mutation: have an exposure leave its sites fresh, in both of
         // `Known::expose`'s loops. It is reported.
         a_pointer_read_out_of_memory_memcpy_wrote_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Written on one arm only, which is undefined on the other and not
-        // reported: a slot is asked only for a proof. Mutation: join the mark
-        // with `||`.
-        // It is reported.
-        a_pointer_read_out_of_memory_written_on_one_arm_is_not_asked_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written on one arm only, which is undefined on the other: doubted,
+        // as a local written on one arm is (#668, #721). Mutation: join
+        // `Known::fresh` with `||`; the doubt becomes certain. Mutation: never
+        // set `Known::maybe_fresh` at a join; the first two go silent. Set at
+        // a back edge too; the loop case is doubted. Leave it set by a
+        // write; the case written again after the join is. Set whatever the
+        // two sides hold; six older cases move, which hold that a site both
+        // sides wrote is not doubted.
+        a_pointer_read_out_of_memory_written_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_an_allocation_written_on_one_arm_only_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_allocation_filled_by_a_loop_is_not_doubted_as_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_an_allocation_written_again_after_the_join_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store through a pointer that may name either of two allocations
+        // may have missed one, so it keeps the doubt about it. Mutation: let
+        // such a store clear `Known::maybe_fresh` as a store through one does;
+        // this builds. An allocation the other arm freed and stopped naming
+        // is no path that left it fresh. Mutation: set the mark where one
+        // side is `Unheld`; this is doubted. Both found by review.
+        a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_allocation_freed_and_dropped_on_the_other_arm_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The cost the rule still has: a write guarded by a null test of the
+        // allocation's own pointer, with a return where it is null, is
+        // doubted, since the null arm leaves the site as it was. #723.
+        a_pointer_read_after_a_null_test_that_guarded_its_write_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written through a pointer read out of memory, which this check
         // does not place. Mutation: have such a store clear no site. It is
         // reported.
@@ -3789,6 +3808,9 @@ cases! {
         // Reported, copied into a table, into a local whose address escaped,
         // and through a `char` temporary. Mutation: drop the byte from
         // `read_through`'s `loaded`; all three go silent.
+        // Each also doubts `*other` as maybe unwritten, since the byte copy
+        // sits under null tests that always hold, which a join cannot tell
+        // from tests that may fail: the cost #668 recorded for a local (#721).
         a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

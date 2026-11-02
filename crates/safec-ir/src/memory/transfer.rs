@@ -772,7 +772,9 @@ impl Allocations<'_> {
     /// reads, [`Known::partly_written`], and that nothing else it may read is
     /// known written: `reads_fresh`'s question, answered as a doubt. A fresh
     /// allocation beside it is not known written, and is no reason for
-    /// silence. Found by review of #667.
+    /// silence. Found by review of #667. **Or an allocation that may still be
+    /// fresh**, `Known::maybe_fresh`, where nothing else it reads is known
+    /// written either, which needs no local beside it (#721).
     ///
     /// **At the element the pointer is known to point at**, or, where that is
     /// not known, at any element (`Known::may_be_unwritten`). Not through a
@@ -784,10 +786,13 @@ impl Allocations<'_> {
         let through = &value.points_to[source.local.index()];
         let at_start = matches!(through.offset, Offset::Zero);
         let maybe = |local: usize| value.may_be_unwritten(local, through.element, at_start);
+        let site_maybe = |site: usize| value.maybe_fresh[site] && !value.fresh[site];
         source.projection.as_slice() == [Projection::Deref]
             && self.may_be_pointer(function, source)
-            && through.writes_to.any()
-            && through.sites().all(|site| value.fresh[site])
+            && (through.writes_to.any() || through.sites().next().is_some())
+            && through
+                .sites()
+                .all(|site| value.fresh[site] || value.maybe_fresh[site])
             && !(through.lost
                 || through.foreign
                 || through.loaded
@@ -797,7 +802,7 @@ impl Allocations<'_> {
                 .writes_to
                 .ones()
                 .all(|local| value.certainly_unwritten(local, through.element) || maybe(local))
-            && through.writes_to.ones().any(maybe)
+            && (through.writes_to.ones().any(maybe) || through.sites().any(site_maybe))
     }
 
     /// Whether a load `depth` dereferences through `local` reads memory a
@@ -1253,6 +1258,7 @@ impl Allocations<'_> {
             exposed,
             contents,
             fresh,
+            maybe_fresh,
             realloced,
             pending,
             calls,
@@ -1394,6 +1400,21 @@ impl Allocations<'_> {
         // use of what was read out of it is reported as a proof. A union here
         // reported `if (c) *box = q; t = *box; *t = 1;`, which C defines when
         // `c` holds.
+        // **And a site one side left fresh and the other did not may still be
+        // fresh**, a union, before `fresh` is intersected: at a forward join
+        // only, as `partly_written` is set for a local (#721). See
+        // `Known::maybe_fresh`.
+        for (site, here) in maybe_fresh.iter_mut().enumerate() {
+            // Not where one side no longer names the site, `Unheld`, which
+            // is the identity of `state`'s join a few lines below: `if (k)
+            // *m = x; else { free(m); m = 0; }` doubted a read of `*m` on the
+            // arm that wrote it. Found by review. See ADR-0048.
+            let named_on_both = !matches!(state[site], SiteState::Unheld)
+                && !matches!(from.state[site], SiteState::Unheld);
+            *here = *here
+                || from.maybe_fresh[site]
+                || (!back && named_on_both && fresh[site] != from.fresh[site]);
+        }
         for (here, there) in fresh.iter_mut().zip(&from.fresh) {
             *here = *here && *there;
         }
@@ -1690,6 +1711,7 @@ impl Analysis for Allocations<'_> {
             contents: vec![Contents::none(self.locals); self.locals],
             // A parameter's memory is the caller's, which may have written it.
             fresh: vec![false; self.locals],
+            maybe_fresh: vec![false; self.locals],
             realloced: vec![None; self.locals],
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
@@ -1949,8 +1971,18 @@ impl Analysis for Allocations<'_> {
                     // locals it may land in. See `Known::unwritten`.
                     if one_step && !(held.loaded || held.lost || held.foreign) {
                         let edges: Vec<usize> = held.writes_to.ones().collect();
-                        for site in held.sites().collect::<Vec<_>>() {
+                        let sites: Vec<usize> = held.sites().collect();
+                        // **A store that may land in several allocations may
+                        // have missed any one**, so one that may still be
+                        // fresh stays so, as a may-fact: `*p = x;` with `p`
+                        // either of two blocks, one of them written on one
+                        // arm only, cleared the doubt about it. Found by
+                        // review. See `Known::maybe_fresh` (#721).
+                        let several = sites.len() > 1;
+                        for &site in &sites {
+                            let maybe = several && (value.fresh[site] || value.maybe_fresh[site]);
                             value.written(site);
+                            value.maybe_fresh[site] = maybe;
                         }
                         // **Through a pointer moved off an array, an element
                         // of it**, which may not be the one read later. See

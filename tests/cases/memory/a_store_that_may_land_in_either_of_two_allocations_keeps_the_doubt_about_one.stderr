@@ -1,0 +1,11 @@
+error[SC0411]: `*m` may be read before anything was assigned to it
+    ╭─[ a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:12:10 ]
+    │
+ 12 │     int *r = *m;
+    │          ───┬──  
+    │             ╰──── read here
+────╯
+  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path before it is read
