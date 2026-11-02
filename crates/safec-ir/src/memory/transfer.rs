@@ -829,9 +829,10 @@ impl Allocations<'_> {
                 // **Where the landing names more than one place**, sites and
                 // locals together and through a place of dereferences too, it
                 // may have missed any of its blocks, so each that may still be
-                // fresh stays so, as a store's does (#721, #727), and the
-                // destination has written what it points at, `Held::stored_through`,
-                // so that a read back through it is of the block it wrote. See
+                // fresh stays so, as a store's does (#721, #727), and a
+                // destination that is a local has written what it points at,
+                // `Held::stored_through`, so that a read back through it is of
+                // the block it wrote. See
                 // `Known::maybe_fresh`.
                 let may_land: Option<(BTreeSet<usize>, bool)> = match dest {
                     Some(Operand::Copy(dest))
@@ -874,9 +875,16 @@ impl Allocations<'_> {
                             value.maybe_fresh[site] = true;
                         }
                     }
+                    // **Only a destination that is a local itself**: the flag
+                    // says what the local points at was written, and a copy
+                    // through `*h` writes `**h`, not `*h`, so set on `h` it would
+                    // stop doubting a read of `*h` nothing wrote. The store sets
+                    // it at one dereference for the same reason.
                     if several {
                         if let Some(Operand::Copy(dest)) = dest {
-                            value.points_to[dest.local.index()].stored_through = true;
+                            if dest.projection.is_empty() {
+                                value.points_to[dest.local.index()].stored_through = true;
+                            }
                         }
                     }
                 }

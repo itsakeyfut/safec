@@ -246,6 +246,10 @@ cases! {
         a_store_whose_pointer_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_does_not_write_a_block_its_destination_only_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_does_not_write_its_source: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `memcpy(*h, pp, 8)` writes `**h`, so a read of `*h` after it is
+        // still doubted (#739). Mutation: mark `h` as stored through for a
+        // deep destination too; the read after the copy goes silent.
+        a_copy_through_a_deep_destination_leaves_the_level_it_reads_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store this check cannot place writes only where it may land:
         // what its landing names and what code it cannot read can reach. An
         // allocation nothing reaches stays unwritten, `SC0411`. Mutation:
