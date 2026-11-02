@@ -1069,8 +1069,15 @@ impl Held {
     /// one value rather than on a local: a field added to one is a field
     /// to answer in the other. What [`Self::joined`] asks of a path before
     /// it drops that path's want of [`Self::believed`] (#719).
+    ///
+    /// **And at its start**, as `report::fits` asks of a null: arithmetic on
+    /// a null holds none of the rest and is not null, and a null test does
+    /// not catch it. Without it `int *p = 0; p = p + 1; if (k) p = *pp;`
+    /// kept the load's belief across the join and proved `*p` whole where
+    /// main doubted it. Found by review.
     fn names_nothing(&self) -> bool {
-        !self.sites.any()
+        self.offset == Offset::Zero
+            && !self.sites.any()
             && !self.writes_to.any()
             && !self.lost
             && !self.loaded

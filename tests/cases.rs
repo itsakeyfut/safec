@@ -3535,6 +3535,11 @@ cases! {
         a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_narrow_pointer_a_call_wrote_on_one_arm_converted_into_another_local_is_bounded_by_what_it_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_whole_int_pointer_a_call_wrote_on_one_arm_moved_and_copied_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // But a null moved by arithmetic is no null, and keeps nothing for
+        // the other path: `int *p = 0; p = p + 1; if (k) p = *pp; return *p;`
+        // is `SC0412`. Mutation: drop the offset test in
+        // `Held::names_nothing`; this builds. Found by review.
+        a_null_moved_by_arithmetic_on_one_path_does_not_carry_the_other_paths_belief: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_whole_int_pointer_a_call_wrote_copied_and_read_back_as_one_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_a_call_wrote_through_a_void_pointer_copied_and_read_back_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And what a lost value read back before its free, or released by a
