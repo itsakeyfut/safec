@@ -208,7 +208,7 @@ pub enum Kind {
     /// 7.22.3.1 p2, 7.22.3.4 p2), and Annex J.2 lists using it as undefined.
     /// Always `Unsafe`, at the read, whatever it is read for, and not again
     /// at a later use of what it read. `local` is the pointer it is read
-    /// through. See `Known::fresh` and ADR-0057.
+    /// through. See `Known::block_init` and ADR-0057.
     ///
     /// Also out of a local that pointer may be the address of, which nothing
     /// wrote since it was made (C17 6.2.4 p6, 6.7.9 p10, and the same line of

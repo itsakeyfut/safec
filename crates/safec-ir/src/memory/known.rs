@@ -12,7 +12,7 @@ use crate::source::{SourceMap, Span};
 
 use super::bits::Bits;
 use super::parts::{
-    Contents, Extent, Held, Levels, Offset, PendingRead, Reached, Read, ReadKey, Realloced,
+    Contents, Extent, Held, Init, Levels, Offset, PendingRead, Reached, Read, ReadKey, Realloced,
     SiteState, read_key,
 };
 use super::{LostReason, derefs, inside, named};
@@ -65,20 +65,19 @@ pub(super) struct Known {
     /// and ADR-0039.
     pub(super) realloced: Vec<Option<Realloced>>,
     /// Per site, whether it is an allocation `malloc` or `aligned_alloc` made
-    /// and nothing has written since, on every path: its contents are
-    /// indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2). An intersection at a join, and
-    /// cleared only by [`Self::written`] and [`Self::written_all`], in the
-    /// direction that can only silence. A pointer read out of it is
+    /// and nothing has written since: [`Init::Unwritten`] on every path, and
+    /// its contents are indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2). Joined
+    /// by [`Init::joined`], and written only by [`Self::written`] and
+    /// [`Self::written_all`], in the direction that can only silence. A pointer read out of it is
     /// reported where it is read, and is
     /// [`Held::fresh_read`](super::parts::Held::fresh_read). Any store clears
     /// it, a store of an indeterminate pointer included; a free does not.
     /// See ADR-0057. Not "empty":
     /// taking a fresh block's contents as empty is the unsound starting set
     /// #579 met.
-    pub(super) fresh: Vec<bool>,
-    /// Per site, whether it may still be as [`Self::fresh`] says on some
-    /// path: a may-fact, so a union at a join, and set at a forward join
-    /// where one side left the site fresh and the other did not. A load out
+    ///
+    /// **[`Init::Maybe`] where it may still be so on some path**: set at a
+    /// forward join where one side left the site fresh and the other did not. A load out
     /// of it is the doubt `Allocations::reads_partly` reports, as one out of
     /// a local [`Self::partly_written`] is (#668): `if (k) *m = *pp; r =
     /// *m;` with `m` from `malloc` built in silence, where the same without
@@ -87,7 +86,7 @@ pub(super) struct Known {
     /// body, as for a local. Cleared wherever `fresh` is. A test that always
     /// holds, `if (d != 0) *d = *s;`, is a doubt it cannot tell from one
     /// that may fail, the cost #668 recorded for a local. See ADR-0057.
-    pub(super) maybe_fresh: Vec<bool>,
+    pub(super) block_init: Vec<Init>,
     /// What has been read through a pointer since the last sequence point.
     ///
     /// **Ordered containers because a lattice value has to be canonical, and
@@ -199,7 +198,7 @@ pub(super) struct Known {
     /// which is why no call, store or library copy writes every escaped
     /// local any more, whatever it was handed or wherever it points.
     ///
-    /// **What [`Self::fresh`] is for an allocation, for a local reached by
+    /// **What [`Self::block_init`] is for an allocation, for a local reached by
     /// its address**: a pointer read out of one is reported where it is
     /// read, `int *q = m[0];` with `m` a local array nothing wrote (#640).
     /// A local whose address is never taken is `assigned.rs`'s, which reads
@@ -1128,7 +1127,7 @@ impl Known {
         !self.points_to[local.index()].sites.any() && self.names_no_more_than_its_sites(local)
     }
 
-    /// Whether every allocation `local` may name is [`Self::fresh`], it names
+    /// Whether every allocation `local` may name is unwritten, [`Self::block_init`], it names
     /// at least one, and it names nothing else, by
     /// [`Self::names_no_more_than_its_sites`]. `realloc` handed it copies
     /// indeterminate bytes into what it returns, which is fresh then, and if
@@ -1140,18 +1139,21 @@ impl Known {
     pub(super) fn names_only_fresh(&self, local: LocalId) -> bool {
         let held = &self.points_to[local.index()];
         held.sites.any()
-            && held.sites.ones().all(|site| self.fresh[site])
+            && held
+                .sites
+                .ones()
+                .all(|site| self.block_init[site].is_unwritten())
             && self.names_no_more_than_its_sites(local)
     }
 
-    /// Whether any allocation `local` may name is [`Self::fresh`] or
-    /// [`Self::maybe_fresh`]: what `realloc` or a library copy handed it may
+    /// Whether any allocation `local` may name may be unwritten,
+    /// [`Self::block_init`]: what `realloc` or a library copy handed it may
     /// copy is then indeterminate in part, whatever else it names (#724).
     pub(super) fn may_name_fresh(&self, local: LocalId) -> bool {
         self.points_to[local.index()]
             .sites
             .ones()
-            .any(|site| self.fresh[site] || self.maybe_fresh[site])
+            .any(|site| self.block_init[site].may_be_unwritten())
     }
 
     /// Whether what `local` may hold is the allocations it names and nothing
@@ -1620,9 +1622,7 @@ impl Known {
             realloced,
             // Not fresh, whatever it was: the caller says whether the new
             // allocation is, since only it knows which function made it.
-            fresh,
-            // As `fresh` is.
-            maybe_fresh,
+            block_init,
             pending,
             calls: _,
             exposed_after_call,
@@ -1694,8 +1694,7 @@ impl Known {
         // now belongs to a new allocation, and the branch that would have
         // settled the old fact is about another. See ADR-0039.
         realloced[site] = None;
-        fresh[site] = false;
-        maybe_fresh[site] = false;
+        block_init[site] = Init::Written;
         for fact in realloced.iter_mut() {
             if fact
                 .as_ref()
@@ -1904,17 +1903,15 @@ impl Known {
 
     /// Something may have written `site`, so its contents are no longer
     /// known to be indeterminate. Exposed memory is written by whatever code
-    /// this check cannot read may do with it. See [`Self::fresh`].
+    /// this check cannot read may do with it. See [`Self::block_init`].
     pub(super) fn written(&mut self, site: usize) {
-        self.fresh[site] = false;
-        self.maybe_fresh[site] = false;
+        self.block_init[site] = Init::Written;
     }
 
     /// Something may have written any allocation: a write this check cannot
-    /// place, or a library call it reads only by name. See [`Self::fresh`].
+    /// place, or a library call it reads only by name. See [`Self::block_init`].
     pub(super) fn written_all(&mut self) {
-        self.fresh.fill(false);
-        self.maybe_fresh.fill(false);
+        self.block_init.fill(Init::Written);
     }
 
     /// Something may have written `local`, so its value is no longer known
