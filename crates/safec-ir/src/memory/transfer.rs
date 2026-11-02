@@ -1364,9 +1364,11 @@ impl Allocations<'_> {
             // alone**: it may name what it does not show, so what it shows is
             // no proof (`reads_fresh` refuses it), and a block it names that
             // may still be fresh is a doubt. `u = *t; r = *u;` with `*t = m`
-            // read `m` nothing wrote in silence (#728). Not about the local
-            // arrays it names, whose element rules (#639, #667) decide what
-            // such a pointer writes and reads, by the user's decision.
+            // read `m` nothing wrote in silence (#728). Not about any local
+            // it names, by the user's decision: asking it about locals moved
+            // twelve cases, most of them arrays whose element rules (#639,
+            // #667) decide what such a pointer writes and reads. A scalar
+            // local it names is left silent with them.
             && if through.loaded {
                 through.sites().any(site_maybe)
             } else {
