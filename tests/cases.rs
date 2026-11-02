@@ -199,13 +199,15 @@ cases! {
         // Written on one arm only, which is undefined on the other: doubted,
         // as a local written on one arm is (#668, #721). Mutation: join
         // `Known::fresh` with `||`; the doubt becomes certain. Mutation: never
-        // set `Known::maybe_fresh` at a join; the first two go silent. Set
-        // whatever the two sides hold; the third is doubted. Set at a back
-        // edge too; the fourth is.
+        // set `Known::maybe_fresh` at a join; the first two go silent. Set at
+        // a back edge too; the loop case is doubted. Leave it set by a
+        // write; the case written again after the join is. Set whatever the
+        // two sides hold; six older cases move, which hold that a site both
+        // sides wrote is not doubted.
         a_pointer_read_out_of_memory_written_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_an_allocation_written_on_one_arm_only_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_pointer_read_out_of_an_allocation_written_on_both_arms_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_filled_by_a_loop_is_not_doubted_as_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_an_allocation_written_again_after_the_join_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written through a pointer read out of memory, which this check
         // does not place. Mutation: have such a store clear no site. It is
         // reported.
