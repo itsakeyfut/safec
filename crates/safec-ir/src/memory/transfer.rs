@@ -679,8 +679,11 @@ impl Allocations<'_> {
                         // fresh stays so, as a may-fact: `*p = x;` with `p`
                         // either of two blocks, one of them written on one
                         // arm only, cleared the doubt about it. Found by
-                        // review. See `Known::maybe_fresh` (#721).
-                        let several = sites.len() > 1;
+                        // review. See `Known::maybe_fresh` (#721). **A local
+                        // it names counts as one of them**: `p = c ? m : &loc;
+                        // *p = x;` may have written `loc` and missed `m`
+                        // (#739).
+                        let several = sites.len() + edges.len() > 1;
                         for &site in &sites {
                             let maybe = several && (value.fresh[site] || value.maybe_fresh[site]);
                             value.written(site);
@@ -739,8 +742,23 @@ impl Allocations<'_> {
                         let mut may_land: BTreeSet<usize> =
                             landing.containers.iter().copied().collect();
                         may_land.extend(value.sites_named_by_unknown_code());
+                        // **But a store deeper than one dereference through a
+                        // pointer this check follows, whose landing names more
+                        // than one place, may have missed any of its blocks**,
+                        // as one through a single dereference may: `*h = c ?
+                        // m : o; **h = x;` read `*m` in silence (#739). Not a
+                        // pointer read out of memory, lost or written by a
+                        // call, which is #726's decision above.
+                        let held = &value.points_to[place.local.index()];
+                        let followed = !(held.loaded || held.lost || held.foreign);
+                        let several =
+                            followed && landing.containers.len() + landing.targets.len() > 1;
                         for site in may_land {
+                            let maybe = several
+                                && landing.containers.contains(&site)
+                                && (value.fresh[site] || value.maybe_fresh[site]);
                             value.written(site);
+                            value.maybe_fresh[site] = maybe;
                         }
                     }
                 }
@@ -795,44 +813,72 @@ impl Allocations<'_> {
                     Some(Operand::Copy(_) | Operand::Constant(_)) | None => Vec::new(),
                 };
                 // What a pointer it was handed may be, read out of memory, as
-                // for an opaque call. See ADR-0040.
-                // Exposed, which is also what says the destination's
-                // allocations are no longer fresh. See `Known::fresh`.
+                // for an opaque call, exposed. See ADR-0040.
                 //
-                // **A copy through a pointer that may name several blocks may
-                // have missed any one**, so a block that may still be fresh
-                // stays so, as a store through such a pointer keeps it: the
-                // same `p = c ? m : o; memcpy(p, pp, 8);` read `*m` in silence
-                // where `*p = *pp;` is doubted (#727). The store's arm above
-                // says the same of its own pointer. See `Known::maybe_fresh`.
-                let missed: Vec<usize> = match dest {
-                    Some(Operand::Copy(dest)) if dest.projection.is_empty() => {
-                        let named: Vec<usize> =
-                            value.points_to[dest.local.index()].sites().collect();
-                        if named.len() > 1 {
-                            named
-                                .into_iter()
-                                .filter(|&site| value.fresh[site] || value.maybe_fresh[site])
-                                .collect()
-                        } else {
-                            Vec::new()
+                // **What it writes, only where its destination may land**: the
+                // blocks its landing names and, where it may land where this
+                // check cannot place it, what code this check cannot read can
+                // name, as a store's are since #726. The exposure wrote the fresh
+                // mark of everything it reached, the copy's source and what its
+                // destination only holds among them: `memcpy(d, m, 8); r = *m;`
+                // and `*o = m; memcpy(o, pp, 8); r = *m;` read a block nothing
+                // wrote in silence, where the store forms are certain (#739).
+                // So the exposure stays, and the mark it had is put back on every
+                // block outside that set.
+                //
+                // **Where the landing names more than one place**, sites and
+                // locals together and through a place of dereferences too, it
+                // may have missed any of its blocks, so each that may still be
+                // fresh stays so, as a store's does (#721, #727), and the
+                // destination has written what it points at, `Held::stored_through`,
+                // so that a read back through it is of the block it wrote. See
+                // `Known::maybe_fresh`.
+                let may_land: Option<(BTreeSet<usize>, bool)> = match dest {
+                    Some(Operand::Copy(dest))
+                        if dest
+                            .projection
+                            .iter()
+                            .all(|step| matches!(step, Projection::Deref)) =>
+                    {
+                        let deep = derefs(dest) + 1;
+                        let landing = self.landing(
+                            value,
+                            dest.local,
+                            deep,
+                            dest.projection.is_empty(),
+                            StoreKind::Copy,
+                        );
+                        let mut set: BTreeSet<usize> = landing.containers.iter().copied().collect();
+                        if landing.unnamed(value)
+                            || landing.unplaced()
+                            || landing.handed_over(value)
+                        {
+                            set.extend(value.sites_named_by_unknown_code());
+                        }
+                        let several = landing.containers.len() + landing.targets.len() > 1;
+                        Some((set, several))
+                    }
+                    // A destination that is no place keeps what the exposure
+                    // says, as it did.
+                    Some(Operand::Copy(_) | Operand::Constant(_)) | None => None,
+                };
+                let fresh_before = value.fresh.clone();
+                let maybe_before = value.maybe_fresh.clone();
+                value.expose(self.sources, reach, Some(span));
+                if let Some((may_land, several)) = may_land {
+                    for site in 0..value.fresh.len() {
+                        if !may_land.contains(&site) {
+                            value.fresh[site] = fresh_before[site];
+                            value.maybe_fresh[site] = maybe_before[site];
+                        } else if several && (fresh_before[site] || maybe_before[site]) {
+                            value.maybe_fresh[site] = true;
                         }
                     }
-                    Some(Operand::Copy(_) | Operand::Constant(_)) | None => Vec::new(),
-                };
-                value.expose(self.sources, reach, Some(span));
-                // **And what the destination points at is written now**,
-                // whichever block it is, as a store through it says by
-                // `Held::stored_through`: without it `memcpy(p, pp, 8); r =
-                // *p;` was doubted about the very block the copy wrote. Found
-                // by review.
-                if !missed.is_empty() {
-                    if let Some(Operand::Copy(dest)) = dest {
-                        value.points_to[dest.local.index()].stored_through = true;
+                    if several {
+                        if let Some(Operand::Copy(dest)) = dest {
+                            value.points_to[dest.local.index()].stored_through = true;
+                        }
                     }
-                }
-                for site in missed {
-                    value.maybe_fresh[site] = true;
                 }
                 // **It writes only through its first argument**: the clause of
                 // each function read by name, C17 7.24.2.1 to 7.24.3.2 and
