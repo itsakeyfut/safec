@@ -232,8 +232,14 @@ cases! {
         // the doubt about each block where it may land in more than one place,
         // at the copy and at the store: through a deep destination, through a
         // pointer that may be a block or a local, and not at a block the copy's
-        // destination only holds or at its source. Mutations, measured at the
-        // commit that guards them (#739).
+        // destination only holds or at its source (#739). Mutation: restore
+        // nothing after the copy's exposure; the last two build. Keep no mark
+        // through a copy's deep destination; the first builds. Keep none at a
+        // deep store; the second. Count blocks alone at the copy; the third.
+        // Count blocks alone at the one-step store; the fourth. Keep the mark
+        // whatever a copy names;
+        // `a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it`
+        // is doubted.
         a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_store_through_a_deep_place_naming_two_blocks_keeps_the_doubt_about_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
