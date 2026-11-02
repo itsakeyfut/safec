@@ -153,19 +153,24 @@ pub(super) struct Landing {
     pub(super) targets: Vec<usize>,
     /// Whether it is one exact dereference through the pointer: then
     /// [`Self::targets`] are the pointer's own edges.
-    one_step: bool,
-    pointer: crate::ir::LocalId,
-    deep: usize,
-    kind: StoreKind,
+    pub(super) one_step: bool,
+    /// The pointer the write goes through, and how many dereferences down
+    /// it lands.
+    pub(super) pointer: crate::ir::LocalId,
+    pub(super) deep: usize,
+    /// Which kind of write it is, which the doors' differences are matched on.
+    pub(super) kind: StoreKind,
 }
 
 impl Landing {
     /// Whether the pointer may hold what this check did not follow, or the
     /// write is deep enough that it is taken as unplaced. See ADR-0044.
     ///
-    /// **Asked where each door asks it, after what it writes into its
-    /// targets**, which may change the pointer's own value, and not when the
-    /// landing is made.
+    /// **Asked where each door asks it**, as `Allocations::land_contents`
+    /// begins, and not when the landing is made: a copy and a deeper store
+    /// have written into their targets by then, which may change the
+    /// pointer's own value, and a store through one dereference writes its
+    /// targets after.
     ///
     /// **The depth at which a write is unnamed differs between the doors**,
     /// and is kept as it was: a store deeper than one dereference, a copy
@@ -181,9 +186,6 @@ impl Landing {
         held.loaded || held.lost || held.foreign || deep_enough
     }
 
-    /// Whether an allocation it lands in is reachable to code this check
-    /// cannot read, which another parameter may name (#489). As of when it
-    /// is asked, for the reason [`Self::unnamed`] gives.
     /// Whether it lands nowhere this check names: no allocation and no local.
     ///
     /// **Which locals count differs between the doors**, and is kept as it
@@ -200,6 +202,9 @@ impl Landing {
         self.containers.is_empty() && no_local
     }
 
+    /// Whether an allocation it lands in is reachable to code this check
+    /// cannot read, which another parameter may name (#489). As of when it
+    /// is asked, for the reason [`Self::unnamed`] gives.
     pub(super) fn handed_over(&self, value: &Known) -> bool {
         let reachable = value.reachable_now();
         self.containers

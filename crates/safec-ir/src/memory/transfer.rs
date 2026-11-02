@@ -98,8 +98,8 @@ enum Pours {
 
 /// What [`Allocations::initialised_by`] is told of one write.
 enum Wrote<'a> {
-    /// An assignment through `place`, which has at least one dereference
-    /// where it lands in memory. `targets` are the locals one exact
+    /// An assignment to `place`, any assignment: one with no dereference
+    /// changes nothing here, and the arm asks that itself. `targets` are the locals one exact
     /// dereference may land in, and `certain` whether it lands in one alone
     /// (ADR-0028). `unwritten_before` is `Known::unwritten` as it was before
     /// the store, for a local it may write past.
@@ -562,6 +562,17 @@ impl Allocations<'_> {
         in_part: &[usize],
         pours: Pours,
     ) {
+        // Every field named, so that one added to `Landing` is answered here
+        // (E0027): what the landing says it lands in is poured below, and the
+        // rest is asked through its methods.
+        let Landing {
+            containers,
+            targets: _,
+            one_step: _,
+            pointer: _,
+            deep: _,
+            kind: _,
+        } = landing;
         let unplaced = landing.unplaced();
         let unnamed = landing.unnamed(value);
         let elsewhere = unplaced || unnamed || landing.handed_over(value);
@@ -583,14 +594,13 @@ impl Allocations<'_> {
                     if unnamed {
                         value.expose(self.sources, carried.clone(), Some(span));
                     }
-                    value.pour(&landing.containers, poured, in_part);
+                    value.pour(containers, poured, in_part);
                     // Stored where code this check cannot read already
                     // reaches is reachable to it from now on, which no call
                     // marks until the next one: a read before this store in
                     // the same expression is told here.
                     let reachable = value.reachable_now();
-                    if landing
-                        .containers
+                    if containers
                         .iter()
                         .any(|container| reachable.contains(container))
                     {
@@ -603,7 +613,7 @@ impl Allocations<'_> {
                 if elsewhere {
                     value.landed_where_unknown_code_points(poured);
                 }
-                value.pour(&landing.containers, poured, in_part);
+                value.pour(containers, poured, in_part);
             }
         }
     }
@@ -620,6 +630,17 @@ impl Allocations<'_> {
     /// **Called where each door called it**, which is before what the store
     /// pours and after what the copy pours: the copy's exposure of what it
     /// was handed marks what is reachable, which its landing asks before it.
+    /// Mutation: call it after the store's `land_contents`, and
+    /// `a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence`
+    /// fails. Found by review.
+    ///
+    /// **What is still each door's own**: what a write puts into the locals
+    /// it lands in, which a store replaces where it is certain and a copy
+    /// only unions (#395), and `Known::named_after_a_store`, which only the
+    /// store records. A kind of write added to `StoreKind` is `E0004` at
+    /// `Landing`'s two matches; it reaches this function and
+    /// `Self::land_contents` only through a variant of `Wrote` and `Pours`
+    /// written for it.
     fn initialised_by(&self, function: &Function, value: &mut Known, wrote: Wrote<'_>) {
         match wrote {
             Wrote::Store {
@@ -648,7 +669,7 @@ impl Allocations<'_> {
                     let held = &value.points_to[pointer];
                     // **And a local it may land in**, the local its edges name
                     // where the store is placed: `m[0] = p;` writes `m`. Where
-                    // it is not placed, `replaced_by` above has cleared the
+                    // it is not placed, `replaced_by` below clears the
                     // locals it may land in. See `Known::unwritten`.
                     if one_step && !(held.loaded || held.lost || held.foreign) {
                         let edges: Vec<usize> = held.writes_to.ones().collect();
