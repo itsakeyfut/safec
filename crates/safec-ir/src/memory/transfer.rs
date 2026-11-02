@@ -2184,7 +2184,7 @@ impl Analysis for Allocations<'_> {
                     // believed four bytes wide where `*pv` of `c`'s address
                     // was doubted (#715). Where it was handed nothing, no
                     // bound, as ADR-0017 believes an output: bounding such a
-                    // pointer at zero doubted 42 cases, measured.
+                    // pointer at zero doubted 34 cases, measured.
                     let bound = if !self.may_be_pointer(function, &operation.place) {
                         None
                     } else if written.loaded {
