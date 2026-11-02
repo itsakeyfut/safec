@@ -150,9 +150,12 @@ read of the block `SC0411` as a doubt (#745); a
 is `SC0411` beside `SC0402`; a store of the indeterminate pointer back into fresh
 memory is a write like any other. A block written on some paths, read
 through a pointer that may also name a block that was written, handed to
-`realloc`, or copied out of by `memcpy` or `memmove`, is `SC0411` as a doubt
-where what holds its bytes is read (#721, #724); `realloc` of a block nothing
-wrote, or a whole copy of one into one block alone, is certain. A block made
+`realloc`, or copied by `memcpy` or `memmove` into another block, is `SC0411`
+as a doubt where the block that holds its bytes is read (#721, #724);
+`realloc` of a block nothing wrote, or a copy of one that covers the whole of
+one other block from its start, is certain. A copy into or out of a local
+array carries no such mark, and neither does a read through a pointer that
+may name a local that was written. A block made
 on one path, or in an earlier turn of a loop, keeps its mark where the paths
 meet. A pointer read through a member, and an integer read out of fresh
 memory, are not followed.

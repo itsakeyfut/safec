@@ -118,6 +118,7 @@ enum Wrote<'a> {
         reach: Vec<usize>,
         span: Span,
         length: CopiedPointers,
+        bytes: Option<u64>,
         source: Option<&'a Operand>,
     },
 }
@@ -811,6 +812,7 @@ impl Allocations<'_> {
                 reach,
                 span,
                 length,
+                bytes,
                 source,
             } => {
                 // **And a local it may write past the end of**, as a store
@@ -898,7 +900,17 @@ impl Allocations<'_> {
                             set.extend(value.sites_named_by_unknown_code());
                         }
                         let several = landing.containers.len() + landing.targets.len() > 1;
-                        let alone = landing.containers.len() == 1 && landing.targets.is_empty();
+                        // One block alone, counted after the widening above:
+                        // a copy that may land wherever code this check cannot
+                        // read can name lands in no one block, and taking its
+                        // container alone made every such block certainly fresh,
+                        // a written one among them. Found by review.
+                        // And from its start, so that a copy that covers the
+                        // block's size covers the block.
+                        let alone = set.len() == 1
+                            && landing.targets.is_empty()
+                            && dest.projection.is_empty()
+                            && matches!(value.points_to[dest.local.index()].offset, Offset::Zero);
                         Some((set, several, alone))
                     }
                     // A destination that is no place keeps what the exposure
@@ -938,6 +950,7 @@ impl Allocations<'_> {
                         CopiedPointers::LastInPart => (false, true),
                         CopiedPointers::NoneWhole => (true, false),
                     };
+                    let mut carried = false;
                     for site in 0..value.fresh.len() {
                         if !may_land.contains(&site) || unwritten {
                             value.fresh[site] = fresh_before[site];
@@ -946,10 +959,26 @@ impl Allocations<'_> {
                             if doubted && (fresh_before[site] || maybe_before[site]) {
                                 value.maybe_fresh[site] = true;
                             }
-                            if source_fresh && alone && matches!(length, CopiedPointers::Whole) {
+                            // **Certain only where it covers the whole block**,
+                            // its size a constant and the length at least that:
+                            // a copy of 8 bytes into 16, or of a length this
+                            // check cannot read, leaves what it did not cover
+                            // as it was, and that may be written. Found by
+                            // review.
+                            let covers = matches!(
+                                (value.extent[site], bytes),
+                                (Some(Extent::Exactly(size)), Some(bytes)) if bytes >= size
+                            );
+                            if source_fresh
+                                && alone
+                                && covers
+                                && matches!(length, CopiedPointers::Whole)
+                            {
                                 value.fresh[site] = true;
+                                carried = true;
                             } else if source_maybe {
                                 value.maybe_fresh[site] = true;
+                                carried = true;
                             }
                         }
                     }
@@ -958,7 +987,19 @@ impl Allocations<'_> {
                     // through `*h` writes `**h`, not `*h`, so set on `h` it would
                     // stop doubting a read of `*h` nothing wrote. The store sets
                     // it at one dereference for the same reason.
-                    if several {
+                    // **Not where it carried bytes nothing may have written**,
+                    // and those it carried them into are read as such again:
+                    // the flag says a read back through a pointer is of what a
+                    // store put there, and what this copy put there may be
+                    // indeterminate. `*n = x; memcpy(n, m, 8); r = *n;` with `m`
+                    // written on one path read `*n` in silence. Found by review.
+                    if carried {
+                        for held in &mut value.points_to {
+                            if held.sites().any(|site| may_land.contains(&site)) {
+                                held.stored_through = false;
+                            }
+                        }
+                    } else if several {
                         if let Some(Operand::Copy(dest)) = dest {
                             if dest.projection.is_empty() {
                                 value.points_to[dest.local.index()].stored_through = true;
@@ -3674,6 +3715,7 @@ impl Analysis for Allocations<'_> {
                         reach,
                         span: origin.span(),
                         length: self.copied_pointers(*callee, arguments),
+                        bytes: self.constant_argument(*callee, arguments, 2),
                         source: arguments.get(1),
                     },
                 );

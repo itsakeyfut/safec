@@ -285,6 +285,18 @@ cases! {
         a_copy_out_of_a_block_nothing_wrote_into_either_of_two_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_what_realloc_of_a_written_block_returns_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_out_of_a_written_block_is_not_reported_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What review found of the copy's carried mark: it clears the
+        // stored-through flag of what it carried into, and is certain only
+        // where it lands in one block it covers from its start. Mutation:
+        // keep the flag after a copy that carried a mark; the first, the
+        // second and the fourth go silent. Count the landing's container
+        // alone, not the set widened by what unknown code names; the second
+        // is certain about a written block. Be certain whatever the copy
+        // covers; the third and the fourth are certain.
+        a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_this_check_cannot_place_out_of_a_block_nothing_wrote_does_not_make_a_written_block_certain: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_shorter_than_its_destination_out_of_a_block_nothing_wrote_leaves_the_rest_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store this check cannot place writes only where it may land:
         // what its landing names and what code it cannot read can reach. An
         // allocation nothing reaches stays unwritten, `SC0411`. Mutation:

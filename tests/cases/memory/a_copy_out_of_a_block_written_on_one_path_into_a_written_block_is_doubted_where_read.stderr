@@ -1,0 +1,11 @@
+error[SC0411]: `*n` may be read before anything was assigned to it
+   ╭─[ a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read.c:8:10 ]
+   │
+ 8 │     int *r = *n;
+   │          ───┬──  
+   │             ╰──── read here
+───╯
+  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path before it is read
