@@ -1,0 +1,116 @@
+Target "x86_64-pc-windows-msvc"
+Function a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:2:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:3:6 "get" declared
+  Local "_0" "void" return
+  Local "_1" "char **" parameter "p"
+Function a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "char *" "c"
+  Local "_2" "char **"
+  Local "_3" "void *" "m"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "char *" "t"
+  Local "_7" "char **"
+  Local "_8" "void *"
+  Local "_9" "int **" "ib"
+  Local "_10" "int *" "r"
+  Local "_11" "int"
+  Block "bb0" entry
+    Operation a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:6:9 written
+      Destination "_2"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:6:5 generated
+    Call a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:6:5 written "get" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:6:5 generated
+    ArgumentsEvaluated a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:7:15 generated
+    Call a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:7:15 written "malloc" "bb2"
+      Destination "_4"
+      Constant 8
+  Block "bb2"
+    Operation a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:7:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:7:15 generated
+    Operation a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:8:9 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:8:9 written "bb3" "bb4"
+      Copy "_5"
+  Block "bb3"
+    Sequenced a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:8:9 generated
+    Operation a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:8:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:8:20 generated
+    Return
+  Block "bb4"
+    Sequenced a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:8:9 generated
+    Goto "bb5"
+  Block "bb5"
+    Operation a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:9:11 written
+      Destination "_6"
+      Use
+        Copy "_1"
+    Sequenced a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:9:15 generated
+    Operation a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:10:15 written
+      Destination "_7"
+      Address
+        Place "_6"
+    ArgumentsEvaluated a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:10:5 generated
+    Call a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:10:5 written "memcpy" "bb6"
+      Destination "_8"
+      Copy "_3"
+      Copy "_7"
+      Constant 8
+  Block "bb6"
+    Sequenced a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:10:5 generated
+    Operation a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:11:11 written
+      Destination "_9"
+      Use
+        Copy "_3"
+    Sequenced a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:11:16 generated
+    Operation a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:12:10 written
+      Destination "_10"
+      Use
+        Copy "_9"
+          Deref
+    Sequenced a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:12:14 generated
+    Operation a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:13:9 written
+      Destination "_11"
+      Unary "Not"
+        Copy "_10"
+    Branch a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:13:9 written "bb7" "bb8"
+      Copy "_11"
+  Block "bb7"
+    Sequenced a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:13:9 generated
+    Operation a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:13:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:13:20 generated
+    Return
+  Block "bb8"
+    Sequenced a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:13:9 generated
+    Goto "bb9"
+  Block "bb9"
+    Operation a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:14:5 written
+      Destination "_0"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider.c:14:12 generated
+    Return

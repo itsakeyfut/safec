@@ -923,7 +923,17 @@ impl Known {
             }
             for slot in locals {
                 let own = &self.points_to[slot];
-                let first = own.loaded.then(|| own.believed.unwrap_or(0));
+                // A pointer a call wrote at what it was handed as, on the
+                // value or, where a join dropped that, on the local, and no
+                // bound where it was handed nothing, as the store reads it
+                // (#715).
+                let first = if own.loaded {
+                    Some(own.believed.unwrap_or(0))
+                } else if own.foreign {
+                    own.believed.or(self.handed_at_most[slot])
+                } else {
+                    None
+                };
                 let held = own.contents_at_most.stored_under(first, depth_cap);
                 levels.bound_by(&held.below(depth - 1 - level));
             }
