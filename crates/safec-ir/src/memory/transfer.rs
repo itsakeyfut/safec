@@ -1309,8 +1309,9 @@ impl Allocations<'_> {
     /// is reported as certain. **The `loaded` clause is held** by
     /// `a_pointer_no_call_can_reach_is_not_written_by_a_store_this_check_cannot_place`,
     /// which gains a false certain report without it, and by
-    /// `a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join`;
-    /// such a pointer is a doubt instead, in `reads_partly` (#728). **The
+    /// `a_pointer_read_out_of_memory_that_names_a_block_nothing_wrote_is_doubted_where_read_through`,
+    /// whose doubt becomes certain: such a pointer is a doubt, in
+    /// `reads_partly` (#728). **The
     /// `lost` and `foreign` clauses have no case**, measured: a local loses
     /// its sites where it is made lost, and no program found gives a foreign
     /// pointer a fresh site that an exposure has not already cleared.
