@@ -1916,8 +1916,12 @@ cases! {
         a_local_read_after_a_store_past_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same written by a library copy, which marks the local as the
         // store does. Mutation: mark nothing past the end at the copy in
-        // `Allocations::initialised_by`; this loses its `SC0411` (#729).
+        // `Allocations::initialised_by`; this loses its `SC0411` (#729). And
+        // through a destination whose level above was moved off the local,
+        // `memcpy(*h, ..)`. Mutation: mark nothing at the deeper copy; the
+        // second loses its `SC0411`.
         a_local_copied_past_its_end_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_copied_past_its_end_through_a_deeper_destination_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `**ppp = q;` stores seven past `z`, so nothing put `q`'s allocation in
         // `z`, and `*q` after `free(z)` is a doubt, not a proof. Mutation: mark
         // such a local lost only through one dereference; `*q` is a proved use
