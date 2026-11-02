@@ -312,6 +312,13 @@ cases! {
         a_pointer_that_may_name_a_block_nothing_wrote_or_a_written_local_is_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_that_may_name_an_unwritten_local_or_a_written_block_is_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_that_may_name_a_written_local_or_a_written_block_is_not_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read out of memory is doubted about a local it names
+        // that is not an array, as well as its blocks (#756). Mutations,
+        // measured at the commit that guards them.
+        a_pointer_read_out_of_memory_that_names_an_unwritten_local_is_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_a_block_that_names_an_unwritten_local_is_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_memory_that_names_an_unwritten_local_array_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store this check cannot place writes only where it may land:
         // what its landing names and what code it cannot read can reach. An
         // allocation nothing reaches stays unwritten, `SC0411`. Mutation:
