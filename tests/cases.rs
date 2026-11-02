@@ -250,6 +250,14 @@ cases! {
         // still doubted (#739). Mutation: mark `h` as stored through for a
         // deep destination too; the read after the copy goes silent.
         a_copy_through_a_deep_destination_leaves_the_level_it_reads_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A library copy reads its length where it writes part of a pointer:
+        // at what it stores (#717) and at what it leaves unwritten (#745).
+        // Mutations, measured at the commit that guards them.
+        a_copy_of_part_of_a_pointer_into_caller_memory_is_asked_at_the_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_of_whole_pointers_into_caller_memory_is_not_asked_its_length: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_shorter_than_a_pointer_leaves_a_fresh_block_fresh: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_ending_part_way_through_a_pointer_leaves_the_block_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_of_whole_pointers_into_a_fresh_block_writes_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store this check cannot place writes only where it may land:
         // what its landing names and what code it cannot read can reach. An
         // allocation nothing reaches stays unwritten, `SC0411`. Mutation:

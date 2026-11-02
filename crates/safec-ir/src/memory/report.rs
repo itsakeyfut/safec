@@ -20,7 +20,7 @@ use super::parts::{
     Callee, Extent, Freeing, Levels, Offset, Reach, Reached, Read, SiteState, earlier, same,
 };
 use super::store::{StoreKind, Written};
-use super::transfer::{Allocations, innermost_element};
+use super::transfer::{Allocations, CopiedPointers, innermost_element};
 use super::{Departure, Finding, Kind, LostReason, Unproven};
 
 /// What a set of sites says about whatever touched them.
@@ -1788,6 +1788,23 @@ fn pointee(analysis: &Allocations<'_>, ty: TyId) -> Option<TyId> {
     }
 }
 
+/// The width a pointer stored by this library copy is believed to point at,
+/// where the copy writes only part of one: `None` where the destination
+/// holds no pointer by its type, or the copy writes whole ones. See
+/// `CopiedPointers`.
+fn part_of_a_pointer(
+    analysis: &Allocations<'_>,
+    callee: FuncId,
+    arguments: &[Operand],
+    into_ty: Option<TyId>,
+) -> Option<u64> {
+    let width = pointee_width(analysis, pointee(analysis, into_ty?)?)?;
+    match analysis.copied_pointers(callee, arguments) {
+        CopiedPointers::Whole => None,
+        CopiedPointers::LastInPart | CopiedPointers::NoneWhole => Some(width),
+    }
+}
+
 /// Report a pointer this element hands back by a `return`, stores through
 /// a pointer, or writes by name into a local code this check cannot read
 /// may read (#690), where this check cannot show it points at one whole
@@ -1951,6 +1968,20 @@ pub(super) fn departed_at_call(
                     (at, Departure::Store, into_ty),
                     &Rvalue::Use(source.clone()),
                     known,
+                );
+            }
+            // **And whether it stores a pointer whole**: `memcpy(out, &v, 4)`
+            // with `out` an `int **` writes four of a pointer's eight bytes,
+            // and a reader of `*out` reads a pointer nobody wrote, which was
+            // asked nothing (#717). Unknown, as every departure is.
+            if let Some(width) = part_of_a_pointer(analysis, *callee, arguments, into_ty) {
+                say_leaving(
+                    findings,
+                    departed,
+                    analysis,
+                    (at, Departure::Store, width),
+                    Some((Fit::Unknown, None)),
+                    false,
                 );
             }
             return;

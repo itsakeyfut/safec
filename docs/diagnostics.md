@@ -142,7 +142,10 @@ and so is `*box == q` or `put(*box)` with no local between. A later use of
 what it read is not reported again, and a `free` or `realloc` of it raises no
 doubt beside the report, unless a call may have replaced it since. Any write
 anywhere in the allocation ends it, whether by a store, `memcpy`, `memset`
-or a call it was handed, since this check keeps no offsets within one; a
+or a call it was handed, since this check keeps no offsets within one; but
+a `memcpy` or `memmove` shorter than one pointer writes no pointer whole and
+ends nothing, and one that ends part way through a later pointer leaves a
+read of the block `SC0411` as a doubt (#745); a
 `free` does not, so a read out of a block nothing wrote before it was freed
 is `SC0411` beside `SC0402`; a store of the indeterminate pointer back into fresh
 memory is a write like any other. A slot written on some paths is not
@@ -210,6 +213,9 @@ whether it does: `g(p + 5)`, `return p + 5;` and `*box = p + 5;` are each
 `SC0413`, labelled `passed here`, `returned here` or `stored here`. A pointer
 to memory lets the pointers stored there leave with it, so `int *q = v;
 h(&q);` asks `q`, and `memcpy` asks what its source points at as a store.
+A `memcpy` into memory its destination's type says holds pointers, whose
+length ends part way through one, stores a pointer nobody wrote whole, and is
+asked as one that may not point at an object as wide as its type (#717).
 Each is asked at the wider of its own type and the type the receiver reads it
 as, so a `void *` local's address passed as an `int **` asks the local four
 bytes wide, and memory by what its record says the pointers stored there point
