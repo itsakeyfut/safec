@@ -313,8 +313,10 @@ cases! {
         a_pointer_that_may_name_an_unwritten_local_or_a_written_block_is_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_that_may_name_a_written_local_or_a_written_block_is_not_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory is doubted about a local it names
-        // that is not an array, as well as its blocks (#756). Mutations,
-        // measured at the commit that guards them.
+        // that is not an array, as well as its blocks (#756). Mutation: ask
+        // it about no local again; the first two go silent. Doubt whatever a
+        // scalar local holds; the third is doubted. Drop the array test; the
+        // fourth is doubted, against #728's decision.
         a_pointer_read_out_of_memory_that_names_an_unwritten_local_is_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_a_block_that_names_an_unwritten_local_is_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
