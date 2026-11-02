@@ -1328,14 +1328,17 @@ impl Allocations<'_> {
                 .all(|local| value.certainly_unwritten(local, through.element))
     }
 
-    /// Whether a load reads an array that may still be unwritten where it
-    /// reads, [`Known::partly_written`], and that nothing else it may read is
-    /// known written: `reads_fresh`'s question, answered as a doubt. A fresh
+    /// Whether a load may read an array that may still be unwritten where it
+    /// reads, [`Known::partly_written`]: `reads_fresh`'s question, answered as
+    /// a doubt. A fresh
     /// allocation beside it is not known written, and is no reason for
     /// silence. Found by review of #667. **Or an allocation that may still be
     /// fresh**, `Known::maybe_fresh` or `Known::fresh`, which needs no local
     /// beside it (#721), and whatever allocations beside it were written
-    /// (#724); a local beside it that is known written still silences it.
+    /// (#724). **Any place it may read that may be unwritten is enough**, a
+    /// block or a local, whatever else it may read was written: the read is of
+    /// that place on some path, and undefined there whatever it is read for
+    /// (#749). See ADR-0057.
     ///
     /// **At the element the pointer is known to point at**, or, where that is
     /// not known, at any element (`Known::may_be_unwritten`). Not through a
@@ -1361,17 +1364,18 @@ impl Allocations<'_> {
             // alone**: it may name what it does not show, so what it shows is
             // no proof (`reads_fresh` refuses it), and a block it names that
             // may still be fresh is a doubt. `u = *t; r = *u;` with `*t = m`
-            // read `m` nothing wrote in silence (#728). Not about the local
-            // arrays it names, whose element rules (#639, #667) decide what
-            // such a pointer writes and reads, by the user's decision.
+            // read `m` nothing wrote in silence (#728). Not about any local
+            // it names, by the user's decision: asking it about locals moved
+            // twelve cases, most of them arrays whose element rules (#639,
+            // #667) decide what such a pointer writes and reads. A scalar
+            // local it names is left silent with them.
             && if through.loaded {
                 through.sites().any(site_maybe)
             } else {
-                through
-                    .writes_to
-                    .ones()
-                    .all(|local| value.certainly_unwritten(local, through.element) || maybe(local))
-                    && (through.writes_to.ones().any(maybe) || through.sites().any(site_maybe))
+                through.sites().any(site_maybe)
+                    || through.writes_to.ones().any(|local| {
+                        value.certainly_unwritten(local, through.element) || maybe(local)
+                    })
             }
     }
 
