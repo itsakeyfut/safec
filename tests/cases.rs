@@ -3907,6 +3907,11 @@ cases! {
         // first goes silent (#713).
         a_void_pointer_copied_by_memcpy_into_an_int_pointer_s_slot_is_asked_how_wide: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_void_pointer_copied_by_memcpy_into_a_void_pointer_s_slot_is_asked_no_width: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And still at the source's type where the destination is narrower:
+        // an `int **` source reaching a `char *` local, copied into a
+        // `char **`, asks the local four bytes wide. Mutation: drop the
+        // source's ask; this goes silent.
+        a_pointer_copied_by_memcpy_into_a_narrower_slot_is_still_asked_at_its_source_s_type: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same three doors, each handed a whole allocation. Mutation:
         // answer every departure unknown in `say_leaving`; this is reported
         // three times.

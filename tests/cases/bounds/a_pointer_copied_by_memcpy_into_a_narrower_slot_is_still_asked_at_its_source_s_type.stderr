@@ -1,0 +1,10 @@
+error[SC0413]: this lets `c` leave, which may not point at an object as wide as its type
+   ╭─[ a_pointer_copied_by_memcpy_into_a_narrower_slot_is_still_asked_at_its_source_s_type.c:9:5 ]
+   │
+ 9 │     memcpy(out, s, 8);
+   │     ────────┬────────  
+   │             ╰────────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
