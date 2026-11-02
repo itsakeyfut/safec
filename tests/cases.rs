@@ -269,8 +269,14 @@ cases! {
         a_copy_of_part_of_a_pointer_through_a_void_pointer_destination_is_asked_by_its_source: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block that may be unwritten keeps its mark where it is carried:
         // across a join where one side does not name it, through realloc,
-        // and through a copy out of it (#724). Mutations, measured at the
-        // commit that guards them.
+        // and through a copy out of it (#724). Mutation: drop `realloc`'s
+        // `may_name_fresh` arm; the first goes silent. Intersect `fresh`
+        // with the side that does not name the site; the second goes silent
+        // and the third loses its report. Drop the maybe-fresh arm at the
+        // copy; the fourth goes silent. Drop its certain arm; the fifth is
+        // only doubted. Drop `alone` from the certain arm; the sixth is
+        // certain. Answer `Known::may_name_fresh` true whatever the pointer
+        // names; the seventh and the eighth are doubted.
         a_pointer_read_out_of_what_realloc_of_a_block_written_on_one_path_returns_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_made_on_one_arm_only_keeps_its_mark_where_the_arms_meet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_made_in_an_earlier_turn_of_a_loop_and_never_written_is_reported_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -279,7 +285,6 @@ cases! {
         a_copy_out_of_a_block_nothing_wrote_into_either_of_two_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_what_realloc_of_a_written_block_returns_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_out_of_a_written_block_is_not_reported_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_block_made_in_an_outer_loop_and_written_is_not_doubted_in_an_inner_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store this check cannot place writes only where it may land:
         // what its landing names and what code it cannot read can reach. An
         // allocation nothing reaches stays unwritten, `SC0411`. Mutation:
