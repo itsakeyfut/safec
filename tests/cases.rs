@@ -216,6 +216,18 @@ cases! {
         // side is `Unheld`; this is doubted. Both found by review.
         a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_freed_and_dropped_on_the_other_arm_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same of a library copy, whose destination may be either block:
+        // it keeps the doubt, and a copy into the one block it names clears
+        // it. Mutation: let the copy clear the mark whatever it names; the
+        // first builds. Keep it whatever it names; the second is doubted
+        // (#727).
+        a_copy_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A read back through the copy's own destination is of what the copy
+        // wrote, as one through a store's pointer is. Mutation: leave
+        // `Held::stored_through` unset at the copy; this is doubted. Found by
+        // review.
+        a_read_back_through_a_copy_s_own_destination_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The cost the rule still has: a write guarded by a null test of the
         // allocation's own pointer, with a return where it is null, is
         // doubted, since the null arm leaves the site as it was. #723.

@@ -3251,8 +3251,44 @@ impl Analysis for Allocations<'_> {
                 // for an opaque call. See ADR-0040.
                 // Exposed, which is also what says the destination's
                 // allocations are no longer fresh. See `Known::fresh`.
+                //
+                // **A copy through a pointer that may name several blocks may
+                // have missed any one**, so a block that may still be fresh
+                // stays so, as a store through such a pointer keeps it: the
+                // same `p = c ? m : o; memcpy(p, pp, 8);` read `*m` in silence
+                // where `*p = *pp;` is doubted (#727). The store's arm says the
+                // same of its own pointer; one landing for both is #737. See
+                // `Known::maybe_fresh`.
+                let missed: Vec<usize> = match arguments.first() {
+                    Some(Operand::Copy(dest)) if dest.projection.is_empty() => {
+                        let named: Vec<usize> =
+                            value.points_to[dest.local.index()].sites().collect();
+                        if named.len() > 1 {
+                            named
+                                .into_iter()
+                                .filter(|&site| value.fresh[site] || value.maybe_fresh[site])
+                                .collect()
+                        } else {
+                            Vec::new()
+                        }
+                    }
+                    Some(Operand::Copy(_) | Operand::Constant(_)) | None => Vec::new(),
+                };
                 let reach = self.reach(function, handed, sites(), value);
                 value.expose(self.sources, reach, Some(origin.span()));
+                // **And what the destination points at is written now**,
+                // whichever block it is, as a store through it says by
+                // `Held::stored_through`: without it `memcpy(p, pp, 8); r =
+                // *p;` was doubted about the very block the copy wrote. Found
+                // by review.
+                if !missed.is_empty() {
+                    if let Some(Operand::Copy(dest)) = arguments.first() {
+                        value.points_to[dest.local.index()].stored_through = true;
+                    }
+                }
+                for site in missed {
+                    value.maybe_fresh[site] = true;
+                }
                 // **It writes only through its first argument**: the clause of
                 // each function read by name, C17 7.24.2.1 to 7.24.3.2 and
                 // 7.24.6.1, says what is written, and it is that one. So
