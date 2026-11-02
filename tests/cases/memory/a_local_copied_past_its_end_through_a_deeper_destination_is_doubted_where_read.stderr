@@ -1,0 +1,21 @@
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_local_copied_past_its_end_through_a_deeper_destination_is_doubted_where_read.c:9:5 ]
+   │
+ 9 │     memcpy(*h, &px, 8);
+   │     ─────────┬────────  
+   │              ╰────────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0411]: `z` may be read before anything was assigned to it
+    ╭─[ a_local_copied_past_its_end_through_a_deeper_destination_is_doubted_where_read.c:10:10 ]
+    │
+ 10 │     int *q = z;
+    │          ──┬──  
+    │            ╰──── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else

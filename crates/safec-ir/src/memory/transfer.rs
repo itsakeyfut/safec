@@ -722,6 +722,46 @@ impl Allocations<'_> {
                 }
             }
             Wrote::Copy { dest, reach, span } => {
+                // **And a local it may write past the end of**, as a store
+                // through the same pointer marks it: lost, and in doubt where
+                // it was unwritten. `pp = &z + 1; memcpy(pp, &px, 8); q = z;`
+                // reported only the out-of-bounds copy, where `*pp = &x;`
+                // also doubts the read of `z` (#729). Through one dereference
+                // where the destination itself was moved off a local, and
+                // deeper where a level above was, as the store asks it. See
+                // `Allocations::written_past_its_end`.
+                let unwritten_before = value.unwritten.clone();
+                let past_end: Vec<usize> = match dest {
+                    Some(Operand::Copy(dest))
+                        if dest
+                            .projection
+                            .iter()
+                            .all(|step| matches!(step, Projection::Deref)) =>
+                    {
+                        let deep = derefs(dest) + 1;
+                        if deep == 1 {
+                            if value.points_to[dest.local.index()].array_edge {
+                                value.written_through(dest.local)
+                            } else {
+                                Vec::new()
+                            }
+                        } else if value
+                            .levels_below(dest.local, deep - 2)
+                            .1
+                            .into_iter()
+                            .any(|local| value.points_to[local].array_edge)
+                        {
+                            value
+                                .levels_below(dest.local, deep - 1)
+                                .1
+                                .into_iter()
+                                .collect()
+                        } else {
+                            Vec::new()
+                        }
+                    }
+                    Some(Operand::Copy(_) | Operand::Constant(_)) | None => Vec::new(),
+                };
                 // What a pointer it was handed may be, read out of memory, as
                 // for an opaque call. See ADR-0040.
                 // Exposed, which is also what says the destination's
@@ -808,6 +848,9 @@ impl Allocations<'_> {
                 }
                 value.replaced(|_| true, |local| may_write[local]);
                 value.array_writes_after(pending);
+                for target in past_end {
+                    self.written_past_its_end(function, value, target, &unwritten_before);
+                }
             }
         }
     }
