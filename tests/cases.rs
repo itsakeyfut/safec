@@ -208,6 +208,18 @@ cases! {
         a_pointer_read_out_of_an_allocation_written_on_one_arm_only_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_filled_by_a_loop_is_not_doubted_as_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_an_allocation_written_again_after_the_join_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store through a pointer that may name either of two allocations
+        // may have missed one, so it keeps the doubt about it. Mutation: let
+        // such a store clear `Known::maybe_fresh` as a store through one does;
+        // this builds. An allocation the other arm freed and stopped naming
+        // is no path that left it fresh. Mutation: set the mark where one
+        // side is `Unheld`; this is doubted. Both found by review.
+        a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_allocation_freed_and_dropped_on_the_other_arm_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The cost the rule still has: a write guarded by a null test of the
+        // allocation's own pointer, with a return where it is null, is
+        // doubted, since the null arm leaves the site as it was. #723.
+        a_pointer_read_after_a_null_test_that_guarded_its_write_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written through a pointer read out of memory, which this check
         // does not place. Mutation: have such a store clear no site. It is
         // reported.

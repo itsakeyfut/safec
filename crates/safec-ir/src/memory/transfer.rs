@@ -1405,7 +1405,15 @@ impl Allocations<'_> {
         // only, as `partly_written` is set for a local (#721). See
         // `Known::maybe_fresh`.
         for (site, here) in maybe_fresh.iter_mut().enumerate() {
-            *here = *here || from.maybe_fresh[site] || (!back && fresh[site] != from.fresh[site]);
+            // Not where one side no longer names the site, `Unheld`, which
+            // is the identity of `state`'s join a few lines below: `if (k)
+            // *m = x; else { free(m); m = 0; }` doubted a read of `*m` on the
+            // arm that wrote it. Found by review. See ADR-0048.
+            let named_on_both = !matches!(state[site], SiteState::Unheld)
+                && !matches!(from.state[site], SiteState::Unheld);
+            *here = *here
+                || from.maybe_fresh[site]
+                || (!back && named_on_both && fresh[site] != from.fresh[site]);
         }
         for (here, there) in fresh.iter_mut().zip(&from.fresh) {
             *here = *here && *there;
@@ -1963,8 +1971,18 @@ impl Analysis for Allocations<'_> {
                     // locals it may land in. See `Known::unwritten`.
                     if one_step && !(held.loaded || held.lost || held.foreign) {
                         let edges: Vec<usize> = held.writes_to.ones().collect();
-                        for site in held.sites().collect::<Vec<_>>() {
+                        let sites: Vec<usize> = held.sites().collect();
+                        // **A store that may land in several allocations may
+                        // have missed any one**, so one that may still be
+                        // fresh stays so, as a may-fact: `*p = x;` with `p`
+                        // either of two blocks, one of them written on one
+                        // arm only, cleared the doubt about it. Found by
+                        // review. See `Known::maybe_fresh` (#721).
+                        let several = sites.len() > 1;
+                        for &site in &sites {
+                            let maybe = several && (value.fresh[site] || value.maybe_fresh[site]);
                             value.written(site);
+                            value.maybe_fresh[site] = maybe;
                         }
                         // **Through a pointer moved off an array, an element
                         // of it**, which may not be the one read later. See
