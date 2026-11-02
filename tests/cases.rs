@@ -263,6 +263,10 @@ cases! {
         a_copy_shorter_than_a_pointer_leaves_a_fresh_block_fresh: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_ending_part_way_through_a_pointer_leaves_the_block_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_of_whole_pointers_into_a_fresh_block_writes_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same ask by the source's type where the destination is a
+        // `void *`. Mutation: ask by the destination's type alone; it goes
+        // silent.
+        a_copy_of_part_of_a_pointer_through_a_void_pointer_destination_is_asked_by_its_source: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store this check cannot place writes only where it may land:
         // what its landing names and what code it cannot read can reach. An
         // allocation nothing reaches stays unwritten, `SC0411`. Mutation:

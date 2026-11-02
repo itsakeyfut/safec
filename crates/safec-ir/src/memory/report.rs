@@ -1789,16 +1789,16 @@ fn pointee(analysis: &Allocations<'_>, ty: TyId) -> Option<TyId> {
 }
 
 /// The width a pointer stored by this library copy is believed to point at,
-/// where the copy writes only part of one: `None` where the destination
-/// holds no pointer by its type, or the copy writes whole ones. See
+/// where the copy writes only part of one: `None` where the operand typed
+/// `ty` holds no pointer by its type, or the copy writes whole ones. See
 /// `CopiedPointers`.
 fn part_of_a_pointer(
     analysis: &Allocations<'_>,
     callee: FuncId,
     arguments: &[Operand],
-    into_ty: Option<TyId>,
+    ty: Option<TyId>,
 ) -> Option<u64> {
-    let width = pointee_width(analysis, pointee(analysis, into_ty?)?)?;
+    let width = pointee_width(analysis, pointee(analysis, ty?)?)?;
     match analysis.copied_pointers(callee, arguments) {
         CopiedPointers::Whole => None,
         CopiedPointers::LastInPart | CopiedPointers::NoneWhole => Some(width),
@@ -1973,8 +1973,13 @@ pub(super) fn departed_at_call(
             // **And whether it stores a pointer whole**: `memcpy(out, &v, 4)`
             // with `out` an `int **` writes four of a pointer's eight bytes,
             // and a reader of `*out` reads a pointer nobody wrote, which was
-            // asked nothing (#717). Unknown, as every departure is.
-            if let Some(width) = part_of_a_pointer(analysis, *callee, arguments, into_ty) {
+            // asked nothing (#717). Unknown, as every departure is. **By the
+            // source's type too**, as the asks above are: `void *d = out;
+            // memcpy(d, &v, 4);` hides the destination's and not the
+            // source's, and was asked nothing. Found by review.
+            if let Some(width) = part_of_a_pointer(analysis, *callee, arguments, into_ty)
+                .or_else(|| part_of_a_pointer(analysis, *callee, arguments, source_ty))
+            {
                 say_leaving(
                     findings,
                     departed,

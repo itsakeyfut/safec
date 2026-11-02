@@ -213,9 +213,11 @@ whether it does: `g(p + 5)`, `return p + 5;` and `*box = p + 5;` are each
 `SC0413`, labelled `passed here`, `returned here` or `stored here`. A pointer
 to memory lets the pointers stored there leave with it, so `int *q = v;
 h(&q);` asks `q`, and `memcpy` asks what its source points at as a store.
-A `memcpy` into memory its destination's type says holds pointers, whose
-length ends part way through one, stores a pointer nobody wrote whole, and is
-asked as one that may not point at an object as wide as its type (#717).
+A `memcpy` whose destination's or source's type says it copies pointers, and
+whose length ends part way through one, stores a pointer nobody wrote whole,
+and is asked as one that may not point at an object as wide as its type
+(#717). Where both are `void *`, nothing says it copies a pointer, and it is
+asked nothing.
 Each is asked at the wider of its own type and the type the receiver reads it
 as, so a `void *` local's address passed as an `int **` asks the local four
 bytes wide, and memory by what its record says the pointers stored there point
