@@ -228,6 +228,19 @@ cases! {
         // `Held::stored_through` unset at the copy; this is doubted. Found by
         // review.
         a_read_back_through_a_copy_s_own_destination_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store this check cannot place writes only where it may land:
+        // what its landing names and what code it cannot read can reach. An
+        // allocation nothing reaches stays unwritten, `SC0411`. Mutation:
+        // clear every allocation again; this builds. Clear only what code it
+        // cannot read reaches, not what the landing names;
+        // `a_pointer_read_out_of_memory_a_loaded_pointer_wrote_is_not_reported`
+        // and its form through two dereferences are doubted (#726).
+        a_store_this_check_cannot_place_leaves_an_allocation_nothing_reaches_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And it may write a block a local whose address such code holds
+        // points at, so that block is not reported unwritten. Mutation: count
+        // only what is reachable from exposed memory; this is `SC0411`. Found
+        // by review.
+        a_store_this_check_cannot_place_may_write_a_block_a_kept_local_points_at: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The cost the rule still has: a write guarded by a null test of the
         // allocation's own pointer, with a return where it is null, is
         // doubted, since the null arm leaves the site as it was. #723.
