@@ -1144,6 +1144,16 @@ impl Known {
             && self.names_no_more_than_its_sites(local)
     }
 
+    /// Whether any allocation `local` may name is [`Self::fresh`] or
+    /// [`Self::maybe_fresh`]: what `realloc` or a library copy handed it may
+    /// copy is then indeterminate in part, whatever else it names (#724).
+    pub(super) fn may_name_fresh(&self, local: LocalId) -> bool {
+        self.points_to[local.index()]
+            .sites
+            .ones()
+            .any(|site| self.fresh[site] || self.maybe_fresh[site])
+    }
+
     /// Whether what `local` may hold is the allocations it names and nothing
     /// else: no local's address, and nothing this check lost, read out of
     /// memory, or that a caller or code this check cannot read may have

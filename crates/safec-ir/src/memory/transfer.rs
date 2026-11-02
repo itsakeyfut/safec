@@ -110,13 +110,15 @@ enum Wrote<'a> {
         targets: &'a [usize],
         unwritten_before: &'a [bool],
     },
-    /// A library copy handed `dest` first, which exposes `reach`, and
-    /// whose length covers the pointers it writes as `length` says.
+    /// A library copy handed `dest` first and `source` second, which
+    /// exposes `reach`, and whose length covers the pointers it writes as
+    /// `length` says.
     Copy {
         dest: Option<&'a Operand>,
         reach: Vec<usize>,
         span: Span,
         length: CopiedPointers,
+        source: Option<&'a Operand>,
     },
 }
 
@@ -809,6 +811,7 @@ impl Allocations<'_> {
                 reach,
                 span,
                 length,
+                source,
             } => {
                 // **And a local it may write past the end of**, as a store
                 // through the same pointer marks it: lost, and in doubt where
@@ -872,7 +875,7 @@ impl Allocations<'_> {
                 // `Held::stored_through`, so that a read back through it is of
                 // the block it wrote. See
                 // `Known::maybe_fresh`.
-                let may_land: Option<(BTreeSet<usize>, bool)> = match dest {
+                let may_land: Option<(BTreeSet<usize>, bool, bool)> = match dest {
                     Some(Operand::Copy(dest))
                         if dest
                             .projection
@@ -895,16 +898,33 @@ impl Allocations<'_> {
                             set.extend(value.sites_named_by_unknown_code());
                         }
                         let several = landing.containers.len() + landing.targets.len() > 1;
-                        Some((set, several))
+                        let alone = landing.containers.len() == 1 && landing.targets.is_empty();
+                        Some((set, several, alone))
                     }
                     // A destination that is no place keeps what the exposure
                     // says, as it did.
                     Some(Operand::Copy(_) | Operand::Constant(_)) | None => None,
                 };
+                // **What it copies may be indeterminate**: bytes nothing wrote
+                // in the source are bytes nothing wrote where they land, so a
+                // read of the destination is a read of them. Where the source
+                // names only blocks nothing wrote, and the copy lands in one
+                // block alone with whole pointers, that block is as fresh as
+                // `realloc`'s result is (`Known::names_only_fresh`); where it
+                // may name one, each block it may land in may be (#724).
+                // Asked before the exposure below, which clears the source's
+                // own mark. A source read through a dereference is not asked.
+                let (source_fresh, source_maybe) = match source {
+                    Some(Operand::Copy(source)) if source.projection.is_empty() => (
+                        value.names_only_fresh(source.local),
+                        value.may_name_fresh(source.local),
+                    ),
+                    Some(Operand::Copy(_) | Operand::Constant(_)) | None => (false, false),
+                };
                 let fresh_before = value.fresh.clone();
                 let maybe_before = value.maybe_fresh.clone();
                 value.expose(self.sources, reach, Some(span));
-                if let Some((may_land, several)) = may_land {
+                if let Some((may_land, several, alone)) = may_land {
                     // **And only as far as its length writes a pointer
                     // whole**: a copy shorter than one writes no pointer in
                     // the block, so a block that was fresh is still fresh,
@@ -922,8 +942,15 @@ impl Allocations<'_> {
                         if !may_land.contains(&site) || unwritten {
                             value.fresh[site] = fresh_before[site];
                             value.maybe_fresh[site] = maybe_before[site];
-                        } else if doubted && (fresh_before[site] || maybe_before[site]) {
-                            value.maybe_fresh[site] = true;
+                        } else {
+                            if doubted && (fresh_before[site] || maybe_before[site]) {
+                                value.maybe_fresh[site] = true;
+                            }
+                            if source_fresh && alone && matches!(length, CopiedPointers::Whole) {
+                                value.fresh[site] = true;
+                            } else if source_maybe {
+                                value.maybe_fresh[site] = true;
+                            }
                         }
                     }
                     // **Only a destination that is a local itself**: the flag
@@ -1237,8 +1264,8 @@ impl Allocations<'_> {
     /// edge with every other clause holding.
     ///
     /// Mutation: weaken `all` to `any` over the sites, and
-    /// `a_pointer_read_through_either_of_two_allocations_one_written_is_not_reported`
-    /// is reported. **The `lost`, `foreign` and `loaded` clauses have no case**,
+    /// `a_pointer_read_through_either_of_two_allocations_one_written_is_doubted`
+    /// is reported as certain. **The `lost`, `foreign` and `loaded` clauses have no case**,
     /// measured: a local loses its sites where it is made lost, and no program
     /// found gives a loaded or foreign pointer a fresh site that an exposure
     /// has not already cleared.
@@ -1260,8 +1287,9 @@ impl Allocations<'_> {
     /// known written: `reads_fresh`'s question, answered as a doubt. A fresh
     /// allocation beside it is not known written, and is no reason for
     /// silence. Found by review of #667. **Or an allocation that may still be
-    /// fresh**, `Known::maybe_fresh`, where nothing else it reads is known
-    /// written either, which needs no local beside it (#721).
+    /// fresh**, `Known::maybe_fresh` or `Known::fresh`, which needs no local
+    /// beside it (#721), and whatever allocations beside it were written
+    /// (#724); a local beside it that is known written still silences it.
     ///
     /// **At the element the pointer is known to point at**, or, where that is
     /// not known, at any element (`Known::may_be_unwritten`). Not through a
@@ -1273,13 +1301,15 @@ impl Allocations<'_> {
         let through = &value.points_to[source.local.index()];
         let at_start = matches!(through.offset, Offset::Zero);
         let maybe = |local: usize| value.may_be_unwritten(local, through.element, at_start);
-        let site_maybe = |site: usize| value.maybe_fresh[site] && !value.fresh[site];
+        // **Any block it may read that may still be fresh is enough**,
+        // fresh or maybe so, beside blocks that were written: `p = a; if (c)
+        // p = b;` with `b` written reads `a` on one path, which is undefined
+        // there whatever the value is read for (#724). `reads_fresh` answers
+        // first, and asks every block.
+        let site_maybe = |site: usize| value.maybe_fresh[site] || value.fresh[site];
         source.projection.as_slice() == [Projection::Deref]
             && self.may_be_pointer(function, source)
             && (through.writes_to.any() || through.sites().next().is_some())
-            && through
-                .sites()
-                .all(|site| value.fresh[site] || value.maybe_fresh[site])
             && !(through.lost
                 || through.foreign
                 || through.loaded
@@ -1902,8 +1932,18 @@ impl Allocations<'_> {
                 || from.maybe_fresh[site]
                 || (!back && named_on_both && fresh[site] != from.fresh[site]);
         }
-        for (here, there) in fresh.iter_mut().zip(&from.fresh) {
-            *here = *here && *there;
+        // **Where one side names the site and the other does not**, the
+        // side that names it says, as `state`'s join takes the state of the
+        // side that holds it: a block made on one arm only, or in last turn's
+        // body, was intersected with the other path's `false` and lost its
+        // mark, so `*m` read a block nothing wrote in silence (#724). See
+        // ADR-0048.
+        for (site, (here, there)) in fresh.iter_mut().zip(&from.fresh).enumerate() {
+            *here = match (&state[site], &from.state[site]) {
+                (_, SiteState::Unheld) => *here,
+                (SiteState::Unheld, _) => *there,
+                _ => *here && *there,
+            };
         }
         // Kept only where both arms remember the same `realloc`: a fact one
         // arm lacks is one a branch after the join cannot act on. See ADR-0039.
@@ -3634,6 +3674,7 @@ impl Analysis for Allocations<'_> {
                         reach,
                         span: origin.span(),
                         length: self.copied_pointers(*callee, arguments),
+                        source: arguments.get(1),
                     },
                 );
             }
@@ -4161,6 +4202,16 @@ impl Analysis for Allocations<'_> {
         };
         if fresh {
             value.fresh[site] = true;
+        } else if let (Some(Leaves::TheOld), Some(Operand::Copy(handed))) = (
+            self.library(*callee).and_then(|row| row.leaves),
+            arguments.first(),
+        ) {
+            // **And may be indeterminate where the old block may have been**,
+            // fresh or maybe so beside what else it names: it copies those
+            // bytes as well (#724). See `Known::maybe_fresh`.
+            if handed.projection.is_empty() && value.may_name_fresh(handed.local) {
+                value.maybe_fresh[site] = true;
+            }
         }
         // **`realloc`'s new object holds what the old one held**, C17 7.22.3.5
         // p2, so what a pointer stored in the old one may hold, the new one
