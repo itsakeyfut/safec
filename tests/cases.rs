@@ -3904,7 +3904,9 @@ cases! {
         // as a store into the destination is: a `void *` copied into an
         // `int **` is `SC0413`, and into a `void **` asks only its start.
         // Mutation: drop the destination's ask in `departed_at_call`; the
-        // first goes silent (#713).
+        // first goes silent, and so do the copies two older cases report.
+        // Mutation: believe a `void *` four bytes wide in `pointee_width`;
+        // the second reports, among 38 (#713).
         a_void_pointer_copied_by_memcpy_into_an_int_pointer_s_slot_is_asked_how_wide: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_void_pointer_copied_by_memcpy_into_a_void_pointer_s_slot_is_asked_no_width: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And still at the source's type where the destination is narrower:
