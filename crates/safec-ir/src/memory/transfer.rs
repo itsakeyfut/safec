@@ -3276,6 +3276,16 @@ impl Analysis for Allocations<'_> {
                 };
                 let reach = self.reach(function, handed, sites(), value);
                 value.expose(self.sources, reach, Some(origin.span()));
+                // **And what the destination points at is written now**,
+                // whichever block it is, as a store through it says by
+                // `Held::stored_through`: without it `memcpy(p, pp, 8); r =
+                // *p;` was doubted about the very block the copy wrote. Found
+                // by review.
+                if !missed.is_empty() {
+                    if let Some(Operand::Copy(dest)) = arguments.first() {
+                        value.points_to[dest.local.index()].stored_through = true;
+                    }
+                }
                 for site in missed {
                     value.maybe_fresh[site] = true;
                 }
