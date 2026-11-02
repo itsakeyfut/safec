@@ -1272,6 +1272,10 @@ impl Allocations<'_> {
             handed_untyped,
             handed_untyped_sites,
         } = into;
+        // Which locals this side left unwritten, before `unwritten` is
+        // intersected below: such a local is no null, and the values' join
+        // asks it (#719). See `Held::joined`.
+        let unwritten_here = unwritten.clone();
         // May-facts, so a union, as `exposed_locals` is. See
         // `Known::handed_untyped`.
         for (here, there) in handed_untyped
@@ -1418,8 +1422,12 @@ impl Allocations<'_> {
             }
         }
 
-        for (here, there) in points_to.iter_mut().zip(&from.points_to) {
-            here.joined(there, self.sources);
+        for (local, (here, there)) in points_to.iter_mut().zip(&from.points_to).enumerate() {
+            here.joined(
+                there,
+                self.sources,
+                (unwritten_here[local], from.unwritten[local]),
+            );
         }
 
         // **A site nothing on one side can still name takes the other side's
@@ -2191,10 +2199,8 @@ impl Analysis for Allocations<'_> {
                         Some(written.believed.unwrap_or(0))
                     } else if written.foreign {
                         // And what the local was handed as, which a join
-                        // keeps where `believed` does not: `if (k) get(&c);`
-                        // with `c` null on the other arm. Found while
-                        // implementing. Kept for the local the call wrote,
-                        // so it does not follow a move after the join (#719).
+                        // keeps where `believed` does not. A join with a null
+                        // keeps `believed` too (#719).
                         let handed = match &operation.value {
                             Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
                                 value.handed_at_most[place.local.index()]

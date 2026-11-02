@@ -868,9 +868,16 @@ pub(super) struct Held {
     /// local through its address by such a call, believed whole as its
     /// result is and no wider than the local was handed as. A store or a
     /// copy of what the call wrote reads it there, so the width moves with
-    /// the value (#715), until a join with a path that does not believe it
-    /// drops it, which for such a value lifts the bound rather than keeping
-    /// it (#719).
+    /// the value (#715). **A null on the other path keeps it**, at the join:
+    /// a null points at no object, so it neither widens nor narrows what the
+    /// other path believes, and whether the pointer may be null is the
+    /// nullability check's question (ADR-0027). A local left unwritten on
+    /// the other path, or a null moved by arithmetic, is no null and drops
+    /// it, as every other path that lacks it does, so a proof is never
+    /// carried onto a path that proved nothing. Dropped at a null, `if (k)
+    /// get(&c); char *t = c;` stored or copied and read back as an `int *`
+    /// was believed whole, since for such a value no belief is no bound
+    /// (#719).
     ///
     /// **The size of what the pointer read points to, and not of what the
     /// local it lands in points to.** `void **pp; ... int *q = *pp;` reads a
@@ -1057,6 +1064,33 @@ impl Levels {
 }
 
 impl Held {
+    /// Whether this value names nothing at all: no allocation, no local's
+    /// address, and none of the marks that say it may hold what this check
+    /// did not follow: a null, or a local nothing was assigned, which
+    /// [`Self::joined`] tells apart from the null by `Known::unwritten`. The test
+    /// `Known::names_no_more_than_its_sites` makes, with no site either, on
+    /// one value rather than on a local: a field added to one is a field
+    /// to answer in the other. What [`Self::joined`] asks of a path before
+    /// it drops that path's want of [`Self::believed`] (#719).
+    ///
+    /// **And at its start**, as `report::fits` asks of a null: arithmetic on
+    /// a null holds none of the rest and is not null, and a null test does
+    /// not catch it. Without it `int *p = 0; p = p + 1; if (k) p = *pp;`
+    /// kept the load's belief across the join and proved `*p` whole where
+    /// main doubted it. Found by review.
+    fn names_nothing(&self) -> bool {
+        self.offset == Offset::Zero
+            && !self.sites.any()
+            && !self.writes_to.any()
+            && !self.lost
+            && !self.loaded
+            && !self.foreign
+            && !self.from_caller
+            && !self.lost_read
+            && !self.stale_read
+            && !self.unreplaced_read
+    }
+
     /// Whether this local may hold a local's address, on some path.
     ///
     /// [`Held::writes_to`] is read for it, because a write through this local
@@ -1235,7 +1269,18 @@ impl Held {
     /// is that [`Held::none`] is the identity for three of these fields and the
     /// zero for the fourth, so building a value up from nothing cleared a proof
     /// every time.
-    pub(super) fn joined(&mut self, other: &Held, sources: &SourceMap) {
+    ///
+    /// `unwritten` is whether each side left the local unwritten
+    /// (`Known::unwritten`), which no field here says: such a local names
+    /// nothing and is no null, and `memcpy(m, &t, 8)` of a `t` written on one
+    /// arm only, read back as an `int *`, was believed whole once it was
+    /// taken for one. Found by review.
+    pub(super) fn joined(&mut self, other: &Held, sources: &SourceMap, unwritten: (bool, bool)) {
+        // Asked of each path as it arrived, before any field below is joined.
+        let (self_names_nothing, other_names_nothing) = (
+            self.names_nothing() && !unwritten.0,
+            other.names_nothing() && !unwritten.1,
+        );
         // Every field named, never `..`, in this method and in its neighbour
         // alike: a field added to this struct is `error[E0027]` in both and has
         // to say what it means in each. ADR-0024 is why there are two places
@@ -1272,9 +1317,13 @@ impl Held {
         // A proof, so an intersection, as `freed` is.
         *fresh_read = *fresh_read && other.fresh_read;
         // A proof as well: believed where every path read it out of memory,
-        // and then only as much as the path that believed least.
+        // and then only as much as the path that believed least. A null on
+        // one path neither widens nor narrows what the other believes, so it
+        // is no such path (#719). See `Self::believed`.
         *believed = match (*believed, other.believed) {
             (Some(here), Some(there)) => Some(here.min(there)),
+            (Some(only), None) if other_names_nothing => Some(only),
+            (None, Some(only)) if self_names_nothing => Some(only),
             _ => None,
         };
         *offset = offset.joined(other.offset);

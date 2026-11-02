@@ -3520,6 +3520,31 @@ cases! {
         a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_narrow_pointer_a_call_wrote_on_one_arm_copied_and_read_back_wider_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_narrow_pointer_a_call_wrote_on_one_arm_stored_and_read_back_wider_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A null on one path keeps what the other believes at the join, so a
+        // callee-written width survives a move after it, in the copy, the
+        // store and the read through the address, and a move on one arm too;
+        // a whole `int` stays silent. Mutation: drop the two null arms in
+        // `Held::joined`; all but the `int` case go silent. Mutation: keep
+        // the other side at zero; the `int` case reports. That a path which
+        // is not a null still drops the belief is held by eight older cases,
+        // `a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join`
+        // among them, which fail if `Held::names_nothing` ignores sites (#719).
+        a_narrow_pointer_a_call_wrote_on_one_arm_moved_and_copied_is_doubted_where_read_back_wider: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_narrow_pointer_a_call_wrote_on_one_arm_moved_and_stored_is_doubted_where_read_back_wider: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_narrow_pointer_a_call_wrote_on_one_arm_moved_is_doubted_where_read_back_wider_through_its_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_narrow_pointer_a_call_wrote_on_one_arm_converted_into_another_local_is_bounded_by_what_it_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_whole_int_pointer_a_call_wrote_on_one_arm_moved_and_copied_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // But a null moved by arithmetic is no null, and keeps nothing for
+        // the other path: `int *p = 0; p = p + 1; if (k) p = *pp; return *p;`
+        // is `SC0412`. Mutation: drop the offset test in
+        // `Held::names_nothing`; this builds. Found by review.
+        a_null_moved_by_arithmetic_on_one_path_does_not_carry_the_other_paths_belief: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Nor does a local left unwritten on one path, whose read through a
+        // copy of its address nothing else asks. Mutation: ignore
+        // `Known::unwritten` in the values' join; this builds. Found by
+        // review.
+        a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_whole_int_pointer_a_call_wrote_copied_and_read_back_as_one_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_a_call_wrote_through_a_void_pointer_copied_and_read_back_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And what a lost value read back before its free, or released by a
@@ -4130,9 +4155,10 @@ cases! {
         // memory holds. Mutation: take the memory's bound alone in
         // `believed_read`; this goes silent.
         a_pointer_read_narrower_than_its_memory_holds_is_believed_as_it_was_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A load that believes nothing on some path is bounded at nothing
-        // when stored. Mutation: record no bound for it; this goes silent.
-        a_load_on_one_arm_and_a_null_on_the_other_stored_in_memory_is_bounded_at_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A load on one arm and a null on the other is bounded when stored
+        // at what the load believed, since a null is no path that believes
+        // less (#719). Mutation: record no bound for it; this goes silent.
+        a_load_on_one_arm_and_a_null_on_the_other_stored_in_memory_is_bounded_at_what_the_load_believed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A bound on one arm survives the join, in either order. Mutation:
         // drop `contents_at_most` from `Held::joined`; the first goes silent.
         // Mutation: take the other side's alone; the second does.
