@@ -1890,6 +1890,9 @@ impl Allocations<'_> {
         // record here gains none, at either kind of join. See
         // `Known::local_init`.
         for (index, (here, there)) in local_init.iter_mut().zip(&from.local_init).enumerate() {
+            // Kept as the two flags joined, though it decides no case,
+            // measured: nothing reads a kept array's whole record for a
+            // doubt, `Known::may_be_unwritten` asking its elements.
             let kept = element_init[index].len() > 0;
             *here = here.joined(*there, back || kept);
         }
@@ -1939,18 +1942,13 @@ impl Allocations<'_> {
         // names it says, as `state`'s join takes the state of the side that
         // holds it: a block made on one arm only, or in last turn's body, kept
         // its mark (#724), and `if (k) *m = x; else { free(m); m = 0; }` does
-        // not doubt a read of `*m` on the arm that wrote it. A doubt the side
-        // that does not name it still held is kept. See ADR-0048.
+        // not doubt a read of `*m` on the arm that wrote it. One rule for
+        // both sides, so that what guards one guards the other: measured,
+        // only one orientation had a case of its own. See ADR-0048.
         for (site, (here, there)) in block_init.iter_mut().zip(&from.block_init).enumerate() {
             *here = match (&state[site], &from.state[site]) {
-                (_, SiteState::Unheld) => match *there {
-                    Init::Maybe if *here == Init::Written => Init::Maybe,
-                    Init::Unwritten | Init::Maybe | Init::Written => *here,
-                },
-                (SiteState::Unheld, _) => match *here {
-                    Init::Maybe if *there == Init::Written => Init::Maybe,
-                    Init::Unwritten | Init::Maybe | Init::Written => *there,
-                },
+                (_, SiteState::Unheld) => named_beside_unheld(*here, *there),
+                (SiteState::Unheld, _) => named_beside_unheld(*there, *here),
                 _ => here.joined(*there, back),
             };
         }
@@ -2056,6 +2054,18 @@ impl Allocations<'_> {
         // And applying it, which the union alone does not do. [`Known::settle`]
         // says why a join needs this and the assignments do not cover it.
         into.settle();
+    }
+}
+
+/// What a site is where the paths meet, when one side names it and the
+/// other, `SiteState::Unheld`, does not: what the side that names it says,
+/// with a doubt the other side still held kept, as the two flags this
+/// replaced joined. **That doubt decides no case**, measured; it is kept so
+/// that #733 changes no answer. See `Allocations::joined` and ADR-0048.
+fn named_beside_unheld(named: Init, unheld: Init) -> Init {
+    match unheld {
+        Init::Maybe if named == Init::Written => Init::Maybe,
+        Init::Unwritten | Init::Maybe | Init::Written => named,
     }
 }
 
