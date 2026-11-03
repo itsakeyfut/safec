@@ -4112,6 +4112,14 @@ cases! {
         // the dereferences' list in `findings_within`; the proof goes and
         // this exits 0.
         a_proof_at_a_call_is_not_displaced_by_a_doubt_about_its_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And one pointer handed twice to one library call is asked at each
+        // argument, a proof at the later standing over a doubt at the
+        // earlier: `memcpy(*pp, pp, 16)` doubts `*pp`, which holds a
+        // `char`'s address, and proves the source runs past `pp`'s eight
+        // bytes, an error where unknown is allowed. Mutation: keep the first
+        // report `reached_by_library` makes per pointer per call; the proof
+        // goes and this exits 0. Found by review of #735.
+        a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_an_earlier_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A pointer moved off a null or off a local's address holds no site,
         // and is not therefore null: a null test on it takes the nullability
         // check's doubt away, and only this is left to ask. The second is the
