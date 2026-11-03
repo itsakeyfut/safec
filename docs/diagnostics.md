@@ -205,9 +205,15 @@ a proof only where the pointer gone through is certainly one local's value. It
 is unknown wherever less is known: a
 pointer moved off its start, since no distance is carried, an allocation whose
 size is not a constant, a pointer this check lost or whose local escaped, and
-a pointer read out of memory as a `void *`. A parameter, a call's result and a
-pointer read out of memory are believed to point at one whole object of the
-type they arrive as, so `void f(int *p) { *p = 1; }` is silent. A library
+a pointer read out of memory as a `void *`. A parameter and a call's result
+are believed to point at one whole object of the type they arrive as, so `void
+f(int *p) { *p = 1; }` is silent. A pointer read out of memory is believed no
+wider than what was recorded where it was stored, and nothing where nothing
+was: `*box = &q; int *t = *box; *t = 1;` is silent, since the store recorded
+`q`'s size, and a pointer read out of a `calloc` block nothing was stored in is
+unknown.
+[ADR-0061](adr/0061-a-pointer-read-out-of-memory-is-believed-only-as-wide-as-was-recorded.md)
+is that part of the decision. A library
 function that takes a length, `memset`, `memcpy`, `memmove`, `memcmp`, `memchr`
 and `strncpy`'s destination, is asked about the length it is handed, and one
 that reads or writes as far as a string runs, `strlen`, `strcmp`, `strcpy` and

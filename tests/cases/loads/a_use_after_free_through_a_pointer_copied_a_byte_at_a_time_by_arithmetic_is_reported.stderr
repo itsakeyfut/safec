@@ -29,6 +29,16 @@ error[SC0411]: `*other` may be read before anything was assigned to it
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: assign it on every path before it is read
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:33:5 ]
+    │
+ 33 │     release(*other);
+    │     ───────┬───────  
+    │            ╰───────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0402]: this uses `p`, which may have been freed
     ╭─[ a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:34:5 ]
     │

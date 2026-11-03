@@ -1204,7 +1204,7 @@ pub(super) fn reached_by_library(
             }
         } else {
             // **A pointer read out of memory and handed straight over** is
-            // believed by the type it was read as, as one assigned to a local
+            // believed as `Allocations::believed_read` says, as one assigned to a local
             // first is, unless it may have been read from a local, which is
             // asked instead ([`through_locals`]), and alone where it
             // certainly was.

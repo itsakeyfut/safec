@@ -182,7 +182,7 @@ cases! {
         // `calloc`'s space is zero bits (C17 7.22.3.2 p2), a null pointer on
         // this target, so the null test is right. Mutation: let `calloc`
         // leave its site fresh. It is reported.
-        a_pointer_read_out_of_memory_calloc_made_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_memory_calloc_made_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written by a store first. Mutation: have a store through one
         // dereference leave its sites fresh. It is reported.
         a_pointer_read_out_of_memory_a_store_wrote_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -3662,7 +3662,7 @@ cases! {
         // read in no new doubt. Found by review. Mutation: treat a load as a
         // lost local, both at the trigger of `Known::lost_may_be_gone` and in
         // what it marks; this reports at `*r`.
-        a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_null_read_out_of_memory_freed_and_stored_is_not_doubted_freed_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And every other spelling of a lost pointer that went, since a lost
         // value names no site and any of them may be the one freed (#503):
         // stored before the free, copied before it, freed through the box it
@@ -3813,7 +3813,7 @@ cases! {
         // Mutation: let every call this check cannot read trigger; the second
         // reports.
         a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
-        a_box_of_a_lost_pointer_is_not_doubted_after_a_call_handed_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And what a call this check cannot read returns when it was handed
         // a lost value, which may be that value: `r = id(*box);` with `id`
         // defined, and `r = id(u);` with it only declared, then `free(u);`
@@ -3864,7 +3864,7 @@ cases! {
         // all three go quiet at the use. Mutation: ask an escaped local only
         // `Held::lost`, not `Held::lost_read`; the second does. Mutation:
         // ask every local, escaped or not;
-        // `a_box_of_a_lost_pointer_is_not_doubted_after_a_call_handed_nothing`
+        // `a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing`
         // reports.
         a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],

@@ -1,3 +1,13 @@
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_pointer_stored_and_read_back_two_levels_down_a_parameter_as_one_place_is_doubted.c:7:5 ]
+   │
+ 7 │     **ppp = m;
+   │     ────┬────  
+   │         ╰────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0414]: this frees `m`, a pointer that was stored where code outside this function may read it
    ╭─[ a_pointer_stored_and_read_back_two_levels_down_a_parameter_as_one_place_is_doubted.c:8:5 ]
    │
@@ -22,6 +32,16 @@ error[SC0402]: this uses a value that may have been freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_pointer_stored_and_read_back_two_levels_down_a_parameter_as_one_place_is_doubted.c:9:10 ]
+   │
+ 9 │     int *q = **ppp;
+   │          ────┬────  
+   │              ╰────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0402]: this uses `q`, which may have been freed
     ╭─[ a_pointer_stored_and_read_back_two_levels_down_a_parameter_as_one_place_is_doubted.c:11:5 ]
     │

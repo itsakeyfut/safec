@@ -15,8 +15,8 @@ use crate::source::{SourceMap, Span};
 use super::built::{built_from, named, replaced_by};
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known};
 use super::parts::{
-    Callee, Contents, Extent, Freeing, Held, Init, Inits, LIBRARY, Leaves, Levels, Library, Makes,
-    Offset, PendingRead, Reached, Read, Realloced, SiteState, bounded,
+    AS_TYPED, Callee, Contents, Extent, Freeing, Held, Init, Inits, LIBRARY, Leaves, Levels,
+    Library, Makes, Offset, PendingRead, Reached, Read, Realloced, SiteState, bounded,
 };
 use super::report::{Fit, fits, slots_from, slots_leaving};
 use super::store::{Landing, StoreKind};
@@ -41,6 +41,9 @@ pub(super) struct Allocations<'a> {
     /// [`Levels`] gives; the margin is kept so that the length needs no
     /// argument to be long enough.
     pub(super) deepest_pointer: usize,
+    /// Each local's size on this target, `None` where it has none, by index:
+    /// what [`Held::recorded_width`] reads a local's address at.
+    pub(super) local_sizes: Vec<Option<u64>>,
     /// The locals a caller filled, which are sites because an allocation can
     /// arrive through one.
     pub(super) parameters: Vec<LocalId>,
@@ -499,7 +502,7 @@ impl Allocations<'_> {
         if depth > 0 {
             levels.bound_by(
                 &value
-                    .memory_levels(place.local, depth, self.deepest_pointer)
+                    .memory_levels(place.local, depth, self.deepest_pointer, &self.local_sizes)
                     .below(1),
             );
         }
@@ -510,7 +513,11 @@ impl Allocations<'_> {
     /// at: the type it is read as, no more than the pointer gone through
     /// says its memory holds that many levels down, nor than the sites it
     /// may be read out of, or any on the way to them, say was stored there
-    /// ([`Known::memory_levels`]). `0` where nothing is believed.
+    /// ([`Known::memory_levels`]). `0` where nothing is believed, **and `0`
+    /// where nothing is recorded at any level on the way**: a route that
+    /// reaches memory without recording a width has read none, and believing
+    /// the type there is how seventeen routes were silent from #622 to #724.
+    /// See ADR-0061.
     ///
     /// **One answer for every reader of a load**: a load assigned, a load
     /// handed straight to a call or to a library function, and a deeper
@@ -521,13 +528,19 @@ impl Allocations<'_> {
     pub(super) fn believed_read(&self, function: &Function, place: &Place, value: &Known) -> u64 {
         let as_read = self.pointee_size(function, place).unwrap_or(0);
         let depth = derefs(place);
-        if depth == 0 {
+        // **As its type where the read is reported as indeterminate**:
+        // nothing was stored in fresh memory, so nothing records a width,
+        // and the defect is the read, reported once where it happens, as the
+        // free and the `realloc` doubts are. Asked here rather than where a
+        // load is assigned, so that a load handed straight on is answered
+        // the same (ADR-0057, ADR-0061).
+        if depth == 0 || self.reads_fresh(function, place, value) {
             return as_read;
         }
         let bound = value
-            .memory_levels(place.local, depth, self.deepest_pointer)
+            .memory_levels(place.local, depth, self.deepest_pointer, &self.local_sizes)
             .at(0);
-        bound.map_or(as_read, |bound| as_read.min(bound))
+        as_read.min(bound.unwrap_or(0))
     }
 
     /// Whether an object of type `ty` holds a pointer: a pointer, or an array
@@ -1208,6 +1221,24 @@ impl Allocations<'_> {
         if self.untyped_below(read_as) {
             remember(&mut value.handed_untyped[local.index()], Some(read_as));
         }
+        let (width, levels) = self.handed_bounds(Some(read_as));
+        value.handed_at_most[local.index()] =
+            bounded(value.handed_at_most[local.index()], Some(width));
+        value.handed_contents_at_most[local.index()].bound_by(&levels);
+    }
+
+    /// What a call this check cannot read may store in memory it reached as
+    /// `read_as`: how wide the pointer it stores there points, and what that
+    /// pointer's own memory holds, level by level. `0` at every level where
+    /// it was reached as `void` or as bytes, `None`, since such a callee may
+    /// store any pointer. One answer for a local ([`Self::handed`]) and for a
+    /// site ([`Self::handed_site`]), so the two cannot read a type
+    /// differently.
+    fn handed_bounds(&self, read_as: Option<TyId>) -> (u64, Levels) {
+        let nothing = || Levels::from_bounds(vec![Some(0); self.deepest_pointer]);
+        let Some(read_as) = read_as else {
+            return (0, nothing());
+        };
         // An array of pointers holds pointers, as `type_levels` reads it.
         let width = match self.unit.ty(innermost_element(self.unit, read_as)) {
             Ty::Pointer(pointee) => self.unit.size_of(pointee).unwrap_or(0),
@@ -1216,8 +1247,6 @@ impl Allocations<'_> {
                 unreachable!("`innermost_element` strips every array")
             }
         };
-        value.handed_at_most[local.index()] =
-            bounded(value.handed_at_most[local.index()], Some(width));
         // **And below it, at every level**, as the type it was reached as says:
         // through a `void *`, nothing at any level. See
         // `Known::handed_contents_at_most`. Through an array to its element, as
@@ -1225,17 +1254,27 @@ impl Allocations<'_> {
         // as reached through a `void *`. Found by review.
         let levels = self
             .type_levels(innermost_element(self.unit, read_as))
-            .unwrap_or_else(|| Levels::from_bounds(vec![Some(0); self.deepest_pointer]));
-        value.handed_contents_at_most[local.index()].bound_by(&levels);
+            .unwrap_or_else(nothing);
+        (width, levels)
     }
 
     /// Record memory a call this check cannot read reached as `read_as`,
     /// where that type is untyped somewhere below. See
     /// [`Known::handed_untyped_sites`].
+    ///
+    /// **And bound what it may store there**, as [`Self::handed`] bounds a
+    /// local: what the callee stores is believed as it was handed, and a
+    /// site records nothing else, so `init(box); int *t = *box;` with `init`
+    /// taking `int **` believed nothing once a load believes nothing that no
+    /// width was recorded for (ADR-0061).
     fn handed_site(&self, value: &mut Known, site: usize, read_as: Option<TyId>) {
         if read_as.is_none_or(|ty| self.untyped_below(ty)) {
             remember(&mut value.handed_untyped_sites[site], read_as);
         }
+        let (width, levels) = self.handed_bounds(read_as);
+        value.contents[site]
+            .stored_at_most
+            .bound_by(&levels.stored_under(Some(width), self.deepest_pointer));
     }
 
     /// Whether a callee handed a pointer to `ty` may store any pointer
@@ -2840,9 +2879,14 @@ impl Analysis for Allocations<'_> {
                     // puts in `believed`, no wider than it was handed as: `get(&c); *cm = c;` with `get`
                     // taking `char **`, read back through an `int **`, was
                     // believed four bytes wide where `*pv` of `c`'s address
-                    // was doubted (#715). Where it was handed nothing, no
-                    // bound, as ADR-0017 believes an output: bounding such a
-                    // pointer at zero doubted 34 cases, measured.
+                    // was doubted (#715). Where it was handed nothing, as its
+                    // type, as ADR-0017 believes an output: bounding such a
+                    // pointer at zero doubted 34 cases, measured. Said as
+                    // `AS_TYPED`, since no bound is now no belief (ADR-0061).
+                    //
+                    // **And any other value at the width of what it names**,
+                    // so that `*box = &q; int *t = *box; *t = 1;` proves what
+                    // it proved when a load believed its type (ADR-0061).
                     let bound = if !self.may_be_pointer(function, &operation.place) {
                         None
                     } else if written.loaded {
@@ -2860,9 +2904,9 @@ impl Analysis for Allocations<'_> {
                             | Rvalue::Unary { .. }
                             | Rvalue::Binary { .. } => None,
                         };
-                        written.believed.or(handed)
+                        Some(written.believed.or(handed).unwrap_or(AS_TYPED))
                     } else {
-                        None
+                        written.recorded_width(&value.extent, &self.local_sizes)
                     };
                     // **And below it, what the stored pointer believes of
                     // its own memory, whatever it is**: a parameter or a
@@ -3786,6 +3830,7 @@ impl Analysis for Allocations<'_> {
                                 source.local,
                                 from_depth + 1,
                                 self.deepest_pointer,
+                                &self.local_sizes,
                             ));
                             let mut poured = Contents::none(value.points_to.len());
                             for &site in &copied {

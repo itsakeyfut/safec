@@ -1,0 +1,30 @@
+warning[SC0401]: this frees `p`, which this check stopped following
+    ╭─[ a_null_read_out_of_memory_freed_and_stored_is_not_doubted_freed_when_read_back.c:10:5 ]
+    │
+ 10 │     free(p);             /* free(NULL): defined */
+    │     ───┬───  
+    │        ╰───── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+warning[SC0413]: this lets `p` leave, which may not point at an object as wide as its type
+    ╭─[ a_null_read_out_of_memory_freed_and_stored_is_not_doubted_freed_when_read_back.c:11:5 ]
+    │
+ 11 │     *box = p;
+    │     ────┬───  
+    │         ╰───── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+warning[SC0412]: this may reach outside the object `r` points at
+    ╭─[ a_null_read_out_of_memory_freed_and_stored_is_not_doubted_freed_when_read_back.c:14:12 ]
+    │
+ 14 │     if (r) v = *r;       /* r is null: not executed */
+    │            ───┬──  
+    │               ╰──── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
