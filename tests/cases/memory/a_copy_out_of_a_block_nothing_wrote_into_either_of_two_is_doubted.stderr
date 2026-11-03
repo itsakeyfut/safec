@@ -9,3 +9,13 @@ error[SC0411]: `*a` may be read before anything was assigned to it
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: assign it on every path before it is read
+error[SC0412]: this may reach outside the object `r` points at
+   ╭─[ a_copy_out_of_a_block_nothing_wrote_into_either_of_two_is_doubted.c:9:5 ]
+   │
+ 9 │     return *r;
+   │     ─────┬────  
+   │          ╰────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

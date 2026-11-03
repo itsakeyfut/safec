@@ -1,0 +1,23 @@
+error[SC0412]: this reaches 16 bytes into an object of 8 bytes
+    ╭─[ a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_an_earlier_one.c:11:5 ]
+    │
+  4 │     char (**pp)[16] = malloc(8);
+    │                       ────┬────  
+    │                           ╰────── allocated here
+    │ 
+ 11 │     memcpy(*pp, pp, 16);
+    │     ─────────┬─────────  
+    │              ╰─────────── wider than the object it reaches
+────╯
+  = note: this check belongs to safety level 1
+  = help: make the object at least as wide as this access, or reach less of it
+warning[SC0413]: this lets a pointer to 1 byte leave where 16 bytes are believed
+    ╭─[ a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_an_earlier_one.c:11:5 ]
+    │
+ 11 │     memcpy(*pp, pp, 16);
+    │     ─────────┬─────────  
+    │              ╰─────────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

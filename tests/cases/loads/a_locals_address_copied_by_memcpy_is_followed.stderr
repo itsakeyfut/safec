@@ -1,3 +1,13 @@
+warning[SC0412]: this may reach outside the object it points at
+    ╭─[ a_locals_address_copied_by_memcpy_is_followed.c:23:5 ]
+    │
+ 23 │     **t4 = r;
+    │     ────┬───  
+    │         ╰───── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 warning[SC0414]: this frees `r`, a pointer that was stored where code outside this function may read it
     ╭─[ a_locals_address_copied_by_memcpy_is_followed.c:24:5 ]
     │
@@ -22,6 +32,16 @@ warning[SC0402]: this uses a value that may have been freed
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0412]: this may reach outside the object it points at
+    ╭─[ a_locals_address_copied_by_memcpy_is_followed.c:25:5 ]
+    │
+ 25 │     return ***t4;
+    │     ──────┬──────  
+    │           ╰──────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 warning[SC0403]: this may dereference a null pointer
     ╭─[ a_locals_address_copied_by_memcpy_is_followed.c:23:5 ]
     │

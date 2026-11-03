@@ -1,0 +1,10 @@
+warning[SC0412]: this may reach outside the object `s` points at
+    ╭─[ a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:29:9 ]
+    │
+ 29 │     int v = *s;
+    │         ───┬──  
+    │            ╰──── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

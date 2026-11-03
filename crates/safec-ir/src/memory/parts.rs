@@ -1081,8 +1081,9 @@ pub(super) struct Held {
     /// it, as every other path that lacks it does, so a proof is never
     /// carried onto a path that proved nothing. Dropped at a null, `if (k)
     /// get(&c); char *t = c;` stored or copied and read back as an `int *`
-    /// was believed whole, since for such a value no belief is no bound
-    /// (#719).
+    /// was believed whole, since for such a value no belief was no bound
+    /// (#719). It is [`AS_TYPED`] now, said where the call writes it, since
+    /// no bound is no belief at a load (ADR-0061).
     ///
     /// **The size of what the pointer read points to, and not of what the
     /// local it lands in points to.** `void **pp; ... int *q = *pp;` reads a
@@ -1177,6 +1178,26 @@ pub(super) struct Held {
     pub(super) stored_through: bool,
 }
 
+/// A width that bounds nothing below the type a pointer is read as, which
+/// `as_read.min` in `Allocations::believed_read` turns into that type.
+///
+/// **What arrives is believed as it arrives, said rather than left
+/// unsaid**: where nothing is recorded a load now believes nothing
+/// (ADR-0061), so a pointer a call this check cannot read wrote, handed
+/// nothing that bounds a width, is given this, as ADR-0017 and ADR-0060
+/// believe an output. **So is an escaped local a store or a copy this check
+/// cannot place may have written** (`Known::replaced`, ADR-0031), which is
+/// marked as one a call wrote: believed as its type there too, as before
+/// ADR-0061, and asked by what it names where it is read through itself.
+///
+/// Mutation: the walk's arm in `Known::memory_levels` answers `0` for such
+/// a value rather than this;
+/// `a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence`
+/// reports, among others. The store's arm answers without it;
+/// `a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back`
+/// reports.
+pub(super) const AS_TYPED: u64 = u64::MAX;
+
 /// The lower of two bounds, where `None` is no bound: a side that bounds
 /// nothing does not loosen one that does. See [`Held::contents_at_most`].
 ///
@@ -1269,6 +1290,62 @@ impl Levels {
 }
 
 impl Held {
+    /// How wide the objects this value names are recorded, at the least:
+    /// each site at its [`Extent`]'s lower bound, `AtLeast(0)` where it has
+    /// none, and each local whose address it holds at the local's size,
+    /// from `sizes`. What a store of it records in
+    /// [`Contents::stored_at_most`], and what a local on the way of a read
+    /// gives from its own value (`Known::memory_levels`). Since a load where
+    /// nothing is recorded believes nothing (ADR-0061), this is what keeps
+    /// the common case, `*box = &q; int *t = *box; *t = 1;`, proved.
+    ///
+    /// **`Some(0)` off its start or inside a local**, since neither has a
+    /// width to read: `Offset` carries no distance (ADR-0036), and a local's
+    /// size is not the size of something inside it. **And where it is
+    /// lost**, since what it holds may be an object no site it names stands
+    /// for: a loop's earlier `malloc(1)` joined into `x = malloc(4)` on one
+    /// arm leaves `x` naming the four-byte site alone, and `*box = x; int *t
+    /// = *box; *t = 1;` was believed four bytes wide, silent where `*x = 1`
+    /// is doubted. Found by review. **`None` where it names nothing**, a
+    /// null, which bounds nothing at a join.
+    ///
+    /// **Three clauses no case reaches.** Both callers answer a load and a
+    /// value a call wrote by its own belief before asking this, so `loaded`
+    /// and `foreign` give `Some(0)` only to a caller that does not, rather
+    /// than the width of what such a value merely names. And no C this
+    /// frontend reads sets `inner_address`, since `&a[1]` is lowered as
+    /// `&a[0]` moved by one, which `offset` answers; it is here for the
+    /// frontend that does not fold it, as [`Self::inner_address`] says.
+    /// Dropping any of the three moves no case, measured.
+    ///
+    /// **The least, and no case tells it from the greatest**: taking the
+    /// greatest moves nothing, measured, because a load carries what the
+    /// store named and `report::fits` folds each one's extent beside the
+    /// belief. Kept the least so that the record alone never says more than
+    /// every object it stands for.
+    pub(super) fn recorded_width(
+        &self,
+        extent: &[Option<Extent>],
+        sizes: &[Option<u64>],
+    ) -> Option<u64> {
+        if self.offset != Offset::Zero
+            || self.inner_address
+            || self.lost
+            || self.loaded
+            || self.foreign
+        {
+            return Some(0);
+        }
+        let sites = self
+            .sites()
+            .map(|site| extent[site].unwrap_or(Extent::AtLeast(0)).lower());
+        let locals = self
+            .writes_to
+            .ones()
+            .map(|target| sizes[target].unwrap_or(0));
+        sites.chain(locals).min()
+    }
+
     /// Whether this value names nothing at all: no allocation, no local's
     /// address, and none of the marks that say it may hold what this check
     /// did not follow: a null, or a local nothing was assigned, which
@@ -1890,11 +1967,16 @@ pub(super) struct Contents {
     /// down lands in the local. A table of its own because a site and a local
     /// share an index. See ADR-0045.
     pub(super) inside_locals: Bits,
-    /// How many bytes a pointer stored there that names nothing
-    /// [`Self::inside`] or [`Self::inside_locals`] records is believed to
-    /// point at, at most, at level 0, and what each pointer stored there
-    /// believed of its own memory at the levels below, with no bound where
-    /// no such pointer was stored. See [`Levels`].
+    /// How many bytes a pointer stored there is believed to point at, at
+    /// most, at level 0, and what each pointer stored there believed of its
+    /// own memory at the levels below, with no bound where nothing recorded
+    /// one. See [`Levels`].
+    ///
+    /// **Every pointer stored, and not only one the record cannot name**: a
+    /// local's address or an allocation at the width of what it names
+    /// ([`Held::recorded_width`]), since a load reading memory where nothing
+    /// is recorded believes nothing, and `*box = &q; int *t = *box; *t = 1;`
+    /// would be doubted (ADR-0061).
     ///
     /// **What the record cannot say**: `char *c = *cc; *m = c;` stores a
     /// pointer read out of the caller's memory, whose object nothing here

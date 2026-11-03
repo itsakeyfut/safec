@@ -1163,7 +1163,7 @@ fn say_fit(
 /// See ADR-0060.
 pub(super) fn reached_by_library(
     findings: &mut Vec<Finding>,
-    touched: &mut Vec<(Span, LocalId)>,
+    touched: &mut Vec<(Span, LocalId, usize)>,
     analysis: &Allocations<'_>,
     function: &Function,
     terminator: &Terminator,
@@ -1187,9 +1187,6 @@ pub(super) fn reached_by_library(
             continue;
         };
         let local = place.local;
-        if touched.contains(&(at, local)) {
-            continue;
-        }
         let width = match reach {
             Reach::Length(length) => analysis.constant_argument(*callee, arguments, length),
             Reach::String => None,
@@ -1204,7 +1201,7 @@ pub(super) fn reached_by_library(
             }
         } else {
             // **A pointer read out of memory and handed straight over** is
-            // believed by the type it was read as, as one assigned to a local
+            // believed as `Allocations::believed_read` says, as one assigned to a local
             // first is, unless it may have been read from a local, which is
             // asked instead ([`through_locals`]), and alone where it
             // certainly was.
@@ -1232,8 +1229,7 @@ pub(super) fn reached_by_library(
             Some(Fit::Outside { extent, made }) => (Conclusion::Unsafe, extent, made, None),
             Some(Fit::Unknown) => (Conclusion::Unknown, None, None, Some(Unproven::Extent)),
         };
-        touched.push((at, local));
-        findings.push(Finding {
+        let finding = Finding {
             function: analysis.function,
             // No width where none was read: it is printed only beside a
             // proof, and a proof needs one.
@@ -1247,7 +1243,29 @@ pub(super) fn reached_by_library(
             freed: None,
             made,
             unproven,
-        });
+        };
+        // **One report per pointer per call, and a proof stands over a
+        // doubt**, as [`say_fit`] keeps it: `memcpy(*pp, pp, 16)` asks `pp`
+        // twice, and the doubt about `*pp` asked first stood where the
+        // proof that the source runs past `pp`'s eight bytes should have,
+        // so `--allow-unknown` built the overflow. Found by review of #735,
+        // where a load believing nothing made that doubt the common case.
+        let standing = touched
+            .iter()
+            .find(|(touched_at, touched_local, _)| *touched_at == at && *touched_local == local);
+        match standing {
+            Some(&(_, _, index)) => {
+                if conclusion == Conclusion::Unsafe
+                    && findings[index].conclusion != Conclusion::Unsafe
+                {
+                    findings[index] = finding;
+                }
+            }
+            None => {
+                touched.push((at, local, findings.len()));
+                findings.push(finding);
+            }
+        }
     }
 }
 

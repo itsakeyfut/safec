@@ -11,8 +11,8 @@ use crate::ir::{LocalId, Operand, Place, TyId};
 use crate::source::{SourceMap, Span};
 
 use super::parts::{
-    Contents, Extent, Held, Init, Inits, Levels, Offset, PendingRead, Reached, Read, ReadKey,
-    Realloced, SiteState, read_key,
+    AS_TYPED, Contents, Extent, Held, Init, Inits, Levels, Offset, PendingRead, Reached, Read,
+    ReadKey, Realloced, SiteState, read_key,
 };
 use super::{LostReason, derefs, inside, named};
 
@@ -899,8 +899,9 @@ impl Known {
     /// &t; ... int **a = *pi;` with `t` a load out of a `void ***` read `a`
     /// believing whole `int`s two levels down, where the sites alone said
     /// nothing (#634). **Its own level too, from the two fields a store of
-    /// its value reads**: what a load believes, and no bound for any other
-    /// value. The pointer read out of the local is that value, and a load
+    /// its value reads**: what a load believes, what a call wrote at what it
+    /// was handed as or as its type, and any other value at the width of
+    /// what it names (ADR-0061). The pointer read out of the local is that value, and a load
     /// asks the local's own fit where it is read, but a copy stores it into
     /// memory, which a later read believes: `memcpy(m, &c, 8)` with `c` a
     /// `char *` load, read back through an `int **`, was believed whole
@@ -908,15 +909,21 @@ impl Known {
     /// condition**, that its destination may hold a pointer: a byte read out
     /// of memory is a load too, so `memcpy(m, &b, 1)` with `b` such a `char`,
     /// read back as a pointer, is doubted, where `*cm = b;` into a `char *`
-    /// records no bound. A bound here only narrows what is believed, and a
-    /// pointer read out of bytes a `char` filled is not shown to be whole.
-    /// Found by review. `depth_cap` is [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer),
+    /// records no bound. A pointer read out of bytes a `char` filled is not
+    /// shown to be whole, and since ADR-0061 no bound at a load is no belief
+    /// either. Found by review. `depth_cap` is [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer),
     /// which the list that puts it one level down is cut to.
     ///
     /// **The one walk a load, a departure and a copy take**, so that the
     /// spellings of one read cannot believe different things. See
-    /// [`Levels`] and ADR-0060.
-    pub(super) fn memory_levels(&self, local: LocalId, depth: usize, depth_cap: usize) -> Levels {
+    /// [`Levels`], ADR-0060 and ADR-0061.
+    pub(super) fn memory_levels(
+        &self,
+        local: LocalId,
+        depth: usize,
+        depth_cap: usize,
+        sizes: &[Option<u64>],
+    ) -> Levels {
         let mut levels = self.points_to[local.index()]
             .contents_at_most
             .below(depth - 1);
@@ -928,15 +935,23 @@ impl Known {
             for slot in locals {
                 let own = &self.points_to[slot];
                 // A pointer a call wrote at what it was handed as, on the
-                // value or, where a join dropped that, on the local, and no
-                // bound where it was handed nothing, as the store reads it
-                // (#715). A join with a null keeps the value's (#719).
+                // value or, where a join dropped that, on the local, and as
+                // its type where it was handed nothing, as the store reads it
+                // (#715, `AS_TYPED`). A join with a null keeps the value's
+                // (#719). **Any other value at the width of what it names**,
+                // since a load reading through nothing recorded believes
+                // nothing (ADR-0061): `int *x = malloc(4); int **pp = &x;
+                // int *t = *pp;` reads `t` as `x`'s allocation is wide.
                 let first = if own.loaded {
                     Some(own.believed.unwrap_or(0))
                 } else if own.foreign {
-                    own.believed.or(self.handed_at_most[slot])
+                    Some(
+                        own.believed
+                            .or(self.handed_at_most[slot])
+                            .unwrap_or(AS_TYPED),
+                    )
                 } else {
-                    None
+                    own.recorded_width(&self.extent, sizes)
                 };
                 let held = own.contents_at_most.stored_under(first, depth_cap);
                 levels.bound_by(&held.below(depth - 1 - level));

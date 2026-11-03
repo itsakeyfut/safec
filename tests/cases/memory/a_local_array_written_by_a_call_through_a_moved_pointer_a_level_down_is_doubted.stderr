@@ -1,3 +1,13 @@
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_local_array_written_by_a_call_through_a_moved_pointer_a_level_down_is_doubted.c:1:32 ]
+   │
+ 1 │ void fill(int ***pp, int *v) { **pp = v; }
+   │                                ────┬───  
+   │                                    ╰───── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0413]: this lets `e` leave, which may not point at an object as wide as its type
    ╭─[ a_local_array_written_by_a_call_through_a_moved_pointer_a_level_down_is_doubted.c:6:5 ]
    │

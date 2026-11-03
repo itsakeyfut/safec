@@ -612,6 +612,10 @@ fn analysis<'a>(
         function: func,
         locals: function.locals().len(),
         deepest_pointer: deepest_pointer(unit, function),
+        local_sizes: function
+            .locals()
+            .map(|local| unit.size_of(function.local(local)))
+            .collect(),
         parameters: function.parameters().collect(),
         exposed_parameters: function
             .parameters()
@@ -723,8 +727,10 @@ fn findings_within(
         // wider: keyed together, a doubt about `*p` in `memset(p, *p, 8)`
         // stood where the proof that `memset` writes past `p`'s object
         // should have, and `--allow-unknown` built the overflow. Found by
-        // review. See ADR-0060.
-        let mut touched: Vec<(Span, LocalId)> = Vec::new();
+        // review. See ADR-0060. With where the report standing for each is,
+        // as `asked` keeps it, so that a proof at a later argument replaces
+        // a doubt at an earlier one over the same pointer.
+        let mut touched: Vec<(Span, LocalId, usize)> = Vec::new();
         // And the pointers that left, per caret and door, apart again: a
         // pointer read through and handed on at one call is two questions.
         // With where the report standing for each is, as `said` keeps it.
