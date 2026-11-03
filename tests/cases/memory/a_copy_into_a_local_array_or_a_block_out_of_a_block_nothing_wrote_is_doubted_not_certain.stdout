@@ -1,0 +1,163 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:1:28 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "x"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int **" "m"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int **" "k"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int *[1]" "a"
+  Local "_10" "int **"
+  Local "_11" "int *"
+  Local "_12" "void *" "d"
+  Local "_13" "int **"
+  Local "_14" "void *"
+  Local "_15" "void *"
+  Local "_16" "int *" "r"
+  Local "_17" "int **"
+  Local "_18" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:34 generated
+    Call a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:34 written "malloc" "bb1"
+      Destination "_4"
+      Constant 8
+  Block "bb1"
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:30 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:34 generated
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:49 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:49 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:49 generated
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:53 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:60 generated
+    Return
+  Block "bb3"
+    Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:49 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:73 generated
+    Call a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:73 written "malloc" "bb5"
+      Destination "_7"
+      Constant 8
+  Block "bb5"
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:69 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:73 generated
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:88 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_6"
+    Branch a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:88 written "bb6" "bb7"
+      Copy "_8"
+  Block "bb6"
+    Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:88 generated
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:92 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:99 generated
+    Return
+  Block "bb7"
+    Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:88 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:113 generated
+      Destination "_10"
+      Address
+        Place "_9"
+          Index
+            Constant 0
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:113 written
+      Destination "_10"
+        Deref
+      Use
+        Copy "_1"
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:113 written
+      Destination "_11"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:113 generated
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:133 generated
+      Destination "_13"
+      Address
+        Place "_9"
+          Index
+            Constant 0
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:129 written
+      Destination "_12"
+      Use
+        Copy "_13"
+    Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:133 generated
+    Branch a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:140 written "bb9" "bb10"
+      Copy "_2"
+  Block "bb9"
+    Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:140 generated
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:143 written
+      Destination "_12"
+      Use
+        Copy "_6"
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:143 written
+      Destination "_14"
+      Use
+        Copy "_12"
+    Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:143 generated
+    Goto "bb11"
+  Block "bb10"
+    Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:140 generated
+    Goto "bb11"
+  Block "bb11"
+    ArgumentsEvaluated a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:150 generated
+    Call a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:150 written "memcpy" "bb12"
+      Destination "_15"
+      Copy "_12"
+      Copy "_3"
+      Constant 8
+  Block "bb12"
+    Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:150 generated
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:176 generated
+      Destination "_17"
+      Address
+        Place "_9"
+          Index
+            Constant 0
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:172 written
+      Destination "_16"
+      Use
+        Copy "_17"
+          Deref
+    Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:176 generated
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:189 written
+      Destination "_18"
+      Binary "Eq"
+        Copy "_16"
+        Copy "_1"
+    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:182 written
+      Destination "_0"
+      Use
+        Copy "_18"
+    Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:189 generated
+    Return

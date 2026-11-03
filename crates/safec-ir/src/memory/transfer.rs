@@ -950,8 +950,36 @@ impl Allocations<'_> {
                             value.may_name_fresh(source.local) || locals_maybe,
                         )
                     }
+                    // **A source read through dereferences is asked too**, of
+                    // what the pointer it reads may name, the walk a load of it
+                    // takes: `memcpy(n, *ppp, 8)` with `**ppp` nothing wrote
+                    // read `*n` in silence, where the same through a named
+                    // `s = *ppp` was doubted. A doubt alone, since what such a
+                    // pointer names is not all it may name. Found by review.
+                    Some(Operand::Copy(source))
+                        if source
+                            .projection
+                            .iter()
+                            .all(|step| matches!(step, Projection::Deref)) =>
+                    {
+                        let (sites, locals) = value.levels_below(source.local, derefs(source));
+                        let maybe = sites
+                            .iter()
+                            .any(|&site| value.block_init[site].may_be_unwritten())
+                            || locals.iter().any(|&l| {
+                                value.certainly_unwritten(l, None)
+                                    || value.may_be_unwritten(l, None, true)
+                            });
+                        (false, maybe)
+                    }
                     Some(Operand::Copy(_) | Operand::Constant(_)) | None => (false, false),
                 };
+                // Whether the destination may land in no block, nor anywhere
+                // code this check cannot read can name: a local is the only
+                // place it writes, so it alone takes what the copy carries.
+                let lands_in_no_block = may_land
+                    .as_ref()
+                    .is_none_or(|(blocks, _, _)| blocks.is_empty());
                 let before = value.block_init.clone();
                 value.expose(self.sources, reach, Some(span));
                 if let Some((may_land, several, alone)) = may_land {
@@ -1089,8 +1117,12 @@ impl Allocations<'_> {
                             .and_then(|id| self.unit.size_of(function.local(id)));
                         let covers =
                             matches!((size, bytes), (Some(size), Some(bytes)) if bytes >= size);
+                        // One local alone, and no block beside it: `d` either
+                        // `a` or a block `k` was certain about `a[0]` though
+                        // the copy may have landed in `k`. Found by review.
                         if source_fresh
                             && lands.len() == 1
+                            && lands_in_no_block
                             && at_start
                             && covers
                             && matches!(length, CopiedPointers::Whole)
