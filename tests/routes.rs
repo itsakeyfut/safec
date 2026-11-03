@@ -77,6 +77,10 @@ enum Route {
     /// What a call this check cannot read wrote into a local, stored into a
     /// block and read back from there, which is where the width it was
     /// handed at is asked (`Known::handed_at_most`). Width only, at a local.
+    /// **Its control's silence is a belief**: what such a call writes into a
+    /// local is believed as its result is, no wider than it was handed as
+    /// (ADR-0060), which the plain call route does not show because reading
+    /// the escaped local through itself is doubted for the escape.
     /// Mutation: `handed` records no `handed_at_most`;
     /// `width_call_stored_d0_both` fails.
     CallStored,
@@ -893,20 +897,6 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         ),
     ),
     (
-        "stale_ret_d0_both",
-        Side::Control,
-        Why::Belief(
-            "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
-        ),
-    ),
-    (
-        "stale_ret_d0_one",
-        Side::Control,
-        Why::Belief(
-            "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
-        ),
-    ),
-    (
         "stale_ret_d2_both",
         Side::Control,
         Why::Belief(
@@ -918,6 +908,20 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Side::Control,
         Why::Belief(
             "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
+        ),
+    ),
+    (
+        "stale_ret_d0_both",
+        Side::Control,
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
+    ),
+    (
+        "stale_ret_d0_one",
+        Side::Control,
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
         ),
     ),
     (
@@ -937,32 +941,44 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
     (
         "stale_memcpy_d0_both",
         Side::Control,
-        Why::Cost("a pointer copied by memcpy is a doubt about whether it was freed (#652)"),
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
     ),
     (
         "stale_memcpy_d0_one",
         Side::Control,
-        Why::Cost("a pointer copied by memcpy is a doubt about whether it was freed (#652)"),
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
     ),
     (
         "stale_memcpy_d1_both",
         Side::Control,
-        Why::Cost("a pointer copied by memcpy is a doubt about whether it was freed (#652)"),
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
     ),
     (
         "stale_memcpy_d1_one",
         Side::Control,
-        Why::Cost("a pointer copied by memcpy is a doubt about whether it was freed (#652)"),
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
     ),
     (
         "stale_memcpy_d2_both",
         Side::Control,
-        Why::Cost("a pointer copied by memcpy is a doubt about whether it was freed (#652)"),
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
     ),
     (
         "stale_memcpy_d2_one",
         Side::Control,
-        Why::Cost("a pointer copied by memcpy is a doubt about whether it was freed (#652)"),
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
     ),
     (
         "stale_realloc_d2_both",
@@ -1628,67 +1644,67 @@ fn a_belief_agreeing_is_a_regression_and_a_cost_agreeing_is_a_fix() {
 const UNCERTAIN: &[(&str, &str)] = &[
     (
         "width_memcpy_d0_both",
-        "a pointer read out of memory or written by a call is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
+        "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
     ),
     (
         "width_memcpy_d0_one",
-        "a pointer read out of memory or written by a call is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
+        "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
     ),
     (
         "width_call_d0_both",
-        "a pointer read out of memory or written by a call is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
+        "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
     ),
     (
         "width_call_d0_one",
-        "a pointer read out of memory or written by a call is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
+        "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
     ),
     (
         "width_ret_d0_both",
-        "a pointer read out of memory or written by a call is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
+        "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
     ),
     (
         "width_ret_d0_one",
-        "a pointer read out of memory or written by a call is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
+        "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
     ),
     (
         "width_memcpy_block_d0_both",
-        "a pointer read out of memory or written by a call is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
+        "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
     ),
     (
         "width_memcpy_block_d0_one",
-        "a pointer read out of memory or written by a call is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
+        "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
     ),
     (
         "width_call_stored_d0_both",
-        "a pointer read out of memory or written by a call is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
+        "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
     ),
     (
         "width_call_deep_d0_both",
-        "a pointer read out of memory or written by a call is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
+        "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
     ),
     (
         "fresh_memcpy_d0_one",
-        "a copy of memory nothing wrote is a doubt where read; the load a store makes is what is reported as certain (ADR-0057)",
+        "on one arm only, a path that wrote the slot meets one that did not, which is a doubt (ADR-0057, #668)",
     ),
     (
         "fresh_memcpy_d1_one",
-        "a copy of memory nothing wrote is a doubt where read; the load a store makes is what is reported as certain (ADR-0057)",
+        "on one arm only, a path that wrote the slot meets one that did not, which is a doubt (ADR-0057, #668)",
     ),
     (
         "fresh_memcpy_half_d1_one",
-        "a copy of memory nothing wrote is a doubt where read; the load a store makes is what is reported as certain (ADR-0057)",
+        "on one arm only, a path that wrote the slot meets one that did not, which is a doubt (ADR-0057, #668)",
     ),
     (
         "fresh_memcpy_part_d1_both",
-        "a copy of memory nothing wrote is a doubt where read; the load a store makes is what is reported as certain (ADR-0057)",
+        "a copy that writes part of a pointer leaves the block in doubt rather than proved unwritten; a missed proof, since the part it misses is unwritten on every path",
     ),
     (
         "fresh_memcpy_maybe_d0_both",
-        "a copy of memory nothing wrote is a doubt where read; the load a store makes is what is reported as certain (ADR-0057)",
+        "on one arm only, a path that wrote the slot meets one that did not, which is a doubt (ADR-0057, #668)",
     ),
     (
         "fresh_memcpy_maybe_d1_both",
-        "a copy of memory nothing wrote is a doubt where read; the load a store makes is what is reported as certain (ADR-0057)",
+        "on one arm only, a path that wrote the slot meets one that did not, which is a doubt (ADR-0057, #668)",
     ),
     (
         "fresh_memcpy_d2_both",
