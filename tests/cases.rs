@@ -215,6 +215,10 @@ cases! {
         // is no path that left it fresh. Mutation: set the mark where one
         // side is `Unheld`; this is doubted. Both found by review.
         a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store that may miss a block nothing wrote leaves it in doubt,
+        // `Init::may_write` (#733). Mutation: let `may_write` write
+        // `Written`; it goes silent.
+        a_store_that_may_land_in_an_unwritten_block_or_a_written_one_leaves_the_first_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_freed_and_dropped_on_the_other_arm_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same of a library copy, whose destination may be either block:
         // it keeps the doubt, and a copy into the one block it names clears

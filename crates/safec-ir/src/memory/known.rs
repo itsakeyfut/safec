@@ -1948,7 +1948,11 @@ impl Known {
             let local = write.local;
             let kept = write.elements.len() > 0;
             // Written, keeping a doubt it held: the write is of one element,
-            // or of one nobody can name, and is no write of the rest.
+            // or of one nobody can name, and is no write of the rest. **The
+            // doubt kept decides no case**, measured: this record is read
+            // for a doubt only where the array is kept whole, and then the
+            // arm below writes it again. It is kept so that #733 changes no
+            // answer.
             self.local_init[local] = match write.init {
                 Init::Maybe => Init::Maybe,
                 Init::Unwritten | Init::Written => Init::Written,
