@@ -4414,10 +4414,14 @@ cases! {
         a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call made on one arm leaves the local bounded by what it was
-        // handed as after the join, where the belief it left is gone.
-        // Mutation: drop the `handed_at_most` question from `fits`; this
-        // goes silent.
+        // handed as after the join. The first holds without the bound,
+        // measured, where its read goes through a load, `q = *pi;`; the
+        // second reads the local's own value, `**pi`, beside a whole object
+        // on the other arm, where the bound alone answers. Mutation: drop
+        // the `handed_at_most` question from `fits`; the second loses its
+        // report about `v`.
         a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_a_callee_may_have_written_beside_a_whole_object_is_believed_no_wider_than_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What memory holds on one arm bounds it after the join, beside a
         // whole object or a null on the other. Mutation: let a recorded
         // whole object stand over a narrower stored bound in
