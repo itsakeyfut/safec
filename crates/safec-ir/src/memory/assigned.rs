@@ -41,6 +41,7 @@ use crate::ir::{
 use crate::source::{SourceMap, Span};
 
 use super::bits::Bits;
+use super::index::LocalIdx;
 use super::{Finding, Kind};
 
 /// The analysis over one function.
@@ -50,7 +51,7 @@ struct Assigned {
     /// write through an address is not followed here, so a local whose address
     /// is taken may be assigned where this cannot see, and 6.3.2.1 p2 is about
     /// the locals whose address is not taken in any case.
-    watched: Bits,
+    watched: Bits<LocalIdx>,
     locals: usize,
 }
 
@@ -335,7 +336,7 @@ fn reaches_certainly(
 /// local is asked by exactly one of them (#640).
 ///
 /// [`Known::local_init`]: super::known::Known::local_init
-pub(super) fn address_taken(function: &Function) -> Bits {
+pub(super) fn address_taken(function: &Function) -> Bits<LocalIdx> {
     let mut taken = Bits::new(function.locals().len());
     for block in function.blocks() {
         for element in &block.elements {
@@ -352,7 +353,7 @@ pub(super) fn address_taken(function: &Function) -> Bits {
                     .iter()
                     .any(|step| matches!(step, Projection::Deref))
                 {
-                    taken.set(place.local.index());
+                    taken.set(LocalIdx::of(place.local));
                 }
             }
         }
@@ -378,7 +379,7 @@ pub(super) fn findings(
             && !parameters.contains(&local)
             && matches!(unit.ty(function.local(local)), Ty::Pointer(_))
         {
-            watched.set(local.index());
+            watched.set(LocalIdx::of(local));
         }
     }
     for local in address_taken(function).ones() {
@@ -396,7 +397,7 @@ pub(super) fn findings(
     // Per block, what is assigned where its terminator runs, for (a).
     let mut at_end: Vec<Option<State>> = vec![None; function.blocks().len()];
     let mut report = |local: LocalId, at: Span, assigned: bool, findings: &mut Vec<Finding>| {
-        if !analysis.watched.get(local.index()) || assigned || said.contains(&(local, at)) {
+        if !analysis.watched.get(LocalIdx::of(local)) || assigned || said.contains(&(local, at)) {
             return;
         }
         said.push((local, at));
@@ -482,7 +483,7 @@ pub(super) fn findings(
         }
     }
     for (local, at, read) in doubted {
-        if !analysis.watched.get(local.index()) || said.contains(&(local, at)) {
+        if !analysis.watched.get(LocalIdx::of(local)) || said.contains(&(local, at)) {
             continue;
         }
         let witness = cfg.order().iter().find_map(|&id| {

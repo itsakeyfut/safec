@@ -30,8 +30,9 @@ pub(super) trait Idx: Copy + Ord {
     fn at(position: usize) -> Self;
 }
 
-/// What the memory check still keeps by a bare position: the definite
-/// assignment check's locals, which have no site to be confused with.
+/// What the memory check still keeps by a bare position: the elements of a
+/// local array, [`Inits`](super::parts::Inits), which are neither sites nor
+/// locals.
 impl Idx for usize {
     fn index(self) -> usize {
         self

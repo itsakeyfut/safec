@@ -1,11 +1,11 @@
 //! What this crate reads in a library function's name: one row per function,
 //! [`LIBRARY`], and the kinds a row is made of.
 //!
-//! At crate level rather than inside the memory check, so that an analysis
-//! besides it reads these rows rather than a copy of them to drift. See
-//! ADR-0063.
+//! At crate level rather than inside the memory check, its only reader so
+//! far, so that an analysis besides it can read these rows rather than keep
+//! a copy of them to drift. See ADR-0063.
 
-/// What this check can read in a callee's name.
+/// What the memory check can read in a callee's name.
 ///
 /// By name because nothing else is available: no annotation says what a
 /// function does to what it is passed. The nullability specifiers say only
@@ -20,8 +20,9 @@
 /// **No `PartialEq`**, so that every reader is a `match` and a new kind is
 /// `error[E0004]` wherever it has to be answered. A comparison lets it through
 /// in silence: the rule for what an opaque call returns was once gated by one.
-/// Measured by adding a variant: every reader in the memory check fails to
-/// compile, the six that were `matches!` until #773 included.
+/// `matches!` and a `_` arm are that comparison spelled differently, so
+/// neither is used on it. Measured by adding a variant: every reader in the
+/// memory check fails to compile.
 #[derive(Clone, Copy)]
 pub(crate) enum Callee {
     /// C17 7.22.3.3's `free`.
@@ -83,7 +84,7 @@ pub(crate) enum Reach {
     /// As many bytes as the argument at this index says, read as the
     /// parameter receives it.
     Length(usize),
-    /// As far as a string runs, which this check does not read, so it is
+    /// As far as a string runs, which the memory check does not read, so it is
     /// never shown to fit.
     String,
 }
@@ -109,14 +110,14 @@ pub(crate) enum Leaves {
     /// What the object it was handed held, up to the lesser of the two
     /// sizes (7.22.3.5 p2), and indeterminate bytes where it was handed a
     /// null pointer, since it then behaves as `malloc` for the size (p3):
-    /// `realloc`. Null is what this check's value can say certainly, a
+    /// `realloc`. Null is what the memory check's value can say certainly, a
     /// constant `0` or a local that names nothing (`Known::names_nothing`);
     /// a pointer null on one path only is read as the old object, because
     /// the value has no "may be null" to tell it by (#689).
     TheOld,
 }
 
-/// A library function this check reads by name.
+/// A library function the memory check reads by name.
 ///
 /// **One row says everything that is read about the name**, and a row that
 /// leaves a field out is `error[E0063]`: what it does to what it is handed,
@@ -143,8 +144,8 @@ pub(crate) struct Library {
     pub(crate) leaves: Option<Leaves>,
 }
 
-/// Every library function this check reads by name, with what each is read
-/// as. A name not here is [`Callee::Opaque`] and reaches nothing this check
+/// Every library function the memory check reads by name, with what each is
+/// read as. A name not here is [`Callee::Opaque`] and reaches nothing it
 /// asks about: it is believed, as a parameter is.
 ///
 /// The clauses: `free` 7.22.3.3, `malloc` 7.22.3.4, `calloc` 7.22.3.2,

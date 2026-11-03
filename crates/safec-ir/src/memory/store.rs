@@ -118,9 +118,16 @@ impl Allocations<'_> {
         else {
             return None;
         };
-        if self.unit.function(*callee).is_defined()
-            || !matches!(self.callee(*callee), Callee::Copies)
-        {
+        let copies = match self.callee(*callee) {
+            Callee::Copies => true,
+            Callee::Frees
+            | Callee::Allocates
+            | Callee::Reallocates
+            | Callee::ReturnsFirst
+            | Callee::Ends
+            | Callee::Opaque => false,
+        };
+        if self.unit.function(*callee).is_defined() || !copies {
             return None;
         }
         let (Some(Operand::Copy(to)), Some(Operand::Copy(from))) =

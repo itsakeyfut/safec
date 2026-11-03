@@ -367,8 +367,8 @@ impl Init {
 /// so the superset is this type's to keep (#733).
 #[derive(Clone, PartialEq, Eq)]
 pub(super) struct Inits {
-    proved: Bits,
-    doubted: Bits,
+    proved: Bits<usize>,
+    doubted: Bits<usize>,
 }
 
 impl Inits {

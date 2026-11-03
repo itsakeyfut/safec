@@ -1708,7 +1708,7 @@ pub(super) fn unwritten_read(
     said: &mut Vec<(Span, Place, usize)>,
     analysis: &Allocations<'_>,
     reads: Vec<(LocalId, Span)>,
-    taken: &Bits,
+    taken: &Bits<LocalIdx>,
     known: &Known,
     doubt_only: bool,
 ) {
@@ -1718,7 +1718,7 @@ pub(super) fn unwritten_read(
         // where nothing wrote any of it. See `Known::local_init`.
         let init = known.local_init[local];
         let partly = init == Init::Maybe;
-        if !taken.get(local.index())
+        if !taken.get(LocalIdx::of(local))
             || init == Init::Written
             || !analysis.holds_a_pointer(function.local(local))
         {
@@ -1771,11 +1771,13 @@ pub(super) fn freed_after_its_read_was_reported(
     else {
         return None;
     };
-    if !matches!(
-        analysis.callee(*callee),
-        Callee::Frees | Callee::Reallocates
-    ) {
-        return None;
+    match analysis.callee(*callee) {
+        Callee::Frees | Callee::Reallocates => {}
+        Callee::Allocates
+        | Callee::ReturnsFirst
+        | Callee::Copies
+        | Callee::Ends
+        | Callee::Opaque => return None,
     }
     match arguments.first() {
         Some(Operand::Copy(place))

@@ -3398,7 +3398,16 @@ impl Analysis for Allocations<'_> {
                     && old.len() == held.sites().count())
                 .then_some(old)
             }
-            _ => None,
+            (Callee::Reallocates, _)
+            | (
+                Callee::Frees
+                | Callee::Allocates
+                | Callee::ReturnsFirst
+                | Callee::Copies
+                | Callee::Ends
+                | Callee::Opaque,
+                _,
+            ) => None,
         };
 
         // **A free of what may be the caller's may free anything the caller

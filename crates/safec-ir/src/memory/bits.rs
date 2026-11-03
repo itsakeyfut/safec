@@ -34,7 +34,7 @@ use super::index::Idx;
 /// [`LocalIdx`](super::index::LocalIdx), so that a set of sites cannot be
 /// asked about a local. See ADR-0063.
 #[derive(Clone, PartialEq, Eq)]
-pub(super) struct Bits<I = usize> {
+pub(super) struct Bits<I> {
     len: usize,
     words: Vec<u64>,
     index: PhantomData<fn(I)>,
