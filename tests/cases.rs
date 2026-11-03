@@ -180,9 +180,20 @@ cases! {
         // leave a `malloc` site not fresh. It builds.
         a_pointer_read_out_of_fresh_memory_through_an_alias_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `calloc`'s space is zero bits (C17 7.22.3.2 p2), a null pointer on
-        // this target, so the null test is right. Mutation: let `calloc`
-        // leave its site fresh. It is reported.
+        // this target, so the null test is right and nothing is
+        // indeterminate. **The `SC0412` is a false one, accepted**: nothing
+        // was stored in the block, so nothing records a width, and a load
+        // believes nothing there (ADR-0061). Mutation: believe the type
+        // where nothing is recorded in `Allocations::believed_read`; this
+        // goes silent.
         a_pointer_read_out_of_memory_calloc_made_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `memset` with a byte that is not zero fills the block with no
+        // pointer anything stored, read back and written through: nothing
+        // records a width, so the write is doubted (ADR-0061), where main
+        // believed the type and built it. Found by review of #735. Mutation:
+        // believe the type where nothing is recorded in
+        // `Allocations::believed_read`; this goes silent.
+        a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written by a store first. Mutation: have a store through one
         // dereference leave its sites fresh. It is reported.
         a_pointer_read_out_of_memory_a_store_wrote_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -4127,6 +4138,10 @@ cases! {
         // report `reached_by_library` makes per pointer per call; the proof
         // goes and this exits 0. Found by review of #735.
         a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_an_earlier_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And in the other order, the proof asked first is not replaced by
+        // the doubt asked after it. Mutation: let any later report replace
+        // a standing one in `reached_by_library`; this exits 0.
+        a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A pointer moved off a null or off a local's address holds no site,
         // and is not therefore null: a null test on it takes the nullability
         // check's doubt away, and only this is left to ask. The second is the
@@ -4604,12 +4619,12 @@ cases! {
         a_local_handed_through_a_void_pointer_is_doubted_once_when_handed_on_deeper: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: a store records level 0 alone.
         a_parameter_stored_in_memory_and_read_back_is_believed_as_it_arrived_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Neither of the mutations below moves this since ADR-0061: what
-        // each drops is the `0` a `void **` believes two levels down, and a
-        // load where nothing is recorded believes `0` too. They were: a
-        // store records level 0 alone; `Known::memory_levels` folds only the
-        // sites at the last level. The store's levels are held by the
-        // read-back case above.
+        // What a store records below its own level and a load believing
+        // nothing where nothing is recorded each answer this: what either
+        // drops is the `0` a `void **` believes two levels down (ADR-0061).
+        // Mutation: a store records level 0 alone, and
+        // `Allocations::believed_read` believes the type where nothing is
+        // recorded; this goes silent. Either alone moves nothing.
         a_parameter_stored_in_memory_and_read_two_levels_at_once_is_believed_as_it_arrived: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: a store records level 0 alone. Mutation:
         // `contents_leaving` compares a site's stored bound at level 0 alone.

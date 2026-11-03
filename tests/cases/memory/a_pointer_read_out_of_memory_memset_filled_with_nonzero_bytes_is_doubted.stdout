@@ -1,0 +1,84 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:1:27 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:1:48 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
+Function a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int **" "box"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "void *"
+  Local "_5" "int *" "t"
+  Local "_6" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:28 generated
+    Call a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:28 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:22 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:28 generated
+    Operation a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:43 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:43 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:43 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:43 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:57 generated
+    Call a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:57 written "memset" "bb5"
+      Destination "_4"
+      Copy "_1"
+      Constant 1
+      Constant 8
+  Block "bb5"
+    Sequenced a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:57 generated
+    Operation a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:81 written
+      Destination "_5"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:85 generated
+    Branch a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:95 written "bb6" "bb7"
+      Copy "_5"
+  Block "bb6"
+    Sequenced a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:95 generated
+    Operation a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:98 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:98 written
+      Destination "_6"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:98 generated
+    Goto "bb8"
+  Block "bb7"
+    Sequenced a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:95 generated
+    Goto "bb8"
+  Block "bb8"
+    ArgumentsEvaluated a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:106 generated
+    Call a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:106 written "free" "bb9"
+      Copy "_1"
+  Block "bb9"
+    Sequenced a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:106 generated
+    Return

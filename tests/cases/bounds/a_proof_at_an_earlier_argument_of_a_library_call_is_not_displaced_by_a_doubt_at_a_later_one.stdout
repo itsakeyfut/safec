@@ -1,0 +1,116 @@
+Target "x86_64-pc-windows-msvc"
+Function a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:2:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "char (**)[16]" "pp"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "char" "c"
+  Local "_5" "void *" "v"
+  Local "_6" "char **" "cp"
+  Local "_7" "char *"
+  Local "_8" "char *"
+  Local "_9" "int"
+  Local "_10" "void *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:4:23 generated
+    Call a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:4:23 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:4:13 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:4:23 generated
+    Operation a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:5:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:5:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:5:9 generated
+    Operation a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:5:18 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:5:25 generated
+    Return
+  Block "bb3"
+    Sequenced a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:6:10 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:6:14 generated
+    Operation a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:7:11 written
+      Destination "_5"
+      Use
+        Copy "_1"
+    Sequenced a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:7:15 generated
+    Operation a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:8:12 written
+      Destination "_6"
+      Use
+        Copy "_5"
+    Sequenced a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:8:17 generated
+    Operation a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:9:11 written
+      Destination "_7"
+      Address
+        Place "_4"
+    Operation a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:9:5 written
+      Destination "_6"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:9:5 written
+      Destination "_8"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:9:5 generated
+    Operation a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:10:9 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_1"
+          Deref
+        Constant 0
+    Branch a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:10:9 written "bb5" "bb6"
+      Copy "_9"
+  Block "bb5"
+    Sequenced a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:10:9 generated
+    Operation a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:10:19 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:10:26 generated
+    Return
+  Block "bb6"
+    Sequenced a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:10:9 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:11:5 generated
+    Call a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:11:5 written "memcpy" "bb8"
+      Destination "_10"
+      Copy "_1"
+      Copy "_1"
+        Deref
+      Constant 16
+  Block "bb8"
+    Sequenced a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:11:5 generated
+    Operation a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:12:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_proof_at_an_earlier_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_a_later_one.c:12:12 generated
+    Return
