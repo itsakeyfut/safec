@@ -48,10 +48,11 @@ Chosen option: **record, then believe no wider than the record.**
 **What a store names is recorded at its width.** A value that names sites or
 locals, at its start and not inside a local, is recorded at the least of their
 widths: each site's `Extent` lower bound, and each local at its size. A value
-off its start or inside a local records `0`. A value naming nothing, a null,
-records nothing. The store into memory records it in `Contents::stored_at_most`,
-and a local reached through its address on the way of a read gives it from its
-own value in `Known::memory_levels`.
+off its start or inside a local records `0`, and so does a lost value, which
+may hold an object no site it names stands for. A value naming nothing, a
+null, records nothing. The store into memory records it in
+`Contents::stored_at_most`, and a local reached through its address on the way
+of a read gives it from its own value in `Known::memory_levels`.
 
 **What arrives is recorded as the type it arrives as.** A local or a site a
 call this check cannot read was handed is believed written as it was handed,
@@ -88,6 +89,12 @@ Each mutation applied on its own, the workspace run, and the file restored.
 * A read already reported as indeterminate asked its width as well:
   `a_byte_copied_out_of_a_local_is_doubted_where_read_back_as_a_pointer` gains
   an `SC0412`, among 23.
+* `Held::recorded_width` not asking whether a value is lost:
+  `a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted`
+  goes silent, among seven.
+* `report::reached_by_library` keeping the first report per pointer per call:
+  `a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_an_earlier_one`
+  exits 0.
 * `Held::recorded_width` taking the greatest width rather than the least moves
   no case, because a load carries what the store named and `report::fits`
   folds each one's extent; its doc comment says so.
@@ -102,7 +109,10 @@ Each mutation applied on its own, the workspace run, and the file restored.
   record. The 33 are that shape, and this record does not close them.
 * Bad, because memory nothing was stored into is believed nothing too:
   `calloc`'s nulls read back and tested are doubted, a false `Unknown`, by the
-  user's decision; and a value lost with no site named is doubted.
+  user's decision; and a lost value stored and read back is doubted.
+* Bad, because **a doubt became the common answer at a library call**, and the
+  first report kept per pointer per call let a doubt about `*pp` stand over the
+  proof that `memcpy(*pp, pp, 16)` runs past `pp`. The proof now replaces it.
 
 ## Pros and Cons of the Options
 

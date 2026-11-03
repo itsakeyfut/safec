@@ -1185,7 +1185,10 @@ pub(super) struct Held {
 /// unsaid**: where nothing is recorded a load now believes nothing
 /// (ADR-0061), so a pointer a call this check cannot read wrote, handed
 /// nothing that bounds a width, is given this, as ADR-0017 and ADR-0060
-/// believe an output. Left as no bound, the five cases that hold the
+/// believe an output. **So is an escaped local a store or a copy this check
+/// cannot place may have written** (`Known::replaced`, ADR-0031), which is
+/// marked as one a call wrote: believed as its type there too, as before
+/// ADR-0061, and asked by what it names where it is read through itself. Left as no bound, the five cases that hold the
 /// output-parameter idiom read back were doubted, measured.
 pub(super) const AS_TYPED: u64 = u64::MAX;
 
