@@ -48,8 +48,11 @@ blessed summary beside it**, in `tests/routes.rs`.
 **The rule comes from the belief, not from the checker.** Each belief names one
 hazard and one control: a pointer to a `char` read back as an `int *` and
 written through, against one to an `int`; memory nothing wrote read back,
-against memory a store wrote first; a lost or stale pointer used, against a
-live one. The hazard has to carry the belief's code and the control must not.
+against memory a store wrote first; a lost or stale pointer freed and used,
+against the same program with nothing freed. The hazard has to carry the
+belief's code and the control must not, and the two differ in one thing, so
+that the control asks what the belief says is safe rather than a program
+further from the hazard.
 **A control is not optional**: a rule asked only of the hazard passes a checker
 that reports every program.
 
@@ -57,8 +60,14 @@ that reports every program.
 is not the rule's is either a defect or a belief another record took on
 purpose, a `void *` a call returns believing no width (ADR-0060) among them.
 Each such row is named in one table with the issue or the record that says
-why, and a listed row that now agrees fails too, so a fix removes its entry and
-no entry outlives what it excused.
+why, and a listed row that now agrees fails too, so no entry outlives what it
+excused. **What a listed row agreeing means is said in its entry**: a cost, a
+false report on a control that is defined C or a silence an open issue answers
+for, where agreeing is a fix that removes the entry; or a belief, a report a
+record takes because the control is not provable from the unit, a pointer
+handed to a call this check cannot read or read where the check stopped
+following it, where agreeing is the check saying safe about what it did not
+prove, and fails as a regression.
 
 **The summary is what main answered.** One line per row, the hazard's and the
 control's exit and codes, is blessed as the corpus is. A change that silences a
@@ -96,6 +105,12 @@ summary, the matrix run, and the file restored.
   memory check is measured against.
 * Bad, because a row's programs are written by templates, and a template can be
   wrong about C; the `--safety off` build catches only what does not type-check.
+  Two were wrong about their belief while the matrix was written, and the
+  control is what showed it.
+* Bad, because **a row listed on its control asks nothing of its hazard**: the
+  control already carries the belief's code, so the hazard's cannot be told
+  from it, and such a row holds only that the route is not silent altogether.
+  The summary notices more, and only where the codes move.
 * Bad, because the matrix's 79 rows run the compiler some 470 times, a process
   each, about four seconds here.
 
