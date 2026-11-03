@@ -27,8 +27,10 @@
 //!
 //! **An allocation is named by the local it first landed in.** A call's
 //! destination and a parameter are the two places one can arrive from, and both
-//! are locals, so a site is a [`LocalId`] and there is no second numbering to
-//! keep in step. Two calls are two locals because the lowering gives each call
+//! are locals, so a site is numbered as the local is and there is no second
+//! numbering to keep in step; it is a type of its own all the same, `Site`
+//! beside `LocalIdx` in `memory/index.rs`, so that one cannot be passed for
+//! the other. Two calls are two locals because the lowering gives each call
 //! its own temporary. A parameter has to be a site as well: without one,
 //! `void f(int *p) { free(p); free(p); }` has nothing to mark and the second
 //! free is missed in silence, which is the worst thing this compiler can do.
@@ -41,20 +43,29 @@
 //! summary per function, which nothing here has.
 //!
 //! **One concern per file.** `memory/parts.rs` holds what the lattice value is
-//! made of, `known.rs` the value and the walks over it, `built.rs` what a value
-//! built out of operands holds, `transfer.rs` the analysis and what each
-//! element, terminator and edge does to the value, and `report.rs` what is asked
-//! once the walk has settled. This file keeps what a caller names: [`findings`],
-//! [`Finding`], [`Kind`] and [`Unproven`]. What an element dereferences and
-//! loads is read in `crate::reads`, whose readers of a dereference the
-//! nullability check asks too.
+//! made of, `known.rs` the value and the walks over it, `index.rs` the two
+//! kinds of index its tables are kept by, and `bits.rs` the sets of them;
+//! `built.rs` what a value built out of operands holds; `allocations.rs` the
+//! analysis and the facts about a function the walk and the report both read;
+//! `transfer.rs` what each element, terminator and edge does to the value, and
+//! `store.rs` where a write lands; `fit.rs` whether an access fits its object,
+//! which the walk and the report both ask; `report.rs` what is asked once the
+//! walk has settled; and `assigned.rs` the definite assignment check. This
+//! file keeps what a caller names: [`findings`], [`Finding`], [`Kind`] and
+//! [`Unproven`]. What an element dereferences and loads is read in
+//! `crate::reads`, whose readers of a dereference the nullability check asks
+//! too; what a library function's name says is `crate::library`, and which
+//! locals are live is `crate::liveness`.
 //!
 //! [the safety model]: https://github.com/itsakeyfut/safec/blob/main/docs/safety-model.md
 //! [`LocalId`]: crate::ir::LocalId
 
+mod allocations;
 mod assigned;
 mod bits;
 mod built;
+mod fit;
+mod index;
 mod known;
 mod parts;
 mod report;
@@ -74,14 +85,15 @@ use crate::reads::{
 };
 use crate::source::{SourceMap, Span};
 
+use allocations::Allocations;
 use built::named;
+use index::Table;
 use report::{
-    after_a_call, copied_away, departed_at_call, departed_in_element, derefs,
-    freed_after_its_read_was_reported, handed, handed_places, handed_stored_out, inside,
-    loaded_indeterminate, may_not_fit, reached_by_library, reported, returned, stored_away,
-    unwritten_read, used, used_before,
+    after_a_call, copied_away, departed_at_call, departed_in_element,
+    freed_after_its_read_was_reported, handed, handed_stored_out, loaded_indeterminate,
+    may_not_fit, reached_by_library, reported, returned, stored_away, unwritten_read, used,
+    used_before,
 };
-use transfer::Allocations;
 
 /// Which of the five things this check answers about a finding is.
 ///
@@ -612,10 +624,12 @@ fn analysis<'a>(
         function: func,
         locals: function.locals().len(),
         deepest_pointer: deepest_pointer(unit, function),
-        local_sizes: function
-            .locals()
-            .map(|local| unit.size_of(function.local(local)))
-            .collect(),
+        local_sizes: Table::from_vec(
+            function
+                .locals()
+                .map(|local| unit.size_of(function.local(local)))
+                .collect(),
+        ),
         parameters: function.parameters().collect(),
         exposed_parameters: function
             .parameters()
@@ -629,9 +643,9 @@ fn analysis<'a>(
                 Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => false,
             })
             .collect(),
-        live_in: transfer::live_in(function),
+        live_in: crate::liveness::live_in(function),
         cfg: Cfg::of(function),
-        opaque_results: Vec::new(),
+        opaque_results: Table::from_vec(Vec::new()),
     };
     analysis.opaque_results = analysis.opaque_results_of(function);
     analysis
@@ -1462,9 +1476,9 @@ mod tests {
             let function = self.unit.function(func);
             let solution = crate::dataflow::solve(&analysis, function, &Cfg::of(function));
             let known = solution.value(at).expect("the last block is reached");
-            known.contents[container.index()]
+            known.contents[index::Site::of(index::LocalIdx::of(container))]
                 .inside_locals
-                .get(self.x.index())
+                .get(index::LocalIdx::of(self.x))
         }
     }
 

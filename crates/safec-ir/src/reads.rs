@@ -240,3 +240,24 @@ fn first_of_two_derefs(place: &Place) -> Option<Place> {
         _ => None,
     }
 }
+
+/// How many dereferences `place` is, when it is nothing but dereferences, and
+/// zero otherwise.
+///
+/// One answer for the load and for the report, so that the two cannot disagree
+/// about which places are followed below their first level. A place with an
+/// `Index` in it is an array's element and is not one of them. No program
+/// this compiler accepts tells that apart from following it too: the lowering
+/// builds an `Index` only under `Rvalue::Address`, which is no place read
+/// or written, and `a[i]` is `*(a + i)` (#621). See ADR-0045.
+pub(crate) fn derefs(place: &Place) -> usize {
+    if place
+        .projection
+        .iter()
+        .all(|step| matches!(step, Projection::Deref))
+    {
+        place.projection.len()
+    } else {
+        0
+    }
+}

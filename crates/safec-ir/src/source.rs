@@ -772,6 +772,41 @@ impl SourceMap {
     }
 }
 
+/// Whether a read at `inner` is part of the arguments of the call at `outer`.
+///
+/// **Strictly inside**, because in C a call's designator and arguments are
+/// written within the call and nothing else is, so every read an argument
+/// makes, a call nested there included, has a span inside the call's and no
+/// read in another operand does. C17 6.5.2.2 p10's first sentence orders the
+/// first kind before the call.
+///
+/// **An equal span is not inside.** The reads that carry exactly a call's span
+/// are its own operand reads and what it is handed, which are recorded after
+/// the call has been asked, so nothing is lost here by refusing them. What it
+/// buys is the direction of a mistake: were a call and a sibling operand ever
+/// given one span, the sibling is reported rather than skipped. See ADR-0043,
+/// and `docs/c-family.md` for what this asks of another frontend.
+///
+/// **Located, across an instance.** A read in an included file, or later in a
+/// macro's expansion, is inside the call that holds its use, as it would be
+/// written out: both spans are compared in the nearest file they share, and
+/// two with none in common are not inside each other. Equality is asked there
+/// too, after locating, so a span that locates to exactly the outer one is not
+/// inside it. That is the rule above in the direction it chose: were a call
+/// ever exactly an instance's use, a read in the instance is reported rather
+/// than taken for the call's own. Found by review. See ADR-0054.
+pub(crate) fn inside(sources: &SourceMap, inner: Span, outer: Span) -> bool {
+    let Some(file) = sources.shared(inner, outer) else {
+        return false;
+    };
+    match (sources.locate(inner, file), sources.locate(outer, file)) {
+        (Some(inner), Some(outer)) => {
+            inner != outer && outer.start() <= inner.start() && inner.end() <= outer.end()
+        }
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,8 +1,8 @@
 //! The lattice's parts: what a local may hold, [`Held`], and what it reached,
 //! [`Reached`]; what is known about a site, [`SiteState`], and where in it a
 //! pointer is, [`Offset`]; the facts carried until something answers them, a read
-//! awaiting the free it is unordered against and a `realloc` awaiting its branch;
-//! and what a call's name says, [`Callee`].
+//! awaiting the free it is unordered against and a `realloc` awaiting its branch.
+//! What a call's name says is [`crate::library`].
 //!
 //! [`Known`](super::known::Known) is the value they make up, in its own module.
 
@@ -13,297 +13,7 @@ use crate::source::{SourceMap, Span};
 
 use super::LostReason;
 use super::bits::Bits;
-
-/// What this check can read in a callee's name.
-///
-/// By name because nothing else is available: no annotation says what a
-/// function does to what it is passed. The nullability specifiers say only
-/// whether a pointer a function takes or returns may be null, which is
-/// ADR-0037 and ADR-0050.
-/// Besides `malloc` and `free`, the names read are the library functions
-/// ADR-0039 lists, each for what its clause says it does to what it is handed.
-/// C17 7.1.3 reserves the identifiers the library declares, so a program
-/// that defines its own `free` has no behaviour C defines. `clang -std=c17
-/// -pedantic-errors` does not diagnose one, measured, so a program that does it
-/// anyway is read wrongly here and there is no way to tell from inside.
-/// **No `PartialEq`**, so that every reader is a `match` and a new kind is
-/// `error[E0004]` wherever it has to be answered. A comparison lets it through
-/// in silence: the rule for what an opaque call returns was once gated by one.
-#[derive(Clone, Copy)]
-pub(super) enum Callee {
-    /// C17 7.22.3.3's `free`.
-    Frees,
-    /// C17 7.22.3.4's `malloc`, and 7.22.3.1's `aligned_alloc` and 7.22.3.2's
-    /// `calloc`, which 7.22.3 p1 holds to the same thing: a pointer to the
-    /// start of an object disjoint from any other. Read so that its arguments
-    /// are left alone, and so that what it returns is a fresh allocation nobody
-    /// else has, rather than one an opaque call may hand back. An allocation
-    /// is otherwise named by where it landed rather than by which function made
-    /// it. See ADR-0039.
-    Allocates,
-    /// C17 7.22.3.5's `realloc`.
-    ///
-    /// Its first argument may be freed, and is not when the call fails with a
-    /// nonzero size (p3), so what it names becomes unproven rather than freed.
-    /// What it returns is a fresh allocation, as `malloc`'s is, holding what
-    /// the old one held (p2). See ADR-0039.
-    Reallocates,
-    /// A C library function that frees nothing and returns its first argument:
-    /// `memset`, `strcpy`, `strncpy`, `strcat` and `strncat`, whose clauses in
-    /// C17 7.24.2 to 7.24.6 each say so.
-    ///
-    /// **What it is handed is exposed all the same**, because it copies bytes
-    /// and a pointer is bytes, and a local whose address it is handed may be
-    /// written through it. See ADR-0039.
-    ReturnsFirst,
-    /// `memcpy` and `memmove`: what [`Callee::ReturnsFirst`] is, and a copy of
-    /// an object besides, so that what the destination may contain gains what
-    /// the source contains (C17 7.24.2.1 and 7.24.2.2 copy the object's bytes).
-    ///
-    /// **Not the string functions**, whose copies end at a null byte (7.24.2.3
-    /// and on), which a pointer's representation may hold, so a stored pointer
-    /// is not copied whole by them. A variant of its own rather than a name
-    /// read inside the transfer, so that every reader of the callee answers
-    /// for it. See ADR-0039.
-    Copies,
-    /// One of [`DOES_NOT_RETURN`](crate::ir::DOES_NOT_RETURN): `abort`,
-    /// `exit`, `_Exit` and `quick_exit`, believed by name as the lowering and
-    /// the reserved-name check believe them (ADR-0051).
-    ///
-    /// **It touches nothing.** What it is handed is asked as an argument, so
-    /// `exit(*p)` reads `*p`, but it exposes, frees and returns nothing. The
-    /// lowering keeps its edge inside a larger full expression, and read as
-    /// [`Callee::Opaque`] that edge carried a call that may have freed
-    /// everything it could reach to code after it: `n > 0 || (abort(), 0);
-    /// use(p);` doubted `p` (#586). No execution continues past it, so the
-    /// value before it is the one that claims least beyond it.
-    Ends,
-    /// Anything else. It may free what it was passed and this cannot tell.
-    Opaque,
-}
-
-/// How far a library call reaches through one pointer it is handed.
-///
-/// See [`LIBRARY`], which is the only place one is written.
-#[derive(Clone, Copy)]
-pub(super) enum Reach {
-    /// As many bytes as the argument at this index says, read as the
-    /// parameter receives it.
-    Length(usize),
-    /// As far as a string runs, which this check does not read, so it is
-    /// never shown to fit.
-    String,
-}
-
-/// How many bytes an allocation function makes, out of its arguments.
-#[derive(Clone, Copy)]
-pub(super) enum Makes {
-    /// The argument at this index.
-    Argument(usize),
-    /// The product of the two arguments at these indices, as `calloc`'s.
-    Product(usize, usize),
-}
-
-/// What an allocation function leaves in the object it makes.
-#[derive(Clone, Copy)]
-pub(super) enum Leaves {
-    /// Indeterminate bytes: `malloc` (C17 7.22.3.4 p2) and `aligned_alloc`
-    /// (7.22.3.1 p2). The allocation is unwritten, `Known::block_init`. See ADR-0057.
-    Indeterminate,
-    /// Zero bits, which is a null pointer on every target here: `calloc`
-    /// (7.22.3.2 p2).
-    ZeroBits,
-    /// What the object it was handed held, up to the lesser of the two
-    /// sizes (7.22.3.5 p2), and indeterminate bytes where it was handed a
-    /// null pointer, since it then behaves as `malloc` for the size (p3):
-    /// `realloc`. Null is what this check's value can say certainly, a
-    /// constant `0` or a local that names nothing (`Known::names_nothing`);
-    /// a pointer null on one path only is read as the old object, because
-    /// the value has no "may be null" to tell it by (#689).
-    TheOld,
-}
-
-/// A library function this check reads by name.
-///
-/// **One row says everything that is read about the name**, and a row that
-/// leaves a field out is `error[E0063]`: what it does to what it is handed,
-/// for the memory transfer; how far it reaches through which argument, for
-/// whether an access fits; what it makes, where it allocates; and what it
-/// leaves in what it makes. A fact about a name read outside the table is a
-/// second reader to drift: `realloc(NULL, n)` was read as copying an old
-/// object while the name `malloc` alone was read as leaving indeterminate
-/// bytes (#689). Kept as
-/// three readers matching names of their own, adding a function that takes
-/// a length to the first and forgetting the second left `memmove(p, q, 64)`
-/// on four bytes silent with every test green. Found by review. See
-/// ADR-0060.
-pub(super) struct Library {
-    /// What the source calls it.
-    pub(super) name: &'static str,
-    /// What it does to what it is handed.
-    pub(super) callee: Callee,
-    /// How far it reaches through each argument it reads or writes through.
-    pub(super) reaches: &'static [(usize, Reach)],
-    /// How many bytes it makes, where it makes an allocation.
-    pub(super) makes: Option<Makes>,
-    /// What it leaves in what it makes: `Some` exactly where `makes` is.
-    pub(super) leaves: Option<Leaves>,
-}
-
-/// Every library function this check reads by name, with what each is read
-/// as. A name not here is [`Callee::Opaque`] and reaches nothing this check
-/// asks about: it is believed, as a parameter is.
-///
-/// The clauses: `free` 7.22.3.3, `malloc` 7.22.3.4, `calloc` 7.22.3.2,
-/// `aligned_alloc` 7.22.3.1, `realloc` 7.22.3.5; `memcpy` 7.24.2.1,
-/// `memmove` 7.24.2.2, `strcpy` 7.24.2.3, `strncpy` 7.24.2.4, which writes
-/// exactly `n` characters (p2, p3), `strcat` 7.24.3.1, `strncat` 7.24.3.2,
-/// which appends after a string whose length nothing here reads; `memcmp`
-/// 7.24.4.1, `strcmp` 7.24.4.2, `strncmp` 7.24.4.4, which stops at a null
-/// character before `n`; `memchr` 7.24.5.1, `strchr` 7.24.5.2, `strrchr`
-/// 7.24.5.5, `strstr` 7.24.5.7; `memset` 7.24.6.1, `strlen` 7.24.6.3.
-pub(super) const LIBRARY: &[Library] = &[
-    Library {
-        name: "free",
-        callee: Callee::Frees,
-        reaches: &[],
-        makes: None,
-        leaves: None,
-    },
-    Library {
-        name: "malloc",
-        callee: Callee::Allocates,
-        reaches: &[],
-        makes: Some(Makes::Argument(0)),
-        leaves: Some(Leaves::Indeterminate),
-    },
-    Library {
-        name: "calloc",
-        callee: Callee::Allocates,
-        reaches: &[],
-        makes: Some(Makes::Product(0, 1)),
-        leaves: Some(Leaves::ZeroBits),
-    },
-    Library {
-        name: "aligned_alloc",
-        callee: Callee::Allocates,
-        reaches: &[],
-        makes: Some(Makes::Argument(1)),
-        leaves: Some(Leaves::Indeterminate),
-    },
-    Library {
-        name: "realloc",
-        callee: Callee::Reallocates,
-        reaches: &[],
-        makes: Some(Makes::Argument(1)),
-        leaves: Some(Leaves::TheOld),
-    },
-    Library {
-        name: "memcpy",
-        callee: Callee::Copies,
-        reaches: &[(0, Reach::Length(2)), (1, Reach::Length(2))],
-        makes: None,
-        leaves: None,
-    },
-    Library {
-        name: "memmove",
-        callee: Callee::Copies,
-        reaches: &[(0, Reach::Length(2)), (1, Reach::Length(2))],
-        makes: None,
-        leaves: None,
-    },
-    Library {
-        name: "memset",
-        callee: Callee::ReturnsFirst,
-        reaches: &[(0, Reach::Length(2))],
-        makes: None,
-        leaves: None,
-    },
-    Library {
-        name: "strcpy",
-        callee: Callee::ReturnsFirst,
-        reaches: &[(0, Reach::String), (1, Reach::String)],
-        makes: None,
-        leaves: None,
-    },
-    Library {
-        name: "strncpy",
-        callee: Callee::ReturnsFirst,
-        reaches: &[(0, Reach::Length(2)), (1, Reach::String)],
-        makes: None,
-        leaves: None,
-    },
-    Library {
-        name: "strcat",
-        callee: Callee::ReturnsFirst,
-        reaches: &[(0, Reach::String), (1, Reach::String)],
-        makes: None,
-        leaves: None,
-    },
-    Library {
-        name: "strncat",
-        callee: Callee::ReturnsFirst,
-        reaches: &[(0, Reach::String), (1, Reach::String)],
-        makes: None,
-        leaves: None,
-    },
-    Library {
-        name: "memcmp",
-        callee: Callee::Opaque,
-        reaches: &[(0, Reach::Length(2)), (1, Reach::Length(2))],
-        makes: None,
-        leaves: None,
-    },
-    Library {
-        name: "memchr",
-        callee: Callee::Opaque,
-        reaches: &[(0, Reach::Length(2))],
-        makes: None,
-        leaves: None,
-    },
-    Library {
-        name: "strlen",
-        callee: Callee::Opaque,
-        reaches: &[(0, Reach::String)],
-        makes: None,
-        leaves: None,
-    },
-    Library {
-        name: "strcmp",
-        callee: Callee::Opaque,
-        reaches: &[(0, Reach::String), (1, Reach::String)],
-        makes: None,
-        leaves: None,
-    },
-    Library {
-        name: "strncmp",
-        callee: Callee::Opaque,
-        reaches: &[(0, Reach::String), (1, Reach::String)],
-        makes: None,
-        leaves: None,
-    },
-    Library {
-        name: "strchr",
-        callee: Callee::Opaque,
-        reaches: &[(0, Reach::String)],
-        makes: None,
-        leaves: None,
-    },
-    Library {
-        name: "strrchr",
-        callee: Callee::Opaque,
-        reaches: &[(0, Reach::String)],
-        makes: None,
-        leaves: None,
-    },
-    Library {
-        name: "strstr",
-        callee: Callee::Opaque,
-        reaches: &[(0, Reach::String), (1, Reach::String)],
-        makes: None,
-        leaves: None,
-    },
-];
+use super::index::{LocalIdx, Site, Table};
 
 /// A free, and whether C has ordered it before what comes after it.
 ///
@@ -657,8 +367,8 @@ impl Init {
 /// so the superset is this type's to keep (#733).
 #[derive(Clone, PartialEq, Eq)]
 pub(super) struct Inits {
-    proved: Bits,
-    doubted: Bits,
+    proved: Bits<usize>,
+    doubted: Bits<usize>,
 }
 
 impl Inits {
@@ -817,7 +527,7 @@ pub(super) fn read_key(at: Span, place: &Place, read: Read) -> ReadKey {
 /// [the safety model]: https://github.com/itsakeyfut/safec/blob/main/docs/safety-model.md
 pub(super) enum Reached {
     /// A site the argument may hold.
-    Site(usize),
+    Site(Site),
     /// The set this local names had one member freed, and which one is not
     /// known. Whether C has sequenced that free travels with it, for the reason
     /// [`Freeing`] gives.
@@ -857,7 +567,7 @@ pub(super) enum Reached {
 /// A struct rather than the bit vector this was, because the two halves travel
 /// together everywhere: a copy writes both, arithmetic unions both, and
 /// anything else clears both. Kept apart they have to be kept in step by hand
-/// in every arm of [`Allocations::element`](super::transfer::Allocations#method.element), and forgetting one is a silence
+/// in every arm of [`Allocations::element`](super::allocations::Allocations#method.element), and forgetting one is a silence
 /// rather than a build error. See ADR-0018.
 ///
 /// **What lives here is what an assignment destroys.** Giving a local a fresh
@@ -882,7 +592,7 @@ pub(super) struct Held {
     /// 0.72 s once the four there were then were packed. Most of what is left is linear in the
     /// locals for every block, which is what `memory::LINEAR` counts. See
     /// ADR-0039.
-    pub(super) sites: Bits,
+    pub(super) sites: Bits<Site>,
     /// Whether this local may hold an allocation this check can no longer
     /// name.
     ///
@@ -918,7 +628,7 @@ pub(super) struct Held {
     /// Two things set it: taking an address, `pp = &p;`, and a call this check
     /// cannot read, whose result may be any local whose address escaped. See
     /// ADR-0039.
-    pub(super) writes_to: Bits,
+    pub(super) writes_to: Bits<LocalIdx>,
     /// Whether a write through this local may land somewhere [`writes_to`]
     /// does not name.
     ///
@@ -981,7 +691,7 @@ pub(super) struct Held {
     /// local became nameable. Read by
     /// [`Known::locals_a_write_may_land_in`](super::known::Known::locals_a_write_may_land_in)
     /// alone. See ADR-0057.
-    pub(super) named_at_read: Bits,
+    pub(super) named_at_read: Bits<LocalIdx>,
     /// Whether a call this check cannot read may have written into this
     /// local, through its address, something no site names.
     ///
@@ -1057,7 +767,7 @@ pub(super) struct Held {
     /// was nulled by hand, and built a double free. Any other assignment
     /// clears this, arithmetic included, and a join keeps it only where both
     /// arms agree. Found by review. See ADR-0039.
-    pub(super) returned_by: Option<usize>,
+    pub(super) returned_by: Option<Site>,
     /// Whether this was read, on every path, out of an allocation
     /// [`Known::block_init`](super::known::Known::block_init) marks, so is
     /// indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2), and was reported
@@ -1221,9 +931,9 @@ pub(super) fn bounded(here: Option<u64>, there: Option<u64>) -> Option<u64> {
 /// level past the end, and an entry of `None`, is no bound. See
 /// [`Held::contents_at_most`] and ADR-0060.
 ///
-/// **No list is longer than [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer)**,
+/// **No list is longer than [`Allocations::deepest_pointer`](super::allocations::Allocations::deepest_pointer)**,
 /// the deepest pointer type among the function's locals. The two that build
-/// one are [`Allocations::type_levels`](super::transfer::Allocations::type_levels),
+/// one are [`Allocations::type_levels`](super::allocations::Allocations::type_levels),
 /// which stops there, and [`Self::stored_under`], which drops what would pass it;
 /// [`Self::below`] and a join make none longer than their inputs. So the
 /// lattice this sits in has a finite height by construction, and no loop of
@@ -1325,8 +1035,8 @@ impl Held {
     /// every object it stands for.
     pub(super) fn recorded_width(
         &self,
-        extent: &[Option<Extent>],
-        sizes: &[Option<u64>],
+        extent: &Table<Site, Option<Extent>>,
+        sizes: &Table<LocalIdx, Option<u64>>,
     ) -> Option<u64> {
         if self.offset != Offset::Zero
             || self.inner_address
@@ -1433,7 +1143,7 @@ impl Held {
     /// it holds its own site at `Zero` and then what the call may have
     /// returned at `Unknown`, and the join makes the whole `Unknown`, which is
     /// the answer that cannot claim more than both said.
-    pub(super) fn hold(&mut self, site: usize, offset: Offset) {
+    pub(super) fn hold(&mut self, site: Site, offset: Offset) {
         self.sites.set(site);
         self.offset = self.offset.joined(offset);
     }
@@ -1459,7 +1169,7 @@ impl Held {
     /// of `a` by address, by value or by `free`, with `b` read again or not,
     /// handed to a call first, or a copy of `a`. A rule that stops counting
     /// such a local as live is one to ask this again under.
-    pub(super) fn certain_target(&self) -> Option<usize> {
+    pub(super) fn certain_target(&self) -> Option<LocalIdx> {
         if self.writes_elsewhere {
             return None;
         }
@@ -1471,7 +1181,7 @@ impl Held {
     }
 
     /// Every site held, in order.
-    pub(super) fn sites(&self) -> impl Iterator<Item = usize> + '_ {
+    pub(super) fn sites(&self) -> impl Iterator<Item = Site> + '_ {
         self.sites.ones()
     }
 
@@ -1747,7 +1457,7 @@ impl Held {
     /// site now reaches none *and says so*. Clearing instead would leave it
     /// reaching nothing with nothing to say, and a read through it would be a
     /// silence.
-    pub(super) fn lose(&mut self, site: usize) {
+    pub(super) fn lose(&mut self, site: Site) {
         if self.sites.get(site) {
             self.sites.remove(site);
             self.lost = true;
@@ -1840,7 +1550,7 @@ pub(super) struct PendingRead {
     /// rebuilt from the position the key holds.
     pub(super) at: Span,
     /// Which allocations it may have read.
-    pub(super) sites: BTreeSet<usize>,
+    pub(super) sites: BTreeSet<Site>,
     /// Which of the two reads it is, which decides the code it is reported
     /// under.
     ///
@@ -1859,7 +1569,7 @@ pub(super) struct PendingRead {
     /// builds. A parameter, a store into an exposed allocation, or another
     /// call in the expression does, since any of them may run first. Filled
     /// by [`Known::meeting`](super::known::Known::meeting) and [`Known::noticed`](super::known::Known::noticed). See ADR-0042.
-    pub(super) reachable: BTreeSet<usize>,
+    pub(super) reachable: BTreeSet<Site>,
     /// Whether something made what this read read reachable to code this
     /// check cannot read while a call that code may be in was pending.
     ///
@@ -1920,7 +1630,7 @@ pub(super) struct Realloced {
     /// the arm that learns it succeeded.
     pub(super) at: Span,
     /// Each allocation it was handed, with where it was made.
-    pub(super) old: Vec<(usize, Option<Span>)>,
+    pub(super) old: Vec<(Site, Option<Span>)>,
 }
 
 /// The element two values point at once joined, where `here` and `there`
@@ -1929,7 +1639,7 @@ pub(super) struct Realloced {
 fn joined_element(
     here_has_edge: bool,
     here: Option<u64>,
-    there_edges: &Bits,
+    there_edges: &Bits<LocalIdx>,
     there: Option<u64>,
 ) -> Option<u64> {
     match (here_has_edge, there_edges.any()) {
@@ -1955,7 +1665,7 @@ pub(super) struct Contents {
     /// cannot read: `*tab = p; log_line();` leaves `p` alone, because nothing
     /// exposed `tab`. Square in the locals, so a bit a pair, for the reason
     /// [`Held::sites`] gives. See ADR-0039.
-    pub(super) inside: Bits,
+    pub(super) inside: Bits<Site>,
     /// The locals whose address a pointer stored in that allocation
     /// may hold: [`Self::inside`] for what is not a site.
     ///
@@ -1966,7 +1676,7 @@ pub(super) struct Contents {
     /// a load out of the allocation carries the edges and a store two levels
     /// down lands in the local. A table of its own because a site and a local
     /// share an index. See ADR-0045.
-    pub(super) inside_locals: Bits,
+    pub(super) inside_locals: Bits<LocalIdx>,
     /// How many bytes a pointer stored there is believed to point at, at
     /// most, at level 0, and what each pointer stored there believed of its
     /// own memory at the levels below, with no bound where nothing recorded
@@ -2218,7 +1928,8 @@ mod tests {
     }
 
     use super::{Extent, Freeing, Held, Init, Inits, Levels, Offset, SiteState, earlier};
-    use crate::memory::report::inside;
+    use crate::memory::index::{Idx, LocalIdx, Site};
+    use crate::source::inside;
     use crate::source::{FileId, SourceMap, Span};
 
     /// A store cannot make a list longer than the function's depth, which is
@@ -2293,8 +2004,8 @@ mod tests {
     #[test]
     fn clearing_a_local_leaves_it_no_site_and_no_edge() {
         let mut held = Held::none(4);
-        held.sites.set(1);
-        held.writes_to.set(3);
+        held.sites.set(Site::at(1));
+        held.writes_to.set(LocalIdx::at(3));
         held.writes_elsewhere = false;
         held.offset = Offset::NonZero;
         held.lost_read = true;
@@ -2327,12 +2038,12 @@ mod tests {
     #[test]
     fn a_certain_target_is_one_edge_and_nothing_elsewhere() {
         let mut one = Held::none(4);
-        one.writes_to.set(2);
+        one.writes_to.set(LocalIdx::at(2));
         one.writes_elsewhere = false;
-        assert_eq!(one.certain_target(), Some(2));
+        assert_eq!(one.certain_target(), Some(LocalIdx::at(2)));
 
         let mut two = one.clone();
-        two.writes_to.set(3);
+        two.writes_to.set(LocalIdx::at(3));
         assert_eq!(two.certain_target(), None);
 
         let mut elsewhere = one.clone();
