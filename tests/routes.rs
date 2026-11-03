@@ -56,29 +56,41 @@ enum Route {
     /// Copied by `memcpy` out of a block holding it, rather than out of a
     /// local's address: `*blk_ = v; memcpy(&slot, blk_, 8);`. The copy that
     /// carries what memory holds, which `Route::Memcpy` from a local does not
-    /// reach.
+    /// reach. Mutation: the copy's `Contents` sets `holds_lost: false`;
+    /// `lost_memcpy_block_d1_both` fails, among four. Mutation: the store's
+    /// sets `stale: false`; `stale_memcpy_block_d1_both` fails, among twelve.
     MemcpyFromBlock,
     /// Half a pointer copied, `memcpy(&slot, b, 4)`, against the whole one:
-    /// `CopiedPointers::NoneWhole`. Asked of freshness only.
+    /// `CopiedPointers::NoneWhole`. Asked of freshness only. Mutation: drop
+    /// the `NoneWhole` and `LastInPart` arms of `copied_pointers`;
+    /// `fresh_memcpy_half_d1_both` fails, and so does
+    /// `fresh_memcpy_part_d1_both`.
     MemcpyHalf,
     /// A pointer and a half copied into a block of two, the second read:
     /// `CopiedPointers::LastInPart`. Asked of freshness only, one level down.
     MemcpyPart,
     /// Copied out of a block written on one arm only, against one written on
     /// both: the copy's may-be-unwritten arm. Asked of freshness only.
+    /// Mutation: drop the arm that doubts a block from a source that may be
+    /// unwritten; `fresh_memcpy_maybe_d1_both` fails.
     MemcpyMaybe,
     /// What a call this check cannot read wrote into a local, stored into a
     /// block and read back from there, which is where the width it was
     /// handed at is asked (`Known::handed_at_most`). Width only, at a local.
+    /// Mutation: `handed` records no `handed_at_most`;
+    /// `width_call_stored_d0_both` fails.
     CallStored,
     /// A call handed a local holding a pointer to pointers through
     /// `char ***`, read two levels down, which is where what it was handed at
     /// below its own level is asked (`Known::handed_contents_at_most`).
-    /// Width only, at a local.
+    /// Width only, at a local. Mutation: `handed` bounds no
+    /// `handed_contents_at_most`; `width_call_deep_d0_both` fails.
     CallDeep,
     /// A `void ***` parameter grown by `realloc` and read two levels down
     /// through an `int ***`, against an `int ***` one: the bound `realloc`
-    /// carries from what it is handed. Width only.
+    /// carries from what it is handed. Width only. Mutation: `realloc` bounds
+    /// nothing it carries by what it is handed;
+    /// `width_realloc_param_d2_both` fails.
     ReallocParam,
 }
 
@@ -1707,7 +1719,8 @@ const UNCERTAIN: &[(&str, &str)] = &[
 /// code is what the rows' own rule, which asks the code, cannot see.
 ///
 /// Mutation: list in `UNCERTAIN` a row that is as certain as its store; this
-/// fails.
+/// fails. Mutation: the copy's certain arm leaves a block in doubt rather
+/// than unwritten; this fails, on the copy rows the store proves.
 #[test]
 fn a_route_is_as_certain_as_its_plain_store() {
     let mut wrong = vec![];
