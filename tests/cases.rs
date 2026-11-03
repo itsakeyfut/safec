@@ -268,6 +268,11 @@ cases! {
         // and `a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported`
         // are doubted.
         a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same where code outside the function reaches the blocks, so
+        // the store exposes what it carries. Found by review. Mutation: let
+        // the store's exposure write over the doubt it kept; both go silent.
+        a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_freed_and_dropped_on_the_other_arm_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same of a library copy, whose destination may be either block:
         // it keeps the doubt, and a copy into the one block it names clears

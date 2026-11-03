@@ -615,14 +615,31 @@ impl Allocations<'_> {
                 if elsewhere && pointer_stored {
                     value.landed_where_unknown_code_points(poured);
                 }
+                // **A doubt the store kept on a block it may have missed
+                // survives its exposure**, which writes every block code this
+                // check cannot read now reaches: `*o = m1;` before `v = *t;
+                // *v = x;` with `*t` either `m1` or `m2` lost the doubt about
+                // `m1` that `initialised_by` had just kept (#754), where the
+                // copy's door puts its marks back after its own exposure.
+                // Found by review.
+                let before = value.block_init.clone();
+                let keep = |value: &mut Known| {
+                    for &site in containers.iter() {
+                        if before[site] == Init::Maybe {
+                            value.block_init[site] = Init::Maybe;
+                        }
+                    }
+                };
                 if unplaced {
                     // No container, so what is poured is the arrays it marks
                     // alone.
                     value.pour(&[], poured, in_part);
                     value.expose(self.sources, carried, Some(span));
+                    keep(value);
                 } else {
                     if unnamed {
                         value.expose(self.sources, carried.clone(), Some(span));
+                        keep(value);
                     }
                     value.pour(containers, poured, in_part);
                     // Stored where code this check cannot read already
