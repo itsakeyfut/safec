@@ -52,9 +52,11 @@
 //! [the safety model]: https://github.com/itsakeyfut/safec/blob/main/docs/safety-model.md
 //! [`LocalId`]: crate::ir::LocalId
 
+mod allocations;
 mod assigned;
 mod bits;
 mod built;
+mod fit;
 mod known;
 mod parts;
 mod report;
@@ -74,14 +76,14 @@ use crate::reads::{
 };
 use crate::source::{SourceMap, Span};
 
+use allocations::Allocations;
 use built::named;
 use report::{
-    after_a_call, copied_away, departed_at_call, departed_in_element, derefs,
-    freed_after_its_read_was_reported, handed, handed_places, handed_stored_out, inside,
-    loaded_indeterminate, may_not_fit, reached_by_library, reported, returned, stored_away,
-    unwritten_read, used, used_before,
+    after_a_call, copied_away, departed_at_call, departed_in_element,
+    freed_after_its_read_was_reported, handed, handed_stored_out, loaded_indeterminate,
+    may_not_fit, reached_by_library, reported, returned, stored_away, unwritten_read, used,
+    used_before,
 };
-use transfer::Allocations;
 
 /// Which of the five things this check answers about a finding is.
 ///
@@ -629,7 +631,7 @@ fn analysis<'a>(
                 Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => false,
             })
             .collect(),
-        live_in: transfer::live_in(function),
+        live_in: crate::liveness::live_in(function),
         cfg: Cfg::of(function),
         opaque_results: Vec::new(),
     };

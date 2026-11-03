@@ -566,7 +566,7 @@ pub(super) enum Reached {
 /// A struct rather than the bit vector this was, because the two halves travel
 /// together everywhere: a copy writes both, arithmetic unions both, and
 /// anything else clears both. Kept apart they have to be kept in step by hand
-/// in every arm of [`Allocations::element`](super::transfer::Allocations#method.element), and forgetting one is a silence
+/// in every arm of [`Allocations::element`](super::allocations::Allocations#method.element), and forgetting one is a silence
 /// rather than a build error. See ADR-0018.
 ///
 /// **What lives here is what an assignment destroys.** Giving a local a fresh
@@ -930,9 +930,9 @@ pub(super) fn bounded(here: Option<u64>, there: Option<u64>) -> Option<u64> {
 /// level past the end, and an entry of `None`, is no bound. See
 /// [`Held::contents_at_most`] and ADR-0060.
 ///
-/// **No list is longer than [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer)**,
+/// **No list is longer than [`Allocations::deepest_pointer`](super::allocations::Allocations::deepest_pointer)**,
 /// the deepest pointer type among the function's locals. The two that build
-/// one are [`Allocations::type_levels`](super::transfer::Allocations::type_levels),
+/// one are [`Allocations::type_levels`](super::allocations::Allocations::type_levels),
 /// which stops there, and [`Self::stored_under`], which drops what would pass it;
 /// [`Self::below`] and a join make none longer than their inputs. So the
 /// lattice this sits in has a finite height by construction, and no loop of
@@ -1927,7 +1927,7 @@ mod tests {
     }
 
     use super::{Extent, Freeing, Held, Init, Inits, Levels, Offset, SiteState, earlier};
-    use crate::memory::report::inside;
+    use crate::source::inside;
     use crate::source::{FileId, SourceMap, Span};
 
     /// A store cannot make a list longer than the function's depth, which is

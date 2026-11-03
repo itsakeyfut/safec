@@ -14,9 +14,9 @@ use crate::ir::{Element, Operand, Place, Projection, Rvalue, Terminator};
 use crate::library::Callee;
 use crate::source::Span;
 
-use super::derefs;
+use super::allocations::Allocations;
 use super::known::Known;
-use super::transfer::Allocations;
+use crate::reads::derefs;
 
 /// One write of a value into a place.
 pub(super) struct Store<'a> {

@@ -14,7 +14,9 @@ use super::parts::{
     AS_TYPED, Contents, Extent, Held, Init, Inits, Levels, Offset, PendingRead, Reached, Read,
     ReadKey, Realloced, SiteState, read_key,
 };
-use super::{LostReason, derefs, inside, named};
+use super::{LostReason, named};
+use crate::reads::derefs;
+use crate::source::inside;
 
 #[derive(Clone, PartialEq, Eq)]
 pub(super) struct Known {
@@ -383,7 +385,7 @@ impl Known {
     /// anyway. The cost that rule was written to avoid is paid on that program
     /// regardless, by a route that knows what it is talking about.
     ///
-    /// [`Allocations::touching`](super::transfer::Allocations::touching) wants the opposite answer for an empty set and
+    /// [`Allocations::touching`](super::allocations::Allocations::touching) wants the opposite answer for an empty set and
     /// writes its own, which is why the rule is not written here.
     ///
     /// [`escaped`]: Known::escaped
@@ -911,7 +913,7 @@ impl Known {
     /// read back as a pointer, is doubted, where `*cm = b;` into a `char *`
     /// records no bound. A pointer read out of bytes a `char` filled is not
     /// shown to be whole, and since ADR-0061 no bound at a load is no belief
-    /// either. Found by review. `depth_cap` is [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer),
+    /// either. Found by review. `depth_cap` is [`Allocations::deepest_pointer`](super::allocations::Allocations::deepest_pointer),
     /// which the list that puts it one level down is cut to.
     ///
     /// **The one walk a load, a departure and a copy take**, so that the
@@ -992,7 +994,7 @@ impl Known {
     }
 
     /// One place of one element, for [`Self::met`], or one argument of one
-    /// call, for [`Allocations::terminator`](super::transfer::Allocations#method.terminator).
+    /// call, for [`Allocations::terminator`](super::allocations::Allocations#method.terminator).
     ///
     /// **`reached` is the caller's**, because the two differ for one place: a
     /// dereference of `*tab` reads through `tab`'s own sites, and `*tab` handed
@@ -2393,7 +2395,7 @@ impl Known {
     /// output-parameter idiom, and ADR-0017 declined to report it on purpose.
     /// There is nothing to lose by leaving it, because a local holding no site
     /// shares none with anybody, and a `free` of it is reported by
-    /// [`Allocations::touching`](super::transfer::Allocations::touching)'s own rule whatever this says.
+    /// [`Allocations::touching`](super::allocations::Allocations::touching)'s own rule whatever this says.
     ///
     /// **Left alone here, not for good.** A call this check cannot read
     /// marks what it wrote as handed over, [`Held::from_caller`], and the
