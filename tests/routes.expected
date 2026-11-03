@@ -1,79 +1,119 @@
-fresh_memcpy_d0_both hazard=1:SC0411,SC0412 control=1:SC0412
-fresh_memcpy_d0_one hazard=1:SC0411,SC0412 control=1:SC0412
-fresh_memcpy_d1_both hazard=1:SC0411 control=0:-
-fresh_memcpy_d1_one hazard=1:SC0411,SC0412 control=0:-
-fresh_memcpy_d2_both hazard=1:SC0403,SC0412 control=1:SC0403
-fresh_memcpy_d2_one hazard=1:SC0403,SC0412 control=1:SC0403
-fresh_realloc_d0_both hazard=1:SC0411 control=0:-
-fresh_realloc_d0_one hazard=1:SC0411 control=0:-
-fresh_realloc_d1_both hazard=1:SC0411 control=0:-
-fresh_realloc_d1_one hazard=1:SC0411 control=0:-
-fresh_realloc_d2_both hazard=1:SC0403,SC0411 control=1:SC0403
-fresh_realloc_d2_one hazard=1:SC0403,SC0411 control=1:SC0403
-fresh_store_d0_both hazard=1:SC0411 control=0:-
-fresh_store_d0_one hazard=1:SC0411 control=0:-
-fresh_store_d1_both hazard=1:SC0411 control=0:-
-fresh_store_d1_one hazard=1:SC0411 control=0:-
-fresh_store_d2_both hazard=1:SC0403,SC0411 control=1:SC0403
-fresh_store_d2_one hazard=1:SC0403,SC0411 control=1:SC0403
-lost_memcpy_d0_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412
-lost_memcpy_d0_one hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412
-lost_memcpy_d1_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412
-lost_memcpy_d1_one hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412
-lost_memcpy_d2_both hazard=1:SC0401,SC0402,SC0403,SC0412 control=1:SC0402,SC0403,SC0412
-lost_memcpy_d2_one hazard=1:SC0401,SC0402,SC0403,SC0412 control=1:SC0402,SC0403,SC0412
-lost_realloc_d1_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0412
-lost_realloc_d1_one hazard=1:SC0401,SC0402,SC0412 control=1:SC0412
-lost_realloc_d2_both hazard=1:SC0401,SC0402,SC0403,SC0412,SC0413,SC0414 control=1:SC0402,SC0403,SC0412,SC0413,SC0414
-lost_realloc_d2_one hazard=1:SC0401,SC0402,SC0403,SC0412,SC0413,SC0414 control=1:SC0402,SC0403,SC0412,SC0413,SC0414
-lost_ret_d0_both hazard=1:SC0401,SC0402,SC0407,SC0412 control=1:SC0402,SC0407,SC0412
-lost_ret_d0_one hazard=1:SC0401,SC0402,SC0407,SC0412 control=1:SC0402,SC0407,SC0412
-lost_ret_d1_both hazard=1:SC0401,SC0402,SC0407,SC0412,SC0413 control=1:SC0407,SC0412,SC0413
-lost_ret_d1_one hazard=1:SC0401,SC0402,SC0407,SC0412,SC0413 control=1:SC0407,SC0412,SC0413
-lost_ret_d2_both hazard=1:SC0401,SC0402,SC0403,SC0407,SC0412,SC0413,SC0414 control=1:SC0402,SC0403,SC0407,SC0412,SC0413,SC0414
-lost_ret_d2_one hazard=1:SC0401,SC0402,SC0403,SC0407,SC0412,SC0413,SC0414 control=1:SC0402,SC0403,SC0407,SC0412,SC0413,SC0414
-lost_store_d0_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412
-lost_store_d0_one hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412
-lost_store_d1_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0412
-lost_store_d1_one hazard=1:SC0401,SC0402,SC0412 control=1:SC0412
-lost_store_d2_both hazard=1:SC0401,SC0402,SC0403,SC0412,SC0414 control=1:SC0403,SC0412,SC0414
-lost_store_d2_one hazard=1:SC0401,SC0402,SC0403,SC0412,SC0414 control=1:SC0403,SC0412,SC0414
-stale_memcpy_d0_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412
-stale_memcpy_d1_both hazard=1:SC0401,SC0402,SC0407,SC0412 control=1:SC0402,SC0407,SC0412
-stale_memcpy_d2_both hazard=1:SC0401,SC0402,SC0403,SC0407,SC0412 control=1:SC0402,SC0403,SC0407,SC0412
-stale_realloc_d1_both hazard=1:SC0402,SC0412 control=0:-
-stale_realloc_d2_both hazard=1:SC0402,SC0403,SC0412,SC0414 control=1:SC0402,SC0403
-stale_ret_d0_both hazard=1:SC0401,SC0402,SC0407,SC0412 control=1:SC0402,SC0407,SC0412
-stale_ret_d1_both hazard=1:SC0401,SC0402,SC0407,SC0412,SC0413 control=1:SC0402,SC0407,SC0412,SC0413
-stale_ret_d2_both hazard=1:SC0401,SC0402,SC0403,SC0407,SC0412,SC0413,SC0414 control=1:SC0402,SC0403,SC0407,SC0412,SC0413,SC0414
-stale_store_d0_both hazard=1:SC0402,SC0412 control=1:SC0402,SC0412
-stale_store_d1_both hazard=1:SC0402,SC0412 control=0:-
-stale_store_d2_both hazard=1:SC0402,SC0403,SC0412,SC0414 control=1:SC0403
-width_call_d0_both hazard=1:SC0412 control=1:SC0412
-width_call_d0_one hazard=1:SC0412 control=1:SC0412
-width_call_d1_both hazard=1:SC0402,SC0412 control=1:SC0402
-width_call_d1_one hazard=1:SC0402,SC0412 control=1:SC0402
-width_call_d2_both hazard=1:SC0402,SC0403,SC0412 control=1:SC0402,SC0403
-width_call_d2_one hazard=1:SC0402,SC0403,SC0412 control=1:SC0402,SC0403
-width_memcpy_d0_both hazard=1:SC0412,SC0413 control=1:SC0412
-width_memcpy_d0_one hazard=1:SC0412,SC0413 control=1:SC0412
-width_memcpy_d1_both hazard=1:SC0412,SC0413 control=0:-
-width_memcpy_d1_one hazard=1:SC0412,SC0413 control=0:-
-width_memcpy_d2_both hazard=1:SC0403,SC0412,SC0413 control=1:SC0403
-width_memcpy_d2_one hazard=1:SC0403,SC0412,SC0413 control=1:SC0403
-width_realloc_d1_both hazard=1:SC0412,SC0413 control=0:-
-width_realloc_d1_one hazard=1:SC0412,SC0413 control=0:-
-width_realloc_d2_both hazard=1:SC0402,SC0403,SC0412,SC0413 control=1:SC0402,SC0403
-width_realloc_d2_one hazard=1:SC0402,SC0403,SC0412,SC0413 control=1:SC0402,SC0403
-width_ret_d0_both hazard=1:SC0412 control=1:SC0412
-width_ret_d0_one hazard=1:SC0412 control=1:SC0412
-width_ret_d1_both hazard=1:SC0412,SC0413 control=1:SC0412,SC0413
-width_ret_d1_one hazard=1:SC0412,SC0413 control=1:SC0412,SC0413
-width_ret_d2_both hazard=1:SC0403,SC0412,SC0413 control=1:SC0403,SC0412,SC0413
-width_ret_d2_one hazard=1:SC0403,SC0412,SC0413 control=1:SC0403,SC0412,SC0413
-width_store_d0_both hazard=1:SC0412 control=0:-
-width_store_d0_one hazard=1:SC0412 control=0:-
-width_store_d1_both hazard=1:SC0412,SC0413 control=0:-
-width_store_d1_one hazard=1:SC0412,SC0413 control=0:-
-width_store_d2_both hazard=1:SC0403,SC0412,SC0413 control=1:SC0403
-width_store_d2_one hazard=1:SC0403,SC0412,SC0413 control=1:SC0403
+fresh_memcpy_d0_both hazard=1:SC0411,SC0412 control=1:SC0412 allowed=1:SC0411,SC0412
+fresh_memcpy_d0_one hazard=1:SC0411,SC0412 control=1:SC0412 allowed=0:SC0411,SC0412
+fresh_memcpy_d1_both hazard=1:SC0411 control=0:- allowed=1:SC0411
+fresh_memcpy_d1_one hazard=1:SC0411,SC0412 control=0:- allowed=0:SC0411,SC0412
+fresh_memcpy_d2_both hazard=1:SC0403,SC0412 control=1:SC0403 allowed=0:SC0403,SC0412
+fresh_memcpy_d2_one hazard=1:SC0403,SC0412 control=1:SC0403 allowed=0:SC0403,SC0412
+fresh_memcpy_half_d1_both hazard=1:SC0411,SC0413 control=0:- allowed=1:SC0411,SC0413
+fresh_memcpy_half_d1_one hazard=1:SC0411,SC0413 control=0:- allowed=0:SC0411,SC0413
+fresh_memcpy_half_d2_both hazard=1:SC0403,SC0413 control=1:SC0403 allowed=0:SC0403,SC0413
+fresh_memcpy_half_d2_one hazard=1:SC0403,SC0413 control=1:SC0403 allowed=0:SC0403,SC0413
+fresh_memcpy_maybe_d0_both hazard=1:SC0411,SC0412 control=1:SC0412 allowed=0:SC0411,SC0412
+fresh_memcpy_maybe_d1_both hazard=1:SC0411 control=0:- allowed=0:SC0411
+fresh_memcpy_maybe_d2_both hazard=1:SC0403 control=1:SC0403 allowed=0:SC0403
+fresh_memcpy_part_d1_both hazard=1:SC0403,SC0411,SC0412,SC0413 control=1:SC0403,SC0412 allowed=0:SC0403,SC0411,SC0412,SC0413
+fresh_realloc_d0_both hazard=1:SC0411 control=0:- allowed=1:SC0411
+fresh_realloc_d0_one hazard=1:SC0411 control=0:- allowed=1:SC0411
+fresh_realloc_d1_both hazard=1:SC0411 control=0:- allowed=1:SC0411
+fresh_realloc_d1_one hazard=1:SC0411 control=0:- allowed=1:SC0411
+fresh_realloc_d2_both hazard=1:SC0403,SC0411 control=1:SC0403 allowed=1:SC0403,SC0411
+fresh_realloc_d2_one hazard=1:SC0403,SC0411 control=1:SC0403 allowed=1:SC0403,SC0411
+fresh_store_d0_both hazard=1:SC0411 control=0:- allowed=1:SC0411
+fresh_store_d0_one hazard=1:SC0411 control=0:- allowed=1:SC0411
+fresh_store_d1_both hazard=1:SC0411 control=0:- allowed=1:SC0411
+fresh_store_d1_one hazard=1:SC0411 control=0:- allowed=1:SC0411
+fresh_store_d2_both hazard=1:SC0403,SC0411 control=1:SC0403 allowed=1:SC0403,SC0411
+fresh_store_d2_one hazard=1:SC0403,SC0411 control=1:SC0403 allowed=1:SC0403,SC0411
+lost_memcpy_block_d0_both hazard=1:SC0401,SC0402,SC0412,SC0413 control=1:SC0412,SC0413 allowed=0:SC0401,SC0402,SC0412,SC0413
+lost_memcpy_block_d0_one hazard=1:SC0401,SC0402,SC0412,SC0413 control=1:SC0412,SC0413 allowed=0:SC0401,SC0402,SC0412,SC0413
+lost_memcpy_block_d1_both hazard=1:SC0401,SC0402,SC0412,SC0413 control=1:SC0412,SC0413 allowed=0:SC0401,SC0402,SC0412,SC0413
+lost_memcpy_block_d1_one hazard=1:SC0401,SC0402,SC0412,SC0413 control=1:SC0412,SC0413 allowed=0:SC0401,SC0402,SC0412,SC0413
+lost_memcpy_block_d2_both hazard=1:SC0401,SC0402,SC0403,SC0412,SC0413 control=1:SC0403,SC0412,SC0413 allowed=0:SC0401,SC0402,SC0403,SC0412,SC0413
+lost_memcpy_block_d2_one hazard=1:SC0401,SC0402,SC0403,SC0412,SC0413 control=1:SC0403,SC0412,SC0413 allowed=0:SC0401,SC0402,SC0403,SC0412,SC0413
+lost_memcpy_d0_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412 allowed=0:SC0401,SC0402,SC0412
+lost_memcpy_d0_one hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412 allowed=0:SC0401,SC0402,SC0412
+lost_memcpy_d1_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412 allowed=0:SC0401,SC0402,SC0412
+lost_memcpy_d1_one hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412 allowed=0:SC0401,SC0402,SC0412
+lost_memcpy_d2_both hazard=1:SC0401,SC0402,SC0403,SC0412 control=1:SC0402,SC0403,SC0412 allowed=0:SC0401,SC0402,SC0403,SC0412
+lost_memcpy_d2_one hazard=1:SC0401,SC0402,SC0403,SC0412 control=1:SC0402,SC0403,SC0412 allowed=0:SC0401,SC0402,SC0403,SC0412
+lost_realloc_d1_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0412 allowed=0:SC0401,SC0402,SC0412
+lost_realloc_d1_one hazard=1:SC0401,SC0402,SC0412 control=1:SC0412 allowed=0:SC0401,SC0402,SC0412
+lost_realloc_d2_both hazard=1:SC0401,SC0402,SC0403,SC0412,SC0413,SC0414 control=1:SC0402,SC0403,SC0412,SC0413,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0412,SC0413,SC0414
+lost_realloc_d2_one hazard=1:SC0401,SC0402,SC0403,SC0412,SC0413,SC0414 control=1:SC0402,SC0403,SC0412,SC0413,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0412,SC0413,SC0414
+lost_ret_d0_both hazard=1:SC0401,SC0402,SC0407,SC0412 control=1:SC0402,SC0407,SC0412 allowed=0:SC0401,SC0402,SC0407,SC0412
+lost_ret_d0_one hazard=1:SC0401,SC0402,SC0407,SC0412 control=1:SC0402,SC0407,SC0412 allowed=0:SC0401,SC0402,SC0407,SC0412
+lost_ret_d1_both hazard=1:SC0401,SC0402,SC0407,SC0412,SC0413 control=1:SC0407,SC0412,SC0413 allowed=0:SC0401,SC0402,SC0407,SC0412,SC0413
+lost_ret_d1_one hazard=1:SC0401,SC0402,SC0407,SC0412,SC0413 control=1:SC0407,SC0412,SC0413 allowed=0:SC0401,SC0402,SC0407,SC0412,SC0413
+lost_ret_d2_both hazard=1:SC0401,SC0402,SC0403,SC0407,SC0412,SC0413,SC0414 control=1:SC0402,SC0403,SC0407,SC0412,SC0413,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0407,SC0412,SC0413,SC0414
+lost_ret_d2_one hazard=1:SC0401,SC0402,SC0403,SC0407,SC0412,SC0413,SC0414 control=1:SC0402,SC0403,SC0407,SC0412,SC0413,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0407,SC0412,SC0413,SC0414
+lost_store_d0_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412 allowed=0:SC0401,SC0402,SC0412
+lost_store_d0_one hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412 allowed=0:SC0401,SC0402,SC0412
+lost_store_d1_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0412 allowed=0:SC0401,SC0402,SC0412
+lost_store_d1_one hazard=1:SC0401,SC0402,SC0412 control=1:SC0412 allowed=0:SC0401,SC0402,SC0412
+lost_store_d2_both hazard=1:SC0401,SC0402,SC0403,SC0412,SC0414 control=1:SC0403,SC0412,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0412,SC0414
+lost_store_d2_one hazard=1:SC0401,SC0402,SC0403,SC0412,SC0414 control=1:SC0403,SC0412,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0412,SC0414
+stale_memcpy_block_d0_both hazard=1:SC0401,SC0402,SC0407,SC0412,SC0413 control=1:SC0412,SC0413 allowed=0:SC0401,SC0402,SC0407,SC0412,SC0413
+stale_memcpy_block_d0_one hazard=1:SC0401,SC0402,SC0407,SC0412,SC0413 control=1:SC0412,SC0413 allowed=0:SC0401,SC0402,SC0407,SC0412,SC0413
+stale_memcpy_block_d1_both hazard=1:SC0401,SC0402,SC0407,SC0412,SC0413 control=1:SC0412,SC0413 allowed=0:SC0401,SC0402,SC0407,SC0412,SC0413
+stale_memcpy_block_d1_one hazard=1:SC0401,SC0402,SC0407,SC0412,SC0413 control=1:SC0412,SC0413 allowed=0:SC0401,SC0402,SC0407,SC0412,SC0413
+stale_memcpy_block_d2_both hazard=1:SC0401,SC0402,SC0403,SC0407,SC0412,SC0413 control=1:SC0403,SC0412,SC0413 allowed=0:SC0401,SC0402,SC0403,SC0407,SC0412,SC0413
+stale_memcpy_block_d2_one hazard=1:SC0401,SC0402,SC0403,SC0407,SC0412,SC0413 control=1:SC0403,SC0412,SC0413 allowed=0:SC0401,SC0402,SC0403,SC0407,SC0412,SC0413
+stale_memcpy_d0_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412 allowed=0:SC0401,SC0402,SC0412
+stale_memcpy_d0_one hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412 allowed=0:SC0401,SC0402,SC0412
+stale_memcpy_d1_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412 allowed=0:SC0401,SC0402,SC0412
+stale_memcpy_d1_one hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412 allowed=0:SC0401,SC0402,SC0412
+stale_memcpy_d2_both hazard=1:SC0401,SC0402,SC0403,SC0412 control=1:SC0402,SC0403,SC0412 allowed=0:SC0401,SC0402,SC0403,SC0412
+stale_memcpy_d2_one hazard=1:SC0401,SC0402,SC0403,SC0412 control=1:SC0402,SC0403,SC0412 allowed=0:SC0401,SC0402,SC0403,SC0412
+stale_realloc_d1_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0412 allowed=0:SC0401,SC0402,SC0412
+stale_realloc_d1_one hazard=1:SC0401,SC0402,SC0412 control=1:SC0412 allowed=0:SC0401,SC0402,SC0412
+stale_realloc_d2_both hazard=1:SC0401,SC0402,SC0403,SC0412,SC0413,SC0414 control=1:SC0402,SC0403,SC0412,SC0413,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0412,SC0413,SC0414
+stale_realloc_d2_one hazard=1:SC0401,SC0402,SC0403,SC0412,SC0413,SC0414 control=1:SC0402,SC0403,SC0412,SC0413,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0412,SC0413,SC0414
+stale_ret_d0_both hazard=1:SC0401,SC0402,SC0407,SC0412 control=1:SC0402,SC0407,SC0412 allowed=0:SC0401,SC0402,SC0407,SC0412
+stale_ret_d0_one hazard=1:SC0401,SC0402,SC0407,SC0412 control=1:SC0402,SC0407,SC0412 allowed=0:SC0401,SC0402,SC0407,SC0412
+stale_ret_d1_both hazard=1:SC0401,SC0407,SC0412,SC0413 control=1:SC0407,SC0412,SC0413 allowed=0:SC0401,SC0407,SC0412,SC0413
+stale_ret_d1_one hazard=1:SC0401,SC0407,SC0412,SC0413 control=1:SC0407,SC0412,SC0413 allowed=0:SC0401,SC0407,SC0412,SC0413
+stale_ret_d2_both hazard=1:SC0401,SC0402,SC0403,SC0407,SC0412,SC0413,SC0414 control=1:SC0402,SC0403,SC0407,SC0412,SC0413,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0407,SC0412,SC0413,SC0414
+stale_ret_d2_one hazard=1:SC0401,SC0402,SC0403,SC0407,SC0412,SC0413,SC0414 control=1:SC0402,SC0403,SC0407,SC0412,SC0413,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0407,SC0412,SC0413,SC0414
+stale_store_d0_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412 allowed=0:SC0401,SC0402,SC0412
+stale_store_d0_one hazard=1:SC0401,SC0402,SC0412 control=1:SC0402,SC0412 allowed=0:SC0401,SC0402,SC0412
+stale_store_d1_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0412 allowed=0:SC0401,SC0402,SC0412
+stale_store_d1_one hazard=1:SC0401,SC0402,SC0412 control=1:SC0412 allowed=0:SC0401,SC0402,SC0412
+stale_store_d2_both hazard=1:SC0401,SC0402,SC0403,SC0412,SC0414 control=1:SC0403,SC0412,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0412,SC0414
+stale_store_d2_one hazard=1:SC0401,SC0402,SC0403,SC0412,SC0414 control=1:SC0403,SC0412,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0412,SC0414
+width_call_d0_both hazard=1:SC0412 control=1:SC0412 allowed=0:SC0412
+width_call_d0_one hazard=1:SC0412 control=1:SC0412 allowed=0:SC0412
+width_call_d1_both hazard=1:SC0402,SC0412 control=1:SC0402 allowed=0:SC0402,SC0412
+width_call_d1_one hazard=1:SC0402,SC0412 control=1:SC0402 allowed=0:SC0402,SC0412
+width_call_d2_both hazard=1:SC0402,SC0403,SC0412 control=1:SC0402,SC0403 allowed=0:SC0402,SC0403,SC0412
+width_call_d2_one hazard=1:SC0402,SC0403,SC0412 control=1:SC0402,SC0403 allowed=0:SC0402,SC0403,SC0412
+width_call_deep_d0_both hazard=1:SC0412 control=1:SC0412 allowed=0:SC0412
+width_call_stored_d0_both hazard=1:SC0412,SC0413 control=0:- allowed=0:SC0412,SC0413
+width_memcpy_block_d0_both hazard=1:SC0412,SC0413 control=1:SC0412 allowed=0:SC0412,SC0413
+width_memcpy_block_d0_one hazard=1:SC0412,SC0413 control=1:SC0412 allowed=0:SC0412,SC0413
+width_memcpy_block_d1_both hazard=1:SC0412,SC0413 control=0:- allowed=0:SC0412,SC0413
+width_memcpy_block_d1_one hazard=1:SC0412,SC0413 control=0:- allowed=0:SC0412,SC0413
+width_memcpy_block_d2_both hazard=1:SC0403,SC0412,SC0413 control=1:SC0403 allowed=0:SC0403,SC0412,SC0413
+width_memcpy_block_d2_one hazard=1:SC0403,SC0412,SC0413 control=1:SC0403 allowed=0:SC0403,SC0412,SC0413
+width_memcpy_d0_both hazard=1:SC0412,SC0413 control=1:SC0412 allowed=0:SC0412,SC0413
+width_memcpy_d0_one hazard=1:SC0412,SC0413 control=1:SC0412 allowed=0:SC0412,SC0413
+width_memcpy_d1_both hazard=1:SC0412,SC0413 control=0:- allowed=0:SC0412,SC0413
+width_memcpy_d1_one hazard=1:SC0412,SC0413 control=0:- allowed=0:SC0412,SC0413
+width_memcpy_d2_both hazard=1:SC0403,SC0412,SC0413 control=1:SC0403 allowed=0:SC0403,SC0412,SC0413
+width_memcpy_d2_one hazard=1:SC0403,SC0412,SC0413 control=1:SC0403 allowed=0:SC0403,SC0412,SC0413
+width_realloc_d1_both hazard=1:SC0412,SC0413 control=0:- allowed=0:SC0412,SC0413
+width_realloc_d1_one hazard=1:SC0412,SC0413 control=0:- allowed=0:SC0412,SC0413
+width_realloc_d2_both hazard=1:SC0402,SC0403,SC0412,SC0413 control=1:SC0402,SC0403 allowed=0:SC0402,SC0403,SC0412,SC0413
+width_realloc_d2_one hazard=1:SC0402,SC0403,SC0412,SC0413 control=1:SC0402,SC0403 allowed=0:SC0402,SC0403,SC0412,SC0413
+width_realloc_param_d2_both hazard=1:SC0402,SC0412 control=1:SC0402,SC0412 allowed=0:SC0402,SC0412
+width_ret_d0_both hazard=1:SC0412 control=1:SC0412 allowed=0:SC0412
+width_ret_d0_one hazard=1:SC0412 control=1:SC0412 allowed=0:SC0412
+width_ret_d1_both hazard=1:SC0412,SC0413 control=1:SC0412,SC0413 allowed=0:SC0412,SC0413
+width_ret_d1_one hazard=1:SC0412,SC0413 control=1:SC0412,SC0413 allowed=0:SC0412,SC0413
+width_ret_d2_both hazard=1:SC0403,SC0412,SC0413 control=1:SC0403,SC0412,SC0413 allowed=0:SC0403,SC0412,SC0413
+width_ret_d2_one hazard=1:SC0403,SC0412,SC0413 control=1:SC0403,SC0412,SC0413 allowed=0:SC0403,SC0412,SC0413
+width_store_d0_both hazard=1:SC0412 control=0:- allowed=1:SC0412
+width_store_d0_one hazard=1:SC0412 control=0:- allowed=1:SC0412
+width_store_d1_both hazard=1:SC0412,SC0413 control=0:- allowed=0:SC0412,SC0413
+width_store_d1_one hazard=1:SC0412,SC0413 control=0:- allowed=0:SC0412,SC0413
+width_store_d2_both hazard=1:SC0403,SC0412,SC0413 control=1:SC0403 allowed=0:SC0403,SC0412,SC0413
+width_store_d2_one hazard=1:SC0403,SC0412,SC0413 control=1:SC0403 allowed=0:SC0403,SC0412,SC0413
