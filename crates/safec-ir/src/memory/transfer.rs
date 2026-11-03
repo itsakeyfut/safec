@@ -922,11 +922,34 @@ impl Allocations<'_> {
                 // may name one, each block it may land in may be (#724).
                 // Asked before the exposure below, which clears the source's
                 // own mark. A source read through a dereference is not asked.
+                // **And a local it names as much as a block** (#750): a local
+                // array nothing wrote, copied into a block, put bytes nothing
+                // wrote there, and `memcpy(n, a, 8); r = *n;` read them in
+                // silence. Certainly so where it names only locals nothing
+                // wrote and nothing it cannot name, as a block's is by
+                // `Known::names_only_fresh`; maybe, where any it names may be,
+                // at any element, since this keeps one mark per object.
                 let (source_fresh, source_maybe) = match source {
-                    Some(Operand::Copy(source)) if source.projection.is_empty() => (
-                        value.names_only_fresh(source.local),
-                        value.may_name_fresh(source.local),
-                    ),
+                    Some(Operand::Copy(source)) if source.projection.is_empty() => {
+                        let held = &value.points_to[source.local.index()];
+                        let plain =
+                            !(held.lost || held.foreign || held.loaded || held.inner_address);
+                        let locals_unwritten = plain
+                            && held.sites().next().is_none()
+                            && held.writes_to.any()
+                            && held
+                                .writes_to
+                                .ones()
+                                .all(|l| value.certainly_unwritten(l, None));
+                        let locals_maybe = held.writes_to.ones().any(|l| {
+                            value.certainly_unwritten(l, None)
+                                || value.may_be_unwritten(l, None, true)
+                        });
+                        (
+                            value.names_only_fresh(source.local) || locals_unwritten,
+                            value.may_name_fresh(source.local) || locals_maybe,
+                        )
+                    }
                     Some(Operand::Copy(_) | Operand::Constant(_)) | None => (false, false),
                 };
                 let before = value.block_init.clone();
@@ -1042,11 +1065,44 @@ impl Allocations<'_> {
                 };
                 let pending = value.array_writes_before(writes);
                 let mut may_write = vec![written.is_none(); value.local_init.len()];
-                for local in written.into_iter().flatten() {
-                    may_write[local] = true;
+                for local in written.iter().flatten() {
+                    may_write[*local] = true;
                 }
                 value.replaced(|_| true, |local| may_write[local]);
                 value.array_writes_after(pending);
+                // **What it carries into a local it writes**, as into a block
+                // above (#724): `memcpy(a, m, 8); r = a[0];` with `m` nothing
+                // wrote read `a[0]` in silence, where `a[0] = *m;` is certain
+                // (#750). Certain where the source names only what nothing
+                // wrote and the copy covers this one local whole from its
+                // start; a doubt about the whole local, every element of it,
+                // where the source may name such a thing, since a copy of part
+                // of it may be of the part that was written, by the user's
+                // decision.
+                if let (Some(lands), Some(Operand::Copy(dest))) = (&written, dest) {
+                    let at_start = dest.projection.is_empty()
+                        && matches!(value.points_to[dest.local.index()].offset, Offset::Zero);
+                    for &local in lands {
+                        let size = function
+                            .locals()
+                            .nth(local)
+                            .and_then(|id| self.unit.size_of(function.local(id)));
+                        let covers =
+                            matches!((size, bytes), (Some(size), Some(bytes)) if bytes >= size);
+                        if source_fresh
+                            && lands.len() == 1
+                            && at_start
+                            && covers
+                            && matches!(length, CopiedPointers::Whole)
+                        {
+                            value.local_init[local] = Init::Unwritten;
+                            value.element_init[local].unwrite_all();
+                        } else if source_maybe {
+                            value.local_init[local].doubt();
+                            value.element_init[local].doubt_all();
+                        }
+                    }
+                }
                 for target in past_end {
                     self.written_past_its_end(function, value, target, &unwritten_before);
                 }
