@@ -208,10 +208,11 @@ size is not a constant, a pointer this check lost or whose local escaped, and
 a pointer read out of memory as a `void *`. A parameter and a call's result
 are believed to point at one whole object of the type they arrive as, so `void
 f(int *p) { *p = 1; }` is silent. A pointer read out of memory is believed no
-wider than what was recorded where it was stored, and nothing where nothing
-was: `*box = &q; int *t = *box; *t = 1;` is silent, since the store recorded
-`q`'s size, and a pointer read out of a `calloc` block nothing was stored in is
-unknown.
+wider than what was recorded where it was stored, which is the type it arrived
+as for memory a parameter or a call's result points at, and nothing where
+nothing was: `*box = &q; int *t = *box; *t = 1;` is silent, since the store
+recorded `q`'s size, and a pointer read out of memory no pointer was stored
+into, a `calloc` block or one `memset` filled, is unknown.
 [ADR-0061](adr/0061-a-pointer-read-out-of-memory-is-believed-only-as-wide-as-was-recorded.md)
 is that part of the decision. A library
 function that takes a length, `memset`, `memcpy`, `memmove`, `memcmp`, `memchr`

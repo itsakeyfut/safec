@@ -909,14 +909,14 @@ impl Known {
     /// condition**, that its destination may hold a pointer: a byte read out
     /// of memory is a load too, so `memcpy(m, &b, 1)` with `b` such a `char`,
     /// read back as a pointer, is doubted, where `*cm = b;` into a `char *`
-    /// records no bound. A bound here only narrows what is believed, and a
-    /// pointer read out of bytes a `char` filled is not shown to be whole.
-    /// Found by review. `depth_cap` is [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer),
+    /// records no bound. A pointer read out of bytes a `char` filled is not
+    /// shown to be whole, and since ADR-0061 no bound at a load is no belief
+    /// either. Found by review. `depth_cap` is [`Allocations::deepest_pointer`](super::transfer::Allocations::deepest_pointer),
     /// which the list that puts it one level down is cut to.
     ///
     /// **The one walk a load, a departure and a copy take**, so that the
     /// spellings of one read cannot believe different things. See
-    /// [`Levels`] and ADR-0060.
+    /// [`Levels`], ADR-0060 and ADR-0061.
     pub(super) fn memory_levels(
         &self,
         local: LocalId,

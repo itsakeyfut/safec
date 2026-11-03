@@ -138,8 +138,12 @@ of the orders, and the second is the false positive the rule costs. See
 **The memory level asks whether an access fits the object it reaches**, as well
 as whether the object is live. An allocation asked for with a constant size
 takes exactly that, a local takes its type's size, and a pointer that arrives
-from outside the function, a parameter, a call's result or a pointer read out
-of memory, is believed to point at one whole object of the type it arrives as.
+from outside the function, a parameter or a call's result, is believed to
+point at one whole object of the type it arrives as. A pointer read out of
+memory is believed no wider than what was recorded where it was stored, which
+is the type it arrived as for memory a parameter or a call's result points at,
+and nothing where nothing was
+([ADR-0061](adr/0061-a-pointer-read-out-of-memory-is-believed-only-as-wide-as-was-recorded.md)).
 An access is proved to fit only from those; it is `Unsafe` where every object it
 may reach is known exactly and is narrower than the access, and `Unknown`
 everywhere else, a pointer moved off its start among them. What is believed

@@ -514,7 +514,8 @@ impl Allocations<'_> {
     /// says its memory holds that many levels down, nor than the sites it
     /// may be read out of, or any on the way to them, say was stored there
     /// ([`Known::memory_levels`]). `0` where nothing is believed, **and `0`
-    /// where nothing is recorded at any level on the way**: a route that
+    /// where nothing on the way of the read recorded a width for the pointer
+    /// read**, so that `Known::memory_levels` answers no bound: a route that
     /// reaches memory without recording a width has read none, and believing
     /// the type there is how seventeen routes were silent from #622 to #724.
     /// See ADR-0061.
@@ -1234,6 +1235,10 @@ impl Allocations<'_> {
     /// store any pointer. One answer for a local ([`Self::handed`]) and for a
     /// site ([`Self::handed_site`]), so the two cannot read a type
     /// differently.
+    ///
+    /// No case reaches the `None` arm through a site, nor tells the levels
+    /// below a site's own from nothing: only the width a site is handed at is
+    /// held, by `a_pointer_read_out_of_memory_a_call_was_handed_is_not_reported_as_indeterminate`.
     fn handed_bounds(&self, read_as: Option<TyId>) -> (u64, Levels) {
         let nothing = || Levels::from_bounds(vec![Some(0); self.deepest_pointer]);
         let Some(read_as) = read_as else {
@@ -2861,12 +2866,13 @@ impl Analysis for Allocations<'_> {
                     // than what it points at. `char *c = *cc; *m = c;`
                     // handed `m` on as an `int **` with nothing asked, and
                     // so did the same with `*m = malloc(4);` first, whose
-                    // site the load also named (#632). **Only a load**,
-                    // which is what `written.loaded` asks: a pointer this
-                    // check lost or a call wrote believes nothing too, and
-                    // bounding it at zero doubted a lost pointer to whole
-                    // allocations read back, which this issue is not
-                    // about. A load that believes nothing is bounded at
+                    // site the load also named (#632). **Only a load** was
+                    // bounded here then, which is what `written.loaded` asks:
+                    // bounding a pointer this check lost at zero doubted a
+                    // lost pointer to whole allocations read back, which that
+                    // issue was not about. Since ADR-0061 every value is
+                    // bounded, a lost one at zero (`Held::recorded_width`),
+                    // and the arms below say how. A load that believes nothing is bounded at
                     // zero, which is what it was asked. `Known::memory_levels`
                     // reads a local's own level from the same two fields, so
                     // that a copy of the local carries what this store

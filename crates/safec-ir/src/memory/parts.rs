@@ -1188,8 +1188,14 @@ pub(super) struct Held {
 /// believe an output. **So is an escaped local a store or a copy this check
 /// cannot place may have written** (`Known::replaced`, ADR-0031), which is
 /// marked as one a call wrote: believed as its type there too, as before
-/// ADR-0061, and asked by what it names where it is read through itself. Left as no bound, the five cases that hold the
-/// output-parameter idiom read back were doubted, measured.
+/// ADR-0061, and asked by what it names where it is read through itself.
+///
+/// Mutation: the walk's arm in `Known::memory_levels` answers `0` for such
+/// a value rather than this;
+/// `a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence`
+/// reports, among others. The store's arm answers without it;
+/// `a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back`
+/// reports.
 pub(super) const AS_TYPED: u64 = u64::MAX;
 
 /// The lower of two bounds, where `None` is no bound: a side that bounds
@@ -1289,9 +1295,9 @@ impl Held {
     /// none, and each local whose address it holds at the local's size,
     /// from `sizes`. What a store of it records in
     /// [`Contents::stored_at_most`], and what a local on the way of a read
-    /// gives from its own value (`Known::memory_levels`), so that the common
-    /// case carries a width once a load believes nothing that none was
-    /// recorded for (ADR-0061).
+    /// gives from its own value (`Known::memory_levels`). Since a load where
+    /// nothing is recorded believes nothing (ADR-0061), this is what keeps
+    /// the common case, `*box = &q; int *t = *box; *t = 1;`, proved.
     ///
     /// **`Some(0)` off its start or inside a local**, since neither has a
     /// width to read: `Offset` carries no distance (ADR-0036), and a local's
@@ -1301,8 +1307,16 @@ impl Held {
     /// arm leaves `x` naming the four-byte site alone, and `*box = x; int *t
     /// = *box; *t = 1;` was believed four bytes wide, silent where `*x = 1`
     /// is doubted. Found by review. **`None` where it names nothing**, a
-    /// null, which bounds nothing at a join. A load and a value a call wrote are answered by
-    /// their own belief before this is asked, and are `Some(0)` here.
+    /// null, which bounds nothing at a join.
+    ///
+    /// **Three clauses no case reaches.** Both callers answer a load and a
+    /// value a call wrote by its own belief before asking this, so `loaded`
+    /// and `foreign` give `Some(0)` only to a caller that does not, rather
+    /// than the width of what such a value merely names. And no C this
+    /// frontend reads sets `inner_address`, since `&a[1]` is lowered as
+    /// `&a[0]` moved by one, which `offset` answers; it is here for the
+    /// frontend that does not fold it, as [`Self::inner_address`] says.
+    /// Dropping any of the three moves no case, measured.
     ///
     /// **The least, and no case tells it from the greatest**: taking the
     /// greatest moves nothing, measured, because a load carries what the
