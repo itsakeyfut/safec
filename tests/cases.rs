@@ -3826,6 +3826,13 @@ cases! {
         // reports.
         a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A value lost in a loop and joined into a live allocation on one
+        // arm names that allocation alone, and may be the loop's one-byte
+        // block: stored and read back as an `int *`, the write through it
+        // is `SC0412`, as `*x = 1` is. Mutation: `Held::recorded_width`
+        // does not ask whether the value is lost; this goes silent, as it
+        // was on main. Found by review of #735.
+        a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And what a call this check cannot read returns when it was handed
         // a lost value, which may be that value: `r = id(*box);` with `id`
         // defined, and `r = id(u);` with it only declared, then `free(u);`

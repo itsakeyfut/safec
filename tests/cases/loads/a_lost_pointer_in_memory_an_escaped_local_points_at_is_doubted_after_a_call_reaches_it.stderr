@@ -1,3 +1,13 @@
+warning[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:22:5 ]
+    │
+ 22 │     w = box;
+    │     ───┬───  
+    │        ╰───── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 warning[SC0402]: this uses `s`, which this check stopped following
     ╭─[ a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:25:9 ]
     │

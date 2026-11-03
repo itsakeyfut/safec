@@ -1292,11 +1292,13 @@ impl Held {
     ///
     /// **`Some(0)` off its start or inside a local**, since neither has a
     /// width to read: `Offset` carries no distance (ADR-0036), and a local's
-    /// size is not the size of something inside it. **`None` where it names
-    /// nothing**, a null, which bounds nothing at a join. **Not asked
-    /// whether it is lost**: a lost value's sites are made again by the same
-    /// call at the same size, which is what `report::fits` already relies on
-    /// where a value leaves. A load and a value a call wrote are answered by
+    /// size is not the size of something inside it. **And where it is
+    /// lost**, since what it holds may be an object no site it names stands
+    /// for: a loop's earlier `malloc(1)` joined into `x = malloc(4)` on one
+    /// arm leaves `x` naming the four-byte site alone, and `*box = x; int *t
+    /// = *box; *t = 1;` was believed four bytes wide, silent where `*x = 1`
+    /// is doubted. Found by review. **`None` where it names nothing**, a
+    /// null, which bounds nothing at a join. A load and a value a call wrote are answered by
     /// their own belief before this is asked, and are `Some(0)` here.
     ///
     /// **The least, and no case tells it from the greatest**: taking the
@@ -1309,7 +1311,12 @@ impl Held {
         extent: &[Option<Extent>],
         sizes: &[Option<u64>],
     ) -> Option<u64> {
-        if self.offset != Offset::Zero || self.inner_address || self.loaded || self.foreign {
+        if self.offset != Offset::Zero
+            || self.inner_address
+            || self.lost
+            || self.loaded
+            || self.foreign
+        {
             return Some(0);
         }
         let sites = self

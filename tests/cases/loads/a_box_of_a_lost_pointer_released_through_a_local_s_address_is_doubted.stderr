@@ -1,3 +1,13 @@
+warning[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:26:5 ]
+    │
+ 26 │     release_ppp(&b);
+    │     ───────┬───────  
+    │            ╰───────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 warning[SC0402]: this uses `r`, which this check stopped following
     ╭─[ a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:29:9 ]
     │
