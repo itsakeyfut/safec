@@ -347,6 +347,47 @@ mod tests {
         assert!(!at_write);
     }
 
+    /// The return place is read by `Return`, which hands it to the caller,
+    /// and not by the block that writes it first. Mutation: leave the return
+    /// place unread at `Return`; the first assertion fails.
+    #[test]
+    fn the_return_place_is_read_where_the_function_returns() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual(
+            "t.c",
+            "int f(void) { return 0; }
+",
+        );
+        let at = Span::new(file, 0, 3);
+        let mut unit = TranslationUnit::new(
+            Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+        );
+        let int = unit.push_type(Ty::Int);
+        let mut function = Function::new(at, int, []);
+        let returned = function.return_place();
+        let writes = function.reserve_block();
+        let returns = function.reserve_block();
+        function.fill_block(
+            writes,
+            assign(
+                Place::local(returned),
+                Rvalue::Use(Operand::Constant(0)),
+                at,
+                returns,
+            ),
+        );
+        function.fill_block(
+            returns,
+            Block {
+                elements: vec![],
+                terminator: Terminator::Return,
+            },
+        );
+        let live = live_in(&function);
+        assert!(live[returns.index()][returned.index()]);
+        assert!(!live[writes.index()][returned.index()]);
+    }
+
     #[test]
     fn a_local_a_branch_tests_is_read() {
         let (at_read, at_write) = liveness(|_, x, _, at, then| Block {
