@@ -1,9 +1,10 @@
-//! The analysis's own value, [`Allocations`], and the facts about a
-//! function both the walk and the report read from it.
+//! The analysis, [`Allocations`], and the facts about a function both the
+//! walk and the report read from it.
 //!
 //! The walk is `transfer.rs` and the report is `report.rs`; what both read
-//! is here, so that neither imports the other's file to get it. See
-//! ADR-0063.
+//! is here, so that the walk imports nothing of the report's to get it. The
+//! report still reads the walk's `CopiedPointers`, which is the direction a
+//! report reads in. See ADR-0063.
 
 use crate::cfg::Cfg;
 use crate::ir::{FuncId, Function, LocalId, Operand, Place, TranslationUnit, Ty, TyId};
@@ -42,7 +43,7 @@ pub(super) struct Allocations<'a> {
     /// had the pointer, and may have left it where a call can free it.
     ///
     /// **Not every parameter.** Every one is a site, for the reason the module
-    /// comment gives, and an integer parameter can hold an allocation only
+    /// comment of `memory` gives, and an integer parameter can hold an allocation only
     /// through a conversion this frontend does not accept yet: a cast, which
     /// does not parse, or an implicit one, which C17 6.5.16.1 p1 forbids and
     /// #154 is about. Exposing one made every opaque call's result reach it.
@@ -57,8 +58,9 @@ pub(super) struct Allocations<'a> {
     pub(super) exposed_parameters: Vec<LocalId>,
     /// Per local, whether a call this check cannot read writes its result
     /// into it: [`Self::opaque_results_of`] answers it, once per function.
-    /// Indexed by site as well, since a site is named by the local the call
-    /// that made it wrote into. Not by position: a local written by such a
+    /// Read at a site as well, through [`Site::local`](super::index::Site::local), since a site is named by
+    /// the local the call that made it wrote into. Not by position: a local
+    /// written by such a
     /// call anywhere is marked everywhere, which can only add a doubt.
     ///
     /// What such a result points at is memory the callee handed over, as

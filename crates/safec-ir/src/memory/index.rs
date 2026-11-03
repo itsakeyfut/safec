@@ -6,9 +6,11 @@
 //! named by the local the allocation was written into, so both used to be a
 //! bare `usize`, and `contents[container]` with `container` a local or
 //! `points_to[target]` with `target` a site compiled and answered about the
-//! wrong object. Now passing one for the other is `error[E0308]` and
-//! indexing a table by the wrong one `error[E0277]`, measured by swapping
-//! each at a reader; and where the two really are the same object, as for a
+//! wrong object. Now passing one for the other does not compile, measured
+//! by swapping each at a reader: an argument and a table of sites indexed by
+//! a local are `error[E0308]`, and a table of locals indexed by a site is
+//! `error[E0277]`, since that table is also indexed by the IR's `LocalId`.
+//! And where the two really are the same object, as for a
 //! parameter or a call's result, [`Site::of`] and [`Site::local`] say so
 //! where it happens. See ADR-0063.
 

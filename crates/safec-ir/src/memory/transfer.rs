@@ -1,6 +1,7 @@
-//! The analysis, [`Allocations`], and its transfer functions: what each element,
-//! terminator and edge of a function does to the [`Known`] value, and what the
-//! analysis asks of the IR to answer that.
+//! The transfer functions of the analysis, [`Allocations`], whose fields are
+//! in `allocations.rs`: what each element, terminator and edge of a function
+//! does to the [`Known`] value, and what the analysis asks of the IR to answer
+//! that.
 
 use std::collections::{BTreeMap, BTreeSet};
 
