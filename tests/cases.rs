@@ -260,8 +260,13 @@ cases! {
         a_copy_out_of_a_local_nothing_wrote_read_through_dereferences_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store through a pointer read out of memory that may name two
-        // blocks may have missed either (#754). Mutations, measured at the
-        // commit that guards them.
+        // blocks may have missed either (#754). Mutation: keep the mark only
+        // for a pointer neither loaded, lost nor foreign, as before; it goes
+        // silent. Set no `stored_through` there; `*v` is doubted as well.
+        // Keep the mark whatever the landing names;
+        // `a_pointer_read_out_of_memory_a_loaded_pointer_wrote_is_not_reported`
+        // and `a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported`
+        // are doubted.
         a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_freed_and_dropped_on_the_other_arm_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same of a library copy, whose destination may be either block:
