@@ -31,8 +31,9 @@ enum Belief {
     /// (ADR-0045): a loop's earlier allocation, put there, freed by the name
     /// it was put there under, read back and used. Held in memory, a lost
     /// pointer is doubted only once something may have freed it, so the free
-    /// is what makes it a hazard; and not a free of the loop's later
-    /// allocation, which is another object (ADR-0045).
+    /// is what makes it a hazard. What is freed is the earlier allocation
+    /// itself, through the name it was stored under: a free of the loop's
+    /// later allocation frees another object, and leaves nothing to doubt.
     Lost,
     /// Whether a pointer there may be stale (ADR-0045): stored on a loop's
     /// first turn, freed, its site made again, read back and used.
@@ -78,6 +79,14 @@ struct Row {
     shape: Shape,
 }
 
+/// Every value of each axis, in the order [`axis_place`] gives them.
+///
+/// **Adding a value** is: its variant, its arm in [`axis_place`] and
+/// [`name_of`], which `E0004` asks for; its place here, which
+/// `every_axis_holds_every_value_once` asks for; then for a belief its
+/// [`mark`], its template and its arm in [`program`]; its rows in `routes!`
+/// and what cannot be written in [`NOT_WRITTEN`], which
+/// `the_matrix_is_every_combination_of_its_axes` asks for; and a blessing.
 const BELIEFS: [Belief; 4] = [Belief::Width, Belief::Fresh, Belief::Lost, Belief::Stale];
 const ROUTES: [Route; 5] = [
     Route::Store,
@@ -88,6 +97,105 @@ const ROUTES: [Route; 5] = [
 ];
 const DEPTHS: [Depth; 3] = [Depth::D0, Depth::D1, Depth::D2];
 const SHAPES: [Shape; 2] = [Shape::Both, Shape::One];
+
+/// Where each value stands in its axis's list. A `match`, so that a variant
+/// added to an axis does not compile until it is given a place, and the test
+/// below fails until the list holds it there.
+fn axis_place(row: Row) -> [usize; 4] {
+    let belief = match row.belief {
+        Belief::Width => 0,
+        Belief::Fresh => 1,
+        Belief::Lost => 2,
+        Belief::Stale => 3,
+    };
+    let route = match row.route {
+        Route::Store => 0,
+        Route::Memcpy => 1,
+        Route::Realloc => 2,
+        Route::Call => 3,
+        Route::Ret => 4,
+    };
+    let depth = match row.depth {
+        Depth::D0 => 0,
+        Depth::D1 => 1,
+        Depth::D2 => 2,
+    };
+    let shape = match row.shape {
+        Shape::Both => 0,
+        Shape::One => 1,
+    };
+    [belief, route, depth, shape]
+}
+
+/// Each axis's list holds every value at the place [`axis_place`] gives it,
+/// so a value left out of a list is a failure rather than rows nobody asks
+/// for.
+///
+/// Mutation: drop `Belief::Stale` from `BELIEFS` and shorten it; this fails.
+#[test]
+fn every_axis_holds_every_value_once() {
+    let any = Row {
+        belief: Belief::Width,
+        route: Route::Store,
+        depth: Depth::D0,
+        shape: Shape::Both,
+    };
+    for (place, belief) in BELIEFS.iter().enumerate() {
+        assert_eq!(
+            axis_place(Row {
+                belief: *belief,
+                ..any
+            })[0],
+            place,
+            "{belief:?}"
+        );
+    }
+    for (place, route) in ROUTES.iter().enumerate() {
+        assert_eq!(
+            axis_place(Row {
+                route: *route,
+                ..any
+            })[1],
+            place,
+            "{route:?}"
+        );
+    }
+    for (place, depth) in DEPTHS.iter().enumerate() {
+        assert_eq!(
+            axis_place(Row {
+                depth: *depth,
+                ..any
+            })[2],
+            place,
+            "{depth:?}"
+        );
+    }
+    for (place, shape) in SHAPES.iter().enumerate() {
+        assert_eq!(
+            axis_place(Row {
+                shape: *shape,
+                ..any
+            })[3],
+            place,
+            "{shape:?}"
+        );
+    }
+    let last = axis_place(Row {
+        belief: Belief::Stale,
+        route: Route::Ret,
+        depth: Depth::D2,
+        shape: Shape::One,
+    });
+    assert_eq!(
+        last,
+        [
+            BELIEFS.len() - 1,
+            ROUTES.len() - 1,
+            DEPTHS.len() - 1,
+            SHAPES.len() - 1
+        ]
+    );
+}
 
 /// One `#[test]` per row, and the roster the axis guard reads, from one
 /// literal table, as `cases!` builds the corpus (ADR-0007).
@@ -196,9 +304,6 @@ routes! {
     stale_ret_d2_both: Stale Ret D2 Both;
 }
 
-/// The combinations no program is written for, each with why: a row that is
-/// neither here nor in the table fails
-/// `the_matrix_is_every_combination_of_its_axes`.
 /// A combination of the axes no program is written for, and why.
 struct Unwritten {
     route: Route,
@@ -208,6 +313,14 @@ struct Unwritten {
     why: &'static str,
 }
 
+/// The combinations no program is written for, each with why: a row that is
+/// neither here nor in the table fails
+/// `the_matrix_is_every_combination_of_its_axes`, and so does an entry with
+/// no reason, which excuses nothing.
+///
+/// `Route::Realloc` at `Depth::D0` is unwritten for the beliefs that grow
+/// what holds the slot, since a local is not grown; `fresh` grows the block
+/// it reads from instead, so its rows at a local are written.
 const NOT_WRITTEN: &[Unwritten] = &[
     Unwritten {
         route: Route::Realloc,
@@ -369,14 +482,14 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         "width_call_d0_both",
         Side::Control,
         Why::Belief(
-            "a call this check cannot read writes the local through its address, and what it wrote is doubted where read through, the output-parameter cost (ADR-0060)",
+            "a call this check cannot read writes the local through its address, and ADR-0060 doubts what it wrote where read through, which it says the output-parameter idiom pays",
         ),
     ),
     (
         "width_call_d0_one",
         Side::Control,
         Why::Belief(
-            "a call this check cannot read writes the local through its address, and what it wrote is doubted where read through, the output-parameter cost (ADR-0060)",
+            "a call this check cannot read writes the local through its address, and ADR-0060 doubts what it wrote where read through, which it says the output-parameter idiom pays",
         ),
     ),
     ("width_memcpy_d0_both", Side::Control, Why::Cost("#769")),
@@ -532,8 +645,8 @@ fn mark(belief: Belief) -> (&'static str, Option<&'static str>) {
     match belief {
         Belief::Width => ("SC0412", None),
         Belief::Fresh => ("SC0411", None),
-        // **Either phrase**: a free of a lost pointer is reported in whichever
-        // words the route leaves it, "this check stopped following" at a
+        // **Either phrase**: the use after a lost pointer's free is reported
+        // in whichever words the route leaves it, "this check stopped following" at a
         // local and "may have been freed" through a `realloc` two levels
         // down, and both are the doubt the belief exists to give. The
         // control, which differs in the free alone, is what keeps this from
@@ -662,6 +775,12 @@ fn width(row: Row, hazard: bool) -> Vec<String> {
 
 /// Memory nothing wrote copied into the slot for the hazard; the same memory
 /// written first for the control.
+///
+/// **Through a store or a `realloc`, what is held is the read**: the hazard
+/// loads `*b` or `*g_` to store it, and ADR-0057 reports that load where it
+/// happens, so those rows hold that a store and a `realloc` read fresh
+/// memory as fresh, and not what reaches the slot. Only `memcpy` carries the
+/// mark into the slot unread, and its rows are the ones that hold that.
 fn fresh(row: Row, hazard: bool) -> Vec<String> {
     let (made, slot) = container(row.depth);
     let mut lines = made;
@@ -883,7 +1002,8 @@ fn disagreement(name: &str, row: Row) -> Option<Side> {
 /// `width_memcpy_d1_both` fails, among the four rows at one and two levels.
 /// Mutation: the copy carries no unwritten mark into a block;
 /// `fresh_memcpy_d1_both` fails, with its one-arm row. Mutation: ask the
-/// control's program for the hazard's; 46 rows fail. Mutation: list in
+/// control's program for the hazard's; every row not listed on its control
+/// fails. Mutation: list in
 /// `ACCEPTED` a row that agrees; that row fails.
 fn check(name: &str, row: Row) {
     let entry = ACCEPTED.iter().find(|(listed, _, _)| *listed == name);
@@ -891,17 +1011,21 @@ fn check(name: &str, row: Row) {
     let found = disagreement(name, row);
     if found != listed {
         let mark = mark(row.belief);
-        let meaning = match (entry, found) {
-            (Some((_, _, Why::Belief(why))), None) => format!(
+        let meaning = match meaning(entry.map(|&(_, _, why)| why), found) {
+            Meaning::Regression(why) => format!(
                 "THIS IS A REGRESSION: the control is not provable from the unit ({why}), \
                  and the row agreeing is the check saying safe about it. Restore the doubt, \
                  or supersede the record first."
             ),
-            (Some((_, _, Why::Cost(why))), None) => {
+            Meaning::Fixed(why) => {
                 format!("The row now agrees ({why}): remove its entry from `ACCEPTED`.")
             }
-            _ => "A row that newly disagrees is a defect, or a belief a record took, and is \
-                  listed with the issue or record that says so."
+            Meaning::Moved(why) => format!(
+                "The row is listed ({why}) but disagrees on another side now: read both \
+                 programs and say which side, or which issue, holds."
+            ),
+            Meaning::New => "A row that newly disagrees is a defect, or a belief a record took, \
+                             and is listed with the issue or record that says so."
                 .to_owned(),
         };
         panic!(
@@ -912,6 +1036,48 @@ fn check(name: &str, row: Row) {
             program(row, false),
         );
     }
+}
+
+/// What a row disagreeing with what `ACCEPTED` lists for it means.
+#[derive(Debug, PartialEq, Eq)]
+enum Meaning {
+    /// A listed belief now agrees: the check says safe about what it cannot
+    /// prove.
+    Regression(&'static str),
+    /// A listed cost now agrees: the entry goes.
+    Fixed(&'static str),
+    /// A listed row disagrees on another side than listed.
+    Moved(&'static str),
+    /// A row nothing lists disagrees.
+    New,
+}
+
+fn meaning(listed: Option<Why>, found: Option<Side>) -> Meaning {
+    match (listed, found) {
+        (Some(Why::Belief(why)), None) => Meaning::Regression(why),
+        (Some(Why::Cost(why)), None) => Meaning::Fixed(why),
+        (Some(Why::Belief(why) | Why::Cost(why)), Some(_)) => Meaning::Moved(why),
+        (None, _) => Meaning::New,
+    }
+}
+
+/// **A listed belief that agrees is a regression, and a listed cost that
+/// agrees is a fix**, which is the one thing the two kinds of entry exist to
+/// tell apart, so it is asked here rather than left to a failure's wording.
+///
+/// Mutation: swap the first two arms of [`meaning`]; this fails.
+#[test]
+fn a_belief_agreeing_is_a_regression_and_a_cost_agreeing_is_a_fix() {
+    assert_eq!(
+        meaning(Some(Why::Belief("b")), None),
+        Meaning::Regression("b")
+    );
+    assert_eq!(meaning(Some(Why::Cost("c")), None), Meaning::Fixed("c"));
+    assert_eq!(
+        meaning(Some(Why::Cost("c")), Some(Side::Hazard)),
+        Meaning::Moved("c")
+    );
+    assert_eq!(meaning(None, Some(Side::Control)), Meaning::New);
 }
 
 /// The table is every combination of its axes, less what `NOT_WRITTEN` says
@@ -1106,10 +1272,22 @@ fn expected_path() -> PathBuf {
 /// proves nothing.
 fn blessing() -> bool {
     let set = |name: &str| std::env::var_os(name).is_some_and(|value| !value.is_empty());
-    let asked = set("SAFEC_BLESS");
+    decide_blessing(set("SAFEC_BLESS"), set("CI"))
+}
+
+/// Split from the environment so that the refusal can be tested, as
+/// `tests/cases.rs` splits its own.
+fn decide_blessing(asked: bool, under_ci: bool) -> bool {
     assert!(
-        !(asked && set("CI")),
+        !(asked && under_ci),
         "SAFEC_BLESS is set under CI. Expected output is written by a person who then reads the diff."
     );
     asked
+}
+
+/// Mutation: return `asked` without the assertion; this fails.
+#[test]
+#[should_panic(expected = "SAFEC_BLESS is set under CI")]
+fn blessing_the_matrix_is_refused_under_ci() {
+    decide_blessing(true, true);
 }

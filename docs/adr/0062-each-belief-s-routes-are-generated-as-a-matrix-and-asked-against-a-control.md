@@ -131,8 +131,8 @@ summary, the matrix run, and the file restored.
 ### Generated programs written into the corpus
 
 * Good, because each program can be read as a file.
-* Bad, because some 960 files and their table lines have to be kept in step with
-  the generator, by a check of their own.
+* Bad, because some 158 programs, up to four files each, and their table lines
+  have to be kept in step with the generator, by a check of their own.
 
 ## More Information
 
