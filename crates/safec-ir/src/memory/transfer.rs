@@ -2349,6 +2349,31 @@ impl Analysis for Allocations<'_> {
         self.joined(into, from, true);
     }
 
+    /// A back edge folded in, then every place written on the paths into the
+    /// loop this turn and unwritten along the back edge made `Maybe`, as
+    /// [`Init::unwritten_again`] says. **Not a site the paths into the loop
+    /// did not name**, `SiteState::Unheld`, which is the join's identity
+    /// (ADR-0048): a block made in last turn's body is unwritten, and was
+    /// nothing before the loop. **A scalar local and an element decide no
+    /// case yet**: nothing makes one unwritten again but `StorageLive`, which
+    /// makes a new object, while a copy between a block and a local carries
+    /// no mark (#750). They are asked so that the rule does not split by
+    /// kind (#760).
+    fn join_back_beside(&self, into: &mut Self::Value, from: &Self::Value, before: &Self::Value) {
+        self.joined(into, from, true);
+        for (site, init) in into.block_init.iter_mut().enumerate() {
+            if !matches!(before.state[site], SiteState::Unheld) {
+                *init = init.unwritten_again(before.block_init[site], from.block_init[site]);
+            }
+        }
+        for (local, init) in into.local_init.iter_mut().enumerate() {
+            *init = init.unwritten_again(before.local_init[local], from.local_init[local]);
+        }
+        for (local, elements) in into.element_init.iter_mut().enumerate() {
+            elements.unwritten_again(&before.element_init[local], &from.element_init[local]);
+        }
+    }
+
     fn element(&self, function: &Function, element: &Element, value: &mut Self::Value) {
         // What is read here is read where this element runs, against what held
         // before it, which is the same question `findings` asks one line

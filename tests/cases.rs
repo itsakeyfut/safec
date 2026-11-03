@@ -225,6 +225,11 @@ cases! {
         // doubted and the second is doubted.
         a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_freed_and_dropped_on_the_first_arm_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A loop that makes a written block unwritten again leaves it in
+        // doubt after it and on its later turns (#760). Mutations, measured
+        // at the commit that guards them.
+        a_block_a_loop_makes_unwritten_again_is_doubted_where_read_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_a_loop_makes_unwritten_again_is_doubted_where_read_on_a_later_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_freed_and_dropped_on_the_other_arm_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same of a library copy, whose destination may be either block:
         // it keeps the doubt, and a copy into the one block it names clears

@@ -602,6 +602,22 @@ impl Init {
         }
     }
 
+    /// What a loop's back edge leaves of `self`, the join already made, where
+    /// the place was `before` on the paths into the loop on this turn and
+    /// `back` along the back edge: **`Maybe` where it was written before the
+    /// loop and is unwritten again along the back edge**, since the body made
+    /// it so and the path that skips the body leaves it written. The back
+    /// edge's exemption, `Unwritten` with `Written` meeting as `Written`, is
+    /// for a loop that fills a place (#668, #670), and a loop that empties
+    /// one is the other direction; `memcpy(m, s, 8)` in a loop, with `s` a
+    /// block nothing wrote, read `*m` after it in silence (#760).
+    pub(super) fn unwritten_again(self, before: Self, back: Self) -> Self {
+        match (before, back) {
+            (Self::Written, Self::Unwritten) => Self::Maybe,
+            (Self::Unwritten | Self::Maybe | Self::Written, _) => self,
+        }
+    }
+
     /// What a write that may have missed it leaves: a proof that nothing
     /// wrote it ends, and a doubt stays. `Written` stays `Written`: this is
     /// a write, not a reason to doubt.
@@ -721,6 +737,16 @@ impl Inits {
     /// Whether some element may be unwritten.
     pub(super) fn any_may_be_unwritten(&self) -> bool {
         self.doubted.any()
+    }
+
+    /// Each element as [`Init::unwritten_again`] leaves it.
+    pub(super) fn unwritten_again(&mut self, before: &Self, back: &Self) {
+        for element in 0..self.len() {
+            let init = self
+                .get(element)
+                .unwritten_again(before.get(element), back.get(element));
+            self.set(element, init);
+        }
     }
 
     /// Each element joined with the other's as [`Init::joined`] says.
@@ -2065,6 +2091,29 @@ mod tests {
         }
         assert!(Inits::unwritten(3).all_unwritten());
         assert!(!Inits::written(3).any_may_be_unwritten());
+    }
+
+    /// A place written before a loop and unwritten again along its back
+    /// edge is in doubt, and every other triple keeps the join already
+    /// made. Mutation: answer `Maybe` whatever `before` is; this fails.
+    #[test]
+    fn a_place_a_loop_makes_unwritten_again_is_in_doubt_after_its_back_edge() {
+        for joined in INITS {
+            for before in INITS {
+                for back in INITS {
+                    let expected = if before == Init::Written && back == Init::Unwritten {
+                        Init::Maybe
+                    } else {
+                        joined
+                    };
+                    assert_eq!(
+                        joined.unwritten_again(before, back),
+                        expected,
+                        "{joined:?} {before:?} {back:?}"
+                    );
+                }
+            }
+        }
     }
 
     #[test]

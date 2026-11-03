@@ -175,8 +175,12 @@ pub trait Analysis {
     /// see. See ADR-0016.
     fn join(&self, into: &mut Self::Value, from: &Self::Value);
 
-    /// Fold `from`, sent along a loop's back edge, into the loop head's
-    /// `into`: an edge from a block at or after the head in `Cfg::drain`.
+    /// Fold `from` into a loop head's `into` as a back edge is folded: what
+    /// a back edge sent, an edge from a block at or after the head in
+    /// `Cfg::drain`, and also what the edges from before the loop sent,
+    /// joined with each other first, since what the head holds holds what
+    /// its back edges brought (#668). So `from` is not always the back edge;
+    /// [`Self::join_back_beside`] is told which is which.
     ///
     /// **The default is [`Self::join`], and it is right for every analysis
     /// that does not ask which edge a value arrived along**, which is every
@@ -186,6 +190,26 @@ pub trait Analysis {
     /// at a back edge it creates no doubt (#668). See ADR-0057.
     fn join_back(&self, into: &mut Self::Value, from: &Self::Value) {
         self.join(into, from);
+    }
+
+    /// Fold `from`, sent along a loop's back edge, into the head's `into`,
+    /// beside `before`, what the edges from before the loop sent on this
+    /// walk of it.
+    ///
+    /// **`before` and not the head's own value**, because the head holds
+    /// what its back edges brought on every earlier turn, an outer loop's
+    /// included, and a rule that compares a turn with the path into the loop
+    /// against it compares two turns (#668). Measured on #760, comparing
+    /// with the head's value decides no case today; what a first cut doubted,
+    /// an array made in an outer loop's body and filled by an inner loop,
+    /// came from asking the rule of an arrival from before the loop too,
+    /// which [`Self::join_back`] also folds in, with the roles reversed.
+    ///
+    /// The default is [`Self::join_back`], which no analysis but the memory
+    /// check needs more than.
+    fn join_back_beside(&self, into: &mut Self::Value, from: &Self::Value, before: &Self::Value) {
+        let _ = before;
+        self.join_back(into, from);
     }
 
     /// What one element of a block does to what is known.
@@ -648,7 +672,25 @@ fn solved<A: Analysis>(
                             // Left out as of a first turn: the head keeps
                             // what arrived from before the loop.
                             if first_turn_of != Some(successor) {
-                                analysis.join_back(&mut folded, just_sent);
+                                // Beside what the edges from before the loop
+                                // sent, which is at least one by now, since
+                                // the head was reached before a back edge
+                                // into it was. See `Analysis::join_back_beside`.
+                                let back = just_sent.clone();
+                                match sent_into(
+                                    analysis,
+                                    function,
+                                    cfg,
+                                    &sent,
+                                    successor,
+                                    &mut targets,
+                                    |from| cfg.drained_at(from) < cfg.drained_at(successor),
+                                ) {
+                                    Some(before) => {
+                                        analysis.join_back_beside(&mut folded, &back, &before);
+                                    }
+                                    None => analysis.join_back(&mut folded, &back),
+                                }
                             }
                         } else {
                             let forward = sent_into(
