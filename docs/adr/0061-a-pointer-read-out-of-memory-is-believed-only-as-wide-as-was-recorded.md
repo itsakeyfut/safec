@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-11-03
 decision-makers: itsakeyfut
 ---
@@ -21,7 +21,7 @@ memory without recording a width is believed whole, and seventeen fixes from
 This record replaces ADR-0060's belief about a load and nothing else. A
 parameter, a call's result and what a call writes into memory it was handed are
 still believed as the type they arrive as, and a pointer that leaves is still
-asked as ADR-0060 says. It is `proposed` while #735 is built.
+asked as ADR-0060 says.
 
 ## Decision Drivers
 
@@ -64,10 +64,33 @@ believed as its type, since the defect is reported once, where it is read.
 
 ### Confirmation
 
-To be filled by #735 with the cases and the mutation each holds: believe the
-type again where nothing is recorded, and the case named for it goes silent;
-record nothing for a store of a local's address, and `*box = &q; int *t = *box;
-*t = 1;` is reported.
+Each mutation applied on its own, the workspace run, and the file restored.
+
+* `Allocations::believed_read` believing the type again where nothing is
+  recorded: `a_pointer_read_out_of_memory_calloc_made_is_not_reported_as_indeterminate`
+  goes silent, among fourteen.
+* The store arm recording no width for a value that names objects:
+  `a_copy_from_a_source_read_out_of_memory_is_recorded` is reported, among 133.
+* `Known::memory_levels` giving a local's own value no width:
+  `a_live_pointer_written_into_a_local_through_its_address_is_read_back_in_silence`
+  is reported, among 21.
+* `Held::recorded_width` ignoring an offset and an inner address:
+  `a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias`
+  changes, among twelve.
+* The walk's arm for a value a call wrote, handed nothing, at `0` rather than
+  `AS_TYPED`: `a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence`
+  is reported, among 23. The store's arm without `AS_TYPED`:
+  `a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back`
+  is reported, and nothing else.
+* `Allocations::handed_site` recording no bound:
+  `a_pointer_read_out_of_memory_a_call_was_handed_is_not_reported_as_indeterminate`
+  gains an `SC0412`.
+* A read already reported as indeterminate asked its width as well:
+  `a_byte_copied_out_of_a_local_is_doubted_where_read_back_as_a_pointer` gains
+  an `SC0412`, among 23.
+* `Held::recorded_width` taking the greatest width rather than the least moves
+  no case, because a load carries what the store named and `report::fits`
+  folds each one's extent; its doc comment says so.
 
 ### Consequences
 
@@ -98,7 +121,9 @@ record nothing for a store of a local's address, and `*box = &q; int *t = *box;
 
 ## More Information
 
+* `crates/safec-ir/src/memory/parts.rs`: `Held::recorded_width`, `AS_TYPED`.
 * `crates/safec-ir/src/memory/transfer.rs`: `Allocations::believed_read`, the
-  store arm that records `Contents::stored_at_most`.
+  store arm that records `Contents::stored_at_most`, `Allocations::handed_bounds`
+  and `Allocations::handed_site`.
 * `crates/safec-ir/src/memory/known.rs`: `Known::memory_levels`.
 * Issue #735 and its design comment.
