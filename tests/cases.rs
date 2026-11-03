@@ -3711,32 +3711,44 @@ cases! {
         // is, into an allocation and where the copy lands unplaced. A whole
         // `int`'s copied and read back as one says nothing. Mutation: give
         // the local no bound at its own level in `Known::memory_levels`; the
-        // first two go silent. Mutation: bound a load there at zero rather
-        // than at what it believed; the third reports. Mutation: bound a
-        // local that is no load as well; 79 cases move, which hold that
-        // only a load is bounded there, as a store bounds only a load (#711).
+        // second goes silent, and the first is still doubted, since a load
+        // where nothing is recorded believes nothing (ADR-0061). Mutation:
+        // bound a load there at zero rather than at what it believed; the
+        // third reports (#711).
         a_narrow_pointer_copied_out_of_a_local_is_doubted_where_read_back_wider: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_narrow_pointer_copied_out_of_a_local_through_an_unplaced_pointer_is_doubted_where_read_back_wider: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_whole_int_pointer_copied_out_of_a_local_and_read_back_as_one_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A byte read out of memory is a load too, so one copied and read
-        // back as a pointer is doubted, though its store into a `char *`
-        // records no bound. Mutation: give the local no bound at its own
-        // level; this goes silent, as it was on main. Found by review.
+        // back as a pointer is reported. A one-byte copy leaves the block
+        // fresh, so the read is `SC0411` and its width is not asked again
+        // (ADR-0061). Mutation: ask the width of a read already reported as
+        // indeterminate in `Allocations::believed_read`; this gains an
+        // `SC0412`. Found by review.
         a_byte_copied_out_of_a_local_is_doubted_where_read_back_as_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer a call this check cannot read wrote is bounded where it
         // is copied or stored at the width it was handed as: `get(&c)` with
         // `get` taking `char **`, copied, stored, moved to another local
         // first, or written on one arm only, read back as an `int *`, is
         // `SC0412`; handed as an `int **` and read back as one, nothing; handed
-        // through a `void *`, doubted. Mutation: the walk's arm for a
-        // callee-written value answers `None`; the copies go silent. The
-        // store's arm; the store goes silent. Either arm's fallback to
-        // `Known::handed_at_most` dropped; its one-arm case goes silent.
-        // The opaque call's write believes nothing; the moved case goes
-        // silent, among 22. A callee-written value nothing bounds bounded at
-        // zero; 34 cases move (#715).
+        // through a `void *`, doubted. Mutation: the opaque call's write
+        // believes nothing; the moved case goes silent, among 27 that move
+        // (#715). **Neither arm that reads such a value back answers for
+        // these any more**: answering `None` in the walk's arm or the
+        // store's leaves nothing recorded, which a load believes as nothing
+        // (ADR-0061), so it is louder, not silent; dropping either arm's
+        // fallback to `Known::handed_at_most` moves no case. Mutation: the
+        // walk's arm believes a value handed nothing at zero rather than as
+        // `AS_TYPED`; 23 cases report.
         a_narrow_pointer_a_call_wrote_copied_and_read_back_wider_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_narrow_pointer_a_call_wrote_stored_and_read_back_wider_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What a call handed nothing may have written into an escaped local
+        // on one arm, beside a local's address on the other, keeps no belief
+        // at the join and is believed as its type where it is stored, as
+        // ADR-0017 believes an output, and read back in silence. Mutation:
+        // the store's arm for a callee-written value answers without
+        // `AS_TYPED`; this reports, since nothing recorded is nothing
+        // believed (ADR-0061).
+        a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_narrow_pointer_a_call_wrote_on_one_arm_copied_and_read_back_wider_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_narrow_pointer_a_call_wrote_on_one_arm_stored_and_read_back_wider_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -4351,8 +4363,11 @@ cases! {
         // A copy carries the bound on what it copies, as a store of a load
         // would: out of a `void **` parameter, out of memory a load named
         // nothing in, and grown by `realloc`. Mutation: record no bound where
-        // `memcpy` copies into memory; the first two go silent. Mutation:
-        // carry none into what `realloc` returns; the third does.
+        // `memcpy` copies into memory; the first goes silent, and the second
+        // is still doubted, since a copy that records nothing leaves nothing
+        // recorded and a load believes nothing there (ADR-0061). Carrying
+        // none into what `realloc` returns leaves the third doubted for the
+        // same reason, measured, so nothing holds that bound now.
         a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -4574,8 +4589,12 @@ cases! {
         a_local_handed_through_a_void_pointer_is_doubted_once_when_handed_on_deeper: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: a store records level 0 alone.
         a_parameter_stored_in_memory_and_read_back_is_believed_as_it_arrived_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: a store records level 0 alone. Mutation:
-        // `Known::memory_levels` folds only the sites at the last level.
+        // Neither of the mutations below moves this since ADR-0061: what
+        // each drops is the `0` a `void **` believes two levels down, and a
+        // load where nothing is recorded believes `0` too. They were: a
+        // store records level 0 alone; `Known::memory_levels` folds only the
+        // sites at the last level. The store's levels are held by the
+        // read-back case above.
         a_parameter_stored_in_memory_and_read_two_levels_at_once_is_believed_as_it_arrived: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: a store records level 0 alone. Mutation:
         // `contents_leaving` compares a site's stored bound at level 0 alone.

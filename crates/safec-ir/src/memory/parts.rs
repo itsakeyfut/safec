@@ -1298,6 +1298,12 @@ impl Held {
     /// call at the same size, which is what `report::fits` already relies on
     /// where a value leaves. A load and a value a call wrote are answered by
     /// their own belief before this is asked, and are `Some(0)` here.
+    ///
+    /// **The least, and no case tells it from the greatest**: taking the
+    /// greatest moves nothing, measured, because a load carries what the
+    /// store named and `report::fits` folds each one's extent beside the
+    /// belief. Kept the least so that the record alone never says more than
+    /// every object it stands for.
     pub(super) fn recorded_width(
         &self,
         extent: &[Option<Extent>],

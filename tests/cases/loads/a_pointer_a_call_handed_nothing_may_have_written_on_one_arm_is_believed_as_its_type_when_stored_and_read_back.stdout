@@ -1,0 +1,165 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:3:6 "tick" declared
+  Local "_0" "void" return
+Function a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:4:6 "g"
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "out"
+  Local "_2" "int" parameter "k"
+  Local "_3" "int"
+  Local "_4" "int" "x"
+  Local "_5" "int *" "p"
+  Local "_6" "int **"
+  Local "_7" "int **"
+  Local "_8" "int *"
+  Local "_9" "int *"
+  Local "_10" "int **" "m"
+  Local "_11" "void *"
+  Local "_12" "int"
+  Local "_13" "int *"
+  Local "_14" "int *" "r"
+  Local "_15" "int"
+  Local "_16" "int"
+  Block "bb0" entry
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:5:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:5:9 written "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:5:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:5:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:8:9 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:8:13 generated
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:9:10 written
+      Destination "_5"
+      Use
+        Constant 0
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:9:14 generated
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:10:12 written
+      Destination "_6"
+      Address
+        Place "_5"
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:10:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:10:5 written
+      Destination "_7"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:10:5 generated
+    Branch a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:11:9 written "bb4" "bb5"
+      Copy "_2"
+  Block "bb4"
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:11:9 generated
+    ArgumentsEvaluated a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:12:9 generated
+    Call a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:12:9 written "tick" "bb7"
+  Block "bb5"
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:11:9 generated
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:14:13 written
+      Destination "_8"
+      Address
+        Place "_4"
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:14:9 written
+      Destination "_5"
+      Use
+        Copy "_8"
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:14:9 written
+      Destination "_9"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:14:9 generated
+    Goto "bb6"
+  Block "bb6"
+    ArgumentsEvaluated a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:16:15 generated
+    Call a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:16:15 written "malloc" "bb8"
+      Destination "_11"
+      Constant 8
+  Block "bb7"
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:12:9 generated
+    Goto "bb6"
+  Block "bb8"
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:16:11 written
+      Destination "_10"
+      Use
+        Copy "_11"
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:16:15 generated
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:17:9 written
+      Destination "_12"
+      Binary "Eq"
+        Copy "_10"
+        Constant 0
+    Branch a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:17:9 written "bb9" "bb10"
+      Copy "_12"
+  Block "bb9"
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:17:9 generated
+    Return
+  Block "bb10"
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:17:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:20:5 written
+      Destination "_10"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:20:5 written
+      Destination "_13"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:20:5 generated
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:21:10 written
+      Destination "_14"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:21:14 generated
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:22:9 written
+      Destination "_15"
+      Binary "Ne"
+        Copy "_14"
+        Constant 0
+    Branch a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:22:9 written "bb12" "bb13"
+      Copy "_15"
+  Block "bb12"
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:22:9 generated
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:23:9 written
+      Destination "_14"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:23:9 written
+      Destination "_16"
+      Use
+        Copy "_14"
+          Deref
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:23:9 generated
+    Goto "bb14"
+  Block "bb13"
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:22:9 generated
+    Goto "bb14"
+  Block "bb14"
+    ArgumentsEvaluated a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:25:5 generated
+    Call a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:25:5 written "free" "bb15"
+      Copy "_10"
+  Block "bb15"
+    Sequenced a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back.c:25:5 generated
+    Return
