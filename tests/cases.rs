@@ -225,6 +225,19 @@ cases! {
         // doubted and the second is doubted.
         a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_freed_and_dropped_on_the_first_arm_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A loop that makes a written block unwritten again leaves it in
+        // doubt after it and on its later turns (#760). Mutation: fold the
+        // back edge by `join_back` alone, in the solver or in the memory
+        // check; both go silent. Ask the rule of a site the paths into the
+        // loop did not name, `Unheld`;
+        // `a_block_made_in_an_earlier_turn_of_a_loop_and_never_written_is_reported_where_read`
+        // is only doubted. Comparing the back edge with the head's value in
+        // place of what arrived from before decides no case, measured.
+        a_block_a_loop_makes_unwritten_again_is_doubted_where_read_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_a_loop_makes_unwritten_again_is_doubted_where_read_on_a_later_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same in an inner loop, read after both. Mutation: as above; this
+        // goes silent. Found by review.
+        a_block_an_inner_loop_makes_unwritten_again_is_doubted_where_read_after_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_freed_and_dropped_on_the_other_arm_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same of a library copy, whose destination may be either block:
         // it keeps the doubt, and a copy into the one block it names clears
