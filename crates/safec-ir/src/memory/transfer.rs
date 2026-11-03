@@ -15,6 +15,7 @@ use super::LostReason;
 use super::allocations::{Allocations, handed_places, innermost_element};
 use super::built::{built_from, named, replaced_by};
 use super::fit::{Fit, fits, slots_from, slots_leaving};
+use super::index::{Idx, LocalIdx, Site, Table};
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known};
 use super::parts::{
     AS_TYPED, Contents, Extent, Freeing, Held, Init, Inits, Levels, Offset, PendingRead, Reached,
@@ -31,7 +32,7 @@ enum Pours {
     /// allocations what it stores holds, and where it is.
     Store {
         pointer_stored: bool,
-        carried: Vec<usize>,
+        carried: Vec<Site>,
         span: Span,
     },
     /// A library copy.
@@ -49,15 +50,15 @@ enum Wrote<'a> {
         place: &'a Place,
         one_step: bool,
         certain: bool,
-        targets: &'a [usize],
-        unwritten_before: &'a [bool],
+        targets: &'a [LocalIdx],
+        unwritten_before: &'a Table<LocalIdx, bool>,
     },
     /// A library copy handed `dest` first and `source` second, which
     /// exposes `reach`, and whose length covers the pointers it writes as
     /// `length` says.
     Copy {
         dest: Option<&'a Operand>,
-        reach: Vec<usize>,
+        reach: Vec<Site>,
         span: Span,
         length: CopiedPointers,
         bytes: Option<u64>,
@@ -202,7 +203,7 @@ impl Allocations<'_> {
             // out, and the direct assignment in `Allocations::element` has
             // already given that temporary `q`'s sites.
             Rvalue::Use(Operand::Copy(source)) if source.projection.is_empty() => {
-                value.points_to[source.local.index()].clone()
+                value.points_to[source.local].clone()
             }
             // The arithmetic written straight into the place, which no C
             // reaches for the reason above and another frontend may. The
@@ -314,7 +315,7 @@ impl Allocations<'_> {
     /// Whether the local at `index` is an array, which pointer arithmetic
     /// keeps the edge to (#639). One answer for both places that build a
     /// value out of operands. See `Held::moved_by_arithmetic`.
-    fn is_array(&self, function: &Function, index: usize) -> bool {
+    fn is_array(&self, function: &Function, index: LocalIdx) -> bool {
         super::built::is_array(self.unit, function, index)
     }
 
@@ -437,9 +438,7 @@ impl Allocations<'_> {
         value: &Known,
     ) -> Levels {
         if place.projection.is_empty() {
-            return value.points_to[place.local.index()]
-                .contents_at_most
-                .clone();
+            return value.points_to[place.local].contents_at_most.clone();
         }
         let mut levels = self
             .unit
@@ -521,8 +520,8 @@ impl Allocations<'_> {
         &self,
         function: &Function,
         value: &mut Known,
-        target: usize,
-        unwritten_before: &[bool],
+        target: LocalIdx,
+        unwritten_before: &Table<LocalIdx, bool>,
     ) {
         if self.is_array(function, target) {
             return;
@@ -551,7 +550,7 @@ impl Allocations<'_> {
         value: &mut Known,
         landing: &Landing,
         poured: &Contents,
-        in_part: &[usize],
+        in_part: &[LocalIdx],
         pours: Pours,
     ) {
         // Every field named, so that one added to `Landing` is answered here
@@ -659,7 +658,7 @@ impl Allocations<'_> {
                 targets,
                 unwritten_before,
             } => {
-                let pointer = place.local.index();
+                let pointer = place.local;
                 // **A write through a pointer may write an allocation**, of
                 // any type, and what it wrote is no longer indeterminate.
                 // Placed only for one dereference through a pointer that
@@ -681,8 +680,8 @@ impl Allocations<'_> {
                     // it is not placed, `replaced_by` below clears the
                     // locals it may land in. See `Known::local_init`.
                     if one_step && !(held.loaded || held.lost || held.foreign) {
-                        let edges: Vec<usize> = held.writes_to.ones().collect();
-                        let sites: Vec<usize> = held.sites().collect();
+                        let edges: Vec<LocalIdx> = held.writes_to.ones().collect();
+                        let sites: Vec<Site> = held.sites().collect();
                         // **A store that may land in several allocations may
                         // have missed any one**, so one that may still be
                         // fresh stays so, as a may-fact: `*p = x;` with `p`
@@ -751,7 +750,7 @@ impl Allocations<'_> {
                             one_step,
                             StoreKind::Through { derefs: deep },
                         );
-                        let mut may_land: BTreeSet<usize> =
+                        let mut may_land: BTreeSet<Site> =
                             landing.containers.iter().copied().collect();
                         may_land.extend(value.sites_named_by_unknown_code());
                         // **But a store whose landing names more than one place
@@ -776,7 +775,7 @@ impl Allocations<'_> {
                         // own read of `*v` after `*v = x;` was doubted. See
                         // `Held::stored_through`.
                         if several && place.projection.as_slice() == [Projection::Deref] {
-                            value.points_to[place.local.index()].stored_through = true;
+                            value.points_to[place.local].stored_through = true;
                         }
                     }
                 }
@@ -806,7 +805,7 @@ impl Allocations<'_> {
                 // deeper where a level above was, as the store asks it. See
                 // `Allocations::written_past_its_end`.
                 let unwritten_before = value.unwritten_locals();
-                let past_end: Vec<usize> = match dest {
+                let past_end: Vec<LocalIdx> = match dest {
                     Some(Operand::Copy(dest))
                         if dest
                             .projection
@@ -815,7 +814,7 @@ impl Allocations<'_> {
                     {
                         let deep = derefs(dest) + 1;
                         if deep == 1 {
-                            if value.points_to[dest.local.index()].array_edge {
+                            if value.points_to[dest.local].array_edge {
                                 value.written_through(dest.local)
                             } else {
                                 Vec::new()
@@ -859,7 +858,7 @@ impl Allocations<'_> {
                 // `Held::stored_through`, so that a read back through it is of
                 // the block it wrote. See
                 // `Known::block_init`.
-                let may_land: Option<(BTreeSet<usize>, bool, bool)> = match dest {
+                let may_land: Option<(BTreeSet<Site>, bool, bool)> = match dest {
                     Some(Operand::Copy(dest))
                         if dest
                             .projection
@@ -874,7 +873,7 @@ impl Allocations<'_> {
                             dest.projection.is_empty(),
                             StoreKind::Copy,
                         );
-                        let mut set: BTreeSet<usize> = landing.containers.iter().copied().collect();
+                        let mut set: BTreeSet<Site> = landing.containers.iter().copied().collect();
                         if landing.unnamed(value)
                             || landing.unplaced()
                             || landing.handed_over(value)
@@ -892,7 +891,7 @@ impl Allocations<'_> {
                         let alone = set.len() == 1
                             && landing.targets.is_empty()
                             && dest.projection.is_empty()
-                            && matches!(value.points_to[dest.local.index()].offset, Offset::Zero);
+                            && matches!(value.points_to[dest.local].offset, Offset::Zero);
                         Some((set, several, alone))
                     }
                     // A destination that is no place keeps what the exposure
@@ -917,7 +916,7 @@ impl Allocations<'_> {
                 // at any element, since this keeps one mark per object.
                 let (source_fresh, source_maybe) = match source {
                     Some(Operand::Copy(source)) if source.projection.is_empty() => {
-                        let held = &value.points_to[source.local.index()];
+                        let held = &value.points_to[source.local];
                         let plain =
                             !(held.lost || held.foreign || held.loaded || held.inner_address);
                         let locals_unwritten = plain
@@ -983,7 +982,7 @@ impl Allocations<'_> {
                         CopiedPointers::NoneWhole => (true, false),
                     };
                     let mut carried = false;
-                    for (site, was) in before.into_iter().enumerate() {
+                    for (site, &was) in before.enumerated() {
                         if !may_land.contains(&site) || unwritten {
                             value.block_init[site] = was;
                         } else {
@@ -1033,7 +1032,7 @@ impl Allocations<'_> {
                     } else if several {
                         if let Some(Operand::Copy(dest)) = dest {
                             if dest.projection.is_empty() {
-                                value.points_to[dest.local.index()].stored_through = true;
+                                value.points_to[dest.local].stored_through = true;
                             }
                         }
                     }
@@ -1049,7 +1048,7 @@ impl Allocations<'_> {
                 // &b, 4)` (#643), and so did a copy through a pointer read out
                 // of the caller's memory (#645). It keeps nothing, so it
                 // exposes no local. See `Known::local_init` and ADR-0057.
-                let written: Option<Vec<usize>> = match dest {
+                let written: Option<Vec<LocalIdx>> = match dest {
                     Some(Operand::Copy(dest))
                         if dest
                             .projection
@@ -1078,7 +1077,8 @@ impl Allocations<'_> {
                     _ => Vec::new(),
                 };
                 let pending = value.array_writes_before(writes);
-                let mut may_write = vec![written.is_none(); value.local_init.len()];
+                let mut may_write: Table<LocalIdx, bool> =
+                    Table::filled(written.is_none(), value.local_init.len());
                 for local in written.iter().flatten() {
                     may_write[*local] = true;
                 }
@@ -1095,11 +1095,11 @@ impl Allocations<'_> {
                 // decision.
                 if let (Some(lands), Some(Operand::Copy(dest))) = (&written, dest) {
                     let at_start = dest.projection.is_empty()
-                        && matches!(value.points_to[dest.local.index()].offset, Offset::Zero);
+                        && matches!(value.points_to[dest.local].offset, Offset::Zero);
                     for &local in lands {
                         let size = function
                             .locals()
-                            .nth(local)
+                            .nth(local.index())
                             .and_then(|id| self.unit.size_of(function.local(id)));
                         let covers =
                             matches!((size, bytes), (Some(size), Some(bytes)) if bytes >= size);
@@ -1158,22 +1158,20 @@ impl Allocations<'_> {
         // may-set, named in a report of its own, by the user's decision. See
         // ADR-0060.
         let Some(read_as) = read_as else {
-            remember(&mut value.handed_untyped[local.index()], None);
-            value.handed_at_most[local.index()] =
-                bounded(value.handed_at_most[local.index()], Some(0));
-            value.handed_contents_at_most[local.index()]
+            remember(&mut value.handed_untyped[local], None);
+            value.handed_at_most[local] = bounded(value.handed_at_most[local], Some(0));
+            value.handed_contents_at_most[local]
                 .bound_by(&Levels::from_bounds(vec![Some(0); self.deepest_pointer]));
             return;
         };
         // Recorded, so a later call walks below it again. See
         // `Known::handed_untyped`.
         if self.untyped_below(read_as) {
-            remember(&mut value.handed_untyped[local.index()], Some(read_as));
+            remember(&mut value.handed_untyped[local], Some(read_as));
         }
         let (width, levels) = self.handed_bounds(Some(read_as));
-        value.handed_at_most[local.index()] =
-            bounded(value.handed_at_most[local.index()], Some(width));
-        value.handed_contents_at_most[local.index()].bound_by(&levels);
+        value.handed_at_most[local] = bounded(value.handed_at_most[local], Some(width));
+        value.handed_contents_at_most[local].bound_by(&levels);
     }
 
     /// What a call this check cannot read may store in memory it reached as
@@ -1220,7 +1218,7 @@ impl Allocations<'_> {
     /// site records nothing else, so `init(box); int *t = *box;` with `init`
     /// taking `int **` believed nothing once a load believes nothing that no
     /// width was recorded for (ADR-0061).
-    fn handed_site(&self, value: &mut Known, site: usize, read_as: Option<TyId>) {
+    fn handed_site(&self, value: &mut Known, site: Site, read_as: Option<TyId>) {
         if read_as.is_none_or(|ty| self.untyped_below(ty)) {
             remember(&mut value.handed_untyped_sites[site], read_as);
         }
@@ -1362,7 +1360,7 @@ impl Allocations<'_> {
                 let read_from = value.levels_below(source.local, depth - 1).1;
                 let fits_each = function
                     .locals()
-                    .filter(|local| read_from.contains(&local.index()))
+                    .filter(|local| read_from.contains(&LocalIdx::of(local)))
                     .all(|local| {
                         matches!(
                             fits(self, function, local, width, value, false),
@@ -1414,7 +1412,7 @@ impl Allocations<'_> {
     /// its sites where it is made lost, and no program found gives a foreign
     /// pointer a fresh site that an exposure has not already cleared.
     pub(super) fn reads_fresh(&self, function: &Function, source: &Place, value: &Known) -> bool {
-        let through = &value.points_to[source.local.index()];
+        let through = &value.points_to[source.local];
         source.projection.as_slice() == [Projection::Deref]
             && self.may_be_pointer(function, source)
             && (through.sites().next().is_some() || through.writes_to.any())
@@ -1447,15 +1445,15 @@ impl Allocations<'_> {
     /// just written, the lowering's own read of an assignment's value among
     /// them. See `Held::stored_through` and ADR-0057.
     pub(super) fn reads_partly(&self, function: &Function, source: &Place, value: &Known) -> bool {
-        let through = &value.points_to[source.local.index()];
+        let through = &value.points_to[source.local];
         let at_start = matches!(through.offset, Offset::Zero);
-        let maybe = |local: usize| value.may_be_unwritten(local, through.element, at_start);
+        let maybe = |local: LocalIdx| value.may_be_unwritten(local, through.element, at_start);
         // **Any block it may read that may still be fresh is enough**,
         // fresh or maybe so, beside blocks that were written: `p = a; if (c)
         // p = b;` with `b` written reads `a` on one path, which is undefined
         // there whatever the value is read for (#724). `reads_fresh` answers
         // first, and asks every block.
-        let site_maybe = |site: usize| value.block_init[site].may_be_unwritten();
+        let site_maybe = |site: Site| value.block_init[site].may_be_unwritten();
         source.projection.as_slice() == [Projection::Deref]
             && self.may_be_pointer(function, source)
             && (through.writes_to.any() || through.sites().next().is_some())
@@ -1505,7 +1503,7 @@ impl Allocations<'_> {
     /// answer for a load assigned and a load as an operand, so that the two
     /// cannot disagree. See ADR-0040.
     fn reads_caller_memory(&self, local: LocalId, depth: usize, value: &Known) -> bool {
-        let held = &value.points_to[local.index()];
+        let held = &value.points_to[local];
         // At least the local's own allocations, which a load with no
         // dereference in its place, an element, still reads through.
         held.from_caller
@@ -1523,10 +1521,10 @@ impl Allocations<'_> {
             || self
                 .exposed_parameters
                 .iter()
-                .any(|parameter| held.sites.get(parameter.index()))
+                .any(|&parameter| held.sites.get(Site::of(LocalIdx::of(parameter))))
             // Or what a call this check cannot read handed back: memory its
             // callee may still hold, and free at the next such call (#394).
-            || held.sites().any(|site| self.opaque_results[site])
+            || held.sites().any(|site| self.opaque_results[site.local()])
     }
 
     /// Whether a free or `realloc` handed these arguments may free what the
@@ -1540,12 +1538,12 @@ impl Allocations<'_> {
                 return false;
             };
             if place.projection.is_empty() {
-                let held = &value.points_to[place.local.index()];
+                let held = &value.points_to[place.local];
                 held.from_caller
                     || self
                         .exposed_parameters
                         .iter()
-                        .any(|parameter| held.sites.get(parameter.index()))
+                        .any(|&parameter| held.sites.get(Site::of(LocalIdx::of(parameter))))
             } else {
                 let depth = derefs(place);
                 depth > 0 && self.reads_caller_memory(place.local, depth, value)
@@ -1562,7 +1560,7 @@ impl Allocations<'_> {
     /// lost, what is stored anywhere, [`Known::stored`]. **A local merely holding no site answers
     /// nothing**: `int *z = 0;` is one, and is not a load. What the report
     /// reads is not this, and is ADR-0017's. See ADR-0040.
-    fn read_out(&self, function: &Function, operand: &Operand, known: &Known) -> Vec<usize> {
+    fn read_out(&self, function: &Function, operand: &Operand, known: &Known) -> Vec<Site> {
         let Operand::Copy(place) = operand else {
             return Vec::new();
         };
@@ -1582,7 +1580,7 @@ impl Allocations<'_> {
         if !self.may_be_pointer(function, place) {
             return Vec::new();
         }
-        let held = &known.points_to[place.local.index()];
+        let held = &known.points_to[place.local];
         if place.projection.is_empty() {
             return if held.loaded || held.lost {
                 known.stored()
@@ -1615,9 +1613,9 @@ impl Allocations<'_> {
         &self,
         function: &Function,
         handed: &[Operand],
-        named: impl Iterator<Item = usize>,
+        named: impl Iterator<Item = Site>,
         known: &Known,
-    ) -> Vec<usize> {
+    ) -> Vec<Site> {
         let mut reach = known.reach_of(named);
         // **And what an argument read out of memory may be.** It names no
         // site, and "no site" is what the report is told; what the callee can
@@ -1642,8 +1640,8 @@ impl Allocations<'_> {
     /// Asked of [`Self::callee`], so that which calls are read by name is
     /// said in one place. A destination with a projection is not a site, as
     /// the call transfer says, so it marks nothing.
-    pub(super) fn opaque_results_of(&self, function: &Function) -> Vec<bool> {
-        let mut marks = vec![false; function.locals().len()];
+    pub(super) fn opaque_results_of(&self, function: &Function) -> Table<LocalIdx, bool> {
+        let mut marks: Table<LocalIdx, bool> = Table::filled(false, function.locals().len());
         for block in function.blocks() {
             if let Terminator::Call {
                 callee,
@@ -1668,7 +1666,7 @@ impl Allocations<'_> {
                     | Callee::Ends => false,
                 };
                 if handed_over && place.projection.is_empty() {
-                    marks[place.local.index()] = true;
+                    marks[place.local] = true;
                 }
             }
         }
@@ -1681,8 +1679,8 @@ impl Allocations<'_> {
     /// `report::handed_stored_out`, which asks what those locals hold, since
     /// `release_pp(&x)` hands the call `x`'s allocation where no argument
     /// names it (#672, found by review). See `Known::expose_locals`.
-    pub(super) fn locals_handed_to_opaque_call(handed: &[Operand], value: &Known) -> Vec<usize> {
-        let mut handed_locals: Vec<usize> = Vec::new();
+    pub(super) fn locals_handed_to_opaque_call(handed: &[Operand], value: &Known) -> Vec<LocalIdx> {
+        let mut handed_locals: Vec<LocalIdx> = Vec::new();
         for argument in handed {
             if let Operand::Copy(place) = argument {
                 if place.projection.is_empty() {
@@ -1707,9 +1705,9 @@ impl Allocations<'_> {
         function: &Function,
         handed: &[Operand],
         value: &Known,
-    ) -> Vec<usize> {
+    ) -> Vec<Site> {
         let touched = Self::touching(handed.iter(), value);
-        let mut handed_memory: Vec<usize> = named(&touched).collect();
+        let mut handed_memory: Vec<Site> = named(&touched).collect();
         for argument in handed {
             handed_memory.extend(self.read_out(function, argument, value));
         }
@@ -1791,7 +1789,7 @@ impl Allocations<'_> {
             // of `q` while `u` may be one already freed (#497). Asked only
             // where it names a site, so that the first row's words stand for
             // an output parameter alone. See ADR-0044.
-            let held = &known.points_to[place.local.index()];
+            let held = &known.points_to[place.local];
             // Which of the four it is, as far as this can tell: one alone
             // names its reason, and more than one is `Other` unless one is
             // `MayBeALocal`, which `LostReason::joined` keeps (#213).
@@ -1853,7 +1851,7 @@ impl Allocations<'_> {
             // a later free of one of those sites is proved a double free on
             // the path that took `&x`, where nothing freed it.
             Operand::Copy(place) => {
-                let held = &known.points_to[place.local.index()];
+                let held = &known.points_to[place.local];
                 place.projection.is_empty()
                     && (held.lost || held.loaded || held.may_be_a_locals_address())
             }
@@ -1887,7 +1885,7 @@ impl Allocations<'_> {
         ) else {
             return;
         };
-        let held = &value.points_to[local.index()];
+        let held = &value.points_to[local];
         let mut sites = held.sites();
         let (Some(returned), None) = (sites.next(), sites.next()) else {
             return;
@@ -1957,7 +1955,8 @@ impl Allocations<'_> {
         // Which locals this side left unwritten, before `unwritten` is
         // intersected below: such a local is no null, and the values' join
         // asks it (#719). See `Held::joined`.
-        let unwritten_here: Vec<bool> = local_init.iter().map(|init| init.is_unwritten()).collect();
+        let unwritten_here: Table<LocalIdx, bool> =
+            Table::from_vec(local_init.iter().map(|init| init.is_unwritten()).collect());
         // May-facts, so a union, as `exposed_locals` is. See
         // `Known::handed_untyped`.
         for (here, there) in handed_untyped
@@ -1993,7 +1992,10 @@ impl Allocations<'_> {
         // edge. An array kept per element has its own doubt above, and its
         // record here gains none, at either kind of join. See
         // `Known::local_init`.
-        for (index, (here, there)) in local_init.iter_mut().zip(&from.local_init).enumerate() {
+        for (index, (here, there)) in local_init
+            .indices()
+            .zip(local_init.iter_mut().zip(&from.local_init))
+        {
             // Kept as the two flags joined, though it decides no case,
             // measured: nothing reads a kept array's whole record for a
             // doubt, `Known::may_be_unwritten` asking its elements.
@@ -2049,7 +2051,10 @@ impl Allocations<'_> {
         // not doubt a read of `*m` on the arm that wrote it. One rule for
         // both sides, so that what guards one guards the other: measured,
         // only one orientation had a case of its own. See ADR-0048.
-        for (site, (here, there)) in block_init.iter_mut().zip(&from.block_init).enumerate() {
+        for (site, (here, there)) in block_init
+            .indices()
+            .zip(block_init.iter_mut().zip(&from.block_init))
+        {
             *here = match (&state[site], &from.state[site]) {
                 (_, SiteState::Unheld) => named_beside_unheld(*here, *there),
                 (SiteState::Unheld, _) => named_beside_unheld(*there, *here),
@@ -2081,7 +2086,10 @@ impl Allocations<'_> {
             }
         }
 
-        for (local, (here, there)) in points_to.iter_mut().zip(&from.points_to).enumerate() {
+        for (local, (here, there)) in points_to
+            .indices()
+            .zip(points_to.iter_mut().zip(&from.points_to))
+        {
             here.joined(
                 there,
                 self.sources,
@@ -2207,7 +2215,7 @@ impl Analysis for Allocations<'_> {
         // After the clearing, so that a site only a dead local held is one
         // nothing holds. See ADR-0048.
         let held = value.held_sites();
-        for (site, state) in value.state.iter_mut().enumerate() {
+        for (site, state) in value.state.enumerated_mut() {
             if !held[site] {
                 *state = SiteState::Unheld;
             }
@@ -2348,20 +2356,20 @@ impl Analysis for Allocations<'_> {
 
     fn on_entry(&self) -> Self::Value {
         let mut known = Known {
-            points_to: vec![Held::none(self.locals); self.locals],
+            points_to: Table::filled(Held::none(self.locals), self.locals),
             // Nothing has allocated into any of these yet, so none of them can
             // say where it came from. A parameter stays this way: its
             // allocation happened somewhere this check cannot see.
-            state: vec![SiteState::Live(None); self.locals],
+            state: Table::filled(SiteState::Live(None), self.locals),
             // Nothing holds a local's address where a function starts, a
             // parameter included: what a caller holds is its own local.
-            escaped: vec![false; self.locals],
-            handed_away: vec![false; self.locals],
-            exposed: vec![false; self.locals],
-            contents: vec![Contents::none(self.locals); self.locals],
+            escaped: Table::filled(false, self.locals),
+            handed_away: Table::filled(false, self.locals),
+            exposed: Table::filled(false, self.locals),
+            contents: Table::filled(Contents::none(self.locals), self.locals),
             // A parameter's memory is the caller's, which may have written it.
-            block_init: vec![Init::Written; self.locals],
-            realloced: vec![None; self.locals],
+            block_init: Table::filled(Init::Written, self.locals),
+            realloced: Table::filled(None, self.locals),
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
             pending: BTreeMap::new(),
@@ -2369,33 +2377,34 @@ impl Analysis for Allocations<'_> {
             exposed_after_call: BTreeSet::new(),
             lost_exposed: false,
             // Nothing is made yet but the parameters, below.
-            extent: vec![None; self.locals],
+            extent: Table::filled(None, self.locals),
             // Nothing stored and nothing handed to a call yet.
-            handed_at_most: vec![None; self.locals],
-            handed_contents_at_most: vec![Levels::default(); self.locals],
+            handed_at_most: Table::filled(None, self.locals),
+            handed_contents_at_most: Table::filled(Levels::default(), self.locals),
             // Every local that may hold a pointer, but the parameters, which
             // the caller wrote. See `Known::local_init`.
-            local_init: self
-                .unwritten_at_entry()
-                .into_iter()
-                .map(|unwritten| {
-                    if unwritten {
-                        Init::Unwritten
-                    } else {
-                        Init::Written
-                    }
-                })
-                .collect(),
-            element_init: self.elements_at_entry(),
-            exposed_in_part: vec![false; self.locals],
-            stored_in_part: vec![false; self.locals],
+            local_init: Table::from_vec(
+                self.unwritten_at_entry()
+                    .into_iter()
+                    .map(|unwritten| {
+                        if unwritten {
+                            Init::Unwritten
+                        } else {
+                            Init::Written
+                        }
+                    })
+                    .collect(),
+            ),
+            element_init: Table::from_vec(self.elements_at_entry()),
+            exposed_in_part: Table::filled(false, self.locals),
+            stored_in_part: Table::filled(false, self.locals),
             // No call has been handed anything yet.
-            exposed_locals: vec![false; self.locals],
+            exposed_locals: Table::filled(false, self.locals),
             // Nothing has been stored anywhere yet.
-            stored_out: vec![false; self.locals],
+            stored_out: Table::filled(false, self.locals),
             // No call has been handed anything yet.
-            handed_untyped: vec![Vec::new(); self.locals],
-            handed_untyped_sites: vec![Vec::new(); self.locals],
+            handed_untyped: Table::filled(Vec::new(), self.locals),
+            handed_untyped_sites: Table::filled(Vec::new(), self.locals),
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -2411,13 +2420,13 @@ impl Analysis for Allocations<'_> {
         // nothing. See ADR-0060.
         let function = self.unit.function(self.function);
         for &parameter in &self.parameters {
-            known.points_to[parameter.index()].hold(parameter.index(), Offset::Zero);
+            known.points_to[parameter].hold(Site::of(LocalIdx::of(parameter)), Offset::Zero);
             // And what its memory holds is believed as its type says, which
             // the caller asked where it stored it. See `Held::contents_at_most`.
-            known.points_to[parameter.index()].contents_at_most = self
+            known.points_to[parameter].contents_at_most = self
                 .type_levels(function.local(parameter))
                 .unwrap_or_default();
-            known.extent[parameter.index()] = Some(Extent::AtLeast(
+            known.extent[Site::of(LocalIdx::of(parameter))] = Some(Extent::AtLeast(
                 self.pointee_size(function, &Place::local(parameter))
                     .unwrap_or(0),
             ));
@@ -2429,7 +2438,9 @@ impl Analysis for Allocations<'_> {
         // check cannot read is unproven too. See ADR-0040.
         known.expose(
             self.sources,
-            self.exposed_parameters.iter().map(|local| local.index()),
+            self.exposed_parameters
+                .iter()
+                .map(|&local| Site::of(LocalIdx::of(local))),
             None,
         );
 
@@ -2439,7 +2450,7 @@ impl Analysis for Allocations<'_> {
         // following. Unmarked, `q = *pp; free(q); q = *pp; return *q;` read
         // `*pp` again as a fresh value and was believed (#482). See ADR-0040.
         for parameter in &self.exposed_parameters {
-            known.contents[parameter.index()].from_caller = true;
+            known.contents[Site::of(LocalIdx::of(parameter))].from_caller = true;
         }
 
         known
@@ -2465,15 +2476,15 @@ impl Analysis for Allocations<'_> {
     /// kind (#760).
     fn join_back_beside(&self, into: &mut Self::Value, from: &Self::Value, before: &Self::Value) {
         self.joined(into, from, true);
-        for (site, init) in into.block_init.iter_mut().enumerate() {
+        for (site, init) in into.block_init.enumerated_mut() {
             if !matches!(before.state[site], SiteState::Unheld) {
                 *init = init.unwritten_again(before.block_init[site], from.block_init[site]);
             }
         }
-        for (local, init) in into.local_init.iter_mut().enumerate() {
+        for (local, init) in into.local_init.enumerated_mut() {
             *init = init.unwritten_again(before.local_init[local], from.local_init[local]);
         }
-        for (local, elements) in into.element_init.iter_mut().enumerate() {
+        for (local, elements) in into.element_init.enumerated_mut() {
             elements.unwritten_again(&before.element_init[local], &from.element_init[local]);
         }
     }
@@ -2597,7 +2608,7 @@ impl Analysis for Allocations<'_> {
                     kind && store.leaves && self.may_be_pointer(function, &store.into)
                 });
                 if marks {
-                    let mut out: Vec<usize> = self
+                    let mut out: Vec<Site> = self
                         .carried(function, &operation.value, value)
                         .sites()
                         .collect();
@@ -2617,7 +2628,7 @@ impl Analysis for Allocations<'_> {
                 // An assignment to a local writes it, whatever it writes. See
                 // `Known::local_init`.
                 if operation.place.projection.is_empty() {
-                    value.written_local(operation.place.local.index());
+                    value.written_local(LocalIdx::of(operation.place.local));
                 }
 
                 // **This check follows a write through exactly one `Deref` and
@@ -2627,7 +2638,7 @@ impl Analysis for Allocations<'_> {
                 // follow at all, and so is a write through any other
                 // projection.
                 let one_step = operation.place.projection.as_slice() == [Projection::Deref];
-                let pointer = operation.place.local.index();
+                let pointer = operation.place.local;
                 // What was unwritten before this store, for a local it may
                 // have written past. See `Allocations::written_past_its_end`.
                 let unwritten_before = value.unwritten_locals();
@@ -2703,12 +2714,12 @@ impl Analysis for Allocations<'_> {
                     // stored**, into memory or into a local through its
                     // address, either of which a load reads back without its
                     // element. Poured below. See `Known::stored_in_part`.
-                    let in_part: Vec<usize> = if written.array_edge {
+                    let in_part: Vec<LocalIdx> = if written.array_edge {
                         written.writes_to.ones().collect()
                     } else {
                         Vec::new()
                     };
-                    let mut carried: Vec<usize> = written.sites().collect();
+                    let mut carried: Vec<Site> = written.sites().collect();
                     // And what a pointer read out of memory may be, which the
                     // sites above do not name: `*b = *a;` stores in `b` what
                     // `a` held. See ADR-0040.
@@ -2733,7 +2744,7 @@ impl Analysis for Allocations<'_> {
                     // with `*t3 = &slot` in `slot`, as a write through an
                     // alias that may land in several locals: by union, the
                     // proof dropped. See ADR-0045 and ADR-0019.
-                    let deep_targets: Vec<usize> = if deep > 1 {
+                    let deep_targets: Vec<LocalIdx> = if deep > 1 {
                         landing.targets.clone()
                     } else {
                         Vec::new()
@@ -2851,7 +2862,7 @@ impl Analysis for Allocations<'_> {
                         // keeps `believed` too (#719).
                         let handed = match &operation.value {
                             Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
-                                value.handed_at_most[place.local.index()]
+                                value.handed_at_most[place.local]
                             }
                             Rvalue::Use(_)
                             | Rvalue::Address(_)
@@ -3053,11 +3064,10 @@ impl Analysis for Allocations<'_> {
                     // this the allocation never leaves the temporary and the
                     // headline program is not an error at all.
                     Rvalue::Use(Operand::Copy(source)) if source.projection.is_empty() => {
-                        let indeterminate = value.holds_fresh_read(source.local.index());
-                        value.points_to[destination.index()] =
-                            value.points_to[source.local.index()].clone();
+                        let indeterminate = value.holds_fresh_read(LocalIdx::of(source.local));
+                        value.points_to[destination] = value.points_to[source.local].clone();
                         // See `Known::holds_fresh_read`.
-                        value.points_to[destination.index()].fresh_read = indeterminate;
+                        value.points_to[destination].fresh_read = indeterminate;
                     }
                     // **Arithmetic on a pointer is followed.** C17 6.5.6 p8
                     // keeps the result inside the object the operand points
@@ -3102,7 +3112,7 @@ impl Analysis for Allocations<'_> {
                         // lowering did not fold is an offset that may be zero,
                         // and is followed. See ADR-0019 and ADR-0021.
                         reached.moved_by_arithmetic(self.moved_by(function, *op, lhs, rhs));
-                        value.points_to[destination.index()] = reached;
+                        value.points_to[destination] = reached;
                     }
                     // A read through a projection is not a pointer this check
                     // follows, and the report reads it as holding nothing,
@@ -3111,8 +3121,7 @@ impl Analysis for Allocations<'_> {
                     // write stores have to know it. See
                     // `Allocations::read_through`.
                     Rvalue::Use(Operand::Copy(source)) => {
-                        value.points_to[destination.index()] =
-                            self.read_through(function, source, value);
+                        value.points_to[destination] = self.read_through(function, source, value);
                     }
                     // A constant or a unary operator. Neither is a pointer this
                     // check can follow: C17 6.5.3.3 gives unary `+`, `-` and
@@ -3140,9 +3149,9 @@ impl Analysis for Allocations<'_> {
                         // is what keeps an escaped local unproved; the edge
                         // dies with the destination and is what lets a write
                         // through it be followed. See ADR-0019.
-                        value.points_to[destination.index()]
+                        value.points_to[destination]
                             .writes_to
-                            .set(taken.local.index());
+                            .set(LocalIdx::of(taken.local));
                         // **And the set is all of it, where the address is of
                         // the local itself.** `Held::clear` ran a line above,
                         // so this destination points at exactly this local,
@@ -3166,29 +3175,29 @@ impl Analysis for Allocations<'_> {
                         // may-write for the same answer, since one element
                         // written does not replace what the rest of the array
                         // holds (#621).
-                        value.points_to[destination.index()].writes_elsewhere =
+                        value.points_to[destination].writes_elsewhere =
                             !taken.projection.is_empty();
                         // **The element it points at**, where what was taken
                         // is an array's start: the lowering builds an index
                         // only as a constant zero, and every other element
                         // is reached by arithmetic. See `Held::element`.
-                        if self.is_array(function, taken.local.index())
+                        if self.is_array(function, LocalIdx::of(taken.local))
                             && taken
                                 .projection
                                 .iter()
                                 .all(|step| matches!(step, Projection::Index(Operand::Constant(0))))
                         {
-                            value.points_to[destination.index()].element = Some(0);
+                            value.points_to[destination].element = Some(0);
                         }
                         // And an access through it is not an access of the
                         // local the edge names, unless what was taken is that
                         // local's own start. See `Held::inner_address`.
-                        value.points_to[destination.index()].inner_address = !taken
+                        value.points_to[destination].inner_address = !taken
                             .projection
                             .iter()
                             .all(|step| matches!(step, Projection::Index(Operand::Constant(0))));
-                        value.escaped[taken.local.index()] = true;
-                        value.unproved(taken.local.index());
+                        value.escaped[taken.local] = true;
+                        value.unproved(LocalIdx::of(taken.local));
                         // What the local holds is reachable to every call from
                         // here, as an exposure is. See ADR-0042.
                         let routes = value.closure(value.sites_of(taken.local).collect());
@@ -3203,13 +3212,13 @@ impl Analysis for Allocations<'_> {
                 // so the arm that looks like the arithmetic case is reached
                 // through the copy, and a mutation of the arithmetic arm broke
                 // nothing at all. One call cannot be put in the wrong place.
-                value.unproved(destination.index());
+                value.unproved(LocalIdx::of(destination));
                 // What an escaped local is given, every call reaches through
                 // `Known::reach_of`, as an exposure does. Here and not in
                 // `Known::unproved`, which `settle` also runs at a join, where
                 // one arm's read and the other arm's call would be paired.
                 // See ADR-0042.
-                if value.escaped[destination.index()] {
+                if value.escaped[destination] {
                     let routes = value.closure(value.sites_of(destination).collect());
                     value.noticed(self.sources, Some(operation.origin.span()), &routes);
                 }
@@ -3222,34 +3231,34 @@ impl Analysis for Allocations<'_> {
                 // array written late in one turn of a loop is unwritten at
                 // the start of the next. See `Known::local_init`.
                 if self.holds_a_pointer(function.local(*local)) {
-                    value.local_init[local.index()] = Init::Unwritten;
-                } else if value.local_init[local.index()] == Init::Maybe {
-                    value.local_init[local.index()] = Init::Written;
+                    value.local_init[local] = Init::Unwritten;
+                } else if value.local_init[local] == Init::Maybe {
+                    value.local_init[local] = Init::Written;
                 }
                 // And every element of it, with nothing written in part and
                 // nothing handed over. See `Known::element_init`.
-                value.element_init[local.index()].unwrite_all();
-                value.exposed_in_part[local.index()] = false;
-                value.stored_in_part[local.index()] = false;
+                value.element_init[local].unwrite_all();
+                value.exposed_in_part[local] = false;
+                value.stored_in_part[local] = false;
                 // **And no call holds its address yet**: one kept from an
                 // earlier lifetime became indeterminate when that one ended
                 // (C17 6.2.4 p2), so a call is no longer a write of it. Kept
                 // across, `stash(m)` in one turn of a loop made `tick()` in
                 // the next a write of a new `m`, and a read nothing wrote was
                 // silent. See `Known::exposed_locals`.
-                value.exposed_locals[local.index()] = false;
+                value.exposed_locals[local] = false;
                 // Nor was it handed to one untyped, for the same reason.
                 // See `Known::handed_untyped`. No case tells this from
                 // keeping the mark, measured: what the mark reaches is
                 // written only where it is exposed, and that is cleared just
                 // above.
-                value.handed_untyped[local.index()].clear();
+                value.handed_untyped[local].clear();
                 // **Nor does any pointer recorded as able to name it**, for
                 // the same reason: a pointer a call wrote in an earlier turn
                 // named the old object, so a write through it is no write of
                 // the new one (#661). See `Held::named_at_read`.
                 for held in value.points_to.iter_mut() {
-                    held.named_at_read.remove(local.index());
+                    held.named_at_read.remove(LocalIdx::of(local));
                 }
                 // **Nor does a pointer that held its address**: the address
                 // is indeterminate now, so a pointer copied in an earlier
@@ -3265,7 +3274,7 @@ impl Analysis for Allocations<'_> {
                 // decides no case, measured, once the pointer is not marked.
                 // See ADR-0057.
                 for held in value.points_to.iter_mut() {
-                    held.writes_to.remove(local.index());
+                    held.writes_to.remove(LocalIdx::of(local));
                 }
             }
             Element::StorageDead { origin: _, local } => value.clear(*local),
@@ -3348,7 +3357,7 @@ impl Analysis for Allocations<'_> {
         // second `realloc` of it, or `g(p)` between the call and the branch
         // left `p` unproven, and the null arm brought it back live. Found by
         // review. See ADR-0039.
-        let touched_now: Vec<usize> = sites().collect();
+        let touched_now: Vec<Site> = sites().collect();
         value.forget_reallocs_touching(|site| touched_now.contains(&site));
 
         // **An allocation this may free stays fresh.** Clearing it here was
@@ -3368,12 +3377,12 @@ impl Analysis for Allocations<'_> {
         // it does not name, as at a free (#497): `r` is `u` on one arm and `q`
         // on the other, and a fact naming `q` alone proved `free(q)` a double
         // free on the arm where `realloc` was handed `u` (#499). See ADR-0039.
-        let realloced: Option<Vec<(usize, Option<Span>)>> = match (kind, &arguments[..]) {
+        let realloced: Option<Vec<(Site, Option<Span>)>> = match (kind, &arguments[..]) {
             (Callee::Reallocates, [Operand::Copy(old), Operand::Constant(size), ..])
                 if *size != 0 && old.projection.is_empty() =>
             {
-                let held = &value.points_to[old.local.index()];
-                let old: Vec<(usize, Option<Span>)> = held
+                let held = &value.points_to[old.local];
+                let old: Vec<(Site, Option<Span>)> = held
                     .sites()
                     .filter_map(|site| match value.state[site] {
                         SiteState::Live(made) => Some((site, made)),
@@ -3445,14 +3454,18 @@ impl Analysis for Allocations<'_> {
             | Callee::Ends => false,
         };
         let hands_a_lost_value = opaque && {
-            let mut handed_memory: Vec<usize> = sites().collect();
-            for local in (0..value.escaped.len()).filter(|&local| value.escaped[local]) {
+            let mut handed_memory: Vec<Site> = sites().collect();
+            for local in value
+                .escaped
+                .indices()
+                .filter(|&local| value.escaped[local])
+            {
                 handed_memory.extend(value.points_to[local].sites());
             }
             for argument in handed {
                 handed_memory.extend(self.read_out(function, argument, value));
                 if let Operand::Copy(place) = argument {
-                    let pointed: Vec<usize> = value.written_through(place.local);
+                    let pointed: Vec<LocalIdx> = value.written_through(place.local);
                     for target in pointed {
                         handed_memory.extend(value.points_to[target].sites());
                     }
@@ -3461,7 +3474,7 @@ impl Analysis for Allocations<'_> {
             let may_hold_lost = |held: &Held| held.lost || held.lost_read;
             handed.iter().any(|argument| match argument {
                 Operand::Copy(place) => {
-                    may_hold_lost(&value.points_to[place.local.index()])
+                    may_hold_lost(&value.points_to[place.local])
                         || (!place.projection.is_empty()
                             && value.marked_below(place.local, derefs(place), |contents| {
                                 contents.holds_lost
@@ -3476,7 +3489,9 @@ impl Analysis for Allocations<'_> {
                 .closure(handed_memory)
                 .into_iter()
                 .any(|site| value.contents[site].holds_lost)
-                || (0..value.escaped.len())
+                || value
+                    .escaped
+                    .indices()
                     .any(|local| value.escaped[local] && may_hold_lost(&value.points_to[local]))
         };
         if hands_a_lost_value {
@@ -3495,7 +3510,7 @@ impl Analysis for Allocations<'_> {
         if may_free
             && handed.iter().any(|argument| match argument {
                 Operand::Copy(place) => {
-                    let held = &value.points_to[place.local.index()];
+                    let held = &value.points_to[place.local];
                     !place.projection.is_empty() || held.lost || held.loaded
                 }
                 Operand::Constant(_) => false,
@@ -3513,7 +3528,7 @@ impl Analysis for Allocations<'_> {
                 unreachable!("`Allocations::terminator` returns for it where `handed` is decided")
             }
             Callee::Frees => {
-                let reached: Vec<usize> = sites().collect();
+                let reached: Vec<Site> = sites().collect();
 
                 // **A free of a local that may hold something this check
                 // cannot name does not say which allocation went.** The sites
@@ -3596,8 +3611,7 @@ impl Analysis for Allocations<'_> {
                             continue;
                         };
                         if place.projection.is_empty() {
-                            value.points_to[place.local.index()].freed =
-                                Some(Freeing::new(origin.span()));
+                            value.points_to[place.local].freed = Some(Freeing::new(origin.span()));
                         }
                     }
 
@@ -3820,7 +3834,7 @@ impl Analysis for Allocations<'_> {
                             for &target in &copied_locals {
                                 poured.inside_locals.set(target);
                             }
-                            let in_part: Vec<usize> = if moved {
+                            let in_part: Vec<LocalIdx> = if moved {
                                 copied_locals.iter().copied().collect()
                             } else {
                                 Vec::new()
@@ -3987,10 +4001,10 @@ impl Analysis for Allocations<'_> {
                 // of every local the call may write, since it may write
                 // through any pointer it reaches, `fill(&e)` through `e = m +
                 // 1`. See `built::write_effects`.
-                let mut partial: Vec<(usize, ArrayWrite)> = Vec::new();
+                let mut partial: Vec<(LocalIdx, ArrayWrite)> = Vec::new();
                 for argument in handed {
                     if let Operand::Copy(place) = argument {
-                        let lands = (0..may_write.len()).filter(|&local| may_write[local]);
+                        let lands = may_write.indices().filter(|&local| may_write[local]);
                         for (local, write) in super::built::write_effects(
                             self.unit,
                             function,
@@ -4012,16 +4026,16 @@ impl Analysis for Allocations<'_> {
                 // reach. See `Known::exposed_in_part`. Not one this call is
                 // handed whole, at its start, which it may write all of:
                 // `fill(m)` after `fill(&m[1])`. Found by review of #667.
-                let handed_whole = |local: usize| {
+                let handed_whole = |local: LocalIdx| {
                     handed.iter().any(|argument| match argument {
                         Operand::Copy(place) if place.projection.is_empty() => {
-                            let held = &value.points_to[place.local.index()];
+                            let held = &value.points_to[place.local];
                             held.writes_to.get(local) && held.element == Some(0) && !held.array_edge
                         }
                         _ => false,
                     })
                 };
-                for (local, &may) in may_write.iter().enumerate() {
+                for (local, &may) in may_write.enumerated() {
                     if may
                         && value.exposed_in_part[local]
                         && !partial.iter().any(|(each, _)| *each == local)
@@ -4094,19 +4108,20 @@ impl Analysis for Allocations<'_> {
                 let marked_locals: Vec<(LocalId, Option<TyId>)> = function
                     .locals()
                     .flat_map(|local| {
-                        value.handed_untyped[local.index()]
+                        value.handed_untyped[local]
                             .iter()
                             .map(move |&read_as| (local, read_as))
                     })
                     .collect();
-                let marked_sites: Vec<(usize, Option<TyId>)> =
-                    (0..value.handed_untyped_sites.len())
-                        .flat_map(|site| {
-                            value.handed_untyped_sites[site]
-                                .iter()
-                                .map(move |&read_as| (site, read_as))
-                        })
-                        .collect();
+                let marked_sites: Vec<(Site, Option<TyId>)> = value
+                    .handed_untyped_sites
+                    .indices()
+                    .flat_map(|site| {
+                        value.handed_untyped_sites[site]
+                            .iter()
+                            .map(move |&read_as| (site, read_as))
+                    })
+                    .collect();
                 if !marked_locals.is_empty() || !marked_sites.is_empty() {
                     let (locals, sites, untyped_sites) =
                         slots_from(self, function, value, marked_locals, marked_sites);
@@ -4141,7 +4156,7 @@ impl Analysis for Allocations<'_> {
                 // `*r` after `free(u)` was read in silence. Found by review.
                 // At any depth, since `pa = &a; get(&r, &pa);` hands `a`'s
                 // too and read `*r` in silence the same way (#513).
-                let mut deeper: Vec<usize> = Vec::new();
+                let mut deeper: Vec<Site> = Vec::new();
                 for argument in handed {
                     if let Operand::Copy(place) = argument {
                         let first = value.written_through(place.local);
@@ -4155,7 +4170,7 @@ impl Analysis for Allocations<'_> {
                 }
                 let shallow = value.closure(handed_memory.clone());
                 handed_memory.extend(deeper);
-                let stored: Vec<usize> = value.closure(handed_memory).into_iter().collect();
+                let stored: Vec<Site> = value.closure(handed_memory).into_iter().collect();
                 // **What only a deeper level hands is kept out of a local that
                 // holds a local's address**: `pp`, in `pp = &p; opaque(&pp);`,
                 // points at `p` and not at the allocation `p` holds, and giving
@@ -4170,10 +4185,14 @@ impl Analysis for Allocations<'_> {
                 // enforces; so a deeper pointer a callee stores into a local
                 // that holds an address, through `void *` or a cast, is
                 // missed, as it was before. Found by review. See ADR-0044.
-                let deep: Vec<bool> = (0..value.state.len())
-                    .map(|site| !shallow.contains(&site))
-                    .collect();
-                for local in 0..value.escaped.len() {
+                let deep: Table<Site, bool> = Table::from_vec(
+                    value
+                        .state
+                        .indices()
+                        .map(|site| !shallow.contains(&site))
+                        .collect(),
+                );
+                for local in value.escaped.indices() {
                     if !value.escaped[local] {
                         continue;
                     }
@@ -4187,7 +4206,7 @@ impl Analysis for Allocations<'_> {
                     //
                     // **No wider than it was handed as**, at this call or an
                     // earlier one ([`Known::handed_at_most`], #632).
-                    let believed = function.locals().nth(local).and_then(|id| {
+                    let believed = function.locals().nth(local.index()).and_then(|id| {
                         let width = self.pointee_size(function, &Place::local(id))?;
                         let width =
                             value.handed_at_most[local].map_or(width, |most| width.min(most));
@@ -4253,7 +4272,7 @@ impl Analysis for Allocations<'_> {
                 // See ADR-0047.
                 value.handed_to_a_call(handed);
                 value.held_out_of_reach(|local| {
-                    then.is_some_and(|then| self.live_in[then.index()][local])
+                    then.is_some_and(|then| self.live_in[then.index()][local.index()])
                 });
             }
         }
@@ -4277,7 +4296,7 @@ impl Analysis for Allocations<'_> {
         }
         // The call's result writes the local it lands in. See
         // `Known::local_init`.
-        value.written_local(place.local.index());
+        value.written_local(LocalIdx::of(place.local));
 
         match kind {
             Callee::Ends => {
@@ -4295,7 +4314,7 @@ impl Analysis for Allocations<'_> {
             Callee::ReturnsFirst | Callee::Copies => {
                 let first = match arguments.first() {
                     Some(Operand::Copy(source)) if source.projection.is_empty() => {
-                        value.points_to[source.local.index()].clone()
+                        value.points_to[source.local].clone()
                     }
                     // `memset(*tab, 0, 4)` returns a pointer read out of
                     // memory, and says so, as an assignment of `*tab` would.
@@ -4307,7 +4326,7 @@ impl Analysis for Allocations<'_> {
                     Some(Operand::Copy(source)) => self.read_through(function, source, value),
                     Some(Operand::Constant(_)) | None => Held::none(value.points_to.len()),
                 };
-                value.points_to[place.local.index()] = first;
+                value.points_to[place.local] = first;
                 return;
             }
             Callee::Allocates | Callee::Reallocates | Callee::Opaque => {}
@@ -4318,7 +4337,8 @@ impl Analysis for Allocations<'_> {
         // with what was there**: a second turn of a loop through the same call
         // is a second allocation, and carrying the first one's `Freed` across
         // would report a double free for code that allocates each time round.
-        let site = place.local.index();
+        let result = LocalIdx::of(place.local);
+        let site = Site::of(result);
         // Read before the rebirth clears it: a loop through this call writes
         // this site every turn, and what the call returns may be last turn's
         // allocation, exposed, which the site number cannot tell apart.
@@ -4326,7 +4346,7 @@ impl Analysis for Allocations<'_> {
         value.clear(place.local);
         // At its start: the site is whatever the call handed back, so the
         // value is that value and not an offset into it.
-        value.points_to[site].hold(site, Offset::Zero);
+        value.points_to[result].hold(site, Offset::Zero);
         // **The span only where this check saw an allocation.** Every call's
         // destination is a site, because a call this cannot read may hand back
         // anything and a site is how that is tracked. But `allocated here` is a
@@ -4359,9 +4379,9 @@ impl Analysis for Allocations<'_> {
             | Callee::Ends => false,
         };
         if opaque {
-            value.points_to[site].believed = self.pointee_size(function, place);
+            value.points_to[result].believed = self.pointee_size(function, place);
             // And what its memory holds as its type says, as a parameter's.
-            value.points_to[site].contents_at_most = self
+            value.points_to[result].contents_at_most = self
                 .unit
                 .place_ty(function, place)
                 .and_then(|ty| self.type_levels(ty))
@@ -4413,7 +4433,7 @@ impl Analysis for Allocations<'_> {
                 unreachable!("`Allocations::terminator` returns for it where `handed` is decided")
             }
             Callee::Reallocates => {
-                let old: Vec<usize> = handed
+                let old: Vec<Site> = handed
                     .iter()
                     .filter_map(|argument| match argument {
                         Operand::Copy(source) if source.projection.is_empty() => Some(source.local),
@@ -4429,9 +4449,7 @@ impl Analysis for Allocations<'_> {
                 for argument in handed {
                     if let Operand::Copy(source) = argument {
                         if source.projection.is_empty() {
-                            let handed = value.points_to[source.local.index()]
-                                .contents_at_most
-                                .clone();
+                            let handed = value.points_to[source.local].contents_at_most.clone();
                             value.contents[site].stored_at_most.bound_by(&handed);
                         }
                     }
@@ -4453,7 +4471,7 @@ impl Analysis for Allocations<'_> {
                         at: origin.span(),
                         old,
                     });
-                    value.points_to[site].returned_by = Some(site);
+                    value.points_to[result].returned_by = Some(site);
                 }
             }
             Callee::Frees
@@ -4498,13 +4516,15 @@ impl Analysis for Allocations<'_> {
                 // place of the free read in silence, since nothing after the
                 // call made it lost. Found by review. See ADR-0045.
                 if value.lost_exposed {
-                    value.points_to[site].lost = true;
+                    value.points_to[result].lost = true;
                 }
-                let exposed: Vec<usize> = (0..value.exposed.len())
+                let exposed: Vec<Site> = value
+                    .exposed
+                    .indices()
                     .filter(|&other| other != site && value.exposed[other])
                     .collect();
                 for other in exposed {
-                    value.points_to[site].hold(other, Offset::Unknown);
+                    value.points_to[result].hold(other, Offset::Unknown);
                 }
                 // **And any escaped local's address**, for the same reason
                 // and with the same reach: `id(&x)` may return `&x`, and
@@ -4512,8 +4532,12 @@ impl Analysis for Allocations<'_> {
                 // learns it, through `Held::may_be_a_locals_address`, and how
                 // a write through the result is followed into the locals it
                 // may land in. See ADR-0039.
-                for local in (0..value.escaped.len()).filter(|&local| value.escaped[local]) {
-                    value.points_to[site].writes_to.set(local);
+                for local in value
+                    .escaped
+                    .indices()
+                    .filter(|&local| value.escaped[local])
+                {
+                    value.points_to[result].writes_to.set(local);
                 }
                 if was_exposed {
                     value.state[site] = SiteState::Unknown;
@@ -4534,7 +4558,7 @@ impl Analysis for Allocations<'_> {
         // out, and one that returns `void` nowhere, so the copy above is
         // what a C program goes through. Another frontend need not, and
         // `a_call_into_a_local_whose_address_escaped` builds the shape by hand.
-        value.unproved(site);
+        value.unproved(result);
     }
 }
 
@@ -4600,7 +4624,7 @@ mod caller_memory {
         let analysis = crate::memory::analysis(&sources, &unit, func);
         let mut value = analysis.on_entry();
         assert!(analysis.reads_caller_memory(pp, 1, &value));
-        value.points_to[pp.index()].lost = true;
+        value.points_to[pp].lost = true;
         assert!(analysis.reads_caller_memory(pp, 1, &value));
     }
 }

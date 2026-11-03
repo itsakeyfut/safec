@@ -15,6 +15,7 @@ use crate::library::Callee;
 use crate::source::Span;
 
 use super::allocations::Allocations;
+use super::index::{LocalIdx, Site};
 use super::known::Known;
 use crate::reads::derefs;
 
@@ -79,7 +80,7 @@ impl Allocations<'_> {
         let (kind, leaves) = if into.projection.is_empty() {
             let leaves = known
                 .locals_named_by_unknown_code()
-                .contains(&into.local.index());
+                .contains(&LocalIdx::of(into.local));
             (StoreKind::Direct, leaves)
         } else {
             let derefs = derefs(&into);
@@ -147,10 +148,10 @@ impl Allocations<'_> {
 /// doors cannot answer one destination differently (#737).
 pub(super) struct Landing {
     /// The allocations it may land in, recorded there by `Known::pour`.
-    pub(super) containers: Vec<usize>,
+    pub(super) containers: Vec<Site>,
     /// The locals it may land in by an edge: the pointer's own edges at
     /// one exact dereference, and the locals the level above may be deeper.
-    pub(super) targets: Vec<usize>,
+    pub(super) targets: Vec<LocalIdx>,
     /// Whether it is one exact dereference through the pointer: then
     /// [`Self::targets`] are the pointer's own edges.
     pub(super) one_step: bool,
@@ -182,7 +183,7 @@ impl Landing {
             StoreKind::Direct | StoreKind::Through { .. } => self.deep > 1,
             StoreKind::Copy => self.deep > 2,
         };
-        let held = &value.points_to[self.pointer.index()];
+        let held = &value.points_to[self.pointer];
         held.loaded || held.lost || held.foreign || deep_enough
     }
 
@@ -225,14 +226,14 @@ impl Allocations<'_> {
         one_step: bool,
         kind: StoreKind,
     ) -> Landing {
-        let containers: Vec<usize> = if one_step {
+        let containers: Vec<Site> = if one_step {
             value.sites_of(pointer).collect()
         } else if deep > 1 {
             value.stored_below(pointer, deep - 1).into_iter().collect()
         } else {
             Vec::new()
         };
-        let targets: Vec<usize> = if one_step {
+        let targets: Vec<LocalIdx> = if one_step {
             value.written_through(pointer)
         } else if deep > 1 {
             value

@@ -57,6 +57,7 @@ mod assigned;
 mod bits;
 mod built;
 mod fit;
+mod index;
 mod known;
 mod parts;
 mod report;
@@ -78,6 +79,7 @@ use crate::source::{SourceMap, Span};
 
 use allocations::Allocations;
 use built::named;
+use index::Table;
 use report::{
     after_a_call, copied_away, departed_at_call, departed_in_element,
     freed_after_its_read_was_reported, handed, handed_stored_out, loaded_indeterminate,
@@ -614,10 +616,12 @@ fn analysis<'a>(
         function: func,
         locals: function.locals().len(),
         deepest_pointer: deepest_pointer(unit, function),
-        local_sizes: function
-            .locals()
-            .map(|local| unit.size_of(function.local(local)))
-            .collect(),
+        local_sizes: Table::from_vec(
+            function
+                .locals()
+                .map(|local| unit.size_of(function.local(local)))
+                .collect(),
+        ),
         parameters: function.parameters().collect(),
         exposed_parameters: function
             .parameters()
@@ -633,7 +637,7 @@ fn analysis<'a>(
             .collect(),
         live_in: crate::liveness::live_in(function),
         cfg: Cfg::of(function),
-        opaque_results: Vec::new(),
+        opaque_results: Table::from_vec(Vec::new()),
     };
     analysis.opaque_results = analysis.opaque_results_of(function);
     analysis
@@ -1464,9 +1468,9 @@ mod tests {
             let function = self.unit.function(func);
             let solution = crate::dataflow::solve(&analysis, function, &Cfg::of(function));
             let known = solution.value(at).expect("the last block is reached");
-            known.contents[container.index()]
+            known.contents[index::Site::of(index::LocalIdx::of(container))]
                 .inside_locals
-                .get(self.x.index())
+                .get(index::LocalIdx::of(self.x))
         }
     }
 

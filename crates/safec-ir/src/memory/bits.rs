@@ -1,5 +1,9 @@
 //! A set of indices below a length fixed when it is made, a bit each.
 
+use std::marker::PhantomData;
+
+use super::index::Idx;
+
 /// A set of indices below `len`, a bit each.
 ///
 /// **What the memory check's square tables are made of**: [`Held::sites`],
@@ -25,41 +29,50 @@
 /// [`Held::named_at_read`]: super::parts::Held::named_at_read
 /// [`Contents::inside`]: super::parts::Contents::inside
 /// [`Contents::inside_locals`]: super::parts::Contents::inside_locals
+///
+/// **Kept by `I`**, a [`Site`](super::index::Site) or a
+/// [`LocalIdx`](super::index::LocalIdx), so that a set of sites cannot be
+/// asked about a local. See ADR-0063.
 #[derive(Clone, PartialEq, Eq)]
-pub(super) struct Bits {
+pub(super) struct Bits<I = usize> {
     len: usize,
     words: Vec<u64>,
+    index: PhantomData<fn(I)>,
 }
 
-impl Bits {
+impl<I: Idx> Bits<I> {
     /// The empty set, below `len`.
     pub(super) fn new(len: usize) -> Self {
         Bits {
             len,
             words: vec![0; len.div_ceil(64)],
+            index: PhantomData,
         }
     }
 
     /// Whether `index` is in the set.
-    pub(super) fn get(&self, index: usize) -> bool {
+    pub(super) fn get(&self, index: I) -> bool {
+        let index = index.index();
         self.check(index);
         self.words[index / 64] & (1 << (index % 64)) != 0
     }
 
     /// Put `index` in the set.
-    pub(super) fn set(&mut self, index: usize) {
+    pub(super) fn set(&mut self, index: I) {
+        let index = index.index();
         self.check(index);
         self.words[index / 64] |= 1 << (index % 64);
     }
 
     /// Take `index` out of the set.
-    pub(super) fn remove(&mut self, index: usize) {
+    pub(super) fn remove(&mut self, index: I) {
+        let index = index.index();
         self.check(index);
         self.words[index / 64] &= !(1 << (index % 64));
     }
 
     /// Put every index of `other` in the set, and say whether that added any.
-    pub(super) fn union_with(&mut self, other: &Bits) -> bool {
+    pub(super) fn union_with(&mut self, other: &Bits<I>) -> bool {
         assert_eq!(self.len, other.len, "a union of sets of two lengths");
         let mut grew = false;
         for (here, there) in self.words.iter_mut().zip(&other.words) {
@@ -70,7 +83,7 @@ impl Bits {
     }
 
     /// Every index in the set, in order.
-    pub(super) fn ones(&self) -> impl Iterator<Item = usize> + '_ {
+    pub(super) fn ones(&self) -> impl Iterator<Item = I> + '_ {
         self.words.iter().enumerate().flat_map(|(at, &word)| {
             let mut rest = word;
             std::iter::from_fn(move || {
@@ -79,7 +92,7 @@ impl Bits {
                 }
                 let bit = rest.trailing_zeros() as usize;
                 rest &= rest - 1;
-                Some(at * 64 + bit)
+                Some(I::at(at * 64 + bit))
             })
         })
     }
@@ -127,7 +140,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "a union of sets of two lengths")]
     fn a_union_of_two_lengths_panics() {
-        Bits::new(70).union_with(&Bits::new(64));
+        Bits::<usize>::new(70).union_with(&Bits::new(64));
     }
 
     /// Mutation: have `remove` flip the bit rather than clear it. Removing an

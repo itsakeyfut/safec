@@ -22,6 +22,7 @@ use super::fit::{
     Fit, fits, folded, only_if_certain, pointee, pointee_width, read_from_locals, slots_leaving,
     through_locals,
 };
+use super::index::{Idx, LocalIdx, Site};
 use super::known::Known;
 use super::parts::{
     Extent, Freeing, Init, Levels, Offset, Reached, Read, SiteState, earlier, same,
@@ -347,7 +348,7 @@ pub(super) fn reported(
     let offset = asked(arguments, null, block)
         .filter_map(|argument| match argument {
             Operand::Copy(place) if place.projection.is_empty() => {
-                Some(known.points_to[place.local.index()].offset)
+                Some(known.points_to[place.local].offset)
             }
             // A constant frees nothing and a projection is already a
             // `Reached::Lost` above, which `interior` answers nothing for.
@@ -382,7 +383,7 @@ pub(super) fn reported(
 
     // What it frees that was stored where code outside may read it, asked
     // before `verdict` takes what was reached. See `Known::stored_out`.
-    let stored_out: Vec<usize> = reached
+    let stored_out: Vec<Site> = reached
         .iter()
         .filter_map(|reached| match reached {
             Reached::Site(site) if known.stored_out[*site] => Some(*site),
@@ -475,7 +476,7 @@ fn interior(reached: &[Reached], offset: Offset, known: &Known) -> Option<Verdic
     // The allocation, where every site agrees about it, because naming
     // one of several as the one freed is a caret on an allocation the value
     // may not hold.
-    let made_of = |site: usize| match known.state[site] {
+    let made_of = |site: Site| match known.state[site] {
         SiteState::Live(made) | SiteState::Freed { made, .. } => made,
         SiteState::Unknown | SiteState::Reachable | SiteState::Unheld => None,
     };
@@ -1239,7 +1240,7 @@ fn contents_leaving(
         let narrower = read_as
             .and_then(|ty| analysis.type_levels(ty))
             .is_some_and(|receiver| {
-                known.points_to[local.index()]
+                known.points_to[local]
                     .contents_at_most
                     .narrower_than(&receiver)
             });
@@ -1272,7 +1273,7 @@ fn contents_leaving(
             .chain(
                 function
                     .locals()
-                    .filter(|local| known.contents[site].inside_locals.get(local.index()))
+                    .filter(|local| known.contents[site].inside_locals.get(LocalIdx::of(local)))
                     .map(|held| {
                         analysis
                             .unit
@@ -1632,7 +1633,7 @@ pub(super) fn loaded_indeterminate(
         // true of it. Mutation: key by `place`, and
         // `a_pointer_read_out_of_a_freed_table_and_returned` loses `SC0402`.
         let local = place.local;
-        let through = &known.points_to[local.index()];
+        let through = &known.points_to[local];
         let kind = Kind::IndeterminateLoad {
             reaches_allocation: through.sites().next().is_some(),
             reaches_local: through.writes_to.any(),
@@ -1715,7 +1716,7 @@ pub(super) fn unwritten_read(
     for (local, at) in reads {
         // **A doubt where an element may still be unwritten**, a proof
         // where nothing wrote any of it. See `Known::local_init`.
-        let init = known.local_init[local.index()];
+        let init = known.local_init[local];
         let partly = init == Init::Maybe;
         if !taken.get(local.index())
             || init == Init::Written
@@ -1778,7 +1779,7 @@ pub(super) fn freed_after_its_read_was_reported(
     }
     match arguments.first() {
         Some(Operand::Copy(place))
-            if place.projection.is_empty() && known.holds_fresh_read(place.local.index()) =>
+            if place.projection.is_empty() && known.holds_fresh_read(LocalIdx::of(place.local)) =>
         {
             Some(place.local)
         }
@@ -2030,8 +2031,8 @@ pub(super) fn copied_away(
         return None;
     }
     let function = analysis.unit.function(analysis.function);
-    let held = &known.points_to[from.local.index()];
-    let named: Vec<usize> = held.writes_to.ones().collect();
+    let held = &known.points_to[from.local];
+    let named: Vec<LocalIdx> = held.writes_to.ones().collect();
     let source = match named.as_slice() {
         [only]
             if from.projection.is_empty()
@@ -2042,7 +2043,7 @@ pub(super) fn copied_away(
             Place::local(
                 function
                     .locals()
-                    .nth(*only)
+                    .nth(only.index())
                     .expect("an edge names a local of this function"),
             )
         }
@@ -2088,7 +2089,7 @@ pub(super) fn copied_away(
 /// where they do not or one was not made where this check saw it. One answer
 /// for the two stored-out doubts, at a free and at a call, so neither names
 /// one `malloc` for an allocation that may be either of two.
-fn made_where_all_agree(sites: &[usize], known: &Known) -> Option<Span> {
+fn made_where_all_agree(sites: &[Site], known: &Known) -> Option<Span> {
     let mut made = None;
     for (index, &site) in sites.iter().enumerate() {
         let from = match known.state[site] {
@@ -2115,9 +2116,9 @@ fn freed_by_opaque_call(
     callee: FuncId,
     handed: &[Operand],
     known: &Known,
-) -> BTreeSet<usize> {
+) -> BTreeSet<Site> {
     if analysis.frees_anything(callee) {
-        return (0..known.state.len()).collect();
+        return known.state.indices().collect();
     }
     let mut sites = analysis.handed_to_opaque_call(function, handed, known);
     for local in Allocations::locals_handed_to_opaque_call(handed, known) {
@@ -2165,7 +2166,7 @@ pub(super) fn handed_stored_out(
         | Callee::Copies
         | Callee::Ends => return,
     }
-    let stored: Vec<usize> = freed_by_opaque_call(analysis, function, *callee, arguments, known)
+    let stored: Vec<Site> = freed_by_opaque_call(analysis, function, *callee, arguments, known)
         .into_iter()
         .filter(|&site| known.stored_out[site])
         .collect();
@@ -2182,7 +2183,7 @@ pub(super) fn handed_stored_out(
     let by_name = arguments.iter().find_map(|argument| match argument {
         Operand::Copy(place)
             if place.projection.is_empty()
-                && known.points_to[place.local.index()]
+                && known.points_to[place.local]
                     .sites()
                     .any(|site| known.stored_out[site]) =>
         {
@@ -2604,7 +2605,7 @@ pub(super) fn used_before(
     );
 
     let touched = Allocations::touching(arguments.iter(), known);
-    let taken: Vec<usize> = named(&touched).collect();
+    let taken: Vec<Site> = named(&touched).collect();
     // **A call this check cannot read may free more than it was handed**:
     // whatever it reaches through what it was handed, closed over what those
     // allocations hold, and whatever something else had made reachable to
@@ -2632,7 +2633,7 @@ pub(super) fn used_before(
         if inside(analysis.sources, read.at, origin.span()) {
             continue;
         }
-        let both: Vec<usize> = read
+        let both: Vec<Site> = read
             .sites
             .iter()
             .copied()

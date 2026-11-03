@@ -5,6 +5,7 @@
 use crate::ir::{BinOp, Function, LocalId, Operand, Place, TranslationUnit, Ty};
 
 use super::allocations::innermost_element;
+use super::index::{Idx, LocalIdx, Site, Table};
 use super::known::{ArrayWrite, Known};
 use super::parts::{Held, Offset, Reached};
 use crate::reads::derefs;
@@ -43,7 +44,7 @@ pub(super) fn built_from(
     may_be_pointer: impl Fn(&Place) -> bool,
     reads_a_byte: impl Fn(&Place) -> bool,
     reads_caller_memory: impl Fn(LocalId, usize) -> bool,
-    is_array: impl Fn(usize) -> bool,
+    is_array: impl Fn(LocalIdx) -> bool,
 ) -> Held {
     let followed: Vec<LocalId> = operands
         .iter()
@@ -81,20 +82,20 @@ pub(super) fn built_from(
             _ => None,
         })
         .collect();
-    let followed: Vec<usize> = if !loads.is_empty() {
+    let followed: Vec<LocalIdx> = if !loads.is_empty() {
         followed
             .iter()
             .filter(|&&local| is_pointer(local))
-            .map(|local| local.index())
+            .map(|&local| LocalIdx::of(local))
             .collect()
     } else if followed.iter().any(|&local| is_pointer(local)) {
         followed
             .iter()
             .filter(|&&local| is_pointer(local))
-            .map(|local| local.index())
+            .map(|&local| LocalIdx::of(local))
             .collect()
     } else {
-        followed.iter().map(|local| local.index()).collect()
+        followed.iter().map(|&local| LocalIdx::of(local)).collect()
     };
 
     // **A byte read out of memory contributes what was stored where it was
@@ -184,7 +185,7 @@ pub(super) fn built_from(
 /// Every other operator answers `Unknown`, a `*` included: C17 6.5.5 p2 gives
 /// it arithmetic operands only, and a hand-built IR can hold one anyway. See
 /// ADR-0036.
-fn offset_of(op: BinOp, operands: [&Operand; 2], followed: &[usize], value: &Known) -> Offset {
+fn offset_of(op: BinOp, operands: [&Operand; 2], followed: &[LocalIdx], value: &Known) -> Offset {
     let [one] = followed[..] else {
         return Offset::Unknown;
     };
@@ -255,15 +256,17 @@ pub(super) fn replaced_by(
     // may land in an `int *m[1]`: compared against the local's own type, the
     // array was believed unwritten after it, and a read of `m[0]` was reported
     // as indeterminate (#640).
-    let may_hold: Vec<bool> = function
-        .locals()
-        .map(|local| {
-            everything || written_ty == Some(innermost_element(unit, function.local(local)))
-        })
-        .collect();
+    let may_hold: Table<LocalIdx, bool> = Table::from_vec(
+        function
+            .locals()
+            .map(|local| {
+                everything || written_ty == Some(innermost_element(unit, function.local(local)))
+            })
+            .collect(),
+    );
 
     // Written: a local of the type stored that the place may land in.
-    let mut lands = vec![false; may_hold.len()];
+    let mut lands: Table<LocalIdx, bool> = Table::filled(false, may_hold.len());
     for local in value.locals_a_write_may_land_in(place.local, derefs(place)) {
         lands[local] = true;
     }
@@ -277,7 +280,9 @@ pub(super) fn replaced_by(
         value,
         place.local,
         derefs(place),
-        (0..lands.len()).filter(|&local| lands[local] && may_hold[local]),
+        lands
+            .indices()
+            .filter(|&local| lands[local] && may_hold[local]),
         false,
     );
     let pending = value.array_writes_before(writes);
@@ -309,13 +314,13 @@ pub(super) fn write_effects(
     value: &Known,
     local: LocalId,
     dereferences: usize,
-    lands: impl IntoIterator<Item = usize>,
+    lands: impl IntoIterator<Item = LocalIdx>,
     call: bool,
-) -> Vec<(usize, ArrayWrite)> {
-    let lands: Vec<usize> = lands.into_iter().collect();
-    let (mut through, from_memory): (Vec<usize>, bool) = match dereferences {
+) -> Vec<(LocalIdx, ArrayWrite)> {
+    let lands: Vec<LocalIdx> = lands.into_iter().collect();
+    let (mut through, from_memory): (Vec<LocalIdx>, bool) = match dereferences {
         0 => return Vec::new(),
-        1 => (vec![local.index()], false),
+        1 => (vec![LocalIdx::of(local)], false),
         _ => {
             let (sites, locals) = value.levels_below(local, dereferences - 2);
             (locals.into_iter().collect(), !sites.is_empty())
@@ -371,10 +376,10 @@ pub(super) fn write_effects(
 /// pointer moved off it keeps and for the write through such a pointer
 /// being of an element. See `Held::moved_by_arithmetic` and
 /// `Known::local_init`.
-pub(super) fn is_array(unit: &TranslationUnit, function: &Function, index: usize) -> bool {
+pub(super) fn is_array(unit: &TranslationUnit, function: &Function, index: LocalIdx) -> bool {
     function
         .locals()
-        .nth(index)
+        .nth(index.index())
         .is_some_and(|local| matches!(unit.ty(function.local(local)), Ty::Array { .. }))
 }
 
@@ -390,7 +395,7 @@ pub(super) fn is_array(unit: &TranslationUnit, function: &Function, index: usize
 /// Neither of the other two variants names a site: one is a fact about a set,
 /// which ADR-0020 records on the local rather than on its members, and the
 /// other is this check having lost the pointer.
-pub(super) fn named(reached: &[Reached]) -> impl Iterator<Item = usize> + '_ {
+pub(super) fn named(reached: &[Reached]) -> impl Iterator<Item = Site> + '_ {
     reached.iter().filter_map(|reached| match reached {
         Reached::Site(site) => Some(*site),
         Reached::SetFreed(_) | Reached::Lost(_) | Reached::Partial => None,

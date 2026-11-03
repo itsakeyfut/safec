@@ -11,6 +11,8 @@ use crate::library::Callee;
 use crate::reads::derefs;
 use crate::source::SourceMap;
 
+use super::index::{LocalIdx, Table};
+
 /// The analysis: where an allocation is, and whether it has been freed.
 pub(super) struct Allocations<'a> {
     pub(super) sources: &'a SourceMap,
@@ -31,7 +33,7 @@ pub(super) struct Allocations<'a> {
     pub(super) deepest_pointer: usize,
     /// Each local's size on this target, `None` where it has none, by index:
     /// what [`Held::recorded_width`](super::parts::Held::recorded_width) reads a local's address at.
-    pub(super) local_sizes: Vec<Option<u64>>,
+    pub(super) local_sizes: Table<LocalIdx, Option<u64>>,
     /// The locals a caller filled, which are sites because an allocation can
     /// arrive through one.
     pub(super) parameters: Vec<LocalId>,
@@ -62,7 +64,7 @@ pub(super) struct Allocations<'a> {
     /// What such a result points at is memory the callee handed over, as
     /// what a parameter points at is memory the caller did, so a pointer read
     /// out of it is one a later such call may free. See ADR-0040.
-    pub(super) opaque_results: Vec<bool>,
+    pub(super) opaque_results: Table<LocalIdx, bool>,
     /// Per block, the locals read from its entry before they are written:
     /// what [`live_in`](crate::liveness::live_in) answers, once per function. See ADR-0048.
     pub(super) live_in: Vec<Vec<bool>>,

@@ -10,6 +10,7 @@ use crate::reads::derefs;
 use crate::source::Span;
 
 use super::allocations::{Allocations, innermost_element};
+use super::index::{LocalIdx, Site};
 use super::known::Known;
 use super::parts::{Extent, Offset, SiteState, same};
 
@@ -76,7 +77,7 @@ pub(super) fn fits(
     known: &Known,
     doubt_unseen_writes: bool,
 ) -> Option<Fit> {
-    let held = &known.points_to[local.index()];
+    let held = &known.points_to[local];
     let holds_something = held.sites().next().is_some()
         || held.offset != Offset::Zero
         || held.may_be_a_locals_address()
@@ -101,7 +102,7 @@ pub(super) fn fits(
     // doubted every `**pi`, since that address is what escapes it. An access
     // through the local itself still doubts all three, which costs a false
     // report and not a silence. See ADR-0060.
-    if doubt_unseen_writes && (held.lost || held.foreign || known.escaped[local.index()]) {
+    if doubt_unseen_writes && (held.lost || held.foreign || known.escaped[local]) {
         return Some(Fit::Unknown);
     }
     // **What a call may have written is no wider than the local was handed
@@ -110,7 +111,7 @@ pub(super) fn fits(
     // bound is kept: `if (c) put(pv, &c);` with `put` taking `void **` left
     // `v` holding nothing believed and nothing named, and a read through its
     // address believed a whole `int` (#632).
-    if held.foreign && known.handed_at_most[local.index()].is_some_and(|most| most < width) {
+    if held.foreign && known.handed_at_most[local].is_some_and(|most| most < width) {
         return Some(Fit::Unknown);
     }
     let sites = held
@@ -120,7 +121,7 @@ pub(super) fn fits(
     // are walked and kept where the edge names them.
     let locals = function
         .locals()
-        .filter(|target| held.writes_to.get(target.index()))
+        .filter(|target| held.writes_to.get(LocalIdx::of(target)))
         .map(|target| {
             analysis
                 .unit
@@ -232,7 +233,7 @@ pub(super) fn read_from_locals(
     // are walked and kept where the walk names them.
     let locals = function
         .locals()
-        .filter(|target| locals.contains(&target.index()))
+        .filter(|target| locals.contains(&LocalIdx::of(target)))
         .collect();
     (locals, certain)
 }
@@ -319,10 +320,10 @@ fn locals_reached(function: &Function, value: &Rvalue, known: &Known) -> Vec<Loc
     match value {
         Rvalue::Address(place) if place.projection.is_empty() => vec![place.local],
         Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
-            let held = &known.points_to[place.local.index()];
+            let held = &known.points_to[place.local];
             function
                 .locals()
-                .filter(|target| held.writes_to.get(target.index()))
+                .filter(|target| held.writes_to.get(LocalIdx::of(target)))
                 .collect()
         }
         Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
@@ -335,7 +336,7 @@ fn locals_reached(function: &Function, value: &Rvalue, known: &Known) -> Vec<Loc
 /// as, or `None` below a type that stops being a pointer; each site with the
 /// type the receiver reads what it holds as; and each site it reached below
 /// such a type, which a departure asks nothing of and a call marks (#679).
-pub(super) type Slots = (Vec<(LocalId, Option<TyId>)>, Vec<(usize, TyId)>, Vec<usize>);
+pub(super) type Slots = (Vec<(LocalId, Option<TyId>)>, Vec<(Site, TyId)>, Vec<Site>);
 
 /// Every slot a pointer leaving as a pointer to `read_as` lets leave with it,
 /// with the type the receiver reads each as: the locals it may point at, at
@@ -362,17 +363,17 @@ pub(super) fn slots_leaving(
     // nothing on before (found by review); a local's address is
     // [`locals_reached`]'s; and what arithmetic builds is asked by
     // [`leaving`] and names nothing to walk.
-    let (seed_sites, seed_locals): (Vec<usize>, Vec<LocalId>) = match value {
+    let (seed_sites, seed_locals): (Vec<Site>, Vec<LocalId>) = match value {
         Rvalue::Use(Operand::Copy(place)) if derefs(place) > 0 => {
             let (sites, locals) = known.levels_below(place.local, derefs(place));
             let locals = function
                 .locals()
-                .filter(|local| locals.contains(&local.index()))
+                .filter(|local| locals.contains(&LocalIdx::of(local)))
                 .collect();
             (sites.into_iter().collect(), locals)
         }
         Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => (
-            known.points_to[place.local.index()].sites().collect(),
+            known.points_to[place.local].sites().collect(),
             locals_reached(function, value, known),
         ),
         Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
@@ -383,7 +384,7 @@ pub(super) fn slots_leaving(
         .into_iter()
         .map(|local| (local, Some(read_as)))
         .collect();
-    let sites: Vec<(usize, Option<TyId>)> = seed_sites
+    let sites: Vec<(Site, Option<TyId>)> = seed_sites
         .into_iter()
         .map(|site| (site, Some(read_as)))
         .collect();
@@ -402,11 +403,11 @@ pub(super) fn slots_from(
     function: &Function,
     known: &Known,
     mut locals: Vec<(LocalId, Option<TyId>)>,
-    mut sites: Vec<(usize, Option<TyId>)>,
+    mut sites: Vec<(Site, Option<TyId>)>,
 ) -> Slots {
     let mut asked_locals: Vec<(LocalId, Option<TyId>)> = Vec::new();
-    let mut asked_sites: Vec<(usize, TyId)> = Vec::new();
-    let mut untyped_sites: Vec<usize> = Vec::new();
+    let mut asked_sites: Vec<(Site, TyId)> = Vec::new();
+    let mut untyped_sites: Vec<Site> = Vec::new();
     // Each pair is expanded once, behind `asked_locals` and `asked_sites`,
     // and there are finitely many: the locals, the sites, and the types the
     // departing one points through. So the walk ends.
@@ -426,11 +427,7 @@ pub(super) fn slots_from(
                     .into_iter()
                     .map(|next| (next, below)),
             );
-            sites.extend(
-                known.points_to[local.index()]
-                    .sites()
-                    .map(|site| (site, below)),
-            );
+            sites.extend(known.points_to[local].sites().map(|site| (site, below)));
         } else if let Some((site, read_as)) = sites.pop() {
             // Below a type that is not a pointer the receiver believes
             // nothing of this memory, and its stores were asked at theirs.
@@ -446,7 +443,9 @@ pub(super) fn slots_from(
                     locals.extend(
                         function
                             .locals()
-                            .filter(|local| known.contents[site].inside_locals.get(local.index()))
+                            .filter(|local| {
+                                known.contents[site].inside_locals.get(LocalIdx::of(local))
+                            })
                             .map(|next| (next, None)),
                     );
                 }
@@ -461,7 +460,7 @@ pub(super) fn slots_from(
             locals.extend(
                 function
                     .locals()
-                    .filter(|local| known.contents[site].inside_locals.get(local.index()))
+                    .filter(|local| known.contents[site].inside_locals.get(LocalIdx::of(local)))
                     .map(|next| (next, below)),
             );
         } else {

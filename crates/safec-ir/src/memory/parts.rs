@@ -13,6 +13,7 @@ use crate::source::{SourceMap, Span};
 
 use super::LostReason;
 use super::bits::Bits;
+use super::index::{LocalIdx, Site, Table};
 
 /// A free, and whether C has ordered it before what comes after it.
 ///
@@ -526,7 +527,7 @@ pub(super) fn read_key(at: Span, place: &Place, read: Read) -> ReadKey {
 /// [the safety model]: https://github.com/itsakeyfut/safec/blob/main/docs/safety-model.md
 pub(super) enum Reached {
     /// A site the argument may hold.
-    Site(usize),
+    Site(Site),
     /// The set this local names had one member freed, and which one is not
     /// known. Whether C has sequenced that free travels with it, for the reason
     /// [`Freeing`] gives.
@@ -591,7 +592,7 @@ pub(super) struct Held {
     /// 0.72 s once the four there were then were packed. Most of what is left is linear in the
     /// locals for every block, which is what `memory::LINEAR` counts. See
     /// ADR-0039.
-    pub(super) sites: Bits,
+    pub(super) sites: Bits<Site>,
     /// Whether this local may hold an allocation this check can no longer
     /// name.
     ///
@@ -627,7 +628,7 @@ pub(super) struct Held {
     /// Two things set it: taking an address, `pp = &p;`, and a call this check
     /// cannot read, whose result may be any local whose address escaped. See
     /// ADR-0039.
-    pub(super) writes_to: Bits,
+    pub(super) writes_to: Bits<LocalIdx>,
     /// Whether a write through this local may land somewhere [`writes_to`]
     /// does not name.
     ///
@@ -690,7 +691,7 @@ pub(super) struct Held {
     /// local became nameable. Read by
     /// [`Known::locals_a_write_may_land_in`](super::known::Known::locals_a_write_may_land_in)
     /// alone. See ADR-0057.
-    pub(super) named_at_read: Bits,
+    pub(super) named_at_read: Bits<LocalIdx>,
     /// Whether a call this check cannot read may have written into this
     /// local, through its address, something no site names.
     ///
@@ -766,7 +767,7 @@ pub(super) struct Held {
     /// was nulled by hand, and built a double free. Any other assignment
     /// clears this, arithmetic included, and a join keeps it only where both
     /// arms agree. Found by review. See ADR-0039.
-    pub(super) returned_by: Option<usize>,
+    pub(super) returned_by: Option<Site>,
     /// Whether this was read, on every path, out of an allocation
     /// [`Known::block_init`](super::known::Known::block_init) marks, so is
     /// indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2), and was reported
@@ -1034,8 +1035,8 @@ impl Held {
     /// every object it stands for.
     pub(super) fn recorded_width(
         &self,
-        extent: &[Option<Extent>],
-        sizes: &[Option<u64>],
+        extent: &Table<Site, Option<Extent>>,
+        sizes: &Table<LocalIdx, Option<u64>>,
     ) -> Option<u64> {
         if self.offset != Offset::Zero
             || self.inner_address
@@ -1142,7 +1143,7 @@ impl Held {
     /// it holds its own site at `Zero` and then what the call may have
     /// returned at `Unknown`, and the join makes the whole `Unknown`, which is
     /// the answer that cannot claim more than both said.
-    pub(super) fn hold(&mut self, site: usize, offset: Offset) {
+    pub(super) fn hold(&mut self, site: Site, offset: Offset) {
         self.sites.set(site);
         self.offset = self.offset.joined(offset);
     }
@@ -1168,7 +1169,7 @@ impl Held {
     /// of `a` by address, by value or by `free`, with `b` read again or not,
     /// handed to a call first, or a copy of `a`. A rule that stops counting
     /// such a local as live is one to ask this again under.
-    pub(super) fn certain_target(&self) -> Option<usize> {
+    pub(super) fn certain_target(&self) -> Option<LocalIdx> {
         if self.writes_elsewhere {
             return None;
         }
@@ -1180,7 +1181,7 @@ impl Held {
     }
 
     /// Every site held, in order.
-    pub(super) fn sites(&self) -> impl Iterator<Item = usize> + '_ {
+    pub(super) fn sites(&self) -> impl Iterator<Item = Site> + '_ {
         self.sites.ones()
     }
 
@@ -1456,7 +1457,7 @@ impl Held {
     /// site now reaches none *and says so*. Clearing instead would leave it
     /// reaching nothing with nothing to say, and a read through it would be a
     /// silence.
-    pub(super) fn lose(&mut self, site: usize) {
+    pub(super) fn lose(&mut self, site: Site) {
         if self.sites.get(site) {
             self.sites.remove(site);
             self.lost = true;
@@ -1549,7 +1550,7 @@ pub(super) struct PendingRead {
     /// rebuilt from the position the key holds.
     pub(super) at: Span,
     /// Which allocations it may have read.
-    pub(super) sites: BTreeSet<usize>,
+    pub(super) sites: BTreeSet<Site>,
     /// Which of the two reads it is, which decides the code it is reported
     /// under.
     ///
@@ -1568,7 +1569,7 @@ pub(super) struct PendingRead {
     /// builds. A parameter, a store into an exposed allocation, or another
     /// call in the expression does, since any of them may run first. Filled
     /// by [`Known::meeting`](super::known::Known::meeting) and [`Known::noticed`](super::known::Known::noticed). See ADR-0042.
-    pub(super) reachable: BTreeSet<usize>,
+    pub(super) reachable: BTreeSet<Site>,
     /// Whether something made what this read read reachable to code this
     /// check cannot read while a call that code may be in was pending.
     ///
@@ -1629,7 +1630,7 @@ pub(super) struct Realloced {
     /// the arm that learns it succeeded.
     pub(super) at: Span,
     /// Each allocation it was handed, with where it was made.
-    pub(super) old: Vec<(usize, Option<Span>)>,
+    pub(super) old: Vec<(Site, Option<Span>)>,
 }
 
 /// The element two values point at once joined, where `here` and `there`
@@ -1638,7 +1639,7 @@ pub(super) struct Realloced {
 fn joined_element(
     here_has_edge: bool,
     here: Option<u64>,
-    there_edges: &Bits,
+    there_edges: &Bits<LocalIdx>,
     there: Option<u64>,
 ) -> Option<u64> {
     match (here_has_edge, there_edges.any()) {
@@ -1664,7 +1665,7 @@ pub(super) struct Contents {
     /// cannot read: `*tab = p; log_line();` leaves `p` alone, because nothing
     /// exposed `tab`. Square in the locals, so a bit a pair, for the reason
     /// [`Held::sites`] gives. See ADR-0039.
-    pub(super) inside: Bits,
+    pub(super) inside: Bits<Site>,
     /// The locals whose address a pointer stored in that allocation
     /// may hold: [`Self::inside`] for what is not a site.
     ///
@@ -1675,7 +1676,7 @@ pub(super) struct Contents {
     /// a load out of the allocation carries the edges and a store two levels
     /// down lands in the local. A table of its own because a site and a local
     /// share an index. See ADR-0045.
-    pub(super) inside_locals: Bits,
+    pub(super) inside_locals: Bits<LocalIdx>,
     /// How many bytes a pointer stored there is believed to point at, at
     /// most, at level 0, and what each pointer stored there believed of its
     /// own memory at the levels below, with no bound where nothing recorded
@@ -1927,6 +1928,7 @@ mod tests {
     }
 
     use super::{Extent, Freeing, Held, Init, Inits, Levels, Offset, SiteState, earlier};
+    use crate::memory::index::{Idx, LocalIdx, Site};
     use crate::source::inside;
     use crate::source::{FileId, SourceMap, Span};
 
@@ -2002,8 +2004,8 @@ mod tests {
     #[test]
     fn clearing_a_local_leaves_it_no_site_and_no_edge() {
         let mut held = Held::none(4);
-        held.sites.set(1);
-        held.writes_to.set(3);
+        held.sites.set(Site::at(1));
+        held.writes_to.set(LocalIdx::at(3));
         held.writes_elsewhere = false;
         held.offset = Offset::NonZero;
         held.lost_read = true;
@@ -2036,12 +2038,12 @@ mod tests {
     #[test]
     fn a_certain_target_is_one_edge_and_nothing_elsewhere() {
         let mut one = Held::none(4);
-        one.writes_to.set(2);
+        one.writes_to.set(LocalIdx::at(2));
         one.writes_elsewhere = false;
-        assert_eq!(one.certain_target(), Some(2));
+        assert_eq!(one.certain_target(), Some(LocalIdx::at(2)));
 
         let mut two = one.clone();
-        two.writes_to.set(3);
+        two.writes_to.set(LocalIdx::at(3));
         assert_eq!(two.certain_target(), None);
 
         let mut elsewhere = one.clone();

@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::ir::{LocalId, Operand, Place, TyId};
 use crate::source::{SourceMap, Span};
 
+use super::index::{LocalIdx, Site, Table};
 use super::parts::{
     AS_TYPED, Contents, Extent, Held, Init, Inits, Levels, Offset, PendingRead, Reached, Read,
     ReadKey, Realloced, SiteState, read_key,
@@ -21,10 +22,10 @@ use crate::source::inside;
 #[derive(Clone, PartialEq, Eq)]
 pub(super) struct Known {
     /// Per local, what it may hold.
-    pub(super) points_to: Vec<Held>,
+    pub(super) points_to: Table<LocalIdx, Held>,
     /// Per site, what is known about it. Meaningless for a local nothing points
     /// at, which is most of them.
-    pub(super) state: Vec<SiteState>,
+    pub(super) state: Table<Site, SiteState>,
     /// Per local, whether anything holds its address.
     ///
     /// **A property of the local rather than of what it held when the address
@@ -34,7 +35,7 @@ pub(super) struct Known {
     /// freed pointer in silence. Whatever an escaped local is given later is
     /// no more proved than what it held before, because the write that put it
     /// there is not the only write that can reach it.
-    pub(super) escaped: Vec<bool>,
+    pub(super) escaped: Table<LocalIdx, bool>,
     /// Per local, whether code this check cannot read certainly holds its
     /// address: an argument of such a call certainly named it
     /// ([`Held::certain_target`]). Not an address memory may hold, whether a
@@ -47,7 +48,7 @@ pub(super) struct Known {
     /// [`Self::held_out_of_reach`] reads this one to exempt a holder, where
     /// the wide answer is a silence: a route missed here leaves a holder
     /// counted, which is a report. See ADR-0047.
-    pub(super) handed_away: Vec<bool>,
+    pub(super) handed_away: Table<LocalIdx, bool>,
     /// Per site, whether code this check cannot read may reach a pointer to it.
     ///
     /// **Once set, set for as long as the allocation lives**, because nothing
@@ -55,16 +56,16 @@ pub(super) struct Known {
     /// to one call may be returned or freed by the next. Every opaque call
     /// unproves every exposed allocation still live, and may return any of
     /// them. See ADR-0039.
-    pub(super) exposed: Vec<bool>,
+    pub(super) exposed: Table<Site, bool>,
     /// Per site, what the memory it names may contain: what a pointer stored
     /// there may hold, how wide it is believed, and the marks a load out of it
     /// carries. One record per site so that a door moving a value into memory
     /// answers for every field at once. See [`Contents`].
-    pub(super) contents: Vec<Contents>,
+    pub(super) contents: Table<Site, Contents>,
     /// Per site, what a `realloc` that returned it was handed, until a branch
     /// on a pointer holding it says whether it succeeded. See [`Realloced`]
     /// and ADR-0039.
-    pub(super) realloced: Vec<Option<Realloced>>,
+    pub(super) realloced: Table<Site, Option<Realloced>>,
     /// Per site, whether it is an allocation `malloc` or `aligned_alloc` made
     /// and nothing has written since: [`Init::Unwritten`] on every path, and
     /// its contents are indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2). Joined
@@ -87,7 +88,7 @@ pub(super) struct Known {
     /// body, as for a local. Cleared wherever `fresh` is. A test that always
     /// holds, `if (d != 0) *d = *s;`, is a doubt it cannot tell from one
     /// that may fail, the cost #668 recorded for a local. See ADR-0057.
-    pub(super) block_init: Vec<Init>,
+    pub(super) block_init: Table<Site, Init>,
     /// What has been read through a pointer since the last sequence point.
     ///
     /// **Ordered containers because a lattice value has to be canonical, and
@@ -116,7 +117,7 @@ pub(super) struct Known {
     /// For a read the walk meets after both: C may run the event, then the
     /// call, then the read, and [`Self::noticed`] cannot tell a read that is
     /// not pending yet. [`Self::meeting`] asks this instead. See ADR-0042.
-    pub(super) exposed_after_call: BTreeSet<usize>,
+    pub(super) exposed_after_call: BTreeSet<Site>,
     /// Whether a value this check lost has been handed to a call it cannot
     /// read, which may have kept it: the lost counterpart of
     /// [`Self::exposed`].
@@ -142,7 +143,7 @@ pub(super) struct Known {
     /// made, a parameter where the function starts and a call's destination
     /// where it returns, and read by the question whether an access fits the
     /// object it reaches. See ADR-0060.
-    pub(super) extent: Vec<Option<Extent>>,
+    pub(super) extent: Table<Site, Option<Extent>>,
     /// Per local, how many bytes a pointer a call may write into it is
     /// believed to point at, at most: the narrowest width the parameters
     /// it was handed through believe at its level, and `0` where one was a
@@ -158,7 +159,7 @@ pub(super) struct Known {
     /// holds a `char`'s address afterwards, asked as a `void *` in `put`'s
     /// body, and was believed a whole `int` (#632). A bound, so the lower of
     /// two at a join. See ADR-0060.
-    pub(super) handed_at_most: Vec<Option<u64>>,
+    pub(super) handed_at_most: Table<LocalIdx, Option<u64>>,
     /// Per local, what the types a call was handed it through say of its
     /// value's memory, below its own level: [`Self::handed_at_most`] one
     /// level further down and every level after, as
@@ -175,7 +176,7 @@ pub(super) struct Known {
     /// address on in silence. A bound, so the lower of two at every level
     /// and at a join, and kept when the site is made again as
     /// [`Self::handed_at_most`] is. See ADR-0060.
-    pub(super) handed_contents_at_most: Vec<Levels>,
+    pub(super) handed_contents_at_most: Table<LocalIdx, Levels>,
     /// Per local, whether nothing may have written it since it was made, on
     /// every path: its value is indeterminate (C17 6.2.4 p6, 6.7.9 p10), and
     /// Annex J.2 lists using it as undefined. That line of J.2 names no
@@ -229,7 +230,7 @@ pub(super) struct Known {
     /// kept there. An array kept per element gains no such doubt at any
     /// join, its elements carrying it. Written by a write of the whole local,
     /// and unwritten again at `StorageLive`. See ADR-0057.
-    pub(super) local_init: Vec<Init>,
+    pub(super) local_init: Table<LocalIdx, Init>,
     /// Per local array of at most [`ELEMENTS_KEPT`] innermost elements, one
     /// [`Init`] per element: [`Self::local_init`] kept per element. Empty for every other local, which
     /// [`Self::local_init`] answers for whole.
@@ -250,12 +251,12 @@ pub(super) struct Known {
     /// there is doubted. Joined per element as [`Init::joined`] says, so a
     /// loop's back edge creates no doubt, as for [`Self::local_init`]. See
     /// ADR-0057.
-    pub(super) element_init: Vec<Inits>,
+    pub(super) element_init: Table<LocalIdx, Inits>,
     /// Per local array, whether code this check cannot read was handed it
     /// only through a pointer moved off its start, so that a call writing it
     /// later writes it only in part (#667). A union at a join, and cleared at
     /// `StorageLive`. See `built::write_effects`.
-    pub(super) exposed_in_part: Vec<bool>,
+    pub(super) exposed_in_part: Table<LocalIdx, bool>,
     /// Per local array, whether a pointer that reaches it only by #639's
     /// rule, [`Held::array_edge`], was stored in memory, so that a pointer
     /// read back out of memory that names it may be that one (#667). A load
@@ -265,7 +266,7 @@ pub(super) struct Known {
     /// names the array is asked as if it may be that pointer: a doubt the
     /// reader sees, never a proof. A union at a join, and cleared at
     /// `StorageLive`. See `built::write_effects`.
-    pub(super) stored_in_part: Vec<bool>,
+    pub(super) stored_in_part: Table<LocalIdx, bool>,
     /// Per local, whether code this check cannot read may hold its address:
     /// what a call may have written, for [`Self::local_init`], and nothing
     /// else reads it. `lost` and `foreign` are still given to every escaped
@@ -296,7 +297,7 @@ pub(super) struct Known {
     /// reported `SC0411`, which the reader sees. A bit set where no call can
     /// reach clears a mark, and a read nothing wrote goes silent. See
     /// ADR-0057.
-    pub(super) exposed_locals: Vec<bool>,
+    pub(super) exposed_locals: Table<LocalIdx, bool>,
     /// Per site, whether a pointer to it may have been stored where code
     /// outside this function may read it, by a store or a library copy whose
     /// `store::Store` leaves (#684): into a caller's memory through a parameter, into memory or a
@@ -313,7 +314,7 @@ pub(super) struct Known {
     /// is made again (`Self::reborn`); never cleared by a later store, since
     /// this check does not follow what one place in such memory holds (#656).
     /// See ADR-0041.
-    pub(super) stored_out: Vec<bool>,
+    pub(super) stored_out: Table<Site, bool>,
     /// Per local, each type a call this check cannot read reached it as on
     /// the walk a departure takes, where that type is untyped somewhere
     /// below: `void`, `char` or `int` bytes, a pointer whose chain ends in
@@ -340,24 +341,24 @@ pub(super) struct Known {
     /// silent. A mark set where no call kept anything doubts what is put
     /// below that local after any later call, which the reader sees. See
     /// ADR-0060.
-    pub(super) handed_untyped: Vec<Vec<Option<TyId>>>,
+    pub(super) handed_untyped: Table<LocalIdx, Vec<Option<TyId>>>,
     /// Per site, each type a call this check cannot read reached the memory
     /// it names as, as [`Self::handed_untyped`] is for a local: `keep(m);
     /// *m = &w; other();` may write `w`. Kept where the site is made again
     /// (`Self::reborn`), as `inside` is, since the old allocation's address
     /// may still be held and the slots of the two are not told apart.
-    pub(super) handed_untyped_sites: Vec<Vec<Option<TyId>>>,
+    pub(super) handed_untyped_sites: Table<Site, Vec<Option<TyId>>>,
 }
 
 impl Known {
     /// Every site this local may point at.
-    pub(super) fn sites_of(&self, local: LocalId) -> impl Iterator<Item = usize> + '_ {
-        self.points_to[local.index()].sites()
+    pub(super) fn sites_of(&self, local: LocalId) -> impl Iterator<Item = Site> + '_ {
+        self.points_to[local].sites()
     }
 
     /// Stop following whatever this local held.
     pub(super) fn clear(&mut self, local: LocalId) {
-        self.points_to[local.index()].clear();
+        self.points_to[local].clear();
     }
 
     /// Every site this local may hold, and whether it may hold more.
@@ -420,20 +421,18 @@ impl Known {
         // over a two-site `p` a proved double free, which is the false proof
         // this rule exists to stop, arriving through a door it had just
         // opened.
-        if let Some(freed) = self.points_to[local.index()].freed {
+        if let Some(freed) = self.points_to[local].freed {
             reached.clear();
             reached.push(Reached::SetFreed(freed));
         }
 
-        if self.points_to[local.index()].lost
-            || (self.escaped[local.index()] && !reached.is_empty())
-        {
+        if self.points_to[local].lost || (self.escaped[local] && !reached.is_empty()) {
             reached.push(Reached::Lost(LostReason::Other));
         }
         // **A load's sites are what was stored where it was read from**, which
         // may not be all it holds: the report may doubt from them and never
         // prove. See ADR-0045.
-        if self.points_to[local.index()].loaded && !reached.is_empty() {
+        if self.points_to[local].loaded && !reached.is_empty() {
             reached.push(Reached::Partial);
         }
         // **And so is a set beside a local's address**: on the path that gave
@@ -442,7 +441,7 @@ impl Known {
         // = &x; free(p); return *q;` was a proved use after free that the
         // `else` path does not commit. Found by review of ADR-0048, whose
         // join opened a second way to it.
-        if self.points_to[local.index()].writes_to.any() && !reached.is_empty() {
+        if self.points_to[local].writes_to.any() && !reached.is_empty() {
             reached.push(Reached::Partial);
         }
 
@@ -508,12 +507,12 @@ impl Known {
         // memory and `slot`'s through an edge, and exempting everything
         // `slot` holds silenced a freed pointer `x` held as well. Found by
         // review.
-        let through_memory: BTreeSet<usize> = sites
+        let through_memory: BTreeSet<Site> = sites
             .iter()
             .copied()
             .flat_map(|container| self.contents[container].inside.ones().collect::<Vec<_>>())
             .collect();
-        let through_address: BTreeSet<usize> = locals
+        let through_address: BTreeSet<Site> = locals
             .iter()
             .flat_map(|&target| self.points_to[target].sites())
             .filter(|site| !through_memory.contains(site))
@@ -552,14 +551,14 @@ impl Known {
         let mut frontier = (first, first_locals);
         loop {
             walked.extend(frontier.0.iter().copied());
-            let in_memory: BTreeSet<usize> = frontier
+            let in_memory: BTreeSet<Site> = frontier
                 .0
                 .iter()
                 .flat_map(|&container| self.contents[container].inside.ones().collect::<Vec<_>>())
                 .collect();
             let (next_sites, next_locals) = self.level_below(&frontier.0, &frontier.1);
-            let new_sites: BTreeSet<usize> = next_sites.difference(&below).copied().collect();
-            let new_locals: BTreeSet<usize> =
+            let new_sites: BTreeSet<Site> = next_sites.difference(&below).copied().collect();
+            let new_locals: BTreeSet<LocalIdx> =
                 next_locals.difference(&seen_locals).copied().collect();
             if new_sites.is_empty() && new_locals.is_empty() {
                 break;
@@ -641,9 +640,9 @@ impl Known {
     /// The locals a read `depth` dereferences below `local` passes through:
     /// those the local's own edges name, then those each level of
     /// [`Self::level_below`] reaches, short of the last.
-    fn locals_read_through(&self, local: LocalId, depth: usize) -> BTreeSet<usize> {
-        let mut sites: BTreeSet<usize> = self.points_to[local.index()].sites().collect();
-        let mut locals: BTreeSet<usize> = self.written_through(local).into_iter().collect();
+    fn locals_read_through(&self, local: LocalId, depth: usize) -> BTreeSet<LocalIdx> {
+        let mut sites: BTreeSet<Site> = self.points_to[local].sites().collect();
+        let mut locals: BTreeSet<LocalIdx> = self.written_through(local).into_iter().collect();
         let mut passed = BTreeSet::new();
         for level in 0..depth {
             passed.extend(locals.iter().copied());
@@ -690,7 +689,7 @@ impl Known {
     /// load of it would hold, which is what `q = *k;` puts in `q`. Nothing
     /// for a local this check lost, whose contents are not named. See
     /// ADR-0045.
-    fn handed_level(&self, place: &Place) -> Option<(BTreeSet<usize>, BTreeSet<usize>)> {
+    fn handed_level(&self, place: &Place) -> Option<(BTreeSet<Site>, BTreeSet<LocalIdx>)> {
         if place.projection.is_empty() {
             self.level_zero(place.local)
         } else {
@@ -746,8 +745,8 @@ impl Known {
     /// lower bound, so what its allocations contain is one too, and every
     /// reader of it is a load read beside [`Reached::Partial`]. So a chain of
     /// loads through locals is followed, however long. See ADR-0045.
-    fn level_zero(&self, local: LocalId) -> Option<(BTreeSet<usize>, BTreeSet<usize>)> {
-        let held = &self.points_to[local.index()];
+    fn level_zero(&self, local: LocalId) -> Option<(BTreeSet<Site>, BTreeSet<LocalIdx>)> {
+        let held = &self.points_to[local];
         if held.lost {
             return None;
         }
@@ -771,9 +770,9 @@ impl Known {
     /// found cannot drift. See ADR-0045.
     fn level_below(
         &self,
-        sites: &BTreeSet<usize>,
-        locals: &BTreeSet<usize>,
-    ) -> (BTreeSet<usize>, BTreeSet<usize>) {
+        sites: &BTreeSet<Site>,
+        locals: &BTreeSet<LocalIdx>,
+    ) -> (BTreeSet<Site>, BTreeSet<LocalIdx>) {
         let mut next_sites = BTreeSet::new();
         let mut next_locals = BTreeSet::new();
         for &container in sites {
@@ -796,7 +795,7 @@ impl Known {
         &self,
         local: LocalId,
         depth: usize,
-    ) -> (BTreeSet<usize>, BTreeSet<usize>) {
+    ) -> (BTreeSet<Site>, BTreeSet<LocalIdx>) {
         // A lost local is followed no further, except into memory this check
         // cannot place: it names no site, and what such memory holds is still
         // what is exposed.
@@ -820,7 +819,7 @@ impl Known {
             // chain of this function's own allocations can hold, a doubt the
             // reader sees, and the same one the chain written through locals
             // already gave. See ADR-0045.
-            let reached: Vec<usize> = if level == 0 {
+            let reached: Vec<Site> = if level == 0 {
                 self.exposed_through(local)
             } else {
                 self.reachable_now().into_iter().collect()
@@ -859,8 +858,8 @@ impl Known {
     /// so what a parameter's memory holds was not read, and `t = *ppp; *w =
     /// m; free(m); q = *t; return *q;` with `f(&px, &x)` was believed (#489).
     /// See [`Self::reachable_now`].
-    fn exposed_through(&self, local: LocalId) -> Vec<usize> {
-        let from = &self.points_to[local.index()];
+    fn exposed_through(&self, local: LocalId) -> Vec<Site> {
+        let from = &self.points_to[local];
         if from.loaded || from.foreign {
             self.reachable_now().into_iter().collect()
         } else {
@@ -880,7 +879,7 @@ impl Known {
     /// Every level is a lower bound read beside
     /// [`Reached::Partial`], and steps through a local whose address is
     /// stored as through an allocation ([`Self::level_below`]). See ADR-0045.
-    pub(super) fn stored_below(&self, local: LocalId, depth: usize) -> BTreeSet<usize> {
+    pub(super) fn stored_below(&self, local: LocalId, depth: usize) -> BTreeSet<Site> {
         self.levels_below(local, depth).0
     }
 
@@ -924,11 +923,9 @@ impl Known {
         local: LocalId,
         depth: usize,
         depth_cap: usize,
-        sizes: &[Option<u64>],
+        sizes: &Table<LocalIdx, Option<u64>>,
     ) -> Levels {
-        let mut levels = self.points_to[local.index()]
-            .contents_at_most
-            .below(depth - 1);
+        let mut levels = self.points_to[local].contents_at_most.below(depth - 1);
         for level in 0..depth {
             let (sites, locals) = self.levels_below(local, level);
             for site in sites {
@@ -1000,7 +997,7 @@ impl Known {
     /// dereference of `*tab` reads through `tab`'s own sites, and `*tab` handed
     /// to a call hands on what they contain ([`Self::handed_reached`]).
     pub(super) fn meeting(&mut self, at: Span, place: &Place, read: Read, reached: &[Reached]) {
-        let sites: BTreeSet<usize> = named(reached).collect();
+        let sites: BTreeSet<Site> = named(reached).collect();
 
         if sites.is_empty() {
             return;
@@ -1011,7 +1008,7 @@ impl Known {
         // into an exposed allocation. Starting empty silences a pointer
         // parameter handed to a call before a later one.
         let reachable = self.reachable_now();
-        let reachable: BTreeSet<usize> = sites
+        let reachable: BTreeSet<Site> = sites
             .iter()
             .copied()
             .filter(|site| reachable.contains(site))
@@ -1054,9 +1051,10 @@ impl Known {
     /// and leaves its bit unset until the next call. Its readers run after
     /// that call and are right to trust it; a pending read is recorded, and
     /// told what became reachable, between calls.
-    pub(super) fn reachable_now(&self) -> BTreeSet<usize> {
+    pub(super) fn reachable_now(&self) -> BTreeSet<Site> {
         self.closure(
-            (0..self.exposed.len())
+            self.exposed
+                .indices()
                 .filter(|&site| self.exposed[site])
                 .collect(),
         )
@@ -1064,8 +1062,8 @@ impl Known {
 
     /// `sites`, and everything a pointer stored in one of them may hold, and
     /// so on.
-    pub(super) fn closure(&self, sites: Vec<usize>) -> BTreeSet<usize> {
-        let mut closed: BTreeSet<usize> = sites.iter().copied().collect();
+    pub(super) fn closure(&self, sites: Vec<Site>) -> BTreeSet<Site> {
+        let mut closed: BTreeSet<Site> = sites.iter().copied().collect();
         let mut pending = sites;
         while let Some(site) = pending.pop() {
             for held in self.contents[site].inside.ones() {
@@ -1117,7 +1115,7 @@ impl Known {
     /// keeps a local's address out of what is exposed, so that a holder is
     /// still asked; this records where it may be and exempts nobody.
     pub(super) fn landed_where_unknown_code_points(&mut self, poured: &Contents) {
-        let landings: Vec<usize> = self.reachable_now().into_iter().collect();
+        let landings: Vec<Site> = self.reachable_now().into_iter().collect();
         self.pour(&landings, poured, &[]);
     }
 
@@ -1134,7 +1132,7 @@ impl Known {
     /// `a_pointer_read_out_of_what_realloc_of_a_live_block_returns_is_not_reported`
     /// is `SC0411`.
     pub(super) fn names_nothing(&self, local: LocalId) -> bool {
-        !self.points_to[local.index()].sites.any() && self.names_no_more_than_its_sites(local)
+        !self.points_to[local].sites.any() && self.names_no_more_than_its_sites(local)
     }
 
     /// Whether every allocation `local` may name is unwritten, [`Self::block_init`], it names
@@ -1147,7 +1145,7 @@ impl Known {
     /// `a_pointer_read_out_of_what_realloc_of_a_block_nothing_wrote_returns_is_reported`
     /// goes silent.
     pub(super) fn names_only_fresh(&self, local: LocalId) -> bool {
-        let held = &self.points_to[local.index()];
+        let held = &self.points_to[local];
         held.sites.any()
             && held
                 .sites
@@ -1160,7 +1158,7 @@ impl Known {
     /// [`Self::block_init`]: what `realloc` or a library copy handed it may
     /// copy is then indeterminate in part, whatever else it names (#724).
     pub(super) fn may_name_fresh(&self, local: LocalId) -> bool {
-        self.points_to[local.index()]
+        self.points_to[local]
             .sites
             .ones()
             .any(|site| self.block_init[site].may_be_unwritten())
@@ -1179,7 +1177,7 @@ impl Known {
     /// `a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_fresh`
     /// is `SC0411` about two correct programs.
     fn names_no_more_than_its_sites(&self, local: LocalId) -> bool {
-        let held = &self.points_to[local.index()];
+        let held = &self.points_to[local];
         !held.writes_to.any()
             && !held.lost
             && !held.loaded
@@ -1208,7 +1206,7 @@ impl Known {
     /// not replace, a lost value gone, caller memory at entry) sets that
     /// field directly, and so does a call this check cannot read where it
     /// writes into what it was handed, which records the sites alone.
-    pub(super) fn pour(&mut self, containers: &[usize], poured: &Contents, in_part: &[usize]) {
+    pub(super) fn pour(&mut self, containers: &[Site], poured: &Contents, in_part: &[LocalIdx]) {
         for &container in containers {
             self.contents[container].absorbed(poured);
         }
@@ -1240,7 +1238,7 @@ impl Known {
         held: &mut Held,
         local: LocalId,
         depth: usize,
-        is_array: &dyn Fn(usize) -> bool,
+        is_array: &dyn Fn(LocalIdx) -> bool,
         from_caller: bool,
     ) -> bool {
         let (sites, locals) = self.levels_below(local, depth);
@@ -1321,9 +1319,13 @@ impl Known {
     /// **After [`Self::expose`], at the same call**, which is what puts the
     /// allocations the call was handed into `reachable_now`: asked before it,
     /// `*box = m; fill_box(box);` left `m` unwritten.
-    pub(super) fn expose_locals(&mut self, locals: Vec<usize>) {
-        let mut seeds: BTreeSet<usize> = locals.into_iter().collect();
-        seeds.extend((0..self.exposed_locals.len()).filter(|&local| self.exposed_locals[local]));
+    pub(super) fn expose_locals(&mut self, locals: Vec<LocalIdx>) {
+        let mut seeds: BTreeSet<LocalIdx> = locals.into_iter().collect();
+        seeds.extend(
+            self.exposed_locals
+                .indices()
+                .filter(|&local| self.exposed_locals[local]),
+        );
         for local in self.closed_from(self.reachable_now(), seeds).locals {
             self.exposed_locals[local] = true;
         }
@@ -1339,7 +1341,7 @@ impl Known {
     /// stored after the read was counted as one the pointer may be, which
     /// silenced a read of a local array it could not reach (#648). See
     /// ADR-0057.
-    pub(super) fn locals_named_by_unknown_code(&self) -> BTreeSet<usize> {
+    pub(super) fn locals_named_by_unknown_code(&self) -> BTreeSet<LocalIdx> {
         self.unknown_code_reaches().locals
     }
 
@@ -1348,7 +1350,7 @@ impl Known {
     /// [`Self::reachable_now`] and what an exposed local points at, at any
     /// depth: `keepp(&slot); slot = b;` puts `b`'s allocation where such code
     /// can find it, though nothing exposed it (#655). See ADR-0041.
-    pub(super) fn sites_named_by_unknown_code(&self) -> BTreeSet<usize> {
+    pub(super) fn sites_named_by_unknown_code(&self) -> BTreeSet<Site> {
         self.unknown_code_reaches().sites
     }
 
@@ -1357,7 +1359,10 @@ impl Known {
     /// every exposed local, so the sites and the locals cannot come from two
     /// different walks.
     fn unknown_code_reaches(&self) -> Closed {
-        let exposed = (0..self.exposed_locals.len()).filter(|&local| self.exposed_locals[local]);
+        let exposed = self
+            .exposed_locals
+            .indices()
+            .filter(|&local| self.exposed_locals[local]);
         self.closed_from(self.reachable_now(), exposed.collect())
     }
 
@@ -1366,7 +1371,7 @@ impl Known {
     /// for the call that exposes and the write and the store that ask, so
     /// they cannot find different memory. Two finite sets that only grow, so
     /// it ends.
-    fn closed_from(&self, mut sites: BTreeSet<usize>, mut locals: BTreeSet<usize>) -> Closed {
+    fn closed_from(&self, mut sites: BTreeSet<Site>, mut locals: BTreeSet<LocalIdx>) -> Closed {
         loop {
             let (next_sites, next_locals) = self.level_below(&sites, &locals);
             let before = (sites.len(), locals.len());
@@ -1389,7 +1394,7 @@ impl Known {
     /// set without `m` and refused a correct program with a certain
     /// `SC0411`. Found by review (#661). Only a local the store marked
     /// `foreign`, since that is what reads this set as of its write.
-    pub(super) fn named_after_a_store(&mut self, landed: &[usize]) {
+    pub(super) fn named_after_a_store(&mut self, landed: &[LocalIdx]) {
         let named = self.locals_named_by_unknown_code();
         for &local in landed {
             if self.points_to[local].foreign {
@@ -1459,13 +1464,13 @@ impl Known {
         &self,
         local: LocalId,
         dereferences: usize,
-    ) -> Vec<usize> {
-        let mut lands: BTreeSet<usize> = match dereferences {
-            0 => BTreeSet::from([local.index()]),
+    ) -> Vec<LocalIdx> {
+        let mut lands: BTreeSet<LocalIdx> = match dereferences {
+            0 => BTreeSet::from([LocalIdx::of(local)]),
             1 => self.written_through(local).into_iter().collect(),
             _ => self.levels_below(local, dereferences - 1).1,
         };
-        let held = &self.points_to[local.index()];
+        let held = &self.points_to[local];
         // `holds_unrecorded` with `loaded` and `foreign` taken apart: keep
         // the two in step.
         if self.unnamed_below(local, dereferences) || held.lost {
@@ -1487,7 +1492,7 @@ impl Known {
     /// of memory is answered as of its read (#648), and one a call wrote as
     /// of the call (#661). See ADR-0057 and ADR-0041.
     pub(super) fn through_unnamed(&self, local: LocalId, dereferences: usize) -> bool {
-        holds_unrecorded(&self.points_to[local.index()]) || self.unnamed_below(local, dereferences)
+        holds_unrecorded(&self.points_to[local]) || self.unnamed_below(local, dereferences)
     }
 
     /// The second half of [`Self::through_unnamed`]: whether a level
@@ -1525,7 +1530,7 @@ impl Known {
         &mut self,
         sources: &SourceMap,
         by: Option<Span>,
-        routes: &BTreeSet<usize>,
+        routes: &BTreeSet<Site>,
     ) {
         // **And whether a call already pending may run between this and the
         // read.** It may unless the read belongs to it or to `by`, or it is
@@ -1560,7 +1565,7 @@ impl Known {
             if own {
                 continue;
             }
-            let now: Vec<usize> = entry
+            let now: Vec<Site> = entry
                 .sites
                 .iter()
                 .copied()
@@ -1575,9 +1580,10 @@ impl Known {
     /// Empty means this check does not know where such a write goes, which is
     /// not the same as knowing it goes nowhere. ADR-0019 records why the answer
     /// to not knowing is to do nothing.
-    pub(super) fn written_through(&self, local: LocalId) -> Vec<usize> {
-        (0..self.points_to.len())
-            .filter(|target| self.points_to[local.index()].writes_to.get(*target))
+    pub(super) fn written_through(&self, local: LocalId) -> Vec<LocalIdx> {
+        self.points_to
+            .indices()
+            .filter(|target| self.points_to[local].writes_to.get(*target))
             .collect()
     }
 
@@ -1586,9 +1592,9 @@ impl Known {
     /// them can reach by following addresses. A visited bit per local, so a
     /// cycle of addresses or a dense graph of them is walked once each,
     /// rather than once per path. See ADR-0044.
-    pub(super) fn beneath(&self, from: impl IntoIterator<Item = usize>) -> Vec<usize> {
-        let mut seen = vec![false; self.points_to.len()];
-        let mut todo: Vec<usize> = from.into_iter().collect();
+    pub(super) fn beneath(&self, from: impl IntoIterator<Item = LocalIdx>) -> Vec<LocalIdx> {
+        let mut seen: Table<LocalIdx, bool> = Table::filled(false, self.points_to.len());
+        let mut todo: Vec<LocalIdx> = from.into_iter().collect();
         let mut found = Vec::new();
         while let Some(local) = todo.pop() {
             if std::mem::replace(&mut seen[local], true) {
@@ -1620,7 +1626,7 @@ impl Known {
     /// added to [`Known`] has to answer here for what happens when the site
     /// starts naming something else. `error[E0027]` is what asks, as it does
     /// for a variant's fields wherever a match does not write `..`.
-    pub(super) fn reborn(&mut self, site: usize, made: Option<Span>) {
+    pub(super) fn reborn(&mut self, site: Site, made: Option<Span>) {
         let Known {
             points_to,
             state,
@@ -1716,8 +1722,8 @@ impl Known {
         // counting it live let a pointer stored last turn be read as the new
         // allocation. Found by review. See ADR-0047.
         let gone = !matches!(state[site], SiteState::Live(_));
-        for (other, held) in points_to.iter_mut().enumerate() {
-            if other != site {
+        for (other, held) in points_to.enumerated_mut() {
+            if other != site.local() {
                 if gone && held.sites.get(site) {
                     held.stale_read = true;
                 }
@@ -1800,7 +1806,7 @@ impl Known {
     ///
     /// An index rather than a [`LocalId`], because [`Self::settle`] walks the
     /// rows of a side table and `LocalId` cannot be built from one.
-    pub(super) fn unproved(&mut self, local: usize) {
+    pub(super) fn unproved(&mut self, local: LocalIdx) {
         if !self.escaped[local] {
             return;
         }
@@ -1835,10 +1841,10 @@ impl Known {
     pub(super) fn expose(
         &mut self,
         sources: &SourceMap,
-        sites: impl IntoIterator<Item = usize>,
+        sites: impl IntoIterator<Item = Site>,
         by: Option<Span>,
     ) {
-        let sites: Vec<usize> = sites.into_iter().collect();
+        let sites: Vec<Site> = sites.into_iter().collect();
         let routes = self.closure(sites.clone());
         self.noticed(sources, by, &routes);
         for site in sites {
@@ -1859,7 +1865,7 @@ impl Known {
     /// read may have written a determinate pointer into it since. The one
     /// answer a copy of it and the suppression at a free ask, so that the
     /// doubt a free of what `fill(&t)` wrote raises is kept. See ADR-0057.
-    pub(super) fn holds_fresh_read(&self, local: usize) -> bool {
+    pub(super) fn holds_fresh_read(&self, local: LocalIdx) -> bool {
         self.points_to[local].fresh_read && !self.escaped[local]
     }
 
@@ -1893,7 +1899,7 @@ impl Known {
             return true;
         }
         let reachable = self.sites_named_by_unknown_code();
-        let into: Vec<usize> = if depth == 1 {
+        let into: Vec<Site> = if depth == 1 {
             self.sites_of(place.local).collect()
         } else {
             self.stored_below(place.local, depth - 1)
@@ -1912,7 +1918,7 @@ impl Known {
     /// Something may have written `site`, so its contents are no longer
     /// known to be indeterminate. Exposed memory is written by whatever code
     /// this check cannot read may do with it. See [`Self::block_init`].
-    pub(super) fn written(&mut self, site: usize) {
+    pub(super) fn written(&mut self, site: Site) {
         self.block_init[site] = Init::Written;
     }
 
@@ -1925,16 +1931,18 @@ impl Known {
     /// Which locals are certainly unwritten, [`Init::Unwritten`], as of now:
     /// what a write that may land past its target asks of the moment before
     /// it. See `Allocations::written_past_its_end`.
-    pub(super) fn unwritten_locals(&self) -> Vec<bool> {
-        self.local_init
-            .iter()
-            .map(|init| init.is_unwritten())
-            .collect()
+    pub(super) fn unwritten_locals(&self) -> Table<LocalIdx, bool> {
+        Table::from_vec(
+            self.local_init
+                .iter()
+                .map(|init| init.is_unwritten())
+                .collect(),
+        )
     }
 
     /// Something may have written `local`, so its value is no longer known
     /// to be indeterminate. See [`Self::local_init`].
-    pub(super) fn written_local(&mut self, local: usize) {
+    pub(super) fn written_local(&mut self, local: LocalIdx) {
         self.local_init[local] = Init::Written;
         self.element_init[local].write_all();
     }
@@ -1944,7 +1952,7 @@ impl Known {
     /// [`Self::array_writes_after`] once it has. See `built::write_effects`.
     pub(super) fn array_writes_before(
         &self,
-        writes: Vec<(usize, ArrayWrite)>,
+        writes: Vec<(LocalIdx, ArrayWrite)>,
     ) -> Vec<PendingWrite> {
         writes
             .into_iter()
@@ -1998,7 +2006,7 @@ impl Known {
     /// Whether `local` is certainly unwritten where a read reaches it at
     /// `element`, or anywhere in it where that is not known. See
     /// [`Self::element_init`].
-    pub(super) fn certainly_unwritten(&self, local: usize, element: Option<u64>) -> bool {
+    pub(super) fn certainly_unwritten(&self, local: LocalIdx, element: Option<u64>) -> bool {
         let elements = &self.element_init[local];
         if elements.len() == 0 {
             return self.local_init[local].is_unwritten();
@@ -2023,7 +2031,7 @@ impl Known {
     /// Found by review of #667.
     pub(super) fn may_be_unwritten(
         &self,
-        local: usize,
+        local: LocalIdx,
         element: Option<u64>,
         at_start: bool,
     ) -> bool {
@@ -2084,17 +2092,17 @@ impl Known {
     /// call did not reach: a load out of one it reached is doubted already.
     /// Only for a site this leaves `Reachable`, since a site `Unknown` or
     /// freed is asked about whoever holds it. See ADR-0047.
-    pub(super) fn held_out_of_reach(&mut self, live_after: impl Fn(usize) -> bool) {
-        for site in 0..self.state.len() {
+    pub(super) fn held_out_of_reach(&mut self, live_after: impl Fn(LocalIdx) -> bool) {
+        for site in self.state.indices() {
             if self.state[site] != SiteState::Reachable {
                 continue;
             }
-            for container in 0..self.contents.len() {
+            for container in self.contents.indices() {
                 if self.contents[container].inside.get(site) {
                     self.contents[container].unreplaced = true;
                 }
             }
-            let out_of_reach = (0..self.points_to.len()).any(|holder| {
+            let out_of_reach = self.points_to.indices().any(|holder| {
                 !self.handed_away[holder]
                     && live_after(holder)
                     && self.points_to[holder].sites().any(|held| held == site)
@@ -2135,7 +2143,7 @@ impl Known {
             if !place.projection.is_empty() {
                 continue;
             }
-            if let Some(target) = self.points_to[place.local.index()].certain_target() {
+            if let Some(target) = self.points_to[place.local].certain_target() {
                 self.handed_away[target] = true;
             }
         }
@@ -2144,7 +2152,7 @@ impl Known {
     /// Forget every `realloc` fact naming an old allocation `touched` says
     /// something else may have freed since, so a branch on the result can no
     /// longer give it back as live. See ADR-0039.
-    pub(super) fn forget_reallocs_touching(&mut self, touched: impl Fn(usize) -> bool) {
+    pub(super) fn forget_reallocs_touching(&mut self, touched: impl Fn(Site) -> bool) {
         for fact in self.realloced.iter_mut() {
             if fact
                 .as_ref()
@@ -2224,10 +2232,10 @@ impl Known {
     /// it lost, reaches what is stored**, since a callee handed its address can
     /// read that pointer out of it and nothing here names what it is. See
     /// ADR-0040.
-    pub(super) fn reach_of(&self, named: impl Iterator<Item = usize>) -> Vec<usize> {
-        let mut reach: Vec<usize> = named.collect();
+    pub(super) fn reach_of(&self, named: impl Iterator<Item = Site>) -> Vec<Site> {
+        let mut reach: Vec<Site> = named.collect();
         let mut unnamed = false;
-        for (local, &escaped) in self.escaped.iter().enumerate() {
+        for (local, &escaped) in self.escaped.enumerated() {
             if escaped {
                 reach.extend(self.points_to[local].sites());
                 unnamed |= self.points_to[local].loaded || self.points_to[local].lost;
@@ -2248,7 +2256,7 @@ impl Known {
     /// **It over-counts, and must**: a site answered as held by nothing takes
     /// its state from the other side of a join, so one held by something
     /// missed here is one whose free could be forgotten. See ADR-0048.
-    pub(super) fn held_sites(&self) -> Vec<bool> {
+    pub(super) fn held_sites(&self) -> Table<Site, bool> {
         let sites = self.state.len();
         // **Every holder stays, whatever a search found** (#481): one left
         // out that some program needs is a free forgotten in silence. Three
@@ -2288,9 +2296,9 @@ impl Known {
         // `a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote`.
         // See ADR-0048.
         if self.points_to.iter().any(|held| held.foreign) {
-            return vec![true; sites];
+            return Table::filled(true, sites);
         }
-        let mut held = vec![false; sites];
+        let mut held: Table<Site, bool> = Table::filled(false, sites);
         for local in &self.points_to {
             for site in local.sites() {
                 held[site] = true;
@@ -2307,7 +2315,7 @@ impl Known {
         // Then nothing that can name the site after the join holds it on that
         // arm, so its state there decides no answer. Tried, with no answer
         // changing: that program, and the same with `&&` in place of `?:`.
-        for (site, held) in held.iter_mut().enumerate() {
+        for (site, held) in held.enumerated_mut() {
             *held |= self.exposed[site] || self.exposed_after_call.contains(&site);
         }
         // A pending read's `sites` can be all that holds a site at an edge:
@@ -2336,8 +2344,9 @@ impl Known {
     /// out of a local through its address is not here and need not be: that
     /// local escaped, so what it holds is in every call's reach already. See
     /// ADR-0040.
-    pub(super) fn stored(&self) -> Vec<usize> {
-        (0..self.contents.len())
+    pub(super) fn stored(&self) -> Vec<Site> {
+        self.contents
+            .indices()
             .filter(|&held| self.contents.iter().any(|row| row.inside.get(held)))
             .collect()
     }
@@ -2357,7 +2366,7 @@ impl Known {
     /// nowhere else, so covering the last three covers every one: nothing has
     /// escaped where a function starts.
     pub(super) fn settle(&mut self) {
-        for local in 0..self.escaped.len() {
+        for local in self.escaped.indices() {
             self.unproved(local);
         }
     }
@@ -2412,11 +2421,11 @@ impl Known {
     /// caller cannot give one answer and forget the other. See ADR-0057.
     pub(super) fn replaced(
         &mut self,
-        may_hold: impl Fn(usize) -> bool,
-        may_write: impl Fn(usize) -> bool,
+        may_hold: impl Fn(LocalIdx) -> bool,
+        may_write: impl Fn(LocalIdx) -> bool,
     ) {
         let named_now = self.locals_named_by_unknown_code();
-        for local in 0..self.escaped.len() {
+        for local in self.escaped.indices() {
             if may_hold(local)
                 && self.escaped[local]
                 && self.points_to[local].sites().next().is_some()
@@ -2463,8 +2472,8 @@ impl Known {
 /// What [`Known::closed_from`] found: the sites and the locals, by name,
 /// since both are indexes and the one taken for the other compiles.
 struct Closed {
-    sites: BTreeSet<usize>,
-    locals: BTreeSet<usize>,
+    sites: BTreeSet<Site>,
+    locals: BTreeSet<LocalIdx>,
 }
 
 /// Whether `held` may hold an address this function never recorded: read
@@ -2493,7 +2502,7 @@ pub(super) enum ArrayWrite {
 /// An [`ArrayWrite`] with what the array held before the write, put back
 /// after it. See [`Known::array_writes_before`].
 pub(super) struct PendingWrite {
-    local: usize,
+    local: LocalIdx,
     write: ArrayWrite,
     init: Init,
     elements: Inits,
