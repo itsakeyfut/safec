@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-11-03
 decision-makers: itsakeyfut
 ---
@@ -21,8 +21,6 @@ were the same program one route over: #719, #721 and #724 were three issues
 for one such matrix, and #724, #735 and #767 found routes main was already
 silent on. A route nobody wrote a case for is believed by default, and the
 first reader to try it is a reviewer.
-
-It is `proposed` while #736 is built.
 
 ## Decision Drivers
 
@@ -77,9 +75,20 @@ type-check fails as itself rather than as a disagreement.
 
 ### Confirmation
 
-To be filled by #736 with the mutations: a route's handling removed in the
-checker, a row deleted from the table, an accepted row that now agrees, and a
-template whose hazard equals its control.
+Each mutation applied on its own to `tests/routes.rs`, the checker or the
+summary, the matrix run, and the file restored.
+
+* The checker's `memcpy` pouring no width: `width_memcpy_d1_both` fails, among
+  others. Its copy carrying no unwritten mark into a block:
+  `fresh_memcpy_d1_both` fails.
+* A row deleted from the table: `the_matrix_is_every_combination_of_its_axes`.
+* `ACCEPTED` listing a row that agrees: that row's test.
+* The control asked the hazard's program: most rows fail.
+* A summary line changed: `the_matrix_answers_what_was_blessed`.
+* A template assigning a `char *` to an `int *`:
+  `every_generated_program_is_c_this_frontend_reads`.
+* Run against `0586f663`, before #735: `width_call_d1_both` and the three
+  rows beside it fail on the hazard, the silences #735 closed.
 
 ### Consequences
 
@@ -87,7 +96,8 @@ template whose hazard equals its control.
   memory check is measured against.
 * Bad, because a row's programs are written by templates, and a template can be
   wrong about C; the `--safety off` build catches only what does not type-check.
-* Bad, because the matrix runs some 240 programs, a process each.
+* Bad, because the matrix's 79 rows run the compiler some 470 times, a process
+  each, about four seconds here.
 
 ## Pros and Cons of the Options
 

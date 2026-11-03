@@ -799,6 +799,13 @@ fn disagreement(name: &str, row: Row) -> Option<Side> {
 }
 
 /// Ask a row its belief's rule, against what `ACCEPTED` lists for it.
+///
+/// Mutation: the checker's `memcpy` pours no width into what it copies into;
+/// `width_memcpy_d1_both` fails, among the four rows at one and two levels.
+/// Mutation: the copy carries no unwritten mark into a block;
+/// `fresh_memcpy_d1_both` fails, with its one-arm row. Mutation: ask the
+/// control's program for the hazard's; 46 rows fail. Mutation: list in
+/// `ACCEPTED` a row that agrees; that row fails.
 fn check(name: &str, row: Row) {
     let listed = ACCEPTED
         .iter()
@@ -920,9 +927,8 @@ fn every_accepted_row_is_in_the_table_once_with_a_reason() {
 /// `--safety off` with nothing said, so that a template that is wrong about
 /// C fails as itself rather than as a row that disagrees.
 ///
-/// Mutation: have `width`'s control assign `vc` rather than `&i`, a `void *`
-/// that holds a `char`'s address, which is C; and assign `&c` to an `int *`
-/// instead, which is not: this fails.
+/// Mutation: have `width`'s control assign `&c`, a `char *`, to its `int *`
+/// rather than `&i`; this fails, beside the rows that template writes.
 #[test]
 fn every_generated_program_is_c_this_frontend_reads() {
     let mut refused = vec![];
