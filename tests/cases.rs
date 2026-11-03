@@ -238,6 +238,27 @@ cases! {
         // The same in an inner loop, read after both. Mutation: as above; this
         // goes silent. Found by review.
         a_block_an_inner_loop_makes_unwritten_again_is_doubted_where_read_after_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy carries what it copies into and out of a local, as
+        // between blocks (#750). Mutation: carry no mark into a local, or
+        // drop the certain arm for one; the first and the third go silent or
+        // are only doubted. Count the source's blocks alone for the certain
+        // arm; the second and the third. Doubt a local whatever the source
+        // holds; the fourth and many more are doubted. Be certain however
+        // much of the local the copy covers; the last, a copy of eight bytes
+        // into a written `a[1]`'s array, is certain about `a[1]`.
+        a_copy_out_of_a_block_nothing_wrote_into_a_local_array_is_reported_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_out_of_a_local_array_nothing_wrote_into_a_block_is_reported_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_out_of_a_local_nothing_wrote_into_another_is_reported_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_out_of_a_written_block_into_a_local_array_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_out_of_a_written_local_array_into_a_block_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_out_of_a_local_nothing_wrote_into_part_of_a_local_array_is_doubted_not_certain: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A source read through dereferences, and a destination that may
+        // be a local or a block. Both found by review. Mutation: ask a
+        // source with a projection nothing; the first goes silent. Let the
+        // certain arm ignore the blocks the destination may name; the second
+        // is certain.
+        a_copy_out_of_a_local_nothing_wrote_read_through_dereferences_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_freed_and_dropped_on_the_other_arm_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same of a library copy, whose destination may be either block:
         // it keeps the doubt, and a copy into the one block it names clears
@@ -3726,7 +3747,10 @@ cases! {
         // `Held::names_nothing`; this builds. Found by review.
         a_null_moved_by_arithmetic_on_one_path_does_not_carry_the_other_paths_belief: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Nor does a local left unwritten on one path, whose read through a
-        // copy of its address nothing else asks. Mutation: ignore which side
+        // copy of its address nothing else asks; what the copy carries is a
+        // doubt at `*ib`, since `t` is unwritten on that path (#750).
+        // Mutation: ask the copy's source about blocks alone; the doubt
+        // goes. Mutation: ignore which side
         // left the local `Init::Unwritten` in the values' join; this builds. Found by
         // review.
         a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

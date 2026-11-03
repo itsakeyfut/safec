@@ -1,0 +1,52 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_out_of_a_local_nothing_wrote_into_another_is_reported_where_read.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_copy_out_of_a_local_nothing_wrote_into_another_is_reported_where_read.c:1:28 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_out_of_a_local_nothing_wrote_into_another_is_reported_where_read.c:2:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "x"
+  Local "_2" "int *" "p"
+  Local "_3" "int *" "q"
+  Local "_4" "int **"
+  Local "_5" "int **"
+  Local "_6" "void *"
+  Local "_7" "int *" "r"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation a_copy_out_of_a_local_nothing_wrote_into_another_is_reported_where_read.c:2:40 written
+      Destination "_4"
+      Address
+        Place "_3"
+    Operation a_copy_out_of_a_local_nothing_wrote_into_another_is_reported_where_read.c:2:44 written
+      Destination "_5"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_copy_out_of_a_local_nothing_wrote_into_another_is_reported_where_read.c:2:33 generated
+    Call a_copy_out_of_a_local_nothing_wrote_into_another_is_reported_where_read.c:2:33 written "memcpy" "bb1"
+      Destination "_6"
+      Copy "_4"
+      Copy "_5"
+      Constant 8
+  Block "bb1"
+    Sequenced a_copy_out_of_a_local_nothing_wrote_into_another_is_reported_where_read.c:2:33 generated
+    Operation a_copy_out_of_a_local_nothing_wrote_into_another_is_reported_where_read.c:2:57 written
+      Destination "_7"
+      Use
+        Copy "_3"
+    Sequenced a_copy_out_of_a_local_nothing_wrote_into_another_is_reported_where_read.c:2:61 generated
+    Operation a_copy_out_of_a_local_nothing_wrote_into_another_is_reported_where_read.c:2:71 written
+      Destination "_8"
+      Binary "Eq"
+        Copy "_7"
+        Copy "_1"
+    Operation a_copy_out_of_a_local_nothing_wrote_into_another_is_reported_where_read.c:2:64 written
+      Destination "_0"
+      Use
+        Copy "_8"
+    Sequenced a_copy_out_of_a_local_nothing_wrote_into_another_is_reported_where_read.c:2:71 generated
+    Return

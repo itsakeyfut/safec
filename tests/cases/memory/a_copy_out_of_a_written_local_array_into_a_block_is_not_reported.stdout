@@ -1,0 +1,99 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:1:28 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "x"
+  Local "_2" "int *[1]" "a"
+  Local "_3" "int **"
+  Local "_4" "int *"
+  Local "_5" "int **" "n"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int **"
+  Local "_9" "void *"
+  Local "_10" "int *" "r"
+  Local "_11" "int"
+  Block "bb0" entry
+    Operation a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:28 generated
+      Destination "_3"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:28 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_1"
+    Operation a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:28 written
+      Destination "_4"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:28 generated
+    ArgumentsEvaluated a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:48 generated
+    Call a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:48 written "malloc" "bb1"
+      Destination "_6"
+      Constant 8
+  Block "bb1"
+    Operation a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:44 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:48 generated
+    Operation a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:63 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_5"
+    Branch a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:63 written "bb2" "bb3"
+      Copy "_7"
+  Block "bb2"
+    Sequenced a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:63 generated
+    Operation a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:67 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:74 generated
+    Return
+  Block "bb3"
+    Sequenced a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:63 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:87 generated
+      Destination "_8"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:77 generated
+    Call a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:77 written "memcpy" "bb5"
+      Destination "_9"
+      Copy "_5"
+      Copy "_8"
+      Constant 8
+  Block "bb5"
+    Sequenced a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:77 generated
+    Operation a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:99 written
+      Destination "_10"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:103 generated
+    Operation a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:114 written
+      Destination "_11"
+      Binary "Eq"
+        Copy "_10"
+        Copy "_1"
+    Operation a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:107 written
+      Destination "_0"
+      Use
+        Copy "_11"
+    Sequenced a_copy_out_of_a_written_local_array_into_a_block_is_not_reported.c:2:114 generated
+    Return

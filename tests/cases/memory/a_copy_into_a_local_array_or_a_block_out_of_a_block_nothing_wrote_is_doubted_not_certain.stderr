@@ -1,0 +1,11 @@
+error[SC0411]: this may read a pointer out of memory before anything was assigned to it
+   ╭─[ a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:172 ]
+   │
+ 2 │ int f(int *x, int c) { int **m = malloc(8); if (!m) return 0; int **k = malloc(8); if (!k) return 0; int *a[1]; a[0] = x; void *d = a; if (c) d = k; memcpy(d, m, 8); int *r = a[0]; return r == x; }
+   │                                                                                                                                                                            ────┬───  
+   │                                                                                                                                                                                ╰───── read here
+───╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path before it is read

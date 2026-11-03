@@ -739,6 +739,15 @@ impl Inits {
         self.doubted.any()
     }
 
+    /// Every element as [`Init::doubt`] leaves it.
+    pub(super) fn doubt_all(&mut self) {
+        for element in 0..self.len() {
+            let mut init = self.get(element);
+            init.doubt();
+            self.set(element, init);
+        }
+    }
+
     /// Each element as [`Init::unwritten_again`] leaves it.
     pub(super) fn unwritten_again(&mut self, before: &Self, back: &Self) {
         for element in 0..self.len() {
