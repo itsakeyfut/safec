@@ -132,6 +132,8 @@ fn axis_place(row: Row) -> [usize; 4] {
 /// for.
 ///
 /// Mutation: drop `Belief::Stale` from `BELIEFS` and shorten it; this fails.
+/// Mutation: add a variant to `Belief`, name it in every `match`, and leave
+/// it out of `BELIEFS`; this fails on the count.
 #[test]
 fn every_axis_holds_every_value_once() {
     let any = Row {
@@ -180,21 +182,55 @@ fn every_axis_holds_every_value_once() {
             "{shape:?}"
         );
     }
-    let last = axis_place(Row {
-        belief: Belief::Stale,
-        route: Route::Ret,
-        depth: Depth::D2,
-        shape: Shape::One,
-    });
-    assert_eq!(
-        last,
-        [
-            BELIEFS.len() - 1,
-            ROUTES.len() - 1,
-            DEPTHS.len() - 1,
-            SHAPES.len() - 1
-        ]
-    );
+    assert_eq!(BELIEFS.len(), values(Belief::Width), "BELIEFS");
+    assert_eq!(ROUTES.len(), values(Route::Store), "ROUTES");
+    assert_eq!(DEPTHS.len(), values(Depth::D0), "DEPTHS");
+    assert_eq!(SHAPES.len(), values(Shape::Both), "SHAPES");
+}
+
+/// How many values an axis has, from a `match` over one of them that names
+/// every variant, so that a variant added does not compile until it is named
+/// here beside the count. **What ties a list's length to its enum**: the
+/// places above are only asked of the values a list holds, so a value left
+/// out of its list and given the next place passed them. Found by review.
+trait Axis {
+    fn values(self) -> usize;
+}
+
+impl Axis for Belief {
+    fn values(self) -> usize {
+        match self {
+            Belief::Width | Belief::Fresh | Belief::Lost | Belief::Stale => 4,
+        }
+    }
+}
+
+impl Axis for Route {
+    fn values(self) -> usize {
+        match self {
+            Route::Store | Route::Memcpy | Route::Realloc | Route::Call | Route::Ret => 5,
+        }
+    }
+}
+
+impl Axis for Depth {
+    fn values(self) -> usize {
+        match self {
+            Depth::D0 | Depth::D1 | Depth::D2 => 3,
+        }
+    }
+}
+
+impl Axis for Shape {
+    fn values(self) -> usize {
+        match self {
+            Shape::Both | Shape::One => 2,
+        }
+    }
+}
+
+fn values(axis: impl Axis) -> usize {
+    axis.values()
 }
 
 /// One `#[test]` per row, and the roster the axis guard reads, from one
@@ -1290,4 +1326,14 @@ fn decide_blessing(asked: bool, under_ci: bool) -> bool {
 #[should_panic(expected = "SAFEC_BLESS is set under CI")]
 fn blessing_the_matrix_is_refused_under_ci() {
     decide_blessing(true, true);
+}
+
+/// The summary is rewritten when blessing is asked for outside CI, and only
+/// then. Mutation: have `decide_blessing` answer `false` or `true` whatever
+/// it is asked; this fails.
+#[test]
+fn the_summary_is_rewritten_only_when_blessing_is_asked_for() {
+    assert!(decide_blessing(true, false));
+    assert!(!decide_blessing(false, false));
+    assert!(!decide_blessing(false, true));
 }
