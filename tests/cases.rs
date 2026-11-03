@@ -4186,8 +4186,11 @@ cases! {
         // A load is believed no wider than what its memory is recorded to
         // hold: a `char`'s address put there through a `void **` alias, or
         // by `memcpy`, and read back as an `int *`. No store either asks is
-        // a departure of the type that is read. Mutation: answer a belief
-        // without the record in `fits`; both go silent.
+        // a departure of the type that is read. Answering a belief without
+        // the record in `fits` alone no longer moves it, measured, since the
+        // load is bounded where it is read; dropping that bound in
+        // `believed_read` as well fails it, and `fit::tests` holds the
+        // record's test in `fits` on its own (ADR-0061).
         a_char_address_stored_as_void_and_read_through_an_int_alias: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `void *` arrives believing nothing, so even one byte through it
         // is not shown to fit. Mutation: believe a `void *` one byte in
