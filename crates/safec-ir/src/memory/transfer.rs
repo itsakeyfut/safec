@@ -615,14 +615,31 @@ impl Allocations<'_> {
                 if elsewhere && pointer_stored {
                     value.landed_where_unknown_code_points(poured);
                 }
+                // **A doubt the store kept on a block it may have missed
+                // survives its exposure**, which writes every block code this
+                // check cannot read now reaches: `*o = m1;` before `v = *t;
+                // *v = x;` with `*t` either `m1` or `m2` lost the doubt about
+                // `m1` that `initialised_by` had just kept (#754), where the
+                // copy's door puts its marks back after its own exposure.
+                // Found by review.
+                let before = value.block_init.clone();
+                let keep = |value: &mut Known| {
+                    for &site in containers.iter() {
+                        if before[site] == Init::Maybe {
+                            value.block_init[site] = Init::Maybe;
+                        }
+                    }
+                };
                 if unplaced {
                     // No container, so what is poured is the arrays it marks
                     // alone.
                     value.pour(&[], poured, in_part);
                     value.expose(self.sources, carried, Some(span));
+                    keep(value);
                 } else {
                     if unnamed {
                         value.expose(self.sources, carried.clone(), Some(span));
+                        keep(value);
                     }
                     value.pour(containers, poured, in_part);
                     // Stored where code this check cannot read already
@@ -751,10 +768,11 @@ impl Allocations<'_> {
                         // allocation let `*w = x;` through a pointer read out
                         // of a parameter clear one nothing could reach, read
                         // after it in silence where its `memcpy` spelling is
-                        // `SC0411` (#726). Taken as written, the may-be-fresh
-                        // mark not kept, since keeping it doubted a write
-                        // through a pointer read out of memory that certainly
-                        // reached its block, by the user's decision. **And
+                        // `SC0411` (#726). Taken as written where it lands in
+                        // one place, the may-be-fresh mark not kept, since
+                        // keeping it doubted a write through a pointer read out
+                        // of memory that certainly reached its block, by the
+                        // user's decision. **And
                         // what such code can name through a local whose
                         // address it holds**, `Known::sites_named_by_unknown_code`,
                         // and not only what is reachable from exposed memory:
@@ -774,23 +792,29 @@ impl Allocations<'_> {
                         let mut may_land: BTreeSet<usize> =
                             landing.containers.iter().copied().collect();
                         may_land.extend(value.sites_named_by_unknown_code());
-                        // **But a store deeper than one dereference through a
-                        // pointer this check follows, whose landing names more
-                        // than one place, may have missed any of its blocks**,
-                        // as one through a single dereference may: `*h = c ?
-                        // m : o; **h = x;` read `*m` in silence (#739). Not a
-                        // pointer read out of memory, lost or written by a
-                        // call, which is #726's decision above.
-                        let held = &value.points_to[place.local.index()];
-                        let followed = !(held.loaded || held.lost || held.foreign);
-                        let several =
-                            followed && landing.containers.len() + landing.targets.len() > 1;
+                        // **But a store whose landing names more than one place
+                        // may have missed any of its blocks**, as one through a
+                        // single dereference may: `*h = c ? m : o; **h = x;`
+                        // read `*m` in silence (#739), and so did `v = *t; *v =
+                        // x;` with `*t` either of two blocks (#754). Whatever
+                        // the pointer is: #726's decision is of a store that
+                        // certainly reaches its one block, and a landing of two
+                        // reaches neither certainly, by the user's decision.
+                        let several = landing.containers.len() + landing.targets.len() > 1;
                         for site in may_land {
                             if several && landing.containers.contains(&site) {
                                 value.block_init[site].may_write();
                             } else {
                                 value.written(site);
                             }
+                        }
+                        // And what it points at was written, so that a read
+                        // back through it is of what was stored, as the
+                        // one-step store's is above: without it the lowering's
+                        // own read of `*v` after `*v = x;` was doubted. See
+                        // `Held::stored_through`.
+                        if several && place.projection.as_slice() == [Projection::Deref] {
+                            value.points_to[place.local.index()].stored_through = true;
                         }
                     }
                 }
