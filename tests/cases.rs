@@ -235,6 +235,9 @@ cases! {
         // place of what arrived from before decides no case, measured.
         a_block_a_loop_makes_unwritten_again_is_doubted_where_read_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_a_loop_makes_unwritten_again_is_doubted_where_read_on_a_later_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same in an inner loop, read after both. Mutation: as above; this
+        // goes silent. Found by review.
+        a_block_an_inner_loop_makes_unwritten_again_is_doubted_where_read_after_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_freed_and_dropped_on_the_other_arm_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same of a library copy, whose destination may be either block:
         // it keeps the doubt, and a copy into the one block it names clears

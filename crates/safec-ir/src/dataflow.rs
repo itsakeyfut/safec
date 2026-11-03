@@ -673,11 +673,18 @@ fn solved<A: Analysis>(
                             // what arrived from before the loop.
                             if first_turn_of != Some(successor) {
                                 // Beside what the edges from before the loop
-                                // sent, which is at least one by now, since
-                                // the head was reached before a back edge
-                                // into it was. See `Analysis::join_back_beside`.
+                                // sent, which is at least one by now for any
+                                // head but the entry, since such a head was
+                                // reached before a back edge into it was. **The
+                                // entry has no edge from before it**, only
+                                // `on_entry`, which is what its value started
+                                // from, so that is what came before: falling
+                                // back to `join_back` there skipped the rule
+                                // for an entry a back edge reaches, which two
+                                // hand-built IR tests reach. Found by review.
+                                // See `Analysis::join_back_beside`.
                                 let back = just_sent.clone();
-                                match sent_into(
+                                let before = sent_into(
                                     analysis,
                                     function,
                                     cfg,
@@ -685,12 +692,14 @@ fn solved<A: Analysis>(
                                     successor,
                                     &mut targets,
                                     |from| cfg.drained_at(from) < cfg.drained_at(successor),
-                                ) {
-                                    Some(before) => {
-                                        analysis.join_back_beside(&mut folded, &back, &before);
-                                    }
-                                    None => analysis.join_back(&mut folded, &back),
-                                }
+                                )
+                                .or_else(|| {
+                                    (successor == function.entry()).then(|| analysis.on_entry())
+                                })
+                                .expect(
+                                    "a head other than the entry is reached from before it first",
+                                );
+                                analysis.join_back_beside(&mut folded, &back, &before);
                             }
                         } else {
                             let forward = sent_into(
