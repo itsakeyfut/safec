@@ -219,6 +219,11 @@ cases! {
         // `Init::may_write` (#733). Mutation: let `may_write` write
         // `Written`; it goes silent.
         a_store_that_may_land_in_an_unwritten_block_or_a_written_one_leaves_the_first_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A site one side of a join does not name takes the other side's
+        // `Init`, whichever side it is (#733). Mutations, measured at the
+        // commit that guards them.
+        a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_freed_and_dropped_on_the_first_arm_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_freed_and_dropped_on_the_other_arm_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same of a library copy, whose destination may be either block:
         // it keeps the doubt, and a copy into the one block it names clears
