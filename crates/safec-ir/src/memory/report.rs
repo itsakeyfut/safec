@@ -17,7 +17,7 @@ use super::bits::Bits;
 use super::built::named;
 use super::known::Known;
 use super::parts::{
-    Callee, Extent, Freeing, Levels, Offset, Reach, Reached, Read, SiteState, earlier, same,
+    Callee, Extent, Freeing, Init, Levels, Offset, Reach, Reached, Read, SiteState, earlier, same,
 };
 use super::store::{StoreKind, Written};
 use super::transfer::{Allocations, CopiedPointers, innermost_element};
@@ -2089,7 +2089,7 @@ pub(super) fn loaded_indeterminate(
     for place in read {
         // A proof where nothing wrote what it reads, and a doubt where an
         // array it reads at its start was written only in part. See
-        // `Known::partly_written`.
+        // `Known::local_init`.
         let certain = analysis.reads_fresh(function, &place, known);
         let maybe = !certain && analysis.reads_partly(function, &place, known);
         if !certain && !maybe {
@@ -2167,7 +2167,7 @@ fn may_say(
 ///
 /// `taken` is `assigned::address_taken`, so a local is asked here exactly
 /// where `memory::assigned` does not ask it: that analysis follows no write
-/// through an address and this one does ([`Known::unwritten`]). See ADR-0057.
+/// through an address and this one does ([`Known::local_init`]). See ADR-0057.
 ///
 /// `doubt_only` as [`loaded_indeterminate`] takes it.
 #[allow(clippy::too_many_arguments)]
@@ -2184,10 +2184,11 @@ pub(super) fn unwritten_read(
     let function = analysis.unit.function(analysis.function);
     for (local, at) in reads {
         // **A doubt where an element may still be unwritten**, a proof
-        // where nothing wrote any of it. See `Known::partly_written`.
-        let partly = !known.unwritten[local.index()] && known.partly_written[local.index()];
+        // where nothing wrote any of it. See `Known::local_init`.
+        let init = known.local_init[local.index()];
+        let partly = init == Init::Maybe;
         if !taken.get(local.index())
-            || !(known.unwritten[local.index()] || partly)
+            || init == Init::Written
             || !analysis.holds_a_pointer(function.local(local))
         {
             continue;

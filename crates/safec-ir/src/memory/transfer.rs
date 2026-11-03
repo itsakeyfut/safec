@@ -12,12 +12,11 @@ use crate::ir::{
 };
 use crate::source::{SourceMap, Span};
 
-use super::bits::Bits;
 use super::built::{built_from, named, replaced_by};
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known};
 use super::parts::{
-    Callee, Contents, Extent, Freeing, Held, LIBRARY, Leaves, Levels, Library, Makes, Offset,
-    PendingRead, Reached, Read, Realloced, SiteState, bounded,
+    Callee, Contents, Extent, Freeing, Held, Init, Inits, LIBRARY, Leaves, Levels, Library, Makes,
+    Offset, PendingRead, Reached, Read, Realloced, SiteState, bounded,
 };
 use super::report::{Fit, fits, slots_from, slots_leaving};
 use super::store::{Landing, StoreKind};
@@ -101,7 +100,7 @@ enum Wrote<'a> {
     /// An assignment to `place`, any assignment: one with no dereference
     /// changes nothing here, and the arm asks that itself. `targets` are the locals one exact
     /// dereference may land in, and `certain` whether it lands in one alone
-    /// (ADR-0028). `unwritten_before` is `Known::unwritten` as it was before
+    /// (ADR-0028). `unwritten_before` is `Known::local_init` as it was before
     /// the store, for a local it may write past.
     Store {
         place: &'a Place,
@@ -297,8 +296,8 @@ impl Allocations<'_> {
     /// The per-element record each local starts with: a bit set for every
     /// element of an array of at most `ELEMENTS_KEPT` pointers that is
     /// unwritten at entry, and none for any other local. See
-    /// `Known::unwritten_elements`.
-    fn elements_at_entry(&self) -> Vec<Bits> {
+    /// `Known::element_init`.
+    fn elements_at_entry(&self) -> Vec<Inits> {
         let function = self.unit.function(self.function);
         let unwritten = self.unwritten_at_entry();
         function
@@ -310,14 +309,9 @@ impl Allocations<'_> {
                 };
                 match length {
                     Some(length) if length <= ELEMENTS_KEPT && unwritten[local.index()] => {
-                        let length = usize::try_from(length).unwrap_or(0);
-                        let mut bits = Bits::new(length);
-                        for element in 0..length {
-                            bits.set(element);
-                        }
-                        bits
+                        Inits::unwritten(usize::try_from(length).unwrap_or(0))
                     }
-                    _ => Bits::new(0),
+                    _ => Inits::written(0),
                 }
             })
             .collect()
@@ -537,7 +531,7 @@ impl Allocations<'_> {
     }
 
     /// Whether an object of type `ty` holds a pointer: a pointer, or an array
-    /// of them through every dimension. What [`Known::unwritten`] watches,
+    /// of them through every dimension. What [`Known::local_init`] watches,
     /// since a pointer is what ADR-0057 reports read out of memory nothing
     /// wrote, and an integer or a byte is not followed there either.
     ///
@@ -573,7 +567,7 @@ impl Allocations<'_> {
         }
         value.points_to[target].lost = true;
         if unwritten_before[target] {
-            value.partly_written[target] = true;
+            value.local_init[target].doubt();
         }
     }
 
@@ -691,7 +685,7 @@ impl Allocations<'_> {
                 // any type, and what it wrote is no longer indeterminate.
                 // Placed only for one dereference through a pointer that
                 // names exactly its sites; anything else may land in any
-                // allocation. See `Known::fresh`.
+                // allocation. See `Known::block_init`.
                 //
                 // **A store of an indeterminate pointer too.** The pointer was
                 // reported where it was read, and keeping the slot fresh
@@ -706,7 +700,7 @@ impl Allocations<'_> {
                     // **And a local it may land in**, the local its edges name
                     // where the store is placed: `m[0] = p;` writes `m`. Where
                     // it is not placed, `replaced_by` below clears the
-                    // locals it may land in. See `Known::unwritten`.
+                    // locals it may land in. See `Known::local_init`.
                     if one_step && !(held.loaded || held.lost || held.foreign) {
                         let edges: Vec<usize> = held.writes_to.ones().collect();
                         let sites: Vec<usize> = held.sites().collect();
@@ -715,15 +709,17 @@ impl Allocations<'_> {
                         // fresh stays so, as a may-fact: `*p = x;` with `p`
                         // either of two blocks, one of them written on one
                         // arm only, cleared the doubt about it. Found by
-                        // review. See `Known::maybe_fresh` (#721). **A local
+                        // review. See `Known::block_init` (#721). **A local
                         // it names counts as one of them**: `p = c ? m : &loc;
                         // *p = x;` may have written `loc` and missed `m`
                         // (#739).
                         let several = sites.len() + edges.len() > 1;
                         for &site in &sites {
-                            let maybe = several && (value.fresh[site] || value.maybe_fresh[site]);
-                            value.written(site);
-                            value.maybe_fresh[site] = maybe;
+                            if several {
+                                value.block_init[site].may_write();
+                            } else {
+                                value.written(site);
+                            }
                         }
                         // **Through a pointer moved off an array, an element
                         // of it**, which may not be the one read later. See
@@ -790,11 +786,11 @@ impl Allocations<'_> {
                         let several =
                             followed && landing.containers.len() + landing.targets.len() > 1;
                         for site in may_land {
-                            let maybe = several
-                                && landing.containers.contains(&site)
-                                && (value.fresh[site] || value.maybe_fresh[site]);
-                            value.written(site);
-                            value.maybe_fresh[site] = maybe;
+                            if several && landing.containers.contains(&site) {
+                                value.block_init[site].may_write();
+                            } else {
+                                value.written(site);
+                            }
                         }
                     }
                 }
@@ -823,7 +819,7 @@ impl Allocations<'_> {
                 // where the destination itself was moved off a local, and
                 // deeper where a level above was, as the store asks it. See
                 // `Allocations::written_past_its_end`.
-                let unwritten_before = value.unwritten.clone();
+                let unwritten_before = value.unwritten_locals();
                 let past_end: Vec<usize> = match dest {
                     Some(Operand::Copy(dest))
                         if dest
@@ -876,7 +872,7 @@ impl Allocations<'_> {
                 // destination that is a local has written what it points at,
                 // `Held::stored_through`, so that a read back through it is of
                 // the block it wrote. See
-                // `Known::maybe_fresh`.
+                // `Known::block_init`.
                 let may_land: Option<(BTreeSet<usize>, bool, bool)> = match dest {
                     Some(Operand::Copy(dest))
                         if dest
@@ -933,8 +929,7 @@ impl Allocations<'_> {
                     ),
                     Some(Operand::Copy(_) | Operand::Constant(_)) | None => (false, false),
                 };
-                let fresh_before = value.fresh.clone();
-                let maybe_before = value.maybe_fresh.clone();
+                let before = value.block_init.clone();
                 value.expose(self.sources, reach, Some(span));
                 if let Some((may_land, several, alone)) = may_land {
                     // **And only as far as its length writes a pointer
@@ -951,13 +946,12 @@ impl Allocations<'_> {
                         CopiedPointers::NoneWhole => (true, false),
                     };
                     let mut carried = false;
-                    for site in 0..value.fresh.len() {
+                    for (site, was) in before.into_iter().enumerate() {
                         if !may_land.contains(&site) || unwritten {
-                            value.fresh[site] = fresh_before[site];
-                            value.maybe_fresh[site] = maybe_before[site];
+                            value.block_init[site] = was;
                         } else {
-                            if doubted && (fresh_before[site] || maybe_before[site]) {
-                                value.maybe_fresh[site] = true;
+                            if doubted && was.may_be_unwritten() {
+                                value.block_init[site].doubt();
                             }
                             // **Certain only where it covers the whole block**,
                             // its size a constant and the length at least that:
@@ -974,10 +968,10 @@ impl Allocations<'_> {
                                 && covers
                                 && matches!(length, CopiedPointers::Whole)
                             {
-                                value.fresh[site] = true;
+                                value.block_init[site] = Init::Unwritten;
                                 carried = true;
                             } else if source_maybe {
-                                value.maybe_fresh[site] = true;
+                                value.block_init[site].doubt();
                                 carried = true;
                             }
                         }
@@ -1017,7 +1011,7 @@ impl Allocations<'_> {
                 // cleared every local array's mark, and so did `memcpy(*pa,
                 // &b, 4)` (#643), and so did a copy through a pointer read out
                 // of the caller's memory (#645). It keeps nothing, so it
-                // exposes no local. See `Known::unwritten` and ADR-0057.
+                // exposes no local. See `Known::local_init` and ADR-0057.
                 let written: Option<Vec<usize>> = match dest {
                     Some(Operand::Copy(dest))
                         if dest
@@ -1047,7 +1041,7 @@ impl Allocations<'_> {
                     _ => Vec::new(),
                 };
                 let pending = value.array_writes_before(writes);
-                let mut may_write = vec![written.is_none(); value.unwritten.len()];
+                let mut may_write = vec![written.is_none(); value.local_init.len()];
                 for local in written.into_iter().flatten() {
                     may_write[local] = true;
                 }
@@ -1161,7 +1155,7 @@ impl Allocations<'_> {
 
     /// Per local, whether it is made unwritten where the function starts:
     /// every local that holds a pointer but the parameters, which the caller
-    /// wrote. See [`Known::unwritten`].
+    /// wrote. See [`Known::local_init`].
     fn unwritten_at_entry(&self) -> Vec<bool> {
         let function = self.unit.function(self.function);
         function
@@ -1293,7 +1287,7 @@ impl Allocations<'_> {
     /// **A pointer, by its type.** A byte or an integer read out of fresh
     /// memory is not followed.
     ///
-    /// **A local reached by its address is memory too** ([`Known::unwritten`]):
+    /// **A local reached by its address is memory too** ([`Known::local_init`]):
     /// `int *q = m[0];` with `m` a local array nothing wrote reads an
     /// indeterminate pointer, as `*box` does out of `malloc`'s block (#640).
     /// `writes_elsewhere` is not asked. `Address(a[0])` sets it for every
@@ -1321,7 +1315,9 @@ impl Allocations<'_> {
             && self.may_be_pointer(function, source)
             && (through.sites().next().is_some() || through.writes_to.any())
             && !(through.lost || through.foreign || through.loaded || through.inner_address)
-            && through.sites().all(|site| value.fresh[site])
+            && through
+                .sites()
+                .all(|site| value.block_init[site].is_unwritten())
             && through
                 .writes_to
                 .ones()
@@ -1329,11 +1325,11 @@ impl Allocations<'_> {
     }
 
     /// Whether a load may read an array that may still be unwritten where it
-    /// reads, [`Known::partly_written`]: `reads_fresh`'s question, answered as
+    /// reads, [`Known::local_init`]: `reads_fresh`'s question, answered as
     /// a doubt. A fresh
     /// allocation beside it is not known written, and is no reason for
     /// silence. Found by review of #667. **Or an allocation that may still be
-    /// fresh**, `Known::maybe_fresh` or `Known::fresh`, which needs no local
+    /// fresh**, `Known::block_init` unwritten or maybe so, which needs no local
     /// beside it (#721), and whatever allocations beside it were written
     /// (#724). **Any place it may read that may be unwritten is enough**, a
     /// block or a local, whatever else it may read was written: the read is of
@@ -1355,7 +1351,7 @@ impl Allocations<'_> {
         // p = b;` with `b` written reads `a` on one path, which is undefined
         // there whatever the value is read for (#724). `reads_fresh` answers
         // first, and asks every block.
-        let site_maybe = |site: usize| value.maybe_fresh[site] || value.fresh[site];
+        let site_maybe = |site: usize| value.block_init[site].may_be_unwritten();
         source.projection.as_slice() == [Projection::Deref]
             && self.may_be_pointer(function, source)
             && (through.writes_to.any() || through.sites().next().is_some())
@@ -1821,7 +1817,7 @@ impl Allocations<'_> {
     /// [`Analysis::join`], and along a loop's back edge [`Analysis::join_back`]
     /// where `back` is set: one body, so the two cannot drift apart. They
     /// differ only in what a local unwritten on one side and written on
-    /// the other becomes. See `Known::partly_written`.
+    /// the other becomes. See `Known::local_init`.
     fn joined(&self, into: &mut Known, from: &Known, back: bool) {
         // **Every field named, never `..`.** A lattice value whose join
         // forgets a field reaches a fixpoint over a value nobody is joining,
@@ -1836,8 +1832,7 @@ impl Allocations<'_> {
             handed_away,
             exposed,
             contents,
-            fresh,
-            maybe_fresh,
+            block_init,
             realloced,
             pending,
             calls,
@@ -1846,10 +1841,8 @@ impl Allocations<'_> {
             extent,
             handed_at_most,
             handed_contents_at_most,
-            unwritten,
-            partly_written,
-            unwritten_elements,
-            maybe_unwritten_elements,
+            local_init,
+            element_init,
             exposed_in_part,
             stored_in_part,
             exposed_locals,
@@ -1860,7 +1853,7 @@ impl Allocations<'_> {
         // Which locals this side left unwritten, before `unwritten` is
         // intersected below: such a local is no null, and the values' join
         // asks it (#719). See `Held::joined`.
-        let unwritten_here = unwritten.clone();
+        let unwritten_here: Vec<bool> = local_init.iter().map(|init| init.is_unwritten()).collect();
         // May-facts, so a union, as `exposed_locals` is. See
         // `Known::handed_untyped`.
         for (here, there) in handed_untyped
@@ -1879,40 +1872,10 @@ impl Allocations<'_> {
         for (here, there) in stored_out.iter_mut().zip(&from.stored_out) {
             *here = *here || *there;
         }
-        // What may be unwritten, before the proofs below are intersected:
-        // a union, or at a back edge what either side doubted and did not
-        // prove, beside what both prove. See
-        // `Known::maybe_unwritten_elements`.
-        for (index, (here, there)) in maybe_unwritten_elements
-            .iter_mut()
-            .zip(&from.maybe_unwritten_elements)
-            .enumerate()
-        {
-            if back {
-                let proved_here = &unwritten_elements[index];
-                let proved_there = &from.unwritten_elements[index];
-                for element in 0..here.len() {
-                    let doubted_here = here.get(element) && !proved_here.get(element);
-                    let doubted_there = there.get(element) && !proved_there.get(element);
-                    let proved = proved_here.get(element) && proved_there.get(element);
-                    if doubted_here || doubted_there || proved {
-                        here.set(element);
-                    } else {
-                        here.remove(element);
-                    }
-                }
-            } else {
-                here.union_with(there);
-            }
-        }
-        // A proof per element, so an intersection. See
-        // `Known::unwritten_elements`.
-        for (here, there) in unwritten_elements.iter_mut().zip(&from.unwritten_elements) {
-            for element in 0..here.len() {
-                if here.get(element) && !there.get(element) {
-                    here.remove(element);
-                }
-            }
+        // Per element, joined as `Init::joined` says. See
+        // `Known::element_init`.
+        for (here, there) in element_init.iter_mut().zip(&from.element_init) {
+            here.join(there, back);
         }
         for (here, there) in exposed_in_part.iter_mut().zip(&from.exposed_in_part) {
             *here = *here || *there;
@@ -1920,25 +1883,18 @@ impl Allocations<'_> {
         for (here, there) in stored_in_part.iter_mut().zip(&from.stored_in_part) {
             *here = *here || *there;
         }
-        // A may-fact, so a union: an element may be unwritten on either
-        // path. And where one path wrote a local the other left unwritten,
-        // which is the doubt itself, but not at a back edge, before
-        // `unwritten` is intersected below. An array kept per element has
-        // its own doubt above. See `Known::partly_written`.
-        for (index, (here, there)) in partly_written
-            .iter_mut()
-            .zip(&from.partly_written)
-            .enumerate()
-        {
-            let differ = !back
-                && unwritten_elements[index].len() == 0
-                && unwritten[index] != from.unwritten[index];
-            *here = *here || *there || differ;
-        }
-        // A proof, so an intersection, as `fresh` is: unwritten only where
-        // no path wrote it.
-        for (here, there) in unwritten.iter_mut().zip(&from.unwritten) {
-            *here = *here && *there;
+        // **Joined as `Init::joined` says**: unwritten only where no path
+        // wrote it, and maybe unwritten where one path wrote it and the other
+        // left it unwritten, which is the doubt itself, but not at a back
+        // edge. An array kept per element has its own doubt above, and its
+        // record here gains none, at either kind of join. See
+        // `Known::local_init`.
+        for (index, (here, there)) in local_init.iter_mut().zip(&from.local_init).enumerate() {
+            // Kept as the two flags joined, though it decides no case,
+            // measured: nothing reads a kept array's whole record for a
+            // doubt, `Known::may_be_unwritten` asking its elements.
+            let kept = element_init[index].len() > 0;
+            *here = here.joined(*there, back || kept);
         }
         // A may-fact, so a union, as `exposed` is: a call on one arm may
         // have kept the address. See `Known::exposed_locals`.
@@ -1975,36 +1931,25 @@ impl Allocations<'_> {
                 (None, None) => None,
             };
         }
-        // **An intersection**: fresh where every path left it fresh, since a
-        // use of what was read out of it is reported as a proof. A union here
-        // reported `if (c) *box = q; t = *box; *t = 1;`, which C defines when
-        // `c` holds.
-        // **And a site one side left fresh and the other did not may still be
-        // fresh**, a union, before `fresh` is intersected: at a forward join
-        // only, as `partly_written` is set for a local (#721). See
-        // `Known::maybe_fresh`.
-        for (site, here) in maybe_fresh.iter_mut().enumerate() {
-            // Not where one side no longer names the site, `Unheld`, which
-            // is the identity of `state`'s join a few lines below: `if (k)
-            // *m = x; else { free(m); m = 0; }` doubted a read of `*m` on the
-            // arm that wrote it. Found by review. See ADR-0048.
-            let named_on_both = !matches!(state[site], SiteState::Unheld)
-                && !matches!(from.state[site], SiteState::Unheld);
-            *here = *here
-                || from.maybe_fresh[site]
-                || (!back && named_on_both && fresh[site] != from.fresh[site]);
-        }
-        // **Where one side names the site and the other does not**, the
-        // side that names it says, as `state`'s join takes the state of the
-        // side that holds it: a block made on one arm only, or in last turn's
-        // body, was intersected with the other path's `false` and lost its
-        // mark, so `*m` read a block nothing wrote in silence (#724). See
-        // ADR-0048.
-        for (site, (here, there)) in fresh.iter_mut().zip(&from.fresh).enumerate() {
+        // **Joined as `Init::joined` says** where both sides name the site,
+        // fresh where every path left it fresh, since a use of what was read
+        // out of it is reported as a proof; a union here reported `if (c)
+        // *box = q; t = *box; *t = 1;`, which C defines when `c` holds. A site
+        // one side left fresh and the other did not may still be fresh, at a
+        // forward join only (#721).
+        //
+        // **Where one side does not name the site, `Unheld`**, the side that
+        // names it says, as `state`'s join takes the state of the side that
+        // holds it: a block made on one arm only, or in last turn's body, kept
+        // its mark (#724), and `if (k) *m = x; else { free(m); m = 0; }` does
+        // not doubt a read of `*m` on the arm that wrote it. One rule for
+        // both sides, so that what guards one guards the other: measured,
+        // only one orientation had a case of its own. See ADR-0048.
+        for (site, (here, there)) in block_init.iter_mut().zip(&from.block_init).enumerate() {
             *here = match (&state[site], &from.state[site]) {
-                (_, SiteState::Unheld) => *here,
-                (SiteState::Unheld, _) => *there,
-                _ => *here && *there,
+                (_, SiteState::Unheld) => named_beside_unheld(*here, *there),
+                (SiteState::Unheld, _) => named_beside_unheld(*there, *here),
+                _ => here.joined(*there, back),
             };
         }
         // Kept only where both arms remember the same `realloc`: a fact one
@@ -2036,7 +1981,7 @@ impl Allocations<'_> {
             here.joined(
                 there,
                 self.sources,
-                (unwritten_here[local], from.unwritten[local]),
+                (unwritten_here[local], from.local_init[local].is_unwritten()),
             );
         }
 
@@ -2109,6 +2054,18 @@ impl Allocations<'_> {
         // And applying it, which the union alone does not do. [`Known::settle`]
         // says why a join needs this and the assignments do not cover it.
         into.settle();
+    }
+}
+
+/// What a site is where the paths meet, when one side names it and the
+/// other, `SiteState::Unheld`, does not: what the side that names it says,
+/// with a doubt the other side still held kept, as the two flags this
+/// replaced joined. **That doubt decides no case**, measured; it is kept so
+/// that #733 changes no answer. See `Allocations::joined` and ADR-0048.
+fn named_beside_unheld(named: Init, unheld: Init) -> Init {
+    match unheld {
+        Init::Maybe if named == Init::Written => Init::Maybe,
+        Init::Unwritten | Init::Maybe | Init::Written => named,
     }
 }
 
@@ -2299,8 +2256,7 @@ impl Analysis for Allocations<'_> {
             exposed: vec![false; self.locals],
             contents: vec![Contents::none(self.locals); self.locals],
             // A parameter's memory is the caller's, which may have written it.
-            fresh: vec![false; self.locals],
-            maybe_fresh: vec![false; self.locals],
+            block_init: vec![Init::Written; self.locals],
             realloced: vec![None; self.locals],
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
@@ -2314,11 +2270,19 @@ impl Analysis for Allocations<'_> {
             handed_at_most: vec![None; self.locals],
             handed_contents_at_most: vec![Levels::default(); self.locals],
             // Every local that may hold a pointer, but the parameters, which
-            // the caller wrote. See `Known::unwritten`.
-            unwritten: self.unwritten_at_entry(),
-            partly_written: vec![false; self.locals],
-            unwritten_elements: self.elements_at_entry(),
-            maybe_unwritten_elements: self.elements_at_entry(),
+            // the caller wrote. See `Known::local_init`.
+            local_init: self
+                .unwritten_at_entry()
+                .into_iter()
+                .map(|unwritten| {
+                    if unwritten {
+                        Init::Unwritten
+                    } else {
+                        Init::Written
+                    }
+                })
+                .collect(),
+            element_init: self.elements_at_entry(),
             exposed_in_part: vec![false; self.locals],
             stored_in_part: vec![false; self.locals],
             // No call has been handed anything yet.
@@ -2522,7 +2486,7 @@ impl Analysis for Allocations<'_> {
                 }
 
                 // An assignment to a local writes it, whatever it writes. See
-                // `Known::unwritten`.
+                // `Known::local_init`.
                 if operation.place.projection.is_empty() {
                     value.written_local(operation.place.local.index());
                 }
@@ -2537,7 +2501,7 @@ impl Analysis for Allocations<'_> {
                 let pointer = operation.place.local.index();
                 // What was unwritten before this store, for a local it may
                 // have written past. See `Allocations::written_past_its_end`.
-                let unwritten_before = value.unwritten.clone();
+                let unwritten_before = value.unwritten_locals();
                 let targets = if one_step {
                     value.written_through(operation.place.local)
                 } else {
@@ -3121,21 +3085,15 @@ impl Analysis for Allocations<'_> {
                 value.clear(*local);
                 // **A new object, indeterminate again** (C17 6.2.4 p6), so an
                 // array written late in one turn of a loop is unwritten at
-                // the start of the next. See `Known::unwritten`.
+                // the start of the next. See `Known::local_init`.
                 if self.holds_a_pointer(function.local(*local)) {
-                    value.unwritten[local.index()] = true;
+                    value.local_init[local.index()] = Init::Unwritten;
+                } else if value.local_init[local.index()] == Init::Maybe {
+                    value.local_init[local.index()] = Init::Written;
                 }
                 // And every element of it, with nothing written in part and
-                // nothing handed over. See `Known::unwritten_elements`.
-                for elements in [
-                    &mut value.unwritten_elements[local.index()],
-                    &mut value.maybe_unwritten_elements[local.index()],
-                ] {
-                    for element in 0..elements.len() {
-                        elements.set(element);
-                    }
-                }
-                value.partly_written[local.index()] = false;
+                // nothing handed over. See `Known::element_init`.
+                value.element_init[local.index()].unwrite_all();
                 value.exposed_in_part[local.index()] = false;
                 value.stored_in_part[local.index()] = false;
                 // **And no call holds its address yet**: one kept from an
@@ -4144,7 +4102,7 @@ impl Analysis for Allocations<'_> {
         };
         if !place.projection.is_empty() {
             // `*box = f();` writes an allocation this does not place. See
-            // `Known::fresh`. **No C program reaches this**, measured: the
+            // `Known::block_init`. **No C program reaches this**, measured: the
             // lowering calls into a temporary and stores that, which the
             // store transfer clears for. It is here for a frontend that
             // does not.
@@ -4152,12 +4110,12 @@ impl Analysis for Allocations<'_> {
                 value.written_all();
             }
             // And an escaped local it may land in, as an unplaced store
-            // does. See `Known::unwritten`.
+            // does. See `Known::local_init`.
             replaced_by(self.unit, function, place, value);
             return;
         }
         // The call's result writes the local it lands in. See
-        // `Known::unwritten`.
+        // `Known::local_init`.
         value.written_local(place.local.index());
 
         match kind {
@@ -4264,16 +4222,16 @@ impl Analysis for Allocations<'_> {
             Some(Leaves::ZeroBits) | None => false,
         };
         if fresh {
-            value.fresh[site] = true;
+            value.block_init[site] = Init::Unwritten;
         } else if let (Some(Leaves::TheOld), Some(Operand::Copy(handed))) = (
             self.library(*callee).and_then(|row| row.leaves),
             arguments.first(),
         ) {
             // **And may be indeterminate where the old block may have been**,
             // fresh or maybe so beside what else it names: it copies those
-            // bytes as well (#724). See `Known::maybe_fresh`.
+            // bytes as well (#724). See `Known::block_init`.
             if handed.projection.is_empty() && value.may_name_fresh(handed.local) {
-                value.maybe_fresh[site] = true;
+                value.block_init[site].doubt();
             }
         }
         // **`realloc`'s new object holds what the old one held**, C17 7.22.3.5

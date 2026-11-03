@@ -208,16 +208,16 @@ pub enum Kind {
     /// 7.22.3.1 p2, 7.22.3.4 p2), and Annex J.2 lists using it as undefined.
     /// Always `Unsafe`, at the read, whatever it is read for, and not again
     /// at a later use of what it read. `local` is the pointer it is read
-    /// through. See `Known::fresh` and ADR-0057.
+    /// through. See `Known::block_init` and ADR-0057.
     ///
     /// Also out of a local that pointer may be the address of, which nothing
     /// wrote since it was made (C17 6.2.4 p6, 6.7.9 p10, and the same line of
     /// Annex J.2), so each says which storage it reached and the words cite
-    /// that storage's clause (#640). See `Known::unwritten`. **`Unknown`
+    /// that storage's clause (#640). See `Known::local_init`. **`Unknown`
     /// where what it reads may be unwritten**: an element of a local array
     /// after a write that may have been of any element (#639, #667), or a
     /// local written on one path into a join and not the other (#668). See
-    /// `Known::partly_written`.
+    /// `Known::local_init`.
     IndeterminateLoad {
         /// Whether it may reach an allocation nothing wrote.
         reaches_allocation: bool,
@@ -231,7 +231,7 @@ pub enum Kind {
     /// was written on one path into a join and not the other (#668). `local`
     /// is the local read. A local whose address is never taken is `Unassigned`'s,
     /// which `memory::assigned` builds, and the two never meet (#640). See
-    /// `Known::unwritten` and ADR-0057.
+    /// `Known::local_init` and ADR-0057.
     IndeterminateLocal,
     /// A function this check gave up on part of the way, past `MAX_WORK`, so
     /// nothing about its memory is proved. Always `Unknown`, at the
@@ -346,13 +346,13 @@ const NAMED_AT_READ: usize = 96;
 
 /// How many bytes the per-element record of a local array adds to each
 /// local (#667): [`Held::element`](parts::Held::element) and its two flags
-/// beside it, and a row of `Known::unwritten_elements` with the two flags
-/// beside that. Measured as [`NAMED_AT_READ`] was, on the same four
+/// beside it, and the proved half of a row of `Known::element_init`, one
+/// set of bits, with the two flags beside that. Measured as [`NAMED_AT_READ`] was, on the same four
 /// functions, release build: peak memory grew by 6.5, 6.1, 5.9 and 5.6%,
 /// from 323 to 344 MB at the smallest and 980 to 1,035 MB at the largest,
 /// which is about 110 bytes a local at each size. The bits an array keeps
-/// are at most one word, beside the row's own 32 bytes. And a row of
-/// `Known::maybe_unwritten_elements` (#668), measured the same way against
+/// are at most one word, beside the row's own 32 bytes. And the doubted
+/// half of that row (#668), a second set of bits, measured the same way against
 /// `main` after #667: 4.1, 3.4 and 2.9% on the three smaller functions, from
 /// 345 to 359 MB at the smallest and 912 to 938 MB at the largest, which
 /// the 110 bytes above put at 54 to 69 bytes a local; 72 are counted. The
@@ -730,7 +730,7 @@ fn findings_within(
         // With where the report standing for each is, as `said` keeps it.
         let mut departed: Vec<(Span, Departure, Option<LocalId>, usize)> = Vec::new();
         // The locals whose address is taken, which a read by name of asks
-        // `Known::unwritten` and `memory::assigned` does not. See #640.
+        // `Known::local_init` and `memory::assigned` does not. See #640.
         let taken = assigned::address_taken(function);
         for &id in cfg.order() {
             // `Cfg::order` holds exactly the reachable blocks and `solve` gives

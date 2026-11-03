@@ -197,24 +197,34 @@ cases! {
         // `Known::expose`'s loops. It is reported.
         a_pointer_read_out_of_memory_memcpy_wrote_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written on one arm only, which is undefined on the other: doubted,
-        // as a local written on one arm is (#668, #721). Mutation: join
-        // `Known::fresh` with `||`; the doubt becomes certain. Mutation: never
-        // set `Known::maybe_fresh` at a join; the first two go silent. Set at
-        // a back edge too; the loop case is doubted. Leave it set by a
-        // write; the case written again after the join is. Set whatever the
-        // two sides hold; six older cases move, which hold that a site both
-        // sides wrote is not doubted.
+        // as a local written on one arm is (#668, #721). Measured since #733,
+        // on `Init::joined`: join `Unwritten` and `Written` at a forward join
+        // as `Unwritten`; the first two are certain. As `Written`; they go
+        // silent. As `Maybe` at a back edge too; the loop case is doubted.
+        // Let `Known::written` leave a `Maybe`; the case written again after
+        // the join is doubted.
         a_pointer_read_out_of_memory_written_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_an_allocation_written_on_one_arm_only_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_filled_by_a_loop_is_not_doubted_as_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_an_allocation_written_again_after_the_join_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store through a pointer that may name either of two allocations
         // may have missed one, so it keeps the doubt about it. Mutation: let
-        // such a store clear `Known::maybe_fresh` as a store through one does;
-        // this builds. An allocation the other arm freed and stopped naming
-        // is no path that left it fresh. Mutation: set the mark where one
-        // side is `Unheld`; this is doubted. Both found by review.
+        // such a store `write` where it would `may_write`, as a store through
+        // one block does; this builds. Found by review. An allocation the
+        // other arm freed and stopped naming is no path that left it fresh;
+        // since #733 that rule, `named_beside_unheld`, is held by the cases
+        // of a site one side of a join does not name, below.
         a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store that may miss a block nothing wrote leaves it in doubt,
+        // `Init::may_write` (#733). Mutation: let `may_write` write
+        // `Written`; it goes silent.
+        a_store_that_may_land_in_an_unwritten_block_or_a_written_one_leaves_the_first_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A site one side of a join does not name takes the other side's
+        // `Init`, whichever side it is (#733). Mutation: let the side joined
+        // in that does not name it join as `Init::joined`; the first is only
+        // doubted and the second is doubted.
+        a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_freed_and_dropped_on_the_first_arm_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_freed_and_dropped_on_the_other_arm_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same of a library copy, whose destination may be either block:
         // it keeps the doubt, and a copy into the one block it names clears
@@ -421,13 +431,15 @@ cases! {
         a_local_array_written_on_one_arm_only_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same written on the other arm, which reaches the join as the
         // value joined in rather than the one joined into. Mutation: a
-        // forward join keeps one side's `Known::maybe_unwritten_elements`;
-        // this goes silent.
+        // forward join keeps the side joined in, `Init::joined`; this goes
+        // silent.
         a_local_array_written_on_the_other_arm_only_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Each turn's `m` is a new object (C17 6.2.4 p2), unwritten on the
         // arm that skips the write whatever the turn before wrote at its
-        // end. Mutation: `StorageLive` leaves
-        // `Known::maybe_unwritten_elements` alone; this goes silent.
+        // end. Mutation: a forward join keeps one side alone, `Init::joined`;
+        // this goes silent. Since #733 `StorageLive` makes every element
+        // unwritten as one value, so the mutation this case once held, of
+        // the doubt half alone, no longer exists.
         a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written on every path into the join, it is written. Mutation: a
         // forward join doubts whatever the two sides hold; this gains an
@@ -439,55 +451,59 @@ cases! {
         // doubt.
         an_element_neither_arm_wrote_is_reported_beside_one_written_on_one_arm: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The doubt made where the arms meet crosses the loop's back edge,
-        // which keeps what either side doubted. Mutation: a back edge keeps
-        // only what both sides prove; this goes silent.
+        // which keeps what either side doubted. Mutation: a forward join
+        // keeps one side alone, `Init::joined`; this goes silent. Measured
+        // since #733: a back edge that drops a doubt it meets does not fail
+        // this case.
         a_local_array_doubted_before_a_loop_is_still_doubted_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer local whose address is taken, written on one arm, is an
-        // `SC0411` doubt read through that address (#668). Mutation: a
-        // forward join sets no doubt where `Known::unwritten` differs; this
-        // goes silent.
+        // `SC0411` doubt read through that address (#668). Mutation: join
+        // `Unwritten` and `Written` at a forward join as `Written`,
+        // `Init::joined`; this goes silent.
         a_pointer_local_written_on_one_arm_only_is_doubted_where_read_through_its_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same read by name, in its own words. Mutation: as above; this
         // goes silent.
         a_pointer_local_written_on_one_arm_only_is_doubted_where_read_by_name: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: a back edge does not keep `Known::partly_written`; this
-        // goes silent.
+        // Mutation: a forward join keeps one side alone, `Init::joined`; this
+        // goes silent. Measured since #733: a back edge that drops a doubt it
+        // meets does not fail this case.
         a_pointer_local_doubted_before_a_loop_is_still_doubted_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A doubt the head already holds survives the back edge even where
         // the loop writes the element, which leaves it nothing to carry
-        // back. Mutation: a back edge keeps only what arrives along it and
-        // what both sides prove; this goes silent.
+        // back. Mutation: a back edge drops a doubt it meets, `Init::joined`;
+        // this goes silent.
         a_local_array_doubted_before_a_loop_that_writes_it_is_still_doubted_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same of a pointer local. Mutation: a back edge keeps only the
-        // `Known::partly_written` it brings; this goes silent.
+        // The same of a pointer local. Mutation: as above; this goes silent.
         a_pointer_local_doubted_before_a_loop_that_writes_it_is_still_doubted_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The doubt made inside the body reaches the head along its back
-        // edge. Mutation: a back edge drops the `Known::partly_written` it
-        // brings; this goes silent.
+        // edge. Mutation: a back edge drops a doubt it meets, `Init::joined`;
+        // this goes silent.
         a_pointer_local_written_on_one_arm_inside_a_loop_is_doubted_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same of an array too long to keep per element. Mutation: as
         // above; this goes silent.
         a_long_local_array_written_on_one_arm_inside_a_loop_is_doubted_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The loop-fill exemption for a local with no per-element record.
-        // Mutation: a back edge sets a doubt where `Known::unwritten`
-        // differs; this gains an `SC0411` doubt.
+        // Mutation: join `Unwritten` and `Written` at a back edge as `Maybe`,
+        // `Init::joined`; this gains an `SC0411` doubt.
         a_pointer_local_assigned_by_a_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same of an array too long to keep per element. Mutation: as
         // above; this gains an `SC0411` doubt.
         a_long_local_array_filled_by_a_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A doubt on one side of a join and a write on the other, where
-        // `Known::unwritten` differs on neither. Mutation: a forward join
-        // keeps only the side joined into; this goes silent.
+        // neither side is certainly unwritten. Mutation: a forward join keeps
+        // the side joined into, `Init::joined`; this goes silent.
         a_long_local_array_written_in_part_on_one_arm_and_at_its_start_on_the_other_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same with the arms the other way round. Mutation: a forward
         // join keeps only the side joined in; this goes silent.
         a_long_local_array_written_at_its_start_on_one_arm_and_in_part_on_the_other_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A write that may be of any element of an array too long to keep
         // per element leaves it in doubt (#639). Mutation: such a write
-        // sets no `Known::partly_written`; this goes silent.
+        // leaves the array's `Init` as it was, no `Init::may_write`; this
+        // goes silent.
         a_long_local_array_copied_into_through_a_moved_pointer_is_doubted_where_read_at_its_start: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An array too long to keep per element is answered as a pointer
-        // local is. Mutation: as above; this goes silent.
+        // local is. Mutation: join `Unwritten` and `Written` at a forward join
+        // as `Written`, `Init::joined`; this goes silent.
         a_long_local_array_written_on_one_arm_only_is_doubted_where_read_at_its_start: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `StorageLive` leaves `unwritten` alone; this goes silent.
         a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -827,8 +843,9 @@ cases! {
         a_long_local_array_written_in_part_and_then_at_its_start_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Each turn's `m` is a new object (C17 6.2.4 p2), so `m[0]` read
         // first is a certain `SC0411`, whatever the turn before wrote.
-        // Mutation: `StorageLive` leaves `Known::partly_written` alone; this
-        // is a doubt.
+        // Measured since #733: leaving the local's or its elements' `Init`
+        // as it was at `StorageLive` does not fail this case, and what holds
+        // it there is not measured.
         a_local_array_written_in_part_in_an_earlier_turn_is_reported_unwritten_in_the_next: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `e` is `m + 1` on one path and `m + i` on the other, an edge
         // only #639's rule keeps on the first. Mutation: a join keeps that
@@ -3696,8 +3713,8 @@ cases! {
         // `Held::names_nothing`; this builds. Found by review.
         a_null_moved_by_arithmetic_on_one_path_does_not_carry_the_other_paths_belief: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Nor does a local left unwritten on one path, whose read through a
-        // copy of its address nothing else asks. Mutation: ignore
-        // `Known::unwritten` in the values' join; this builds. Found by
+        // copy of its address nothing else asks. Mutation: ignore which side
+        // left the local `Init::Unwritten` in the values' join; this builds. Found by
         // review.
         a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_whole_int_pointer_a_call_wrote_copied_and_read_back_as_one_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

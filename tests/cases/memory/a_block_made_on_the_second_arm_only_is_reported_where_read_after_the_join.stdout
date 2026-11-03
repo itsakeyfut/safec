@@ -1,0 +1,113 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:2:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "k"
+  Local "_2" "int **" "m"
+  Local "_3" "int"
+  Local "_4" "void *"
+  Local "_5" "int **"
+  Local "_6" "int"
+  Local "_7" "int *" "r"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:3:11 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:3:15 generated
+    Operation a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:4:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:4:9 written "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:4:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:4:9 generated
+    ArgumentsEvaluated a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:4:28 generated
+    Call a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:4:28 written "malloc" "bb4"
+      Destination "_4"
+      Constant 8
+  Block "bb3"
+    Branch a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:5:9 written "bb8" "bb9"
+      Copy "_2"
+  Block "bb4"
+    Operation a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:4:24 written
+      Destination "_2"
+      Use
+        Copy "_4"
+    Operation a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:4:24 written
+      Destination "_5"
+      Use
+        Copy "_2"
+    Sequenced a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:4:24 generated
+    Operation a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:4:43 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_2"
+    Branch a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:4:43 written "bb5" "bb6"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:4:43 generated
+    Operation a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:4:47 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:4:54 generated
+    Return
+  Block "bb6"
+    Sequenced a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:4:43 generated
+    Goto "bb7"
+  Block "bb7"
+    Goto "bb3"
+  Block "bb8"
+    Sequenced a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:5:9 generated
+    StorageLive a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:5:14 generated "_7"
+    Operation a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:5:19 written
+      Destination "_7"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:5:23 generated
+    Operation a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:5:31 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_7"
+    Branch a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:5:31 written "bb11" "bb12"
+      Copy "_8"
+  Block "bb9"
+    Sequenced a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:5:9 generated
+    Goto "bb10"
+  Block "bb10"
+    Operation a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:6:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:6:12 generated
+    Return
+  Block "bb11"
+    Sequenced a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:5:31 generated
+    Operation a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:5:35 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:5:42 generated
+    StorageDead a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:5:35 generated "_7"
+    Return
+  Block "bb12"
+    Sequenced a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:5:31 generated
+    Goto "bb13"
+  Block "bb13"
+    Operation a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:5:45 written
+      Destination "_0"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:5:52 generated
+    StorageDead a_block_made_on_the_second_arm_only_is_reported_where_read_after_the_join.c:5:45 generated "_7"
+    Return

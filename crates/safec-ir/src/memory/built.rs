@@ -232,7 +232,7 @@ fn offset_of(op: BinOp, operands: [&Operand; 2], followed: &[usize], value: &Kno
 /// a write it cannot narrow.
 ///
 /// **What it may have written is a second, narrower answer**, about
-/// `Known::unwritten` alone: a local of that type which
+/// `Known::local_init` alone: a local of that type which
 /// `Known::locals_a_write_may_land_in` says the place may land in. A local
 /// the write cannot reach keeps its mark, so a read of it nothing wrote is
 /// still `SC0411`. See ADR-0057.
@@ -270,7 +270,7 @@ pub(super) fn replaced_by(
     // **Through a pointer moved off an array, an element of it**, as the
     // placed store answers: still a write `replaced` makes of every local it
     // may land in, then partly written where it was unwritten before. See
-    // `Known::partly_written`.
+    // `Known::local_init`.
     let writes = write_effects(
         unit,
         function,
@@ -302,7 +302,7 @@ pub(super) fn replaced_by(
 /// element it is handed, so what it is handed at a known element other
 /// than the start is in part too. One answer for the placed store, a store
 /// this check cannot place, a library copy and a call. See
-/// `Known::unwritten_elements` and ADR-0057.
+/// `Known::element_init` and ADR-0057.
 pub(super) fn write_effects(
     unit: &TranslationUnit,
     function: &Function,
@@ -350,7 +350,7 @@ pub(super) fn write_effects(
                 }
                 _ => None,
             };
-            let kept = value.unwritten_elements[each].len() > 0;
+            let kept = value.element_init[each].len() > 0;
             match element {
                 Some(0) if call && !array_edge => None,
                 Some(_) if call => Some(ArrayWrite::Maybe),
@@ -370,7 +370,7 @@ pub(super) fn write_effects(
 /// Whether the local at `index` is an array. One answer for the edge a
 /// pointer moved off it keeps and for the write through such a pointer
 /// being of an element. See `Held::moved_by_arithmetic` and
-/// `Known::partly_written`.
+/// `Known::local_init`.
 pub(super) fn is_array(unit: &TranslationUnit, function: &Function, index: usize) -> bool {
     function
         .locals()
