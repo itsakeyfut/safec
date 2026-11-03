@@ -1,0 +1,13 @@
+error[SC0412]: this reaches 64 bytes into an object of 4 bytes
+    ╭─[ a_memchr_longer_than_its_object.c:11:12 ]
+    │
+  6 │     char *p = malloc(4);
+    │               ────┬────  
+    │                   ╰────── allocated here
+    │ 
+ 11 │     return memchr(p, 1, 64) == 0;
+    │            ────────┬───────  
+    │                    ╰───────── wider than the object it reaches
+────╯
+  = note: this check belongs to safety level 1
+  = help: make the object at least as wide as this access, or reach less of it

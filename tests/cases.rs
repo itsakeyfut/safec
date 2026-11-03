@@ -4163,6 +4163,18 @@ cases! {
         a_memmove_wider_than_its_destination: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_memcmp_longer_than_both_objects: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_strlen_is_not_shown_to_fit: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The rows the three above leave unread. `memchr` reaches its first
+        // argument by its length, and `memmove` its second as well as its
+        // first. Mutation: read `memchr`'s reach as a string; the first says
+        // "may reach outside" instead. Drop `memmove`'s `(1, ..)`; the second
+        // goes silent.
+        a_memchr_longer_than_its_object: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_memmove_wider_than_its_source: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer off its start handed to a string function is asked as
+        // the row's reach, once, and not again as a departure. Mutation:
+        // drop a `String` reach from `strcmp`, `strncmp` or `strstr`, or
+        // empty `strchr`'s or `strrchr`'s row; that call's report changes.
+        each_string_reach_is_asked_as_a_library_reach: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `strncpy` writes exactly `n` characters, so its destination is an
         // access of `n` and fits here; its source is read as a string, which
         // is not shown to fit. Mutation: read its destination as a string;
