@@ -299,158 +299,230 @@ enum Side {
     Both,
 }
 
+/// Why a row is let disagree.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Why {
+    /// A false report on a control that is defined C, or a silence, that an
+    /// open issue or a known cost answers for: the row agreeing is a fix,
+    /// and removes its entry.
+    Cost(&'static str),
+    /// A report a record takes on purpose, because the control is not
+    /// provable from the unit by this check: it hands the pointer to a call
+    /// this check cannot read, or reads one the check stopped following.
+    /// **The row agreeing is a regression**, the check saying safe about
+    /// what it did not prove, unless that record is superseded.
+    Belief(&'static str),
+}
+
 /// The rows whose answer is not their belief's rule, each with the issue or
 /// the record that says why. **Exact in both directions**: a row listed here
-/// that now agrees fails, so that a fix removes its entry. See ADR-0062.
-const ACCEPTED: &[(&str, Side, &str)] = &[
+/// that now agrees fails, and what that means is the entry's [`Why`].
+///
+/// **A row listed on [`Side::Control`] no longer asks its hazard**: the
+/// control already carries the belief's code, so the hazard's report cannot
+/// be told from it. Such a row holds only that the route is not silent
+/// altogether, and the blessed summary is what notices more. See ADR-0062.
+const ACCEPTED: &[(&str, Side, Why)] = &[
     (
         "width_ret_d0_both",
         Side::Control,
-        "a `void *` a call this check cannot read returns believes no width (ADR-0060)",
+        Why::Belief(
+            "a `void *` a call this check cannot read returns believes no width (ADR-0060)",
+        ),
     ),
     (
         "width_ret_d0_one",
         Side::Control,
-        "a `void *` a call this check cannot read returns believes no width (ADR-0060)",
+        Why::Belief(
+            "a `void *` a call this check cannot read returns believes no width (ADR-0060)",
+        ),
     ),
     (
         "width_ret_d1_both",
         Side::Control,
-        "a `void *` a call this check cannot read returns believes no width (ADR-0060)",
+        Why::Belief(
+            "a `void *` a call this check cannot read returns believes no width (ADR-0060)",
+        ),
     ),
     (
         "width_ret_d1_one",
         Side::Control,
-        "a `void *` a call this check cannot read returns believes no width (ADR-0060)",
+        Why::Belief(
+            "a `void *` a call this check cannot read returns believes no width (ADR-0060)",
+        ),
     ),
     (
         "width_ret_d2_both",
         Side::Control,
-        "a `void *` a call this check cannot read returns believes no width (ADR-0060)",
+        Why::Belief(
+            "a `void *` a call this check cannot read returns believes no width (ADR-0060)",
+        ),
     ),
     (
         "width_ret_d2_one",
         Side::Control,
-        "a `void *` a call this check cannot read returns believes no width (ADR-0060)",
+        Why::Belief(
+            "a `void *` a call this check cannot read returns believes no width (ADR-0060)",
+        ),
     ),
     (
         "width_call_d0_both",
         Side::Control,
-        "a pointer a call writes into a local through its address is doubted where read through, the output-parameter cost (ADR-0060)",
+        Why::Belief(
+            "a call this check cannot read writes the local through its address, and what it wrote is doubted where read through, the output-parameter cost (ADR-0060)",
+        ),
     ),
     (
         "width_call_d0_one",
         Side::Control,
-        "a pointer a call writes into a local through its address is doubted where read through, the output-parameter cost (ADR-0060)",
+        Why::Belief(
+            "a call this check cannot read writes the local through its address, and what it wrote is doubted where read through, the output-parameter cost (ADR-0060)",
+        ),
     ),
-    ("width_memcpy_d0_both", Side::Control, "#769"),
-    ("width_memcpy_d0_one", Side::Control, "#769"),
-    ("fresh_memcpy_d2_both", Side::Hazard, "#768"),
-    ("fresh_memcpy_d2_one", Side::Hazard, "#768"),
-    (
-        "lost_memcpy_d0_both",
-        Side::Control,
-        "a pointer copied by memcpy is a doubt about whether it was freed (#652)",
-    ),
-    (
-        "lost_memcpy_d0_one",
-        Side::Control,
-        "a pointer copied by memcpy is a doubt about whether it was freed (#652)",
-    ),
-    (
-        "lost_memcpy_d1_both",
-        Side::Control,
-        "a pointer copied by memcpy is a doubt about whether it was freed (#652)",
-    ),
-    (
-        "lost_memcpy_d1_one",
-        Side::Control,
-        "a pointer copied by memcpy is a doubt about whether it was freed (#652)",
-    ),
-    (
-        "lost_memcpy_d2_both",
-        Side::Control,
-        "a pointer copied by memcpy is a doubt about whether it was freed (#652)",
-    ),
-    (
-        "lost_memcpy_d2_one",
-        Side::Control,
-        "a pointer copied by memcpy is a doubt about whether it was freed (#652)",
-    ),
-    (
-        "stale_memcpy_d0_both",
-        Side::Control,
-        "a pointer copied by memcpy is a doubt about whether it was freed (#652)",
-    ),
-    (
-        "stale_memcpy_d1_both",
-        Side::Control,
-        "a pointer copied by memcpy is a doubt about whether it was freed (#652)",
-    ),
-    (
-        "stale_memcpy_d2_both",
-        Side::Control,
-        "a pointer copied by memcpy is a doubt about whether it was freed (#652)",
-    ),
-    (
-        "lost_realloc_d2_both",
-        Side::Control,
-        "#656: the old block a store replaced in memory is still taken to be there after realloc moves it",
-    ),
-    (
-        "lost_realloc_d2_one",
-        Side::Control,
-        "#656: the old block a store replaced in memory is still taken to be there after realloc moves it",
-    ),
-    (
-        "stale_realloc_d2_both",
-        Side::Control,
-        "#656: the old block a store replaced in memory is still taken to be there after realloc moves it",
-    ),
-    (
-        "lost_ret_d0_both",
-        Side::Control,
-        "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
-    ),
-    (
-        "lost_ret_d0_one",
-        Side::Control,
-        "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
-    ),
-    (
-        "lost_ret_d1_both",
-        Side::Control,
-        "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
-    ),
-    (
-        "lost_ret_d1_one",
-        Side::Control,
-        "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
-    ),
+    ("width_memcpy_d0_both", Side::Control, Why::Cost("#769")),
+    ("width_memcpy_d0_one", Side::Control, Why::Cost("#769")),
+    ("fresh_memcpy_d2_both", Side::Hazard, Why::Cost("#768")),
+    ("fresh_memcpy_d2_one", Side::Hazard, Why::Cost("#768")),
     (
         "lost_ret_d2_both",
         Side::Control,
-        "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
+        Why::Belief(
+            "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
+        ),
     ),
     (
         "lost_ret_d2_one",
         Side::Control,
-        "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
+        Why::Belief(
+            "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
+        ),
+    ),
+    (
+        "lost_ret_d0_both",
+        Side::Control,
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
+    ),
+    (
+        "lost_ret_d0_one",
+        Side::Control,
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
     ),
     (
         "stale_ret_d0_both",
         Side::Control,
-        "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
+        Why::Belief(
+            "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
+        ),
     ),
     (
         "stale_ret_d1_both",
         Side::Control,
-        "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
+        Why::Belief(
+            "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
+        ),
     ),
     (
         "stale_ret_d2_both",
         Side::Control,
-        "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
+        Why::Belief(
+            "a pointer handed to a call this check cannot read may be freed by it (ADR-0039)",
+        ),
+    ),
+    (
+        "stale_memcpy_d0_both",
+        Side::Control,
+        Why::Cost("a pointer copied by memcpy is a doubt about whether it was freed (#652)"),
+    ),
+    (
+        "stale_memcpy_d1_both",
+        Side::Control,
+        Why::Cost("a pointer copied by memcpy is a doubt about whether it was freed (#652)"),
+    ),
+    (
+        "stale_memcpy_d2_both",
+        Side::Control,
+        Why::Cost("a pointer copied by memcpy is a doubt about whether it was freed (#652)"),
+    ),
+    (
+        "stale_realloc_d2_both",
+        Side::Control,
+        Why::Cost(
+            "the old block a store replaced in memory is still taken to be there after realloc moves it (#656)",
+        ),
+    ),
+    (
+        "lost_realloc_d2_both",
+        Side::Control,
+        Why::Cost(
+            "the old block a store replaced in memory is still taken to be there after realloc moves it (#656)",
+        ),
+    ),
+    (
+        "lost_realloc_d2_one",
+        Side::Control,
+        Why::Cost(
+            "the old block a store replaced in memory is still taken to be there after realloc moves it (#656)",
+        ),
+    ),
+    (
+        "lost_store_d0_both",
+        Side::Control,
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
+    ),
+    (
+        "lost_store_d0_one",
+        Side::Control,
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
+    ),
+    (
+        "lost_memcpy_d0_both",
+        Side::Control,
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
+    ),
+    (
+        "lost_memcpy_d0_one",
+        Side::Control,
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
+    ),
+    (
+        "lost_memcpy_d1_both",
+        Side::Control,
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
+    ),
+    (
+        "lost_memcpy_d1_one",
+        Side::Control,
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
+    ),
+    (
+        "lost_memcpy_d2_both",
+        Side::Control,
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
+    ),
+    (
+        "lost_memcpy_d2_one",
+        Side::Control,
+        Why::Belief(
+            "a lost pointer read out of a local, copied by memcpy or handed through a call, proves nothing where it is used (ADR-0045)",
+        ),
     ),
 ];
 
@@ -460,7 +532,17 @@ fn mark(belief: Belief) -> (&'static str, Option<&'static str>) {
     match belief {
         Belief::Width => ("SC0412", None),
         Belief::Fresh => ("SC0411", None),
+        // **Either phrase**: a free of a lost pointer is reported in whichever
+        // words the route leaves it, "this check stopped following" at a
+        // local and "may have been freed" through a `realloc` two levels
+        // down, and both are the doubt the belief exists to give. The
+        // control, which differs in the free alone, is what keeps this from
+        // passing on a doubt the free did not cause.
         Belief::Lost => ("SC0402", None),
+        // **The freeing phrase alone**: the control is a loop that makes the
+        // site again with nothing freed, which this check rightly calls a
+        // pointer it stopped following (ADR-0045), so `SC0402` alone would
+        // count the control's lost doubt as the hazard's.
         Belief::Stale => ("SC0402", Some("may have been freed")),
     }
 }
@@ -604,10 +686,13 @@ fn fresh(row: Row, hazard: bool) -> Vec<String> {
 }
 
 /// A loop's earlier allocation, which the loop's next `malloc` makes this
-/// check lose, for the hazard; one allocation for the control.
+/// check lose, put in the slot and freed by the name it was put there under,
+/// for the hazard; **the same program without the free** for the control, so
+/// that the two differ in the free alone and the control asks that a lost
+/// pointer held in memory is not doubted before anything may have freed it.
 fn lost(row: Row, hazard: bool) -> Vec<String> {
     let (made, slot) = container(row.depth);
-    let mut lines: Vec<String> = if hazard {
+    let mut lines: Vec<String> = {
         [
             "int *u = 0;",
             "int *q = 0;",
@@ -624,16 +709,10 @@ fn lost(row: Row, hazard: bool) -> Vec<String> {
         .iter()
         .map(|line| (*line).to_owned())
         .collect()
-    } else {
-        vec![
-            "int *v = malloc(4);".to_owned(),
-            "if (!v) return 0;".to_owned(),
-        ]
     };
     lines.extend(made);
     let body = put(row.route, row.depth, slot, "v");
     lines.extend(shaped(row.shape, slot, body));
-    // The control frees nothing.
     if hazard {
         lines.push("free(v);".to_owned());
     }
@@ -807,18 +886,27 @@ fn disagreement(name: &str, row: Row) -> Option<Side> {
 /// control's program for the hazard's; 46 rows fail. Mutation: list in
 /// `ACCEPTED` a row that agrees; that row fails.
 fn check(name: &str, row: Row) {
-    let listed = ACCEPTED
-        .iter()
-        .find(|(listed, _, _)| *listed == name)
-        .map(|&(_, side, _)| side);
+    let entry = ACCEPTED.iter().find(|(listed, _, _)| *listed == name);
+    let listed = entry.map(|&(_, side, _)| side);
     let found = disagreement(name, row);
     if found != listed {
         let mark = mark(row.belief);
+        let meaning = match (entry, found) {
+            (Some((_, _, Why::Belief(why))), None) => format!(
+                "THIS IS A REGRESSION: the control is not provable from the unit ({why}), \
+                 and the row agreeing is the check saying safe about it. Restore the doubt, \
+                 or supersede the record first."
+            ),
+            (Some((_, _, Why::Cost(why))), None) => {
+                format!("The row now agrees ({why}): remove its entry from `ACCEPTED`.")
+            }
+            _ => "A row that newly disagrees is a defect, or a belief a record took, and is \
+                  listed with the issue or record that says so."
+                .to_owned(),
+        };
         panic!(
             "row `{name}` disagrees on {found:?} where `ACCEPTED` lists {listed:?}.\n\
-             The hazard must report {mark:?} and the control must not. A row that now \
-             agrees is removed from `ACCEPTED`; one that newly disagrees is a defect, \
-             or a belief a record took, and is listed with the issue or record that says so.\n\n\
+             The hazard must report {mark:?} and the control must not. {meaning}\n\n\
              hazard:\n{}\ncontrol:\n{}",
             program(row, true),
             program(row, false),
@@ -913,6 +1001,7 @@ fn every_accepted_row_is_in_the_table_once_with_a_reason() {
             ROWS.iter().any(|(row, _)| row == name),
             "`ACCEPTED` names `{name}`, which is no row"
         );
+        let (Why::Cost(why) | Why::Belief(why)) = why;
         assert!(!why.is_empty(), "`ACCEPTED` gives `{name}` no reason");
         assert!(
             ACCEPTED[place + 1..]
@@ -988,19 +1077,20 @@ fn the_matrix_answers_what_was_blessed() {
     if expected != actual {
         let moved: Vec<String> = expected
             .lines()
-            .zip(actual.lines())
-            .filter(|(old, new)| old != new)
-            .map(|(old, new)| format!("- {old}\n+ {new}"))
+            .filter(|old| !actual.lines().any(|new| new == *old))
+            .map(|old| format!("- {old}"))
+            .chain(
+                actual
+                    .lines()
+                    .filter(|new| !expected.lines().any(|old| old == *new))
+                    .map(|new| format!("+ {new}")),
+            )
             .collect();
         panic!(
             "the matrix answers differently from {}:\n{}\n\nRead the difference, then run \
              with SAFEC_BLESS=1 to write what it answers now.",
             path.display(),
-            if moved.is_empty() {
-                "(rows added or removed)".to_owned()
-            } else {
-                moved.join("\n")
-            }
+            moved.join("\n")
         );
     }
 }
