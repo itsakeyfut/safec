@@ -11,11 +11,11 @@
 //! `error[E0004]` at each of them (#688).
 
 use crate::ir::{Element, Operand, Place, Projection, Rvalue, Terminator};
+use crate::library::Callee;
 use crate::source::Span;
 
 use super::derefs;
 use super::known::Known;
-use super::parts::Callee;
 use super::transfer::Allocations;
 
 /// One write of a value into a place.

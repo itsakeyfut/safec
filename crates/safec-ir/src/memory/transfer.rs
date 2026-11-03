@@ -15,12 +15,13 @@ use crate::source::{SourceMap, Span};
 use super::built::{built_from, named, replaced_by};
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known};
 use super::parts::{
-    AS_TYPED, Callee, Contents, Extent, Freeing, Held, Init, Inits, LIBRARY, Leaves, Levels,
-    Library, Makes, Offset, PendingRead, Reached, Read, Realloced, SiteState, bounded,
+    AS_TYPED, Contents, Extent, Freeing, Held, Init, Inits, Levels, Offset, PendingRead, Reached,
+    Read, Realloced, SiteState, bounded,
 };
 use super::report::{Fit, fits, slots_from, slots_leaving};
 use super::store::{Landing, StoreKind};
 use super::{LostReason, derefs, handed_places};
+use crate::library::{Callee, LIBRARY, Leaves, Library, Makes};
 use crate::reads::{dereferenced_in_element, dereferenced_in_terminator};
 
 /// The analysis: where an allocation is, and whether it has been freed.
@@ -162,8 +163,16 @@ impl Allocations<'_> {
         destination: &Place,
     ) -> Extent {
         let constant = |index: usize| self.constant_argument(callee, handed, index);
-        if matches!(kind, Callee::Opaque) {
-            return Extent::AtLeast(self.pointee_size(function, destination).unwrap_or(0));
+        match kind {
+            Callee::Opaque => {
+                return Extent::AtLeast(self.pointee_size(function, destination).unwrap_or(0));
+            }
+            Callee::Frees
+            | Callee::Allocates
+            | Callee::Reallocates
+            | Callee::ReturnsFirst
+            | Callee::Copies
+            | Callee::Ends => {}
         }
         let asked = match self.library(callee).and_then(|row| row.makes) {
             Some(Makes::Argument(index)) => constant(index),
@@ -3487,7 +3496,16 @@ impl Analysis for Allocations<'_> {
         //
         // Computed once, for the trigger here and for the call's result
         // below, so that the two cannot disagree about what it was handed.
-        let hands_a_lost_value = matches!(kind, Callee::Opaque) && {
+        let opaque = match kind {
+            Callee::Opaque => true,
+            Callee::Frees
+            | Callee::Allocates
+            | Callee::Reallocates
+            | Callee::ReturnsFirst
+            | Callee::Copies
+            | Callee::Ends => false,
+        };
+        let hands_a_lost_value = opaque && {
             let mut handed_memory: Vec<usize> = sites().collect();
             for local in (0..value.escaped.len()).filter(|&local| value.escaped[local]) {
                 handed_memory.extend(value.points_to[local].sites());
@@ -3527,7 +3545,15 @@ impl Analysis for Allocations<'_> {
             value.lost_exposed = true;
         }
 
-        if matches!(kind, Callee::Frees | Callee::Reallocates)
+        let may_free = match kind {
+            Callee::Frees | Callee::Reallocates => true,
+            Callee::Allocates
+            | Callee::ReturnsFirst
+            | Callee::Copies
+            | Callee::Ends
+            | Callee::Opaque => false,
+        };
+        if may_free
             && handed.iter().any(|argument| match argument {
                 Operand::Copy(place) => {
                     let held = &value.points_to[place.local.index()];
@@ -3539,8 +3565,7 @@ impl Analysis for Allocations<'_> {
             value.lost_may_be_gone();
         }
 
-        if matches!(kind, Callee::Frees | Callee::Reallocates) && self.frees_callers(handed, value)
-        {
+        if may_free && self.frees_callers(handed, value) {
             value.callers_memory_may_be_freed();
         }
 
@@ -3694,7 +3719,16 @@ impl Analysis for Allocations<'_> {
                 // at, and what is copied is one level below what `*ps` may
                 // point at. Read only as plain locals, those built in silence.
                 // Found by review.
-                if matches!(kind, Callee::Copies) {
+                let copies = match kind {
+                    Callee::Copies => true,
+                    Callee::Frees
+                    | Callee::Allocates
+                    | Callee::Reallocates
+                    | Callee::ReturnsFirst
+                    | Callee::Ends
+                    | Callee::Opaque => false,
+                };
+                if copies {
                     if let [Operand::Copy(dest), Operand::Copy(source), ..] = &arguments[..] {
                         let (into_depth, from_depth) = (derefs(dest), derefs(source));
                         let placed = (dest.projection.is_empty() || into_depth > 0)
@@ -4376,7 +4410,16 @@ impl Analysis for Allocations<'_> {
         // check recorded: an allocation this function handed it is folded in
         // at its size. The `return` in its body is where the belief is asked,
         // where that body is one this check reads. See ADR-0060.
-        if matches!(kind, Callee::Opaque) {
+        let opaque = match kind {
+            Callee::Opaque => true,
+            Callee::Frees
+            | Callee::Allocates
+            | Callee::Reallocates
+            | Callee::ReturnsFirst
+            | Callee::Copies
+            | Callee::Ends => false,
+        };
+        if opaque {
             value.points_to[site].believed = self.pointee_size(function, place);
             // And what its memory holds as its type says, as a parameter's.
             value.points_to[site].contents_at_most = self

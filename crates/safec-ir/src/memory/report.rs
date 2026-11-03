@@ -10,6 +10,7 @@ use crate::ir::{
     BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
     Ty, TyId,
 };
+use crate::library::{Callee, Reach};
 use crate::nullability::NullAtTerminators;
 use crate::source::{SourceMap, Span};
 
@@ -17,7 +18,7 @@ use super::bits::Bits;
 use super::built::named;
 use super::known::Known;
 use super::parts::{
-    Callee, Extent, Freeing, Init, Levels, Offset, Reach, Reached, Read, SiteState, earlier, same,
+    Extent, Freeing, Init, Levels, Offset, Reached, Read, SiteState, earlier, same,
 };
 use super::store::{StoreKind, Written};
 use super::transfer::{Allocations, CopiedPointers, innermost_element};
@@ -1154,7 +1155,7 @@ fn say_fit(
 /// Report every library call at this terminator that reads or writes through
 /// a pointer it is handed further than this check can show fits.
 ///
-/// **What the call is asked to touch is the access**, as [`LIBRARY`](super::parts::LIBRARY) says per
+/// **What the call is asked to touch is the access**, as [`LIBRARY`](crate::library::LIBRARY) says per
 /// argument: a [`Reach::Length`] is an access of as many bytes as that
 /// argument holds, read as the parameter receives it, and any length this
 /// check cannot read is unknown; a [`Reach::String`] runs as far as a string
