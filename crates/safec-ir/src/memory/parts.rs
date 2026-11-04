@@ -1038,12 +1038,7 @@ impl Held {
         extent: &Table<Site, Option<Extent>>,
         sizes: &Table<LocalIdx, Option<u64>>,
     ) -> Option<u64> {
-        if self.offset != Offset::Zero
-            || self.inner_address
-            || self.lost
-            || self.loaded
-            || self.foreign
-        {
+        if self.offset != Offset::Zero || self.inner_address || self.beyond().unrecorded_address() {
             return Some(0);
         }
         let sites = self
@@ -1074,13 +1069,26 @@ impl Held {
         self.offset == Offset::Zero
             && !self.sites.any()
             && !self.writes_to.any()
-            && !self.lost
-            && !self.loaded
-            && !self.foreign
-            && !self.from_caller
-            && !self.lost_read
-            && !self.stale_read
-            && !self.unreplaced_read
+            && self.beyond().is_nothing()
+    }
+
+    /// What this value may hold beyond what its sites and its edges name.
+    /// See [`Beyond`].
+    pub(super) fn beyond(&self) -> Beyond {
+        let unrecorded = Unrecorded {
+            lost: self.lost,
+            loaded: self.loaded,
+            foreign: self.foreign,
+            from_caller: self.from_caller,
+            stale_read: self.stale_read,
+            lost_read: self.lost_read,
+            unreplaced_read: self.unreplaced_read,
+        };
+        if unrecorded.any() {
+            Beyond::Unrecorded(unrecorded)
+        } else {
+            Beyond::Nothing
+        }
     }
 
     /// Whether this local may hold a local's address, on some path.
@@ -1785,6 +1793,82 @@ impl Contents {
         self.unreplaced |= *unreplaced;
         self.holds_lost |= *holds_lost;
         self.from_caller |= *from_caller;
+    }
+}
+
+/// What a value may hold beyond what its sites and its edges name: the one
+/// answer every reader asks, so that a mark added to it is a compile error
+/// wherever it has to be answered.
+///
+/// **Seven marks and two questions.** `lost`, `loaded` and `foreign` say the
+/// value may be an address this function never recorded, which
+/// [`Beyond::unrecorded_address`] asks; `from_caller`, `stale_read`,
+/// `lost_read` and `unreplaced_read` say where what it names came from, and
+/// [`Beyond::is_nothing`] asks all seven, for a reader that has to know the
+/// value names exactly its sites. Each question names every mark, `_` for one
+/// it does not read, so a mark added is `error[E0027]` in each. See ADR-0063.
+pub(super) enum Beyond {
+    /// It names exactly what its sites and edges say.
+    Nothing,
+    /// It may hold more, as the marks say; at least one is set.
+    Unrecorded(Unrecorded),
+}
+
+/// The marks of [`Held`] that say what [`Beyond`] says.
+#[derive(Clone, Copy)]
+pub(super) struct Unrecorded {
+    lost: bool,
+    loaded: bool,
+    foreign: bool,
+    from_caller: bool,
+    stale_read: bool,
+    lost_read: bool,
+    unreplaced_read: bool,
+}
+
+impl Unrecorded {
+    /// Whether any mark is set.
+    fn any(self) -> bool {
+        let Unrecorded {
+            lost,
+            loaded,
+            foreign,
+            from_caller,
+            stale_read,
+            lost_read,
+            unreplaced_read,
+        } = self;
+        lost || loaded || foreign || from_caller || stale_read || lost_read || unreplaced_read
+    }
+}
+
+impl Beyond {
+    /// Whether the value names exactly its sites and edges.
+    pub(super) fn is_nothing(&self) -> bool {
+        match self {
+            Beyond::Nothing => true,
+            Beyond::Unrecorded(_) => false,
+        }
+    }
+
+    /// Whether the value may be an address this function never recorded:
+    /// lost, read out of memory, or written by a call this check cannot
+    /// read. Not where it came from: a value read out of a caller's memory
+    /// is `loaded` already, and the provenance marks are the free's and the
+    /// load's to ask.
+    pub(super) fn unrecorded_address(&self) -> bool {
+        match self {
+            Beyond::Nothing => false,
+            Beyond::Unrecorded(Unrecorded {
+                lost,
+                loaded,
+                foreign,
+                from_caller: _,
+                stale_read: _,
+                lost_read: _,
+                unreplaced_read: _,
+            }) => *lost || *loaded || *foreign,
+        }
     }
 }
 

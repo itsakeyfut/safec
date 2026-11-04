@@ -191,7 +191,7 @@ impl Landing {
             StoreKind::Copy => self.deep > 2,
         };
         let held = &value.points_to[self.pointer];
-        held.loaded || held.lost || held.foreign || deep_enough
+        held.beyond().unrecorded_address() || deep_enough
     }
 
     /// Whether it lands nowhere this check names: no allocation and no local.

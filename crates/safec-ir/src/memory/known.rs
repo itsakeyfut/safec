@@ -1178,14 +1178,7 @@ impl Known {
     /// is `SC0411` about two correct programs.
     fn names_no_more_than_its_sites(&self, local: LocalId) -> bool {
         let held = &self.points_to[local];
-        !held.writes_to.any()
-            && !held.lost
-            && !held.loaded
-            && !held.foreign
-            && !held.from_caller
-            && !held.lost_read
-            && !held.stale_read
-            && !held.unreplaced_read
+        !held.writes_to.any() && held.beyond().is_nothing()
     }
 
     /// Pour `poured` into each of `containers`, and mark every array in
@@ -1471,8 +1464,8 @@ impl Known {
             _ => self.levels_below(local, dereferences - 1).1,
         };
         let held = &self.points_to[local];
-        // `holds_unrecorded` with `loaded` and `foreign` taken apart: keep
-        // the two in step.
+        // `Beyond::unrecorded_address` with `loaded` and `foreign` taken
+        // apart: keep the two in step.
         if self.unnamed_below(local, dereferences) || held.lost {
             lands.extend(self.locals_named_by_unknown_code());
         } else if held.loaded || held.foreign {
@@ -1492,7 +1485,8 @@ impl Known {
     /// of memory is answered as of its read (#648), and one a call wrote as
     /// of the call (#661). See ADR-0057 and ADR-0041.
     pub(super) fn through_unnamed(&self, local: LocalId, dereferences: usize) -> bool {
-        holds_unrecorded(&self.points_to[local]) || self.unnamed_below(local, dereferences)
+        self.points_to[local].beyond().unrecorded_address()
+            || self.unnamed_below(local, dereferences)
     }
 
     /// The second half of [`Self::through_unnamed`]: whether a level
@@ -1506,7 +1500,7 @@ impl Known {
             !sites.is_empty()
                 || locals
                     .iter()
-                    .any(|&held| holds_unrecorded(&self.points_to[held]))
+                    .any(|&held| self.points_to[held].beyond().unrecorded_address())
         })
     }
 
@@ -2474,14 +2468,6 @@ impl Known {
 struct Closed {
     sites: BTreeSet<Site>,
     locals: BTreeSet<LocalIdx>,
-}
-
-/// Whether `held` may hold an address this function never recorded: read
-/// out of memory, lost, or written by a call this check cannot read.
-/// [`Known::locals_a_write_may_land_in`] spells it with `loaded` and
-/// `foreign` apart, and follows it.
-fn holds_unrecorded(held: &Held) -> bool {
-    held.loaded || held.lost || held.foreign
 }
 
 /// How many innermost elements a local array may have and still be kept

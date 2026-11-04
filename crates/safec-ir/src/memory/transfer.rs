@@ -680,7 +680,7 @@ impl Allocations<'_> {
                     // where the store is placed: `m[0] = p;` writes `m`. Where
                     // it is not placed, `replaced_by` below clears the
                     // locals it may land in. See `Known::local_init`.
-                    if one_step && !(held.loaded || held.lost || held.foreign) {
+                    if one_step && !held.beyond().unrecorded_address() {
                         let edges: Vec<LocalIdx> = held.writes_to.ones().collect();
                         let sites: Vec<Site> = held.sites().collect();
                         // **A store that may land in several allocations may
@@ -918,8 +918,7 @@ impl Allocations<'_> {
                 let (source_fresh, source_maybe) = match source {
                     Some(Operand::Copy(source)) if source.projection.is_empty() => {
                         let held = &value.points_to[source.local];
-                        let plain =
-                            !(held.lost || held.foreign || held.loaded || held.inner_address);
+                        let plain = !(held.beyond().unrecorded_address() || held.inner_address);
                         let locals_unwritten = plain
                             && held.sites().next().is_none()
                             && held.writes_to.any()
@@ -1417,7 +1416,7 @@ impl Allocations<'_> {
         source.projection.as_slice() == [Projection::Deref]
             && self.may_be_pointer(function, source)
             && (through.sites().next().is_some() || through.writes_to.any())
-            && !(through.lost || through.foreign || through.loaded || through.inner_address)
+            && !(through.beyond().unrecorded_address() || through.inner_address)
             && through
                 .sites()
                 .all(|site| value.block_init[site].is_unwritten())
