@@ -768,6 +768,29 @@ cases! {
         // with `g = e;`. Mutation: a load takes no element from the one
         // local it reads out of; this loses its `SC0411`.
         a_pointer_to_an_array_s_start_copied_into_a_local_writes_only_the_element_it_names: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **But not where the value read names more than one array**, or
+        // anything beside one: an element is an index into every array a
+        // pointer names, so `e` either `m` or `n` read back through `pe`
+        // and written through would write `m[0]` for certain on the path
+        // where it wrote `n[0]`, and `m[0]` is a doubt. Mutation: take the
+        // element whatever the value read names; this goes silent. Found
+        // by review.
+        a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same copied into a local through its address, #706's shape.
+        // Mutation as above; this goes silent.
+        a_pointer_into_either_of_two_arrays_copied_into_a_local_writes_neither_for_certain: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same where the local was handed to a call this check cannot
+        // read, which may have pointed it elsewhere. Mutation as above;
+        // this goes silent.
+        a_pointer_into_an_array_handed_to_a_call_and_read_back_through_its_address_names_no_element: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read back out of a local or a block, whose element nothing keeps.
+        // Mutation: take the element though a site is read out of too; this
+        // goes silent. Found by review.
+        a_pointer_read_back_out_of_a_local_or_a_block_names_no_element: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read back out of either of two locals naming different elements.
+        // Mutation: take the first local's element; this goes silent. Found
+        // by review.
+        a_pointer_read_back_out_of_either_of_two_locals_names_no_element: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And copied out of memory that holds such a pointer, `box[0] = m + 1;
         // memcpy(&g, box, 8); g[0] = &x;`, which the copy carries as a load of
         // the box does, `g = box[0];`: the copy is a load built by

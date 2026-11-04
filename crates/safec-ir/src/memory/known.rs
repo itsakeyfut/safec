@@ -1379,11 +1379,24 @@ impl Known {
         // of, whose record gathers every store into any of its elements, nor
         // a block, which keeps no element (`Held::absorb`), nor more than
         // one local, whose elements this would have to join.
+        //
+        // **And only where that local's value names one array and nothing
+        // else**: an element is an index into each array a pointer may
+        // name, and a write through it is taken as a write of that element
+        // in all of them (`built::write_effects`). With `e` either `m` or
+        // `n`, or handed to a call this check cannot read, the element would
+        // write `m[0]` for certain on a path where `n[0]` was written, and a
+        // read of `m[0]` nothing wrote went silent. Found by review.
         let (from_sites, from_locals) = self.levels_below(local, depth - 1);
         let from_locals: Vec<LocalIdx> = from_locals.into_iter().collect();
         if let (true, [read_from]) = (from_sites.is_empty(), from_locals.as_slice()) {
-            if !is_array(*read_from) {
-                held.element = self.points_to[*read_from].element;
+            let value = &self.points_to[*read_from];
+            let mut names = value.locals();
+            let one_array = matches!((names.next(), names.next()), (Some(_), None))
+                && !value.holds_a_site()
+                && value.beyond().is_nothing();
+            if !is_array(*read_from) && one_array {
+                held.element = value.element;
             }
         }
         // What every block it reads through, at any level, gives what it
