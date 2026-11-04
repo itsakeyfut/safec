@@ -2232,7 +2232,7 @@ impl Known {
         for (local, &escaped) in self.escaped.enumerated() {
             if escaped {
                 reach.extend(self.points_to[local].sites());
-                unnamed |= self.points_to[local].loaded || self.points_to[local].lost;
+                unnamed |= self.points_to[local].beyond().unrecorded_address();
             }
         }
         if unnamed {

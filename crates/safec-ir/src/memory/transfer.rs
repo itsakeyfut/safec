@@ -1587,15 +1587,14 @@ impl Allocations<'_> {
         }
         let held = &known.points_to[place.local];
         if place.projection.is_empty() {
-            return if held.loaded || held.lost {
+            return if held.beyond().unrecorded_address() {
                 known.stored()
             } else {
                 Vec::new()
             };
         }
         if place.projection.as_slice() == [Projection::Deref]
-            && !held.lost
-            && !held.loaded
+            && !held.beyond().unrecorded_address()
             && held.sites().next().is_some()
         {
             return held
@@ -1858,7 +1857,7 @@ impl Allocations<'_> {
             Operand::Copy(place) => {
                 let held = &known.points_to[place.local];
                 place.projection.is_empty()
-                    && (held.lost || held.loaded || held.may_be_a_locals_address())
+                    && (held.beyond().unrecorded_address() || held.may_be_a_locals_address())
             }
         })
     }
@@ -3525,7 +3524,7 @@ impl Analysis for Allocations<'_> {
             && handed.iter().any(|argument| match argument {
                 Operand::Copy(place) => {
                     let held = &value.points_to[place.local];
-                    !place.projection.is_empty() || held.lost || held.loaded
+                    !place.projection.is_empty() || held.beyond().unrecorded_address()
                 }
                 Operand::Constant(_) => false,
             })
