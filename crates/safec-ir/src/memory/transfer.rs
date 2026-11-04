@@ -20,8 +20,8 @@ use super::index::{Idx, LocalIdx, Site, Table};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known};
 use super::parts::{
-    AS_TYPED, Contents, Extent, Freeing, Held, Init, Inits, Levels, Offset, PendingRead, Reached,
-    Read, Realloced, SiteState, bounded,
+    AS_TYPED, Contents, Extent, Freeing, Held, Init, Inits, Levels, Marks, Offset, PendingRead,
+    Reached, Read, Realloced, SiteState, bounded,
 };
 use super::store::{Landing, StoreKind};
 use crate::library::{Callee, LIBRARY, Leaves, Library, Makes};
@@ -729,39 +729,63 @@ impl Allocations<'_> {
     /// when handed one. One rule in several places drifts apart.
     /// See ADR-0040.
     fn read_through(&self, function: &Function, source: &Place, value: &Known) -> Held {
-        let mut held = Held::none(value.points_to.len());
-        // **A byte is a load too.** C17 6.5 p7 lets a character type read any
-        // object, so a pointer copied a byte at a time is copied, and the byte
-        // carries what was stored where it was read from, marked as a load is
-        // so that it proves nothing about what it names. See ADR-0046.
-        held.loaded = self.may_be_pointer(function, source) || self.reads_a_byte(function, source);
+        // Every mark a load gives before it reads anything, each said, so a
+        // mark added is answered here (#732); what it reads is
+        // `Known::load_into`'s, and whether it is fresh is below.
+        let mut held = Held::from_marks(
+            value.points_to.len(),
+            Marks {
+                lost: false,
+                freed: None,
+                writes_elsewhere: true,
+                offset: Offset::Zero,
+                // **A byte is a load too.** C17 6.5 p7 lets a character type
+                // read any object, so a pointer copied a byte at a time is
+                // copied, and the byte carries what was stored where it was
+                // read from, marked as a load is so that it proves nothing
+                // about what it names. See ADR-0046.
+                loaded: self.may_be_pointer(function, source)
+                    || self.reads_a_byte(function, source),
+                foreign: false,
+                stale_read: false,
+                unreplaced_read: false,
+                lost_read: false,
+                from_caller: false,
+                returned_by: None,
+                fresh_read: false,
+                // **Believed to point at one whole object of the type it is
+                // read as**, which the store that put it there is asked about.
+                // A byte is no pointer and believes nothing; a `void *`
+                // believes it starts an object and no width, which is all its
+                // store is asked. No more than the memory it is read out of is
+                // believed to hold ([`Self::believed_read`]), and only where
+                // every local it may be read out of fits, below. See ADR-0060.
+                believed: self
+                    .pointee_size(function, source)
+                    .map(|_| self.believed_read(function, source, value)),
+                // **And it arrives as the type it is read as**, which bounds
+                // what its own memory holds, no more than the memory it was
+                // read out of believed one level down: `a = *pi;` with `pi` a
+                // `void ***` converted to `int ***` believes nothing of what
+                // `*a` points at, where the type alone said whole `int`s
+                // (#634). See `Held::contents_at_most`.
+                //
+                // Mutation: take the type alone, and
+                // `a_void_pointer_three_levels_deep_converted_whole_is_believed_below_its_first_level`
+                // goes silent.
+                contents_at_most: self.contents_read(function, source, value),
+                inner_address: false,
+                element: None,
+                array_edge: false,
+                stored_through: false,
+            },
+        );
         // What could be named as this was read. See `Held::named_at_read`.
         if held.loaded {
             for named in value.locals_named_by_unknown_code() {
                 held.named_at_read.set(named);
             }
         }
-        // **Believed to point at one whole object of the type it is read as**,
-        // which the store that put it there is asked about. A byte is no
-        // pointer and believes nothing; a `void *` believes it starts an
-        // object and no width, which is all its store is asked. No more
-        // than the memory it is read out of is believed to hold
-        // ([`Self::believed_read`]), and only where every local it may be
-        // read out of fits, below. See ADR-0060.
-        held.believed = self
-            .pointee_size(function, source)
-            .map(|_| self.believed_read(function, source, value));
-        // **And it arrives as the type it is read as**, which bounds what its
-        // own memory holds, no more than the memory it was read out of
-        // believed one level down: `a = *pi;` with `pi` a `void ***`
-        // converted to `int ***` believes nothing of what `*a` points at,
-        // where the type alone said whole `int`s (#634). See
-        // `Held::contents_at_most`.
-        //
-        // Mutation: take the type alone, and
-        // `a_void_pointer_three_levels_deep_converted_whole_is_believed_below_its_first_level`
-        // goes silent.
-        held.contents_at_most = self.contents_read(function, source, value);
         // **And what was stored where it was read from**, at an offset nobody
         // said, so that a dereference of it can be asked about what it may
         // point at. `loaded` stays set, which is what marks the set as
@@ -3083,7 +3107,29 @@ impl Analysis for Allocations<'_> {
                             // memcpy(&g, box, 8); g[0] = &x;` believed `m[0]`
                             // written where `g = box[0];` doubts it. Found by
                             // review, each.
-                            let mut read = Held::none(value.points_to.len());
+                            let mut read = Held::from_marks(
+                                value.points_to.len(),
+                                Marks {
+                                    lost: false,
+                                    freed: None,
+                                    writes_elsewhere: true,
+                                    offset: Offset::Zero,
+                                    loaded: true,
+                                    foreign: false,
+                                    stale_read: false,
+                                    unreplaced_read: false,
+                                    lost_read: false,
+                                    from_caller: false,
+                                    returned_by: None,
+                                    fresh_read: false,
+                                    believed: None,
+                                    contents_at_most: Levels::default(),
+                                    inner_address: false,
+                                    element: None,
+                                    array_edge: false,
+                                    stored_through: false,
+                                },
+                            );
                             let caller =
                                 self.reads_caller_memory(source.local, from_depth + 1, value);
                             value.load_into(
@@ -3093,7 +3139,6 @@ impl Analysis for Allocations<'_> {
                                 &|local| self.is_array(function, local),
                                 caller,
                             );
-                            read.loaded = true;
                             // As of this copy. See `Held::named_at_read`.
                             for named in value.locals_named_by_unknown_code() {
                                 read.named_at_read.set(named);

@@ -1107,32 +1107,82 @@ impl Held {
 
     /// A local holding nothing, in a function with this many sites.
     pub(super) fn none(sites: usize) -> Self {
+        Held::from_marks(
+            sites,
+            Marks {
+                lost: false,
+                freed: None,
+                writes_elsewhere: true,
+                // Nothing held, so nothing to be off the start of. `Unknown` here
+                // would be a warning about an offset nobody wrote, on every path
+                // that holds nothing and, through `Held::hold`'s join, on every
+                // parameter. See ADR-0036.
+                offset: Offset::Zero,
+                loaded: false,
+                foreign: false,
+                stale_read: false,
+                unreplaced_read: false,
+                lost_read: false,
+                from_caller: false,
+                returned_by: None,
+                fresh_read: false,
+                believed: None,
+                contents_at_most: Levels::default(),
+                inner_address: false,
+                element: None,
+                array_edge: false,
+                stored_through: false,
+            },
+        )
+    }
+
+    /// A value naming nothing yet, with every mark as `marks` says: what a
+    /// door that builds a value starts from, so that it says each mark it
+    /// gives, `false` included where a reviewer reads it. A mark added to
+    /// [`Marks`] is `error[E0063]` at every door until it answers (#732).
+    pub(super) fn from_marks(sites: usize, marks: Marks) -> Self {
+        let Marks {
+            lost,
+            freed,
+            writes_elsewhere,
+            offset,
+            loaded,
+            foreign,
+            stale_read,
+            unreplaced_read,
+            lost_read,
+            from_caller,
+            returned_by,
+            fresh_read,
+            believed,
+            contents_at_most,
+            inner_address,
+            element,
+            array_edge,
+            stored_through,
+        } = marks;
         Held {
             sites: Bits::new(sites),
-            lost: false,
-            freed: None,
+            lost,
+            freed,
             writes_to: Bits::new(sites),
-            writes_elsewhere: true,
-            // Nothing held, so nothing to be off the start of. `Unknown` here
-            // would be a warning about an offset nobody wrote, on every path
-            // that holds nothing and, through `Held::hold`'s join, on every
-            // parameter. See ADR-0036.
-            offset: Offset::Zero,
-            loaded: false,
+            writes_elsewhere,
+            offset,
+            loaded,
             named_at_read: Bits::new(sites),
-            foreign: false,
-            stale_read: false,
-            unreplaced_read: false,
-            lost_read: false,
-            from_caller: false,
-            returned_by: None,
-            fresh_read: false,
-            believed: None,
-            contents_at_most: Levels::default(),
-            inner_address: false,
-            element: None,
-            array_edge: false,
-            stored_through: false,
+            foreign,
+            stale_read,
+            unreplaced_read,
+            lost_read,
+            from_caller,
+            returned_by,
+            fresh_read,
+            believed,
+            contents_at_most,
+            inner_address,
+            element,
+            array_edge,
+            stored_through,
         }
     }
 
@@ -1794,6 +1844,33 @@ impl Contents {
         self.holds_lost |= *holds_lost;
         self.from_caller |= *from_caller;
     }
+}
+
+/// Every mark of a [`Held`] beside the sets of what it names, for
+/// [`Held::from_marks`]. **No `Default`**, so a door that builds a value
+/// names each one, and one it leaves out is not its precise default in
+/// silence: the copy into a local's address once set seven marks and not
+/// `element`, and wrote the whole array (#706), and the store's landing did
+/// the same (#705). See [`Held`] for what each mark means.
+pub(super) struct Marks {
+    pub(super) lost: bool,
+    pub(super) freed: Option<Freeing>,
+    pub(super) writes_elsewhere: bool,
+    pub(super) offset: Offset,
+    pub(super) loaded: bool,
+    pub(super) foreign: bool,
+    pub(super) stale_read: bool,
+    pub(super) unreplaced_read: bool,
+    pub(super) lost_read: bool,
+    pub(super) from_caller: bool,
+    pub(super) returned_by: Option<Site>,
+    pub(super) fresh_read: bool,
+    pub(super) believed: Option<u64>,
+    pub(super) contents_at_most: Levels,
+    pub(super) inner_address: bool,
+    pub(super) element: Option<u64>,
+    pub(super) array_edge: bool,
+    pub(super) stored_through: bool,
 }
 
 /// What a value may hold beyond what its sites and its edges name: the one
