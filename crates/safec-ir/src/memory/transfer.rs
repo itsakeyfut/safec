@@ -3193,7 +3193,17 @@ impl Analysis for Allocations<'_> {
                                 // other is a may-write, as a union is.
                                 match replaces {
                                     Some(at) if at.local() == target => value.replace(at, each),
-                                    _ => value.target_union(target, &each),
+                                    // **Naming no element**: a copy that does
+                                    // not replace the local may write part of
+                                    // a pointer, or none, so what it leaves is
+                                    // not the element the source names, and
+                                    // taking it made `memcpy(&g, &e, 4); *g =
+                                    // &x;` a certain write of `m[1]`, which
+                                    // nothing wrote. Found by review.
+                                    _ => {
+                                        each.element = None;
+                                        value.target_union(target, &each);
+                                    }
                                 }
                             }
                             // **A copy into memory this check cannot place lands

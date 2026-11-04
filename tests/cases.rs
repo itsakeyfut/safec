@@ -791,6 +791,15 @@ cases! {
         // Mutation: take the first local's element; this goes silent. Found
         // by review.
         a_pointer_read_back_out_of_either_of_two_locals_names_no_element: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **Nor where the copy may write part of a pointer**: half of `e`
+        // copied into `g` is not a pointer to `m[1]`, so the write through
+        // `g` is no certain write of it and `m[1]` is a doubt. Mutation: a
+        // copy that does not replace its local carries the element; this
+        // goes silent. Found by review.
+        half_a_pointer_into_an_array_copied_into_a_local_names_no_element: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same by a length this check cannot read. Mutation as above;
+        // this goes silent.
+        a_pointer_into_an_array_copied_into_a_local_by_a_length_this_check_cannot_read_names_no_element: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And copied out of memory that holds such a pointer, `box[0] = m + 1;
         // memcpy(&g, box, 8); g[0] = &x;`, which the copy carries as a load of
         // the box does, `g = box[0];`: the copy is a load built by
