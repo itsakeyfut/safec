@@ -47,8 +47,9 @@
 //! kinds of index its tables are kept by, and `bits.rs` the sets of them;
 //! `built.rs` what a value built out of operands holds; `allocations.rs` the
 //! analysis and the facts about a function the walk and the report both read;
-//! `transfer.rs` what each element, terminator and edge does to the value, and
-//! `store.rs` where a write lands; `fit.rs` whether an access fits its object,
+//! `transfer.rs` what each element, terminator and edge does to the value,
+//! `store.rs` where a write lands, and `init.rs` what a write leaves
+//! unwritten; `fit.rs` whether an access fits its object,
 //! which the walk and the report both ask; `report.rs` what is asked once the
 //! walk has settled; and `assigned.rs` the definite assignment check. This
 //! file keeps what a caller names: [`findings`], [`Finding`], [`Kind`] and
@@ -66,6 +67,7 @@ mod bits;
 mod built;
 mod fit;
 mod index;
+mod init;
 mod known;
 mod parts;
 mod report;

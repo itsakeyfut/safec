@@ -17,10 +17,11 @@ use super::allocations::{Allocations, handed_places, innermost_element};
 use super::built::{built_from, named, replaced_by};
 use super::fit::{Fit, fits, slots_from, slots_leaving};
 use super::index::{Idx, LocalIdx, Site, Table};
+use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known};
 use super::parts::{
-    AS_TYPED, Contents, Extent, Freeing, Held, Init, Inits, Levels, Offset, PendingRead, Reached,
-    Read, Realloced, SiteState, bounded,
+    AS_TYPED, Contents, Extent, Freeing, Held, Init, Inits, Levels, Marks, Offset, PendingRead,
+    Reached, Read, Realloced, SiteState, bounded,
 };
 use super::store::{Landing, StoreKind};
 use crate::library::{Callee, LIBRARY, Leaves, Library, Makes};
@@ -38,33 +39,6 @@ enum Pours {
     },
     /// A library copy.
     Copy,
-}
-
-/// What [`Allocations::initialised_by`] is told of one write.
-enum Wrote<'a> {
-    /// An assignment to `place`, any assignment: one with no dereference
-    /// changes nothing here, and the arm asks that itself. `targets` are the locals one exact
-    /// dereference may land in, and `certain` whether it lands in one alone
-    /// (ADR-0028). `unwritten_before` is `Known::local_init` as it was before
-    /// the store, for a local it may write past.
-    Store {
-        place: &'a Place,
-        one_step: bool,
-        certain: bool,
-        targets: &'a [LocalIdx],
-        unwritten_before: &'a Table<LocalIdx, bool>,
-    },
-    /// A library copy handed `dest` first and `source` second, which
-    /// exposes `reach`, and whose length covers the pointers it writes as
-    /// `length` says.
-    Copy {
-        dest: Option<&'a Operand>,
-        reach: Vec<Site>,
-        span: Span,
-        length: CopiedPointers,
-        bytes: Option<u64>,
-        source: Option<&'a Operand>,
-    },
 }
 
 /// How a library copy's length covers the pointers it writes, which
@@ -316,7 +290,7 @@ impl Allocations<'_> {
     /// Whether the local at `index` is an array, which pointer arithmetic
     /// keeps the edge to (#639). One answer for both places that build a
     /// value out of operands. See `Held::moved_by_arithmetic`.
-    fn is_array(&self, function: &Function, index: LocalIdx) -> bool {
+    pub(super) fn is_array(&self, function: &Function, index: LocalIdx) -> bool {
         super::built::is_array(self.unit, function, index)
     }
 
@@ -507,32 +481,6 @@ impl Allocations<'_> {
         }
     }
 
-    /// **A local that is not an array, written through a pointer that reached
-    /// it only by the rule that keeps an edge through a known move, is lost,
-    /// and in doubt where it was unwritten** (#647): the write may be of the
-    /// local, `&slot + 1 - 1`, or past it, `pp[1] = q;`, which is undefined
-    /// and the bounds rule's to report. Kept as a may-write alone, a local
-    /// that held nothing held only what was stored, so `free(z)` after
-    /// `*(&z + 7) = q;` certainly freed `q`'s allocation and `*q` was a proved
-    /// use after free; and a read of it after a store past it, which C leaves
-    /// indeterminate, was silent where it had been a certain `SC0411`, found
-    /// by review. Measured, both. See `Held::moved_by_arithmetic`.
-    fn written_past_its_end(
-        &self,
-        function: &Function,
-        value: &mut Known,
-        target: LocalIdx,
-        unwritten_before: &Table<LocalIdx, bool>,
-    ) {
-        if self.is_array(function, target) {
-            return;
-        }
-        value.points_to[target].lost = true;
-        if unwritten_before[target] {
-            value.local_init[target].doubt();
-        }
-    }
-
     /// **What a write pours into memory**, at the store and at the library
     /// copy: what it carries, into the allocations it lands in, and, where it
     /// may land where this check cannot place it, into every allocation code
@@ -564,6 +512,9 @@ impl Allocations<'_> {
             pointer: _,
             deep: _,
             kind: _,
+            // Whether a write is certain is the unwritten belief's question,
+            // `Landing::certain`; contents are poured where it may land.
+            through_unrecorded: _,
         } = landing;
         let unplaced = landing.unplaced();
         let unnamed = landing.unnamed(value);
@@ -623,508 +574,6 @@ impl Allocations<'_> {
                     value.landed_where_unknown_code_points(poured);
                 }
                 value.pour(containers, poured, in_part);
-            }
-        }
-    }
-
-    /// **What a write does to what this check knows is unwritten**, at the
-    /// store and at the library copy: the fresh and may-be-fresh marks of the
-    /// allocations it may write, the locals it writes or may write, an array
-    /// written in part, a local written past its end, and that a pointer has
-    /// written what it points at. One function with one arm per kind of
-    /// write, so that a rule changed for one is read beside the other: each
-    /// arm is what that door did, and their differences are #726, #729 and
-    /// #739 (#737).
-    ///
-    /// **Called where each door called it**, which is before what the store
-    /// pours and after what the copy pours: the copy's exposure of what it
-    /// was handed marks what is reachable, which its landing asks before it.
-    /// Mutation: call it after the store's `land_contents`, and
-    /// `a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence`
-    /// fails. Found by review.
-    ///
-    /// **What is still each door's own**: what a write puts into the locals
-    /// it lands in, which a store replaces where it is certain and a copy
-    /// only unions (#395), and `Known::named_after_a_store`, which only the
-    /// store records. A kind of write added to `StoreKind` is `E0004` at
-    /// `Landing`'s two matches; it reaches this function and
-    /// `Self::land_contents` only through a variant of `Wrote` and `Pours`
-    /// written for it.
-    fn initialised_by(&self, function: &Function, value: &mut Known, wrote: Wrote<'_>) {
-        match wrote {
-            Wrote::Store {
-                place,
-                one_step,
-                certain,
-                targets,
-                unwritten_before,
-            } => {
-                let pointer = place.local;
-                // **A write through a pointer may write an allocation**, of
-                // any type, and what it wrote is no longer indeterminate.
-                // Placed only for one dereference through a pointer that
-                // names exactly its sites; anything else may land in any
-                // allocation. See `Known::block_init`.
-                //
-                // **A store of an indeterminate pointer too.** The pointer was
-                // reported where it was read, and keeping the slot fresh
-                // reported the copy the lowering takes of the assignment's
-                // value (C17 6.5.16 p3) as a read of memory nothing wrote, at
-                // the store that wrote it. Mutation: keep the slot fresh for
-                // such a store, and
-                // `a_pointer_read_out_of_fresh_memory_stored_and_read_back_is_reported_once`
-                // gains two. See ADR-0057.
-                if derefs(place) > 0 {
-                    let held = &value.points_to[pointer];
-                    // **And a local it may land in**, the local its edges name
-                    // where the store is placed: `m[0] = p;` writes `m`. Where
-                    // it is not placed, `replaced_by` below clears the
-                    // locals it may land in. See `Known::local_init`.
-                    if one_step && !(held.loaded || held.lost || held.foreign) {
-                        let edges: Vec<LocalIdx> = held.writes_to.ones().collect();
-                        let sites: Vec<Site> = held.sites().collect();
-                        // **A store that may land in several allocations may
-                        // have missed any one**, so one that may still be
-                        // fresh stays so, as a may-fact: `*p = x;` with `p`
-                        // either of two blocks, one of them written on one
-                        // arm only, cleared the doubt about it. Found by
-                        // review. See `Known::block_init` (#721). **A local
-                        // it names counts as one of them**: `p = c ? m : &loc;
-                        // *p = x;` may have written `loc` and missed `m`
-                        // (#739).
-                        let several = sites.len() + edges.len() > 1;
-                        for &site in &sites {
-                            if several {
-                                value.block_init[site].may_write();
-                            } else {
-                                value.written(site);
-                            }
-                        }
-                        // **Through a pointer moved off an array, an element
-                        // of it**, which may not be the one read later. See
-                        // `built::write_effects`.
-                        let writes = super::built::write_effects(
-                            self.unit,
-                            function,
-                            value,
-                            place.local,
-                            1,
-                            edges.iter().copied(),
-                            false,
-                        );
-                        let pending = value.array_writes_before(writes);
-                        for local in edges {
-                            value.written_local(local);
-                        }
-                        value.array_writes_after(pending);
-                        // And what it points at is written now, whichever
-                        // element that is. See `Held::stored_through`.
-                        if place.projection.as_slice() == [Projection::Deref] {
-                            value.points_to[pointer].stored_through = true;
-                        }
-                    } else {
-                        // **Only where it may land**: what its landing names
-                        // and what code this check cannot read can reach,
-                        // which is where its contents land too
-                        // (`Known::landed_where_unknown_code_points`). Every
-                        // allocation let `*w = x;` through a pointer read out
-                        // of a parameter clear one nothing could reach, read
-                        // after it in silence where its `memcpy` spelling is
-                        // `SC0411` (#726). Taken as written where it lands in
-                        // one place, the may-be-fresh mark not kept, since
-                        // keeping it doubted a write through a pointer read out
-                        // of memory that certainly reached its block, by the
-                        // user's decision. **And
-                        // what such code can name through a local whose
-                        // address it holds**, `Known::sites_named_by_unknown_code`,
-                        // and not only what is reachable from exposed memory:
-                        // `keep(&p); p = m; **t = x;` with `t` read out of a
-                        // parameter may write `m` through `p`, and reading it
-                        // as reachable only refused that correct program with
-                        // a certain `SC0411`. Found by review. See ADR-0044 and
-                        // ADR-0057.
-                        let deep = derefs(place);
-                        let landing = self.landing(
-                            value,
-                            place.local,
-                            deep,
-                            one_step,
-                            StoreKind::Through { derefs: deep },
-                        );
-                        let mut may_land: BTreeSet<Site> =
-                            landing.containers.iter().copied().collect();
-                        may_land.extend(value.sites_named_by_unknown_code());
-                        // **But a store whose landing names more than one place
-                        // may have missed any of its blocks**, as one through a
-                        // single dereference may: `*h = c ? m : o; **h = x;`
-                        // read `*m` in silence (#739), and so did `v = *t; *v =
-                        // x;` with `*t` either of two blocks (#754). Whatever
-                        // the pointer is: #726's decision is of a store that
-                        // certainly reaches its one block, and a landing of two
-                        // reaches neither certainly, by the user's decision.
-                        let several = landing.containers.len() + landing.targets.len() > 1;
-                        for site in may_land {
-                            if several && landing.containers.contains(&site) {
-                                value.block_init[site].may_write();
-                            } else {
-                                value.written(site);
-                            }
-                        }
-                        // And what it points at was written, so that a read
-                        // back through it is of what was stored, as the
-                        // one-step store's is above: without it the lowering's
-                        // own read of `*v` after `*v = x;` was doubted. See
-                        // `Held::stored_through`.
-                        if several && place.projection.as_slice() == [Projection::Deref] {
-                            value.points_to[place.local].stored_through = true;
-                        }
-                    }
-                }
-                if !place.projection.is_empty() && !certain {
-                    replaced_by(self.unit, function, place, value);
-                    if one_step && value.points_to[pointer].array_edge {
-                        for &target in targets {
-                            self.written_past_its_end(function, value, target, unwritten_before);
-                        }
-                    }
-                }
-            }
-            Wrote::Copy {
-                dest,
-                reach,
-                span,
-                length,
-                bytes,
-                source,
-            } => {
-                // **And a local it may write past the end of**, as a store
-                // through the same pointer marks it: lost, and in doubt where
-                // it was unwritten. `pp = &z + 1; memcpy(pp, &px, 8); q = z;`
-                // reported only the out-of-bounds copy, where `*pp = &x;`
-                // also doubts the read of `z` (#729). Through one dereference
-                // where the destination itself was moved off a local, and
-                // deeper where a level above was, as the store asks it. See
-                // `Allocations::written_past_its_end`.
-                let unwritten_before = value.unwritten_locals();
-                let past_end: Vec<LocalIdx> = match dest {
-                    Some(Operand::Copy(dest))
-                        if dest
-                            .projection
-                            .iter()
-                            .all(|step| matches!(step, Projection::Deref)) =>
-                    {
-                        let deep = derefs(dest) + 1;
-                        if deep == 1 {
-                            if value.points_to[dest.local].array_edge {
-                                value.written_through(dest.local)
-                            } else {
-                                Vec::new()
-                            }
-                        } else if value
-                            .levels_below(dest.local, deep - 2)
-                            .1
-                            .into_iter()
-                            .any(|local| value.points_to[local].array_edge)
-                        {
-                            value
-                                .levels_below(dest.local, deep - 1)
-                                .1
-                                .into_iter()
-                                .collect()
-                        } else {
-                            Vec::new()
-                        }
-                    }
-                    Some(Operand::Copy(_) | Operand::Constant(_)) | None => Vec::new(),
-                };
-                // What a pointer it was handed may be, read out of memory, as
-                // for an opaque call, exposed. See ADR-0040.
-                //
-                // **What it writes, only where its destination may land**: the
-                // blocks its landing names and, where it may land where this
-                // check cannot place it, what code this check cannot read can
-                // name, as a store's are since #726. The exposure wrote the fresh
-                // mark of everything it reached, the copy's source and what its
-                // destination only holds among them: `memcpy(d, m, 8); r = *m;`
-                // and `*o = m; memcpy(o, pp, 8); r = *m;` read a block nothing
-                // wrote in silence, where the store forms are certain (#739).
-                // So the exposure stays, and the mark it had is put back on every
-                // block outside that set.
-                //
-                // **Where the landing names more than one place**, sites and
-                // locals together and through a place of dereferences too, it
-                // may have missed any of its blocks, so each that may still be
-                // fresh stays so, as a store's does (#721, #727), and a
-                // destination that is a local has written what it points at,
-                // `Held::stored_through`, so that a read back through it is of
-                // the block it wrote. See
-                // `Known::block_init`.
-                let may_land: Option<(BTreeSet<Site>, bool, bool)> = match dest {
-                    Some(Operand::Copy(dest))
-                        if dest
-                            .projection
-                            .iter()
-                            .all(|step| matches!(step, Projection::Deref)) =>
-                    {
-                        let deep = derefs(dest) + 1;
-                        let landing = self.landing(
-                            value,
-                            dest.local,
-                            deep,
-                            dest.projection.is_empty(),
-                            StoreKind::Copy,
-                        );
-                        let mut set: BTreeSet<Site> = landing.containers.iter().copied().collect();
-                        if landing.unnamed(value)
-                            || landing.unplaced()
-                            || landing.handed_over(value)
-                        {
-                            set.extend(value.sites_named_by_unknown_code());
-                        }
-                        let several = landing.containers.len() + landing.targets.len() > 1;
-                        // One block alone, counted after the widening above:
-                        // a copy that may land wherever code this check cannot
-                        // read can name lands in no one block, and taking its
-                        // container alone made every such block certainly fresh,
-                        // a written one among them. Found by review.
-                        // And from its start, so that a copy that covers the
-                        // block's size covers the block.
-                        let alone = set.len() == 1
-                            && landing.targets.is_empty()
-                            && dest.projection.is_empty()
-                            && matches!(value.points_to[dest.local].offset, Offset::Zero);
-                        Some((set, several, alone))
-                    }
-                    // A destination that is no place keeps what the exposure
-                    // says, as it did.
-                    Some(Operand::Copy(_) | Operand::Constant(_)) | None => None,
-                };
-                // **What it copies may be indeterminate**: bytes nothing wrote
-                // in the source are bytes nothing wrote where they land, so a
-                // read of the destination is a read of them. Where the source
-                // names only blocks nothing wrote, and the copy lands in one
-                // block alone with whole pointers, that block is as fresh as
-                // `realloc`'s result is (`Known::names_only_fresh`); where it
-                // may name one, each block it may land in may be (#724).
-                // Asked before the exposure below, which clears the source's
-                // own mark. A source read through a dereference is not asked.
-                // **And a local it names as much as a block** (#750): a local
-                // array nothing wrote, copied into a block, put bytes nothing
-                // wrote there, and `memcpy(n, a, 8); r = *n;` read them in
-                // silence. Certainly so where it names only locals nothing
-                // wrote and nothing it cannot name, as a block's is by
-                // `Known::names_only_fresh`; maybe, where any it names may be,
-                // at any element, since this keeps one mark per object.
-                let (source_fresh, source_maybe) = match source {
-                    Some(Operand::Copy(source)) if source.projection.is_empty() => {
-                        let held = &value.points_to[source.local];
-                        let plain =
-                            !(held.lost || held.foreign || held.loaded || held.inner_address);
-                        let locals_unwritten = plain
-                            && held.sites().next().is_none()
-                            && held.writes_to.any()
-                            && held
-                                .writes_to
-                                .ones()
-                                .all(|l| value.certainly_unwritten(l, None));
-                        let locals_maybe = held.writes_to.ones().any(|l| {
-                            value.certainly_unwritten(l, None)
-                                || value.may_be_unwritten(l, None, true)
-                        });
-                        (
-                            value.names_only_fresh(source.local) || locals_unwritten,
-                            value.may_name_fresh(source.local) || locals_maybe,
-                        )
-                    }
-                    // **A source read through dereferences is asked too**, of
-                    // what the pointer it reads may name, the walk a load of it
-                    // takes: `memcpy(n, *ppp, 8)` with `**ppp` nothing wrote
-                    // read `*n` in silence, where the same through a named
-                    // `s = *ppp` was doubted. A doubt alone, since what such a
-                    // pointer names is not all it may name. Found by review.
-                    Some(Operand::Copy(source))
-                        if source
-                            .projection
-                            .iter()
-                            .all(|step| matches!(step, Projection::Deref)) =>
-                    {
-                        let (sites, locals) = value.levels_below(source.local, derefs(source));
-                        let maybe = sites
-                            .iter()
-                            .any(|&site| value.block_init[site].may_be_unwritten())
-                            || locals.iter().any(|&l| {
-                                value.certainly_unwritten(l, None)
-                                    || value.may_be_unwritten(l, None, true)
-                            });
-                        (false, maybe)
-                    }
-                    Some(Operand::Copy(_) | Operand::Constant(_)) | None => (false, false),
-                };
-                // Whether the destination may land in no block, nor anywhere
-                // code this check cannot read can name: a local is the only
-                // place it writes, so it alone takes what the copy carries.
-                let lands_in_no_block = may_land
-                    .as_ref()
-                    .is_none_or(|(blocks, _, _)| blocks.is_empty());
-                let before = value.block_init.clone();
-                value.expose(self.sources, reach, Some(span));
-                if let Some((may_land, several, alone)) = may_land {
-                    // **And only as far as its length writes a pointer
-                    // whole**: a copy shorter than one writes no pointer in
-                    // the block, so a block that was fresh is still fresh,
-                    // and a read of it is certain; one that ends part way
-                    // through a later pointer wrote some and not others, and
-                    // the mark, one per block, cannot say which a read is of,
-                    // so it is a doubt, as a copy that may have missed the
-                    // block is (#745). See `CopiedPointers`.
-                    let (unwritten, doubted) = match length {
-                        CopiedPointers::Whole => (false, several),
-                        CopiedPointers::LastInPart => (false, true),
-                        CopiedPointers::NoneWhole => (true, false),
-                    };
-                    let mut carried = false;
-                    for (site, &was) in before.enumerated() {
-                        if !may_land.contains(&site) || unwritten {
-                            value.block_init[site] = was;
-                        } else {
-                            if doubted && was.may_be_unwritten() {
-                                value.block_init[site].doubt();
-                            }
-                            // **Certain only where it covers the whole block**,
-                            // its size a constant and the length at least that:
-                            // a copy of 8 bytes into 16, or of a length this
-                            // check cannot read, leaves what it did not cover
-                            // as it was, and that may be written. Found by
-                            // review.
-                            let covers = matches!(
-                                (value.extent[site], bytes),
-                                (Some(Extent::Exactly(size)), Some(bytes)) if bytes >= size
-                            );
-                            if source_fresh
-                                && alone
-                                && covers
-                                && matches!(length, CopiedPointers::Whole)
-                            {
-                                value.block_init[site] = Init::Unwritten;
-                                carried = true;
-                            } else if source_maybe {
-                                value.block_init[site].doubt();
-                                carried = true;
-                            }
-                        }
-                    }
-                    // **Only a destination that is a local itself**: the flag
-                    // says what the local points at was written, and a copy
-                    // through `*h` writes `**h`, not `*h`, so set on `h` it would
-                    // stop doubting a read of `*h` nothing wrote. The store sets
-                    // it at one dereference for the same reason.
-                    // **Not where it carried bytes nothing may have written**,
-                    // and those it carried them into are read as such again:
-                    // the flag says a read back through a pointer is of what a
-                    // store put there, and what this copy put there may be
-                    // indeterminate. `*n = x; memcpy(n, m, 8); r = *n;` with `m`
-                    // written on one path read `*n` in silence. Found by review.
-                    if carried {
-                        for held in &mut value.points_to {
-                            if held.sites().any(|site| may_land.contains(&site)) {
-                                held.stored_through = false;
-                            }
-                        }
-                    } else if several {
-                        if let Some(Operand::Copy(dest)) = dest {
-                            if dest.projection.is_empty() {
-                                value.points_to[dest.local].stored_through = true;
-                            }
-                        }
-                    }
-                }
-                // **It writes only through its first argument**: the clause of
-                // each function read by name, C17 7.24.2.1 to 7.24.3.2 and
-                // 7.24.6.1, says what is written, and it is that one. So
-                // a local is written where that argument may point:
-                // `Known::locals_a_write_may_land_in`, one dereference below
-                // it, which is what a store through it asks too, so the two
-                // cannot answer one pointer differently. `memcpy(&a, &b, 4)`
-                // cleared every local array's mark, and so did `memcpy(*pa,
-                // &b, 4)` (#643), and so did a copy through a pointer read out
-                // of the caller's memory (#645). It keeps nothing, so it
-                // exposes no local. See `Known::local_init` and ADR-0057.
-                let written: Option<Vec<LocalIdx>> = match dest {
-                    Some(Operand::Copy(dest))
-                        if dest
-                            .projection
-                            .iter()
-                            .all(|step| matches!(step, Projection::Deref)) =>
-                    {
-                        Some(value.locals_a_write_may_land_in(dest.local, derefs(dest) + 1))
-                    }
-                    // A constant writes nothing anyone can read back, and no
-                    // other place reaches a call's argument from C.
-                    _ => None,
-                };
-                // And through a destination moved off an array, an element of
-                // it, as a store through it answers. See
-                // `built::write_effects`.
-                let writes = match (dest, &written) {
-                    (Some(Operand::Copy(dest)), Some(lands)) => super::built::write_effects(
-                        self.unit,
-                        function,
-                        value,
-                        dest.local,
-                        derefs(dest) + 1,
-                        lands.iter().copied(),
-                        true,
-                    ),
-                    _ => Vec::new(),
-                };
-                let pending = value.array_writes_before(writes);
-                let mut may_write: Table<LocalIdx, bool> =
-                    Table::filled(written.is_none(), value.local_init.len());
-                for local in written.iter().flatten() {
-                    may_write[*local] = true;
-                }
-                value.replaced(|_| true, |local| may_write[local]);
-                value.array_writes_after(pending);
-                // **What it carries into a local it writes**, as into a block
-                // above (#724): `memcpy(a, m, 8); r = a[0];` with `m` nothing
-                // wrote read `a[0]` in silence, where `a[0] = *m;` is certain
-                // (#750). Certain where the source names only what nothing
-                // wrote and the copy covers this one local whole from its
-                // start; a doubt about the whole local, every element of it,
-                // where the source may name such a thing, since a copy of part
-                // of it may be of the part that was written, by the user's
-                // decision.
-                if let (Some(lands), Some(Operand::Copy(dest))) = (&written, dest) {
-                    let at_start = dest.projection.is_empty()
-                        && matches!(value.points_to[dest.local].offset, Offset::Zero);
-                    for &local in lands {
-                        let size = function
-                            .locals()
-                            .nth(local.index())
-                            .and_then(|id| self.unit.size_of(function.local(id)));
-                        let covers =
-                            matches!((size, bytes), (Some(size), Some(bytes)) if bytes >= size);
-                        // One local alone, and no block beside it: `d` either
-                        // `a` or a block `k` was certain about `a[0]` though
-                        // the copy may have landed in `k`. Found by review.
-                        if source_fresh
-                            && lands.len() == 1
-                            && lands_in_no_block
-                            && at_start
-                            && covers
-                            && matches!(length, CopiedPointers::Whole)
-                        {
-                            value.local_init[local] = Init::Unwritten;
-                            value.element_init[local].unwrite_all();
-                        } else if source_maybe {
-                            value.local_init[local].doubt();
-                            value.element_init[local].doubt_all();
-                        }
-                    }
-                }
-                for target in past_end {
-                    self.written_past_its_end(function, value, target, &unwritten_before);
-                }
             }
         }
     }
@@ -1256,19 +705,6 @@ impl Allocations<'_> {
         }
     }
 
-    /// Per local, whether it is made unwritten where the function starts:
-    /// every local that holds a pointer but the parameters, which the caller
-    /// wrote. See [`Known::local_init`].
-    fn unwritten_at_entry(&self) -> Vec<bool> {
-        let function = self.unit.function(self.function);
-        function
-            .locals()
-            .map(|local| {
-                !self.parameters.contains(&local) && self.holds_a_pointer(function.local(local))
-            })
-            .collect()
-    }
-
     /// Whether a place is a byte: of character type, which C17 6.5 p7 lets read
     /// any object, a pointer included.
     ///
@@ -1293,39 +729,63 @@ impl Allocations<'_> {
     /// when handed one. One rule in several places drifts apart.
     /// See ADR-0040.
     fn read_through(&self, function: &Function, source: &Place, value: &Known) -> Held {
-        let mut held = Held::none(value.points_to.len());
-        // **A byte is a load too.** C17 6.5 p7 lets a character type read any
-        // object, so a pointer copied a byte at a time is copied, and the byte
-        // carries what was stored where it was read from, marked as a load is
-        // so that it proves nothing about what it names. See ADR-0046.
-        held.loaded = self.may_be_pointer(function, source) || self.reads_a_byte(function, source);
+        // Every mark a load gives before it reads anything, each said, so a
+        // mark added is answered here (#732); what it reads is
+        // `Known::load_into`'s, and whether it is fresh is below.
+        let mut held = Held::from_marks(
+            value.points_to.len(),
+            Marks {
+                lost: false,
+                freed: None,
+                writes_elsewhere: true,
+                offset: Offset::Zero,
+                // **A byte is a load too.** C17 6.5 p7 lets a character type
+                // read any object, so a pointer copied a byte at a time is
+                // copied, and the byte carries what was stored where it was
+                // read from, marked as a load is so that it proves nothing
+                // about what it names. See ADR-0046.
+                loaded: self.may_be_pointer(function, source)
+                    || self.reads_a_byte(function, source),
+                foreign: false,
+                stale_read: false,
+                unreplaced_read: false,
+                lost_read: false,
+                from_caller: false,
+                returned_by: None,
+                fresh_read: false,
+                // **Believed to point at one whole object of the type it is
+                // read as**, which the store that put it there is asked about.
+                // A byte is no pointer and believes nothing; a `void *`
+                // believes it starts an object and no width, which is all its
+                // store is asked. No more than the memory it is read out of is
+                // believed to hold ([`Self::believed_read`]), and only where
+                // every local it may be read out of fits, below. See ADR-0060.
+                believed: self
+                    .pointee_size(function, source)
+                    .map(|_| self.believed_read(function, source, value)),
+                // **And it arrives as the type it is read as**, which bounds
+                // what its own memory holds, no more than the memory it was
+                // read out of believed one level down: `a = *pi;` with `pi` a
+                // `void ***` converted to `int ***` believes nothing of what
+                // `*a` points at, where the type alone said whole `int`s
+                // (#634). See `Held::contents_at_most`.
+                //
+                // Mutation: take the type alone, and
+                // `a_void_pointer_three_levels_deep_converted_whole_is_believed_below_its_first_level`
+                // goes silent.
+                contents_at_most: self.contents_read(function, source, value),
+                inner_address: false,
+                element: None,
+                array_edge: false,
+                stored_through: false,
+            },
+        );
         // What could be named as this was read. See `Held::named_at_read`.
         if held.loaded {
             for named in value.locals_named_by_unknown_code() {
                 held.named_at_read.set(named);
             }
         }
-        // **Believed to point at one whole object of the type it is read as**,
-        // which the store that put it there is asked about. A byte is no
-        // pointer and believes nothing; a `void *` believes it starts an
-        // object and no width, which is all its store is asked. No more
-        // than the memory it is read out of is believed to hold
-        // ([`Self::believed_read`]), and only where every local it may be
-        // read out of fits, below. See ADR-0060.
-        held.believed = self
-            .pointee_size(function, source)
-            .map(|_| self.believed_read(function, source, value));
-        // **And it arrives as the type it is read as**, which bounds what its
-        // own memory holds, no more than the memory it was read out of
-        // believed one level down: `a = *pi;` with `pi` a `void ***`
-        // converted to `int ***` believes nothing of what `*a` points at,
-        // where the type alone said whole `int`s (#634). See
-        // `Held::contents_at_most`.
-        //
-        // Mutation: take the type alone, and
-        // `a_void_pointer_three_levels_deep_converted_whole_is_believed_below_its_first_level`
-        // goes silent.
-        held.contents_at_most = self.contents_read(function, source, value);
         // **And what was stored where it was read from**, at an offset nobody
         // said, so that a dereference of it can be asked about what it may
         // point at. `loaded` stays set, which is what marks the set as
@@ -1353,24 +813,10 @@ impl Allocations<'_> {
             // asks it (ADR-0060), without doubting the escape its address
             // is. `int *q = *pi; *q = 1;` with `v = p + 4` after `pi = &v`
             // is unknown at `*q` for it (#627).
-            if let Some(width) = held.believed {
-                // One level short of `depth`: the locals the value is read
-                // out of, not those whose address the value may be, which
-                // the walk above took. `report::read_from_locals` takes the
-                // same level for an access.
-                let read_from = value.levels_below(source.local, depth - 1).1;
-                let fits_each = function
-                    .locals()
-                    .filter(|local| read_from.contains(&LocalIdx::of(local)))
-                    .all(|local| {
-                        matches!(
-                            fits(self, function, local, width, value, false),
-                            None | Some(Fit::Inside)
-                        )
-                    });
-                if !fits_each {
-                    held.believed = None;
-                }
+            if held.believed.is_some_and(|width| {
+                !self.read_from_fits(function, source.local, depth, width, value)
+            }) {
+                held.believed = None;
             }
             // The question the report asks at this read, so that a value
             // carrying the mark is always one reported where it was read.
@@ -1380,107 +826,36 @@ impl Allocations<'_> {
         held
     }
 
-    /// Whether reading `source` reads a pointer out of memory nothing wrote,
-    /// certainly: one dereference through a pointer that names allocations
-    /// and locals and nothing else, every allocation fresh and every local
-    /// unwritten. The report asks it at every read of such a place, and
-    /// [`Self::read_through`] asks it for [`Held::fresh_read`], which is
-    /// sound only while the two agree. See ADR-0057.
-    ///
-    /// **A pointer, by its type.** A byte or an integer read out of fresh
-    /// memory is not followed.
-    ///
-    /// **A local reached by its address is memory too** ([`Known::local_init`]):
-    /// `int *q = m[0];` with `m` a local array nothing wrote reads an
-    /// indeterminate pointer, as `*box` does out of `malloc`'s block (#640).
-    /// `writes_elsewhere` is not asked. `Address(a[0])` sets it for every
-    /// array, and a path where the pointer held nothing is a null, which is
-    /// the nullability check's as a path holding no site already is for an
-    /// allocation. `inner_address` is asked, since an edge that may name
-    /// something inside another local names the wrong memory. **Nothing
-    /// guards that clause**: no C program reaches a read through such an
-    /// edge with every other clause holding.
-    ///
-    /// Mutation: weaken `all` to `any` over the sites, and
-    /// `a_pointer_read_through_either_of_two_allocations_one_written_is_doubted`
-    /// is reported as certain. **The `loaded` clause is held** by
-    /// `a_pointer_no_call_can_reach_is_not_written_by_a_store_this_check_cannot_place`,
-    /// which gains a false certain report without it, and by
-    /// `a_pointer_read_out_of_memory_that_names_a_block_nothing_wrote_is_doubted_where_read_through`,
-    /// whose doubt becomes certain: such a pointer is a doubt, in
-    /// `reads_partly` (#728). **The
-    /// `lost` and `foreign` clauses have no case**, measured: a local loses
-    /// its sites where it is made lost, and no program found gives a foreign
-    /// pointer a fresh site that an exposure has not already cleared.
-    pub(super) fn reads_fresh(&self, function: &Function, source: &Place, value: &Known) -> bool {
-        let through = &value.points_to[source.local];
-        source.projection.as_slice() == [Projection::Deref]
-            && self.may_be_pointer(function, source)
-            && (through.sites().next().is_some() || through.writes_to.any())
-            && !(through.lost || through.foreign || through.loaded || through.inner_address)
-            && through
-                .sites()
-                .all(|site| value.block_init[site].is_unwritten())
-            && through
-                .writes_to
-                .ones()
-                .all(|local| value.certainly_unwritten(local, through.element))
-    }
-
-    /// Whether a load may read an array that may still be unwritten where it
-    /// reads, [`Known::local_init`]: `reads_fresh`'s question, answered as
-    /// a doubt. A fresh
-    /// allocation beside it is not known written, and is no reason for
-    /// silence. Found by review of #667. **Or an allocation that may still be
-    /// fresh**, `Known::block_init` unwritten or maybe so, which needs no local
-    /// beside it (#721), and whatever allocations beside it were written
-    /// (#724). **Any place it may read that may be unwritten is enough**, a
-    /// block or a local, whatever else it may read was written: the read is of
-    /// that place on some path, and undefined there whatever it is read for
-    /// (#749). See ADR-0057.
-    ///
-    /// **At the element the pointer is known to point at**, or, where that is
-    /// not known, at any element (`Known::may_be_unwritten`). Not through a
-    /// pointer a store has written
-    /// through since it was given its value: that read is of the element
-    /// just written, the lowering's own read of an assignment's value among
-    /// them. See `Held::stored_through` and ADR-0057.
-    pub(super) fn reads_partly(&self, function: &Function, source: &Place, value: &Known) -> bool {
-        let through = &value.points_to[source.local];
-        let at_start = matches!(through.offset, Offset::Zero);
-        let maybe = |local: LocalIdx| value.may_be_unwritten(local, through.element, at_start);
-        // **Any block it may read that may still be fresh is enough**,
-        // fresh or maybe so, beside blocks that were written: `p = a; if (c)
-        // p = b;` with `b` written reads `a` on one path, which is undefined
-        // there whatever the value is read for (#724). `reads_fresh` answers
-        // first, and asks every block.
-        let site_maybe = |site: Site| value.block_init[site].may_be_unwritten();
-        source.projection.as_slice() == [Projection::Deref]
-            && self.may_be_pointer(function, source)
-            && (through.writes_to.any() || through.sites().next().is_some())
-            && !(through.lost || through.foreign || through.inner_address || through.stored_through)
-            // **A pointer read out of memory is asked about its blocks
-            // alone**: it may name what it does not show, so what it shows is
-            // no proof (`reads_fresh` refuses it), and a block it names that
-            // may still be fresh is a doubt. `u = *t; r = *u;` with `*t = m`
-            // read `m` nothing wrote in silence (#728). **And about a local it
-            // names that is not an array**, unwritten or maybe so: `u = *pp;
-            // r = *u;` with `*pp = &loc` read `loc` in silence (#756). Not an
-            // array, by the user's decision on #728: asking about every local
-            // moved twelve cases, most of them arrays whose element rules
-            // (#639, #667) decide what such a pointer writes and reads.
-            && if through.loaded {
-                through.sites().any(site_maybe)
-                    || through.writes_to.ones().any(|local| {
-                        !self.is_array(function, local)
-                            && (value.certainly_unwritten(local, through.element) || maybe(local))
-                    })
-            } else {
-                through.sites().any(site_maybe)
-                    || through.writes_to.ones().any(|local| {
-                        value.certainly_unwritten(local, through.element) || maybe(local)
-                    })
-            }
+    /// Whether every local a pointer read `depth` dereferences below `local`
+    /// may be read out of holds a value that fits `width` bytes, as
+    /// [`fits`] answers its own value with no doubt of unseen writes: what a
+    /// belief in the type a pointer is read as needs, since a local is not
+    /// memory with a door and `v = p + 4;` after `pi = &v;` was never asked
+    /// where it was assigned. One answer for a load and for a library copy,
+    /// which is a load of its source one level further (#777); the copy
+    /// asking none believed a pointer a call wrote and this function moved
+    /// as a whole `int` at its start. See ADR-0060.
+    fn read_from_fits(
+        &self,
+        function: &Function,
+        local: LocalId,
+        depth: usize,
+        width: u64,
+        value: &Known,
+    ) -> bool {
+        // One level short of `depth`: the locals the value is read out of,
+        // not those whose address the value may be. `fit::read_from_locals`
+        // takes the same level for an access.
+        let read_from = value.levels_below(local, depth - 1).1;
+        function
+            .locals()
+            .filter(|each| read_from.contains(&LocalIdx::of(each)))
+            .all(|each| {
+                matches!(
+                    fits(self, function, each, width, value, false),
+                    None | Some(Fit::Inside)
+                )
+            })
     }
 
     /// Whether a load `depth` dereferences through `local` reads memory a
@@ -1588,15 +963,14 @@ impl Allocations<'_> {
         }
         let held = &known.points_to[place.local];
         if place.projection.is_empty() {
-            return if held.loaded || held.lost {
+            return if held.beyond().unrecorded_address() {
                 known.stored()
             } else {
                 Vec::new()
             };
         }
         if place.projection.as_slice() == [Projection::Deref]
-            && !held.lost
-            && !held.loaded
+            && !held.beyond().unrecorded_address()
             && held.sites().next().is_some()
         {
             return held
@@ -1859,7 +1233,7 @@ impl Allocations<'_> {
             Operand::Copy(place) => {
                 let held = &known.points_to[place.local];
                 place.projection.is_empty()
-                    && (held.lost || held.loaded || held.may_be_a_locals_address())
+                    && (held.beyond().unrecorded_address() || held.may_be_a_locals_address())
             }
         })
     }
@@ -2644,12 +2018,26 @@ impl Analysis for Allocations<'_> {
                 // follow at all, and so is a write through any other
                 // projection.
                 let one_step = operation.place.projection.as_slice() == [Projection::Deref];
-                let pointer = operation.place.local;
                 // What was unwritten before this store, for a local it may
                 // have written past. See `Allocations::written_past_its_end`.
                 let unwritten_before = value.unwritten_locals();
+                // Where it lands, before anything here writes: the one
+                // description of this write the unwritten belief applies and
+                // the replacement below reads (#778).
+                let deep = derefs(&operation.place);
+                let before = self.landing(
+                    value,
+                    operation.place.local,
+                    deep,
+                    one_step,
+                    if deep == 0 {
+                        StoreKind::Direct
+                    } else {
+                        StoreKind::Through { derefs: deep }
+                    },
+                );
                 let targets = if one_step {
-                    value.written_through(operation.place.local)
+                    before.targets.clone()
                 } else {
                     Vec::new()
                 };
@@ -2658,18 +2046,14 @@ impl Analysis for Allocations<'_> {
                 // ADR-0028's condition, read here and at the replacement
                 // further down: one is about what the write may have reached
                 // *besides* its target and the other about what it does to
-                // that target, and the two have to be the same question.
-                // Spelled twice they are one rule in two places, and those
-                // drift apart.
+                // that target, and the two have to be the same question, so
+                // both ask `Landing::lands_in_one_local`.
                 //
                 // A deeper projection is never certain, and that is the
-                // condition above rather than an extra clause: `written_through`
+                // condition there rather than an extra clause: `written_through`
                 // answers about the local the place starts at, so for `**ppp`
                 // it answers about `*ppp` and names the wrong thing.
-                let certain = one_step
-                    && targets.len() == 1
-                    && !value.points_to[pointer].writes_elsewhere
-                    && !value.escaped[pointer];
+                let certain = before.lands_in_one_local(value);
 
                 // **Any write through a projection that is not the certain one
                 // may have landed in an escaped local.** Not only the one this
@@ -2693,9 +2077,7 @@ impl Analysis for Allocations<'_> {
                     value,
                     Wrote::Store {
                         place: &operation.place,
-                        one_step,
-                        certain,
-                        targets: &targets,
+                        landing: &before,
                         unwritten_before: &unwritten_before,
                     },
                 );
@@ -2770,14 +2152,7 @@ impl Analysis for Allocations<'_> {
                         if moved_above {
                             self.written_past_its_end(function, value, target, &unwritten_before);
                         }
-                        // Where it starts survives, as below.
-                        let offset = value.points_to[target].offset.joined(written.offset);
-                        value.points_to[target].accumulated(&written);
-                        value.points_to[target].offset = offset;
-                        // No program observes this, as for the write through
-                        // one dereference below, and it is here for the same
-                        // reason: keeping the proof is the confident direction.
-                        value.points_to[target].freed = None;
+                        value.target_union(target, &written);
                     }
                     // Written into locals whose addresses escaped, which every
                     // call reaches, so a pending read is told, as at an
@@ -3018,39 +2393,7 @@ impl Analysis for Allocations<'_> {
                     // the heap half over the merged value at every join. See
                     // ADR-0019.
                     for target in targets {
-                        // **Where it starts is what either value said**, the
-                        // old one or the one written, and not unknown, which
-                        // [`Held::accumulated`] says for a value built by
-                        // arithmetic. A local is asked what it holds where it
-                        // is reached through its address (ADR-0060), and the
-                        // value written was asked where it was stored: made
-                        // unknown, `**t3 = r;` with `*t3 = &slot` doubted
-                        // every later `***t3`. Found by review.
-                        let offset = value.points_to[target].offset.joined(written.offset);
-                        value.points_to[target].accumulated(&written);
-                        value.points_to[target].offset = offset;
-                        // **The proof goes, whatever the accumulator would
-                        // say about it.** [`Held::accumulated`] keeps it while
-                        // the set does not grow, which is right where an
-                        // expression is built from its operands and wrong
-                        // here: this write may have replaced the pointer, and
-                        // then freeing the target again is not a second free
-                        // of anything. The sites stay because keeping them is
-                        // the conservative direction for a use after free; the
-                        // proof goes because keeping *it* is the confident
-                        // one. See ADR-0024.
-                        //
-                        // **No program observes this, and it is here anyway.**
-                        // `writes_to` is written only where an address is
-                        // taken, so a target of a write through a pointer has
-                        // always escaped, and ADR-0017 answers `Reached::Lost`
-                        // for an escaped local wherever a report is made: the
-                        // answer is `Unknown` whatever this field says.
-                        // Measured, and the narrow claim is the true one:
-                        // removing this line breaks nothing today. What it
-                        // would cost if the escape stopped covering it is a
-                        // proof about a pointer this write may have replaced.
-                        value.points_to[target].freed = None;
+                        value.target_union(target, &written);
                     }
 
                     return;
@@ -3526,7 +2869,7 @@ impl Analysis for Allocations<'_> {
             && handed.iter().any(|argument| match argument {
                 Operand::Copy(place) => {
                     let held = &value.points_to[place.local];
-                    !place.projection.is_empty() || held.lost || held.loaded
+                    !place.projection.is_empty() || held.beyond().unrecorded_address()
                 }
                 Operand::Constant(_) => false,
             })
@@ -3723,31 +3066,62 @@ impl Analysis for Allocations<'_> {
                                     value.stored_out[site] = true;
                                 }
                             }
-                            // The second half has no case: a lost local copied
-                            // is doubted by its own escape first, measured.
-                            let marked = value.stale_below(source.local, from_depth + 1)
-                                || value.lost_through(source.local, from_depth + 1);
-                            // And a slot a call could not replace, copied.
-                            // See ADR-0047.
-                            let unreplaced =
-                                value.marked_below(source.local, from_depth + 1, |contents| {
-                                    contents.unreplaced
-                                });
-                            // And what was read out of caller memory, as a
-                            // store of a load of the source would carry it:
-                            // `memcpy(box, pp, 8)` is `*box = *pp;`. Found by
-                            // review. See ADR-0040.
+                            // **What it copies is a load of the source one level
+                            // further**, `memcpy(box, pp, 8)` being `*box =
+                            // *pp;`, built by the load's own `Known::load_into`
+                            // rather than by a copy of it to drift (#777): the
+                            // sites and addresses one level below the source,
+                            // whatever type the source was declared with, since
+                            // `memcpy` copies bytes and the usual source is a
+                            // `void *`, and every mark a load sets. Among them
+                            // whether what was stored there may be lost or gone,
+                            // a slot a call could not replace (ADR-0047), what
+                            // was read out of caller memory (ADR-0040), and
+                            // whether it may be a lost value: `*box = u;
+                            // memcpy(box2, box, 8); free(u); r = *box2;` read
+                            // `*r` in silence until it was carried. And whether
+                            // it reaches an array only by #639's rule, which a
+                            // copy written apart once left out where a store
+                            // stored such a pointer: `box[0] = m + 1;
+                            // memcpy(&g, box, 8); g[0] = &x;` believed `m[0]`
+                            // written where `g = box[0];` doubts it. Found by
+                            // review, each.
+                            let mut read = Held::from_marks(
+                                value.points_to.len(),
+                                Marks {
+                                    lost: false,
+                                    freed: None,
+                                    writes_elsewhere: true,
+                                    offset: Offset::Zero,
+                                    loaded: true,
+                                    foreign: false,
+                                    stale_read: false,
+                                    unreplaced_read: false,
+                                    lost_read: false,
+                                    from_caller: false,
+                                    returned_by: None,
+                                    fresh_read: false,
+                                    believed: None,
+                                    contents_at_most: Levels::default(),
+                                    inner_address: false,
+                                    element: None,
+                                    array_edge: false,
+                                    stored_through: false,
+                                },
+                            );
                             let caller =
                                 self.reads_caller_memory(source.local, from_depth + 1, value);
-                            // And whether what it copies may be a lost value,
-                            // as a store of a load of the source would carry
-                            // it: `*box = u; memcpy(box2, box, 8); free(u);
-                            // r = *box2;` read `*r` in silence. Found by review.
-                            // See `Contents::holds_lost`.
-                            let holds_lost =
-                                value.marked_below(source.local, from_depth + 1, |contents| {
-                                    contents.holds_lost
-                                });
+                            value.load_into(
+                                &mut read,
+                                source.local,
+                                from_depth + 1,
+                                &|local| self.is_array(function, local),
+                                caller,
+                            );
+                            // As of this copy. See `Held::named_at_read`.
+                            for named in value.locals_named_by_unknown_code() {
+                                read.named_at_read.set(named);
+                            }
                             // Where it lands, as a store one dereference
                             // further would. See `store::Landing`.
                             let landing = self.landing(
@@ -3764,59 +3138,71 @@ impl Analysis for Allocations<'_> {
                             // ones the destination's address edges name, or,
                             // for a place of dereferences, the locals the
                             // level above may be, as for a store's deep
-                            // targets. By union, as those are given, since `n`
-                            // may copy part of a pointer and a replacement
-                            // would prove things about a value nobody wrote
-                            // (#395). See ADR-0039 and ADR-0040.
+                            // targets. How it lands in them is below. See
+                            // ADR-0039 and ADR-0040.
+                            //
+                            // **Whether what it copies may be a pointer that
+                            // reaches an array only by #639's rule** is the
+                            // load's `array_edge`, carried into a local with the
+                            // rest of the value, as a store through the address
+                            // gives it, and into memory as the arrays it marks
+                            // where it is poured, `Known::stored_in_part`.
+                            // Without either `e = m + 1; memcpy(box, &e, 8); f =
+                            // box[0]; *f = &x;`, and the same into `&f`, left
+                            // `m[0]` believed written where the store form is
+                            // doubted.
                             let targets = landing.targets.clone();
-                            // What lands is what the allocation path above
-                            // writes, read the same way: the sites and
-                            // addresses one level below the source and the
-                            // marks on them, whatever type the source was
-                            // declared with. `memcpy` copies bytes, and the
-                            // usual source is a `void *`, through which a load
-                            // has no pointer type to be one; asking a load for
-                            // it carried nothing from one. Found by review.
-                            // **And whether what it copies may be a pointer
-                            // that reaches an array only by #639's rule**, as a
-                            // store of it says: the locals it may be read out
-                            // of, one level below the source, asked as a load
-                            // of the source asks them. Into memory it marks the
-                            // arrays it reaches, `Known::stored_in_part`, below;
-                            // into a local's address the local carries it, as a
-                            // store through the address gives it. Without either
-                            // `e = m + 1; memcpy(box, &e, 8); f = box[0]; *f =
-                            // &x;`, and the same into `&f`, left `m[0]` believed
-                            // written where the store form is doubted.
-                            let moved = value
-                                .levels_below(source.local, from_depth)
-                                .1
-                                .into_iter()
-                                .any(|local| {
-                                    !self.is_array(function, local)
-                                        && value.points_to[local].array_edge
-                                });
-                            if !targets.is_empty() {
-                                let mut held = Held::none(value.points_to.len());
-                                for &site in &copied {
-                                    held.hold(site, Offset::Unknown);
-                                }
-                                for &target in &copied_locals {
-                                    held.writes_to.set(target);
-                                }
-                                held.loaded = true;
-                                // As of this copy. See `Held::named_at_read`.
-                                for named in value.locals_named_by_unknown_code() {
-                                    held.named_at_read.set(named);
-                                }
-                                held.lost = marked;
-                                held.stale_read = marked;
-                                held.unreplaced_read = unreplaced;
-                                held.lost_read = holds_lost;
-                                held.from_caller = caller;
-                                held.array_edge = moved;
-                                for &target in &targets {
-                                    value.points_to[target].accumulated(&held);
+                            // **Believed as a load at the local's type would be**,
+                            // `s = *(T **)&v`: that type, no wider than the
+                            // source's memory recorded, as `believed_read`
+                            // answers a load (ADR-0061). Carried with no belief,
+                            // `memcpy(&s, &v, 8)` of a whole `int`'s address was
+                            // doubted at `*s` where `s = v;` is not (#769).
+                            let recorded = value
+                                .memory_levels(
+                                    source.local,
+                                    from_depth + 1,
+                                    self.deepest_pointer,
+                                    &self.local_sizes,
+                                )
+                                .at(0);
+                            // **And it replaces the local where it is the
+                            // store's certain one**, as `s = v;` does: one
+                            // local and nothing else (`Landing::lands_in_one_local`),
+                            // and a constant length of exactly its size. Anywhere
+                            // else by union, since `n` may copy
+                            // part of a pointer, or none, and a replacement
+                            // would prove things about a value nobody wrote
+                            // (#395). By union alone, the local's own null was
+                            // joined in and took the belief away.
+                            let replaces = self.copy_replaces_one_local(
+                                function,
+                                value,
+                                arguments.first(),
+                                self.constant_argument(*callee, arguments, 2),
+                            );
+                            for &target in &targets {
+                                let mut each = read.clone();
+                                let local = function.locals().nth(target.index());
+                                let as_read = local
+                                    .and_then(|local| {
+                                        self.pointee_size(function, &Place::local(local))
+                                    })
+                                    .unwrap_or(0);
+                                let width = as_read.min(recorded.unwrap_or(0));
+                                each.believed = self
+                                    .read_from_fits(
+                                        function,
+                                        source.local,
+                                        from_depth + 1,
+                                        width,
+                                        value,
+                                    )
+                                    .then_some(width);
+                                if replaces {
+                                    value.points_to[target] = each;
+                                } else {
+                                    value.target_union(target, &each);
                                 }
                             }
                             // **A copy into memory this check cannot place lands
@@ -3849,7 +3235,7 @@ impl Analysis for Allocations<'_> {
                             for &target in &copied_locals {
                                 poured.inside_locals.set(target);
                             }
-                            let in_part: Vec<LocalIdx> = if moved {
+                            let in_part: Vec<LocalIdx> = if read.array_edge {
                                 copied_locals.iter().copied().collect()
                             } else {
                                 Vec::new()
@@ -3860,10 +3246,10 @@ impl Analysis for Allocations<'_> {
                                 inside: poured.inside,
                                 inside_locals: poured.inside_locals,
                                 stored_at_most: copied_bound,
-                                stale: marked,
-                                unreplaced,
-                                holds_lost,
-                                from_caller: caller,
+                                stale: read.stale_read,
+                                unreplaced: read.unreplaced_read,
+                                holds_lost: read.lost_read,
+                                from_caller: read.from_caller,
                             };
                             // Where it lands, unplaced too, with what it
                             // carries, as a store's landing is given. See

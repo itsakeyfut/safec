@@ -1038,12 +1038,7 @@ impl Held {
         extent: &Table<Site, Option<Extent>>,
         sizes: &Table<LocalIdx, Option<u64>>,
     ) -> Option<u64> {
-        if self.offset != Offset::Zero
-            || self.inner_address
-            || self.lost
-            || self.loaded
-            || self.foreign
-        {
+        if self.offset != Offset::Zero || self.inner_address || self.beyond().unrecorded_address() {
             return Some(0);
         }
         let sites = self
@@ -1074,13 +1069,26 @@ impl Held {
         self.offset == Offset::Zero
             && !self.sites.any()
             && !self.writes_to.any()
-            && !self.lost
-            && !self.loaded
-            && !self.foreign
-            && !self.from_caller
-            && !self.lost_read
-            && !self.stale_read
-            && !self.unreplaced_read
+            && self.beyond().is_nothing()
+    }
+
+    /// What this value may hold beyond what its sites and its edges name.
+    /// See [`Beyond`].
+    pub(super) fn beyond(&self) -> Beyond {
+        let unrecorded = Unrecorded {
+            lost: self.lost,
+            loaded: self.loaded,
+            foreign: self.foreign,
+            from_caller: self.from_caller,
+            stale_read: self.stale_read,
+            lost_read: self.lost_read,
+            unreplaced_read: self.unreplaced_read,
+        };
+        if unrecorded.any() {
+            Beyond::Unrecorded(unrecorded)
+        } else {
+            Beyond::Nothing
+        }
     }
 
     /// Whether this local may hold a local's address, on some path.
@@ -1099,32 +1107,82 @@ impl Held {
 
     /// A local holding nothing, in a function with this many sites.
     pub(super) fn none(sites: usize) -> Self {
+        Held::from_marks(
+            sites,
+            Marks {
+                lost: false,
+                freed: None,
+                writes_elsewhere: true,
+                // Nothing held, so nothing to be off the start of. `Unknown` here
+                // would be a warning about an offset nobody wrote, on every path
+                // that holds nothing and, through `Held::hold`'s join, on every
+                // parameter. See ADR-0036.
+                offset: Offset::Zero,
+                loaded: false,
+                foreign: false,
+                stale_read: false,
+                unreplaced_read: false,
+                lost_read: false,
+                from_caller: false,
+                returned_by: None,
+                fresh_read: false,
+                believed: None,
+                contents_at_most: Levels::default(),
+                inner_address: false,
+                element: None,
+                array_edge: false,
+                stored_through: false,
+            },
+        )
+    }
+
+    /// A value naming nothing yet, with every mark as `marks` says: what a
+    /// door that builds a value starts from, so that it says each mark it
+    /// gives, `false` included where a reviewer reads it. A mark added to
+    /// [`Marks`] is `error[E0063]` at every door until it answers (#732).
+    pub(super) fn from_marks(sites: usize, marks: Marks) -> Self {
+        let Marks {
+            lost,
+            freed,
+            writes_elsewhere,
+            offset,
+            loaded,
+            foreign,
+            stale_read,
+            unreplaced_read,
+            lost_read,
+            from_caller,
+            returned_by,
+            fresh_read,
+            believed,
+            contents_at_most,
+            inner_address,
+            element,
+            array_edge,
+            stored_through,
+        } = marks;
         Held {
             sites: Bits::new(sites),
-            lost: false,
-            freed: None,
+            lost,
+            freed,
             writes_to: Bits::new(sites),
-            writes_elsewhere: true,
-            // Nothing held, so nothing to be off the start of. `Unknown` here
-            // would be a warning about an offset nobody wrote, on every path
-            // that holds nothing and, through `Held::hold`'s join, on every
-            // parameter. See ADR-0036.
-            offset: Offset::Zero,
-            loaded: false,
+            writes_elsewhere,
+            offset,
+            loaded,
             named_at_read: Bits::new(sites),
-            foreign: false,
-            stale_read: false,
-            unreplaced_read: false,
-            lost_read: false,
-            from_caller: false,
-            returned_by: None,
-            fresh_read: false,
-            believed: None,
-            contents_at_most: Levels::default(),
-            inner_address: false,
-            element: None,
-            array_edge: false,
-            stored_through: false,
+            foreign,
+            stale_read,
+            unreplaced_read,
+            lost_read,
+            from_caller,
+            returned_by,
+            fresh_read,
+            believed,
+            contents_at_most,
+            inner_address,
+            element,
+            array_edge,
+            stored_through,
         }
     }
 
@@ -1785,6 +1843,110 @@ impl Contents {
         self.unreplaced |= *unreplaced;
         self.holds_lost |= *holds_lost;
         self.from_caller |= *from_caller;
+    }
+}
+
+/// Every mark of a [`Held`] beside the sets of what it names, for
+/// [`Held::from_marks`]. **No `Default`**, so a door that builds a value
+/// names each one, and one it leaves out is not its precise default in
+/// silence: the copy into a local's address set seven marks and not
+/// `element`, so its write is of the whole array (#706), and the store's
+/// landing did the same (#705). See [`Held`] for what each mark means.
+pub(super) struct Marks {
+    pub(super) lost: bool,
+    pub(super) freed: Option<Freeing>,
+    pub(super) writes_elsewhere: bool,
+    pub(super) offset: Offset,
+    pub(super) loaded: bool,
+    pub(super) foreign: bool,
+    pub(super) stale_read: bool,
+    pub(super) unreplaced_read: bool,
+    pub(super) lost_read: bool,
+    pub(super) from_caller: bool,
+    pub(super) returned_by: Option<Site>,
+    pub(super) fresh_read: bool,
+    pub(super) believed: Option<u64>,
+    pub(super) contents_at_most: Levels,
+    pub(super) inner_address: bool,
+    pub(super) element: Option<u64>,
+    pub(super) array_edge: bool,
+    pub(super) stored_through: bool,
+}
+
+/// What a value may hold beyond what its sites and its edges name: the one
+/// answer every reader asks, so that a mark added to it is a compile error
+/// wherever it has to be answered.
+///
+/// **Seven marks and two questions.** `lost`, `loaded` and `foreign` say the
+/// value may be an address this function never recorded, which
+/// [`Beyond::unrecorded_address`] asks; `from_caller`, `stale_read`,
+/// `lost_read` and `unreplaced_read` say where what it names came from, and
+/// [`Beyond::is_nothing`] asks whether any of the seven is set, for a reader
+/// that has to know the value names exactly its sites. Every place that reads
+/// a mark names every mark, `_` for one it does not read, so a mark added is
+/// `error[E0063]` where [`Held::beyond`] builds it and `error[E0027]` where it
+/// is read. See ADR-0063.
+pub(super) enum Beyond {
+    /// It names exactly what its sites and edges say.
+    Nothing,
+    /// It may hold more, as the marks say; at least one is set.
+    Unrecorded(Unrecorded),
+}
+
+/// The marks of [`Held`] that say what [`Beyond`] says.
+#[derive(Clone, Copy)]
+pub(super) struct Unrecorded {
+    lost: bool,
+    loaded: bool,
+    foreign: bool,
+    from_caller: bool,
+    stale_read: bool,
+    lost_read: bool,
+    unreplaced_read: bool,
+}
+
+impl Unrecorded {
+    /// Whether any mark is set.
+    fn any(self) -> bool {
+        let Unrecorded {
+            lost,
+            loaded,
+            foreign,
+            from_caller,
+            stale_read,
+            lost_read,
+            unreplaced_read,
+        } = self;
+        lost || loaded || foreign || from_caller || stale_read || lost_read || unreplaced_read
+    }
+}
+
+impl Beyond {
+    /// Whether the value names exactly its sites and edges.
+    pub(super) fn is_nothing(&self) -> bool {
+        match self {
+            Beyond::Nothing => true,
+            Beyond::Unrecorded(_) => false,
+        }
+    }
+
+    /// Whether the value may be an address this function never recorded:
+    /// lost, read out of memory, or written by a call this check cannot
+    /// read. Not where what it names came from, which the provenance marks
+    /// say and a reader asks of them itself.
+    pub(super) fn unrecorded_address(&self) -> bool {
+        match self {
+            Beyond::Nothing => false,
+            Beyond::Unrecorded(Unrecorded {
+                lost,
+                loaded,
+                foreign,
+                from_caller: _,
+                stale_read: _,
+                lost_read: _,
+                unreplaced_read: _,
+            }) => *lost || *loaded || *foreign,
+        }
     }
 }
 

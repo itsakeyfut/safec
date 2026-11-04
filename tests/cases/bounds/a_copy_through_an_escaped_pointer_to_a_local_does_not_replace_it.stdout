@@ -1,0 +1,107 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:2:6 "get" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "out"
+Function a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:3:6 "keep" declared
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "p"
+Function a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:4:5 "use" declared
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "p"
+Function a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:5:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" "r"
+  Local "_2" "int **"
+  Local "_3" "int *" "s"
+  Local "_4" "int **" "d"
+  Local "_5" "int **"
+  Local "_6" "int ***"
+  Local "_7" "int **"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int"
+  Block "bb0" entry
+    Operation a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:6:10 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:6:14 generated
+    Operation a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:7:9 written
+      Destination "_2"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:7:5 generated
+    Call a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:7:5 written "get" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:7:5 generated
+    Operation a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:8:10 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:8:14 generated
+    Operation a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:9:15 written
+      Destination "_5"
+      Address
+        Place "_3"
+    Operation a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:9:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:9:15 generated
+    Operation a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:10:10 written
+      Destination "_6"
+      Address
+        Place "_4"
+    ArgumentsEvaluated a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:10:5 generated
+    Call a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:10:5 written "keep" "bb2"
+      Copy "_6"
+  Block "bb2"
+    Sequenced a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:10:5 generated
+    Operation a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:11:15 written
+      Destination "_7"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:11:5 generated
+    Call a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:11:5 written "memcpy" "bb3"
+      Destination "_8"
+      Copy "_4"
+      Copy "_7"
+      Constant 8
+  Block "bb3"
+    Sequenced a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:11:5 generated
+    Operation a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:12:9 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:12:9 written "bb4" "bb5"
+      Copy "_9"
+  Block "bb4"
+    Sequenced a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:12:9 generated
+    Operation a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:13:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:13:16 generated
+    Return
+  Block "bb5"
+    Sequenced a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:12:9 generated
+    Goto "bb6"
+  Block "bb6"
+    ArgumentsEvaluated a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:15:12 generated
+    Call a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:15:12 written "use" "bb7"
+      Destination "_10"
+      Copy "_3"
+  Block "bb7"
+    Operation a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:15:5 written
+      Destination "_0"
+      Use
+        Copy "_10"
+    Sequenced a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it.c:15:12 generated
+    Return

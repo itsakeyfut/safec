@@ -17,6 +17,7 @@ use crate::source::Span;
 use super::allocations::Allocations;
 use super::index::{LocalIdx, Site};
 use super::known::Known;
+use super::parts::Held;
 use crate::reads::derefs;
 
 /// One write of a value into a place.
@@ -168,6 +169,59 @@ pub(super) struct Landing {
     pub(super) deep: usize,
     /// Which kind of write it is, which the doors' differences are matched on.
     pub(super) kind: StoreKind,
+    /// Whether the places it was found in were read out of memory whose
+    /// record is not all it may hold: a caller's, or memory code this check
+    /// cannot read may reach. Its one container is then the one this check
+    /// recorded, not the one place it lands, so it proves nothing written
+    /// (#778).
+    pub(super) through_unrecorded: bool,
+}
+
+/// A write that lands in exactly one allocation: the one fact that lets the
+/// unwritten belief say a store wrote an allocation on every path,
+/// [`Known::certainly_written`]. Only [`Landing::certain`] makes one, since
+/// its field is private to this module, so a store that has not proved one
+/// place cannot mark a block written and has `Init::may_write` instead,
+/// `E0308` otherwise. A store once wrote for certain what code this check
+/// cannot read may name beside its landing, and its one container found
+/// through a caller's memory, so that `**t = y;`, which could not reach
+/// `*m`, left `*m` read in silence (#778). Memory handed to code this check
+/// cannot read is believed written by that code: a belief at the boundary,
+/// named apart as `Known::believed_written_by_unknown_code`, and no
+/// `Certain`. See ADR-0057.
+pub(super) struct Certain(Site);
+
+impl Certain {
+    /// The allocation the write lands in.
+    pub(super) fn site(&self) -> Site {
+        self.0
+    }
+}
+
+impl Landing {
+    /// The one allocation this write lands in, where it lands in exactly one
+    /// and in no local, found through memory this function recorded all of.
+    /// A store that certainly reaches its one block is taken as writing it
+    /// even through a pointer read out of memory, by the author's decision
+    /// (#726); through a caller's memory, or memory code this check cannot
+    /// read may reach, the one container is only what was recorded.
+    pub(super) fn certain(&self) -> Option<Certain> {
+        match (self.containers.as_slice(), self.targets.as_slice()) {
+            ([site], []) if !self.through_unrecorded => Some(Certain(*site)),
+            _ => None,
+        }
+    }
+
+    /// Whether this write lands in exactly one local and nowhere else: one
+    /// exact dereference through a pointer whose one edge is all it may hold
+    /// and whose address has not escaped. See ADR-0028.
+    pub(super) fn lands_in_one_local(&self, value: &Known) -> bool {
+        let held = &value.points_to[self.pointer];
+        self.one_step
+            && self.targets.len() == 1
+            && !held.writes_elsewhere
+            && !value.escaped[self.pointer]
+    }
 }
 
 impl Landing {
@@ -191,7 +245,7 @@ impl Landing {
             StoreKind::Copy => self.deep > 2,
         };
         let held = &value.points_to[self.pointer];
-        held.loaded || held.lost || held.foreign || deep_enough
+        held.beyond().unrecorded_address() || deep_enough
     }
 
     /// Whether it lands nowhere this check names: no allocation and no local.
@@ -251,6 +305,32 @@ impl Allocations<'_> {
         } else {
             Vec::new()
         };
+        // The memory its containers were read out of: the pointer's own
+        // value at one dereference, and the level above them deeper down,
+        // its blocks and the locals whose value it reads there.
+        let held = &value.points_to[pointer];
+        let (above, above_locals): (Vec<Site>, Vec<LocalIdx>) = if deep > 2 {
+            let (sites, locals) = value.levels_below(pointer, deep - 2);
+            (sites.into_iter().collect(), locals.into_iter().collect())
+        } else if deep == 2 {
+            (
+                value.sites_of(pointer).collect(),
+                value.written_through(pointer),
+            )
+        } else {
+            (Vec::new(), Vec::new())
+        };
+        // A local there is read as memory is: `p = *param; t = &p; **t = y;`
+        // takes `p`'s value, which may be what the caller stored, and its one
+        // recorded site is no proof. Found by review.
+        let unrecorded = |local: &Held| local.from_caller || local.beyond().unrecorded_address();
+        let through_unrecorded = held.from_caller
+            || above
+                .iter()
+                .any(|&site| value.exposed[site] || value.contents[site].from_caller)
+            || above_locals
+                .iter()
+                .any(|&local| unrecorded(&value.points_to[local]));
         Landing {
             containers,
             targets,
@@ -258,6 +338,7 @@ impl Allocations<'_> {
             pointer,
             deep,
             kind,
+            through_unrecorded,
         }
     }
 }

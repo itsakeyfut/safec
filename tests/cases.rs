@@ -404,10 +404,34 @@ cases! {
         // and its form through two dereferences are doubted (#726).
         a_store_this_check_cannot_place_leaves_an_allocation_nothing_reaches_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And it may write a block a local whose address such code holds
-        // points at, so that block is not reported unwritten. Mutation: count
-        // only what is reachable from exposed memory; this is `SC0411`. Found
-        // by review.
+        // points at, so that block is not reported unwritten for certain;
+        // nor is it written for certain, since the store may have landed
+        // elsewhere, so a read of it is a doubt (#778). Mutation: count only
+        // what is reachable from exposed memory; this is a certain `SC0411`.
+        // Found by review. The second is the same through a parameter the
+        // store cannot be shown to reach `m` by, which was silent: `*s = m;`
+        // puts `m` in every block such code reaches, `t`'s among them, so the
+        // landing's one container is `m` and is still no proof. Mutation:
+        // write for certain what such code may name beside the landing in
+        // `initialised_by`, or let `Landing::certain` take a container found
+        // through a caller's memory; the second is silent either way.
         a_store_this_check_cannot_place_may_write_a_block_a_kept_local_points_at: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same three ways round, each held by its own half of the rule.
+        // A library copy that cannot reach `*m` either, `memcpy(*t, y, 8);`,
+        // which a copy once took as writing every block it may land in: it
+        // is no code this check cannot read. Mutation: write for certain
+        // every block in the copy's landing in `initialised_by`; the first
+        // is silent. A store one dereference through a pointer read out of a
+        // parameter, `v = *t; *v = y;`. Mutation: drop the pointer's own
+        // `from_caller` from `Landing::through_unrecorded`; the second is
+        // silent. And a store through a local that may hold what the caller
+        // stored, `p = *param; t = &p; **t = y;`. Mutation: ask no local
+        // above the landing in `through_unrecorded`; the third loses its
+        // doubt about `*m` (#778).
+        a_copy_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The cost the rule still has: a write guarded by a null test of the
         // allocation's own pointer, with a return where it is null, is
         // doubted, since the null arm leaves the site as it was. #723.
@@ -738,6 +762,13 @@ cases! {
         // into a local's address leaves `Held::array_edge` unset; this loses
         // its `SC0411`.
         a_local_array_written_through_a_moved_pointer_copied_into_a_local_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And copied out of memory that holds such a pointer, `box[0] = m + 1;
+        // memcpy(&g, box, 8); g[0] = &x;`, which the copy carries as a load of
+        // the box does, `g = box[0];`: the copy is a load built by
+        // `Known::load_into` (#777). Mutation: drop the `stored_in_part`
+        // test from `load_into`; this loses its `SC0411`, and so does its
+        // store form.
+        a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `fill(&e, &x)` writes `m` through `e = m + 1`, a level below what
         // it is handed: an `SC0411` doubt at `m[0]`. Mutation: a call asks
         // only the pointer it is handed; this goes silent.
@@ -4170,6 +4201,19 @@ cases! {
         // goes silent.
         a_memchr_longer_than_its_object: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_memmove_wider_than_its_source: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A library copy into a local's address is a load of its source
+        // and replaces the local as a store would, and each half of that
+        // has a case (#777). Believed only where every local it is read out
+        // of fits, as a load is: `t = r + 1;` after `get(&r)` copied into
+        // `s` is asked where `s` leaves. Mutation: believe the copy without
+        // `Allocations::read_from_fits`; the first loses `SC0413` at
+        // `use(s)`. A copy of half a pointer, or through a pointer to a local
+        // that escaped, does not replace the local. Mutation: drop the length
+        // or the one-local test from `copy_replaces_one_local`; the second or
+        // the third loses `SC0413` at `use(s)`.
+        a_pointer_a_call_wrote_and_this_function_moved_copied_into_a_local_is_doubted_where_it_leaves: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_of_half_a_pointer_into_a_local_does_not_replace_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer off its start handed to a string function is asked as
         // the row's reach, once, and not again as a departure. Mutation:
         // drop a `String` reach from `strcmp`, `strncmp` or `strstr`, or

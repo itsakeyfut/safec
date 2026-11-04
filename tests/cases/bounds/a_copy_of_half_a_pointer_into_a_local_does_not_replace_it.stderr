@@ -1,0 +1,20 @@
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+   ╭─[ a_copy_of_half_a_pointer_into_a_local_does_not_replace_it.c:8:5 ]
+   │
+ 8 │     memcpy(&s, &r, 4);
+   │     ────────┬────────  
+   │             ╰────────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets `s` leave, which may not point at an object as wide as its type
+    ╭─[ a_copy_of_half_a_pointer_into_a_local_does_not_replace_it.c:12:12 ]
+    │
+ 12 │     return use(s);
+    │            ───┬──  
+    │               ╰──── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

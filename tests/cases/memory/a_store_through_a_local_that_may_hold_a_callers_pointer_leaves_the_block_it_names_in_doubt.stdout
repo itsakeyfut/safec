@@ -1,0 +1,111 @@
+Target "x86_64-pc-windows-msvc"
+Function a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:2:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "k"
+  Local "_2" "int ***" parameter "param"
+  Local "_3" "int *" parameter "y"
+  Local "_4" "int **" "m"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int **" "p"
+  Local "_8" "int **"
+  Local "_9" "int ***" "t"
+  Local "_10" "int ***"
+  Local "_11" "int *"
+  Local "_12" "int *" "r"
+  Local "_13" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:3:15 generated
+    Call a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:3:15 written "malloc" "bb1"
+      Destination "_5"
+      Constant 8
+  Block "bb1"
+    Operation a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:3:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:3:15 generated
+    Operation a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:4:9 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_4"
+    Branch a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:4:9 written "bb2" "bb3"
+      Copy "_6"
+  Block "bb2"
+    Sequenced a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:4:9 generated
+    Operation a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:4:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:4:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:4:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:5:11 written
+      Destination "_7"
+      Use
+        Copy "_4"
+    Sequenced a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:5:15 generated
+    Branch a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:6:9 written "bb5" "bb6"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:6:9 generated
+    Operation a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:6:12 written
+      Destination "_7"
+      Use
+        Copy "_2"
+          Deref
+    Operation a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:6:12 written
+      Destination "_8"
+      Use
+        Copy "_7"
+    Sequenced a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:6:12 generated
+    Goto "bb7"
+  Block "bb6"
+    Sequenced a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:6:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:7:16 written
+      Destination "_10"
+      Address
+        Place "_7"
+    Operation a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:7:12 written
+      Destination "_9"
+      Use
+        Copy "_10"
+    Sequenced a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:7:16 generated
+    Operation a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:8:5 written
+      Destination "_9"
+        Deref
+          Deref
+      Use
+        Copy "_3"
+    Operation a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:8:5 written
+      Destination "_11"
+      Use
+        Copy "_9"
+          Deref
+            Deref
+    Sequenced a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:8:5 generated
+    Operation a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:9:10 written
+      Destination "_12"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:9:14 generated
+    Operation a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:10:12 written
+      Destination "_13"
+      Binary "Ne"
+        Copy "_12"
+        Constant 0
+    Operation a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:10:5 written
+      Destination "_0"
+      Use
+        Copy "_13"
+    Sequenced a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:10:12 generated
+    Return
