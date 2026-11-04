@@ -373,6 +373,21 @@ const NAMED_AT_READ: usize = 96;
 /// largest of the four is now past the bound on both.
 const ELEMENTS: usize = 184;
 
+/// How many bytes a block's cell adds to each local now that it is a
+/// [`Held`](parts::Held) rather than the six fields it replaced (#780):
+/// `named_at_read` a pair, which [`CELL_PAIRS`] counts, and the rest of a
+/// `Held` beside a local. Measured on functions of 60, 80, 100 and 120
+/// allocating locals with a loop per write, the shape [`NAMED_AT_READ`] was
+/// measured on, release build, against #779's tree: peak memory grew by 20,
+/// 20, 21 and 22%, from 270 to 324 MB at the smallest and 1,392 to 1,705 MB
+/// at the largest. Fitted as a term square in the locals and one linear in
+/// them, the growth is about 31% of the first and 16% of the second, which
+/// is these two.
+const CELL: usize = 216;
+
+/// The tenths of a byte a pair the cell adds. See [`CELL`].
+const CELL_PAIRS: usize = 4;
+
 /// About how many bytes one block's value takes in a function of this many
 /// locals, whose deepest pointer type is `depth` `*`s deep.
 ///
@@ -381,8 +396,9 @@ const ELEMENTS: usize = 184;
 /// `a_function_whose_lists_are_too_large_is_unknown_and_not_read` fails.
 fn per_block(locals: usize, depth: usize) -> usize {
     let per_local = locals
-        .saturating_add(locals.saturating_mul(3) / 10)
+        .saturating_add(locals.saturating_mul(3 + CELL_PAIRS) / 10)
         .saturating_add(LINEAR)
+        .saturating_add(CELL)
         .saturating_add(NAMED_AT_READ)
         .saturating_add(ELEMENTS)
         .saturating_add(PER_LEVEL.saturating_mul(depth));
@@ -1175,23 +1191,23 @@ mod tests {
     }
 
     /// Past the bound, a function is one `Unknown` finding at its name and
-    /// is not read. Ten locals are `10 * (10 + 3 + LINEAR + NAMED_AT_READ +
-    /// ELEMENTS)` a block, so three blocks are 39,510.
+    /// is not read. Ten locals are `10 * (10 + 7 + LINEAR + NAMED_AT_READ +
+    /// ELEMENTS + CELL)` a block, so three blocks are 46,110.
     ///
     /// Mutation: drop the guard. The function is solved, and no `TooLarge`
-    /// finding is made. Mutation: leave out [`NAMED_AT_READ`] or
-    /// [`ELEMENTS`], or the three tenths of a byte a pair. This fails on
+    /// finding is made. Mutation: leave out [`NAMED_AT_READ`], [`ELEMENTS`]
+    /// or [`CELL`], or the seven tenths of a byte a pair. This fails on
     /// `bytes`.
     #[test]
     fn a_function_past_the_bound_is_one_unknown_finding() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, 39_509, MAX_WORK);
+        let findings = findings_within(&sources, &unit, 46_109, MAX_WORK);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(
             findings[0].kind,
             Kind::TooLarge {
-                bytes: 39_510,
-                max: 39_509
+                bytes: 46_110,
+                max: 46_109
             }
         );
         assert_eq!(findings[0].conclusion, Conclusion::Unknown);
@@ -1204,7 +1220,7 @@ mod tests {
     #[test]
     fn a_function_at_the_bound_is_read() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, 39_510, MAX_WORK);
+        let findings = findings_within(&sources, &unit, 46_110, MAX_WORK);
         assert!(
             findings
                 .iter()
@@ -1215,21 +1231,21 @@ mod tests {
 
     /// The lists a local's levels take count toward the bound: ten locals,
     /// one of them three `*`s deep, are
-    /// `10 * (10 + 3 + LINEAR + NAMED_AT_READ + ELEMENTS + 3 * PER_LEVEL)` a block, so
-    /// three blocks are 43,830, past a bound the same function with no
+    /// `10 * (10 + 7 + LINEAR + NAMED_AT_READ + ELEMENTS + CELL + 3 *
+    /// PER_LEVEL)` a block, so three blocks are 50,430, past a bound the same function with no
     /// pointer in it is read under.
     ///
     /// Mutation: leave out [`PER_LEVEL`]. This is read.
     #[test]
     fn a_function_whose_lists_are_too_large_is_unknown_and_not_read() {
         let (sources, unit) = ten_by_three_deep(3);
-        let findings = findings_within(&sources, &unit, 43_829, MAX_WORK);
+        let findings = findings_within(&sources, &unit, 50_429, MAX_WORK);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(
             findings[0].kind,
             Kind::TooLarge {
-                bytes: 43_830,
-                max: 43_829
+                bytes: 50_430,
+                max: 50_429
             }
         );
     }
@@ -1243,19 +1259,21 @@ mod tests {
         assert_eq!(PER_LEVEL, 48);
         assert_eq!(NAMED_AT_READ, 96);
         assert_eq!(ELEMENTS, 184);
+        assert_eq!(CELL, 216);
+        assert_eq!(CELL_PAIRS, 4);
         assert_eq!(MAX_BYTES, 1_073_741_824);
         assert_eq!(MAX_WORK, 4_294_967_296);
     }
 
     /// Past the work bound, a function is one `Unknown` finding at its name.
-    /// Ten locals are 13,170 a walk, so a bound of 39,509 is two walks, and
+    /// Ten locals are 15,370 a walk, so a bound of 46,109 is two walks, and
     /// the three blocks take three.
     ///
     /// Mutation: solve without the bound. No `TooLong` finding is made.
     #[test]
     fn a_function_past_the_work_bound_is_one_unknown_finding() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, MAX_BYTES, 39_509);
+        let findings = findings_within(&sources, &unit, MAX_BYTES, 46_109);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(findings[0].kind, Kind::TooLong { walks: 2 });
         assert_eq!(findings[0].conclusion, Conclusion::Unknown);
@@ -1336,7 +1354,7 @@ mod tests {
     #[test]
     fn a_function_at_the_work_bound_is_read() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, MAX_BYTES, 39_510);
+        let findings = findings_within(&sources, &unit, MAX_BYTES, 46_110);
         assert!(findings.is_empty(), "{findings:?}");
     }
     /// Where a local's address stored in memory can reach, as a test builds
