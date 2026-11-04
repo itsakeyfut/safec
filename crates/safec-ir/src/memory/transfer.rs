@@ -4651,7 +4651,8 @@ mod caller_memory {
     /// **No program shows the first half**: the `Callee::Opaque` arm marks
     /// what the call returned `Contents::from_caller` as it makes the site,
     /// and `marked_below` answers for that before this clause is asked.
-    /// Dropping both fails eight corpus cases; dropping either alone, none.
+    /// Dropping the clause alone fails no corpus case, the mark alone two,
+    /// and both eight.
     ///
     /// Mutation: drop the opaque-result clause from `reads_caller_memory`,
     /// or answer `false` for `Callee::Opaque` in `opaque_results_of`. The

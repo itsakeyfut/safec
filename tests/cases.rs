@@ -5361,8 +5361,11 @@ cases! {
         // Mutation: drop the opaque-result clause from
         // `Allocations::reads_caller_memory` together with the
         // `Contents::from_caller` mark the `Callee::Opaque` arm sets on what
-        // it returned; the second builds, and six more. Either alone is held
-        // by the other, and the clause by its unit test in `transfer.rs`.
+        // it returned; the second builds, and six more. The clause alone
+        // changes no case, since the mark answers first, and is held by its
+        // unit test in `transfer.rs`; the mark alone fails
+        // `a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubted`
+        // and one more.
         a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_what_a_call_returned_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same pointers read back through the address of the local that
