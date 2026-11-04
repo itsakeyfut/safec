@@ -936,8 +936,6 @@ const LOST_COPIED: &str =
     "a lost pointer copied by memcpy proves nothing where it is read back (ADR-0045)";
 const LOST_HANDED: &str = "a lost pointer handed through a call this check cannot read proves nothing where it is used (ADR-0045)";
 const OLD_BLOCK: &str = "the old block a store replaced in memory is still taken to be there after realloc moves it (#656)";
-const COPY_INTO_LOCAL: &str =
-    "#769: a pointer memcpy copies into a local's address is doubted where read through";
 const DEPTH_TWO: &str = "#768: a read two levels down is never asked whether it is indeterminate";
 const REPORTED_ELSEWHERE: &str = "the free and the call a freed pointer is handed to are each reported where they happen (SC0401, SC0407), and not again at its use; agreeing would report the use too";
 // End of the reasons `ACCEPTED` gives.
@@ -966,26 +964,6 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         "width_call_d0_one",
         Side::Control,
         Why::Belief(ESCAPED_OUTPUT),
-    ),
-    (
-        "width_memcpy_d0_both",
-        Side::Control,
-        Why::Cost(COPY_INTO_LOCAL),
-    ),
-    (
-        "width_memcpy_d0_one",
-        Side::Control,
-        Why::Cost(COPY_INTO_LOCAL),
-    ),
-    (
-        "width_memcpy_block_d0_both",
-        Side::Control,
-        Why::Cost(COPY_INTO_LOCAL),
-    ),
-    (
-        "width_memcpy_block_d0_one",
-        Side::Control,
-        Why::Cost(COPY_INTO_LOCAL),
     ),
     ("fresh_memcpy_d2_both", Side::Hazard, Why::Cost(DEPTH_TWO)),
     ("fresh_memcpy_d2_one", Side::Hazard, Why::Cost(DEPTH_TWO)),

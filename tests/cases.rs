@@ -747,6 +747,13 @@ cases! {
         // into a local's address leaves `Held::array_edge` unset; this loses
         // its `SC0411`.
         a_local_array_written_through_a_moved_pointer_copied_into_a_local_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And copied out of memory that holds such a pointer, `box[0] = m + 1;
+        // memcpy(&g, box, 8); g[0] = &x;`, which the copy carries as a load of
+        // the box does, `g = box[0];`: the copy is a load built by
+        // `Known::load_into` (#777). Mutation: drop the `stored_in_part`
+        // test from `load_into`; this loses its `SC0411`, and so does its
+        // store form.
+        a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `fill(&e, &x)` writes `m` through `e = m + 1`, a level below what
         // it is handed: an `SC0411` doubt at `m[0]`. Mutation: a call asks
         // only the pointer it is handed; this goes silent.

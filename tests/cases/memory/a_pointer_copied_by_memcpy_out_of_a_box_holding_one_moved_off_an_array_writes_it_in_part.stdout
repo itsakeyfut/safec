@@ -1,0 +1,144 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:2:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" "x"
+  Local "_2" "int *[2]" "m"
+  Local "_3" "int **" "e"
+  Local "_4" "int **"
+  Local "_5" "int **"
+  Local "_6" "int **[1]" "box"
+  Local "_7" "int ***"
+  Local "_8" "int **"
+  Local "_9" "int **" "g"
+  Local "_10" "int ***"
+  Local "_11" "int ***"
+  Local "_12" "void *"
+  Local "_13" "int"
+  Local "_14" "int *"
+  Local "_15" "int *"
+  Local "_16" "int *" "r"
+  Local "_17" "int **"
+  Local "_18" "int"
+  Block "bb0" entry
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:3:9 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:3:13 generated
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:5:15 generated
+      Destination "_4"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:5:15 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_4"
+        Constant 1
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:5:11 written
+      Destination "_3"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:5:15 generated
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:7:5 generated
+      Destination "_7"
+      Address
+        Place "_6"
+          Index
+            Constant 0
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:7:5 written
+      Destination "_7"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:7:5 written
+      Destination "_8"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:7:5 generated
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:8:11 written
+      Destination "_9"
+      Use
+        Constant 0
+    Sequenced a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:8:15 generated
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:9:12 written
+      Destination "_10"
+      Address
+        Place "_9"
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:9:16 generated
+      Destination "_11"
+      Address
+        Place "_6"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:9:5 generated
+    Call a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:9:5 written "memcpy" "bb1"
+      Destination "_12"
+      Copy "_10"
+      Copy "_11"
+      Constant 8
+  Block "bb1"
+    Sequenced a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:9:5 generated
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:10:9 written
+      Destination "_13"
+      Unary "Not"
+        Copy "_9"
+    Branch a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:10:9 written "bb2" "bb3"
+      Copy "_13"
+  Block "bb2"
+    Sequenced a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:10:9 generated
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:10:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:10:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:10:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:11:12 written
+      Destination "_14"
+      Address
+        Place "_1"
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:11:5 written
+      Destination "_9"
+        Deref
+      Use
+        Copy "_14"
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:11:5 written
+      Destination "_15"
+      Use
+        Copy "_9"
+          Deref
+    Sequenced a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:11:5 generated
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:12:14 generated
+      Destination "_17"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:12:10 written
+      Destination "_16"
+      Use
+        Copy "_17"
+          Deref
+    Sequenced a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:12:14 generated
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:13:12 written
+      Destination "_18"
+      Binary "Ne"
+        Copy "_16"
+        Constant 0
+    Operation a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:13:5 written
+      Destination "_0"
+      Use
+        Copy "_18"
+    Sequenced a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:13:12 generated
+    Return

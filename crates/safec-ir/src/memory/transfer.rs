@@ -3063,31 +3063,41 @@ impl Analysis for Allocations<'_> {
                                     value.stored_out[site] = true;
                                 }
                             }
-                            // The second half has no case: a lost local copied
-                            // is doubted by its own escape first, measured.
-                            let marked = value.stale_below(source.local, from_depth + 1)
-                                || value.lost_through(source.local, from_depth + 1);
-                            // And a slot a call could not replace, copied.
-                            // See ADR-0047.
-                            let unreplaced =
-                                value.marked_below(source.local, from_depth + 1, |contents| {
-                                    contents.unreplaced
-                                });
-                            // And what was read out of caller memory, as a
-                            // store of a load of the source would carry it:
-                            // `memcpy(box, pp, 8)` is `*box = *pp;`. Found by
-                            // review. See ADR-0040.
+                            // **What it copies is a load of the source one level
+                            // further**, `memcpy(box, pp, 8)` being `*box =
+                            // *pp;`, built by the load's own `Known::load_into`
+                            // rather than by a copy of it to drift (#777): the
+                            // sites and addresses one level below the source,
+                            // whatever type the source was declared with, since
+                            // `memcpy` copies bytes and the usual source is a
+                            // `void *`, and every mark a load sets. Among them
+                            // whether what was stored there may be lost or gone,
+                            // a slot a call could not replace (ADR-0047), what
+                            // was read out of caller memory (ADR-0040), and
+                            // whether it may be a lost value: `*box = u;
+                            // memcpy(box2, box, 8); free(u); r = *box2;` read
+                            // `*r` in silence until it was carried. And whether
+                            // it reaches an array only by #639's rule, which a
+                            // copy written apart once left out where a store
+                            // stored such a pointer: `box[0] = m + 1;
+                            // memcpy(&g, box, 8); g[0] = &x;` believed `m[0]`
+                            // written where `g = box[0];` doubts it. Found by
+                            // review, each.
+                            let mut read = Held::none(value.points_to.len());
                             let caller =
                                 self.reads_caller_memory(source.local, from_depth + 1, value);
-                            // And whether what it copies may be a lost value,
-                            // as a store of a load of the source would carry
-                            // it: `*box = u; memcpy(box2, box, 8); free(u);
-                            // r = *box2;` read `*r` in silence. Found by review.
-                            // See `Contents::holds_lost`.
-                            let holds_lost =
-                                value.marked_below(source.local, from_depth + 1, |contents| {
-                                    contents.holds_lost
-                                });
+                            value.load_into(
+                                &mut read,
+                                source.local,
+                                from_depth + 1,
+                                &|local| self.is_array(function, local),
+                                caller,
+                            );
+                            read.loaded = true;
+                            // As of this copy. See `Held::named_at_read`.
+                            for named in value.locals_named_by_unknown_code() {
+                                read.named_at_read.set(named);
+                            }
                             // Where it lands, as a store one dereference
                             // further would. See `store::Landing`.
                             let landing = self.landing(
@@ -3109,54 +3119,58 @@ impl Analysis for Allocations<'_> {
                             // would prove things about a value nobody wrote
                             // (#395). See ADR-0039 and ADR-0040.
                             let targets = landing.targets.clone();
-                            // What lands is what the allocation path above
-                            // writes, read the same way: the sites and
-                            // addresses one level below the source and the
-                            // marks on them, whatever type the source was
-                            // declared with. `memcpy` copies bytes, and the
-                            // usual source is a `void *`, through which a load
-                            // has no pointer type to be one; asking a load for
-                            // it carried nothing from one. Found by review.
-                            // **And whether what it copies may be a pointer
-                            // that reaches an array only by #639's rule**, as a
-                            // store of it says: the locals it may be read out
-                            // of, one level below the source, asked as a load
-                            // of the source asks them. Into memory it marks the
+                            // **Whether what it copies may be a pointer that
+                            // reaches an array only by #639's rule** is the
+                            // load's `array_edge`: into memory it marks the
                             // arrays it reaches, `Known::stored_in_part`, below;
                             // into a local's address the local carries it, as a
                             // store through the address gives it. Without either
                             // `e = m + 1; memcpy(box, &e, 8); f = box[0]; *f =
                             // &x;`, and the same into `&f`, left `m[0]` believed
                             // written where the store form is doubted.
-                            let moved = value
-                                .levels_below(source.local, from_depth)
-                                .1
-                                .into_iter()
-                                .any(|local| {
-                                    !self.is_array(function, local)
-                                        && value.points_to[local].array_edge
-                                });
-                            if !targets.is_empty() {
-                                let mut held = Held::none(value.points_to.len());
-                                for &site in &copied {
-                                    held.hold(site, Offset::Unknown);
-                                }
-                                for &target in &copied_locals {
-                                    held.writes_to.set(target);
-                                }
-                                held.loaded = true;
-                                // As of this copy. See `Held::named_at_read`.
-                                for named in value.locals_named_by_unknown_code() {
-                                    held.named_at_read.set(named);
-                                }
-                                held.lost = marked;
-                                held.stale_read = marked;
-                                held.unreplaced_read = unreplaced;
-                                held.lost_read = holds_lost;
-                                held.from_caller = caller;
-                                held.array_edge = moved;
-                                for &target in &targets {
-                                    value.points_to[target].accumulated(&held);
+                            // **Believed as a load at the local's type would be**,
+                            // `s = *(T **)&v`: that type, no wider than the
+                            // source's memory recorded, as `believed_read`
+                            // answers a load (ADR-0061). Carried with no belief,
+                            // `memcpy(&s, &v, 8)` of a whole `int`'s address was
+                            // doubted at `*s` where `s = v;` is not (#769).
+                            let recorded = value
+                                .memory_levels(
+                                    source.local,
+                                    from_depth + 1,
+                                    self.deepest_pointer,
+                                    &self.local_sizes,
+                                )
+                                .at(0);
+                            //
+                            // **And it replaces the local where it is the
+                            // store's certain one**, as `s = v;` does: one
+                            // local and nothing else (`Landing::lands_in_one_local`),
+                            // and a length that is a constant covering all of
+                            // it. Anywhere else by union, since `n` may copy
+                            // part of a pointer, or none, and a replacement
+                            // would prove things about a value nobody wrote
+                            // (#395). By union alone, the local's own null was
+                            // joined in and took the belief away.
+                            let replaces = self.copy_replaces_one_local(
+                                function,
+                                value,
+                                arguments.first(),
+                                self.constant_argument(*callee, arguments, 2),
+                            );
+                            for &target in &targets {
+                                let mut each = read.clone();
+                                let local = function.locals().nth(target.index());
+                                let as_read = local
+                                    .and_then(|local| {
+                                        self.pointee_size(function, &Place::local(local))
+                                    })
+                                    .unwrap_or(0);
+                                each.believed = Some(as_read.min(recorded.unwrap_or(0)));
+                                if replaces {
+                                    value.points_to[target] = each;
+                                } else {
+                                    value.points_to[target].accumulated(&each);
                                 }
                             }
                             // **A copy into memory this check cannot place lands
@@ -3189,7 +3203,7 @@ impl Analysis for Allocations<'_> {
                             for &target in &copied_locals {
                                 poured.inside_locals.set(target);
                             }
-                            let in_part: Vec<LocalIdx> = if moved {
+                            let in_part: Vec<LocalIdx> = if read.array_edge {
                                 copied_locals.iter().copied().collect()
                             } else {
                                 Vec::new()
@@ -3200,10 +3214,10 @@ impl Analysis for Allocations<'_> {
                                 inside: poured.inside,
                                 inside_locals: poured.inside_locals,
                                 stored_at_most: copied_bound,
-                                stale: marked,
-                                unreplaced,
-                                holds_lost,
-                                from_caller: caller,
+                                stale: read.stale_read,
+                                unreplaced: read.unreplaced_read,
+                                holds_lost: read.lost_read,
+                                from_caller: read.from_caller,
                             };
                             // Where it lands, unplaced too, with what it
                             // carries, as a store's landing is given. See

@@ -655,22 +655,6 @@ impl Known {
         passed
     }
 
-    /// Whether a local a read through `local` passes through lost an
-    /// allocation that may be gone: [`Held::stale_read`] read along the walk,
-    /// as [`Self::lost_through`] reads `lost`, so a load through it carries
-    /// what a load of the local itself would. See ADR-0045.
-    ///
-    /// **Reading `lost` here instead changes no answer, measured**, though it
-    /// is the wider rule: a local whose address is taken has its allocation
-    /// left unproven by the escape (ADR-0017), so a rebirth of it always
-    /// counts as gone and sets the bit, and one lost to a call writing
-    /// through its address is doubted at the read by that allocation's state.
-    pub(super) fn stale_through(&self, local: LocalId, depth: usize) -> bool {
-        self.locals_read_through(local, depth)
-            .into_iter()
-            .any(|target| self.points_to[target].stale_read)
-    }
-
     /// Whether a local a read `depth` dereferences below `local` passes
     /// through holds memory a caller or a callee handed over,
     /// [`Held::from_caller`], so that `pr = &r; s = *pr;` carries what `s =
@@ -1282,11 +1266,13 @@ impl Known {
         if self.marked_below(local, depth, |contents| contents.holds_lost) {
             held.lost_read = true;
         }
-        // Read through a pointer to a local this check lost, carrying whether
-        // what it lost may be gone, as the local does. See ADR-0045.
+        // Read through a pointer to a local this check lost, which may be
+        // gone: the stricter of the two rules a load and a library copy once
+        // kept apart, so that a copy can be a load (#777). Taking it for
+        // every load moved no case, measured. See ADR-0045.
         if self.lost_through(local, depth) {
             held.lost = true;
-            held.stale_read |= self.stale_through(local, depth);
+            held.stale_read = true;
         }
         if from_caller {
             held.from_caller = true;

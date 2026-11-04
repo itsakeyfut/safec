@@ -529,7 +529,20 @@ impl Allocations<'_> {
                 for local in written.iter().flatten() {
                     may_write[*local] = true;
                 }
-                value.replaced(|_| true, |local| may_write[local]);
+                // **Not where it replaced its one local**, as a store's
+                // certain write is not (ADR-0028): the copy wrote that local
+                // whole, and `replaced` marking it as a call may have written
+                // it took away the belief the copy gave, so `memcpy(&s, &v,
+                // 8)` doubted `*s` where `s = v;` did not (#769).
+                // It wrote that local, which is what `replaced` would have said
+                // of it.
+                if self.copy_replaces_one_local(function, value, dest, bytes) {
+                    for local in written.iter().flatten() {
+                        value.written_local(*local);
+                    }
+                } else {
+                    value.replaced(|_| true, |local| may_write[local]);
+                }
                 value.array_writes_after(pending);
                 // **What it carries into a local it writes**, as into a block
                 // above (#724): `memcpy(a, m, 8); r = a[0];` with `m` nothing
@@ -689,5 +702,52 @@ impl Allocations<'_> {
                         value.certainly_unwritten(local, through.element) || maybe(local)
                     })
             }
+    }
+
+    /// Whether a library copy into `dest` of `bytes` replaces the one local
+    /// it lands in: one exact local and nothing else
+    /// (`Landing::lands_in_one_local`), and a constant length covering all
+    /// of it, as a store's certain write replaces its target (ADR-0028).
+    /// Anything less is a union, since a copy may write part of a pointer,
+    /// or none (#395). **One answer for the value the copy leaves and for
+    /// whether it is marked as a call's write**, so that the two cannot
+    /// disagree: a copy that replaced `s` and then marked it as one a call
+    /// may have written doubted `*s` where `s = v;` did not (#769).
+    pub(super) fn copy_replaces_one_local(
+        &self,
+        function: &Function,
+        value: &Known,
+        dest: Option<&Operand>,
+        bytes: Option<u64>,
+    ) -> bool {
+        let Some(Operand::Copy(dest)) = dest else {
+            return false;
+        };
+        if !dest
+            .projection
+            .iter()
+            .all(|step| matches!(step, Projection::Deref))
+        {
+            return false;
+        }
+        let landing = self.landing(
+            value,
+            dest.local,
+            derefs(dest) + 1,
+            dest.projection.is_empty(),
+            StoreKind::Copy,
+        );
+        let size = |target: LocalIdx| {
+            function
+                .locals()
+                .nth(target.index())
+                .and_then(|local| self.unit.size_of(function.local(local)))
+        };
+        match landing.targets.as_slice() {
+            [target] if landing.lands_in_one_local(value) => {
+                bytes.is_some() && bytes == size(*target)
+            }
+            _ => false,
+        }
     }
 }
