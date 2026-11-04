@@ -1844,10 +1844,40 @@ impl Held {
             poured.name_local(target);
         }
         poured.bound_stored(stored);
-        poured.stale_read = from.stale_read;
-        poured.unreplaced_read = from.unreplaced_read;
-        poured.lost = from.lost || from.lost_read;
-        poured.from_caller = from.from_caller;
+        // Every field named, never `..`, as `Self::absorb` and
+        // `Self::taken_by_a_load` name them: a mark memory keeps that no
+        // door puts there is a mark no load ever sees, so a field added to
+        // `Held` is `error[E0027]` here until it says what a store leaves of
+        // it. Found by review.
+        let Held {
+            stale_read,
+            unreplaced_read,
+            lost,
+            lost_read,
+            from_caller,
+            // What it names and how wide, given apart by the door, which
+            // knows what the write carried.
+            names: _,
+            believed: _,
+            contents_at_most: _,
+            // Not recorded in memory. See `Self::absorb`.
+            freed: _,
+            writes_elsewhere: _,
+            offset: _,
+            loaded: _,
+            named_at_read: _,
+            foreign: _,
+            returned_by: _,
+            fresh_read: _,
+            inner_address: _,
+            element: _,
+            array_edge: _,
+            stored_through: _,
+        } = from;
+        poured.stale_read = *stale_read;
+        poured.unreplaced_read = *unreplaced_read;
+        poured.lost = *lost || *lost_read;
+        poured.from_caller = *from_caller;
         poured
     }
 
