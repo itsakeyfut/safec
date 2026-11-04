@@ -16,7 +16,7 @@ use super::LostReason;
 use super::allocations::{Allocations, handed_places, innermost_element};
 use super::built::{built_from, named, replaced_by};
 use super::fit::{Fit, fits, slots_from, slots_leaving};
-use super::index::{Idx, LocalIdx, Site, Table};
+use super::index::{Idx, Loc, LocalIdx, Site, Table};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known};
 use super::parts::{
@@ -1327,7 +1327,6 @@ impl Allocations<'_> {
             element_init,
             exposed_in_part,
             stored_in_part,
-            exposed_locals,
             stored_out,
             handed_untyped,
             handed_untyped_sites,
@@ -1337,7 +1336,7 @@ impl Allocations<'_> {
         // asks it (#719). See `Held::joined`.
         let unwritten_here: Table<LocalIdx, bool> =
             Table::from_vec(local_init.iter().map(|init| init.is_unwritten()).collect());
-        // May-facts, so a union, as `exposed_locals` is. See
+        // May-facts, so a union, as `exposed` of a local is. See
         // `Known::handed_untyped`.
         for (here, there) in handed_untyped
             .iter_mut()
@@ -1381,11 +1380,6 @@ impl Allocations<'_> {
             // doubt, `Known::may_be_unwritten` asking its elements.
             let kept = element_init[index].len() > 0;
             *here = here.joined(*there, back || kept);
-        }
-        // A may-fact, so a union, as `exposed` is: a call on one arm may
-        // have kept the address. See `Known::exposed_locals`.
-        for (here, there) in exposed_locals.iter_mut().zip(&from.exposed_locals) {
-            *here = *here || *there;
         }
         // Bounds, so the lower of two at every level. See
         // `Known::handed_contents_at_most`.
@@ -1503,7 +1497,8 @@ impl Allocations<'_> {
 
         // Exposed on one arm is exposed where the arms meet, and what an
         // allocation may hold on either arm it may hold after them. A union,
-        // for the reason `escaped` is one. See ADR-0039.
+        // for the reason `escaped` is one, for a block and for a local whose
+        // address a call on one arm may have kept alike. See ADR-0039.
         for (here, there) in exposed.iter_mut().zip(&from.exposed) {
             *here = *here || *there;
         }
@@ -1745,7 +1740,7 @@ impl Analysis for Allocations<'_> {
             // parameter included: what a caller holds is its own local.
             escaped: Table::filled(false, self.locals),
             handed_away: Table::filled(false, self.locals),
-            exposed: Table::filled(false, self.locals),
+            exposed: Table::filled(false, Loc::count(self.locals)),
             contents: Table::filled(Contents::none(self.locals), self.locals),
             // A parameter's memory is the caller's, which may have written it.
             block_init: Table::filled(Init::Written, self.locals),
@@ -1779,7 +1774,6 @@ impl Analysis for Allocations<'_> {
             exposed_in_part: Table::filled(false, self.locals),
             stored_in_part: Table::filled(false, self.locals),
             // No call has been handed anything yet.
-            exposed_locals: Table::filled(false, self.locals),
             // Nothing has been stored anywhere yet.
             stored_out: Table::filled(false, self.locals),
             // No call has been handed anything yet.
@@ -2591,8 +2585,8 @@ impl Analysis for Allocations<'_> {
                 // (C17 6.2.4 p2), so a call is no longer a write of it. Kept
                 // across, `stash(m)` in one turn of a loop made `tick()` in
                 // the next a write of a new `m`, and a read nothing wrote was
-                // silent. See `Known::exposed_locals`.
-                value.exposed_locals[local] = false;
+                // silent. See `Known::exposed` of a local.
+                value.exposed[local] = false;
                 // Nor was it handed to one untyped, for the same reason.
                 // See `Known::handed_untyped`. No case tells this from
                 // keeping the mark, measured: what the mark reaches is
@@ -3392,7 +3386,13 @@ impl Analysis for Allocations<'_> {
                 // beside such a call. See ADR-0057.
                 let handed_locals = Self::locals_handed_to_opaque_call(handed, value);
                 value.expose_locals(handed_locals);
-                let may_write = value.exposed_locals.clone();
+                let may_write: Table<LocalIdx, bool> = Table::from_vec(
+                    value
+                        .exposed
+                        .locals()
+                        .map(|local| value.exposed[local])
+                        .collect(),
+                );
                 // And an array handed through a pointer moved off it is
                 // written in part, as a store through that pointer is: asked
                 // of every local the call may write, since it may write
@@ -3917,7 +3917,7 @@ impl Analysis for Allocations<'_> {
                 }
                 let exposed: Vec<Site> = value
                     .exposed
-                    .indices()
+                    .sites()
                     .filter(|&other| other != site && value.exposed[other])
                     .collect();
                 for other in exposed {

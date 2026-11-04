@@ -272,3 +272,71 @@ impl<T> IndexMut<&LocalId> for Table<LocalIdx, T> {
         &mut self[LocalIdx::of(local)]
     }
 }
+
+/// A table of places, read by the kind of place a reader holds: a site, a
+/// local, or the IR's own name for a local. One table where there were two
+/// (#779), so a reader of a site and a reader of a local read the same
+/// memory, each through its own index type.
+impl<T> Table<Loc, T> {
+    /// Every site the table has, in order.
+    pub(super) fn sites(&self) -> impl Iterator<Item = Site> + use<T> {
+        (0..self.items.len() / 2).map(Site::at)
+    }
+
+    /// Every local the table has, in order.
+    pub(super) fn locals(&self) -> impl Iterator<Item = LocalIdx> + use<T> {
+        (0..self.items.len() / 2).map(LocalIdx::at)
+    }
+}
+
+impl<T> Index<Site> for Table<Loc, T> {
+    type Output = T;
+    fn index(&self, site: Site) -> &T {
+        &self[Loc::Heap(site)]
+    }
+}
+
+impl<T> IndexMut<Site> for Table<Loc, T> {
+    fn index_mut(&mut self, site: Site) -> &mut T {
+        &mut self[Loc::Heap(site)]
+    }
+}
+
+impl<T> Index<LocalIdx> for Table<Loc, T> {
+    type Output = T;
+    fn index(&self, local: LocalIdx) -> &T {
+        &self[Loc::Local(local)]
+    }
+}
+
+impl<T> IndexMut<LocalIdx> for Table<Loc, T> {
+    fn index_mut(&mut self, local: LocalIdx) -> &mut T {
+        &mut self[Loc::Local(local)]
+    }
+}
+
+impl<T> Index<LocalId> for Table<Loc, T> {
+    type Output = T;
+    fn index(&self, local: LocalId) -> &T {
+        &self[Loc::Local(LocalIdx::of(local))]
+    }
+}
+
+impl<T> IndexMut<LocalId> for Table<Loc, T> {
+    fn index_mut(&mut self, local: LocalId) -> &mut T {
+        &mut self[Loc::Local(LocalIdx::of(local))]
+    }
+}
+
+impl<T> Index<&LocalId> for Table<Loc, T> {
+    type Output = T;
+    fn index(&self, local: &LocalId) -> &T {
+        &self[Loc::Local(LocalIdx::of(local))]
+    }
+}
+
+impl<T> IndexMut<&LocalId> for Table<Loc, T> {
+    fn index_mut(&mut self, local: &LocalId) -> &mut T {
+        &mut self[Loc::Local(LocalIdx::of(local))]
+    }
+}

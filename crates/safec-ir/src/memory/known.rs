@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::ir::{LocalId, Operand, Place, TyId};
 use crate::source::{SourceMap, Span};
 
-use super::index::{LocalIdx, Site, Table};
+use super::index::{Loc, LocalIdx, Site, Table};
 use super::parts::{
     AS_TYPED, Contents, Extent, Held, Init, Inits, Levels, Offset, PendingRead, Reached, Read,
     ReadKey, Realloced, SiteState, read_key,
@@ -57,7 +57,41 @@ pub(super) struct Known {
     /// to one call may be returned or freed by the next. Every opaque call
     /// unproves every exposed allocation still live, and may return any of
     /// them. See ADR-0039.
-    pub(super) exposed: Table<Site, bool>,
+    ///
+    /// **And per local, whether such code may hold its address**, in the
+    /// same table: one kind of place (#779). What was said of a local:
+    ///
+    /// Per local, whether code this check cannot read may hold its address:
+    /// what a call may have written, for [`Self::local_init`], and nothing
+    /// else reads it. `lost` and `foreign` are still given to every escaped
+    /// local, since a route missed there would be a free in silence
+    /// (ADR-0029).
+    ///
+    /// **Not [`Self::exposed`] for what is not a site**, though it is set by
+    /// the same kind of event. A library copy exposes the allocations it is
+    /// handed and sets nothing here, because it keeps no address: it writes
+    /// only through its first argument, which the `Callee::Copies` arm of
+    /// the transfer answers for by itself.
+    ///
+    /// **Set by [`Self::expose_locals`] at a call this check cannot read**,
+    /// over what it can reach. A store this check cannot place sets nothing
+    /// here: it records the address in memory such code can reach,
+    /// [`Self::landed_where_unknown_code_points`], which the next call's walk
+    /// starts from. A union at a join. Never cleared while the local lives,
+    /// for the reason [`Self::exposed`] gives: nothing here can say that a
+    /// callee has dropped an address it kept, so `stash(m); tick();` may
+    /// write `m` at the second call. **Cleared at its `StorageLive`**, where
+    /// the local is a new object and an address kept from the old one is
+    /// indeterminate (C17 6.2.4 p2): kept across, `stash(m)` in one turn of
+    /// a loop made `tick()` in the next a write of the new `m`, and a read
+    /// nothing wrote was silent.
+    ///
+    /// **Wrong in both directions, and the two are not alike.** A route the
+    /// walk misses leaves the bit unset, and a program a call did write is
+    /// reported `SC0411`, which the reader sees. A bit set where no call can
+    /// reach clears a mark, and a read nothing wrote goes silent. See
+    /// ADR-0057.
+    pub(super) exposed: Table<Loc, bool>,
     /// Per site, what the memory it names may contain: what a pointer stored
     /// there may hold, how wide it is believed, and the marks a load out of it
     /// carries. One record per site so that a door moving a value into memory
@@ -192,7 +226,7 @@ pub(super) struct Known {
     /// cleared only by [`Self::written_local`] and [`Self::replaced`], which a write
     /// that may land there calls: an assignment, a placed store, a call's
     /// result, a call, which writes only the locals in
-    /// [`Self::exposed_locals`] (#643), and a store or a library copy this
+    /// [`Self::exposed`] (#643), and a store or a library copy this
     /// check cannot pin down, which writes only the locals
     /// [`Self::locals_a_write_may_land_in`] answers (#645). An intersection
     /// at a join.
@@ -271,37 +305,6 @@ pub(super) struct Known {
     /// reader sees, never a proof. A union at a join, and cleared at
     /// `StorageLive`. See `built::write_effects`.
     pub(super) stored_in_part: Table<LocalIdx, bool>,
-    /// Per local, whether code this check cannot read may hold its address:
-    /// what a call may have written, for [`Self::local_init`], and nothing
-    /// else reads it. `lost` and `foreign` are still given to every escaped
-    /// local, since a route missed there would be a free in silence
-    /// (ADR-0029).
-    ///
-    /// **Not [`Self::exposed`] for what is not a site**, though it is set by
-    /// the same kind of event. A library copy exposes the allocations it is
-    /// handed and sets nothing here, because it keeps no address: it writes
-    /// only through its first argument, which the `Callee::Copies` arm of
-    /// the transfer answers for by itself.
-    ///
-    /// **Set by [`Self::expose_locals`] at a call this check cannot read**,
-    /// over what it can reach. A store this check cannot place sets nothing
-    /// here: it records the address in memory such code can reach,
-    /// [`Self::landed_where_unknown_code_points`], which the next call's walk
-    /// starts from. A union at a join. Never cleared while the local lives,
-    /// for the reason [`Self::exposed`] gives: nothing here can say that a
-    /// callee has dropped an address it kept, so `stash(m); tick();` may
-    /// write `m` at the second call. **Cleared at its `StorageLive`**, where
-    /// the local is a new object and an address kept from the old one is
-    /// indeterminate (C17 6.2.4 p2): kept across, `stash(m)` in one turn of
-    /// a loop made `tick()` in the next a write of the new `m`, and a read
-    /// nothing wrote was silent.
-    ///
-    /// **Wrong in both directions, and the two are not alike.** A route the
-    /// walk misses leaves the bit unset, and a program a call did write is
-    /// reported `SC0411`, which the reader sees. A bit set where no call can
-    /// reach clears a mark, and a read nothing wrote goes silent. See
-    /// ADR-0057.
-    pub(super) exposed_locals: Table<LocalIdx, bool>,
     /// Per site, whether a pointer to it may have been stored where code
     /// outside this function may read it, by a store or a library copy whose
     /// `store::Store` leaves (#684): into a caller's memory through a parameter, into memory or a
@@ -338,7 +341,7 @@ pub(super) struct Known {
     /// out-parameter is: walking from those doubted locals a may-set puts
     /// below a typed callee's memory at every later call. A union at a join,
     /// never cleared while the local lives, and cleared at its
-    /// `StorageLive`, as [`Self::exposed_locals`] is.
+    /// `StorageLive`, as [`Self::exposed`] is.
     ///
     /// **Wrong in both directions, and the two are not alike.** A mark
     /// missed leaves a local below it believed whole, and a program is
@@ -1042,7 +1045,7 @@ impl Known {
     pub(super) fn reachable_now(&self) -> BTreeSet<Site> {
         self.closure(
             self.exposed
-                .indices()
+                .sites()
                 .filter(|&site| self.exposed[site])
                 .collect(),
         )
@@ -1282,7 +1285,7 @@ impl Known {
 
     /// Record that a call this check cannot read was handed the address of
     /// each of `locals`: every local whose address it can find from them, at
-    /// any depth, is [`Self::exposed_locals`] from here on.
+    /// any depth, is [`Self::exposed`] from here on.
     ///
     /// **From everything it can reach, not only what it was handed**: every
     /// allocation [`Self::reachable_now`] names and every local already
@@ -1302,13 +1305,9 @@ impl Known {
     /// `*box = m; fill_box(box);` left `m` unwritten.
     pub(super) fn expose_locals(&mut self, locals: Vec<LocalIdx>) {
         let mut seeds: BTreeSet<LocalIdx> = locals.into_iter().collect();
-        seeds.extend(
-            self.exposed_locals
-                .indices()
-                .filter(|&local| self.exposed_locals[local]),
-        );
+        seeds.extend(self.exposed.locals().filter(|&local| self.exposed[local]));
         for local in self.closed_from(self.reachable_now(), seeds).locals {
-            self.exposed_locals[local] = true;
+            self.exposed[local] = true;
         }
     }
 
@@ -1340,10 +1339,7 @@ impl Known {
     /// every exposed local, so the sites and the locals cannot come from two
     /// different walks.
     fn unknown_code_reaches(&self) -> Closed {
-        let exposed = self
-            .exposed_locals
-            .indices()
-            .filter(|&local| self.exposed_locals[local]);
+        let exposed = self.exposed.locals().filter(|&local| self.exposed[local]);
         self.closed_from(self.reachable_now(), exposed.collect())
     }
 
@@ -1640,11 +1636,10 @@ impl Known {
             exposed_in_part: _,
             stored_in_part: _,
             // A local's, as `escaped` is, and a site being reborn is not.
-            exposed_locals: _,
             // About the allocation the site named, whose address may have
             // been stored out; the new one's has not been.
             stored_out,
-            // About a local, as `exposed_locals` is.
+            // About a local, as `exposed` of a local is.
             handed_untyped: _,
             // Kept, as `inside` is: a call may still hold the old
             // allocation's address, and the slots of the new one are not told
@@ -2081,9 +2076,9 @@ impl Known {
         // `realloc` remembered, so the fact goes too. See ADR-0039.
         let exposed = self.exposed.clone();
         self.forget_reallocs_touching(|site| exposed[site]);
-        for (state, &exposed) in self.state.iter_mut().zip(&self.exposed) {
-            if exposed {
-                state.doubted();
+        for site in self.exposed.sites() {
+            if self.exposed[site] {
+                self.state[site].doubted();
             }
         }
     }
@@ -2442,7 +2437,7 @@ impl Known {
     /// [`Self::local_init`] alone. A store this check cannot pin down answers
     /// it with the locals its place may land in, of the type it stores; a
     /// call answers it with what it may reach,
-    /// [`Self::exposed_locals`], which is narrower than every escaped local,
+    /// [`Self::exposed`], which is narrower than every escaped local,
     /// so `int **p = m; tick(); q = *p;` reads `m` as nothing wrote it
     /// (#643). Two parameters rather than a second function, so that a new
     /// caller cannot give one answer and forget the other. See ADR-0057.
