@@ -102,7 +102,9 @@ impl Idx for LocalIdx {
 /// [`Bits`](super::bits::Bits) or a [`Table`] of places needs no count of
 /// locals to be indexed and takes the memory the two tables took. A reader
 /// that answers the two kinds differently is a `match` on it, so a kind
-/// added is `error[E0004]` at each. See ADR-0063.
+/// added is `error[E0004]` at each: measured, at the five there are, the
+/// two projections below, [`Idx::index`], and the unwritten belief's join
+/// and back edge. See ADR-0063.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(super) enum Loc {
     /// An allocation site.
