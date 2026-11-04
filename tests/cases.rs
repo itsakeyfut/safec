@@ -4163,6 +4163,18 @@ cases! {
         a_memmove_wider_than_its_destination: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_memcmp_longer_than_both_objects: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_strlen_is_not_shown_to_fit: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The rows the three above leave unread. `memchr` reaches its first
+        // argument by its length, and `memmove` its second as well as its
+        // first. Mutation: read `memchr`'s reach as a string; the first says
+        // "may reach outside" instead. Drop `memmove`'s `(1, ..)`; the second
+        // goes silent.
+        a_memchr_longer_than_its_object: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_memmove_wider_than_its_source: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer off its start handed to a string function is asked as
+        // the row's reach, once, and not again as a departure. Mutation:
+        // drop a `String` reach from `strcmp`, `strncmp` or `strstr`, or
+        // empty `strchr`'s or `strrchr`'s row; that call's report changes.
+        each_string_reach_is_asked_as_a_library_reach: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `strncpy` writes exactly `n` characters, so its destination is an
         // access of `n` and fits here; its source is read as a string, which
         // is not shown to fit. Mutation: read its destination as a string;
@@ -4174,8 +4186,11 @@ cases! {
         // A load is believed no wider than what its memory is recorded to
         // hold: a `char`'s address put there through a `void **` alias, or
         // by `memcpy`, and read back as an `int *`. No store either asks is
-        // a departure of the type that is read. Mutation: answer a belief
-        // without the record in `fits`; both go silent.
+        // a departure of the type that is read. Answering a belief without
+        // the record in `fits` alone no longer moves it, measured, since the
+        // load is bounded where it is read; dropping that bound in
+        // `believed_read` as well fails it, and `fit::tests` holds the
+        // record's test in `fits` on its own (ADR-0061).
         a_char_address_stored_as_void_and_read_through_an_int_alias: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `void *` arrives believing nothing, so even one byte through it
         // is not shown to fit. Mutation: believe a `void *` one byte in
@@ -4402,10 +4417,14 @@ cases! {
         a_load_stored_and_copied_by_memcpy_is_believed_no_wider_than_it_was_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_load_stored_and_grown_by_realloc_is_believed_no_wider_than_it_was_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call made on one arm leaves the local bounded by what it was
-        // handed as after the join, where the belief it left is gone.
-        // Mutation: drop the `handed_at_most` question from `fits`; this
-        // goes silent.
+        // handed as after the join. The first holds without the bound,
+        // measured, where its read goes through a load, `q = *pi;`; the
+        // second reads the local's own value, `**pi`, beside a whole object
+        // on the other arm, where the bound alone answers. Mutation: drop
+        // the `handed_at_most` question from `fits`; the second loses its
+        // report about `v`.
         a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_a_callee_may_have_written_beside_a_whole_object_is_believed_no_wider_than_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What memory holds on one arm bounds it after the join, beside a
         // whole object or a null on the other. Mutation: let a recorded
         // whole object stand over a narrower stored bound in
@@ -5340,7 +5359,13 @@ cases! {
         // what it handed out (#394). Mutation: drop the marking after
         // `Known::replaced` in the `Callee::Opaque` arm; the first builds.
         // Mutation: drop the opaque-result clause from
-        // `Allocations::reads_caller_memory`; the second builds.
+        // `Allocations::reads_caller_memory` together with the
+        // `Contents::from_caller` mark the `Callee::Opaque` arm sets on what
+        // it returned; the second builds, and six more. The clause alone
+        // changes no case, since the mark answers first, and is held by its
+        // unit test in `transfer.rs`; the mark alone fails
+        // `a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubted`
+        // and one more.
         a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_what_a_call_returned_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same pointers read back through the address of the local that

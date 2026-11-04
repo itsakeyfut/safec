@@ -485,3 +485,114 @@ pub(super) fn pointee(analysis: &Allocations<'_>, ty: TyId) -> Option<TyId> {
         Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
     }
 }
+
+/// [`fits`], asked of values no program isolates.
+#[cfg(test)]
+mod tests {
+    use super::{Fit, fits};
+    use crate::dataflow::Analysis;
+    use crate::ir::{Block, Function, Terminator, TranslationUnit, Ty};
+    use crate::memory::index::LocalIdx;
+    use crate::source::{SourceMap, Span};
+    use crate::target::Target;
+
+    /// A function with a `char` `c`, an `int [2]` `a` and an `int *` `p`,
+    /// whose only block returns, and the analysis of it.
+    fn asked(
+        check: impl FnOnce(
+            &crate::memory::allocations::Allocations<'_>,
+            &Function,
+            [crate::ir::LocalId; 3],
+        ),
+    ) {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "f");
+        let mut unit = TranslationUnit::new(
+            Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+        );
+        let int = unit.push_type(Ty::Int);
+        let char = unit.push_type(Ty::Char);
+        let pair = unit.push_type(Ty::Array {
+            element: int,
+            length: 2,
+        });
+        let ptr = unit.push_type(Ty::Pointer(int));
+        let mut function = Function::new(Span::new(file, 0, 1), int, []);
+        let c = function.push_local(char);
+        let a = function.push_local(pair);
+        let p = function.push_local(ptr);
+        let block = function.reserve_block();
+        function.fill_block(
+            block,
+            Block {
+                elements: vec![],
+                terminator: Terminator::Return,
+            },
+        );
+        let func = unit.push_function(function);
+        let analysis = crate::memory::analysis(&sources, &unit, func);
+        check(&analysis, unit.function(func), [c, a, p]);
+    }
+
+    /// An edge that may be the address of something inside a local is not
+    /// read at that local's size: four bytes through `&a[1]` are not shown
+    /// to fit, though `a` is eight. The same edge to the whole of `a` fits.
+    ///
+    /// **No program isolates it**: `&a[1]` handed on is doubted by another
+    /// rule first, measured with `memset(&a[1], 0, 8)`.
+    ///
+    /// Mutation: drop the `inner_address` test from `fits`. The first
+    /// assertion fails.
+    #[test]
+    fn an_edge_inside_a_local_is_not_read_at_the_local_s_size() {
+        asked(|analysis, function, [_, a, p]| {
+            let mut known = analysis.on_entry();
+            let held = &mut known.points_to[p];
+            held.writes_to.set(LocalIdx::of(a));
+            held.writes_elsewhere = false;
+            held.inner_address = true;
+            assert!(matches!(
+                fits(analysis, function, p, 4, &known, false),
+                Some(Fit::Unknown)
+            ));
+            known.points_to[p].inner_address = false;
+            assert!(matches!(
+                fits(analysis, function, p, 4, &known, false),
+                Some(Fit::Inside)
+            ));
+        });
+    }
+
+    /// A belief is no proof where what the pointer is recorded to name is
+    /// narrower: believed four bytes wide and naming a one-byte `char`, it
+    /// is not shown to fit; naming the eight-byte `a`, it is.
+    ///
+    /// **No program isolates it**: a load is believed no wider than what its
+    /// memory was recorded to hold (ADR-0061), so the belief that arrives
+    /// here is already the narrower one.
+    ///
+    /// Mutation: drop `&& recorded` from the belief's answer in `fits`. The
+    /// first assertion fails.
+    #[test]
+    fn a_belief_is_no_wider_than_what_the_pointer_is_recorded_to_name() {
+        asked(|analysis, function, [c, a, p]| {
+            let mut known = analysis.on_entry();
+            let held = &mut known.points_to[p];
+            held.writes_to.set(LocalIdx::of(c));
+            held.writes_elsewhere = false;
+            held.loaded = true;
+            held.believed = Some(4);
+            assert!(matches!(
+                fits(analysis, function, p, 4, &known, false),
+                Some(Fit::Unknown)
+            ));
+            let held = &mut known.points_to[p];
+            held.writes_to.remove(LocalIdx::of(c));
+            held.writes_to.set(LocalIdx::of(a));
+            assert!(matches!(
+                fits(analysis, function, p, 4, &known, false),
+                Some(Fit::Inside)
+            ));
+        });
+    }
+}

@@ -1525,6 +1525,11 @@ impl Allocations<'_> {
                 .any(|&parameter| held.sites.get(Site::of(LocalIdx::of(parameter))))
             // Or what a call this check cannot read handed back: memory its
             // callee may still hold, and free at the next such call (#394).
+            // **The `Callee::Opaque` arm answers for it first**, by marking
+            // what the call returned `Contents::from_caller`, so no program
+            // shows this clause alone, measured; the unit test
+            // `a_local_holding_what_an_opaque_call_returned_reads_callee_memory`
+            // is the guard.
             || held.sites().any(|site| self.opaque_results[site.local()])
     }
 
@@ -4636,5 +4641,70 @@ mod caller_memory {
         assert!(analysis.reads_caller_memory(pp, 1, &value));
         value.points_to[pp].lost = true;
         assert!(analysis.reads_caller_memory(pp, 1, &value));
+    }
+
+    /// A local holding the site of what a call this check cannot read
+    /// returned reads memory the callee handed over, though that site's
+    /// memory carries no mark of it; and one holding a site nothing returned
+    /// does not.
+    ///
+    /// **No program shows the first half**: the `Callee::Opaque` arm marks
+    /// what the call returned `Contents::from_caller` as it makes the site,
+    /// and `marked_below` answers for that before this clause is asked.
+    /// Dropping the clause alone fails no corpus case, the mark alone two,
+    /// and both eight.
+    ///
+    /// Mutation: drop the opaque-result clause from `reads_caller_memory`,
+    /// or answer `false` for `Callee::Opaque` in `opaque_results_of`. The
+    /// first assertion fails.
+    #[test]
+    fn a_local_holding_what_an_opaque_call_returned_reads_callee_memory() {
+        use crate::ir::{Block, Origin, Place, Terminator};
+        use crate::memory::index::{LocalIdx, Site};
+        use crate::memory::parts::Offset;
+
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "f get");
+        let mut unit = TranslationUnit::new(
+            Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+        );
+        let int = unit.push_type(Ty::Int);
+        let ptr = unit.push_type(Ty::Pointer(int));
+        let get = unit.push_function(Function::new(Span::new(file, 2, 5), ptr, []));
+        let mut function = Function::new(Span::new(file, 0, 1), int, []);
+        let result = function.push_local(ptr);
+        let other = function.push_local(ptr);
+        let holder = function.push_local(ptr);
+        let call = function.reserve_block();
+        let exit = function.reserve_block();
+        function.fill_block(
+            call,
+            Block {
+                elements: vec![],
+                terminator: Terminator::Call {
+                    callee: get,
+                    arguments: vec![],
+                    destination: Some(Place::local(result)),
+                    then: Some(exit),
+                    origin: Origin::Written(Span::new(file, 2, 5)),
+                },
+            },
+        );
+        function.fill_block(
+            exit,
+            Block {
+                elements: vec![],
+                terminator: Terminator::Return,
+            },
+        );
+        let func = unit.push_function(function);
+        let analysis = crate::memory::analysis(&sources, &unit, func);
+        let mut value = analysis.on_entry();
+        value.points_to[holder].hold(Site::of(LocalIdx::of(result)), Offset::Zero);
+        assert!(analysis.reads_caller_memory(holder, 1, &value));
+
+        let mut value = analysis.on_entry();
+        value.points_to[holder].hold(Site::of(LocalIdx::of(other)), Offset::Zero);
+        assert!(!analysis.reads_caller_memory(holder, 1, &value));
     }
 }
