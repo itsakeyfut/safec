@@ -1939,6 +1939,39 @@ impl Known {
         self.element_init[local].write_all();
     }
 
+    /// What a write that may land in `target` leaves there: a union of what
+    /// it held and `written`, since the write may have missed it. The one
+    /// rule for every such write, a store's one dereference and its deeper
+    /// targets and a library copy's alike, which had drifted: the copy kept
+    /// neither half below (#777).
+    ///
+    /// **Where it starts is what either value said**, the old one or the
+    /// one written, and not unknown, which [`Held::accumulated`] says for a
+    /// value built by arithmetic. A local is asked what it holds where it is
+    /// reached through its address (ADR-0060), and the value written was
+    /// asked where it was stored: made unknown, `**t3 = r;` with `*t3 =
+    /// &slot` doubted every later `***t3`. Found by review.
+    ///
+    /// **The proof goes, whatever the accumulator would say about it.**
+    /// [`Held::accumulated`] keeps it while the set does not grow, which is
+    /// right where an expression is built from its operands and wrong here:
+    /// this write may have replaced the pointer, and then freeing the target
+    /// again is not a second free of anything. The sites stay because
+    /// keeping them is the conservative direction for a use after free; the
+    /// proof goes because keeping *it* is the confident one. See ADR-0024.
+    /// **No program observes this, and it is here anyway.** `writes_to` is
+    /// written only where an address is taken, so a target of such a write
+    /// has always escaped, and ADR-0017 answers `Reached::Lost` for an
+    /// escaped local wherever a report is made, measured: removing it breaks
+    /// nothing today. What it would cost if the escape stopped covering it is
+    /// a proof about a pointer this write may have replaced.
+    pub(super) fn target_union(&mut self, target: LocalIdx, written: &Held) {
+        let offset = self.points_to[target].offset.joined(written.offset);
+        self.points_to[target].accumulated(written);
+        self.points_to[target].offset = offset;
+        self.points_to[target].freed = None;
+    }
+
     /// What `writes` leave of the arrays they name, taken before the write
     /// that would clear them whole and handed to
     /// [`Self::array_writes_after`] once it has. See `built::write_effects`.

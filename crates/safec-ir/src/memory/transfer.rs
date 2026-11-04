@@ -2134,14 +2134,7 @@ impl Analysis for Allocations<'_> {
                         if moved_above {
                             self.written_past_its_end(function, value, target, &unwritten_before);
                         }
-                        // Where it starts survives, as below.
-                        let offset = value.points_to[target].offset.joined(written.offset);
-                        value.points_to[target].accumulated(&written);
-                        value.points_to[target].offset = offset;
-                        // No program observes this, as for the write through
-                        // one dereference below, and it is here for the same
-                        // reason: keeping the proof is the confident direction.
-                        value.points_to[target].freed = None;
+                        value.target_union(target, &written);
                     }
                     // Written into locals whose addresses escaped, which every
                     // call reaches, so a pending read is told, as at an
@@ -2382,39 +2375,7 @@ impl Analysis for Allocations<'_> {
                     // the heap half over the merged value at every join. See
                     // ADR-0019.
                     for target in targets {
-                        // **Where it starts is what either value said**, the
-                        // old one or the one written, and not unknown, which
-                        // [`Held::accumulated`] says for a value built by
-                        // arithmetic. A local is asked what it holds where it
-                        // is reached through its address (ADR-0060), and the
-                        // value written was asked where it was stored: made
-                        // unknown, `**t3 = r;` with `*t3 = &slot` doubted
-                        // every later `***t3`. Found by review.
-                        let offset = value.points_to[target].offset.joined(written.offset);
-                        value.points_to[target].accumulated(&written);
-                        value.points_to[target].offset = offset;
-                        // **The proof goes, whatever the accumulator would
-                        // say about it.** [`Held::accumulated`] keeps it while
-                        // the set does not grow, which is right where an
-                        // expression is built from its operands and wrong
-                        // here: this write may have replaced the pointer, and
-                        // then freeing the target again is not a second free
-                        // of anything. The sites stay because keeping them is
-                        // the conservative direction for a use after free; the
-                        // proof goes because keeping *it* is the confident
-                        // one. See ADR-0024.
-                        //
-                        // **No program observes this, and it is here anyway.**
-                        // `writes_to` is written only where an address is
-                        // taken, so a target of a write through a pointer has
-                        // always escaped, and ADR-0017 answers `Reached::Lost`
-                        // for an escaped local wherever a report is made: the
-                        // answer is `Unknown` whatever this field says.
-                        // Measured, and the narrow claim is the true one:
-                        // removing this line breaks nothing today. What it
-                        // would cost if the escape stopped covering it is a
-                        // proof about a pointer this write may have replaced.
-                        value.points_to[target].freed = None;
+                        value.target_union(target, &written);
                     }
 
                     return;
@@ -3215,7 +3176,7 @@ impl Analysis for Allocations<'_> {
                                 if replaces {
                                     value.points_to[target] = each;
                                 } else {
-                                    value.points_to[target].accumulated(&each);
+                                    value.target_union(target, &each);
                                 }
                             }
                             // **A copy into memory this check cannot place lands
