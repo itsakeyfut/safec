@@ -1636,7 +1636,7 @@ pub(super) fn loaded_indeterminate(
         let through = &known.points_to[local];
         let kind = Kind::IndeterminateLoad {
             reaches_allocation: through.sites().next().is_some(),
-            reaches_local: through.writes_to.any(),
+            reaches_local: through.may_be_a_locals_address(),
         };
         let root = Place::local(local);
         let conclusion = if maybe || doubt_only {
@@ -2034,7 +2034,7 @@ pub(super) fn copied_away(
     }
     let function = analysis.unit.function(analysis.function);
     let held = &known.points_to[from.local];
-    let named: Vec<LocalIdx> = held.writes_to.ones().collect();
+    let named: Vec<LocalIdx> = held.locals().collect();
     let source = match named.as_slice() {
         [only]
             if from.projection.is_empty()

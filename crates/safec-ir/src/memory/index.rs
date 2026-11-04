@@ -95,6 +95,62 @@ impl Idx for LocalIdx {
     }
 }
 
+/// One kind of place: an allocation site or a local, which this check used
+/// to keep in two tables per question and answer twice (#779).
+///
+/// **Interleaved**, `Heap(s)` at `2s` and `Local(l)` at `2l + 1`, so that a
+/// [`Bits`](super::bits::Bits) or a [`Table`] of places needs no count of
+/// locals to be indexed and takes the memory the two tables took. A reader
+/// that answers the two kinds differently is a `match` on it, so a kind
+/// added is `error[E0004]` at each. See ADR-0063.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub(super) enum Loc {
+    /// An allocation site.
+    Heap(Site),
+    /// A local.
+    Local(LocalIdx),
+}
+
+impl Loc {
+    /// The site this place is, if it is one.
+    pub(super) fn site(self) -> Option<Site> {
+        match self {
+            Loc::Heap(site) => Some(site),
+            Loc::Local(_) => None,
+        }
+    }
+
+    /// The local this place is, if it is one.
+    pub(super) fn local(self) -> Option<LocalIdx> {
+        match self {
+            Loc::Heap(_) => None,
+            Loc::Local(local) => Some(local),
+        }
+    }
+
+    /// How many places a function with `locals` locals has: a site and a
+    /// local per local, since a site is named by the local it landed in.
+    pub(super) fn count(locals: usize) -> usize {
+        2 * locals
+    }
+}
+
+impl Idx for Loc {
+    fn index(self) -> usize {
+        match self {
+            Loc::Heap(site) => 2 * site.index(),
+            Loc::Local(local) => 2 * local.index() + 1,
+        }
+    }
+    fn at(position: usize) -> Self {
+        if position % 2 == 0 {
+            Loc::Heap(Site::at(position / 2))
+        } else {
+            Loc::Local(LocalIdx::at(position / 2))
+        }
+    }
+}
+
 /// A `Vec` indexed by `I` alone.
 #[derive(Clone, PartialEq, Eq)]
 pub(super) struct Table<I, T> {

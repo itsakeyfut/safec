@@ -445,7 +445,7 @@ impl Known {
         // = &x; free(p); return *q;` was a proved use after free that the
         // `else` path does not commit. Found by review of ADR-0048, whose
         // join opened a second way to it.
-        if self.points_to[local].writes_to.any() && !reached.is_empty() {
+        if self.points_to[local].may_be_a_locals_address() && !reached.is_empty() {
             reached.push(Reached::Partial);
         }
 
@@ -769,7 +769,7 @@ impl Known {
         }
         for &held in locals {
             next_sites.extend(self.points_to[held].sites());
-            next_locals.extend(self.points_to[held].writes_to.ones());
+            next_locals.extend(self.points_to[held].locals());
         }
         (next_sites, next_locals)
     }
@@ -1120,7 +1120,7 @@ impl Known {
     /// `a_pointer_read_out_of_what_realloc_of_a_live_block_returns_is_not_reported`
     /// is `SC0411`.
     pub(super) fn names_nothing(&self, local: LocalId) -> bool {
-        !self.points_to[local].sites.any() && self.names_no_more_than_its_sites(local)
+        !self.points_to[local].holds_a_site() && self.names_no_more_than_its_sites(local)
     }
 
     /// Whether every allocation `local` may name is unwritten, [`Self::block_init`], it names
@@ -1134,10 +1134,9 @@ impl Known {
     /// goes silent.
     pub(super) fn names_only_fresh(&self, local: LocalId) -> bool {
         let held = &self.points_to[local];
-        held.sites.any()
+        held.holds_a_site()
             && held
-                .sites
-                .ones()
+                .sites()
                 .all(|site| self.block_init[site].is_unwritten())
             && self.names_no_more_than_its_sites(local)
     }
@@ -1147,8 +1146,7 @@ impl Known {
     /// copy is then indeterminate in part, whatever else it names (#724).
     pub(super) fn may_name_fresh(&self, local: LocalId) -> bool {
         self.points_to[local]
-            .sites
-            .ones()
+            .sites()
             .any(|site| self.block_init[site].may_be_unwritten())
     }
 
@@ -1166,7 +1164,7 @@ impl Known {
     /// is `SC0411` about two correct programs.
     fn names_no_more_than_its_sites(&self, local: LocalId) -> bool {
         let held = &self.points_to[local];
-        !held.writes_to.any() && held.beyond().is_nothing()
+        !held.may_be_a_locals_address() && held.beyond().is_nothing()
     }
 
     /// Pour `poured` into each of `containers`, and mark every array in
@@ -1231,7 +1229,7 @@ impl Known {
         // all of them, since the set is a lower bound. See ADR-0045.
         let named_a_local = !locals.is_empty();
         for target in locals {
-            held.writes_to.set(target);
+            held.name_local(target);
             // And it may be a pointer that reached an array only by #639's
             // rule. See `Known::stored_in_part`.
             if self.stored_in_part[target] {
@@ -1567,11 +1565,11 @@ impl Known {
     pub(super) fn written_through(&self, local: LocalId) -> Vec<LocalIdx> {
         self.points_to
             .indices()
-            .filter(|target| self.points_to[local].writes_to.get(*target))
+            .filter(|target| self.points_to[local].names_local(*target))
             .collect()
     }
 
-    /// Every local reachable from `from` through [`Held::writes_to`], at any
+    /// Every local reachable from `from` through [`Held::locals`], at any
     /// depth, `from` included: what a callee handed the address of one of
     /// them can reach by following addresses. A visited bit per local, so a
     /// cycle of addresses or a dense graph of them is walked once each,
@@ -1586,7 +1584,7 @@ impl Known {
             }
             found.push(local);
             let held = &self.points_to[local];
-            todo.extend(held.writes_to.ones());
+            todo.extend(held.locals());
         }
         found
     }
@@ -1708,7 +1706,7 @@ impl Known {
         let gone = !matches!(state[site], SiteState::Live(_));
         for (other, held) in points_to.enumerated_mut() {
             if other != site.local() {
-                if gone && held.sites.get(site) {
+                if gone && held.has_site(site) {
                     held.stale_read = true;
                 }
                 held.lose(site);
@@ -1963,7 +1961,7 @@ impl Known {
     /// again is not a second free of anything. The sites stay because
     /// keeping them is the conservative direction for a use after free; the
     /// proof goes because keeping *it* is the confident one. See ADR-0024.
-    /// **No program observes this, and it is here anyway.** `writes_to` is
+    /// **No program observes this, and it is here anyway.** `Held::locals` is
     /// written only where an address is taken, so a target of such a write
     /// has always escaped, and ADR-0017 answers `Reached::Lost` for an
     /// escaped local wherever a report is made, measured: removing it breaks

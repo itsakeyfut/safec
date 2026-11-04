@@ -897,7 +897,7 @@ impl Allocations<'_> {
             || self
                 .exposed_parameters
                 .iter()
-                .any(|&parameter| held.sites.get(Site::of(LocalIdx::of(parameter))))
+                .any(|&parameter| held.has_site(Site::of(LocalIdx::of(parameter))))
             // Or what a call this check cannot read handed back: memory its
             // callee may still hold, and free at the next such call (#394).
             // **The `Callee::Opaque` arm answers for it first**, by marking
@@ -924,7 +924,7 @@ impl Allocations<'_> {
                     || self
                         .exposed_parameters
                         .iter()
-                        .any(|&parameter| held.sites.get(Site::of(LocalIdx::of(parameter))))
+                        .any(|&parameter| held.has_site(Site::of(LocalIdx::of(parameter))))
             } else {
                 let depth = derefs(place);
                 depth > 0 && self.reads_caller_memory(place.local, depth, value)
@@ -2103,7 +2103,7 @@ impl Analysis for Allocations<'_> {
                     // address, either of which a load reads back without its
                     // element. Poured below. See `Known::stored_in_part`.
                     let in_part: Vec<LocalIdx> = if written.array_edge {
-                        written.writes_to.ones().collect()
+                        written.locals().collect()
                     } else {
                         Vec::new()
                     };
@@ -2298,7 +2298,7 @@ impl Analysis for Allocations<'_> {
                     }
                     // And the locals whose address it carries, which are no
                     // site. See ADR-0045.
-                    for target in written.writes_to.ones() {
+                    for target in written.locals() {
                         poured.inside_locals.set(target);
                     }
                     let poured = Contents {
@@ -2498,9 +2498,7 @@ impl Analysis for Allocations<'_> {
                         // is what keeps an escaped local unproved; the edge
                         // dies with the destination and is what lets a write
                         // through it be followed. See ADR-0019.
-                        value.points_to[destination]
-                            .writes_to
-                            .set(LocalIdx::of(taken.local));
+                        value.points_to[destination].name_local(LocalIdx::of(taken.local));
                         // **And the set is all of it, where the address is of
                         // the local itself.** `Held::clear` ran a line above,
                         // so this destination points at exactly this local,
@@ -2623,7 +2621,7 @@ impl Analysis for Allocations<'_> {
                 // decides no case, measured, once the pointer is not marked.
                 // See ADR-0057.
                 for held in value.points_to.iter_mut() {
-                    held.writes_to.remove(LocalIdx::of(local));
+                    held.unname_local(LocalIdx::of(local));
                 }
             }
             Element::StorageDead { origin: _, local } => value.clear(*local),
@@ -3431,7 +3429,7 @@ impl Analysis for Allocations<'_> {
                     handed.iter().any(|argument| match argument {
                         Operand::Copy(place) if place.projection.is_empty() => {
                             let held = &value.points_to[place.local];
-                            held.writes_to.get(local) && held.element == Some(0) && !held.array_edge
+                            held.names_local(local) && held.element == Some(0) && !held.array_edge
                         }
                         _ => false,
                     })
@@ -3581,7 +3579,7 @@ impl Analysis for Allocations<'_> {
                 // sites, so what one level hands is held as before this rule:
                 // kept out of it, `k = 0; r = &k; get(&r, u);` read `*r` after
                 // `free(u)` in silence, and so did `void *` spellings in which
-                // such a local really may hold it. Read from `writes_to`
+                // such a local really may hold it. Read from `Held::locals`
                 // rather than from a declared type, which nothing here
                 // enforces; so a deeper pointer a callee stores into a local
                 // that holds an address, through `void *` or a cast, is
@@ -3617,7 +3615,7 @@ impl Analysis for Allocations<'_> {
                         );
                         whole.then_some(width)
                     });
-                    let holds_an_address = value.points_to[local].writes_to.any();
+                    let holds_an_address = value.points_to[local].may_be_a_locals_address();
                     // As of this load, and before the borrow below. See
                     // `Held::named_at_read`.
                     let named_now = value.locals_named_by_unknown_code();
@@ -3929,7 +3927,7 @@ impl Analysis for Allocations<'_> {
                 }
                 // **And any escaped local's address**, for the same reason
                 // and with the same reach: `id(&x)` may return `&x`, and
-                // `stash(&x); fetch()` may too. `writes_to` is how a free
+                // `stash(&x); fetch()` may too. `Held::locals` is how a free
                 // learns it, through `Held::may_be_a_locals_address`, and how
                 // a write through the result is followed into the locals it
                 // may land in. See ADR-0039.
@@ -3938,7 +3936,7 @@ impl Analysis for Allocations<'_> {
                     .indices()
                     .filter(|&local| value.escaped[local])
                 {
-                    value.points_to[result].writes_to.set(local);
+                    value.points_to[result].name_local(local);
                 }
                 if was_exposed {
                     value.state[site] = SiteState::Unknown;

@@ -125,7 +125,7 @@ impl Allocations<'_> {
                     // it is not placed, `replaced_by` below clears the
                     // locals it may land in. See `Known::local_init`.
                     if one_step && !held.beyond().unrecorded_address() {
-                        let edges: Vec<LocalIdx> = held.writes_to.ones().collect();
+                        let edges: Vec<LocalIdx> = held.locals().collect();
                         let sites: Vec<Site> = held.sites().collect();
                         // **A store that may land in several allocations may
                         // have missed any one**, so one that may still be
@@ -366,12 +366,9 @@ impl Allocations<'_> {
                         let plain = !(held.beyond().unrecorded_address() || held.inner_address);
                         let locals_unwritten = plain
                             && held.sites().next().is_none()
-                            && held.writes_to.any()
-                            && held
-                                .writes_to
-                                .ones()
-                                .all(|l| value.certainly_unwritten(l, None));
-                        let locals_maybe = held.writes_to.ones().any(|l| {
+                            && held.may_be_a_locals_address()
+                            && held.locals().all(|l| value.certainly_unwritten(l, None));
+                        let locals_maybe = held.locals().any(|l| {
                             value.certainly_unwritten(l, None)
                                 || value.may_be_unwritten(l, None, true)
                         });
@@ -648,14 +645,13 @@ impl Allocations<'_> {
         let through = &value.points_to[source.local];
         source.projection.as_slice() == [Projection::Deref]
             && self.may_be_pointer(function, source)
-            && (through.sites().next().is_some() || through.writes_to.any())
+            && (through.sites().next().is_some() || through.may_be_a_locals_address())
             && !(through.beyond().unrecorded_address() || through.inner_address)
             && through
                 .sites()
                 .all(|site| value.block_init[site].is_unwritten())
             && through
-                .writes_to
-                .ones()
+                .locals()
                 .all(|local| value.certainly_unwritten(local, through.element))
     }
 
@@ -689,7 +685,7 @@ impl Allocations<'_> {
         let site_maybe = |site: Site| value.block_init[site].may_be_unwritten();
         source.projection.as_slice() == [Projection::Deref]
             && self.may_be_pointer(function, source)
-            && (through.writes_to.any() || through.sites().next().is_some())
+            && (through.may_be_a_locals_address() || through.sites().next().is_some())
             && !(through.lost || through.foreign || through.inner_address || through.stored_through)
             // **A pointer read out of memory is asked about its blocks
             // alone**: it may name what it does not show, so what it shows is
@@ -703,13 +699,13 @@ impl Allocations<'_> {
             // (#639, #667) decide what such a pointer writes and reads.
             && if through.loaded {
                 through.sites().any(site_maybe)
-                    || through.writes_to.ones().any(|local| {
+                    || through.locals().any(|local| {
                         !self.is_array(function, local)
                             && (value.certainly_unwritten(local, through.element) || maybe(local))
                     })
             } else {
                 through.sites().any(site_maybe)
-                    || through.writes_to.ones().any(|local| {
+                    || through.locals().any(|local| {
                         value.certainly_unwritten(local, through.element) || maybe(local)
                     })
             }

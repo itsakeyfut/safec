@@ -340,7 +340,7 @@ pub(super) fn write_effects(
             let naming: Vec<&super::parts::Held> = through
                 .iter()
                 .map(|&pointer| &value.points_to[pointer])
-                .filter(|held| held.writes_to.get(each))
+                .filter(|held| held.names_local(each))
                 .collect();
             // **And a call may read a moved pointer out of memory** a store
             // put there, which no local it reaches by name holds: `*h = m +

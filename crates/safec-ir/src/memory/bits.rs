@@ -7,7 +7,7 @@ use super::index::Idx;
 /// A set of indices below `len`, a bit each.
 ///
 /// **What the memory check's square tables are made of**: [`Held::sites`],
-/// [`Held::writes_to`], [`Held::named_at_read`], [`Contents::inside`] and
+/// [`Held::locals`], [`Held::named_at_read`], [`Contents::inside`] and
 /// [`Contents::inside_locals`] each
 /// hold a bit per local for every local, and as `Vec<bool>` they spent a byte
 /// on each. Hand-written because this crate takes no dependencies
@@ -25,7 +25,7 @@ use super::index::Idx;
 /// sets every bit, so it holds by construction.
 ///
 /// [`Held::sites`]: super::parts::Held::sites
-/// [`Held::writes_to`]: super::parts::Held::writes_to
+/// [`Held::locals`]: super::parts::Held::locals
 /// [`Held::named_at_read`]: super::parts::Held::named_at_read
 /// [`Contents::inside`]: super::parts::Contents::inside
 /// [`Contents::inside_locals`]: super::parts::Contents::inside_locals

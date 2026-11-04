@@ -13,7 +13,7 @@ use crate::source::{SourceMap, Span};
 
 use super::LostReason;
 use super::bits::Bits;
-use super::index::{LocalIdx, Site, Table};
+use super::index::{Loc, LocalIdx, Site, Table};
 
 /// A free, and whether C has ordered it before what comes after it.
 ///
@@ -581,7 +581,7 @@ pub(super) enum Reached {
 pub(super) struct Held {
     /// A bit per site. A site is a local, so this is square in the locals.
     ///
-    /// **One of five tables square in the locals**, with [`Held::writes_to`],
+    /// **One of five tables square in the locals**, with [`Held::locals`],
     /// [`Held::named_at_read`],
     /// [`Contents::inside`] and
     /// [`Contents::inside_locals`], and the
@@ -592,7 +592,26 @@ pub(super) struct Held {
     /// 0.72 s once the four there were then were packed. Most of what is left is linear in the
     /// locals for every block, which is what `memory::LINEAR` counts. See
     /// ADR-0039.
-    pub(super) sites: Bits<Site>,
+    ///
+    /// **And the locals whose address it may hold**, its address edges, in
+    /// the same set: one kind of place (#779). What was said of them:
+    ///
+    /// Per local, whether a write **through** this one may land in it.
+    ///
+    /// The edge `Known::escaped` is the shadow of. That field says a local's
+    /// address is held by something; this says by whom, which is what a write
+    /// through a pointer needs in order to be followed rather than feared. See
+    /// ADR-0019.
+    ///
+    /// It is here rather than beside `escaped` because an assignment destroys
+    /// it: `pp = 0;` ends what a write through `pp` can reach, while the fact
+    /// that `p`'s address escaped outlives anything done to `pp`. That is
+    /// ADR-0018's rule for what this struct holds.
+    ///
+    /// Two things set it: taking an address, `pp = &p;`, and a call this check
+    /// cannot read, whose result may be any local whose address escaped. See
+    /// ADR-0039.
+    pub(super) names: Bits<Loc>,
     /// Whether this local may hold an allocation this check can no longer
     /// name.
     ///
@@ -613,23 +632,7 @@ pub(super) struct Held {
     /// on one path. What is true is a fact about the **set**, and the local
     /// that named the set is the only place it fits. See ADR-0020.
     pub(super) freed: Option<Freeing>,
-    /// Per local, whether a write **through** this one may land in it.
-    ///
-    /// The edge `Known::escaped` is the shadow of. That field says a local's
-    /// address is held by something; this says by whom, which is what a write
-    /// through a pointer needs in order to be followed rather than feared. See
-    /// ADR-0019.
-    ///
-    /// It is here rather than beside `escaped` because an assignment destroys
-    /// it: `pp = 0;` ends what a write through `pp` can reach, while the fact
-    /// that `p`'s address escaped outlives anything done to `pp`. That is
-    /// ADR-0018's rule for what this struct holds.
-    ///
-    /// Two things set it: taking an address, `pp = &p;`, and a call this check
-    /// cannot read, whose result may be any local whose address escaped. See
-    /// ADR-0039.
-    pub(super) writes_to: Bits<LocalIdx>,
-    /// Whether a write through this local may land somewhere [`writes_to`]
+    /// Whether a write through this local may land somewhere [`Held::locals`]
     /// does not name.
     ///
     /// The field above is a may-set, so one member in it means "at most one
@@ -645,7 +648,7 @@ pub(super) struct Held {
     /// it: that value is the lattice's identity and is also what every local
     /// holds where a function starts.
     ///
-    /// [`writes_to`]: Held::writes_to
+    /// [`Held::locals`]: Held::locals
     pub(super) writes_elsewhere: bool,
     /// Where in every site above this local's value points.
     ///
@@ -834,7 +837,7 @@ pub(super) struct Held {
     /// the lower of two and a side with none is no bound, the reverse of
     /// [`Self::believed`]. See ADR-0060.
     pub(super) contents_at_most: Levels,
-    /// Whether an edge in [`Self::writes_to`] may be the address of
+    /// Whether an edge in [`Self::locals`] may be the address of
     /// something inside the local it names rather than of the local itself.
     ///
     /// **An edge can only name a local**, so `&*pp`, which C17 6.5.3.2 p3
@@ -848,7 +851,7 @@ pub(super) struct Held {
     /// for the frontend that does not fold it, and for the first address of a
     /// member. A may-fact, so a union. See ADR-0060.
     pub(super) inner_address: bool,
-    /// Which element of a local array the edges in [`Self::writes_to`] point
+    /// Which element of a local array the edges in [`Self::locals`] point
     /// at, counted in the array's innermost elements, where it is known:
     /// `&m[c]` with constant indices, and a constant move of such a pointer.
     /// `None` where it is not, and meaningless where there is no edge.
@@ -859,7 +862,7 @@ pub(super) struct Held {
     /// keeps it where both paths agree. See `Known::element_init` and
     /// ADR-0057.
     pub(super) element: Option<u64>,
-    /// Whether an edge in [`Self::writes_to`] survives only by the rule of
+    /// Whether an edge in [`Self::locals`] survives only by the rule of
     /// [`Self::moved_by_arithmetic`], a constant move off the local's start
     /// that an earlier rule dropped the edge for: an array's (#639), or any
     /// local's, as an array of one (#647).
@@ -1044,10 +1047,7 @@ impl Held {
         let sites = self
             .sites()
             .map(|site| extent[site].unwrap_or(Extent::AtLeast(0)).lower());
-        let locals = self
-            .writes_to
-            .ones()
-            .map(|target| sizes[target].unwrap_or(0));
+        let locals = self.locals().map(|target| sizes[target].unwrap_or(0));
         sites.chain(locals).min()
     }
 
@@ -1066,10 +1066,7 @@ impl Held {
     /// kept the load's belief across the join and proved `*p` whole where
     /// main doubted it. Found by review.
     fn names_nothing(&self) -> bool {
-        self.offset == Offset::Zero
-            && !self.sites.any()
-            && !self.writes_to.any()
-            && self.beyond().is_nothing()
+        self.offset == Offset::Zero && !self.names.any() && self.beyond().is_nothing()
     }
 
     /// What this value may hold beyond what its sites and its edges name.
@@ -1093,7 +1090,7 @@ impl Held {
 
     /// Whether this local may hold a local's address, on some path.
     ///
-    /// [`Held::writes_to`] is read for it, because a write through this local
+    /// [`Held::locals`] is read for it, because a write through this local
     /// lands in a local exactly when it points at one, and the join keeps
     /// the edge where it keeps the sites the other path brought. A call
     /// handed such a pointer may be handed something that is no allocation
@@ -1102,7 +1099,37 @@ impl Held {
     /// the sites. See `Allocations::touching` and
     /// `Allocations::holds_something_unnameable`, which ask it.
     pub(super) fn may_be_a_locals_address(&self) -> bool {
-        self.writes_to.any()
+        self.locals().next().is_some()
+    }
+
+    /// Every local whose address this value may be, its address edges.
+    pub(super) fn locals(&self) -> impl Iterator<Item = LocalIdx> + '_ {
+        self.names.ones().filter_map(Loc::local)
+    }
+
+    /// Whether this value may be `local`'s address.
+    pub(super) fn names_local(&self, local: LocalIdx) -> bool {
+        self.names.get(Loc::Local(local))
+    }
+
+    /// Also be `local`'s address.
+    pub(super) fn name_local(&mut self, local: LocalIdx) {
+        self.names.set(Loc::Local(local));
+    }
+
+    /// No longer be `local`'s address.
+    pub(super) fn unname_local(&mut self, local: LocalIdx) {
+        self.names.remove(Loc::Local(local));
+    }
+
+    /// Whether this value holds `site`.
+    pub(super) fn has_site(&self, site: Site) -> bool {
+        self.names.get(Loc::Heap(site))
+    }
+
+    /// Whether this value holds any site.
+    pub(super) fn holds_a_site(&self) -> bool {
+        self.sites().next().is_some()
     }
 
     /// A local holding nothing, in a function with this many sites.
@@ -1162,10 +1189,9 @@ impl Held {
             stored_through,
         } = marks;
         Held {
-            sites: Bits::new(sites),
+            names: Bits::new(Loc::count(sites)),
             lost,
             freed,
-            writes_to: Bits::new(sites),
             writes_elsewhere,
             offset,
             loaded,
@@ -1202,7 +1228,7 @@ impl Held {
     /// returned at `Unknown`, and the join makes the whole `Unknown`, which is
     /// the answer that cannot claim more than both said.
     pub(super) fn hold(&mut self, site: Site, offset: Offset) {
-        self.sites.set(site);
+        self.names.set(Loc::Heap(site));
         self.offset = self.offset.joined(offset);
     }
 
@@ -1231,7 +1257,7 @@ impl Held {
         if self.writes_elsewhere {
             return None;
         }
-        let mut targets = self.writes_to.ones();
+        let mut targets = self.locals();
         match (targets.next(), targets.next()) {
             (Some(target), None) => Some(target),
             _ => None,
@@ -1240,7 +1266,7 @@ impl Held {
 
     /// Every site held, in order.
     pub(super) fn sites(&self) -> impl Iterator<Item = Site> + '_ {
-        self.sites.ones()
+        self.names.ones().filter_map(Loc::site)
     }
 
     /// Hold nothing, and hold nothing unnameable either.
@@ -1263,10 +1289,9 @@ impl Held {
         // fact that survives an assignment, which is `..` letting a field walk
         // past an exhaustive match, one type over.
         let Held {
-            sites,
+            names,
             lost,
             freed,
-            writes_to,
             writes_elsewhere,
             offset,
             loaded,
@@ -1285,7 +1310,7 @@ impl Held {
             array_edge,
             stored_through,
         } = self;
-        sites.clear_all();
+        names.clear_all();
         *fresh_read = false;
         *believed = None;
         *contents_at_most = Levels::default();
@@ -1303,7 +1328,6 @@ impl Held {
         *unreplaced_read = false;
         *lost_read = false;
         *freed = None;
-        writes_to.clear_all();
         // What a local is given ends the claim that this check knew where a
         // write through it landed, along with the set that claim was about.
         *writes_elsewhere = true;
@@ -1336,10 +1360,9 @@ impl Held {
         // to say what it means in each. ADR-0024 is why there are two places
         // to answer.
         let Held {
-            sites,
+            names,
             lost,
             freed,
-            writes_to,
             writes_elsewhere,
             offset,
             loaded,
@@ -1390,7 +1413,8 @@ impl Held {
         // union below leaves one target and only this says the set is not
         // all of it. See ADR-0028.
         *writes_elsewhere = *writes_elsewhere || other.writes_elsewhere;
-        sites.union_with(&other.sites);
+        let here_has_edge = names.ones().any(|place| place.local().is_some());
+        names.union_with(&other.names);
         *lost = *lost || other.lost;
         // **An intersection, where every other field here is a union.** The
         // rest of this struct holds may-facts, which grow where paths meet.
@@ -1403,10 +1427,14 @@ impl Held {
         };
         // The element where both paths agree, and a side with no edge
         // says nothing about it. Before the union below. See `Held::element`.
-        *element = joined_element(writes_to.any(), *element, &other.writes_to, other.element);
+        *element = joined_element(
+            here_has_edge,
+            *element,
+            other.may_be_a_locals_address(),
+            other.element,
+        );
         *array_edge = *array_edge || other.array_edge;
         *stored_through = *stored_through && other.stored_through;
-        writes_to.union_with(&other.writes_to);
     }
 
     /// Also hold everything that one holds, where a value is being built from
@@ -1425,10 +1453,9 @@ impl Held {
     /// mistake spelled as an ordering.
     pub(super) fn accumulated(&mut self, other: &Held) {
         let Held {
-            sites,
+            names,
             lost,
             freed,
-            writes_to,
             writes_elsewhere,
             offset,
             loaded,
@@ -1496,15 +1523,20 @@ impl Held {
         // flag beside it are decided again by both callers that build a value
         // out of operands, through [`Held::moved_by_arithmetic`]. See
         // ADR-0019.
-        sites.union_with(&other.sites);
+        let here_has_edge = names.ones().any(|place| place.local().is_some());
+        names.union_with(&other.names);
         *lost = *lost || other.lost;
         // As the join keeps it, before the union. See `Held::element`.
-        *element = joined_element(writes_to.any(), *element, &other.writes_to, other.element);
+        *element = joined_element(
+            here_has_edge,
+            *element,
+            other.may_be_a_locals_address(),
+            other.element,
+        );
         *array_edge = *array_edge || other.array_edge;
         // A pointer built from others points at an element none of them was
         // known to have written. See `Held::stored_through`.
         *stored_through = false;
-        writes_to.union_with(&other.writes_to);
         *writes_elsewhere = *writes_elsewhere || other.writes_elsewhere;
     }
 
@@ -1516,8 +1548,8 @@ impl Held {
     /// reaching nothing with nothing to say, and a read through it would be a
     /// silence.
     pub(super) fn lose(&mut self, site: Site) {
-        if self.sites.get(site) {
-            self.sites.remove(site);
+        if self.has_site(site) {
+            self.names.remove(Loc::Heap(site));
             self.lost = true;
         }
     }
@@ -1563,7 +1595,7 @@ impl Held {
     pub(super) fn moved_by_arithmetic(&mut self, by: Option<i128>) {
         // **Kept by the array rule alone**, where the move is known not to
         // be zero: an earlier rule dropped this edge. See `Held::array_edge`.
-        if matches!(self.offset, Offset::NonZero) && self.writes_to.any() {
+        if matches!(self.offset, Offset::NonZero) && self.may_be_a_locals_address() {
             self.array_edge = true;
         }
         // **The element moves by what was added**, where both are known: `by`
@@ -1697,10 +1729,10 @@ pub(super) struct Realloced {
 fn joined_element(
     here_has_edge: bool,
     here: Option<u64>,
-    there_edges: &Bits<LocalIdx>,
+    there_has_edge: bool,
     there: Option<u64>,
 ) -> Option<u64> {
-    match (here_has_edge, there_edges.any()) {
+    match (here_has_edge, there_has_edge) {
         (false, _) => there,
         (true, false) => here,
         (true, true) if here == there => here,
@@ -1727,7 +1759,7 @@ pub(super) struct Contents {
     /// The locals whose address a pointer stored in that allocation
     /// may hold: [`Self::inside`] for what is not a site.
     ///
-    /// **A local's address is an edge, not a site** ([`Held::writes_to`],
+    /// **A local's address is an edge, not a site** ([`Held::locals`],
     /// ADR-0019), so a store of one recorded nothing and `*t3 = &slot; **t3
     /// = r; free(r); return ***t3;` read nothing through `*t3`. Written by a
     /// store of a value carrying edges, read by [`Known::levels_below`](super::known::Known::levels_below), so
@@ -2160,14 +2192,14 @@ mod tests {
     /// What a local is given replaces every site and every edge it had, and
     /// every mark about how it came by them.
     ///
-    /// Mutation: have `clear` leave `writes_to`, `sites`, `offset`,
+    /// Mutation: have `clear` leave `Held::locals`, `sites`, `offset`,
     /// `lost_read`, `unreplaced_read`, `foreign` or `freed`. This fails. The
     /// marks beside those have corpus cases of their own.
     #[test]
     fn clearing_a_local_leaves_it_no_site_and_no_edge() {
         let mut held = Held::none(4);
-        held.sites.set(Site::at(1));
-        held.writes_to.set(LocalIdx::at(3));
+        held.hold(Site::at(1), Offset::Zero);
+        held.name_local(LocalIdx::at(3));
         held.writes_elsewhere = false;
         held.offset = Offset::NonZero;
         held.lost_read = true;
@@ -2200,12 +2232,12 @@ mod tests {
     #[test]
     fn a_certain_target_is_one_edge_and_nothing_elsewhere() {
         let mut one = Held::none(4);
-        one.writes_to.set(LocalIdx::at(2));
+        one.name_local(LocalIdx::at(2));
         one.writes_elsewhere = false;
         assert_eq!(one.certain_target(), Some(LocalIdx::at(2)));
 
         let mut two = one.clone();
-        two.writes_to.set(LocalIdx::at(3));
+        two.name_local(LocalIdx::at(3));
         assert_eq!(two.certain_target(), None);
 
         let mut elsewhere = one.clone();
