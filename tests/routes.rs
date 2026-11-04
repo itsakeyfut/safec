@@ -2142,6 +2142,69 @@ fn the_matrix_answers_what_was_blessed() {
     }
 }
 
+/// A route answers a slot in a local as it answers one a level below a
+/// local: every row at [`Depth::D0`] and its row at [`Depth::D1`] have the
+/// same hazard exit and the same control exit. One kind of place, whose
+/// rules may still differ in the codes they give and in what they prove,
+/// which is narrower than this and not asked here (#780).
+///
+/// **Read off the blessed summary**, which
+/// `the_matrix_answers_what_was_blessed` holds to what the matrix answers:
+/// a change that parts the two depths fails that test first, and this one
+/// once the summary is blessed, so that blessing it does not accept it.
+///
+/// Mutation: in `tests/routes.expected`, change `width_store_d1_both`'s
+/// `hazard=1` to `hazard=0`; this fails.
+#[test]
+fn a_route_answers_alike_at_depth_zero_and_one() {
+    let summary = std::fs::read_to_string(expected_path())
+        .unwrap_or_else(|error| panic!("{}: {error}", expected_path().display()))
+        .replace("\r\n", "\n");
+    // The hazard's and the control's exit, by row, from `hazard=E:codes
+    // control=E:codes allowed=E:codes`.
+    let exits = |name: &str| -> (String, String) {
+        let line = summary
+            .lines()
+            .find(|line| line.split(' ').next() == Some(name))
+            .unwrap_or_else(|| panic!("the summary has no line for `{name}`"));
+        let exit = |side: &str| {
+            line.split(' ')
+                .find_map(|field| field.strip_prefix(side))
+                .and_then(|answer| answer.split(':').next())
+                .unwrap_or_else(|| panic!("`{name}` has no `{side}` in the summary"))
+                .to_owned()
+        };
+        (exit("hazard="), exit("control="))
+    };
+    let mut pairs = 0;
+    let mut parted = vec![];
+    for &(near, row) in ROWS.iter().filter(|(_, row)| row.depth == Depth::D0) {
+        let Some(&(far, _)) = ROWS.iter().find(|(_, other)| {
+            *other
+                == Row {
+                    depth: Depth::D1,
+                    ..row
+                }
+        }) else {
+            continue;
+        };
+        pairs += 1;
+        let (here, there) = (exits(near), exits(far));
+        if here != there {
+            parted.push(format!(
+                "{near} hazard={} control={}, {far} hazard={} control={}",
+                here.0, here.1, there.0, there.1
+            ));
+        }
+    }
+    assert!(pairs > 0, "no row at depth 0 has its row at depth 1");
+    assert!(
+        parted.is_empty(),
+        "a route answers a local and the level below one differently:\n{}",
+        parted.join("\n")
+    );
+}
+
 fn expected_path() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
