@@ -66,6 +66,7 @@ mod bits;
 mod built;
 mod fit;
 mod index;
+mod init;
 mod known;
 mod parts;
 mod report;
