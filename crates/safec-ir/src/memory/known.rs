@@ -15,7 +15,7 @@ use super::parts::{
     AS_TYPED, Contents, Extent, Held, Init, Inits, Levels, Offset, PendingRead, Reached, Read,
     ReadKey, Realloced, SiteState, read_key,
 };
-use super::store::Certain;
+use super::store::{Certain, Strong};
 use super::{LostReason, named};
 use crate::reads::derefs;
 use crate::source::inside;
@@ -372,9 +372,19 @@ impl Known {
         self.points_to[local].sites()
     }
 
-    /// Stop following whatever this local held.
+    /// Stop following whatever this local held, because its lifetime began
+    /// or ended or nothing reads it again: no write, which is
+    /// [`Self::replace`]'s, and so no [`Strong`] asked for.
     pub(super) fn clear(&mut self, local: LocalId) {
         self.points_to[local].clear();
+    }
+
+    /// The local `at` names holds `value` and nothing it held before: the one
+    /// replacement of a local's whole value, which only a [`Strong`] can ask
+    /// for. Every other write that may land in a local adds to what it held,
+    /// [`Self::target_union`]. See ADR-0028 and ADR-0063.
+    pub(super) fn replace(&mut self, at: Strong, value: Held) {
+        self.points_to[at.local()] = value;
     }
 
     /// Every site this local may hold, and whether it may hold more.

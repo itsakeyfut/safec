@@ -198,6 +198,44 @@ impl Certain {
     }
 }
 
+/// A write that replaces the whole value of exactly one local: the one fact
+/// that lets a write take away what the local held rather than add to it,
+/// [`Known::replace`]. Only this module makes one, since its field is
+/// private here, so a door that has not proved its one local cannot replace
+/// a value and has `Known::target_union` instead. Measured: handing
+/// [`Known::replace`] the store's bare target is `error[E0308]`, and
+/// spelling `Strong(target)` outside this module `error[E0423]`.
+///
+/// **Two ways to prove it.** A write to the local by name, an assignment or
+/// a call's result with no projection ([`Strong::assigned`]), and a write
+/// through a pointer whose one edge is all it may hold
+/// ([`Landing::strong`], ADR-0028). A library copy replaces its local only
+/// where it is such a landing and covers the local whole,
+/// `Allocations::copy_replaces_one_local`.
+///
+/// **It says who may replace a value, not who may change a field of one.**
+/// `Known::points_to` is still indexed mutably for the marks a door sets on
+/// a value it keeps, and a local whose lifetime begins or ends is emptied by
+/// `Known::clear`, which is no write. See ADR-0063.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct Strong(LocalIdx);
+
+impl Strong {
+    /// The local `place` writes by name, where it is one: no projection, as
+    /// an assignment's or a call's destination with none is.
+    pub(super) fn assigned(place: &Place) -> Option<Strong> {
+        place
+            .projection
+            .is_empty()
+            .then(|| Strong(LocalIdx::of(place.local)))
+    }
+
+    /// The local the write replaces.
+    pub(super) fn local(self) -> LocalIdx {
+        self.0
+    }
+}
+
 impl Landing {
     /// The one allocation this write lands in, where it lands in exactly one
     /// and in no local, found through memory this function recorded all of.
@@ -212,15 +250,17 @@ impl Landing {
         }
     }
 
-    /// Whether this write lands in exactly one local and nowhere else: one
-    /// exact dereference through a pointer whose one edge is all it may hold
-    /// and whose address has not escaped. See ADR-0028.
-    pub(super) fn lands_in_one_local(&self, value: &Known) -> bool {
+    /// The one local this write lands in and nothing else, where it does:
+    /// one exact dereference through a pointer whose one edge is all it may
+    /// hold and whose address has not escaped. See ADR-0028.
+    pub(super) fn strong(&self, value: &Known) -> Option<Strong> {
         let held = &value.points_to[self.pointer];
-        self.one_step
-            && self.targets.len() == 1
-            && !held.writes_elsewhere
-            && !value.escaped[self.pointer]
+        match self.targets.as_slice() {
+            [target] if self.one_step && !held.writes_elsewhere && !value.escaped[self.pointer] => {
+                Some(Strong(*target))
+            }
+            _ => None,
+        }
     }
 }
 

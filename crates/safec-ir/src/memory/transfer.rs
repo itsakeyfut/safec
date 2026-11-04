@@ -23,7 +23,7 @@ use super::parts::{
     AS_TYPED, Contents, Extent, Freeing, Held, Init, Inits, Levels, Marks, Offset, PendingRead,
     Reached, Read, Realloced, SiteState, bounded,
 };
-use super::store::{Landing, StoreKind};
+use super::store::{Landing, StoreKind, Strong};
 use crate::library::{Callee, LIBRARY, Leaves, Library, Makes};
 use crate::reads::{dereferenced_in_element, dereferenced_in_terminator, derefs};
 
@@ -2054,13 +2054,13 @@ impl Analysis for Allocations<'_> {
                 // further down: one is about what the write may have reached
                 // *besides* its target and the other about what it does to
                 // that target, and the two have to be the same question, so
-                // both ask `Landing::lands_in_one_local`.
+                // both ask `Landing::strong`.
                 //
                 // A deeper projection is never certain, and that is the
                 // condition there rather than an extra clause: `written_through`
                 // answers about the local the place starts at, so for `**ppp`
                 // it answers about `*ppp` and names the wrong thing.
-                let certain = before.lands_in_one_local(value);
+                let certain = before.strong(value);
 
                 // **Any write through a projection that is not the certain one
                 // may have landed in an escaped local.** Not only the one this
@@ -2073,10 +2073,13 @@ impl Analysis for Allocations<'_> {
                 // The locals it may land in, asked before it lands, so that
                 // what they record below is about this store. See
                 // `Known::named_after_a_store`.
-                let landed = (!operation.place.projection.is_empty() && !certain).then(|| {
-                    value
-                        .locals_a_write_may_land_in(operation.place.local, derefs(&operation.place))
-                });
+                let landed =
+                    (!operation.place.projection.is_empty() && certain.is_none()).then(|| {
+                        value.locals_a_write_may_land_in(
+                            operation.place.local,
+                            derefs(&operation.place),
+                        )
+                    });
                 // What it writes of what is unwritten, after the locals it may
                 // land in are asked. See `Allocations::initialised_by`.
                 self.initialised_by(
@@ -2378,8 +2381,8 @@ impl Analysis for Allocations<'_> {
                     // cannot be recorded on the local whose address is taken.
                     // See ADR-0028. An analysis that proves anything positive
                     // about a local has to answer for its address escaping.
-                    if certain {
-                        value.points_to[targets[0]] = written;
+                    if let Some(at) = certain {
+                        value.replace(at, written);
                         return;
                     }
 
@@ -2408,10 +2411,9 @@ impl Analysis for Allocations<'_> {
                 // A write through any other projection changes what a pointer
                 // points at rather than which allocation a local holds, and
                 // this check follows locals.
-                if !operation.place.projection.is_empty() {
+                let Some(at) = Strong::assigned(&operation.place) else {
                     return;
-                }
-
+                };
                 let destination = operation.place.local;
                 match &operation.value {
                     // **Not an optimisation.** `int *p = malloc(4);` lowers to
@@ -2420,7 +2422,7 @@ impl Analysis for Allocations<'_> {
                     // headline program is not an error at all.
                     Rvalue::Use(Operand::Copy(source)) if source.projection.is_empty() => {
                         let indeterminate = value.holds_fresh_read(LocalIdx::of(source.local));
-                        value.points_to[destination] = value.points_to[source.local].clone();
+                        value.replace(at, value.points_to[source.local].clone());
                         // See `Known::holds_fresh_read`.
                         value.points_to[destination].fresh_read = indeterminate;
                     }
@@ -2467,7 +2469,7 @@ impl Analysis for Allocations<'_> {
                         // lowering did not fold is an offset that may be zero,
                         // and is followed. See ADR-0019 and ADR-0021.
                         reached.moved_by_arithmetic(self.moved_by(function, *op, lhs, rhs));
-                        value.points_to[destination] = reached;
+                        value.replace(at, reached);
                     }
                     // A read through a projection is not a pointer this check
                     // follows, and the report reads it as holding nothing,
@@ -2476,13 +2478,14 @@ impl Analysis for Allocations<'_> {
                     // write stores have to know it. See
                     // `Allocations::read_through`.
                     Rvalue::Use(Operand::Copy(source)) => {
-                        value.points_to[destination] = self.read_through(function, source, value);
+                        let read = self.read_through(function, source, value);
+                        value.replace(at, read);
                     }
                     // A constant or a unary operator. Neither is a pointer this
                     // check can follow: C17 6.5.3.3 gives unary `+`, `-` and
                     // `~` arithmetic operands only, and `!` yields an `int`.
                     Rvalue::Use(Operand::Constant(_)) | Rvalue::Unary { .. } => {
-                        value.clear(destination);
+                        value.replace(at, Held::none(value.points_to.len()));
                     }
                     // The address of a place is not an allocation this check
                     // follows: nothing here frees a local's own storage, which
@@ -2498,7 +2501,7 @@ impl Analysis for Allocations<'_> {
                     // `int **pp = &p; *pp = q; free(q); free(p);` silent about
                     // a double free.
                     Rvalue::Address(taken) => {
-                        value.clear(destination);
+                        value.replace(at, Held::none(value.points_to.len()));
                         // **The edge and the bit, and both are needed.** The
                         // bit outlives everything done to this destination and
                         // is what keeps an escaped local unproved; the edge
@@ -3167,7 +3170,7 @@ impl Analysis for Allocations<'_> {
                                 .at(0);
                             // **And it replaces the local where it is the
                             // store's certain one**, as `s = v;` does: one
-                            // local and nothing else (`Landing::lands_in_one_local`),
+                            // local and nothing else (`Landing::strong`),
                             // and a constant length of exactly its size. Anywhere
                             // else by union, since `n` may copy
                             // part of a pointer, or none, and a replacement
@@ -3198,10 +3201,12 @@ impl Analysis for Allocations<'_> {
                                         value,
                                     )
                                     .then_some(width);
-                                if replaces {
-                                    value.points_to[target] = each;
-                                } else {
-                                    value.target_union(target, &each);
+                                // The one target, which is all `targets`
+                                // holds where the copy replaces it; any
+                                // other is a may-write, as a union is.
+                                match replaces {
+                                    Some(at) if at.local() == target => value.replace(at, each),
+                                    _ => value.target_union(target, &each),
                                 }
                             }
                             // **A copy into memory this check cannot place lands
@@ -3684,7 +3689,7 @@ impl Analysis for Allocations<'_> {
         let Some(place) = destination else {
             return;
         };
-        if !place.projection.is_empty() {
+        let Some(at) = Strong::assigned(place) else {
             // `*box = f();` writes an allocation this does not place. See
             // `Known::init`. **No C program reaches this**, measured: the
             // lowering calls into a temporary and stores that, which the
@@ -3697,7 +3702,7 @@ impl Analysis for Allocations<'_> {
             // does. See `Known::init`.
             replaced_by(self.unit, function, place, value);
             return;
-        }
+        };
         // The call's result writes the local it lands in. See
         // `Known::init`.
         value.written_local(LocalIdx::of(place.local));
@@ -3710,7 +3715,7 @@ impl Analysis for Allocations<'_> {
             // destination. A frontend that gives it one gives it a `void`
             // local, which holds none of this.
             Callee::Frees => {
-                value.clear(place.local);
+                value.replace(at, Held::none(value.points_to.len()));
                 return;
             }
             // What it returns is its first argument, unmoved: C17 7.24.2 to
@@ -3730,7 +3735,7 @@ impl Analysis for Allocations<'_> {
                     Some(Operand::Copy(source)) => self.read_through(function, source, value),
                     Some(Operand::Constant(_)) | None => Held::none(value.points_to.len()),
                 };
-                value.points_to[place.local] = first;
+                value.replace(at, first);
                 return;
             }
             Callee::Allocates | Callee::Reallocates | Callee::Opaque => {}
@@ -3747,7 +3752,7 @@ impl Analysis for Allocations<'_> {
         // this site every turn, and what the call returns may be last turn's
         // allocation, exposed, which the site number cannot tell apart.
         let was_exposed = value.exposed[site];
-        value.clear(place.local);
+        value.replace(at, Held::none(value.points_to.len()));
         // At its start: the site is whatever the call handed back, so the
         // value is that value and not an offset into it.
         value.points_to[result].hold(site, Offset::Zero);

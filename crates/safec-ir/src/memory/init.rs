@@ -16,7 +16,7 @@ use super::built::replaced_by;
 use super::index::{Idx, LocalIdx, Site, Table};
 use super::known::Known;
 use super::parts::{Extent, Init, Offset};
-use super::store::{Certain, Landing, StoreKind};
+use super::store::{Certain, Landing, StoreKind, Strong};
 use super::transfer::CopiedPointers;
 
 /// What [`Allocations::initialised_by`] is told of one write.
@@ -224,7 +224,7 @@ impl Allocations<'_> {
                         }
                     }
                 }
-                if !place.projection.is_empty() && !landing.lands_in_one_local(value) {
+                if !place.projection.is_empty() && landing.strong(value).is_none() {
                     replaced_by(self.unit, function, place, value);
                     if one_step && value.points_to[pointer].array_edge {
                         for &target in &landing.targets {
@@ -544,7 +544,10 @@ impl Allocations<'_> {
                 // 8)` doubted `*s` where `s = v;` did not (#769).
                 // It wrote that local, which is what `replaced` would have said
                 // of it.
-                if self.copy_replaces_one_local(function, value, dest, bytes) {
+                if self
+                    .copy_replaces_one_local(function, value, dest, bytes)
+                    .is_some()
+                {
                     for local in written.iter().flatten() {
                         value.written_local(*local);
                     }
@@ -710,9 +713,9 @@ impl Allocations<'_> {
             }
     }
 
-    /// Whether a library copy into `dest` of `bytes` replaces the one local
-    /// it lands in: one exact local and nothing else
-    /// (`Landing::lands_in_one_local`), and a constant length of exactly its
+    /// The one local a library copy into `dest` of `bytes` replaces, where
+    /// it replaces one: one exact local and nothing else
+    /// ([`Landing::strong`]), and a constant length of exactly its
     /// size, as a store's certain write replaces its target (ADR-0028). Not
     /// a longer one, which writes past the local and is the bounds rule's to
     /// report.
@@ -727,16 +730,16 @@ impl Allocations<'_> {
         value: &Known,
         dest: Option<&Operand>,
         bytes: Option<u64>,
-    ) -> bool {
+    ) -> Option<Strong> {
         let Some(Operand::Copy(dest)) = dest else {
-            return false;
+            return None;
         };
         if !dest
             .projection
             .iter()
             .all(|step| matches!(step, Projection::Deref))
         {
-            return false;
+            return None;
         }
         let landing = self.landing(
             value,
@@ -751,11 +754,8 @@ impl Allocations<'_> {
                 .nth(target.index())
                 .and_then(|local| self.unit.size_of(function.local(local)))
         };
-        match landing.targets.as_slice() {
-            [target] if landing.lands_in_one_local(value) => {
-                bytes.is_some() && bytes == size(*target)
-            }
-            _ => false,
-        }
+        landing
+            .strong(value)
+            .filter(|at| bytes.is_some() && bytes == size(at.local()))
     }
 }
