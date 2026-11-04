@@ -2300,20 +2300,13 @@ impl Analysis for Allocations<'_> {
                     // value can find it (#503, ADR-0045); and a pointer read
                     // out of caller memory keeps that fact where it is stored
                     // (ADR-0040).
-                    let mut poured = Held::none(value.points_to.len());
-                    for &site in &carried {
-                        poured.name_site(site);
-                    }
-                    // And the locals whose address it carries, which are no
-                    // site. See ADR-0045.
-                    for target in written.locals() {
-                        poured.name_local(target);
-                    }
-                    poured.bound_stored(&stored);
-                    poured.stale_read = written.stale_read;
-                    poured.unreplaced_read = written.unreplaced_read;
-                    poured.lost = written.lost || written.lost_read;
-                    poured.from_caller = written.from_caller;
+                    let poured = Held::poured(
+                        value.points_to.len(),
+                        carried.iter().copied(),
+                        written.locals(),
+                        &stored,
+                        &written,
+                    );
                     self.land_contents(
                         value,
                         &landing,
@@ -3223,27 +3216,18 @@ impl Analysis for Allocations<'_> {
                                 from_depth + 1,
                                 self.deepest_pointer,
                             ));
-                            let mut poured = Held::none(value.points_to.len());
-                            for &site in &copied {
-                                poured.name_site(site);
-                            }
-                            // And the locals whose address it copies. See
-                            // ADR-0045.
-                            for &target in &copied_locals {
-                                poured.name_local(target);
-                            }
+                            let poured = Held::poured(
+                                value.points_to.len(),
+                                copied.iter().copied(),
+                                copied_locals.iter().copied(),
+                                &copied_bound,
+                                &read,
+                            );
                             let in_part: Vec<LocalIdx> = if read.array_edge {
                                 copied_locals.iter().copied().collect()
                             } else {
                                 Vec::new()
                             };
-                            // What memory keeps of it, as a store's. See
-                            // `Held::absorb`.
-                            poured.bound_stored(&copied_bound);
-                            poured.stale_read = read.stale_read;
-                            poured.unreplaced_read = read.unreplaced_read;
-                            poured.lost = read.lost_read;
-                            poured.from_caller = read.from_caller;
                             // Where it lands, unplaced too, with what it
                             // carries, as a store's landing is given. See
                             // `Allocations::land_contents`.

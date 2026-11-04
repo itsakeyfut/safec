@@ -1819,6 +1819,38 @@ impl Held {
         }
     }
 
+    /// What a store or a library copy of `from` leaves in a block: the sites
+    /// and the locals it lands naming, `stored` as what each level below is
+    /// believed, and the marks a load out of the block carries on. **One
+    /// body for both doors** (#780), so that a mark one of them leaves
+    /// behind is a mark both do. The two built their records apart, and the
+    /// copy kept a lost value by a narrower rule than the store, `lost_read`
+    /// alone where the store kept `lost` as well; one rule now, the store's,
+    /// which moved no case in the corpus or the route matrix, measured.
+    pub(super) fn poured(
+        locals: usize,
+        sites: impl IntoIterator<Item = Site>,
+        named: impl IntoIterator<Item = LocalIdx>,
+        stored: &Levels,
+        from: &Held,
+    ) -> Held {
+        let mut poured = Held::none(locals);
+        for site in sites {
+            poured.name_site(site);
+        }
+        // And the locals whose address it carries, which are no site. See
+        // ADR-0045.
+        for target in named {
+            poured.name_local(target);
+        }
+        poured.bound_stored(stored);
+        poured.stale_read = from.stale_read;
+        poured.unreplaced_read = from.unreplaced_read;
+        poured.lost = from.lost || from.lost_read;
+        poured.from_caller = from.from_caller;
+        poured
+    }
+
     /// A pointer stored there may also hold `site`.
     pub(super) fn name_site(&mut self, site: Site) {
         self.names.set(Loc::Heap(site));
