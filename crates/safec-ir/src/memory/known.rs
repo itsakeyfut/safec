@@ -830,16 +830,24 @@ impl Known {
         depth: usize,
         marked: impl Fn(&Held) -> bool,
     ) -> bool {
+        self.cells_on_the_way(local, depth)
+            .into_iter()
+            .any(|site| marked(&self.contents[site]))
+    }
+
+    /// Every allocation a pointer read `depth` dereferences below `local`
+    /// reads through, at any level: what [`Self::marked_below`] asks, and
+    /// what [`Self::load_into`] takes its marks from.
+    fn cells_on_the_way(&self, local: LocalId, depth: usize) -> BTreeSet<Site> {
+        let mut passed = BTreeSet::new();
         let Some((mut sites, mut locals)) = self.level_zero(local) else {
-            return false;
+            return passed;
         };
         for _ in 0..depth {
-            if sites.iter().any(|&site| marked(&self.contents[site])) {
-                return true;
-            }
+            passed.extend(sites.iter().copied());
             (sites, locals) = self.level_below(&sites, &locals);
         }
-        false
+        passed
     }
 
     /// What a pointer read through `local` reads through first: the
@@ -1362,22 +1370,11 @@ impl Known {
         {
             held.array_edge = true;
         }
-        // Read out of an allocation that may hold one that is gone. See
-        // ADR-0045.
-        if self.stale_below(local, depth) {
-            held.lost = true;
-            held.stale_read = true;
-        }
-        // Read out of an allocation that may hold a slot a call could not
-        // replace, which is asked where it is handed by address and nowhere
-        // else. See ADR-0047.
-        if self.marked_below(local, depth, |contents| contents.unreplaced_read) {
-            held.unreplaced_read = true;
-        }
-        // Read out of an allocation that may hold a lost value, which is made
-        // lost if a lost value goes. See `Held::lost_read`.
-        if self.marked_below(local, depth, |contents| contents.lost) {
-            held.lost_read = true;
+        // What every block it reads through, at any level, gives what it
+        // reads, by the one rule a load out of memory has. See
+        // `Held::taken_by_a_load` and `Self::marked_below`.
+        for site in self.cells_on_the_way(local, depth) {
+            self.contents[site].taken_by_a_load(held);
         }
         // Read through a pointer to a local this check lost, which may be
         // gone: the stricter of the two rules a load and a library copy once

@@ -1756,6 +1756,69 @@ impl Held {
         self.contents_at_most.bound_by(&levels.below(1));
     }
 
+    /// What a load that reads through this block gives the value it reads:
+    /// **the one rule a load out of memory has**, so that what a block keeps
+    /// and what a load takes cannot be answered in two places (#780).
+    /// Applied for every block on the way of the read, at any level, since
+    /// any of them may be where the value came from
+    /// (`Known::marked_below`); what the value names is taken from the last
+    /// level alone, by `Known::load_into`.
+    ///
+    /// **`lost` is given as `lost_read`, not as `lost`**: a value read out
+    /// of memory a lost value may be in may be that value, and is made lost
+    /// only if a lost value goes (`Known::lost_may_be_gone`). Measured: a
+    /// load given `lost` itself doubts every walk of a list built in a loop
+    /// with nothing freed, whose head is lost every turn,
+    /// `a_list_built_in_a_loop_with_nothing_freed_is_walked_without_a_doubt`.
+    /// Every field is named, so a field added is `error[E0027]` here until
+    /// it says what a load takes of it.
+    pub(super) fn taken_by_a_load(&self, held: &mut Held) {
+        let Held {
+            stale_read,
+            unreplaced_read,
+            lost,
+            names: _,
+            // What it names is the last level's, and its bounds are
+            // `Known::memory_levels`', which reads every level.
+            believed: _,
+            contents_at_most: _,
+            // Read by `Allocations::reads_caller_memory`, which is the
+            // caller's answer to `load_into`.
+            from_caller: _,
+            // Not recorded in memory. See `Held::absorb`.
+            lost_read: _,
+            freed: _,
+            writes_elsewhere: _,
+            offset: _,
+            loaded: _,
+            named_at_read: _,
+            foreign: _,
+            returned_by: _,
+            fresh_read: _,
+            inner_address: _,
+            element: _,
+            array_edge: _,
+            stored_through: _,
+        } = self;
+        // Read out of an allocation that may hold one that is gone. See
+        // ADR-0045.
+        if *stale_read {
+            held.lost = true;
+            held.stale_read = true;
+        }
+        // Read out of an allocation that may hold a slot a call could not
+        // replace, which is asked where it is handed by address and nowhere
+        // else. See ADR-0047.
+        if *unreplaced_read {
+            held.unreplaced_read = true;
+        }
+        // Read out of an allocation that may hold a lost value, which is made
+        // lost if a lost value goes. See `Held::lost_read`.
+        if *lost {
+            held.lost_read = true;
+        }
+    }
+
     /// A pointer stored there may also hold `site`.
     pub(super) fn name_site(&mut self, site: Site) {
         self.names.set(Loc::Heap(site));
