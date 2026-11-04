@@ -184,10 +184,11 @@ pub(super) struct Landing {
 /// place cannot mark a block written and has `Init::may_write` instead,
 /// `E0308` otherwise. A store once wrote for certain what code this check
 /// cannot read may name beside its landing, and its one container found
-/// through a caller's memory, and `**t = y;` that could not reach `*m` left
-/// it read in silence (#778). Memory code this check cannot read is handed
-/// is believed written by that code, a belief at the boundary named apart,
-/// `Known::believed_written_by_unknown_code`. See ADR-0057.
+/// through a caller's memory, so that `**t = y;`, which could not reach
+/// `*m`, left `*m` read in silence (#778). Memory handed to code this check
+/// cannot read is believed written by that code: a belief at the boundary,
+/// named apart as `Known::believed_written_by_unknown_code`, and no
+/// `Certain`. See ADR-0057.
 pub(super) struct Certain(Site);
 
 impl Certain {

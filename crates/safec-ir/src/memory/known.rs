@@ -70,9 +70,11 @@ pub(super) struct Known {
     /// Per site, whether it is an allocation `malloc` or `aligned_alloc` made
     /// and nothing has written since: [`Init::Unwritten`] on every path, and
     /// its contents are indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2). Joined
-    /// by [`Init::joined`], and written only by [`Self::certainly_written`],
-    /// [`Self::believed_written_by_unknown_code`] and [`Self::written_all`],
-    /// in the direction that can only silence. A pointer read out of it is
+    /// by [`Init::joined`]. Marked written by [`Self::certainly_written`],
+    /// where a store proved one place, by
+    /// [`Self::believed_written_by_unknown_code`], at the boundary, and by
+    /// [`Self::written_all`]; every other door weakens it with
+    /// `Init::may_write` or `Init::doubt`, or restores what it was. A pointer read out of it is
     /// reported where it is read, and is
     /// [`Held::fresh_read`](super::parts::Held::fresh_read). Any store clears
     /// it, a store of an indeterminate pointer included; a free does not.
@@ -1843,14 +1845,16 @@ impl Known {
 
     /// **Exposed memory is believed written** by whatever code this check
     /// cannot read may do with it: `p = malloc(n); fill(p); q = *p;` is the
-    /// output-parameter idiom, and reading it as maybe unwritten doubted it
-    /// and thirty-five corpus cases, measured. A belief at the boundary, not
+    /// output-parameter idiom, and reading it as maybe unwritten, `may_write`
+    /// in place of this, doubted it across the corpus, measured. A belief at
+    /// the boundary, not
     /// a landing this check proved, so it does not take a
     /// [`Certain`] and is named apart from
     /// [`Self::certainly_written`], by the author's decision (#778).
     fn believed_written_by_unknown_code(&mut self, site: Site) {
         self.block_init[site] = Init::Written;
     }
+
     /// Whether `local` holds a pointer read out of fresh memory that nothing
     /// may have replaced: [`Held::fresh_read`](super::parts::Held::fresh_read),
     /// and not a local whose address escaped, since code this check cannot
@@ -2253,10 +2257,11 @@ impl Known {
     /// points at is one of those: its address was taken to point at it. See
     /// ADR-0039.
     ///
-    /// **An escaped local that may hold a pointer read out of memory, or one
-    /// it lost, reaches what is stored**, since a callee handed its address can
-    /// read that pointer out of it and nothing here names what it is. See
-    /// ADR-0040.
+    /// **An escaped local that may hold a pointer read out of memory, one it
+    /// lost, or one a call this check cannot read wrote, reaches what is
+    /// stored**, since a callee handed its address can read that pointer out
+    /// of it and nothing here names what it is: `Beyond::unrecorded_address`.
+    /// The third moved no case when it was added, measured. See ADR-0040.
     pub(super) fn reach_of(&self, named: impl Iterator<Item = Site>) -> Vec<Site> {
         let mut reach: Vec<Site> = named.collect();
         let mut unnamed = false;

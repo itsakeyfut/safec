@@ -206,13 +206,10 @@ impl Allocations<'_> {
                         // y;` through a parameter that cannot reach `*m` left
                         // `*m` read in silence where it was `SC0411` without
                         // the store (#778).
-                        let certain = landing.certain();
-                        let certain_site = certain.as_ref().map(Certain::site);
                         for site in may_land {
-                            if Some(site) != certain_site {
-                                value.block_init[site].may_write();
-                            }
+                            value.block_init[site].may_write();
                         }
+                        let certain = landing.certain();
                         let uncertain = certain.is_none();
                         if let Some(at) = certain {
                             value.certainly_written(at);
@@ -637,15 +634,16 @@ impl Allocations<'_> {
     ///
     /// Mutation: weaken `all` to `any` over the sites, and
     /// `a_pointer_read_through_either_of_two_allocations_one_written_is_doubted`
-    /// is reported as certain. **The `loaded` clause is held** by
+    /// is reported as certain. **`loaded`, among the marks
+    /// `Beyond::unrecorded_address` asks, is held** by
     /// `a_pointer_no_call_can_reach_is_not_written_by_a_store_this_check_cannot_place`,
     /// which gains a false certain report without it, and by
     /// `a_pointer_read_out_of_memory_that_names_a_block_nothing_wrote_is_doubted_where_read_through`,
     /// whose doubt becomes certain: such a pointer is a doubt, in
-    /// `reads_partly` (#728). **The
-    /// `lost` and `foreign` clauses have no case**, measured: a local loses
-    /// its sites where it is made lost, and no program found gives a foreign
-    /// pointer a fresh site that an exposure has not already cleared.
+    /// `reads_partly` (#728). **`lost` and `foreign` there have no case**,
+    /// measured: a local loses its sites where it is made lost, and no
+    /// program found gives a foreign pointer a fresh site that an exposure
+    /// has not already cleared.
     pub(super) fn reads_fresh(&self, function: &Function, source: &Place, value: &Known) -> bool {
         let through = &value.points_to[source.local];
         source.projection.as_slice() == [Projection::Deref]
@@ -719,8 +717,10 @@ impl Allocations<'_> {
 
     /// Whether a library copy into `dest` of `bytes` replaces the one local
     /// it lands in: one exact local and nothing else
-    /// (`Landing::lands_in_one_local`), and a constant length covering all
-    /// of it, as a store's certain write replaces its target (ADR-0028).
+    /// (`Landing::lands_in_one_local`), and a constant length of exactly its
+    /// size, as a store's certain write replaces its target (ADR-0028). Not
+    /// a longer one, which writes past the local and is the bounds rule's to
+    /// report.
     /// Anything less is a union, since a copy may write part of a pointer,
     /// or none (#395). **One answer for the value the copy leaves and for
     /// whether it is marked as a call's write**, so that the two cannot

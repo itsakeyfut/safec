@@ -3138,20 +3138,20 @@ impl Analysis for Allocations<'_> {
                             // ones the destination's address edges name, or,
                             // for a place of dereferences, the locals the
                             // level above may be, as for a store's deep
-                            // targets. By union, as those are given, since `n`
-                            // may copy part of a pointer and a replacement
-                            // would prove things about a value nobody wrote
-                            // (#395). See ADR-0039 and ADR-0040.
-                            let targets = landing.targets.clone();
+                            // targets. How it lands in them is below. See
+                            // ADR-0039 and ADR-0040.
+                            //
                             // **Whether what it copies may be a pointer that
                             // reaches an array only by #639's rule** is the
-                            // load's `array_edge`: into memory it marks the
-                            // arrays it reaches, `Known::stored_in_part`, below;
-                            // into a local's address the local carries it, as a
-                            // store through the address gives it. Without either
-                            // `e = m + 1; memcpy(box, &e, 8); f = box[0]; *f =
-                            // &x;`, and the same into `&f`, left `m[0]` believed
-                            // written where the store form is doubted.
+                            // load's `array_edge`, carried into a local with the
+                            // rest of the value, as a store through the address
+                            // gives it, and into memory as the arrays it marks
+                            // where it is poured, `Known::stored_in_part`.
+                            // Without either `e = m + 1; memcpy(box, &e, 8); f =
+                            // box[0]; *f = &x;`, and the same into `&f`, left
+                            // `m[0]` believed written where the store form is
+                            // doubted.
+                            let targets = landing.targets.clone();
                             // **Believed as a load at the local's type would be**,
                             // `s = *(T **)&v`: that type, no wider than the
                             // source's memory recorded, as `believed_read`
@@ -3166,12 +3166,11 @@ impl Analysis for Allocations<'_> {
                                     &self.local_sizes,
                                 )
                                 .at(0);
-                            //
                             // **And it replaces the local where it is the
                             // store's certain one**, as `s = v;` does: one
                             // local and nothing else (`Landing::lands_in_one_local`),
-                            // and a length that is a constant covering all of
-                            // it. Anywhere else by union, since `n` may copy
+                            // and a constant length of exactly its size. Anywhere
+                            // else by union, since `n` may copy
                             // part of a pointer, or none, and a replacement
                             // would prove things about a value nobody wrote
                             // (#395). By union alone, the local's own null was

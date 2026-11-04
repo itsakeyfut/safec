@@ -1849,9 +1849,9 @@ impl Contents {
 /// Every mark of a [`Held`] beside the sets of what it names, for
 /// [`Held::from_marks`]. **No `Default`**, so a door that builds a value
 /// names each one, and one it leaves out is not its precise default in
-/// silence: the copy into a local's address once set seven marks and not
-/// `element`, and wrote the whole array (#706), and the store's landing did
-/// the same (#705). See [`Held`] for what each mark means.
+/// silence: the copy into a local's address set seven marks and not
+/// `element`, so its write is of the whole array (#706), and the store's
+/// landing did the same (#705). See [`Held`] for what each mark means.
 pub(super) struct Marks {
     pub(super) lost: bool,
     pub(super) freed: Option<Freeing>,
@@ -1881,9 +1881,11 @@ pub(super) struct Marks {
 /// value may be an address this function never recorded, which
 /// [`Beyond::unrecorded_address`] asks; `from_caller`, `stale_read`,
 /// `lost_read` and `unreplaced_read` say where what it names came from, and
-/// [`Beyond::is_nothing`] asks all seven, for a reader that has to know the
-/// value names exactly its sites. Each question names every mark, `_` for one
-/// it does not read, so a mark added is `error[E0027]` in each. See ADR-0063.
+/// [`Beyond::is_nothing`] asks whether any of the seven is set, for a reader
+/// that has to know the value names exactly its sites. Every place that reads
+/// a mark names every mark, `_` for one it does not read, so a mark added is
+/// `error[E0063]` where [`Held::beyond`] builds it and `error[E0027]` where it
+/// is read. See ADR-0063.
 pub(super) enum Beyond {
     /// It names exactly what its sites and edges say.
     Nothing,
@@ -1930,9 +1932,8 @@ impl Beyond {
 
     /// Whether the value may be an address this function never recorded:
     /// lost, read out of memory, or written by a call this check cannot
-    /// read. Not where it came from: a value read out of a caller's memory
-    /// is `loaded` already, and the provenance marks are the free's and the
-    /// load's to ask.
+    /// read. Not where what it names came from, which the provenance marks
+    /// say and a reader asks of them itself.
     pub(super) fn unrecorded_address(&self) -> bool {
         match self {
             Beyond::Nothing => false,
