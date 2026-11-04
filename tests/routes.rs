@@ -2267,6 +2267,18 @@ fn a_route_is_as_certain_as_its_plain_store() {
     );
 }
 
+/// Whether `NOT_WRITTEN` says, with a reason, that no program is written for
+/// `row`.
+fn excused(row: Row) -> bool {
+    NOT_WRITTEN.iter().any(|unwritten| {
+        !unwritten.why.is_empty()
+            && unwritten.route == row.route
+            && unwritten.depth.is_none_or(|depth| depth == row.depth)
+            && unwritten.belief.is_none_or(|belief| belief == row.belief)
+            && unwritten.shape.is_none_or(|shape| shape == row.shape)
+    })
+}
+
 /// The table is every combination of its axes, less what `NOT_WRITTEN` says
 /// cannot be written, once each, and each row's name is spelled from its axes,
 /// so that a row left out is a failure rather than a gap and a name cannot
@@ -2275,15 +2287,6 @@ fn a_route_is_as_certain_as_its_plain_store() {
 /// Mutation: delete a row from `routes!`. This fails, naming it.
 #[test]
 fn the_matrix_is_every_combination_of_its_axes() {
-    let excused = |row: Row| {
-        NOT_WRITTEN.iter().any(|unwritten| {
-            !unwritten.why.is_empty()
-                && unwritten.route == row.route
-                && unwritten.depth.is_none_or(|depth| depth == row.depth)
-                && unwritten.belief.is_none_or(|belief| belief == row.belief)
-                && unwritten.shape.is_none_or(|shape| shape == row.shape)
-        })
-    };
     let mut missing = vec![];
     for belief in BELIEFS {
         for route in ROUTES {
@@ -2495,7 +2498,9 @@ fn the_matrix_answers_what_was_blessed() {
 /// once the summary is blessed, so that blessing it does not accept it.
 ///
 /// Mutation: in `tests/routes.expected`, change `width_store_d1_both`'s
-/// `hazard=1` to `hazard=0`; this fails.
+/// `hazard=1` to `hazard=0`; this fails. Mutation: pair each row with
+/// the row at `Depth::D0` rather than `Depth::D1`; this fails, naming a row
+/// paired with itself.
 #[test]
 fn a_route_answers_alike_at_depth_zero_and_one() {
     let summary = std::fs::read_to_string(expected_path())
@@ -2520,15 +2525,22 @@ fn a_route_answers_alike_at_depth_zero_and_one() {
     let mut pairs = 0;
     let mut parted = vec![];
     for &(near, row) in ROWS.iter().filter(|(_, row)| row.depth == Depth::D0) {
-        let Some(&(far, _)) = ROWS.iter().find(|(_, other)| {
-            *other
-                == Row {
-                    depth: Depth::D1,
-                    ..row
-                }
-        }) else {
+        let twin = Row {
+            depth: Depth::D1,
+            ..row
+        };
+        // **A row with no twin is one `NOT_WRITTEN` excuses**, not one this
+        // skips: `width_call_deep_d0_both` is written at one depth only, and
+        // says so there.
+        let Some(&(far, found)) = ROWS.iter().find(|(_, other)| *other == twin) else {
+            assert!(
+                excused(twin),
+                "`{near}` has no row at depth 1 and nothing excuses it"
+            );
             continue;
         };
+        // And it is a row one level below, not `near` itself.
+        assert_eq!(found.depth, Depth::D1, "`{near}` is paired with `{far}`");
         pairs += 1;
         let (here, there) = (exits(near), exits(far));
         if here != there {
