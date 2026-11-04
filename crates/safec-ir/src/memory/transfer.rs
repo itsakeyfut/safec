@@ -512,6 +512,9 @@ impl Allocations<'_> {
             pointer: _,
             deep: _,
             kind: _,
+            // Whether a write is certain is the unwritten belief's question,
+            // `Landing::certain`; contents are poured where it may land.
+            through_unrecorded: _,
         } = landing;
         let unplaced = landing.unplaced();
         let unnamed = landing.unnamed(value);
@@ -1973,12 +1976,26 @@ impl Analysis for Allocations<'_> {
                 // follow at all, and so is a write through any other
                 // projection.
                 let one_step = operation.place.projection.as_slice() == [Projection::Deref];
-                let pointer = operation.place.local;
                 // What was unwritten before this store, for a local it may
                 // have written past. See `Allocations::written_past_its_end`.
                 let unwritten_before = value.unwritten_locals();
+                // Where it lands, before anything here writes: the one
+                // description of this write the unwritten belief applies and
+                // the replacement below reads (#778).
+                let deep = derefs(&operation.place);
+                let before = self.landing(
+                    value,
+                    operation.place.local,
+                    deep,
+                    one_step,
+                    if deep == 0 {
+                        StoreKind::Direct
+                    } else {
+                        StoreKind::Through { derefs: deep }
+                    },
+                );
                 let targets = if one_step {
-                    value.written_through(operation.place.local)
+                    before.targets.clone()
                 } else {
                     Vec::new()
                 };
@@ -1987,18 +2004,14 @@ impl Analysis for Allocations<'_> {
                 // ADR-0028's condition, read here and at the replacement
                 // further down: one is about what the write may have reached
                 // *besides* its target and the other about what it does to
-                // that target, and the two have to be the same question.
-                // Spelled twice they are one rule in two places, and those
-                // drift apart.
+                // that target, and the two have to be the same question, so
+                // both ask `Landing::lands_in_one_local`.
                 //
                 // A deeper projection is never certain, and that is the
-                // condition above rather than an extra clause: `written_through`
+                // condition there rather than an extra clause: `written_through`
                 // answers about the local the place starts at, so for `**ppp`
                 // it answers about `*ppp` and names the wrong thing.
-                let certain = one_step
-                    && targets.len() == 1
-                    && !value.points_to[pointer].writes_elsewhere
-                    && !value.escaped[pointer];
+                let certain = before.lands_in_one_local(value);
 
                 // **Any write through a projection that is not the certain one
                 // may have landed in an escaped local.** Not only the one this
@@ -2022,9 +2035,7 @@ impl Analysis for Allocations<'_> {
                     value,
                     Wrote::Store {
                         place: &operation.place,
-                        one_step,
-                        certain,
-                        targets: &targets,
+                        landing: &before,
                         unwritten_before: &unwritten_before,
                     },
                 );

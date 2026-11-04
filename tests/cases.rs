@@ -404,10 +404,19 @@ cases! {
         // and its form through two dereferences are doubted (#726).
         a_store_this_check_cannot_place_leaves_an_allocation_nothing_reaches_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And it may write a block a local whose address such code holds
-        // points at, so that block is not reported unwritten. Mutation: count
-        // only what is reachable from exposed memory; this is `SC0411`. Found
-        // by review.
+        // points at, so that block is not reported unwritten for certain;
+        // nor is it written for certain, since the store may have landed
+        // elsewhere, so a read of it is a doubt (#778). Mutation: count only
+        // what is reachable from exposed memory; this is a certain `SC0411`.
+        // Found by review. The second is the same through a parameter the
+        // store cannot be shown to reach `m` by, which was silent: `*s = m;`
+        // puts `m` in every block such code reaches, `t`'s among them, so the
+        // landing's one container is `m` and is still no proof. Mutation:
+        // write for certain what such code may name beside the landing in
+        // `initialised_by`, or let `Landing::certain` take a container found
+        // through a caller's memory; the second is silent either way.
         a_store_this_check_cannot_place_may_write_a_block_a_kept_local_points_at: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The cost the rule still has: a write guarded by a null test of the
         // allocation's own pointer, with a return where it is null, is
         // doubted, since the null arm leaves the site as it was. #723.

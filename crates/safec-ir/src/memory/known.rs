@@ -15,6 +15,7 @@ use super::parts::{
     AS_TYPED, Contents, Extent, Held, Init, Inits, Levels, Offset, PendingRead, Reached, Read,
     ReadKey, Realloced, SiteState, read_key,
 };
+use super::store::Certain;
 use super::{LostReason, named};
 use crate::reads::derefs;
 use crate::source::inside;
@@ -69,8 +70,9 @@ pub(super) struct Known {
     /// Per site, whether it is an allocation `malloc` or `aligned_alloc` made
     /// and nothing has written since: [`Init::Unwritten`] on every path, and
     /// its contents are indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2). Joined
-    /// by [`Init::joined`], and written only by [`Self::written`] and
-    /// [`Self::written_all`], in the direction that can only silence. A pointer read out of it is
+    /// by [`Init::joined`], and written only by [`Self::certainly_written`],
+    /// [`Self::believed_written_by_unknown_code`] and [`Self::written_all`],
+    /// in the direction that can only silence. A pointer read out of it is
     /// reported where it is read, and is
     /// [`Held::fresh_read`](super::parts::Held::fresh_read). Any store clears
     /// it, a store of an indeterminate pointer included; a free does not.
@@ -1843,16 +1845,26 @@ impl Known {
         self.noticed(sources, by, &routes);
         for site in sites {
             self.exposed[site] = true;
-            self.written(site);
+            self.believed_written_by_unknown_code(site);
         }
         // One closure, shared with what a pending read is told, so that the
         // two cannot disagree about what an exposed allocation reaches.
         for site in self.reachable_now() {
             self.exposed[site] = true;
-            self.written(site);
+            self.believed_written_by_unknown_code(site);
         }
     }
 
+    /// **Exposed memory is believed written** by whatever code this check
+    /// cannot read may do with it: `p = malloc(n); fill(p); q = *p;` is the
+    /// output-parameter idiom, and reading it as maybe unwritten doubted it
+    /// and thirty-five corpus cases, measured. A belief at the boundary, not
+    /// a landing this check proved, so it does not take a
+    /// [`Certain`] and is named apart from
+    /// [`Self::certainly_written`], by the author's decision (#778).
+    fn believed_written_by_unknown_code(&mut self, site: Site) {
+        self.block_init[site] = Init::Written;
+    }
     /// Whether `local` holds a pointer read out of fresh memory that nothing
     /// may have replaced: [`Held::fresh_read`](super::parts::Held::fresh_read),
     /// and not a local whose address escaped, since code this check cannot
@@ -1909,11 +1921,11 @@ impl Known {
             }
     }
 
-    /// Something may have written `site`, so its contents are no longer
-    /// known to be indeterminate. Exposed memory is written by whatever code
-    /// this check cannot read may do with it. See [`Self::block_init`].
-    pub(super) fn written(&mut self, site: Site) {
-        self.block_init[site] = Init::Written;
+    /// A write landed in this one allocation, so its contents are not
+    /// indeterminate on this path. Only a landing that proves one place can
+    /// ask, which is what [`Certain`] is. See [`Self::block_init`].
+    pub(super) fn certainly_written(&mut self, at: Certain) {
+        self.block_init[at.site()] = Init::Written;
     }
 
     /// Something may have written any allocation: a write this check cannot

@@ -16,21 +16,20 @@ use super::built::replaced_by;
 use super::index::{Idx, LocalIdx, Site, Table};
 use super::known::Known;
 use super::parts::{Extent, Init, Offset};
-use super::store::StoreKind;
+use super::store::{Certain, Landing, StoreKind};
 use super::transfer::CopiedPointers;
 
 /// What [`Allocations::initialised_by`] is told of one write.
 pub(super) enum Wrote<'a> {
     /// An assignment to `place`, any assignment: one with no dereference
-    /// changes nothing here, and the arm asks that itself. `targets` are the locals one exact
-    /// dereference may land in, and `certain` whether it lands in one alone
-    /// (ADR-0028). `unwritten_before` is `Known::local_init` as it was before
-    /// the store, for a local it may write past.
+    /// changes nothing here, and the arm asks that itself. `landing` is where
+    /// it lands, as the store computed it before writing, the one
+    /// description of a write both doors read (#778). `unwritten_before` is
+    /// `Known::local_init` as it was before the store, for a local it may
+    /// write past.
     Store {
         place: &'a Place,
-        one_step: bool,
-        certain: bool,
-        targets: &'a [LocalIdx],
+        landing: &'a Landing,
         unwritten_before: &'a Table<LocalIdx, bool>,
     },
     /// A library copy handed `dest` first and `source` second, which
@@ -100,12 +99,11 @@ impl Allocations<'_> {
         match wrote {
             Wrote::Store {
                 place,
-                one_step,
-                certain,
-                targets,
+                landing,
                 unwritten_before,
             } => {
                 let pointer = place.local;
+                let one_step = landing.one_step;
                 // **A write through a pointer may write an allocation**, of
                 // any type, and what it wrote is no longer indeterminate.
                 // Placed only for one dereference through a pointer that
@@ -138,12 +136,13 @@ impl Allocations<'_> {
                         // it names counts as one of them**: `p = c ? m : &loc;
                         // *p = x;` may have written `loc` and missed `m`
                         // (#739).
-                        let several = sites.len() + edges.len() > 1;
-                        for &site in &sites {
-                            if several {
-                                value.block_init[site].may_write();
-                            } else {
-                                value.written(site);
+                        // One site and no edge is the landing's one place.
+                        match landing.certain() {
+                            Some(at) => value.certainly_written(at),
+                            None => {
+                                for &site in &sites {
+                                    value.block_init[site].may_write();
+                                }
                             }
                         }
                         // **Through a pointer moved off an array, an element
@@ -189,14 +188,6 @@ impl Allocations<'_> {
                         // as reachable only refused that correct program with
                         // a certain `SC0411`. Found by review. See ADR-0044 and
                         // ADR-0057.
-                        let deep = derefs(place);
-                        let landing = self.landing(
-                            value,
-                            place.local,
-                            deep,
-                            one_step,
-                            StoreKind::Through { derefs: deep },
-                        );
                         let mut may_land: BTreeSet<Site> =
                             landing.containers.iter().copied().collect();
                         may_land.extend(value.sites_named_by_unknown_code());
@@ -208,28 +199,38 @@ impl Allocations<'_> {
                         // the pointer is: #726's decision is of a store that
                         // certainly reaches its one block, and a landing of two
                         // reaches neither certainly, by the user's decision.
-                        let several = landing.containers.len() + landing.targets.len() > 1;
+                        //
+                        // **Only the landing's one place is written**: what
+                        // code this check cannot read may name beside it may
+                        // have been written by this store or not, so `**t =
+                        // y;` through a parameter that cannot reach `*m` left
+                        // `*m` read in silence where it was `SC0411` without
+                        // the store (#778).
+                        let certain = landing.certain();
+                        let certain_site = certain.as_ref().map(Certain::site);
                         for site in may_land {
-                            if several && landing.containers.contains(&site) {
+                            if Some(site) != certain_site {
                                 value.block_init[site].may_write();
-                            } else {
-                                value.written(site);
                             }
+                        }
+                        let uncertain = certain.is_none();
+                        if let Some(at) = certain {
+                            value.certainly_written(at);
                         }
                         // And what it points at was written, so that a read
                         // back through it is of what was stored, as the
                         // one-step store's is above: without it the lowering's
                         // own read of `*v` after `*v = x;` was doubted. See
                         // `Held::stored_through`.
-                        if several && place.projection.as_slice() == [Projection::Deref] {
+                        if uncertain && place.projection.as_slice() == [Projection::Deref] {
                             value.points_to[place.local].stored_through = true;
                         }
                     }
                 }
-                if !place.projection.is_empty() && !certain {
+                if !place.projection.is_empty() && !landing.lands_in_one_local(value) {
                     replaced_by(self.unit, function, place, value);
                     if one_step && value.points_to[pointer].array_edge {
-                        for &target in targets {
+                        for &target in &landing.targets {
                             self.written_past_its_end(function, value, target, unwritten_before);
                         }
                     }
