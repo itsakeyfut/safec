@@ -975,7 +975,7 @@ impl Allocations<'_> {
         {
             return held
                 .sites()
-                .flat_map(|container| known.contents[container].inside.ones())
+                .flat_map(|container| known.contents[container].sites_inside())
                 .collect();
         }
         known.stored()
@@ -2294,16 +2294,15 @@ impl Analysis for Allocations<'_> {
                     // (ADR-0040).
                     let mut poured = Contents::none(value.points_to.len());
                     for &site in &carried {
-                        poured.inside.set(site);
+                        poured.hold_site(site);
                     }
                     // And the locals whose address it carries, which are no
                     // site. See ADR-0045.
                     for target in written.locals() {
-                        poured.inside_locals.set(target);
+                        poured.hold_local(target);
                     }
                     let poured = Contents {
                         inside: poured.inside,
-                        inside_locals: poured.inside_locals,
                         stored_at_most: stored,
                         stale: written.stale_read,
                         unreplaced: written.unreplaced_read,
@@ -3226,12 +3225,12 @@ impl Analysis for Allocations<'_> {
                             ));
                             let mut poured = Contents::none(value.points_to.len());
                             for &site in &copied {
-                                poured.inside.set(site);
+                                poured.hold_site(site);
                             }
                             // And the locals whose address it copies. See
                             // ADR-0045.
                             for &target in &copied_locals {
-                                poured.inside_locals.set(target);
+                                poured.hold_local(target);
                             }
                             let in_part: Vec<LocalIdx> = if read.array_edge {
                                 copied_locals.iter().copied().collect()
@@ -3242,7 +3241,6 @@ impl Analysis for Allocations<'_> {
                             // `Known::pour`.
                             let poured = Contents {
                                 inside: poured.inside,
-                                inside_locals: poured.inside_locals,
                                 stored_at_most: copied_bound,
                                 stale: read.stale_read,
                                 unreplaced: read.unreplaced_read,
@@ -3644,7 +3642,7 @@ impl Analysis for Allocations<'_> {
                 }
                 for &container in &stored {
                     for &site in &stored {
-                        value.contents[container].inside.set(site);
+                        value.contents[container].hold_site(site);
                     }
                 }
                 // **What it wrote there it handed over**, as a callee's

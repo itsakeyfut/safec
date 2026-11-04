@@ -437,13 +437,11 @@ pub(super) fn slots_from(
             let Some(read_as) = read_as else {
                 if !untyped_sites.contains(&site) {
                     untyped_sites.push(site);
-                    sites.extend(known.contents[site].inside.ones().map(|next| (next, None)));
+                    sites.extend(known.contents[site].sites_inside().map(|next| (next, None)));
                     locals.extend(
                         function
                             .locals()
-                            .filter(|local| {
-                                known.contents[site].inside_locals.get(LocalIdx::of(local))
-                            })
+                            .filter(|local| known.contents[site].holds_local(LocalIdx::of(local)))
                             .map(|next| (next, None)),
                     );
                 }
@@ -454,11 +452,15 @@ pub(super) fn slots_from(
             }
             asked_sites.push((site, read_as));
             let below = pointee(analysis, read_as);
-            sites.extend(known.contents[site].inside.ones().map(|next| (next, below)));
+            sites.extend(
+                known.contents[site]
+                    .sites_inside()
+                    .map(|next| (next, below)),
+            );
             locals.extend(
                 function
                     .locals()
-                    .filter(|local| known.contents[site].inside_locals.get(LocalIdx::of(local)))
+                    .filter(|local| known.contents[site].holds_local(LocalIdx::of(local)))
                     .map(|next| (next, below)),
             );
         } else {

@@ -514,7 +514,7 @@ impl Known {
         let through_memory: BTreeSet<Site> = sites
             .iter()
             .copied()
-            .flat_map(|container| self.contents[container].inside.ones().collect::<Vec<_>>())
+            .flat_map(|container| self.contents[container].sites_inside().collect::<Vec<_>>())
             .collect();
         let through_address: BTreeSet<Site> = locals
             .iter()
@@ -558,7 +558,7 @@ impl Known {
             let in_memory: BTreeSet<Site> = frontier
                 .0
                 .iter()
-                .flat_map(|&container| self.contents[container].inside.ones().collect::<Vec<_>>())
+                .flat_map(|&container| self.contents[container].sites_inside().collect::<Vec<_>>())
                 .collect();
             let (next_sites, next_locals) = self.level_below(&frontier.0, &frontier.1);
             let new_sites: BTreeSet<Site> = next_sites.difference(&below).copied().collect();
@@ -745,7 +745,7 @@ impl Known {
     }
 
     /// One dereference further: what the allocations may contain
-    /// ([`Contents::inside`], [`Contents::inside_locals`]) and what the locals hold,
+    /// ([`Contents::inside`], [`Contents::locals_inside`]) and what the locals hold,
     /// their sites and the locals their own address edges name.
     ///
     /// **A local is stepped through as an allocation is**, the read half of
@@ -764,8 +764,8 @@ impl Known {
         let mut next_sites = BTreeSet::new();
         let mut next_locals = BTreeSet::new();
         for &container in sites {
-            next_sites.extend(self.contents[container].inside.ones());
-            next_locals.extend(self.contents[container].inside_locals.ones());
+            next_sites.extend(self.contents[container].sites_inside());
+            next_locals.extend(self.contents[container].locals_inside());
         }
         for &held in locals {
             next_sites.extend(self.points_to[held].sites());
@@ -816,7 +816,7 @@ impl Known {
             // store there recorded: `*a = &x;` through a load `a` puts
             // `x` where `t = *b;` through another load may read it.
             for &site in &reached {
-                locals.extend(self.contents[site].inside_locals.ones());
+                locals.extend(self.contents[site].locals_inside());
             }
             sites.extend(reached);
         }
@@ -1054,7 +1054,7 @@ impl Known {
         let mut closed: BTreeSet<Site> = sites.iter().copied().collect();
         let mut pending = sites;
         while let Some(site) = pending.pop() {
-            for held in self.contents[site].inside.ones() {
+            for held in self.contents[site].sites_inside() {
                 if closed.insert(held) {
                     pending.push(held);
                 }
@@ -1659,7 +1659,6 @@ impl Known {
             // See ADR-0045.
             inside: _,
             // Kept, as `inside` is. See ADR-0045.
-            inside_locals: _,
             // Kept, as `inside` is: the slots of the new allocation are not
             // told apart from the old one's, and a bound kept only doubts.
             stored_at_most: _,
@@ -1728,7 +1727,7 @@ impl Known {
         // call that may free it, which built where `main` refused it. Found by
         // review; `a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held`.
         for row in contents.iter_mut() {
-            if gone && row.inside.get(site) {
+            if gone && row.holds_site(site) {
                 row.stale = true;
             }
         }
@@ -2125,7 +2124,7 @@ impl Known {
                 continue;
             }
             for container in self.contents.indices() {
-                if self.contents[container].inside.get(site) {
+                if self.contents[container].holds_site(site) {
                     self.contents[container].unreplaced = true;
                 }
             }
@@ -2158,7 +2157,7 @@ impl Known {
     /// silence: `grow(*k); grow(*k);` is asked at the second call.
     ///
     /// **Not what memory the call can reach may hold**, for the same reason:
-    /// what a slot was given stays in [`Contents::inside_locals`] after the slot
+    /// what a slot was given stays in [`Contents::locals_inside`] after the slot
     /// is given something else, so `*t = &a; *t = 0; stash(t);` exempted `a`
     /// though `stash` saw only null. The in-out idiom through memory a call
     /// can reach is asked for it. See ADR-0047.
@@ -2333,7 +2332,7 @@ impl Known {
             }
         }
         for contents in &self.contents {
-            for site in contents.inside.ones() {
+            for site in contents.sites_inside() {
                 held[site] = true;
             }
         }
@@ -2375,7 +2374,7 @@ impl Known {
     pub(super) fn stored(&self) -> Vec<Site> {
         self.contents
             .indices()
-            .filter(|&held| self.contents.iter().any(|row| row.inside.get(held)))
+            .filter(|&held| self.contents.iter().any(|row| row.holds_site(held)))
             .collect()
     }
 

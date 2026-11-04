@@ -1479,14 +1479,13 @@ mod tests {
             let solution = crate::dataflow::solve(&analysis, function, &Cfg::of(function));
             let known = solution.value(at).expect("the last block is reached");
             known.contents[index::Site::of(index::LocalIdx::of(container))]
-                .inside_locals
-                .get(index::LocalIdx::of(self.x))
+                .holds_local(index::LocalIdx::of(self.x))
         }
     }
 
     /// A local's address stored on either arm is there where the arms meet.
     ///
-    /// Mutation: have the join leave `inside_locals` as the first arm to
+    /// Mutation: have the join leave the locals in `Contents::inside` as the first arm to
     /// arrive had it. One of the two fails, whichever arm the walk takes first.
     #[test]
     fn a_locals_address_stored_on_either_arm_is_in_memory_where_they_meet() {
@@ -1531,7 +1530,7 @@ mod tests {
     /// What a `realloc` returns may hold every local's address the old
     /// allocation held.
     ///
-    /// Mutation: drop the union into the new site's `inside_locals`, or copy
+    /// Mutation: drop the union into the locals in the new site's `Contents::inside`, or copy
     /// the old site's `inside` row into it instead. This fails.
     #[test]
     fn a_locals_address_stored_in_an_allocation_is_in_what_realloc_returns() {
@@ -1556,7 +1555,7 @@ mod tests {
     /// What `memcpy` copies into may hold every local's address the source
     /// held.
     ///
-    /// Mutation: have the copy leave the destination's `inside_locals` alone.
+    /// Mutation: have the copy leave the locals in the destination's `Contents::inside` alone.
     /// This fails.
     #[test]
     fn a_locals_address_stored_in_an_allocation_is_in_what_memcpy_copies_it_into() {

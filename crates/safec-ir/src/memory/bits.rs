@@ -8,7 +8,7 @@ use super::index::Idx;
 ///
 /// **What the memory check's square tables are made of**: [`Held::sites`],
 /// [`Held::locals`], [`Held::named_at_read`], [`Contents::inside`] and
-/// [`Contents::inside_locals`] each
+/// [`Contents::locals_inside`] each
 /// hold a bit per local for every local, and as `Vec<bool>` they spent a byte
 /// on each. Hand-written because this crate takes no dependencies
 /// (ADR-0011), and dense rather than a sorted list of indices so that its size
@@ -28,7 +28,7 @@ use super::index::Idx;
 /// [`Held::locals`]: super::parts::Held::locals
 /// [`Held::named_at_read`]: super::parts::Held::named_at_read
 /// [`Contents::inside`]: super::parts::Contents::inside
-/// [`Contents::inside_locals`]: super::parts::Contents::inside_locals
+/// [`Contents::locals_inside`]: super::parts::Contents::locals_inside
 ///
 /// **Kept by `I`**, a [`Site`](super::index::Site) or a
 /// [`LocalIdx`](super::index::LocalIdx), so that a set of sites cannot be

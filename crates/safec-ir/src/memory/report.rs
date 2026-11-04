@@ -1144,7 +1144,7 @@ fn say_leaving(
 /// stores were asked at the type they stored, and the receiver may read a
 /// wider one: `*m = c; use(pm);` with `m` a `void **` and `c` one `char` is
 /// asked what `m` holds, the objects the pointers stored there point at
-/// ([`Contents::inside`](super::parts::Contents::inside), [`Contents::inside_locals`](super::parts::Contents::inside_locals)) by their size. What the
+/// ([`Contents::inside`](super::parts::Contents::inside), [`Contents::locals_inside`](super::parts::Contents::locals_inside)) by their size. What the
 /// record does not hold is not asked by its record, since asking it would
 /// doubt every pointer to a parameter's memory handed on (#627); it is
 /// asked by what it is believed to hold instead, from the type the
@@ -1267,13 +1267,12 @@ fn contents_leaving(
             continue;
         };
         let extents: Vec<Extent> = known.contents[site]
-            .inside
-            .ones()
+            .sites_inside()
             .map(|held| known.extent[held].unwrap_or(Extent::AtLeast(0)))
             .chain(
                 function
                     .locals()
-                    .filter(|local| known.contents[site].inside_locals.get(LocalIdx::of(local)))
+                    .filter(|local| known.contents[site].holds_local(LocalIdx::of(local)))
                     .map(|held| {
                         analysis
                             .unit

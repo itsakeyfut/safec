@@ -584,7 +584,7 @@ pub(super) struct Held {
     /// **One of five tables square in the locals**, with [`Held::locals`],
     /// [`Held::named_at_read`],
     /// [`Contents::inside`] and
-    /// [`Contents::inside_locals`], and the
+    /// [`Contents::locals_inside`], and the
     /// value holds one for every block and edge. So they are [`Bits`], a bit a
     /// pair, where a `Vec<bool>` spent a byte. Measured on a loop per write
     /// over 100 allocating locals, 401 blocks of 702 locals, release build:
@@ -1755,7 +1755,10 @@ pub(super) struct Contents {
     /// cannot read: `*tab = p; log_line();` leaves `p` alone, because nothing
     /// exposed `tab`. Square in the locals, so a bit a pair, for the reason
     /// [`Held::sites`] gives. See ADR-0039.
-    pub(super) inside: Bits<Site>,
+    ///
+    /// **And the locals whose address a pointer stored there may be**, in the
+    /// same set: one kind of place (#779). What was said of them:
+    ///
     /// The locals whose address a pointer stored in that allocation
     /// may hold: [`Self::inside`] for what is not a site.
     ///
@@ -1766,7 +1769,7 @@ pub(super) struct Contents {
     /// a load out of the allocation carries the edges and a store two levels
     /// down lands in the local. A table of its own because a site and a local
     /// share an index. See ADR-0045.
-    pub(super) inside_locals: Bits<LocalIdx>,
+    pub(super) inside: Bits<Loc>,
     /// How many bytes a pointer stored there is believed to point at, at
     /// most, at level 0, and what each pointer stored there believed of its
     /// own memory at the levels below, with no bound where nothing recorded
@@ -1838,11 +1841,40 @@ pub(super) struct Contents {
 }
 
 impl Contents {
+    /// Every site a pointer stored here may hold.
+    pub(super) fn sites_inside(&self) -> impl Iterator<Item = Site> + '_ {
+        self.inside.ones().filter_map(Loc::site)
+    }
+
+    /// Every local whose address a pointer stored here may be.
+    pub(super) fn locals_inside(&self) -> impl Iterator<Item = LocalIdx> + '_ {
+        self.inside.ones().filter_map(Loc::local)
+    }
+
+    /// Whether a pointer stored here may hold `site`.
+    pub(super) fn holds_site(&self, site: Site) -> bool {
+        self.inside.get(Loc::Heap(site))
+    }
+
+    /// Whether a pointer stored here may be `local`'s address.
+    pub(super) fn holds_local(&self, local: LocalIdx) -> bool {
+        self.inside.get(Loc::Local(local))
+    }
+
+    /// A pointer stored here may also hold `site`.
+    pub(super) fn hold_site(&mut self, site: Site) {
+        self.inside.set(Loc::Heap(site));
+    }
+
+    /// A pointer stored here may also be `local`'s address.
+    pub(super) fn hold_local(&mut self, local: LocalIdx) {
+        self.inside.set(Loc::Local(local));
+    }
+
     /// Nothing recorded: no site, no local, no bound and no mark.
     pub(super) fn none(locals: usize) -> Self {
         Contents {
-            inside: Bits::new(locals),
-            inside_locals: Bits::new(locals),
+            inside: Bits::new(Loc::count(locals)),
             stored_at_most: Levels::default(),
             stale: false,
             unreplaced: false,
@@ -1861,7 +1893,6 @@ impl Contents {
     pub(super) fn absorbed(&mut self, other: &Contents) {
         let Contents {
             inside,
-            inside_locals,
             stored_at_most,
             stale,
             unreplaced,
@@ -1869,7 +1900,6 @@ impl Contents {
             from_caller,
         } = other;
         self.inside.union_with(inside);
-        self.inside_locals.union_with(inside_locals);
         self.stored_at_most.bound_by(stored_at_most);
         self.stale |= *stale;
         self.unreplaced |= *unreplaced;
