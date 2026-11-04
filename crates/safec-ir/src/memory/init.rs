@@ -306,7 +306,7 @@ impl Allocations<'_> {
                 // `Held::stored_through`, so that a read back through it is of
                 // the block it wrote. See
                 // `Known::block_init`.
-                let may_land: Option<(BTreeSet<Site>, bool, bool)> = match dest {
+                let may_land: Option<(BTreeSet<Site>, bool, bool, Option<Site>)> = match dest {
                     Some(Operand::Copy(dest))
                         if dest
                             .projection
@@ -340,7 +340,8 @@ impl Allocations<'_> {
                             && landing.targets.is_empty()
                             && dest.projection.is_empty()
                             && matches!(value.points_to[dest.local].offset, Offset::Zero);
-                        Some((set, several, alone))
+                        let certain = landing.certain().as_ref().map(Certain::site);
+                        Some((set, several, alone, certain))
                     }
                     // A destination that is no place keeps what the exposure
                     // says, as it did.
@@ -411,10 +412,10 @@ impl Allocations<'_> {
                 // place it writes, so it alone takes what the copy carries.
                 let lands_in_no_block = may_land
                     .as_ref()
-                    .is_none_or(|(blocks, _, _)| blocks.is_empty());
+                    .is_none_or(|(blocks, _, _, _)| blocks.is_empty());
                 let before = value.block_init.clone();
                 value.expose(self.sources, reach, Some(span));
-                if let Some((may_land, several, alone)) = may_land {
+                if let Some((may_land, several, alone, certain)) = may_land {
                     // **And only as far as its length writes a pointer
                     // whole**: a copy shorter than one writes no pointer in
                     // the block, so a block that was fresh is still fresh,
@@ -433,6 +434,18 @@ impl Allocations<'_> {
                         if !may_land.contains(&site) || unwritten {
                             value.block_init[site] = was;
                         } else {
+                            // **Only the landing's one place is written**, as a
+                            // store's is (#778): a block code this check cannot
+                            // read may name beside it may have been written by
+                            // the copy or not, and taking the exposure's belief
+                            // for it read `*m` in silence after `memcpy(*t, y,
+                            // 8);` through a parameter, where `**t = *y;` is
+                            // `SC0411`. A library copy is no code this check
+                            // cannot read.
+                            if Some(site) != certain {
+                                value.block_init[site] = was;
+                                value.block_init[site].may_write();
+                            }
                             if doubted && was.may_be_unwritten() {
                                 value.block_init[site].doubt();
                             }

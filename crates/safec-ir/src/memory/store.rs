@@ -17,6 +17,7 @@ use crate::source::Span;
 use super::allocations::Allocations;
 use super::index::{LocalIdx, Site};
 use super::known::Known;
+use super::parts::Held;
 use crate::reads::derefs;
 
 /// One write of a value into a place.
@@ -304,19 +305,31 @@ impl Allocations<'_> {
             Vec::new()
         };
         // The memory its containers were read out of: the pointer's own
-        // value at one dereference, and the level above them deeper down.
+        // value at one dereference, and the level above them deeper down,
+        // its blocks and the locals whose value it reads there.
         let held = &value.points_to[pointer];
-        let above: Vec<Site> = if deep > 2 {
-            value.stored_below(pointer, deep - 2).into_iter().collect()
+        let (above, above_locals): (Vec<Site>, Vec<LocalIdx>) = if deep > 2 {
+            let (sites, locals) = value.levels_below(pointer, deep - 2);
+            (sites.into_iter().collect(), locals.into_iter().collect())
         } else if deep == 2 {
-            value.sites_of(pointer).collect()
+            (
+                value.sites_of(pointer).collect(),
+                value.written_through(pointer),
+            )
         } else {
-            Vec::new()
+            (Vec::new(), Vec::new())
         };
+        // A local there is read as memory is: `p = *param; t = &p; **t = y;`
+        // takes `p`'s value, which may be what the caller stored, and its one
+        // recorded site is no proof. Found by review.
+        let unrecorded = |local: &Held| local.from_caller || local.beyond().unrecorded_address();
         let through_unrecorded = held.from_caller
             || above
                 .iter()
-                .any(|&site| value.exposed[site] || value.contents[site].from_caller);
+                .any(|&site| value.exposed[site] || value.contents[site].from_caller)
+            || above_locals
+                .iter()
+                .any(|&local| unrecorded(&value.points_to[local]));
         Landing {
             containers,
             targets,

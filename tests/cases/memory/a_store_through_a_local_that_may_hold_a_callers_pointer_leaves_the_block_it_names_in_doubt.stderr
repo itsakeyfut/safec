@@ -1,0 +1,71 @@
+error[SC0402]: this uses a value that may have been freed
+   ╭─[ a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:8:5 ]
+   │
+ 8 │     **t = y;
+   │     ───┬───  
+   │        ╰───── used here, where it may have been freed before
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:8:5 ]
+   │
+ 8 │     **t = y;
+   │     ───┬───  
+   │        ╰───── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object `p` points at
+   ╭─[ a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:8:5 ]
+   │
+ 8 │     **t = y;
+   │     ───┬───  
+   │        ╰───── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0411]: `*m` may be read before anything was assigned to it
+   ╭─[ a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:9:10 ]
+   │
+ 9 │     int *r = *m;
+   │          ───┬──  
+   │             ╰──── read here
+───╯
+  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path before it is read
+error[SC0402]: this uses `m`, which may have been freed
+   ╭─[ a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:9:10 ]
+   │
+ 9 │     int *r = *m;
+   │          ───┬──  
+   │             ╰──── used here, where it may have been freed before
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0403]: this may dereference `param` while it is null
+   ╭─[ a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:6:12 ]
+   │
+ 6 │     if (k) p = *param;
+   │            ─────┬────  
+   │                 ╰────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt.c:8:5 ]
+   │
+ 8 │     **t = y;
+   │     ───┬───  
+   │        ╰───── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it

@@ -417,6 +417,21 @@ cases! {
         // through a caller's memory; the second is silent either way.
         a_store_this_check_cannot_place_may_write_a_block_a_kept_local_points_at: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same three ways round, each held by its own half of the rule.
+        // A library copy that cannot reach `*m` either, `memcpy(*t, y, 8);`,
+        // which a copy once took as writing every block it may land in: it
+        // is no code this check cannot read. Mutation: write for certain
+        // every block in the copy's landing in `initialised_by`; the first
+        // is silent. A store one dereference through a pointer read out of a
+        // parameter, `v = *t; *v = y;`. Mutation: drop the pointer's own
+        // `from_caller` from `Landing::through_unrecorded`; the second is
+        // silent. And a store through a local that may hold what the caller
+        // stored, `p = *param; t = &p; **t = y;`. Mutation: ask no local
+        // above the landing in `through_unrecorded`; the third loses its
+        // doubt about `*m` (#778).
+        a_copy_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The cost the rule still has: a write guarded by a null test of the
         // allocation's own pointer, with a return where it is null, is
         // doubted, since the null arm leaves the site as it was. #723.
