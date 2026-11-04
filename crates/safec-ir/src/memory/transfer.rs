@@ -661,7 +661,7 @@ impl Allocations<'_> {
 
     /// Record memory a call this check cannot read reached as `read_as`,
     /// where that type is untyped somewhere below. See
-    /// [`Known::handed_untyped_sites`].
+    /// [`Known::handed_untyped`].
     ///
     /// **And bound what it may store there**, as [`Self::handed`] bounds a
     /// local: what the callee stores is believed as it was handed, and a
@@ -670,7 +670,7 @@ impl Allocations<'_> {
     /// width was recorded for (ADR-0061).
     fn handed_site(&self, value: &mut Known, site: Site, read_as: Option<TyId>) {
         if read_as.is_none_or(|ty| self.untyped_below(ty)) {
-            remember(&mut value.handed_untyped_sites[site], read_as);
+            remember(&mut value.handed_untyped[site], read_as);
         }
         let (width, levels) = self.handed_bounds(read_as);
         value.contents[site]
@@ -1328,7 +1328,6 @@ impl Allocations<'_> {
             stored_in_part,
             stored_out,
             handed_untyped,
-            handed_untyped_sites,
         } = into;
         // Which locals this side left unwritten, before `unwritten` is
         // intersected below: such a local is no null, and the values' join
@@ -1340,11 +1339,7 @@ impl Allocations<'_> {
         );
         // May-facts, so a union, as `exposed` of a local is. See
         // `Known::handed_untyped`.
-        for (here, there) in handed_untyped
-            .iter_mut()
-            .chain(handed_untyped_sites.iter_mut())
-            .zip(from.handed_untyped.iter().chain(&from.handed_untyped_sites))
-        {
+        for (here, there) in handed_untyped.iter_mut().zip(&from.handed_untyped) {
             for ty in there {
                 if !here.contains(ty) {
                     here.push(*ty);
@@ -1781,8 +1776,7 @@ impl Analysis for Allocations<'_> {
             // Nothing has been stored anywhere yet.
             stored_out: Table::filled(false, self.locals),
             // No call has been handed anything yet.
-            handed_untyped: Table::filled(Vec::new(), self.locals),
-            handed_untyped_sites: Table::filled(Vec::new(), self.locals),
+            handed_untyped: Table::filled(Vec::new(), Loc::count(self.locals)),
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -3492,7 +3486,7 @@ impl Analysis for Allocations<'_> {
                         self.handed(value, local, read_as);
                     }
                     // And the memory it reached, as the locals are. See
-                    // `Known::handed_untyped_sites`.
+                    // `Known::handed_untyped`.
                     for (site, read_as) in sites {
                         self.handed_site(value, site, Some(read_as));
                     }
@@ -3518,10 +3512,10 @@ impl Analysis for Allocations<'_> {
                     })
                     .collect();
                 let marked_sites: Vec<(Site, Option<TyId>)> = value
-                    .handed_untyped_sites
-                    .indices()
+                    .handed_untyped
+                    .sites()
                     .flat_map(|site| {
-                        value.handed_untyped_sites[site]
+                        value.handed_untyped[site]
                             .iter()
                             .map(move |&read_as| (site, read_as))
                     })

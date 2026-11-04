@@ -329,7 +329,7 @@ pub(super) struct Known {
     /// the walk a departure takes, where that type is untyped somewhere
     /// below: `void`, `char` or `int` bytes, a pointer whose chain ends in
     /// `void` or `char`, or `None` below a type that stops being a pointer.
-    /// [`Self::handed_untyped_sites`] is the same for memory.
+    /// The same table says the same of memory, per site.
     ///
     /// **So that a later call bounds what is below it then** (#679): such a
     /// callee may keep the address and store any pointer through it at any
@@ -351,13 +351,13 @@ pub(super) struct Known {
     /// silent. A mark set where no call kept anything doubts what is put
     /// below that local after any later call, which the reader sees. See
     /// ADR-0060.
-    pub(super) handed_untyped: Table<LocalIdx, Vec<Option<TyId>>>,
-    /// Per site, each type a call this check cannot read reached the memory
-    /// it names as, as [`Self::handed_untyped`] is for a local: `keep(m);
-    /// *m = &w; other();` may write `w`. Kept where the site is made again
+    ///
+    /// **And per site, each type such a call reached the memory it names
+    /// as**, in the same table: one kind of place (#779). `keep(m); *m = &w;
+    /// other();` may write `w`. Kept where the site is made again
     /// (`Self::reborn`), as `inside` is, since the old allocation's address
     /// may still be held and the slots of the two are not told apart.
-    pub(super) handed_untyped_sites: Table<Site, Vec<Option<TyId>>>,
+    pub(super) handed_untyped: Table<Loc, Vec<Option<TyId>>>,
 }
 
 impl Known {
@@ -1639,12 +1639,11 @@ impl Known {
             // About the allocation the site named, whose address may have
             // been stored out; the new one's has not been.
             stored_out,
-            // About a local, as `exposed` of a local is.
-            handed_untyped: _,
-            // Kept, as `inside` is: a call may still hold the old
+            // Not a local's, which a site being reborn is not about, and
+            // kept for the site, as `inside` is: a call may still hold the old
             // allocation's address, and the slots of the new one are not told
             // apart from the old one's. Found by review.
-            handed_untyped_sites: _,
+            handed_untyped: _,
         } = self;
         // **What the site's own record keeps when it names a new
         // allocation**, field by field, so that a field added to `Contents`
