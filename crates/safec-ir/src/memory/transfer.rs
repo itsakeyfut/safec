@@ -424,7 +424,7 @@ impl Allocations<'_> {
         if depth > 0 {
             levels.bound_by(
                 &value
-                    .memory_levels(place.local, depth, self.deepest_pointer, &self.local_sizes)
+                    .memory_levels(place.local, depth, self.deepest_pointer)
                     .below(1),
             );
         }
@@ -461,7 +461,7 @@ impl Allocations<'_> {
             return as_read;
         }
         let bound = value
-            .memory_levels(place.local, depth, self.deepest_pointer, &self.local_sizes)
+            .memory_levels(place.local, depth, self.deepest_pointer)
             .at(0);
         as_read.min(bound.unwrap_or(0))
     }
@@ -1418,7 +1418,8 @@ impl Allocations<'_> {
         }
         // A may-fact, so a union, as `exposed` is.
         *lost_exposed |= from.lost_exposed;
-        // A side that never made the site says nothing about it. Two sides
+        // A side that never made the site says nothing about it. A local's
+        // size is the same on both sides, and joins as itself. Two sides
         // that both did are joined as `Extent::joined` says, which only
         // narrows, so being wrong here doubts an access rather than proves
         // one. **`SiteState::Unheld` is not asked**, although it is the
@@ -1750,8 +1751,19 @@ impl Analysis for Allocations<'_> {
             calls: BTreeMap::new(),
             exposed_after_call: BTreeSet::new(),
             lost_exposed: false,
-            // Nothing is made yet but the parameters, below.
-            extent: Table::filled(None, self.locals),
+            // Nothing is made yet but the parameters, below, and every local
+            // is the size its type is. See `Known::extent`.
+            extent: {
+                let function = self.unit.function(self.function);
+                let mut extent = Table::filled(None, Loc::count(self.locals));
+                for local in function.locals() {
+                    extent[local] = self
+                        .unit
+                        .size_of(function.local(local))
+                        .map(Extent::Exactly);
+                }
+                extent
+            },
             // Nothing stored and nothing handed to a call yet.
             handed_at_most: Table::filled(None, self.locals),
             handed_contents_at_most: Table::filled(Levels::default(), self.locals),
@@ -2247,7 +2259,7 @@ impl Analysis for Allocations<'_> {
                         };
                         Some(written.believed.or(handed).unwrap_or(AS_TYPED))
                     } else {
-                        written.recorded_width(&value.extent, &self.local_sizes)
+                        written.recorded_width(&value.extent)
                     };
                     // **And below it, what the stored pointer believes of
                     // its own memory, whatever it is**: a parameter or a
@@ -3151,12 +3163,7 @@ impl Analysis for Allocations<'_> {
                             // `memcpy(&s, &v, 8)` of a whole `int`'s address was
                             // doubted at `*s` where `s = v;` is not (#769).
                             let recorded = value
-                                .memory_levels(
-                                    source.local,
-                                    from_depth + 1,
-                                    self.deepest_pointer,
-                                    &self.local_sizes,
-                                )
+                                .memory_levels(source.local, from_depth + 1, self.deepest_pointer)
                                 .at(0);
                             // **And it replaces the local where it is the
                             // store's certain one**, as `s = v;` does: one
@@ -3216,7 +3223,6 @@ impl Analysis for Allocations<'_> {
                                 source.local,
                                 from_depth + 1,
                                 self.deepest_pointer,
-                                &self.local_sizes,
                             ));
                             let mut poured = Contents::none(value.points_to.len());
                             for &site in &copied {

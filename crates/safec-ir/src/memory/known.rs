@@ -238,7 +238,13 @@ pub(super) struct Known {
     /// made, a parameter where the function starts and a call's destination
     /// where it returns, and read by the question whether an access fits the
     /// object it reaches. See ADR-0060.
-    pub(super) extent: Table<Site, Option<Extent>>,
+    ///
+    /// **And per local, its size on this target**, in the same table: one
+    /// kind of place (#779). [`Extent::Exactly`] where the local has a size
+    /// and `None` where it has none, written where the function starts and
+    /// never after, since a local is the one object its name stands for. What
+    /// [`Held::recorded_width`] reads a local's address at.
+    pub(super) extent: Table<Loc, Option<Extent>>,
     /// Per local, how many bytes a pointer a call may write into it is
     /// believed to point at, at most: the narrowest width the parameters
     /// it was handed through believe at its level, and `0` where one was a
@@ -912,13 +918,7 @@ impl Known {
     /// **The one walk a load, a departure and a copy take**, so that the
     /// spellings of one read cannot believe different things. See
     /// [`Levels`], ADR-0060 and ADR-0061.
-    pub(super) fn memory_levels(
-        &self,
-        local: LocalId,
-        depth: usize,
-        depth_cap: usize,
-        sizes: &Table<LocalIdx, Option<u64>>,
-    ) -> Levels {
+    pub(super) fn memory_levels(&self, local: LocalId, depth: usize, depth_cap: usize) -> Levels {
         let mut levels = self.points_to[local].contents_at_most.below(depth - 1);
         for level in 0..depth {
             let (sites, locals) = self.levels_below(local, level);
@@ -944,7 +944,7 @@ impl Known {
                             .unwrap_or(AS_TYPED),
                     )
                 } else {
-                    own.recorded_width(&self.extent, sizes)
+                    own.recorded_width(&self.extent)
                 };
                 let held = own.contents_at_most.stored_under(first, depth_cap);
                 levels.bound_by(&held.below(depth - 1 - level));
@@ -1624,7 +1624,8 @@ impl Known {
             // About no site.
             lost_exposed: _,
             // Left to the caller, which writes what the new allocation takes
-            // on the line after this, since only it knows what made it.
+            // on the line after this, since only it knows what made it. A
+            // local's size is not about the site.
             extent: _,
             // About a local, not a site.
             handed_at_most: _,

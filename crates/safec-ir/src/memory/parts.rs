@@ -1036,19 +1036,16 @@ impl Held {
     /// store named and `report::fits` folds each one's extent beside the
     /// belief. Kept the least so that the record alone never says more than
     /// every object it stands for.
-    pub(super) fn recorded_width(
-        &self,
-        extent: &Table<Site, Option<Extent>>,
-        sizes: &Table<LocalIdx, Option<u64>>,
-    ) -> Option<u64> {
+    pub(super) fn recorded_width(&self, extent: &Table<Loc, Option<Extent>>) -> Option<u64> {
         if self.offset != Offset::Zero || self.inner_address || self.beyond().unrecorded_address() {
             return Some(0);
         }
-        let sites = self
-            .sites()
-            .map(|site| extent[site].unwrap_or(Extent::AtLeast(0)).lower());
-        let locals = self.locals().map(|target| sizes[target].unwrap_or(0));
-        sites.chain(locals).min()
+        // **One rule for both kinds of place**: a site nothing made and a
+        // local with no size are both nothing read, `0`. See `Known::extent`.
+        self.names
+            .ones()
+            .map(|place| extent[place].unwrap_or(Extent::AtLeast(0)).lower())
+            .min()
     }
 
     /// Whether this value names nothing at all: no allocation, no local's

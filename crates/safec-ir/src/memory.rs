@@ -626,12 +626,6 @@ fn analysis<'a>(
         function: func,
         locals: function.locals().len(),
         deepest_pointer: deepest_pointer(unit, function),
-        local_sizes: Table::from_vec(
-            function
-                .locals()
-                .map(|local| unit.size_of(function.local(local)))
-                .collect(),
-        ),
         parameters: function.parameters().collect(),
         exposed_parameters: function
             .parameters()
