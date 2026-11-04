@@ -1368,8 +1368,8 @@ impl Allocations<'_> {
         // `Known::init`.
         //
         // **One loop over every place, each kind by its own rule** (#779).
-        // Both rules read `state` before its own join below, as they did
-        // when they were two loops.
+        // Both rules read `state` as it was before this join: `state` is
+        // joined below, and must not be before this loop.
         for place in init.indices() {
             let (here, there) = (init[place], from.init[place]);
             init[place] = match place {
@@ -1741,7 +1741,6 @@ impl Analysis for Allocations<'_> {
             handed_away: Table::filled(false, self.locals),
             exposed: Table::filled(false, Loc::count(self.locals)),
             contents: Table::filled(Held::none(self.locals), self.locals),
-            // A parameter's memory is the caller's, which may have written it.
             realloced: Table::filled(None, self.locals),
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
@@ -1768,7 +1767,8 @@ impl Analysis for Allocations<'_> {
             // Every local that may hold a pointer, but the parameters, which
             // the caller wrote. See `Known::init`.
             // Every place written but the locals `unwritten_at_entry` names:
-            // an allocation is made fresh where it is made.
+            // a parameter's memory is the caller's, which may have written it,
+            // and an allocation is made fresh where it is made.
             init: {
                 let unwritten = self.unwritten_at_entry();
                 let mut init = Table::filled(Init::Written, Loc::count(self.locals));
@@ -2279,9 +2279,9 @@ impl Analysis for Allocations<'_> {
                         .contents_at_most
                         .stored_under(bound, self.deepest_pointer);
                     // **What the store carries, poured into each allocation it
-                    // lands in**, every field named so that a mark added to
-                    // the cell is answered here, and poured below. **After
-                    // the landing and the exposure**, as it always was: poured
+                    // lands in**, as `Held::poured` builds it, which names
+                    // every field. **After the landing and the exposure**:
+                    // poured
                     // first, a container already reachable makes what it
                     // carries reachable too, and the landing then records it
                     // inside itself: a pointer this check cannot place cannot
@@ -3894,7 +3894,7 @@ impl Analysis for Allocations<'_> {
                 // through it: marked from the start, this very call staled its
                 // own result. **In a loop it does anyway**, from the second
                 // turn: the site names last turn's result as well, the mark
-                // from then is still on it, and `reborn` keeps `stale`
+                // from then is still on it, and `reborn` keeps `stale_read`
                 // because a site's allocations are not told apart. So a load
                 // out of each turn's result is doubted, a false report the
                 // reader can see. See ADR-0040.

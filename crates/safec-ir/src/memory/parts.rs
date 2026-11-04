@@ -562,7 +562,12 @@ pub(super) enum Reached {
     Partial,
 }
 
-/// What one local may hold.
+/// What one local may hold, and what a block holds: a block's memory is
+/// the value a pointer stored there may be, its cell (`Known::contents`),
+/// gathered by [`Held::absorb`], made by [`Held::poured`] and read by
+/// [`Held::taken_by_a_load`], which between them name the fields a cell
+/// uses. A cell's `lost` is a lost value stored there, which a load takes as
+/// `lost_read`.
 ///
 /// A struct rather than the bit vector this was, because the two halves travel
 /// together everywhere: a copy writes both, arithmetic unions both, and
@@ -579,23 +584,21 @@ pub(super) enum Reached {
 /// #155.
 #[derive(Clone, PartialEq, Eq)]
 pub(super) struct Held {
-    /// A bit per site. A site is a local, so this is square in the locals.
+    /// A bit per site and a bit per local, interleaved by [`Loc`]. A site is a
+    /// local, so this is square in the locals.
     ///
-    /// **One of five tables square in the locals**, with [`Held::locals`],
-    /// [`Held::named_at_read`],
-    /// a cell's `names`, and the
-    /// value holds one for every block and edge. So they are [`Bits`], a bit a
-    /// pair, where a `Vec<bool>` spent a byte. Measured on a loop per write
-    /// over 100 allocating locals, 401 blocks of 702 locals, release build:
-    /// peak memory went from 2,025 MB to 427 MB and time from 2.29 s to
-    /// 0.72 s once the four there were then were packed. Most of what is left is linear in the
+    /// **One of the tables square in the locals**, beside
+    /// [`Held::named_at_read`], in every local's value and every block's cell,
+    /// for every block of the function. So they are [`Bits`], a bit a pair,
+    /// where a `Vec<bool>` spent a byte. Measured on a loop per write over
+    /// 100 allocating locals, 401 blocks of 702 locals, release build: peak
+    /// memory went from 2,025 MB to 427 MB and time from 2.29 s to 0.72 s once
+    /// they were packed. Most of what is left is linear in the
     /// locals for every block, which is what `memory::LINEAR` counts. See
     /// ADR-0039.
     ///
-    /// **And the locals whose address it may hold**, its address edges, in
-    /// the same set: one kind of place (#779). What was said of them:
-    ///
-    /// Per local, whether a write **through** this one may land in it.
+    /// **The locals whose address it may hold**, its address edges: per
+    /// local, whether a write **through** this one may land in it.
     ///
     /// The edge `Known::escaped` is the shadow of. That field says a local's
     /// address is held by something; this says by whom, which is what a write
@@ -1128,7 +1131,8 @@ impl Held {
         self.sites().next().is_some()
     }
 
-    /// A local holding nothing, in a function with this many sites.
+    /// A local holding nothing, in a function with this many sites, and a
+    /// block nothing was stored in, which is [`Held::absorb`]'s identity.
     pub(super) fn none(sites: usize) -> Self {
         Held::from_marks(
             sites,
@@ -1761,7 +1765,7 @@ impl Held {
     /// and what a load takes cannot be answered in two places (#780).
     /// Applied for every block on the way of the read, at any level, since
     /// any of them may be where the value came from
-    /// (`Known::marked_below`); what the value names is taken from the last
+    /// (`Known::cells_on_the_way`); what the value names is taken from the last
     /// level alone, by `Known::load_into`.
     ///
     /// **`lost` is given as `lost_read`, not as `lost`**: a value read out

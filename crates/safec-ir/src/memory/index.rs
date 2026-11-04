@@ -13,6 +13,12 @@
 //! And where the two really are the same object, as for a
 //! parameter or a call's result, [`Site::of`] and [`Site::local`] say so
 //! where it happens. See ADR-0063.
+//!
+//! **And one kind of place, [`Loc`], where a question is asked of both.** A
+//! table of places is indexed by a site and by a local alike, so the two
+//! index types guard nothing there; what does is that a reader answering
+//! the two kinds apart is a `match` on [`Loc`], which a third kind would
+//! have to answer.
 
 use std::borrow::Borrow;
 use std::marker::PhantomData;
