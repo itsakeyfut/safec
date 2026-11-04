@@ -102,7 +102,7 @@ pub(crate) enum Makes {
 #[derive(Clone, Copy)]
 pub(crate) enum Leaves {
     /// Indeterminate bytes: `malloc` (C17 7.22.3.4 p2) and `aligned_alloc`
-    /// (7.22.3.1 p2). The allocation is unwritten, `Known::block_init`. See ADR-0057.
+    /// (7.22.3.1 p2). The allocation is unwritten, `Known::init`. See ADR-0057.
     Indeterminate,
     /// Zero bits, which is a null pointer on every target here: `calloc`
     /// (7.22.3.2 p2).

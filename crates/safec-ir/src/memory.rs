@@ -222,16 +222,16 @@ pub enum Kind {
     /// 7.22.3.1 p2, 7.22.3.4 p2), and Annex J.2 lists using it as undefined.
     /// Always `Unsafe`, at the read, whatever it is read for, and not again
     /// at a later use of what it read. `local` is the pointer it is read
-    /// through. See `Known::block_init` and ADR-0057.
+    /// through. See `Known::init` and ADR-0057.
     ///
     /// Also out of a local that pointer may be the address of, which nothing
     /// wrote since it was made (C17 6.2.4 p6, 6.7.9 p10, and the same line of
     /// Annex J.2), so each says which storage it reached and the words cite
-    /// that storage's clause (#640). See `Known::local_init`. **`Unknown`
+    /// that storage's clause (#640). See `Known::init`. **`Unknown`
     /// where what it reads may be unwritten**: an element of a local array
     /// after a write that may have been of any element (#639, #667), or a
     /// local written on one path into a join and not the other (#668). See
-    /// `Known::local_init`.
+    /// `Known::init`.
     IndeterminateLoad {
         /// Whether it may reach an allocation nothing wrote.
         reaches_allocation: bool,
@@ -245,7 +245,7 @@ pub enum Kind {
     /// was written on one path into a join and not the other (#668). `local`
     /// is the local read. A local whose address is never taken is `Unassigned`'s,
     /// which `memory::assigned` builds, and the two never meet (#640). See
-    /// `Known::local_init` and ADR-0057.
+    /// `Known::init` and ADR-0057.
     IndeterminateLocal,
     /// A function this check gave up on part of the way, past `MAX_WORK`, so
     /// nothing about its memory is proved. Always `Unknown`, at the
@@ -752,7 +752,7 @@ fn findings_within(
         // With where the report standing for each is, as `said` keeps it.
         let mut departed: Vec<(Span, Departure, Option<LocalId>, usize)> = Vec::new();
         // The locals whose address is taken, which a read by name of asks
-        // `Known::local_init` and `memory::assigned` does not. See #640.
+        // `Known::init` and `memory::assigned` does not. See #640.
         let taken = assigned::address_taken(function);
         for &id in cfg.order() {
             // `Cfg::order` holds exactly the reachable blocks and `solve` gives

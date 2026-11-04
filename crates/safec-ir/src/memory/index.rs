@@ -209,11 +209,6 @@ impl<I: Idx, T: Clone> Table<I, T> {
     pub(super) fn filled(item: T, len: usize) -> Self {
         Table::from_vec(vec![item; len])
     }
-
-    /// Set every value to `item`.
-    pub(super) fn fill(&mut self, item: T) {
-        self.items.fill(item);
-    }
 }
 
 impl<'a, I: Idx, T> IntoIterator for &'a Table<I, T> {

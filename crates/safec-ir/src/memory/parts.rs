@@ -772,7 +772,7 @@ pub(super) struct Held {
     /// arms agree. Found by review. See ADR-0039.
     pub(super) returned_by: Option<Site>,
     /// Whether this was read, on every path, out of an allocation
-    /// [`Known::block_init`](super::known::Known::block_init) marks, so is
+    /// [`Known::init`](super::known::Known::init) marks, so is
     /// indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2), and was reported
     /// where it was read. **It decides no report.** It is what drops the
     /// doubt a free or a `realloc` of the value would raise beside that
@@ -873,7 +873,7 @@ pub(super) struct Held {
     /// always did, through an offset this check cannot read, the write is of
     /// the whole array, as it always was. That is the line between not losing
     /// a proof and not doubting every loop that fills an array. A union. See
-    /// `Known::local_init` and ADR-0057.
+    /// `Known::init` and ADR-0057.
     pub(super) array_edge: bool,
     /// Whether a store placed through this pointer has written what it
     /// points at since it was given its value, on every path. A read through
@@ -882,12 +882,12 @@ pub(super) struct Held {
     /// **What keeps the lowering's own read of an assignment's value from
     /// being doubted** (#667): `*e = &x;` reads `*e` back as the value of the
     /// expression, and with `e` moved through a loop the element is not
-    /// known, so the write left the array [`Known::local_init`] and the
+    /// known, so the write left the array [`Known::init`] and the
     /// read back of it was a doubt about the element just written. Held by
     /// the pointer, so a new value for it clears it and a copy of it keeps
     /// it. An intersection at a join. See `Known::may_be_unwritten`.
     ///
-    /// [`Known::local_init`]: super::known::Known::local_init
+    /// [`Known::init`]: super::known::Known::init
     pub(super) stored_through: bool,
 }
 
@@ -1054,7 +1054,7 @@ impl Held {
     /// Whether this value names nothing at all: no allocation, no local's
     /// address, and none of the marks that say it may hold what this check
     /// did not follow: a null, or a local nothing was assigned, which
-    /// [`Self::joined`] tells apart from the null by `Known::local_init`. The test
+    /// [`Self::joined`] tells apart from the null by `Known::init`. The test
     /// `Known::names_no_more_than_its_sites` makes, with no site either, on
     /// one value rather than on a local: a field added to one is a field
     /// to answer in the other. What [`Self::joined`] asks of a path before
@@ -1345,7 +1345,7 @@ impl Held {
     /// every time.
     ///
     /// `unwritten` is whether each side left the local unwritten
-    /// (`Known::local_init`), which no field here says: such a local names
+    /// (`Known::init`), which no field here says: such a local names
     /// nothing and is no null, and `memcpy(m, &t, 8)` of a `t` written on one
     /// arm only, read back as an `int *`, was believed whole once it was
     /// taken for one. Found by review.

@@ -233,7 +233,7 @@ fn offset_of(op: BinOp, operands: [&Operand; 2], followed: &[LocalIdx], value: &
 /// a write it cannot narrow.
 ///
 /// **What it may have written is a second, narrower answer**, about
-/// `Known::local_init` alone: a local of that type which
+/// `Known::init` alone: a local of that type which
 /// `Known::locals_a_write_may_land_in` says the place may land in. A local
 /// the write cannot reach keeps its mark, so a read of it nothing wrote is
 /// still `SC0411`. See ADR-0057.
@@ -273,7 +273,7 @@ pub(super) fn replaced_by(
     // **Through a pointer moved off an array, an element of it**, as the
     // placed store answers: still a write `replaced` makes of every local it
     // may land in, then partly written where it was unwritten before. See
-    // `Known::local_init`.
+    // `Known::init`.
     let writes = write_effects(
         unit,
         function,
@@ -375,7 +375,7 @@ pub(super) fn write_effects(
 /// Whether the local at `index` is an array. One answer for the edge a
 /// pointer moved off it keeps and for the write through such a pointer
 /// being of an element. See `Held::moved_by_arithmetic` and
-/// `Known::local_init`.
+/// `Known::init`.
 pub(super) fn is_array(unit: &TranslationUnit, function: &Function, index: LocalIdx) -> bool {
     function
         .locals()

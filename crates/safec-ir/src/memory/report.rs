@@ -1619,7 +1619,7 @@ pub(super) fn loaded_indeterminate(
     for place in read {
         // A proof where nothing wrote what it reads, and a doubt where an
         // array it reads at its start was written only in part. See
-        // `Known::local_init`.
+        // `Known::init`.
         let certain = analysis.reads_fresh(function, &place, known);
         let maybe = !certain && analysis.reads_partly(function, &place, known);
         if !certain && !maybe {
@@ -1697,7 +1697,7 @@ fn may_say(
 ///
 /// `taken` is `assigned::address_taken`, so a local is asked here exactly
 /// where `memory::assigned` does not ask it: that analysis follows no write
-/// through an address and this one does ([`Known::local_init`]). See ADR-0057.
+/// through an address and this one does ([`Known::init`]). See ADR-0057.
 ///
 /// `doubt_only` as [`loaded_indeterminate`] takes it.
 #[allow(clippy::too_many_arguments)]
@@ -1714,8 +1714,8 @@ pub(super) fn unwritten_read(
     let function = analysis.unit.function(analysis.function);
     for (local, at) in reads {
         // **A doubt where an element may still be unwritten**, a proof
-        // where nothing wrote any of it. See `Known::local_init`.
-        let init = known.local_init[local];
+        // where nothing wrote any of it. See `Known::init`.
+        let init = known.init[local];
         let partly = init == Init::Maybe;
         if !taken.get(LocalIdx::of(local))
             || init == Init::Written
