@@ -757,11 +757,17 @@ cases! {
         // (#687). Mutation: the copy pours with no array in part; this loses
         // its `SC0411`.
         a_local_array_written_through_a_moved_pointer_copied_into_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // And copied into a local through its address, which carries the
-        // mark as a store through the address gives it. Mutation: the copy
-        // into a local's address leaves `Held::array_edge` unset; this loses
-        // its `SC0411`.
-        a_local_array_written_through_a_moved_pointer_copied_into_a_local_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And copied into a local through its address, which is a load of
+        // `e`: it names `m[1]`, as `f = e;` does, so `m[0]` is a certain
+        // `SC0411` (#706). Mutation: a load takes no element from the one
+        // local it reads out of; this is a doubt again.
+        a_local_array_written_through_a_moved_pointer_copied_into_a_local_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // #706's program: a pointer to an array's start copied into a local
+        // through its address names the element `e` names, so a write
+        // through it writes `m[0]` alone and `m[1]` is a certain `SC0411`, as
+        // with `g = e;`. Mutation: a load takes no element from the one
+        // local it reads out of; this loses its `SC0411`.
+        a_pointer_to_an_array_s_start_copied_into_a_local_writes_only_the_element_it_names: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And copied out of memory that holds such a pointer, `box[0] = m + 1;
         // memcpy(&g, box, 8); g[0] = &x;`, which the copy carries as a load of
         // the box does, `g = box[0];`: the copy is a load built by
@@ -870,10 +876,10 @@ cases! {
         // `SC0411` and `m[8]` goes silent.
         a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `f = *pe` reads `e = m + 1` back out of `e` itself, which no store
-        // marked, and the write through it may be of any element: `m[0]` is
-        // an `SC0411` doubt. Mutation: a load takes no edge from the local
-        // it reads out of; this goes silent.
-        a_local_array_written_through_a_moved_pointer_read_back_through_its_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // marked, and names `m[1]` as `e` does, so `m[0]` is a certain
+        // `SC0411`, as with `f = e;` (#706). Mutation: a load takes no
+        // element from the local it reads out of; this is a doubt again.
+        a_local_array_written_through_a_moved_pointer_read_back_through_its_address_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same read as an operand, `*pe - 1`, which moves it back onto
         // `m[0]`; `m[1]` is an `SC0411` doubt. Mutation: such an operand
         // takes no edge from the local it reads out of; this goes silent.

@@ -1370,6 +1370,22 @@ impl Known {
         {
             held.array_edge = true;
         }
+        // **And the element it names, where it is read out of one local and
+        // nothing else**: the value read is that local's, so `f = *pe;` with
+        // `pe = &e` and `e = m` names `m[0]` as `f = e;` does, and so does
+        // `memcpy(&g, &e, 8)`, a load of the same. Left unnamed, a write
+        // through it was a write of the whole array, and `m[1]`, which
+        // nothing wrote, was believed written (#706). Not an array read out
+        // of, whose record gathers every store into any of its elements, nor
+        // a block, which keeps no element (`Held::absorb`), nor more than
+        // one local, whose elements this would have to join.
+        let (from_sites, from_locals) = self.levels_below(local, depth - 1);
+        let from_locals: Vec<LocalIdx> = from_locals.into_iter().collect();
+        if let (true, [read_from]) = (from_sites.is_empty(), from_locals.as_slice()) {
+            if !is_array(*read_from) {
+                held.element = self.points_to[*read_from].element;
+            }
+        }
         // What every block it reads through, at any level, gives what it
         // reads, by the one rule a load out of memory has. See
         // `Held::taken_by_a_load` and `Self::marked_below`.
