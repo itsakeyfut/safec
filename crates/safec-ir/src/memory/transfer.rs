@@ -20,8 +20,8 @@ use super::index::{Idx, Loc, LocalIdx, Site, Table};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known};
 use super::parts::{
-    AS_TYPED, Contents, Extent, Freeing, Held, Init, Inits, Levels, Marks, Offset, PendingRead,
-    Reached, Read, Realloced, SiteState, bounded,
+    AS_TYPED, Extent, Freeing, Held, Init, Inits, Levels, Marks, Offset, PendingRead, Reached,
+    Read, Realloced, SiteState, bounded,
 };
 use super::store::{Landing, StoreKind, Strong};
 use crate::library::{Callee, LIBRARY, Leaves, Library, Makes};
@@ -498,7 +498,7 @@ impl Allocations<'_> {
         &self,
         value: &mut Known,
         landing: &Landing,
-        poured: &Contents,
+        poured: &Held,
         in_part: &[LocalIdx],
         pours: Pours,
     ) {
@@ -673,9 +673,7 @@ impl Allocations<'_> {
             remember(&mut value.handed_untyped[site], read_as);
         }
         let (width, levels) = self.handed_bounds(read_as);
-        value.contents[site]
-            .stored_at_most
-            .bound_by(&levels.stored_under(Some(width), self.deepest_pointer));
+        value.contents[site].bound_stored(&levels.stored_under(Some(width), self.deepest_pointer));
     }
 
     /// Whether a callee handed a pointer to `ty` may store any pointer
@@ -868,7 +866,7 @@ impl Allocations<'_> {
     /// one level further in, `q = **ppp` spelled `pp = *ppp; q = *pp;`, and
     /// without it `q` held nothing a call could make lost; the third is the
     /// same read after a store, `*box = q; r = *box;` or `r = **bb;`, which
-    /// [`Contents::from_caller`] marks. Below the first level a load also reads
+    /// a cell's `from_caller` says. Below the first level a load also reads
     /// what is reachable to code this check cannot read, in
     /// [`Known::levels_below`] (#486), which doubts `r = **bb;` without the
     /// third; the third still decides whether `free(**bb)` frees what a
@@ -901,7 +899,7 @@ impl Allocations<'_> {
             // Or what a call this check cannot read handed back: memory its
             // callee may still hold, and free at the next such call (#394).
             // **The `Callee::Opaque` arm answers for it first**, by marking
-            // what the call returned `Contents::from_caller`, so no program
+            // the cell of what the call returned `from_caller`, so no program
             // shows this clause alone, measured; the unit test
             // `a_local_holding_what_an_opaque_call_returned_reads_callee_memory`
             // is the guard.
@@ -975,7 +973,7 @@ impl Allocations<'_> {
         {
             return held
                 .sites()
-                .flat_map(|container| known.contents[container].sites_inside())
+                .flat_map(|container| known.contents[container].sites())
                 .collect();
         }
         known.stored()
@@ -1504,9 +1502,9 @@ impl Allocations<'_> {
             *here = *here || *there;
         }
         // What each allocation may contain, every field at once. See
-        // `Contents::absorbed`.
+        // `Held::absorb`.
         for (here, there) in contents.iter_mut().zip(&from.contents) {
-            here.absorbed(there);
+            here.absorb(there);
         }
 
         // **A union, because a read on either arm is a read some execution
@@ -1742,7 +1740,7 @@ impl Analysis for Allocations<'_> {
             escaped: Table::filled(false, self.locals),
             handed_away: Table::filled(false, self.locals),
             exposed: Table::filled(false, Loc::count(self.locals)),
-            contents: Table::filled(Contents::none(self.locals), self.locals),
+            contents: Table::filled(Held::none(self.locals), self.locals),
             // A parameter's memory is the caller's, which may have written it.
             realloced: Table::filled(None, self.locals),
             // Nothing has been read yet, so there is nothing a free could be
@@ -2205,7 +2203,7 @@ impl Analysis for Allocations<'_> {
                     // `*w = m; free(m); q = *pp; return *q;` with `f(&x, &x)`
                     // read back nothing at `*pp` and was believed (#489).
                     // Reachable to code this check cannot read, which is what
-                    // another parameter can name, and not `Contents::from_caller`,
+                    // another parameter can name, and not a cell's `from_caller`,
                     // which a buffer of this function's own gains by holding
                     // a caller's pointer. Found by review.
                     // **A pointer read out of memory is bounded by what it
@@ -2272,7 +2270,7 @@ impl Analysis for Allocations<'_> {
                     // parameter, read back through an `int ***`, believed
                     // whole `int`s two levels down (#634). A local's
                     // address and an allocation believe nothing here, so
-                    // record nothing. See `Contents::stored_at_most`.
+                    // record nothing. See `Held::stored_levels`.
                     //
                     // Mutation: record level 0 alone, and
                     // `a_parameter_stored_in_memory_and_read_back_is_believed_as_it_arrived_below_its_first_level`
@@ -2282,7 +2280,7 @@ impl Analysis for Allocations<'_> {
                         .stored_under(bound, self.deepest_pointer);
                     // **What the store carries, poured into each allocation it
                     // lands in**, every field named so that a mark added to
-                    // `Contents` is answered here, and poured below. **After
+                    // the cell is answered here, and poured below. **After
                     // the landing and the exposure**, as it always was: poured
                     // first, a container already reachable makes what it
                     // carries reachable too, and the landing then records it
@@ -2302,23 +2300,20 @@ impl Analysis for Allocations<'_> {
                     // value can find it (#503, ADR-0045); and a pointer read
                     // out of caller memory keeps that fact where it is stored
                     // (ADR-0040).
-                    let mut poured = Contents::none(value.points_to.len());
+                    let mut poured = Held::none(value.points_to.len());
                     for &site in &carried {
-                        poured.hold_site(site);
+                        poured.name_site(site);
                     }
                     // And the locals whose address it carries, which are no
                     // site. See ADR-0045.
                     for target in written.locals() {
-                        poured.hold_local(target);
+                        poured.name_local(target);
                     }
-                    let poured = Contents {
-                        inside: poured.inside,
-                        stored_at_most: stored,
-                        stale: written.stale_read,
-                        unreplaced: written.unreplaced_read,
-                        holds_lost: written.lost || written.lost_read,
-                        from_caller: written.from_caller,
-                    };
+                    poured.bound_stored(&stored);
+                    poured.stale_read = written.stale_read;
+                    poured.unreplaced_read = written.unreplaced_read;
+                    poured.lost = written.lost || written.lost_read;
+                    poured.from_caller = written.from_caller;
                     self.land_contents(
                         value,
                         &landing,
@@ -2841,9 +2836,8 @@ impl Analysis for Allocations<'_> {
                 Operand::Copy(place) => {
                     may_hold_lost(&value.points_to[place.local])
                         || (!place.projection.is_empty()
-                            && value.marked_below(place.local, derefs(place), |contents| {
-                                contents.holds_lost
-                            }))
+                            && value
+                                .marked_below(place.local, derefs(place), |contents| contents.lost))
                         || value
                             .written_through(place.local)
                             .into_iter()
@@ -2853,7 +2847,7 @@ impl Analysis for Allocations<'_> {
             }) || value
                 .closure(handed_memory)
                 .into_iter()
-                .any(|site| value.contents[site].holds_lost)
+                .any(|site| value.contents[site].lost)
                 || value
                     .escaped
                     .indices()
@@ -3229,30 +3223,27 @@ impl Analysis for Allocations<'_> {
                                 from_depth + 1,
                                 self.deepest_pointer,
                             ));
-                            let mut poured = Contents::none(value.points_to.len());
+                            let mut poured = Held::none(value.points_to.len());
                             for &site in &copied {
-                                poured.hold_site(site);
+                                poured.name_site(site);
                             }
                             // And the locals whose address it copies. See
                             // ADR-0045.
                             for &target in &copied_locals {
-                                poured.hold_local(target);
+                                poured.name_local(target);
                             }
                             let in_part: Vec<LocalIdx> = if read.array_edge {
                                 copied_locals.iter().copied().collect()
                             } else {
                                 Vec::new()
                             };
-                            // Every field named, as a store's are. See
-                            // `Known::pour`.
-                            let poured = Contents {
-                                inside: poured.inside,
-                                stored_at_most: copied_bound,
-                                stale: read.stale_read,
-                                unreplaced: read.unreplaced_read,
-                                holds_lost: read.lost_read,
-                                from_caller: read.from_caller,
-                            };
+                            // What memory keeps of it, as a store's. See
+                            // `Held::absorb`.
+                            poured.bound_stored(&copied_bound);
+                            poured.stale_read = read.stale_read;
+                            poured.unreplaced_read = read.unreplaced_read;
+                            poured.lost = read.lost_read;
+                            poured.from_caller = read.from_caller;
                             // Where it lands, unplaced too, with what it
                             // carries, as a store's landing is given. See
                             // `Allocations::land_contents`.
@@ -3654,7 +3645,7 @@ impl Analysis for Allocations<'_> {
                 }
                 for &container in &stored {
                     for &site in &stored {
-                        value.contents[container].hold_site(site);
+                        value.contents[container].name_site(site);
                     }
                 }
                 // **What it wrote there it handed over**, as a callee's
@@ -3859,7 +3850,7 @@ impl Analysis for Allocations<'_> {
                     if let Operand::Copy(source) = argument {
                         if source.projection.is_empty() {
                             let handed = value.points_to[source.local].contents_at_most.clone();
-                            value.contents[site].stored_at_most.bound_by(&handed);
+                            value.contents[site].bound_stored(&handed);
                         }
                     }
                 }
@@ -3870,7 +3861,7 @@ impl Analysis for Allocations<'_> {
                 // same reason (ADR-0040), and whether a lost value was stored
                 // in it, or a free of one after `box = realloc(box, 16);`
                 // finds nothing in the new allocation to mark, found by
-                // review (`Contents::holds_lost`). See `Known::pour`.
+                // review (a cell's `lost`). See `Known::pour`.
                 for old in old {
                     let held = value.contents[old].clone();
                     value.pour(&[site], &held, &[]);
@@ -4043,7 +4034,7 @@ mod caller_memory {
     /// does not.
     ///
     /// **No program shows the first half**: the `Callee::Opaque` arm marks
-    /// what the call returned `Contents::from_caller` as it makes the site,
+    /// the cell of what the call returned `from_caller` as it makes the site,
     /// and `marked_below` answers for that before this clause is asked.
     /// Dropping the clause alone fails no corpus case, the mark alone two,
     /// and both eight.
