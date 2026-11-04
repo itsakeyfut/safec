@@ -4201,6 +4201,19 @@ cases! {
         // goes silent.
         a_memchr_longer_than_its_object: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_memmove_wider_than_its_source: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A library copy into a local's address is a load of its source
+        // and replaces the local as a store would, and each half of that
+        // has a case (#777). Believed only where every local it is read out
+        // of fits, as a load is: `t = r + 1;` after `get(&r)` copied into
+        // `s` is asked where `s` leaves. Mutation: believe the copy without
+        // `Allocations::read_from_fits`; the first loses `SC0413` at
+        // `use(s)`. A copy of half a pointer, or through a pointer to a local
+        // that escaped, does not replace the local. Mutation: drop the length
+        // or the one-local test from `copy_replaces_one_local`; the second or
+        // the third loses `SC0413` at `use(s)`.
+        a_pointer_a_call_wrote_and_this_function_moved_copied_into_a_local_is_doubted_where_it_leaves: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_of_half_a_pointer_into_a_local_does_not_replace_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_through_an_escaped_pointer_to_a_local_does_not_replace_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer off its start handed to a string function is asked as
         // the row's reach, once, and not again as a departure. Mutation:
         // drop a `String` reach from `strcmp`, `strncmp` or `strstr`, or

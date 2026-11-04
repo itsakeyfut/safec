@@ -1,0 +1,20 @@
+error[SC0413]: this lets `t` leave, which may not point at an object as wide as its type
+   ╭─[ a_pointer_a_call_wrote_and_this_function_moved_copied_into_a_local_is_doubted_where_it_leaves.c:9:5 ]
+   │
+ 9 │     memcpy(&s, &t, 8);
+   │     ────────┬────────  
+   │             ╰────────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets `s` leave, which may not point at an object as wide as its type
+    ╭─[ a_pointer_a_call_wrote_and_this_function_moved_copied_into_a_local_is_doubted_where_it_leaves.c:13:12 ]
+    │
+ 13 │     return use(s);
+    │            ───┬──  
+    │               ╰──── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

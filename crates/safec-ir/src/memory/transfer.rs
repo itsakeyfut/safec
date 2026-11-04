@@ -813,24 +813,10 @@ impl Allocations<'_> {
             // asks it (ADR-0060), without doubting the escape its address
             // is. `int *q = *pi; *q = 1;` with `v = p + 4` after `pi = &v`
             // is unknown at `*q` for it (#627).
-            if let Some(width) = held.believed {
-                // One level short of `depth`: the locals the value is read
-                // out of, not those whose address the value may be, which
-                // the walk above took. `report::read_from_locals` takes the
-                // same level for an access.
-                let read_from = value.levels_below(source.local, depth - 1).1;
-                let fits_each = function
-                    .locals()
-                    .filter(|local| read_from.contains(&LocalIdx::of(local)))
-                    .all(|local| {
-                        matches!(
-                            fits(self, function, local, width, value, false),
-                            None | Some(Fit::Inside)
-                        )
-                    });
-                if !fits_each {
-                    held.believed = None;
-                }
+            if held.believed.is_some_and(|width| {
+                !self.read_from_fits(function, source.local, depth, width, value)
+            }) {
+                held.believed = None;
             }
             // The question the report asks at this read, so that a value
             // carrying the mark is always one reported where it was read.
@@ -838,6 +824,38 @@ impl Allocations<'_> {
             held.fresh_read = self.reads_fresh(function, source, value);
         }
         held
+    }
+
+    /// Whether every local a pointer read `depth` dereferences below `local`
+    /// may be read out of holds a value that fits `width` bytes, as
+    /// [`fits`] answers its own value with no doubt of unseen writes: what a
+    /// belief in the type a pointer is read as needs, since a local is not
+    /// memory with a door and `v = p + 4;` after `pi = &v;` was never asked
+    /// where it was assigned. One answer for a load and for a library copy,
+    /// which is a load of its source one level further (#777); the copy
+    /// asking none believed a pointer a call wrote and this function moved
+    /// as a whole `int` at its start. See ADR-0060.
+    fn read_from_fits(
+        &self,
+        function: &Function,
+        local: LocalId,
+        depth: usize,
+        width: u64,
+        value: &Known,
+    ) -> bool {
+        // One level short of `depth`: the locals the value is read out of,
+        // not those whose address the value may be. `fit::read_from_locals`
+        // takes the same level for an access.
+        let read_from = value.levels_below(local, depth - 1).1;
+        function
+            .locals()
+            .filter(|each| read_from.contains(&LocalIdx::of(each)))
+            .all(|each| {
+                matches!(
+                    fits(self, function, each, width, value, false),
+                    None | Some(Fit::Inside)
+                )
+            })
     }
 
     /// Whether a load `depth` dereferences through `local` reads memory a
@@ -3172,7 +3190,16 @@ impl Analysis for Allocations<'_> {
                                         self.pointee_size(function, &Place::local(local))
                                     })
                                     .unwrap_or(0);
-                                each.believed = Some(as_read.min(recorded.unwrap_or(0)));
+                                let width = as_read.min(recorded.unwrap_or(0));
+                                each.believed = self
+                                    .read_from_fits(
+                                        function,
+                                        source.local,
+                                        from_depth + 1,
+                                        width,
+                                        value,
+                                    )
+                                    .then_some(width);
                                 if replaces {
                                     value.points_to[target] = each;
                                 } else {
