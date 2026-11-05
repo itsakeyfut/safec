@@ -1842,7 +1842,7 @@ impl Analysis for Allocations<'_> {
         self.joined(into, from, false);
     }
 
-    fn join_back(&self, into: &mut Self::Value, from: &Self::Value) {
+    fn join_back(&self, _head: BlockId, into: &mut Self::Value, from: &Self::Value) {
         self.joined(into, from, true);
     }
 
@@ -1856,7 +1856,13 @@ impl Analysis for Allocations<'_> {
     /// makes a new object, while a copy between a block and a local carries
     /// no mark (#750). They are asked so that the rule does not split by
     /// kind (#760).
-    fn join_back_beside(&self, into: &mut Self::Value, from: &Self::Value, before: &Self::Value) {
+    fn join_back_beside(
+        &self,
+        _head: BlockId,
+        into: &mut Self::Value,
+        from: &Self::Value,
+        before: &Self::Value,
+    ) {
         self.joined(into, from, true);
         for place in into.init.indices() {
             let again = into.init[place].unwritten_again(before.init[place], from.init[place]);
