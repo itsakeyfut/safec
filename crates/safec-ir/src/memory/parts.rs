@@ -960,10 +960,6 @@ impl Levels {
         self.0.get(level).copied().flatten()
     }
 
-    /// The lower of the two at every level, where `None` is no bound, as
-    /// [`bounded`] says for one: a side that bounds nothing at a level does
-    /// not loosen one that does, and a shorter list bounds nothing past its
-    /// end.
     /// No bound at level 0, whatever was recorded there: what a read out of
     /// a cell a store recorded no width in believes. See
     /// [`Cell::unrecorded`](Cell).
@@ -973,6 +969,10 @@ impl Levels {
         }
     }
 
+    /// The lower of the two at every level, where `None` is no bound, as
+    /// [`bounded`] says for one: a side that bounds nothing at a level does
+    /// not loosen one that does, and a shorter list bounds nothing past its
+    /// end.
     pub(super) fn bound_by(&mut self, other: &Levels) {
         if self.0.len() < other.0.len() {
             self.0.resize(other.0.len(), None);
