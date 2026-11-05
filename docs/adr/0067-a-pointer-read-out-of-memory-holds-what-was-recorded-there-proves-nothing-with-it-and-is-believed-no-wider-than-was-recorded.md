@@ -85,6 +85,10 @@ three records describe it in names that no longer exist.
    the way by the same three arms, forgets level 0 where a cell is
    `Cell::unrecorded`, and `Allocations::handed_site` bounds a cell a call was
    handed as it was handed.
+6. **A lost value handed to a call this check cannot read is handed to every
+   later one.** `Known::lost_exposed` is set where such a call is handed a
+   value this check lost, a union at a join and never cleared, and what any
+   later such call returns is lost, since the call may hand that value back.
 
 ### Confirmation
 
@@ -134,6 +138,10 @@ restored after; the test named is in `tests/cases.rs`.
    `a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias`;
    `handed_site` recording no bound fails
    `a_pointer_read_out_of_memory_a_call_was_handed_is_not_reported_as_indeterminate`.
+6. A later call's result not made lost fails
+   `a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free`;
+   `lost_exposed` joined as an intersection fails
+   `a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free`.
 
 Per-route detail is the route matrix in `tests/routes.rs` (ADR-0062) and the
 doc comments of the functions named above.

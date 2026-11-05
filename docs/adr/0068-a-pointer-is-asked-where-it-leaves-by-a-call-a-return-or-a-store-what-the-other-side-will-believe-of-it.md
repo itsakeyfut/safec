@@ -88,6 +88,17 @@ Chosen option: the first. The rules, each with the code that holds it:
 7. **A store nothing outside reads asks only whether its pointer may be off
    its start**, `report::at_its_start`. Its width is asked by the load that
    reads it back (ADR-0067) and by the door the memory leaves by.
+8. **A `void *` leaves believing no width**, so it is asked only whether it
+   starts an object (`fit::pointee_width` answers `0` for it), at every door.
+9. **What a call this check cannot read is handed is believed no wider than
+   it was handed as, at every level, at that call and every later one**:
+   `Known::handed_at_most` bounds a local's own level and
+   `Known::handed_contents_at_most` the levels below, both read back where the
+   local is read and where it leaves. Handed untyped, through a `void *` or as
+   bytes, it is believed nothing, and `Known::handed_untyped` keeps the mark,
+   at the local or at the memory it reached, so that every later such call
+   walks below it again and a pointer put there after is doubted where it
+   leaves, `slots_from`.
 
 A new `Kind` is `error[E0004]` in `verdict`'s `ordered` and in
 `memory_finding` (`crates/safec-c/src/driver/words.rs`), and a new `Callee`
@@ -95,8 +106,7 @@ in `handed_places`, `departed_at_call`, `handed_stored_out` and `store_at`.
 
 ### Confirmation
 
-The mutations are listed beside this record's draft with their exact text. Per
-rule, a named case in `tests/cases.rs` unless it says otherwise:
+Per rule, a named case in `tests/cases.rs` unless it says otherwise:
 
 1. `a_free_after_the_write_into_the_return_place_is_not_asked_about` in
    `crates/safec-ir/tests/freed.rs` pins the boundary of asking at the write.
@@ -153,6 +163,14 @@ rule, a named case in `tests/cases.rs` unless it says otherwise:
    In `tests/routes.rs`, `every_pair_kept_apart_still_differs` holds the pairs
    `ASKED_WHERE_STORED` lists, and `a_route_answers_alike_at_depth_zero_and_one`
    the rest.
+8. `pointee_width` answering nothing for `void` fails
+   `a_void_pointer_off_its_start_leaving_is_asked_whether_it_starts_an_object`.
+9. In `tests/routes.rs`: `handed` recording no `handed_at_most` fails
+   `width_call_stored_d0_both`, and bounding no `handed_contents_at_most` fails
+   `width_call_deep_d0_both`; `handed` recording no read-as for `void` fails
+   `width_kept_void_d0_both`, nothing untyped below fails
+   `width_kept_bytes_d0_both`, and `handed_site` recording nothing untyped fails
+   `width_kept_block_d0_both`.
 
 ### Consequences
 
