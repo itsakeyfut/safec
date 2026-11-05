@@ -48,12 +48,16 @@ doubted after it.
 
 The proof is narrow on purpose, since a wrong one is a silence: one edge into
 the head from outside the loop; one latch; no edge leaving the body early that
-reaches where the head's test leaves; and the head's test, run over its own
-elements, true where every value it reads is a constant from zero to `INT_MAX`
-or an `int` local whose address is never taken and that a straight line of
-blocks before the loop last gave such a constant. The range and the type are
-there because the IR carries no conversion: `char c = 200;` holds 200 there
-and not what C stores.
+reaches anything the head's test leaves for; and the head's test, run over its
+own elements, true where every value it reads is a constant from zero to
+`INT_MAX` or an `int` local whose address is never taken, written once at
+most by the head, and otherwise last given such a constant by a straight line
+of blocks before the loop. The range and the type are there because the IR
+carries no conversion: `char c = 200;` holds 200 there and not what C stores.
+The address because a write through it is a write the head's own walk does
+not see, `(i = 0, *p = 5, i < 1)`; the single write because two that C leaves
+unsequenced are lowered in an order C did not choose, `(i = 0) < (i = 3)`.
+Review found both shown to run.
 
 **A loop shown to run hides its first turn from what leaves the body early**,
 so the first-turn reading ADR-0057 gives a loop's body is given as well to
@@ -75,6 +79,11 @@ In `tests/cases/memory/`:
 * `a_pointer_read_after_a_loop_its_constants_do_not_run_is_doubted` goes
   silent if `memory::runs::shown_to_run` takes a test it can evaluate as true
   whatever it answers.
+* `pointers_read_after_loops_their_constants_compare_false_at_the_bound_are_doubted`
+  goes silent, in one of its five loops, if `Lt`, `Gt` or `Eq` in
+  `runs::compared` gains or loses its equality or turns its direction, and
+  `pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted`
+  gains `SC0411` if `Le`, `Ge` or `Ne` does.
 * `a_pointer_read_after_a_loop_tested_on_a_char_is_doubted` goes silent if a
   `char` local is taken to hold the constant written to it.
 * `a_pointer_read_after_a_loop_whose_counter_was_given_another_constant_is_doubted`
@@ -89,15 +98,28 @@ In `tests/cases/memory/`:
 * `a_pointer_read_after_a_loop_whose_counter_was_written_through_its_address_is_doubted`
   goes silent if a local whose address is taken is taken to hold a constant.
 * `a_pointer_read_after_a_loop_whose_test_assigns_a_char_is_doubted` goes
-  silent if a `char` the head writes is taken to hold what was written.
+  silent if a `char` the head reads is taken to hold what the head wrote.
+* `a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_alias_is_doubted`
+  goes silent if a local whose address is taken is asked only where the head
+  has not written it.
+* `a_pointer_read_after_a_loop_whose_test_writes_its_counter_twice_unsequenced_is_doubted`
+  goes silent if a local the head writes twice keeps its second value, and
+  `a_pointer_read_after_a_loop_whose_test_writes_its_counter_twice_in_sequence_is_doubted`
+  if the head reads the first of its writes rather than the last.
 * `a_pointer_read_on_an_arm_that_leaves_a_loop_that_runs_before_its_write_is_doubted`
   goes silent if no block outside the loop is read as of its first turn.
 
-That a loop has one latch and that no early exit reaches past it are held by
-nothing: the frontend reads neither `continue`, `break` nor `goto`, so no C
-program reaches either refusal. Nor is the walk back stopping at a call whose
-result lands in the local itself, since the lowering puts a call's result in a
-temporary and copies it.
+The frontend reads neither `continue`, `break` nor `goto`, so no C program
+reaches the latch's refusal or the early exit's, and IR built by hand in
+`memory::runs`'s tests holds them:
+`a_loop_with_two_latches_is_not_shown_to_run` fails if the latch count is not
+asked, `a_loop_left_from_its_body_for_where_its_test_leaves_is_not_shown_to_run`
+if an early exit is not, `a_loop_left_from_its_body_for_what_follows_it_is_not_shown_to_run`
+if only one that reaches where the test leaves is refused, and
+`a_loop_left_from_its_body_by_a_return_is_shown_to_run` if every early exit is.
+The walk back stopping at a call whose result lands in the local itself is
+held by nothing, since the lowering puts a call's result in a temporary and
+copies it.
 
 ### Consequences
 
@@ -141,4 +163,7 @@ temporary and copies it.
   whose back-edge rule this replaces.
 * `memory::assigned`, which asks a pointer local whose address is never taken
   by name and keeps its own rule: a read after a loop that may run zero times
-  is silent there.
+  is silent there. Its module comment says why: that analysis follows no
+  condition a path took, and reporting every read some paths assigned refused
+  programs C defines, so it reports only after a branch edge that certainly
+  leads to the read unassigned, which a loop's exit edge is not.
