@@ -32,6 +32,12 @@ caller_store_d1_both hazard=1:SC0402,SC0412 control=0:- allowed=0:SC0402,SC0412
 caller_store_d1_one hazard=1:SC0402,SC0412 control=0:- allowed=0:SC0402,SC0412
 caller_store_d2_both hazard=1:SC0402,SC0403,SC0412 control=1:SC0403 allowed=0:SC0402,SC0403,SC0412
 caller_store_d2_one hazard=1:SC0402,SC0403,SC0412 control=1:SC0403 allowed=0:SC0402,SC0403,SC0412
+fresh_call_d0_both hazard=1:SC0412 control=1:SC0412 allowed=0:SC0412
+fresh_call_d0_one hazard=1:SC0412 control=1:SC0412 allowed=0:SC0412
+fresh_call_d1_both hazard=1:SC0402 control=1:SC0402 allowed=0:SC0402
+fresh_call_d1_one hazard=1:SC0402 control=1:SC0402 allowed=0:SC0402
+fresh_call_d2_both hazard=1:SC0402,SC0403 control=1:SC0402,SC0403 allowed=0:SC0402,SC0403
+fresh_call_d2_one hazard=1:SC0402,SC0403 control=1:SC0402,SC0403 allowed=0:SC0402,SC0403
 fresh_memcpy_d0_both hazard=1:SC0411,SC0412 control=0:- allowed=1:SC0411,SC0412
 fresh_memcpy_d0_one hazard=1:SC0411,SC0412 control=0:- allowed=0:SC0411,SC0412
 fresh_memcpy_d1_both hazard=1:SC0411 control=0:- allowed=1:SC0411

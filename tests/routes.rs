@@ -79,6 +79,9 @@ enum Route {
     /// Stored, then what holds it grown by `realloc`.
     Realloc,
     /// A call this check cannot read writes it through an out-parameter.
+    /// Asked of width, where the call writes a pointer of its own, and of
+    /// freshness, where it writes nothing and is believed to have written
+    /// what it was handed, which `ACCEPTED` lists as that belief (#782).
     Call,
     /// Handed through `void *pass(void *)`, which this check cannot read.
     Ret,
@@ -561,6 +564,12 @@ routes! {
     reborn_restored_d1_one: Reborn Restored D1 One;
     reborn_restored_d2_both: Reborn Restored D2 Both;
     reborn_restored_d2_one: Reborn Restored D2 One;
+    fresh_call_d0_both: Fresh Call D0 Both;
+    fresh_call_d0_one: Fresh Call D0 One;
+    fresh_call_d1_both: Fresh Call D1 Both;
+    fresh_call_d1_one: Fresh Call D1 One;
+    fresh_call_d2_both: Fresh Call D2 Both;
+    fresh_call_d2_one: Fresh Call D2 One;
     caller_store_d0_both: Caller Store D0 Both;
     caller_store_d0_one: Caller Store D0 One;
     caller_store_d1_both: Caller Store D1 Both;
@@ -781,13 +790,6 @@ const NOT_WRITTEN: &[Unwritten] = &[
         belief: Some(Belief::Stale),
         shape: None,
         why: "a local is not grown by realloc",
-    },
-    Unwritten {
-        route: Route::Call,
-        depth: None,
-        belief: Some(Belief::Fresh),
-        shape: None,
-        why: "a call this check cannot read may write the memory, so it is not fresh",
     },
     Unwritten {
         route: Route::Call,
@@ -1145,6 +1147,7 @@ const LOST_COPIED: &str =
 const LOST_HANDED: &str = "a lost pointer handed through a call this check cannot read proves nothing where it is used (ADR-0045)";
 const OLD_BLOCK: &str = "the old block a store replaced in memory is still taken to be there after realloc moves it (#656)";
 const REPORTED_ELSEWHERE: &str = "the free and the call a freed pointer is handed to are each reported where they happen (SC0401, SC0407), and not again at its use; agreeing would report the use too";
+const WRITES_WHAT_IT_IS_HANDED: &str = "a call this check cannot read is believed to write what it is handed, which `docs/safety-model.md` states beside the other boundary beliefs; not believing it refused correct programs that rely on the callee writing (#782)";
 // End of the reasons `ACCEPTED` gives.
 
 /// The rows whose answer is not their belief's rule, each with the issue or
@@ -1156,6 +1159,36 @@ const REPORTED_ELSEWHERE: &str = "the free and the call a freed pointer is hande
 /// be told from it. Such a row holds only that the route is not silent
 /// altogether, and the blessed summary is what notices more. See ADR-0062.
 const ACCEPTED: &[(&str, Side, Why)] = &[
+    (
+        "fresh_call_d0_both",
+        Side::Hazard,
+        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
+    ),
+    (
+        "fresh_call_d0_one",
+        Side::Hazard,
+        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
+    ),
+    (
+        "fresh_call_d1_both",
+        Side::Hazard,
+        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
+    ),
+    (
+        "fresh_call_d1_one",
+        Side::Hazard,
+        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
+    ),
+    (
+        "fresh_call_d2_both",
+        Side::Hazard,
+        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
+    ),
+    (
+        "fresh_call_d2_one",
+        Side::Hazard,
+        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
+    ),
     ("caller_ret_d0_both", Side::Control, Why::Belief(MAY_FREE)),
     ("caller_ret_d0_one", Side::Control, Why::Belief(MAY_FREE)),
     ("caller_ret_d1_both", Side::Control, Why::Belief(MAY_FREE)),
@@ -1409,6 +1442,7 @@ void get_wide2(int ***p);
 void release_all(void);
 void release_ref(int **pp);
 int use2(int **pp);
+void touch(int **p);
 ";
 
 /// The statements that make the slot, its spelling, and what it lives in.
@@ -1646,8 +1680,22 @@ fn fresh(row: Row, hazard: bool) -> Vec<String> {
             "if (!g_) return 0;".to_owned(),
             format!("{slot} = *g_;"),
         ],
-        Route::Call
-        | Route::Ret
+        // The slot handed by its address to a call this check cannot read,
+        // which writes nothing in either program: the control wrote the slot
+        // first. Believed written by the call, so the hazard is silent, which
+        // `ACCEPTED` lists as the boundary belief it is.
+        Route::Call => {
+            if hazard {
+                vec![format!("touch(&{slot});")]
+            } else {
+                vec![
+                    "int y = 0;".to_owned(),
+                    format!("{slot} = &y;"),
+                    format!("touch(&{slot});"),
+                ]
+            }
+        }
+        Route::Ret
         | Route::Restored
         | Route::MemcpyFromBlock
         | Route::CallStored
@@ -2104,6 +2152,30 @@ fn a_belief_agreeing_is_a_regression_and_a_cost_agreeing_is_a_fix() {
 /// The rows whose hazard the plain store proves and the row only doubts, each
 /// with why. Exact in both directions, as [`ACCEPTED`] is.
 const UNCERTAIN: &[(&str, &str)] = &[
+    (
+        "fresh_call_d0_both",
+        "the call is believed to write what it is handed, so the read back proves nothing indeterminate; see `WRITES_WHAT_IT_IS_HANDED`",
+    ),
+    (
+        "fresh_call_d0_one",
+        "the call is believed to write what it is handed, so the read back proves nothing indeterminate; see `WRITES_WHAT_IT_IS_HANDED`",
+    ),
+    (
+        "fresh_call_d1_both",
+        "the call is believed to write what it is handed, so the read back proves nothing indeterminate; see `WRITES_WHAT_IT_IS_HANDED`",
+    ),
+    (
+        "fresh_call_d1_one",
+        "the call is believed to write what it is handed, so the read back proves nothing indeterminate; see `WRITES_WHAT_IT_IS_HANDED`",
+    ),
+    (
+        "fresh_call_d2_both",
+        "the call is believed to write what it is handed, so the read back proves nothing indeterminate; see `WRITES_WHAT_IT_IS_HANDED`",
+    ),
+    (
+        "fresh_call_d2_one",
+        "the call is believed to write what it is handed, so the read back proves nothing indeterminate; see `WRITES_WHAT_IT_IS_HANDED`",
+    ),
     (
         "width_memcpy_d0_both",
         "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",

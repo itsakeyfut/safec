@@ -449,3 +449,18 @@ from the undefined ones
 ([#393](https://github.com/itsakeyfut/safec/issues/393)); what would is a
 declaration that says whether a result hands ownership over, the `owner` sketch
 under *Annotations* above.
+
+**And it is believed to write what it is handed.** A call this check does
+not follow into, whether or not its body is in the translation unit, is
+taken to have written every object it was handed the address of, and every
+one it can reach from there, so what is read back after it is not reported
+as indeterminate: `void fill(int **m); int *v[1]; fill(v); int *q = v[0];`
+builds, and so does the same with `fill`'s body empty, where nothing wrote
+`v[0]`. That is the output-parameter idiom, `int *p; get(&p); *p = 1;`, and
+not believing it refused correct programs that rely on the callee writing:
+measured, 17 of them, with 86 cases moved
+([#782](https://github.com/itsakeyfut/safec/issues/782)). So a callee that
+writes less than it was handed is not detected, as a wrong hatch promise is
+not, and the route matrix's `fresh_call_*` rows hold it as a belief rather
+than a cost. Saying what a callee writes is the declaration the `owner`
+sketch above would carry, not a reading of the caller.
