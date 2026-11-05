@@ -71,6 +71,7 @@ mod init;
 mod known;
 mod parts;
 mod report;
+mod runs;
 mod store;
 mod transfer;
 
@@ -78,7 +79,7 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve_first_turn_within, solve_within};
 use crate::ir::{
-    Between, Element, FuncId, Function, LocalId, Place, Terminator, TranslationUnit, Ty,
+    Between, BlockId, Element, FuncId, Function, LocalId, Place, Terminator, TranslationUnit, Ty,
 };
 use crate::nullability::{self};
 use crate::reads::{
@@ -208,9 +209,10 @@ pub enum Kind {
     /// `memory::assigned`.
     Unassigned,
     /// A pointer local read where some path assigned it, after a branch edge
-    /// that leads to the read on every path and assigns it on none. Always
-    /// `Unknown`, since no execution may take the edge. See
-    /// `memory::assigned`.
+    /// that leads to the read on every path and assigns it on none, the
+    /// local unassigned where the branch is, or on a loop's first turn where
+    /// the edge leaves the loop. Always `Unknown`, since no execution may
+    /// take the edge. See `memory::assigned`.
     SometimesUnassigned {
         /// The branch's controlling expression.
         edge: Span,
@@ -658,7 +660,15 @@ fn analysis<'a>(
         live_in: crate::liveness::live_in(function),
         cfg: Cfg::of(function),
         opaque_results: Table::from_vec(Vec::new()),
+        // Filled below, since `shown_to_run` reads `analysis.cfg`.
+        runs_once: Vec::new(),
     };
+    analysis.runs_once = vec![false; function.blocks().len()];
+    let taken = assigned::address_taken(function);
+    for each in analysis.cfg.loops() {
+        analysis.runs_once[each.head().index()] =
+            runs::shown_to_run(unit, function, &analysis.cfg, &each, &taken);
+    }
     analysis.opaque_results = analysis.opaque_results_of(function);
     analysis
 }
@@ -1017,16 +1027,17 @@ fn findings_within(
         // **And every read inside a loop, as of that loop's first turn**
         // (#670): whatever turn reaches a read, the first ran before it, and
         // what it sees is what arrived from before the loop. The join at the
-        // head creates no doubt along a back edge, so a loop that fills an
-        // array is not doubted for the path that skips it (#668), and with
-        // nothing else every read the head reached before a write went
-        // silent, `r = m[0]; m[0] = &x;` in the body among them. Per loop
-        // rather than every back edge at once, which doubted a local made in
-        // an outer loop and filled by an inner one wherever it was read after
-        // the inner loop. After the every-turn walk above, so that a proof it
-        // gave stands at the caret, and a doubt it gave gives way to a proof
-        // here: asked first, a first turn's doubt took the place of four such
-        // proofs, measured. See ADR-0057.
+        // head of a loop shown to run creates no doubt along a back edge, so
+        // such a loop that fills an array is not doubted for a path that
+        // skips it (#668, ADR-0064), and with nothing else every read the
+        // head reached before a write went silent, `r = m[0]; m[0] = &x;` in
+        // the body among them. Per loop rather than every back edge at once,
+        // which doubted a local made in an outer loop and filled by an inner
+        // one wherever it was read after the inner loop. After the every-turn
+        // walk above, so that a proof it gave stands at the caret, and a
+        // doubt it gave gives way to a proof here: asked first, a first
+        // turn's doubt took the place of four such proofs, measured. See
+        // ADR-0057.
         //
         // **One loop at a time, its solution dropped before the next, and
         // every first turn together within one more bound**, by the user's
@@ -1053,8 +1064,34 @@ fn findings_within(
                 break;
             };
             left -= solution.walks();
+            // **And every block that leaves the loop from inside its body**,
+            // one a block of the body other than the head dominates: what runs
+            // there on the first turn is what arrived from before the loop
+            // too. The every-turn state of a loop shown to run creates no doubt
+            // at its back edge, and without this `if (c()) return *m[0] == 0;`
+            // before the body's write went silent in a loop that runs. A
+            // doubt, since it may not run on the first turn. See ADR-0064.
+            //
+            // **The nearest dominator in the loop, per block, in one pass**:
+            // the head dominates every block of the body, so some block of the
+            // body other than the head dominates a block exactly where the
+            // nearest one of its dominators in the loop is not the head.
+            // `Cfg::order` puts a block's immediate dominator before it, so
+            // the dominator's answer is there when the block is reached.
+            let mut nearest_inside: Vec<Option<BlockId>> = vec![None; function.blocks().len()];
             for &id in cfg.order() {
-                if !each.contains(id) {
+                if let Some(up) = dominators.immediate(id) {
+                    nearest_inside[id.index()] = if each.contains(up) {
+                        Some(up)
+                    } else {
+                        nearest_inside[up.index()]
+                    };
+                }
+            }
+            for &id in cfg.order() {
+                let leaves_early = !each.contains(id)
+                    && nearest_inside[id.index()].is_some_and(|inside| inside != each.head());
+                if !each.contains(id) && !leaves_early {
                     continue;
                 }
                 let Some(mut turn) = solution.value(id).cloned() else {
@@ -1067,7 +1104,9 @@ fn findings_within(
                 // and C defines it reading last turn's value, so it is a
                 // doubt, by the user's decision. Every latch and not any: no
                 // case tells the two apart, measured, since a loop this C can
-                // write has one, and `continue` is the first that will not.
+                // write has one, and `continue` is the first that will not. A
+                // block that leaves the loop early dominates no latch, so it
+                // is a doubt by the same test.
                 let doubt_only = !each
                     .latches()
                     .iter()

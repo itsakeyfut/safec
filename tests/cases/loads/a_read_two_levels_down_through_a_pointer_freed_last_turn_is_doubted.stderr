@@ -8,6 +8,17 @@ warning[SC0402]: this uses a pointer this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+warning[SC0411]: `*t2` may be read before anything was assigned to it
+    ╭─[ a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:17:13 ]
+    │
+ 17 │             return **t2;
+    │             ──────┬─────  
+    │                   ╰─────── read here
+────╯
+  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: assign it on every path before it is read
 warning[SC0403]: this may dereference a null pointer
     ╭─[ a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:17:13 ]
     │

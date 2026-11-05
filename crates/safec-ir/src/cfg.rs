@@ -160,6 +160,12 @@ impl Cfg {
     }
 
     /// The order to take the blocks in, which holds exactly the reachable ones.
+    ///
+    /// **A reverse postorder, so every block comes after its immediate
+    /// dominator**, which the memory check's first-turn reading relies on to
+    /// work out each block's nearest dominator in a loop in one pass.
+    /// `a_block_s_immediate_dominator_comes_before_it_and_the_entry_has_none`
+    /// holds it.
     pub fn order(&self) -> &[BlockId] {
         &self.order
     }
@@ -347,6 +353,20 @@ impl Dominators {
                 _ => return false,
             }
         }
+    }
+
+    /// The block `block`'s immediate dominator: the one of its dominators
+    /// every other one dominates. `None` for the entry and for a block the
+    /// entry does not reach.
+    ///
+    /// **The entry is asked first** because the table keeps it as its own
+    /// immediate dominator, which `dominates` stops at; answered from the
+    /// table, a walk up the tree from any block would never end.
+    pub fn immediate(&self, block: BlockId) -> Option<BlockId> {
+        if Some(block) == self.entry {
+            return None;
+        }
+        self.immediate[block.index()]
     }
 }
 
@@ -897,6 +917,60 @@ mod tests {
         assert!(dominators.dominates(head, exit));
         assert!(!dominators.dominates(body, exit));
         assert!(!dominators.dominates(body, head));
+    }
+
+    /// A block's immediate dominator is the nearest of its dominators, comes
+    /// before it in `Cfg::order`, and the entry has none.
+    ///
+    /// Mutation: answer the entry from the table, which keeps it as its own;
+    /// this fails. Mutation: reverse `order`; this fails.
+    #[test]
+    fn a_block_s_immediate_dominator_comes_before_it_and_the_entry_has_none() {
+        let (_sources, span) = spans();
+        let (_unit, mut function) = a_function(span);
+        let entry = function.reserve_block();
+        let then = function.reserve_block();
+        let otherwise = function.reserve_block();
+        let head = function.reserve_block();
+        let body = function.reserve_block();
+        let exit = function.reserve_block();
+        let go = |to| Block {
+            elements: Vec::new(),
+            terminator: Terminator::Goto(to),
+        };
+        let branch = |then, otherwise| Block {
+            elements: Vec::new(),
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(0),
+                then,
+                otherwise,
+                origin: Origin::Written(span),
+            },
+        };
+        function.fill_block(entry, branch(then, otherwise));
+        function.fill_block(then, go(head));
+        function.fill_block(otherwise, go(head));
+        function.fill_block(head, branch(body, exit));
+        function.fill_block(body, go(head));
+        function.fill_block(
+            exit,
+            Block {
+                elements: Vec::new(),
+                terminator: Terminator::Return,
+            },
+        );
+        let cfg = Cfg::of(&function);
+        let dominators = cfg.dominators();
+        assert_eq!(dominators.immediate(entry), None);
+        assert_eq!(dominators.immediate(then), Some(entry));
+        assert_eq!(dominators.immediate(head), Some(entry));
+        assert_eq!(dominators.immediate(body), Some(head));
+        assert_eq!(dominators.immediate(exit), Some(head));
+        for (at, &block) in cfg.order().iter().enumerate() {
+            if let Some(up) = dominators.immediate(block) {
+                assert!(cfg.order()[..at].contains(&up), "{}", block.index());
+            }
+        }
     }
 
     /// Where control enters a cycle at two blocks, neither dominates the

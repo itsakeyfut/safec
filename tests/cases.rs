@@ -915,6 +915,83 @@ cases! {
         // what it had; this gains an `SC0411` doubt, which `main` does not
         // give. Found by review of #668.
         a_local_array_made_in_an_outer_loop_and_filled_by_an_inner_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `n` may be zero, so the read after the loop may be of `m` nothing
+        // wrote: `SC0411`, a doubt (#783). See ADR-0064. Mutation:
+        // `Allocations::runs_once` true at every head, which was ADR-0057's
+        // rule; this goes silent.
+        a_pointer_read_after_a_loop_that_may_run_zero_times_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Its constants say the loop runs no turn: the doubt stays. Mutation:
+        // `runs::shown_to_run` takes a test it can evaluate as true whatever
+        // it answers; this goes silent.
+        a_pointer_read_after_a_loop_its_constants_do_not_run_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `char c = 200;` stores what C converts 200 to, which the IR does
+        // not say, so the test is not evaluated. Mutation: a `char` local is
+        // taken to hold the constant written to it; this goes silent.
+        a_pointer_read_after_a_loop_tested_on_a_char_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `i = 0; i = 3;`: the last write is what the test reads. Mutation:
+        // the walk back takes the first write in a block rather than the
+        // last; this goes silent.
+        a_pointer_read_after_a_loop_whose_counter_was_given_another_constant_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `i` is 0 on the arm and 3 on the path that skips it. Mutation: the
+        // walk back goes on past a block with two predecessors by the last
+        // of them; this goes silent.
+        a_pointer_read_after_a_loop_whose_counter_one_arm_set_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `i` is 0 on one arm and 3 on the other, each arm a block that goes
+        // on only into the loop. Mutation: the walk back goes on past a
+        // block with two predecessors by the first of them; this goes
+        // silent.
+        a_pointer_read_after_a_loop_whose_counter_each_arm_set_apart_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `i = c();` after `i = 0;`: the lowering copies the call's result
+        // into `i`, a last write that is no constant. Mutation: the walk
+        // back passes over a write of what is not a constant; this goes
+        // silent.
+        a_pointer_read_after_a_loop_whose_counter_a_call_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*pi = 3;` writes `i` where the walk back does not look. Mutation:
+        // a local whose address is taken is taken to hold a constant; this
+        // goes silent.
+        a_pointer_read_after_a_loop_whose_counter_was_written_through_its_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `(c = 200) > 100` in the head, `c` a `char`. Mutation: a `char`
+        // the head reads is taken to hold what the head wrote into it; this
+        // goes silent.
+        a_pointer_read_after_a_loop_whose_test_assigns_a_char_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `(i = 0, *p = 5, i < 1)` with `p = &i`: the write through `p` is
+        // a write of `i` the head's own walk does not see. Found by review.
+        // Mutation: a local whose address is taken is asked only where the
+        // head has not written it; this goes silent.
+        a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_alias_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `(i = 0) < (i = 3)`: two writes C leaves unsequenced, lowered in an
+        // order C did not choose. Found by review. Mutation: a local the
+        // head writes twice keeps the second value; this goes silent.
+        a_pointer_read_after_a_loop_whose_test_writes_its_counter_twice_unsequenced_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `(i = 0, i = 5, i < 3)`: the test reads the last of two writes,
+        // and a second write refuses the local, which costs this doubt; the
+        // loop runs no turn either way. Found by review. Mutation: the head
+        // reads the first write it recorded rather than the last; this goes
+        // silent.
+        a_pointer_read_after_a_loop_whose_test_writes_its_counter_twice_in_sequence_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Five loops whose constants compare false, at the bound and past
+        // it: five `SC0411` doubts. Found by review. Mutation: `Lt`, `Gt`
+        // or `Eq` in `runs::compared` answered with the equality added, the
+        // direction turned or the answer negated; one goes silent.
+        pointers_read_after_loops_their_constants_compare_false_at_the_bound_are_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Five loops whose constants compare true, at the bound and inside
+        // it: shown to run, so silent. Mutation: `Le`, `Ge` or `Ne` answered
+        // with the equality dropped, the direction turned or the answer
+        // negated; that loop gains an `SC0411` doubt.
+        pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The loop is shown to run, so its back edge creates no doubt, but
+        // an arm that returns may run on the first turn, before the write:
+        // `SC0411`, a doubt. See ADR-0064. Mutation: no block outside the
+        // loop is read as of its first turn; this goes silent.
+        a_pointer_read_on_an_arm_that_leaves_a_loop_that_runs_before_its_write_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same zero-trip read of a pointer local whose address is never
+        // taken, which `memory::assigned` asks by name: `SC0411`, a doubt,
+        // at the loop's test when it is false. Found by review. Mutation: no
+        // loop's exit edge is asked as of its first turn; this goes silent.
+        a_pointer_local_read_after_a_loop_that_may_run_zero_times_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A loop its constants run, by name. Mutation: `memory::assigned`
+        // asks the exit edge of a loop shown to run too; this gains a doubt.
+        a_pointer_local_assigned_by_a_loop_its_constants_run_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read on every turn before the body writes it, so the first turn reads it
         // unwritten: `SC0411`, a proof (#670). See ADR-0057. Mutation: ask no read
         // as of a loop's first turn; this goes silent.

@@ -179,18 +179,24 @@ element may be unwritten. A longer array is kept whole: written in part by
 such a pointer, a read of it at its start is the same doubt. A write at an
 index this check cannot read writes the whole array. A local written on one
 path into a join and not on the other is `SC0411` as a doubt where it is read
-after the join, `if (c()) m[0] = &x; q = m[0];` (#668), but not across a
-loop's back edge, so a loop that fills an array is not doubted for the path
-that skips it. A read inside a loop is asked as of the loop's first turn as
-well, since every turn that reaches it ran the first (#670): `r = m[0]; m[0] =
-&x;` in the body, and a read in the loop's own condition, are `SC0411` where
-the read runs on every turn, and a doubt on an arm, which costs a doubt about
-a read on an arm of last turn's value, `if (k == 1) q = *t2;`. A pointer local
-whose address is never taken is asked the same where the read runs on every
-turn, `r = q; q = &x;`, and stays silent on an arm. An integer read out of
-such a local is not followed.
+after the join, `if (c()) m[0] = &x; q = m[0];` (#668). So is one after a
+loop that may run zero times, `while (i < n) m[0] = &x; q = m[0];` (#783),
+but not after a loop whose own test is true on the way in by constants,
+`for (int i = 0; i < 2; i++)`, which runs its body at least once. A read
+inside a loop is asked as of the loop's first turn as well, since every turn
+that reaches it ran the first (#670): `r = m[0]; m[0] = &x;` in the body, and
+a read in the loop's own condition, are `SC0411` where the read runs on every
+turn, and a doubt on an arm, which costs a doubt about a read on an arm of
+last turn's value, `if (k == 1) q = *t2;`. So is a read on an arm that leaves
+the loop by a `return`. A pointer local whose address is never taken is asked
+the same where the read runs on every turn, `r = q; q = &x;`, stays silent on
+an arm, and is the same doubt after a loop that may run zero times, at the
+loop's test when it is false. An integer read out of such a local is not
+followed.
 [ADR-0057](adr/0057-a-pointer-read-out-of-fresh-memory-is-reported-where-it-is-read.md)
-is the decision.
+is the decision, and
+[ADR-0064](adr/0064-a-loop-may-run-zero-times-unless-its-test-is-shown-true-on-the-way-in.md)
+what it says of a loop's back edge.
 
 **`SC0412` is an access that may not fit the object it reaches.** It is a
 class of its own because it is about where in an object an access lands, not

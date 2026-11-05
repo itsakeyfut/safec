@@ -71,6 +71,10 @@ pub(super) struct Allocations<'a> {
     /// [`tested_against_null`](crate::nullability::tested_against_null)
     /// makes back across a `Goto`.
     pub(super) cfg: Cfg,
+    /// Per block, whether it is the head of a loop shown to run its body at
+    /// least once, [`shown_to_run`](super::runs::shown_to_run): the one loop
+    /// whose back edge creates no doubt. See ADR-0064.
+    pub(super) runs_once: Vec<bool>,
 }
 
 /// The type an array's elements have, through every dimension, and `ty`

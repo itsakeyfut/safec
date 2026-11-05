@@ -30,6 +30,13 @@
 //! path through every edge before its read, or a path from the edge that
 //! avoids it. The cost is an edge no execution takes: `if (n >= 0) p = q;
 //! else if (n < 0) p = r; use(p);` is refused, which C defines.
+//!
+//! **A loop's own test is such a branch as of its first turn**, unless
+//! `runs::shown_to_run` shows the loop runs (#783): its edge out of the loop
+//! is asked against what arrived from before the loop, since the turns that
+//! came round assigned it. So `while (i < n) q = &x; r = q;` is the same
+//! doubt, at `i < n` when it is false, and a loop C runs that this cannot
+//! show runs is the cost, as it is in the memory check. See ADR-0064.
 
 use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
@@ -42,6 +49,7 @@ use crate::source::{SourceMap, Span};
 
 use super::bits::Bits;
 use super::index::LocalIdx;
+use super::runs;
 use super::{Finding, Kind};
 
 /// The analysis over one function.
@@ -476,6 +484,41 @@ pub(super) fn findings(
         at_end[id.index()] = Some(value);
     }
 
+    // **And at the head of a loop not shown to run, as of its first turn**
+    // (#783): the every-turn state there holds what the back edge assigned,
+    // so (a) never held at a loop's own test, and `while (i < n) q = &x; r =
+    // q;` read an unassigned `q` in silence when `n <= 0`. Only the edge that
+    // leaves the loop is asked this way, since the first turn is the one
+    // that may take it before the body ran. A loop shown to run takes that
+    // edge on no first turn. See ADR-0064.
+    let taken = address_taken(function);
+    let mut first_turn_at_end: Vec<Option<(State, BlockId)>> = vec![None; function.blocks().len()];
+    for (each, solution) in &first_turns {
+        let head = each.head();
+        let Terminator::Branch {
+            then, otherwise, ..
+        } = &function.block(head).terminator
+        else {
+            continue;
+        };
+        let leaves = match (each.contains(*then), each.contains(*otherwise)) {
+            (true, false) => *otherwise,
+            (false, true) => *then,
+            _ => continue,
+        };
+        if runs::shown_to_run(unit, function, &cfg, each, &taken) {
+            continue;
+        }
+        let Some(start) = solution.value(head) else {
+            continue;
+        };
+        let mut value = start.clone();
+        for element in &function.block(head).elements {
+            analysis.element(function, element, &mut value);
+        }
+        first_turn_at_end[head.index()] = Some((value, leaves));
+    }
+
     let mut reach = vec![Vec::new(); function.blocks().len()];
     if !doubted.is_empty() {
         for &id in cfg.order() {
@@ -503,12 +546,19 @@ pub(super) fn findings(
             if then == otherwise {
                 return None;
             }
-            // (a)
-            if at_end[id.index()].as_ref()?[local.index()] {
+            // (a), or the same of a loop's first turn at the edge that
+            // leaves it.
+            let first_turn = first_turn_at_end[id.index()]
+                .as_ref()
+                .filter(|(value, _)| !value[local.index()])
+                .map(|&(_, leaves)| leaves);
+            if at_end[id.index()].as_ref()?[local.index()] && first_turn.is_none() {
                 return None;
             }
+            let every_edge = !at_end[id.index()].as_ref()?[local.index()];
             [(*then, true), (*otherwise, false)]
                 .into_iter()
+                .filter(|&(target, _)| every_edge || Some(target) == first_turn)
                 .find(|&(target, _)| {
                     !assigned_between(function, cfg.order(), &reach, target, read, local)
                         && reaches_certainly(unit, sources, function, target, read.0)

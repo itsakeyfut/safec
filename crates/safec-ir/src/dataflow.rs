@@ -186,9 +186,12 @@ pub trait Analysis {
     /// that does not ask which edge a value arrived along**, which is every
     /// one but the memory check's. That one doubts a local unwritten on one
     /// path into a join and written on the other, and the path that skips a
-    /// loop's body is such a path into every loop that fills an array, so
-    /// at a back edge it creates no doubt (#668). See ADR-0057.
-    fn join_back(&self, into: &mut Self::Value, from: &Self::Value) {
+    /// loop's body is such a path into every loop that fills an array. It
+    /// is no path of a loop shown to run at least once, so at that loop's
+    /// back edge alone it creates no doubt (#668, #783), and `head` says
+    /// which loop this is. See ADR-0064.
+    fn join_back(&self, head: BlockId, into: &mut Self::Value, from: &Self::Value) {
+        let _ = head;
         self.join(into, from);
     }
 
@@ -207,9 +210,15 @@ pub trait Analysis {
     ///
     /// The default is [`Self::join_back`], which no analysis but the memory
     /// check needs more than.
-    fn join_back_beside(&self, into: &mut Self::Value, from: &Self::Value, before: &Self::Value) {
+    fn join_back_beside(
+        &self,
+        head: BlockId,
+        into: &mut Self::Value,
+        from: &Self::Value,
+        before: &Self::Value,
+    ) {
         let _ = before;
-        self.join_back(into, from);
+        self.join_back(head, into, from);
     }
 
     /// What one element of a block does to what is known.
@@ -699,7 +708,7 @@ fn solved<A: Analysis>(
                                 .expect(
                                     "a head other than the entry is reached from before it first",
                                 );
-                                analysis.join_back_beside(&mut folded, &back, &before);
+                                analysis.join_back_beside(successor, &mut folded, &back, &before);
                             }
                         } else {
                             let forward = sent_into(
@@ -712,7 +721,7 @@ fn solved<A: Analysis>(
                                 |from| cfg.drained_at(from) < cfg.drained_at(successor),
                             )
                             .expect("the edge that just sent is one from before the head");
-                            analysis.join_back(&mut folded, &forward);
+                            analysis.join_back(successor, &mut folded, &forward);
                         }
                         Some(folded)
                     }
