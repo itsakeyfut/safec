@@ -82,7 +82,7 @@ use crate::ir::{
 };
 use crate::nullability::{self};
 use crate::reads::{
-    dereferenced_in_element, dereferenced_in_terminator, read_out_of_memory_in_element,
+    dereferenced_in_element, dereferenced_in_terminator, read_out_of_memory_after,
     read_out_of_memory_in_terminator,
 };
 use crate::source::{SourceMap, Span};
@@ -775,6 +775,7 @@ fn findings_within(
             };
 
             let block = function.block(id);
+            let mut before = None;
             for element in &block.elements {
                 // Before `used`, so that the proof stands at the caret and a
                 // doubt about the same place there does not replace it.
@@ -784,7 +785,7 @@ fn findings_within(
                     &mut said,
                     &analysis,
                     function,
-                    read_out_of_memory_in_element(element),
+                    read_out_of_memory_after(before.replace(element), element),
                     &known,
                     false,
                 );
@@ -1072,6 +1073,7 @@ fn findings_within(
                     .iter()
                     .all(|&latch| dominators.dominates(id, latch));
                 let block = function.block(id);
+                let mut before = None;
                 for element in &block.elements {
                     loaded_indeterminate(
                         sources,
@@ -1079,7 +1081,7 @@ fn findings_within(
                         &mut said,
                         &analysis,
                         function,
-                        read_out_of_memory_in_element(element),
+                        read_out_of_memory_after(before.replace(element), element),
                         &turn,
                         doubt_only,
                     );

@@ -160,9 +160,7 @@ pub(crate) fn read_out_of_memory_in_element(element: &Element) -> Option<(Span, 
         }
         // Converted, so read (C17 6.3.2.1 p2), which is why the lowering
         // emits it.
-        Element::Evaluate { place, origin } => {
-            Some((origin.span(), read_as_value(place).into_iter().collect()))
-        }
+        Element::Evaluate { place, origin } => Some((origin.span(), read_as_value(place))),
         Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => None,
         Element::UnsequencedAccess {
             local: _,
@@ -184,6 +182,27 @@ pub(crate) fn read_out_of_memory_in_element(element: &Element) -> Option<(Span, 
 }
 
 /// The same, for what a terminator reads.
+/// What [`read_out_of_memory_in_element`] answers for `element`, less the
+/// lowering's own read of the value the assignment `before` it just stored
+/// at the same caret, where that place is two dereferences or more: the
+/// value of an assignment is what was stored (C17 6.5.16 p3), and the slot
+/// was written a moment ago whatever else it may name. A place one
+/// dereference deep is answered by `Held::stored_through` instead. Left in,
+/// `**t = y;` doubted its own write as a read of memory nothing wrote
+/// (#768).
+pub(crate) fn read_out_of_memory_after(
+    before: Option<&Element>,
+    element: &Element,
+) -> Option<(Span, Vec<Place>)> {
+    let (at, mut places) = read_out_of_memory_in_element(element)?;
+    if let Some(Element::Assign(stored)) = before {
+        if stored.origin.span() == at {
+            places.retain(|place| place.projection.len() < 2 || *place != stored.place);
+        }
+    }
+    Some((at, places))
+}
+
 pub(crate) fn read_out_of_memory_in_terminator(
     terminator: &Terminator,
 ) -> Option<(Span, Vec<Place>)> {
@@ -195,7 +214,7 @@ pub(crate) fn read_out_of_memory_in_terminator(
             then: _,
             origin,
         } => {
-            let mut places: Vec<Place> = arguments.iter().filter_map(read_in).collect();
+            let mut places: Vec<Place> = arguments.iter().flat_map(read_in).collect();
             if let Some(destination) = destination {
                 places.extend(first_of_two_derefs(destination));
             }
@@ -206,27 +225,34 @@ pub(crate) fn read_out_of_memory_in_terminator(
             then: _,
             otherwise: _,
             origin,
-        } => Some((origin.span(), read_in(condition).into_iter().collect())),
+        } => Some((origin.span(), read_in(condition))),
         Terminator::Goto(_) | Terminator::Return | Terminator::Abnormal { to: _ } => None,
     }
 }
 
-/// The `*l` an operand reads, if it reads one.
-fn read_in(operand: &Operand) -> Option<Place> {
+/// The places an operand reads out of memory, if it reads any.
+fn read_in(operand: &Operand) -> Vec<Place> {
     match operand {
         Operand::Copy(place) => read_as_value(place),
-        Operand::Constant(_) => None,
+        Operand::Constant(_) => Vec::new(),
     }
 }
 
-/// The `*l` a place read as a value reads: itself, where it is `*l`, or the
-/// first dereference on the way to a second.
-fn read_as_value(place: &Place) -> Option<Place> {
+/// The places a place read as a value reads out of memory: itself, where it
+/// is `*l`; and where it goes through two dereferences or more, the first
+/// on the way **and itself, where it is nothing but dereferences**, since
+/// `int *r = **m;` reads `**m` as much as `*m`. Left at the first, a read
+/// two levels down of memory nothing wrote was asked nothing, where `t =
+/// *m; r = *t;` is `SC0411` (#768). See ADR-0057.
+fn read_as_value(place: &Place) -> Vec<Place> {
     if place.projection.as_slice() == [Projection::Deref] {
-        Some(place.clone())
-    } else {
-        first_of_two_derefs(place)
+        return vec![place.clone()];
     }
+    let mut places: Vec<Place> = first_of_two_derefs(place).into_iter().collect();
+    if !places.is_empty() && derefs(place) == place.projection.len() {
+        places.push(place.clone());
+    }
+    places
 }
 
 /// The `*l` reaching a place reads on the way, read or written: the first

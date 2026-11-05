@@ -691,6 +691,34 @@ impl Allocations<'_> {
     /// just written, the lowering's own read of an assignment's value among
     /// them. See `Held::stored_through` and ADR-0057.
     pub(super) fn reads_partly(&self, function: &Function, source: &Place, value: &Known) -> bool {
+        // **A read below the first dereference is asked too**, of what the
+        // pointer it goes through last may name, as a load reads it
+        // (`Known::levels_below`): `int *r = **m;` of memory nothing wrote
+        // was asked nothing, where `t = *m; r = *t;` was `SC0411` (#768).
+        // **A doubt, never a proof**: that pointer was read out of memory,
+        // so what the walk shows is a lower bound on what it may name, and
+        // it is asked as a pointer read out of memory is below, a block or
+        // a local that is not an array, at no known element. See ADR-0057.
+        let depth = derefs(source);
+        if depth > 1
+            && source
+                .projection
+                .iter()
+                .all(|step| matches!(step, Projection::Deref))
+        {
+            if !self.may_be_pointer(function, source) {
+                return false;
+            }
+            let (sites, locals) = value.levels_below(source.local, depth - 1);
+            return sites
+                .into_iter()
+                .any(|site| value.init[site].may_be_unwritten())
+                || locals.into_iter().any(|local| {
+                    !self.is_array(function, local)
+                        && (value.certainly_unwritten(local, None)
+                            || value.may_be_unwritten(local, None, false))
+                });
+        }
         let through = &value.points_to[source.local];
         let at_start = matches!(through.offset, Offset::Zero);
         let maybe = |local: LocalIdx| value.may_be_unwritten(local, through.element, at_start);
