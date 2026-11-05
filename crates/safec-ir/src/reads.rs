@@ -181,7 +181,6 @@ pub(crate) fn read_out_of_memory_in_element(element: &Element) -> Option<(Span, 
     }
 }
 
-/// The same, for what a terminator reads.
 /// What [`read_out_of_memory_in_element`] answers for `element`, less the
 /// lowering's own read of the value the assignment `before` it just stored
 /// at the same caret, where that place is two dereferences or more: the
@@ -203,6 +202,7 @@ pub(crate) fn read_out_of_memory_after(
     Some((at, places))
 }
 
+/// The same, for what a terminator reads.
 pub(crate) fn read_out_of_memory_in_terminator(
     terminator: &Terminator,
 ) -> Option<(Span, Vec<Place>)> {

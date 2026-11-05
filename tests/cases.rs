@@ -811,6 +811,13 @@ cases! {
         // have landed in the allocation, and `m[1]` may be unwritten.
         // Mutation as the first above; this goes silent. Found by review.
         a_store_through_a_pointer_into_an_array_or_an_allocation_may_have_missed_the_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **The lowering's read of a deep store's value is no read of memory
+        // nothing wrote**, in a loop's first turn as in every turn: `**h =
+        // *pp;` in a loop body, with `*h` either of two blocks, reads `**h`
+        // back as the assignment's value (C17 6.5.16 p3). Mutation: the
+        // first-turn walk asks `read_out_of_memory_in_element` rather than
+        // `read_out_of_memory_after`; this gains `SC0411`. Found by review.
+        a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And copied out of memory that holds such a pointer, `box[0] = m + 1;
         // memcpy(&g, box, 8); g[0] = &x;`, which the copy carries as a load of
         // the box does, `g = box[0];`: the copy is a load built by
