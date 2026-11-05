@@ -84,12 +84,20 @@ In `tests/cases/memory/`:
   silent if the walk back goes on past a block with two predecessors by its
   last, and `a_pointer_read_after_a_loop_whose_counter_each_arm_set_apart_is_doubted`
   if it goes on by its first.
+* `a_pointer_read_after_a_loop_whose_counter_a_call_returned_is_doubted` goes
+  silent if the walk back passes over a write of what is not a constant.
+* `a_pointer_read_after_a_loop_whose_counter_was_written_through_its_address_is_doubted`
+  goes silent if a local whose address is taken is taken to hold a constant.
+* `a_pointer_read_after_a_loop_whose_test_assigns_a_char_is_doubted` goes
+  silent if a `char` the head writes is taken to hold what was written.
 * `a_pointer_read_on_an_arm_that_leaves_a_loop_that_runs_before_its_write_is_doubted`
   goes silent if no block outside the loop is read as of its first turn.
 
 That a loop has one latch and that no early exit reaches past it are held by
 nothing: the frontend reads neither `continue`, `break` nor `goto`, so no C
-program reaches either refusal.
+program reaches either refusal. Nor is the walk back stopping at a call whose
+result lands in the local itself, since the lowering puts a call's result in a
+temporary and copies it.
 
 ### Consequences
 

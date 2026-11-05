@@ -940,6 +940,19 @@ cases! {
         // on only into the loop. Mutation: the walk back goes on past a
         // block with two predecessors by its first; this goes silent.
         a_pointer_read_after_a_loop_whose_counter_each_arm_set_apart_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `i = c();` after `i = 0;`: the lowering copies the call's result
+        // into `i`, a last write that is no constant. Mutation: the walk
+        // back passes over a write of what is not a constant; this goes
+        // silent.
+        a_pointer_read_after_a_loop_whose_counter_a_call_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*pi = 3;` writes `i` where the walk back does not look. Mutation:
+        // a local whose address is taken is taken to hold a constant; this
+        // goes silent.
+        a_pointer_read_after_a_loop_whose_counter_was_written_through_its_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `(c = 200) > 100` in the head, `c` a `char`. Mutation: a `char`
+        // the head writes is taken to hold what was written; this goes
+        // silent.
+        a_pointer_read_after_a_loop_whose_test_assigns_a_char_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The loop is shown to run, so its back edge creates no doubt, but
         // an arm that returns may run on the first turn, before the write:
         // `SC0411`, a doubt. See ADR-0064. Mutation: no block outside the
