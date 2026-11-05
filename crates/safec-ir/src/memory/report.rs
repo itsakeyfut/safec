@@ -1297,9 +1297,16 @@ fn contents_leaving(
             .type_levels(read_as)
             .unwrap_or_default()
             .stored_under(Some(width), analysis.deepest_pointer);
-        let stored_narrower = known.contents[site]
-            .stored_levels()
-            .narrower_than(&receiver);
+        // **And where a store there recorded no width**, which no other
+        // record may stand in for where the receiver reads a pointer out of
+        // it: `*ib = 7; use(box);` with `use` taking `int **` handed on an
+        // `int` read as a pointer, in silence, and so did the same on one
+        // arm beside `*box = malloc(4);` on the other (#767). See
+        // `Cell::unrecorded`.
+        let stored_narrower = (known.contents[site].unrecorded() && receiver.at(0).is_some())
+            || known.contents[site]
+                .stored_levels()
+                .narrower_than(&receiver);
         let fit = match (extents.is_empty(), stored_narrower) {
             (true, false) => continue,
             (true, true) => Fit::Unknown,

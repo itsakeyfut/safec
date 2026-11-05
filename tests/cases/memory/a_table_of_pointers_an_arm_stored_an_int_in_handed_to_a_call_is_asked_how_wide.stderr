@@ -1,0 +1,10 @@
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_how_wide.c:14:5 ]
+    │
+ 14 │     use(box);
+    │     ────┬───  
+    │         ╰───── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
