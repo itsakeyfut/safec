@@ -83,7 +83,8 @@ enum Route {
     /// freshness, where it writes nothing and is believed to have written
     /// what it was handed, which `ACCEPTED` lists as that belief (#782).
     /// Mutation: `Known::believed_written_by_unknown_code` writes nothing;
-    /// `fresh_call_d1_both` fails, among four.
+    /// the four `fresh_call_*` rows fail, `fresh_call_d1_both` among them,
+    /// beside the copy rows the same belief holds.
     Call,
     /// Handed through `void *pass(void *)`, which this check cannot read.
     Ret,
