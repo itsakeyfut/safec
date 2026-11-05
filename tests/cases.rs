@@ -984,6 +984,14 @@ cases! {
         // `SC0411`, a doubt. See ADR-0064. Mutation: no block outside the
         // loop is read as of its first turn; this goes silent.
         a_pointer_read_on_an_arm_that_leaves_a_loop_that_runs_before_its_write_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same zero-trip read of a pointer local whose address is never
+        // taken, which `memory::assigned` asks by name: `SC0411`, a doubt,
+        // at the loop's test when it is false. Found by review. Mutation: no
+        // loop's exit edge is asked as of its first turn; this goes silent.
+        a_pointer_local_read_after_a_loop_that_may_run_zero_times_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A loop its constants run, by name. Mutation: `memory::assigned`
+        // asks the exit edge of a loop shown to run too; this gains a doubt.
+        a_pointer_local_assigned_by_a_loop_its_constants_run_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read on every turn before the body writes it, so the first turn reads it
         // unwritten: `SC0411`, a proof (#670). See ADR-0057. Mutation: ask no read
         // as of a loop's first turn; this goes silent.

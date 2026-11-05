@@ -209,9 +209,10 @@ pub enum Kind {
     /// `memory::assigned`.
     Unassigned,
     /// A pointer local read where some path assigned it, after a branch edge
-    /// that leads to the read on every path and assigns it on none. Always
-    /// `Unknown`, since no execution may take the edge. See
-    /// `memory::assigned`.
+    /// that leads to the read on every path and assigns it on none, the
+    /// local unassigned where the branch is, or on a loop's first turn where
+    /// the edge leaves the loop. Always `Unknown`, since no execution may
+    /// take the edge. See `memory::assigned`.
     SometimesUnassigned {
         /// The branch's controlling expression.
         edge: Span,
