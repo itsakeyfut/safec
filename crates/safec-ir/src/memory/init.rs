@@ -433,6 +433,16 @@ impl Allocations<'_> {
                     // the mark, one per block, cannot say which a read is of,
                     // so it is a doubt, as a copy that may have missed the
                     // block is (#745). See `CopiedPointers`.
+                    //
+                    // **`several` decides nothing in the `Whole` arm, and
+                    // nothing holds it**: a landing of several places has no
+                    // `certain` one (`Landing::certain`), so every block it
+                    // lands in takes `may_write` below, which leaves one that
+                    // may be unwritten `Maybe` already, and `doubt` moves only
+                    // `Written`. Measured on #785: answering `false` there
+                    // fails no case, no route row and no probe written to tell
+                    // them apart. It is kept so that a landing that one day
+                    // has a certain place among several still doubts it.
                     let (unwritten, doubted) = match length {
                         CopiedPointers::Whole => (false, several),
                         CopiedPointers::LastInPart => (false, true),
