@@ -1780,6 +1780,13 @@ pub(super) struct Cell {
     /// would forget every width after `*box = 0;`. Level 0 only, by the
     /// user's decision on #767: no program shows a width forgotten below it
     /// being hidden.
+    ///
+    /// **Nothing clears it**, as nothing replaces a block's record: the
+    /// slots of a block are not told apart, so a pointer stored after the
+    /// `int` may have landed in another slot. `*ib = 7; *box = malloc(4);`
+    /// is doubted at a read of `*box`, a false report accepted on #767 by
+    /// the user's decision, where clearing the mark would leave `box[0]`
+    /// read in silence after `box[1]` was written.
     unrecorded: bool,
 }
 
