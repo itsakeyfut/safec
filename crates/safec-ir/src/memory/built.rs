@@ -7,7 +7,7 @@ use crate::ir::{BinOp, Function, LocalId, Operand, Place, TranslationUnit, Ty};
 use super::allocations::innermost_element;
 use super::index::{Idx, LocalIdx, Site, Table};
 use super::known::{ArrayWrite, Known};
-use super::parts::{Held, Offset, Reached};
+use super::parts::{Held, Init, Inits, Offset, Reached};
 use crate::reads::derefs;
 
 /// What the operands of a binary operation build.
@@ -285,12 +285,41 @@ pub(super) fn replaced_by(
             .filter(|&local| lands[local] && may_hold[local]),
         false,
     );
+    // **A store this check reads that may land in more than one place may
+    // have missed each local it may land in**, which may still be unwritten,
+    // as a site the landing names beside another may (#721): with `g`
+    // either `&m` or `&n`, or either `m + 1` or an allocation, `*g = &x;`
+    // let a read of `m` or `m[1]` nothing wrote go silent, since
+    // `Known::replaced` takes what it may write as written. That is a call
+    // this check cannot read's belief (ADR-0057), and it is kept where the
+    // store may land in one local alone, which a pointer read out of memory
+    // is believed to reach as #726 believes a block's. Found by review.
+    let landing: Vec<LocalIdx> = lands
+        .indices()
+        .filter(|&local| lands[local] && may_hold[local])
+        .collect();
+    let one_place =
+        landing.len() == 1 && !(derefs(place) == 1 && value.points_to[place.local].holds_a_site());
+    let before: Vec<(LocalIdx, Init, Inits)> = if one_place {
+        Vec::new()
+    } else {
+        landing
+            .iter()
+            .map(|&local| (local, value.init[local], value.element_init[local].clone()))
+            .collect()
+    };
     let pending = value.array_writes_before(writes);
     value.replaced(
         |local| may_hold[local],
         |local| may_hold[local] && lands[local],
     );
     value.array_writes_after(pending);
+    for (local, mut init, mut elements) in before {
+        init.may_write();
+        elements.may_write_all();
+        value.init[local] = init;
+        value.element_init[local] = elements;
+    }
 }
 
 /// What a write through `local`, `dereferences` deep, is to each array among

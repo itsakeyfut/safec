@@ -800,6 +800,17 @@ cases! {
         // The same by a length this check cannot read. Mutation as above;
         // this goes silent.
         a_pointer_into_an_array_copied_into_a_local_by_a_length_this_check_cannot_read_names_no_element: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A store that may land in either of two locals may have missed
+        // each**: `*g = &x;` with `g` either `&m` or `&n` wrote one of them,
+        // and `r = m;` may read what nothing wrote. Mutation: the placed
+        // store writes every local it names for certain; this goes silent.
+        // Mutation: `replaced_by` takes what such a store may write as
+        // written; this goes silent too. Found by review.
+        a_store_through_a_pointer_to_either_of_two_locals_may_have_missed_each: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with `g` either `m + 1` or an allocation: the write may
+        // have landed in the allocation, and `m[1]` may be unwritten.
+        // Mutation as the first above; this goes silent. Found by review.
+        a_store_through_a_pointer_into_an_array_or_an_allocation_may_have_missed_the_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And copied out of memory that holds such a pointer, `box[0] = m + 1;
         // memcpy(&g, box, 8); g[0] = &x;`, which the copy carries as a load of
         // the box does, `g = box[0];`: the copy is a load built by

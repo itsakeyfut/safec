@@ -157,11 +157,26 @@ impl Allocations<'_> {
                             edges.iter().copied(),
                             false,
                         );
-                        let pending = value.array_writes_before(writes);
-                        for local in edges {
-                            value.written_local(local);
+                        // **A local is written for certain only where it is
+                        // the one place the store lands**, as a site is
+                        // (`Landing::certain`): with `g` either `&m` or `&n`,
+                        // `*g = &x;` wrote one of them and may have missed
+                        // the other, and writing both let `r = m;` read
+                        // what nothing wrote in silence. A local it may land
+                        // in beside another place may still be unwritten,
+                        // and each element of it. Found by review.
+                        if let ([_], true) = (edges.as_slice(), sites.is_empty()) {
+                            let pending = value.array_writes_before(writes);
+                            for local in edges {
+                                value.written_local(local);
+                            }
+                            value.array_writes_after(pending);
+                        } else {
+                            for local in edges {
+                                value.init[local].may_write();
+                                value.element_init[local].may_write_all();
+                            }
                         }
-                        value.array_writes_after(pending);
                         // And what it points at is written now, whichever
                         // element that is. See `Held::stored_through`.
                         if place.projection.as_slice() == [Projection::Deref] {
