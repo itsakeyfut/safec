@@ -864,6 +864,22 @@ cases! {
         // `q`'s, which nothing wrote. Mutation: a write through a projection
         // leaves what was stored standing; this goes silent.
         a_place_two_levels_down_read_after_its_pointer_is_moved_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A path that stored with no width is no belief where the arms
+        // meet** (#767): an `int` stored through a `void *` alias of `box` on
+        // one arm, `malloc(4)` on the other, and `*box` read back and written
+        // through an `int *` is asked how wide, as with the `int` store alone.
+        // Mutation: `Cell::absorb` does not join `unrecorded`; this goes
+        // silent. Mutation: the store never sets it; this goes silent.
+        // Mutation: `Known::memory_levels` does not forget level 0; this goes
+        // silent.
+        a_pointer_stored_on_one_arm_beside_an_int_on_the_other_is_doubted_how_wide: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with the arms the other way round, which the join answers
+        // alike. Mutations as above.
+        a_pointer_stored_on_one_arm_beside_an_int_on_the_other_the_other_way_round_is_doubted_how_wide: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **But not a null**, which names nothing and is the nullability
+        // check's: the width the other arm stored stands. Mutation: a store
+        // that names nothing sets `unrecorded` too; this gains `SC0412`.
+        a_null_stored_on_one_arm_does_not_forget_the_width_the_other_arm_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And copied out of memory that holds such a pointer, `box[0] = m + 1;
         // memcpy(&g, box, 8); g[0] = &x;`, which the copy carries as a load of
         // the box does, `g = box[0];`: the copy is a load built by
