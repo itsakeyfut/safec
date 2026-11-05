@@ -232,9 +232,16 @@ is the decision.
 to a call, returned, or stored is believed by whoever receives it to point at
 the start of an object as wide as the type it leaves as, so it is asked there
 whether it does: `g(p + 5)`, `return p + 5;` and `*box = p + 5;` are each
-`SC0413`, labelled `passed here`, `returned here` or `stored here`. A pointer
-to memory lets the pointers stored there leave with it, so `int *q = v;
-h(&q);` asks `q`, and `memcpy` asks what its source points at as a store.
+`SC0413`, labelled `passed here`, `returned here` or `stored here`. **A store
+into memory nothing outside the function reads is asked only whether the
+pointer starts an object**: how wide it is, and what it points at, is asked
+by the load that reads it back and by the door the memory leaves by, as a
+write into a local is. So `*m = v;` with `m` this function's own block and
+`v` a `char`'s address is not `SC0413`, and `*box = p + 5;` still is
+([ADR-0065](adr/0065-a-store-nothing-outside-reads-asks-only-whether-its-pointer-is-off-its-start.md)).
+A pointer to memory lets the pointers stored there leave with it, so `int *q
+= v; h(&q);` asks `q`, and `memcpy` asks what its source points at as a
+store.
 A `memcpy` whose destination's or source's type says it copies pointers, and
 whose length ends part way through one, stores a pointer nobody wrote whole,
 and is asked as one that may not point at an object as wide as its type
@@ -348,8 +355,10 @@ so `free(memset(a, 0, 4))` is not reported
 It is asked at every level as well, about an allocation that may have been
 freed: `free(a); use2(&a);` is `SC0407`, `this passes a pointer to where a
 pointer that may have been freed is stored`, since the callee may read the freed pointer out,
-and it is never a proof, since the callee may only write there. The fix is at
-the call or at the free, which is why it is not `SC0402`.
+and it is never a proof, since the callee may only write there. Not of
+`memcpy`'s or `memmove`'s destination, which the copy writes and does not
+read (C17 7.24.2.1, 7.24.2.2). The fix is at the call or at the free, which
+is why it is not `SC0402`.
 [ADR-0042](adr/0042-a-pointer-handed-to-a-call-is-asked-at-the-call-as-a-dereference-of-it-would-be.md)
 is the decision and records what it costs.
 

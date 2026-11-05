@@ -1,0 +1,20 @@
+error[SC0411]: `*pp` is read before anything was assigned to it
+    ╭─[ a_pointer_copied_into_a_local_through_a_pointer_read_out_of_fresh_memory_keeps_its_doubt.c:11:5 ]
+    │
+ 11 │     memcpy(&s, *pp, 8);
+    │     ─────────┬────────  
+    │              ╰────────── read here
+────╯
+  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = help: assign to it before reading it, or allocate with `calloc`
+error[SC0412]: this may reach outside the object `r` points at
+    ╭─[ a_pointer_copied_into_a_local_through_a_pointer_read_out_of_fresh_memory_keeps_its_doubt.c:16:5 ]
+    │
+ 16 │     *r = 1;
+    │     ───┬──  
+    │        ╰──── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

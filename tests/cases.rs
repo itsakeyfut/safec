@@ -992,6 +992,27 @@ cases! {
         // A loop its constants run, by name. Mutation: `memory::assigned`
         // asks the exit edge of a loop shown to run too; this gains a doubt.
         a_pointer_local_assigned_by_a_loop_its_constants_run_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `memcpy(m, &v, 8)` with `*m` freed before: the copy writes `*m`
+        // and reads nothing of it, so what it held is not handed on, as it is
+        // not into a local (#791). Mutation: ask a library copy's destination
+        // what it holds behind it; this gains `SC0407`.
+        a_copy_into_a_block_that_held_a_freed_pointer_is_not_asked_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `memcpy(&s, b, 8)` of fresh `b`: the read is `SC0411`, once, and
+        // `*r = 1` is not doubted again for a width nothing recorded, as a
+        // load out of fresh memory is not (#791). Mutation: believe such a
+        // copy as recorded; this gains `SC0412`.
+        a_pointer_copied_into_a_local_out_of_fresh_memory_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `memcpy(&s, *pp, 8)` with `*pp` itself read out of fresh memory:
+        // the copy's source is a level further than the freshness asked of
+        // a copy at depth zero, so `s` keeps the doubt of what nothing
+        // recorded. Found by review. Mutation: ask a copy's source fresh at
+        // any depth; this loses `SC0412`.
+        a_pointer_copied_into_a_local_through_a_pointer_read_out_of_fresh_memory_keeps_its_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `memcpy` defined in this unit reads its destination, and is asked
+        // as any function is: its destination's freed pointer is `SC0407`.
+        // Found by review. Mutation: skip the destination of every call
+        // named `memcpy`, defined or not; this loses `SC0407`.
+        a_defined_memcpy_s_destination_is_asked_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read on every turn before the body writes it, so the first turn reads it
         // unwritten: `SC0411`, a proof (#670). See ADR-0057. Mutation: ask no read
         // as of a loop's first turn; this goes silent.
@@ -4467,6 +4488,19 @@ cases! {
         a_pointer_moved_past_its_allocation_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_moved_off_its_start_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_moved_off_its_start_stored_into_memory: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `char`'s address stored as an `int *` into this function's own
+        // block, which nothing reads back and nothing outside reads: its
+        // width is asked by a load and by a door, and neither happens, as
+        // `s = v;` into a local is asked nothing (#791). Mutation: ask the
+        // store door at every store through a pointer; this gains `SC0413`.
+        // See ADR-0065.
+        a_narrow_pointer_stored_into_a_block_nothing_outside_reads_is_not_asked_where_it_is_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `malloc(0)` stored into this function's own block: a pointer to
+        // no bytes starts an object all the same, so the store asks nothing,
+        // and a use of it is asked where it is used. Found by review.
+        // Mutation: let `at_its_start` keep an object too narrow for one
+        // byte as outside; this gains `SC0413`. See ADR-0065.
+        a_zero_byte_allocation_stored_into_a_block_nothing_outside_reads_is_not_asked_where_it_is_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A write by name into a local whose address code this check cannot
         // read kept is the same store door, since a read through the kept
         // address believes it (#690). Mutation: drop the

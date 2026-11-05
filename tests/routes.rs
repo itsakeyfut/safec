@@ -2530,44 +2530,144 @@ fn the_matrix_answers_what_was_blessed() {
     }
 }
 
+/// A pointer this check cannot say starts an object, a call's result or
+/// a pointer it stopped following, is asked where it is stored into memory,
+/// and a store into a local is no door. See ADR-0065.
+const ASKED_WHERE_STORED: &str = "a pointer this check cannot say starts an object is asked where it is stored into memory, and a store into a local is no door (ADR-0065)";
+/// See ADR-0045.
+const LOST_READ_FROM_A_LOCAL: &str = "a lost pointer read out of a local proves nothing where it is used, and one read out of memory is believed as it was stored (ADR-0045)";
+
+/// The pairs of a row at depth zero and its row at depth one that answer
+/// differently, with why: each a rule that tells a local from a block on
+/// purpose. Every other pair answers alike in its codes and its exits,
+/// which [`a_route_answers_alike_at_depth_zero_and_one`] holds, and a
+/// pair listed here that no longer differs fails
+/// [`every_pair_kept_apart_still_differs`]. Named as the rows are, without
+/// the depth.
+const APART: &[(&str, &str)] = &[
+    ("caller_ret_both", ASKED_WHERE_STORED),
+    ("caller_ret_one", ASKED_WHERE_STORED),
+    ("width_ret_both", ASKED_WHERE_STORED),
+    ("width_ret_one", ASKED_WHERE_STORED),
+    ("lost_restored_both", ASKED_WHERE_STORED),
+    ("lost_restored_one", ASKED_WHERE_STORED),
+    ("stale_restored_both", ASKED_WHERE_STORED),
+    ("stale_restored_one", ASKED_WHERE_STORED),
+    ("reborn_restored_both", ASKED_WHERE_STORED),
+    ("reborn_restored_one", ASKED_WHERE_STORED),
+    ("reborn_ret_both", ASKED_WHERE_STORED),
+    ("reborn_ret_one", ASKED_WHERE_STORED),
+    (
+        "lost_ret_both",
+        "a lost pointer read out of a local proves nothing (ADR-0045), and one stored into memory is asked there (ADR-0065)",
+    ),
+    (
+        "lost_ret_one",
+        "a lost pointer read out of a local proves nothing (ADR-0045), and one stored into memory is asked there (ADR-0065)",
+    ),
+    (
+        "stale_ret_both",
+        "the freed pointer passed is reported where it is freed and passed (SC0401, SC0407) and not again where it is read back out of memory, and stored into memory it is asked there (ADR-0065)",
+    ),
+    (
+        "stale_ret_one",
+        "the freed pointer passed is reported where it is freed and passed (SC0401, SC0407) and not again where it is read back out of memory, and stored into memory it is asked there (ADR-0065)",
+    ),
+    ("lost_store_both", LOST_READ_FROM_A_LOCAL),
+    ("lost_store_one", LOST_READ_FROM_A_LOCAL),
+    ("stale_store_both", LOST_READ_FROM_A_LOCAL),
+    ("stale_store_one", LOST_READ_FROM_A_LOCAL),
+    ("reborn_store_both", LOST_READ_FROM_A_LOCAL),
+    ("reborn_store_one", LOST_READ_FROM_A_LOCAL),
+    ("width_call_both", MAY_FREE),
+    ("width_call_one", MAY_FREE),
+    (
+        "width_store_both",
+        "a width read out of memory is a lower bound, so a load proves no access too wide where a local's object does (ADR-0061)",
+    ),
+    (
+        "width_store_one",
+        "a width read out of memory is a lower bound, so a load proves no access too wide where a local's object does (ADR-0061)",
+    ),
+    (
+        "fresh_memcpy_one",
+        "a copy into a local is believed as its type where its source is fresh, and a load out of memory that may be fresh on one path believes what was recorded (ADR-0061), so the block's form doubts a width the local's does not",
+    ),
+];
+
 /// A route answers a slot in a local as it answers one a level below a
-/// local: every row at [`Depth::D0`] and its row at [`Depth::D1`] have the
-/// same hazard exit and the same control exit. One kind of place, whose
-/// rules may still differ in the codes they give and in what they prove,
-/// which is narrower than this and not asked here (#780).
+/// local: every row at [`Depth::D0`] and its row at [`Depth::D1`] give the
+/// same codes and the same exit on the hazard, on the control and under
+/// `--allow-unknown`, unless [`APART`] says why the two differ (#791), and
+/// a pair it lists still has the same hazard and control exits.
 ///
 /// **Read off the blessed summary**, which
 /// `the_matrix_answers_what_was_blessed` holds to what the matrix answers:
 /// a change that parts the two depths fails that test first, and this one
 /// once the summary is blessed, so that blessing it does not accept it.
 ///
-/// Mutation: in `tests/routes.expected`, change `width_store_d1_both`'s
-/// `hazard=1` to `hazard=0`; this fails. Mutation: pair each row with
-/// the row at `Depth::D0` rather than `Depth::D1`; this fails, naming a row
-/// paired with itself.
+/// Mutation: in `tests/routes.expected`, take `SC0413` out of
+/// `width_memcpy_d1_both`'s `hazard=`; this fails, where comparing the exits
+/// alone did not. Mutation: change `width_store_d1_both`'s `hazard=1` to
+/// `hazard=0`, a pair `APART` lists; this fails. Mutation: pair each row
+/// with the row at `Depth::D0` rather than `Depth::D1`; this fails, naming a
+/// row paired with itself.
 #[test]
 fn a_route_answers_alike_at_depth_zero_and_one() {
     let summary = std::fs::read_to_string(expected_path())
         .unwrap_or_else(|error| panic!("{}: {error}", expected_path().display()))
         .replace("\r\n", "\n");
-    // The hazard's and the control's exit, by row, from `hazard=E:codes
-    // control=E:codes allowed=E:codes`.
-    let exits = |name: &str| -> (String, String) {
-        let line = summary
-            .lines()
-            .find(|line| line.split(' ').next() == Some(name))
-            .unwrap_or_else(|| panic!("the summary has no line for `{name}`"));
-        let exit = |side: &str| {
-            line.split(' ')
-                .find_map(|field| field.strip_prefix(side))
-                .and_then(|answer| answer.split(':').next())
-                .unwrap_or_else(|| panic!("`{name}` has no `{side}` in the summary"))
-                .to_owned()
-        };
-        (exit("hazard="), exit("control="))
-    };
     let mut pairs = 0;
     let mut parted = vec![];
+    for (near, far) in depth_pairs() {
+        pairs += 1;
+        let (here, there) = (answers(&summary, near), answers(&summary, far));
+        // **A pair kept apart still has the same hazard exit and the same
+        // control exit**: what `APART` excuses is a code or what is proved,
+        // and a hazard one depth accepts is a difference no record names.
+        let kept_apart = APART.iter().any(|(pair, _)| *pair == pair_name(near));
+        let differs = if kept_apart {
+            exits(here) != exits(there)
+        } else {
+            here != there
+        };
+        if differs {
+            parted.push(format!("{near} {here}\n{far} {there}"));
+        }
+    }
+    assert!(pairs > 0, "no row at depth 0 has its row at depth 1");
+    assert!(
+        parted.is_empty(),
+        "a route answers a local and the level below one differently, and `APART` does not say why:\n{}",
+        parted.join("\n")
+    );
+}
+
+/// A pair `APART` lists still answers differently: a table that keeps a pair
+/// which agrees again hides the next difference that pair grows. Mutation:
+/// list a pair that agrees, `width_memcpy_both`; this fails.
+#[test]
+fn every_pair_kept_apart_still_differs() {
+    let summary = std::fs::read_to_string(expected_path())
+        .unwrap_or_else(|error| panic!("{}: {error}", expected_path().display()))
+        .replace("\r\n", "\n");
+    for &(pair, why) in APART {
+        assert!(!why.is_empty(), "`{pair}` is kept apart with no reason");
+        let (near, far) = depth_pairs()
+            .into_iter()
+            .find(|(near, _)| pair_name(near) == pair)
+            .unwrap_or_else(|| panic!("`APART` lists `{pair}`, which is no pair of the matrix"));
+        assert_ne!(
+            answers(&summary, near),
+            answers(&summary, far),
+            "`{pair}` answers alike at depth 0 and 1 now; take it out of `APART`"
+        );
+    }
+}
+
+/// Every row at depth zero beside its row at depth one.
+fn depth_pairs() -> Vec<(&'static str, &'static str)> {
+    let mut pairs = vec![];
     for &(near, row) in ROWS.iter().filter(|(_, row)| row.depth == Depth::D0) {
         let twin = Row {
             depth: Depth::D1,
@@ -2585,21 +2685,37 @@ fn a_route_answers_alike_at_depth_zero_and_one() {
         };
         // And it is a row one level below, not `near` itself.
         assert_eq!(found.depth, Depth::D1, "`{near}` is paired with `{far}`");
-        pairs += 1;
-        let (here, there) = (exits(near), exits(far));
-        if here != there {
-            parted.push(format!(
-                "{near} hazard={} control={}, {far} hazard={} control={}",
-                here.0, here.1, there.0, there.1
-            ));
-        }
+        pairs.push((near, far));
     }
-    assert!(pairs > 0, "no row at depth 0 has its row at depth 1");
-    assert!(
-        parted.is_empty(),
-        "a route answers a local and the level below one differently:\n{}",
-        parted.join("\n")
-    );
+    pairs
+}
+
+/// The hazard's and the control's exit out of what a row answers.
+fn exits(answer: &str) -> (&str, &str) {
+    let exit = |side: &str| {
+        answer
+            .split(' ')
+            .find_map(|field| field.strip_prefix(side))
+            .and_then(|it| it.split(':').next())
+            .unwrap_or_else(|| panic!("`{answer}` has no `{side}`"))
+    };
+    (exit("hazard="), exit("control="))
+}
+
+/// A row's name without its depth, the name `APART` lists a pair by.
+fn pair_name(near: &str) -> String {
+    near.replacen("_d0_", "_", 1)
+}
+
+/// What a row answers, `hazard=E:codes control=E:codes allowed=E:codes`,
+/// from the summary: every field after its name.
+fn answers<'s>(summary: &'s str, name: &str) -> &'s str {
+    summary
+        .lines()
+        .find(|line| line.split(' ').next() == Some(name))
+        .and_then(|line| line.split_once(' '))
+        .map(|(_, answer)| answer)
+        .unwrap_or_else(|| panic!("the summary has no line for `{name}`"))
 }
 
 fn expected_path() -> PathBuf {
