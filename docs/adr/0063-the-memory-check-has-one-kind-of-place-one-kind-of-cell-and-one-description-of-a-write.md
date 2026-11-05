@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-11-03
 decision-makers: itsakeyfut
 ---
@@ -81,11 +81,26 @@ Chosen option: **rebuild in stages**, in this order, the design of each in
 
 ### Confirmation
 
-Each stage's pull request names, for the steps it lands, the mutation that
-fails a named test; until then this record is held by its plan alone. The
-redesign is done when the next architecture review measures, against
-2026-11-03, the fixes per week under `memory/`, the share of new
-`fix(memory)` issues found by the matrix, and the longest open chain.
+Each stage is held where it landed, most of it by the build:
+
+* Stage 1: adding a variant to `Callee` is `E0004` at 21 places, every reader
+  of a callee's kind; passing a `LocalIdx` where a `Site` is wanted,
+  `known.points_to[parameter].hold(LocalIdx::of(parameter), Offset::Zero)` in
+  `memory/transfer.rs`, is `E0308`.
+* Stage 2: a `Certain` built outside `memory::store` is `E0603`, so a certain
+  write is made only by a landing that proves one place (#778).
+* Stage 3: reaching a cell's `Held` from outside `memory::parts`,
+  `value.contents[site].held.from_caller = true`, is `E0616`, so a cell is read
+  and joined by its own rules.
+* Stages 0 and 4: the route matrix in `tests/routes.rs`, which
+  `the_matrix_answers_what_was_blessed`, `a_route_answers_alike_at_depth_zero_and_one`
+  and `every_pair_kept_apart_still_differs` hold, and the rows ADR-0067,
+  ADR-0068 and ADR-0069 name for each belief.
+
+Whether the redesign did what it was for is measured, not held: the next
+architecture review compares, against 2026-11-03, the fixes per week under
+`memory/`, the share of new `fix(memory)` issues the matrix found, and the
+longest open chain.
 
 ### Consequences
 
