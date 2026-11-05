@@ -659,6 +659,7 @@ fn analysis<'a>(
         live_in: crate::liveness::live_in(function),
         cfg: Cfg::of(function),
         opaque_results: Table::from_vec(Vec::new()),
+        // Filled below, since `shown_to_run` reads `analysis.cfg`.
         runs_once: Vec::new(),
     };
     analysis.runs_once = vec![false; function.blocks().len()];
@@ -1029,13 +1030,13 @@ fn findings_within(
         // such a loop that fills an array is not doubted for a path that
         // skips it (#668, ADR-0064), and with nothing else every read the
         // head reached before a write went silent, `r = m[0]; m[0] = &x;` in
-        // the body among them. Per loop
-        // rather than every back edge at once, which doubted a local made in
-        // an outer loop and filled by an inner one wherever it was read after
-        // the inner loop. After the every-turn walk above, so that a proof it
-        // gave stands at the caret, and a doubt it gave gives way to a proof
-        // here: asked first, a first turn's doubt took the place of four such
-        // proofs, measured. See ADR-0057.
+        // the body among them. Per loop rather than every back edge at once,
+        // which doubted a local made in an outer loop and filled by an inner
+        // one wherever it was read after the inner loop. After the every-turn
+        // walk above, so that a proof it gave stands at the caret, and a
+        // doubt it gave gives way to a proof here: asked first, a first
+        // turn's doubt took the place of four such proofs, measured. See
+        // ADR-0057.
         //
         // **One loop at a time, its solution dropped before the next, and
         // every first turn together within one more bound**, by the user's
@@ -1074,9 +1075,8 @@ fn findings_within(
             // the head dominates every block of the body, so some block of the
             // body other than the head dominates a block exactly where the
             // nearest one of its dominators in the loop is not the head.
-            // `Cfg::order` puts a block's immediate dominator before it. Asked
-            // of every block of the body by `Dominators::dominates` instead,
-            // this was a square in the blocks per loop.
+            // `Cfg::order` puts a block's immediate dominator before it, so
+            // the dominator's answer is there when the block is reached.
             let mut nearest_inside: Vec<Option<BlockId>> = vec![None; function.blocks().len()];
             for &id in cfg.order() {
                 if let Some(up) = dominators.immediate(id) {
@@ -1103,12 +1103,13 @@ fn findings_within(
                 // and C defines it reading last turn's value, so it is a
                 // doubt, by the user's decision. Every latch and not any: no
                 // case tells the two apart, measured, since a loop this C can
-                // write has one, and `continue` is the first that will not.
-                let doubt_only = leaves_early
-                    || !each
-                        .latches()
-                        .iter()
-                        .all(|&latch| dominators.dominates(id, latch));
+                // write has one, and `continue` is the first that will not. A
+                // block that leaves the loop early dominates no latch, so it
+                // is a doubt by the same test.
+                let doubt_only = !each
+                    .latches()
+                    .iter()
+                    .all(|&latch| dominators.dominates(id, latch));
                 let block = function.block(id);
                 let mut stored = None;
                 for element in &block.elements {
