@@ -2598,7 +2598,8 @@ const APART: &[(&str, &str)] = &[
 /// A route answers a slot in a local as it answers one a level below a
 /// local: every row at [`Depth::D0`] and its row at [`Depth::D1`] give the
 /// same codes and the same exit on the hazard, on the control and under
-/// `--allow-unknown`, unless [`APART`] says why the two differ (#791).
+/// `--allow-unknown`, unless [`APART`] says why the two differ (#791), and
+/// a pair it lists still has the same hazard and control exits.
 ///
 /// **Read off the blessed summary**, which
 /// `the_matrix_answers_what_was_blessed` holds to what the matrix answers:
@@ -2607,8 +2608,10 @@ const APART: &[(&str, &str)] = &[
 ///
 /// Mutation: in `tests/routes.expected`, take `SC0413` out of
 /// `width_memcpy_d1_both`'s `hazard=`; this fails, where comparing the exits
-/// alone did not. Mutation: pair each row with the row at `Depth::D0`
-/// rather than `Depth::D1`; this fails, naming a row paired with itself.
+/// alone did not. Mutation: change `width_store_d1_both`'s `hazard=1` to
+/// `hazard=0`, a pair `APART` lists; this fails. Mutation: pair each row
+/// with the row at `Depth::D0` rather than `Depth::D1`; this fails, naming a
+/// row paired with itself.
 #[test]
 fn a_route_answers_alike_at_depth_zero_and_one() {
     let summary = std::fs::read_to_string(expected_path())
@@ -2618,11 +2621,17 @@ fn a_route_answers_alike_at_depth_zero_and_one() {
     let mut parted = vec![];
     for (near, far) in depth_pairs() {
         pairs += 1;
-        if APART.iter().any(|(pair, _)| *pair == pair_name(near)) {
-            continue;
-        }
         let (here, there) = (answers(&summary, near), answers(&summary, far));
-        if here != there {
+        // **A pair kept apart still has the same hazard exit and the same
+        // control exit**: what `APART` excuses is a code or what is proved,
+        // and a hazard one depth accepts is a difference no record names.
+        let kept_apart = APART.iter().any(|(pair, _)| *pair == pair_name(near));
+        let differs = if kept_apart {
+            exits(here) != exits(there)
+        } else {
+            here != there
+        };
+        if differs {
             parted.push(format!("{near} {here}\n{far} {there}"));
         }
     }
@@ -2679,6 +2688,18 @@ fn depth_pairs() -> Vec<(&'static str, &'static str)> {
         pairs.push((near, far));
     }
     pairs
+}
+
+/// The hazard's and the control's exit out of what a row answers.
+fn exits(answer: &str) -> (&str, &str) {
+    let exit = |side: &str| {
+        answer
+            .split(' ')
+            .find_map(|field| field.strip_prefix(side))
+            .and_then(|it| it.split(':').next())
+            .unwrap_or_else(|| panic!("`{answer}` has no `{side}`"))
+    };
+    (exit("hazard="), exit("control="))
 }
 
 /// A row's name without its depth, the name `APART` lists a pair by.
