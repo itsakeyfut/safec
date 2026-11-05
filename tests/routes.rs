@@ -82,6 +82,8 @@ enum Route {
     /// Asked of width, where the call writes a pointer of its own, and of
     /// freshness, where it writes nothing and is believed to have written
     /// what it was handed, which `ACCEPTED` lists as that belief (#782).
+    /// Mutation: `Known::believed_written_by_unknown_code` writes nothing;
+    /// `fresh_call_d1_both` fails, among four.
     Call,
     /// Handed through `void *pass(void *)`, which this check cannot read.
     Ret,
@@ -564,8 +566,6 @@ routes! {
     reborn_restored_d1_one: Reborn Restored D1 One;
     reborn_restored_d2_both: Reborn Restored D2 Both;
     reborn_restored_d2_one: Reborn Restored D2 One;
-    fresh_call_d0_both: Fresh Call D0 Both;
-    fresh_call_d0_one: Fresh Call D0 One;
     fresh_call_d1_both: Fresh Call D1 Both;
     fresh_call_d1_one: Fresh Call D1 One;
     fresh_call_d2_both: Fresh Call D2 Both;
@@ -658,6 +658,13 @@ struct Unwritten {
 /// what holds the slot, since a local is not grown; `fresh` grows the block
 /// it reads from instead, so its rows at a local are written.
 const NOT_WRITTEN: &[Unwritten] = &[
+    Unwritten {
+        route: Route::Call,
+        depth: Some(Depth::D0),
+        belief: Some(Belief::Fresh),
+        shape: None,
+        why: "a local slot is made with a value, so a call handed its address is handed nothing fresh",
+    },
     Unwritten {
         route: Route::Realloc,
         depth: Some(Depth::D0),
@@ -1159,16 +1166,6 @@ const WRITES_WHAT_IT_IS_HANDED: &str = "a call this check cannot read is believe
 /// be told from it. Such a row holds only that the route is not silent
 /// altogether, and the blessed summary is what notices more. See ADR-0062.
 const ACCEPTED: &[(&str, Side, Why)] = &[
-    (
-        "fresh_call_d0_both",
-        Side::Hazard,
-        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
-    ),
-    (
-        "fresh_call_d0_one",
-        Side::Hazard,
-        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
-    ),
     (
         "fresh_call_d1_both",
         Side::Hazard,
@@ -2152,14 +2149,6 @@ fn a_belief_agreeing_is_a_regression_and_a_cost_agreeing_is_a_fix() {
 /// The rows whose hazard the plain store proves and the row only doubts, each
 /// with why. Exact in both directions, as [`ACCEPTED`] is.
 const UNCERTAIN: &[(&str, &str)] = &[
-    (
-        "fresh_call_d0_both",
-        "the call is believed to write what it is handed, so the read back proves nothing indeterminate; see `WRITES_WHAT_IT_IS_HANDED`",
-    ),
-    (
-        "fresh_call_d0_one",
-        "the call is believed to write what it is handed, so the read back proves nothing indeterminate; see `WRITES_WHAT_IT_IS_HANDED`",
-    ),
     (
         "fresh_call_d1_both",
         "the call is believed to write what it is handed, so the read back proves nothing indeterminate; see `WRITES_WHAT_IT_IS_HANDED`",
