@@ -3168,6 +3168,23 @@ impl Analysis for Allocations<'_> {
                             let recorded = value
                                 .memory_levels(source.local, from_depth + 1, self.deepest_pointer)
                                 .at(0);
+                            // **As its type where what it copies is read
+                            // fresh**, as `believed_read` believes such a load:
+                            // the copy's read is reported as indeterminate
+                            // there, once, and nothing was stored to record a
+                            // width. Carried with none, `memcpy(&s, b, 8)` of
+                            // fresh `b` was doubted again at `*s` where
+                            // `memcpy(m, b, 8)` was not (#791). See ADR-0057
+                            // and ADR-0061.
+                            let fresh = from_depth == 0
+                                && self.reads_fresh(
+                                    function,
+                                    &Place {
+                                        local: source.local,
+                                        projection: vec![Projection::Deref],
+                                    },
+                                    value,
+                                );
                             // **And it replaces the local where it is the
                             // store's certain one**, as `s = v;` does: one
                             // local and nothing else (`Landing::strong`),
@@ -3192,15 +3209,18 @@ impl Analysis for Allocations<'_> {
                                     })
                                     .unwrap_or(0);
                                 let width = as_read.min(recorded.unwrap_or(0));
-                                each.believed = self
-                                    .read_from_fits(
+                                each.believed = if fresh {
+                                    Some(as_read)
+                                } else {
+                                    self.read_from_fits(
                                         function,
                                         source.local,
                                         from_depth + 1,
                                         width,
                                         value,
                                     )
-                                    .then_some(width);
+                                    .then_some(width)
+                                };
                                 // The one target, which is all `targets`
                                 // holds where the copy replaces it; any
                                 // other is a may-write, as a union is.

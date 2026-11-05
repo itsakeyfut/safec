@@ -997,6 +997,11 @@ cases! {
         // not into a local (#791). Mutation: ask a library copy's destination
         // what it holds behind it; this gains `SC0407`.
         a_copy_into_a_block_that_held_a_freed_pointer_is_not_asked_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `memcpy(&s, b, 8)` of fresh `b`: the read is `SC0411`, once, and
+        // `*r = 1` is not doubted again for a width nothing recorded, as a
+        // load out of fresh memory is not (#791). Mutation: believe such a
+        // copy as recorded; this gains `SC0412`.
+        a_pointer_copied_into_a_local_out_of_fresh_memory_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read on every turn before the body writes it, so the first turn reads it
         // unwritten: `SC0411`, a proof (#670). See ADR-0057. Mutation: ask no read
         // as of a loop's first turn; this goes silent.
