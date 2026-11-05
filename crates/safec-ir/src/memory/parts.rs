@@ -1764,8 +1764,8 @@ fn joined_element(
 pub(super) struct Cell {
     /// What a pointer stored there may be.
     held: Held,
-    /// Whether a store into it recorded no width for what it stored, where
-    /// what it stored is not a pointer by its type or names something.
+    /// Whether a store into it stored a value that is not a pointer by its
+    /// type, which records no width for what a load reads back there.
     ///
     /// **"Stored with no width", told apart from "nothing stored"**, which
     /// `held`'s `believed` alone cannot say, since `None` is both no bound

@@ -2306,15 +2306,11 @@ impl Analysis for Allocations<'_> {
                         written.locals(),
                         &stored,
                         &written,
-                        // **No width for what may be a pointer**: a value
-                        // not a pointer by its type, or one that names
-                        // something no width was recorded for. Not a null,
-                        // which names nothing. See `Cell::unrecorded`.
-                        bound.is_none()
-                            && (!self.may_be_pointer(function, &operation.place)
-                                || written.holds_a_site()
-                                || written.may_be_a_locals_address()
-                                || !written.beyond().is_nothing()),
+                        // **No width, for a value that is not a pointer by
+                        // its type**: a pointer is given one above whatever it
+                        // names, and one with no `bound` names nothing, which
+                        // is a null. See `Cell::unrecorded`.
+                        !self.may_be_pointer(function, &operation.place),
                     );
                     self.land_contents(
                         value,
