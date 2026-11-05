@@ -992,6 +992,11 @@ cases! {
         // A loop its constants run, by name. Mutation: `memory::assigned`
         // asks the exit edge of a loop shown to run too; this gains a doubt.
         a_pointer_local_assigned_by_a_loop_its_constants_run_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `memcpy(m, &v, 8)` with `*m` freed before: the copy writes `*m`
+        // and reads nothing of it, so what it held is not handed on, as it is
+        // not into a local (#791). Mutation: ask a library copy's destination
+        // what it holds behind it; this gains `SC0407`.
+        a_copy_into_a_block_that_held_a_freed_pointer_is_not_asked_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read on every turn before the body writes it, so the first turn reads it
         // unwritten: `SC0411`, a proof (#670). See ADR-0057. Mutation: ask no read
         // as of a loop's first turn; this goes silent.

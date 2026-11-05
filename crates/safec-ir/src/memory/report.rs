@@ -2389,7 +2389,23 @@ pub(super) fn handed(
     // `*tab` hands on. Not carried forwards as the pointer is, because only
     // allocations already freed are asked, and those are reported there.
     // See ADR-0042.
+    //
+    // **Not a library copy's destination**, which `memcpy` and `memmove`
+    // write and do not read (C17 7.24.2.1, 7.24.2.2): what it held before is
+    // not handed on, and a later read of what the copy left there is asked
+    // where it is read. Asked, a destination block that once held a freed
+    // pointer was `SC0407` where the same copy into a local was silent
+    // (#791).
+    let copies = !analysis.unit.function(*callee).is_defined()
+        && matches!(analysis.callee(*callee), Callee::Copies);
+    let destination = match arguments.first() {
+        Some(Operand::Copy(place)) if copies => Some(place),
+        Some(_) | None => None,
+    };
     for place in silent {
+        if Some(place) == destination {
+            continue;
+        }
         freed_behind(
             findings,
             said,

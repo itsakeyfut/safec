@@ -355,8 +355,10 @@ so `free(memset(a, 0, 4))` is not reported
 It is asked at every level as well, about an allocation that may have been
 freed: `free(a); use2(&a);` is `SC0407`, `this passes a pointer to where a
 pointer that may have been freed is stored`, since the callee may read the freed pointer out,
-and it is never a proof, since the callee may only write there. The fix is at
-the call or at the free, which is why it is not `SC0402`.
+and it is never a proof, since the callee may only write there. Not of
+`memcpy`'s or `memmove`'s destination, which the copy writes and does not
+read (C17 7.24.2.1, 7.24.2.2). The fix is at the call or at the free, which
+is why it is not `SC0402`.
 [ADR-0042](adr/0042-a-pointer-handed-to-a-call-is-asked-at-the-call-as-a-dereference-of-it-would-be.md)
 is the decision and records what it costs.
 
