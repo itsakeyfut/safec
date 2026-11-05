@@ -21,8 +21,8 @@ use crate::ir::{
 use super::bits::Bits;
 use super::index::LocalIdx;
 
-/// Whether `each` is shown to run its body at least once, and to leave by
-/// its head only after a whole turn.
+/// Whether `each` is shown to run its body at least once, with its head's
+/// test the only way past it and taken only after a whole turn.
 ///
 /// `taken` is every local whose address is taken, which `assigned::address_taken`
 /// answers: a write through an address is not followed here, so such a local
@@ -78,11 +78,25 @@ pub(super) fn shown_to_run(
 }
 
 /// Whether an edge leaving `each` from a block other than its head reaches
-/// `past`, the block the head's test leaves the loop for.
+/// anything `past` reaches, `past` being the block the head's test leaves
+/// the loop for.
+///
+/// **Anything `past` reaches, not `past` alone**: a `goto` from the body to
+/// a label after the loop reaches what follows it without passing `past`,
+/// and carries the first turn's skipped write there all the same.
 fn leaves_early_to(function: &Function, cfg: &Cfg, each: &Loop, past: BlockId) -> bool {
-    let mut seen = vec![false; function.blocks().len()];
-    let mut stack = Vec::new();
+    let mut after = vec![false; function.blocks().len()];
+    let mut stack = vec![past];
     let mut successors = Vec::new();
+    while let Some(block) = stack.pop() {
+        if std::mem::replace(&mut after[block.index()], true) {
+            continue;
+        }
+        successors.clear();
+        function.block(block).terminator.successors(&mut successors);
+        stack.extend(successors.iter().copied());
+    }
+    let mut seen = vec![false; function.blocks().len()];
     for &block in cfg.order() {
         if block == each.head() || !each.contains(block) {
             continue;
@@ -92,7 +106,7 @@ fn leaves_early_to(function: &Function, cfg: &Cfg, each: &Loop, past: BlockId) -
         stack.extend(successors.iter().copied().filter(|&to| !each.contains(to)));
     }
     while let Some(block) = stack.pop() {
-        if block == past {
+        if after[block.index()] {
             return true;
         }
         if std::mem::replace(&mut seen[block.index()], true) {
@@ -114,6 +128,15 @@ fn leaves_early_to(function: &Function, cfg: &Cfg, each: &Loop, past: BlockId) -
 /// constant [`constant_on_the_way_in`] finds. **Only an `int` holds one**:
 /// the IR carries no conversion, so `char c = 200;` holds 200 here and not
 /// what C stores, and a `char` is never taken to hold a constant.
+///
+/// **A local whose address is taken holds nothing, even after the head
+/// wrote it**, since `*p = 5` writes it as a write to `p`: `(i = 0, *p = 5,
+/// i < 1)` was shown to run. **And a local the head writes twice holds
+/// nothing after the second write**: two writes C leaves unsequenced are
+/// undefined (C17 6.5 p2) and the IR lowers them in an order C did not
+/// choose, so `(i = 0) < (i = 3)` was shown to run by that order. A second
+/// write the head does sequence, `(i = 0, i = 1, i < 2)`, is refused with
+/// it, which costs a doubt.
 fn head_test(
     unit: &TranslationUnit,
     function: &Function,
@@ -128,13 +151,15 @@ fn head_test(
     let value = |written: &[(LocalId, Option<i128>)], operand: &Operand| match operand {
         Operand::Constant(c) => small(*c),
         Operand::Copy(place) if place.projection.is_empty() => {
+            if taken.get(LocalIdx::of(place.local)) || !holds_int(place.local) {
+                return None;
+            }
             match written
                 .iter()
                 .rev()
                 .find(|(local, _)| *local == place.local)
             {
                 Some(&(_, known)) => known,
-                None if taken.get(LocalIdx::of(place.local)) || !holds_int(place.local) => None,
                 None => constant_on_the_way_in(function, cfg, entry, place.local),
             }
         }
@@ -143,25 +168,30 @@ fn head_test(
     for element in &function.block(head).elements {
         match element {
             Element::Assign(operation) => {
-                let known =
-                    if operation.place.projection.is_empty() && holds_int(operation.place.local) {
-                        match &operation.value {
-                            Rvalue::Use(operand) => value(&written, operand),
-                            Rvalue::Binary { op, lhs, rhs } => {
-                                match (value(&written, lhs), value(&written, rhs)) {
-                                    (Some(lhs), Some(rhs)) => compared(*op, lhs, rhs),
-                                    _ => None,
-                                }
+                let again = written
+                    .iter()
+                    .any(|(local, _)| *local == operation.place.local);
+                let known = if again {
+                    None
+                } else if operation.place.projection.is_empty() {
+                    match &operation.value {
+                        Rvalue::Use(operand) => value(&written, operand),
+                        Rvalue::Binary { op, lhs, rhs } => {
+                            match (value(&written, lhs), value(&written, rhs)) {
+                                (Some(lhs), Some(rhs)) => compared(*op, lhs, rhs),
+                                _ => None,
                             }
-                            Rvalue::Unary { .. } | Rvalue::Address(_) => None,
                         }
-                    } else {
-                        None
-                    };
+                        Rvalue::Unary { .. } | Rvalue::Address(_) => None,
+                    }
+                } else {
+                    None
+                };
                 written.push((operation.place.local, known));
             }
-            // A local made again holds nothing, and one two operands write
-            // unsequenced holds what C does not define.
+            // A local made again holds nothing. `UnsequencedAccess` names
+            // only a pointer today (ADR-0052), which holds no constant here
+            // anyway; the second write above is what refuses an `int`.
             Element::StorageLive { local, .. } | Element::UnsequencedAccess { local, .. } => {
                 written.push((*local, None));
             }
@@ -256,4 +286,106 @@ fn compared(op: BinOp, lhs: i128, rhs: i128) -> Option<i128> {
         | BinOp::BitOr => return None,
     };
     Some(i128::from(holds))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ir::{Block, Origin};
+    use crate::source::{SourceMap, Span};
+    use crate::target::Target;
+
+    /// The edges of a loop whose head tests the constant 1, built by hand:
+    /// blocks 0 to `blocks - 1`, the entry `0` going to the head `1`, the
+    /// head going to `2` or to `past`, and `edges` giving every other
+    /// block's successors, one for a `Goto`, two for a `Branch`, none for a
+    /// `Return`. Answers whether the loop at `1` is shown to run.
+    ///
+    /// **By hand because no C reaches these shapes yet**: the frontend reads
+    /// neither `continue`, `break` nor `goto`, and each refusal they need
+    /// would otherwise be held by nothing until it did.
+    fn runs(blocks: usize, past: usize, edges: &[(usize, &[usize])]) -> bool {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "f");
+        let at = Span::new(file, 0, 1);
+        let mut unit = TranslationUnit::new(
+            Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+        );
+        let int = unit.push_type(Ty::Int);
+        let mut function = Function::new(at, int, []);
+        let ids: Vec<BlockId> = (0..blocks).map(|_| function.reserve_block()).collect();
+        let branch = |then: usize, otherwise: usize| Terminator::Branch {
+            condition: Operand::Constant(1),
+            then: ids[then],
+            otherwise: ids[otherwise],
+            origin: Origin::Written(at),
+        };
+        let mut terminators: Vec<Option<Terminator>> = (0..blocks).map(|_| None).collect();
+        terminators[0] = Some(Terminator::Goto(ids[1]));
+        terminators[1] = Some(branch(2, past));
+        for &(block, to) in edges {
+            terminators[block] = Some(match to {
+                [] => Terminator::Return,
+                [to] => Terminator::Goto(ids[*to]),
+                [then, otherwise] => branch(*then, *otherwise),
+                _ => unreachable!("a block has at most two successors here"),
+            });
+        }
+        for (id, terminator) in ids.iter().zip(terminators) {
+            function.fill_block(
+                *id,
+                Block {
+                    elements: vec![],
+                    terminator: terminator.expect("every block is given its edges"),
+                },
+            );
+        }
+        let taken = Bits::new(function.locals().len());
+        let cfg = Cfg::of(&function);
+        let each = cfg
+            .loops()
+            .into_iter()
+            .find(|each| each.head() == ids[1])
+            .expect("block 1 heads a loop");
+        shown_to_run(&unit, &function, &cfg, &each, &taken)
+    }
+
+    /// The control: one latch, and the only way out is the head's test.
+    /// Mutation: `shown_to_run` answers `false` once its other checks pass;
+    /// this fails, and so do the corpus's loops counted by constants.
+    #[test]
+    fn a_loop_whose_test_holds_on_the_way_in_is_shown_to_run() {
+        assert!(runs(4, 3, &[(2, &[1]), (3, &[])]));
+    }
+
+    /// `continue`: a second back edge, from a turn that did not finish.
+    /// Mutation: delete the latch count's refusal; this fails.
+    #[test]
+    fn a_loop_with_two_latches_is_not_shown_to_run() {
+        assert!(!runs(5, 4, &[(2, &[1, 3]), (3, &[1]), (4, &[])]));
+    }
+
+    /// `break`: an edge from the body to where the head's test leaves.
+    /// Mutation: delete the early exit's refusal; this fails.
+    #[test]
+    fn a_loop_left_from_its_body_for_where_its_test_leaves_is_not_shown_to_run() {
+        assert!(!runs(5, 4, &[(2, &[4, 3]), (3, &[1]), (4, &[])]));
+    }
+
+    /// `goto out;` with `out:` after the loop: the body reaches what follows
+    /// the loop without passing where the test leaves. Found by review.
+    /// Mutation: refuse only an early exit that reaches `past` itself; this
+    /// fails.
+    #[test]
+    fn a_loop_left_from_its_body_for_what_follows_it_is_not_shown_to_run() {
+        assert!(!runs(6, 4, &[(2, &[5, 3]), (3, &[1]), (4, &[5]), (5, &[])]));
+    }
+
+    /// An arm that returns from the body leaves for nothing after the loop.
+    /// Mutation: refuse every early exit; this fails, and so do the corpus
+    /// cases whose arm returns from a loop counted by constants.
+    #[test]
+    fn a_loop_left_from_its_body_by_a_return_is_shown_to_run() {
+        assert!(runs(6, 4, &[(2, &[5, 3]), (3, &[1]), (4, &[]), (5, &[])]));
+    }
 }
