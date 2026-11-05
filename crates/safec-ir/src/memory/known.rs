@@ -463,7 +463,9 @@ impl Known {
         self.points_to[local].clear();
     }
 
-    /// The local `at` names holds `value` and nothing it held before: the one
+    /// The local `at` names holds `value` and nothing it held before: **the
+    /// strong update, not [`Self::replaced`]**, which a write that may land in
+    /// several escaped locals takes, and which replaces nothing. The one
     /// replacement of a local's whole value, which only a [`Strong`] can ask
     /// for. Every other write that may land in a local adds to what it held,
     /// [`Self::target_union`]. See ADR-0028 and ADR-0063.
@@ -2533,6 +2535,9 @@ impl Known {
         }
     }
 
+    /// **The weak update, not [`Self::replace`]**, which is the one strong
+    /// one: this adds to what each local may hold and replaces none of it.
+    ///
     /// Everything an escaped local this writer could have reached holds may
     /// have been replaced.
     ///

@@ -102,7 +102,9 @@ impl Idx for LocalIdx {
 }
 
 /// One kind of place: an allocation site or a local, which this check used
-/// to keep in two tables per question and answer twice (#779).
+/// to keep in two tables per question and answer twice (#779). **Not the
+/// IR's [`Place`](crate::ir::Place)**, which is a local with a projection
+/// that a statement reads or writes: this is what such a place may name.
 ///
 /// **Interleaved**, `Heap(s)` at `2s` and `Local(l)` at `2l + 1`, so that a
 /// [`Bits`](super::bits::Bits) or a [`Table`] of places needs no count of
