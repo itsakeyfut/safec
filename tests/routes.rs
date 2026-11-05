@@ -141,6 +141,68 @@ enum Route {
     /// store of a pointer read out of memory holding a lost one does not
     /// mark what it lands in; `lost_restored_d1_both` fails.
     Restored,
+    /// Copied out of a block nothing wrote into the slot, written first, by
+    /// a length this check cannot read, `memcpy(&slot, b, k)`, against the
+    /// same out of a written block: a copy whose length is not a constant
+    /// does not cover its destination, so the slot is a doubt. Freshness
+    /// only, in a block. Mutation: `covers` takes an unreadable length as
+    /// covering; `a_route_is_as_certain_as_its_plain_store` fails at
+    /// `fresh_memcpy_unread_d1_both`, which then proves.
+    MemcpyUnread,
+    /// One pointer copied out of a block nothing wrote into a block of two
+    /// whose second was written, the second read back: what a copy shorter
+    /// than its destination leaves is in doubt. Freshness only, in a block.
+    /// Mutation: drop a block copy's `&& covers`;
+    /// `a_route_is_as_certain_as_its_plain_store` fails at
+    /// `fresh_memcpy_short_d1_both`, which then proves.
+    MemcpyShort,
+    /// The same into a local array of two: the local copy's own `covers`.
+    /// Freshness only, at a local. Mutation: drop a local copy's `&& covers`;
+    /// `a_route_is_as_certain_as_its_plain_store` fails at
+    /// `fresh_memcpy_into_part_d0_both`, which then proves.
+    MemcpyIntoPart,
+    /// Copied out of a block nothing wrote into `d`, a parameter, after the
+    /// slot's block, written, was handed to a call this check cannot read:
+    /// `d` may be that block, so it is a doubt. Freshness only, in a block.
+    /// Mutation: drop a block copy's `&& alone`;
+    /// `a_route_is_as_certain_as_its_plain_store` fails at
+    /// `fresh_memcpy_unplaced_d1_both`, which then proves.
+    MemcpyUnplaced,
+    /// Copied out of a local nothing wrote, `memcpy(&slot, &src_, 8)`,
+    /// against one written. Freshness only. Mutation: drop
+    /// `locals_unwritten`; `a_route_is_as_certain_as_its_plain_store` fails
+    /// at `fresh_memcpy_from_local_d0_both`, a doubt where the store proves.
+    MemcpyFromLocal,
+    /// The same with the local written on one arm only. Freshness only.
+    /// Mutation: drop `locals_maybe`; `fresh_memcpy_from_local_maybe_d0_both`
+    /// goes silent.
+    MemcpyFromLocalMaybe,
+    /// A local array of two written backwards through a pointer moved off
+    /// its end, its first read where only its second was written, against
+    /// both written. Freshness only, at a local. Mutation: `reads_partly`
+    /// drops `stored_through`; `fresh_stored_through_d0_both` fails.
+    StoredThrough,
+    /// A local array's second element stored as a pointer into a block,
+    /// read back and written through, its first read: `box2[0] = a2 + 1;`,
+    /// against `box2[0] = a2;`. Freshness only, at a local. Mutation: a load
+    /// takes no `array_edge` from `Known::stored_in_part`;
+    /// `fresh_element_slot_d0_both` goes silent.
+    ElementSlot,
+    /// A local's address handed to a call taking `void *` that keeps it, a
+    /// pointer's address stored there after, a later call, the local moved
+    /// on, and the pointer passed on after another: `SC0413`, against the
+    /// same handed typed. Width only, at a local. Mutation: `handed` records
+    /// no read-as for `void`; `width_kept_void_d0_both` goes silent.
+    KeptVoid,
+    /// The same handed as `char *` through `void *`: memory read as bytes,
+    /// which a later pointer below may be stored into. Width only, at a
+    /// local. Mutation: `handed` records nothing untyped below;
+    /// `width_kept_bytes_d0_both` goes silent.
+    KeptBytes,
+    /// The same with the pointer's address stored into a block the call
+    /// kept through `void *`. Width only, in a block. Mutation: `handed_site`
+    /// records nothing untyped; `width_kept_block_d0_both` goes silent.
+    KeptBlock,
 }
 
 /// Where the slot is: a local, or one or two levels below one.
@@ -188,7 +250,7 @@ const BELIEFS: [Belief; 7] = [
     Belief::Caller,
     Belief::Unreplaced,
 ];
-const ROUTES: [Route; 13] = [
+const ROUTES: [Route; 24] = [
     Route::Store,
     Route::Memcpy,
     Route::Realloc,
@@ -202,6 +264,17 @@ const ROUTES: [Route; 13] = [
     Route::CallDeep,
     Route::ReallocParam,
     Route::Restored,
+    Route::MemcpyUnread,
+    Route::MemcpyShort,
+    Route::MemcpyIntoPart,
+    Route::MemcpyUnplaced,
+    Route::MemcpyFromLocal,
+    Route::MemcpyFromLocalMaybe,
+    Route::StoredThrough,
+    Route::ElementSlot,
+    Route::KeptVoid,
+    Route::KeptBytes,
+    Route::KeptBlock,
 ];
 const DEPTHS: [Depth; 3] = [Depth::D0, Depth::D1, Depth::D2];
 const SHAPES: [Shape; 2] = [Shape::Both, Shape::One];
@@ -233,6 +306,17 @@ fn axis_place(row: Row) -> [usize; 4] {
         Route::CallDeep => 10,
         Route::ReallocParam => 11,
         Route::Restored => 12,
+        Route::MemcpyUnread => 13,
+        Route::MemcpyShort => 14,
+        Route::MemcpyIntoPart => 15,
+        Route::MemcpyUnplaced => 16,
+        Route::MemcpyFromLocal => 17,
+        Route::MemcpyFromLocalMaybe => 18,
+        Route::StoredThrough => 19,
+        Route::ElementSlot => 20,
+        Route::KeptVoid => 21,
+        Route::KeptBytes => 22,
+        Route::KeptBlock => 23,
     };
     let depth = match row.depth {
         Depth::D0 => 0,
@@ -345,7 +429,18 @@ impl Axis for Route {
             | Route::CallStored
             | Route::CallDeep
             | Route::ReallocParam
-            | Route::Restored => 13,
+            | Route::Restored
+            | Route::MemcpyUnread
+            | Route::MemcpyShort
+            | Route::MemcpyIntoPart
+            | Route::MemcpyUnplaced
+            | Route::MemcpyFromLocal
+            | Route::MemcpyFromLocalMaybe
+            | Route::StoredThrough
+            | Route::ElementSlot
+            | Route::KeptVoid
+            | Route::KeptBytes
+            | Route::KeptBlock => 24,
         }
     }
 }
@@ -639,6 +734,23 @@ routes! {
     unreplaced_restored_d1_one: Unreplaced Restored D1 One;
     unreplaced_restored_d2_both: Unreplaced Restored D2 Both;
     unreplaced_restored_d2_one: Unreplaced Restored D2 One;
+    fresh_memcpy_unread_d1_both: Fresh MemcpyUnread D1 Both;
+    fresh_memcpy_unread_d1_one: Fresh MemcpyUnread D1 One;
+    fresh_memcpy_short_d1_both: Fresh MemcpyShort D1 Both;
+    fresh_memcpy_into_part_d0_both: Fresh MemcpyIntoPart D0 Both;
+    fresh_memcpy_unplaced_d1_both: Fresh MemcpyUnplaced D1 Both;
+    fresh_memcpy_unplaced_d1_one: Fresh MemcpyUnplaced D1 One;
+    fresh_memcpy_from_local_d0_both: Fresh MemcpyFromLocal D0 Both;
+    fresh_memcpy_from_local_d0_one: Fresh MemcpyFromLocal D0 One;
+    fresh_memcpy_from_local_d1_both: Fresh MemcpyFromLocal D1 Both;
+    fresh_memcpy_from_local_d1_one: Fresh MemcpyFromLocal D1 One;
+    fresh_memcpy_from_local_maybe_d0_both: Fresh MemcpyFromLocalMaybe D0 Both;
+    fresh_memcpy_from_local_maybe_d1_both: Fresh MemcpyFromLocalMaybe D1 Both;
+    fresh_stored_through_d0_both: Fresh StoredThrough D0 Both;
+    fresh_element_slot_d0_both: Fresh ElementSlot D0 Both;
+    width_kept_void_d0_both: Width KeptVoid D0 Both;
+    width_kept_bytes_d0_both: Width KeptBytes D0 Both;
+    width_kept_block_d0_both: Width KeptBlock D0 Both;
 }
 
 /// A combination of the axes no program is written for, and why.
@@ -1408,6 +1520,9 @@ fn mark(row: Row) -> (&'static str, Option<&'static str>) {
     // its own, and only the hazard doubts `r`.
     match row.route {
         Route::CallDeep | Route::ReallocParam => return ("SC0412", Some("object `r` points at")),
+        // **About the pointer passed on**, where a kept call may have stored
+        // any pointer: what a departure asks (`Known::handed_untyped`).
+        Route::KeptVoid | Route::KeptBytes | Route::KeptBlock => return ("SC0413", None),
         Route::Store
         | Route::Memcpy
         | Route::Realloc
@@ -1418,7 +1533,15 @@ fn mark(row: Row) -> (&'static str, Option<&'static str>) {
         | Route::MemcpyPart
         | Route::MemcpyMaybe
         | Route::CallStored
-        | Route::Restored => {}
+        | Route::Restored
+        | Route::MemcpyUnread
+        | Route::MemcpyShort
+        | Route::MemcpyIntoPart
+        | Route::MemcpyUnplaced
+        | Route::MemcpyFromLocal
+        | Route::MemcpyFromLocalMaybe
+        | Route::StoredThrough
+        | Route::ElementSlot => {}
     }
     match row.belief {
         Belief::Width => ("SC0412", None),
@@ -1441,6 +1564,12 @@ void release_all(void);
 void release_ref(int **pp);
 int use2(int **pp);
 void touch(int **p);
+void hand(int **p);
+void keep_v(void *p);
+void keep_c(char *p);
+void keep_t(int ***p);
+void keep_t4(int ****p);
+void use1(int *p);
 ";
 
 /// The statements that make the slot, its spelling, and what it lives in.
@@ -1508,8 +1637,21 @@ fn put(route: Route, depth: Depth, slot: &str, value: &str) -> Vec<String> {
         Route::Call | Route::CallStored | Route::CallDeep | Route::ReallocParam => {
             unreachable!("only `Belief::Width` writes through a call or a parameter; see `width`")
         }
-        Route::MemcpyHalf | Route::MemcpyPart | Route::MemcpyMaybe => {
+        Route::MemcpyHalf
+        | Route::MemcpyPart
+        | Route::MemcpyMaybe
+        | Route::MemcpyUnread
+        | Route::MemcpyShort
+        | Route::MemcpyIntoPart
+        | Route::MemcpyUnplaced
+        | Route::MemcpyFromLocal
+        | Route::MemcpyFromLocalMaybe
+        | Route::StoredThrough
+        | Route::ElementSlot => {
             unreachable!("only `Belief::Fresh` asks a copy's length or source; see `fresh`")
+        }
+        Route::KeptVoid | Route::KeptBytes | Route::KeptBlock => {
+            unreachable!("only `Belief::Width` asks a kept call; see `width`")
         }
     }
 }
@@ -1610,7 +1752,63 @@ fn width(row: Row, hazard: bool) -> Vec<String> {
             value.extend(put(row.route, row.depth, slot, "v"));
             value
         }
-        Route::MemcpyHalf | Route::MemcpyPart | Route::MemcpyMaybe => {
+        // **A local's address kept by a call that reads it untyped**, a
+        // pointer's address stored there after, a later call, and the
+        // pointer passed on, which is where what the kept call may have
+        // stored is asked; the control keeps it typed.
+        Route::KeptVoid | Route::KeptBytes | Route::KeptBlock => {
+            let keep = |untyped: &str| {
+                if hazard {
+                    untyped.to_owned()
+                } else {
+                    "keep_t".to_owned()
+                }
+            };
+            let mut kept = vec!["int x3 = 0;".to_owned(), "int *w = &x3;".to_owned()];
+            match row.route {
+                // **After the holder moves on**, which is where what was kept
+                // untyped is walked again from the mark rather than from the
+                // holder's value now.
+                Route::KeptVoid => kept.extend([
+                    "int **u = 0;".to_owned(),
+                    "int ***v = 0;".to_owned(),
+                    format!("{}(&v);", if hazard { "keep_v" } else { "keep_t4" }),
+                    "v = &u;".to_owned(),
+                    "release_all();".to_owned(),
+                    "v = 0;".to_owned(),
+                    "u = &w;".to_owned(),
+                ]),
+                Route::KeptBytes => {
+                    kept.push("int **v = 0;".to_owned());
+                    if hazard {
+                        kept.extend(["void *pv = &v;".to_owned(), "keep_c(pv);".to_owned()]);
+                    } else {
+                        kept.push("keep_t(&v);".to_owned());
+                    }
+                    kept.push("v = &w;".to_owned());
+                }
+                _ => kept.extend([
+                    "int ***m3 = malloc(8);".to_owned(),
+                    "if (!m3) return 0;".to_owned(),
+                    "*m3 = 0;".to_owned(),
+                    format!("{}(m3);", keep("keep_v")),
+                    "*m3 = &w;".to_owned(),
+                ]),
+            }
+            kept.push("release_all();".to_owned());
+            kept
+        }
+        Route::MemcpyHalf
+        | Route::MemcpyPart
+        | Route::MemcpyMaybe
+        | Route::MemcpyUnread
+        | Route::MemcpyShort
+        | Route::MemcpyIntoPart
+        | Route::MemcpyUnplaced
+        | Route::MemcpyFromLocal
+        | Route::MemcpyFromLocalMaybe
+        | Route::StoredThrough
+        | Route::ElementSlot => {
             unreachable!("asked of freshness only; see `NOT_WRITTEN`")
         }
     };
@@ -1693,12 +1891,97 @@ fn fresh(row: Row, hazard: bool) -> Vec<String> {
                 ]
             }
         }
+        // The slot written first, then copied over out of `b` by a length
+        // this check cannot read.
+        Route::MemcpyUnread => vec![
+            "int x0 = 0;".to_owned(),
+            format!("{slot} = &x0;"),
+            format!("memcpy(&{slot}, b, k);"),
+        ],
+        // One pointer copied out of `b` into a block of two whose second
+        // was written, the second read.
+        Route::MemcpyShort => vec![
+            "int x0 = 0;".to_owned(),
+            "int **n2 = malloc(16);".to_owned(),
+            "if (!n2) return 0;".to_owned(),
+            "n2[1] = &x0;".to_owned(),
+            "memcpy(n2, b, 8);".to_owned(),
+        ],
+        // The same into a local array of two.
+        Route::MemcpyIntoPart => vec![
+            "int x0 = 0;".to_owned(),
+            "int *a2[2];".to_owned(),
+            "a2[1] = &x0;".to_owned(),
+            "memcpy(a2, b, 8);".to_owned(),
+        ],
+        // The slot written and its block handed on, then a copy out of `b`
+        // into a parameter that may be that block.
+        Route::MemcpyUnplaced => vec![
+            "int x0 = 0;".to_owned(),
+            format!("{slot} = &x0;"),
+            "hand(m);".to_owned(),
+            "memcpy(d, b, 8);".to_owned(),
+        ],
+        // Out of a local nothing wrote, or one written on one arm only, and
+        // the control's written; `b` is not the source.
+        Route::MemcpyFromLocal | Route::MemcpyFromLocalMaybe => {
+            let mut source = vec!["int x0 = 0;".to_owned()];
+            match (hazard, row.route) {
+                (true, Route::MemcpyFromLocal) => source.push("int *src_;".to_owned()),
+                (true, _) => {
+                    source.push("int *src_;".to_owned());
+                    source.push("if (k) src_ = &x0;".to_owned());
+                }
+                (false, _) => source.push("int *src_ = &x0;".to_owned()),
+            }
+            source.push(format!("memcpy(&{slot}, &src_, 8);"));
+            source
+        }
+        // Written backwards through a pointer moved off the array's end: the
+        // hazard writes the second element alone, the control both.
+        //
+        // **What is read is not the array**, which a walk off its end leaves
+        // written in part and so doubted on both sides: the hazard reads the
+        // element the loop left unwritten, and the control reads nothing of
+        // it, so what it would gain is a doubt at the loop's own store.
+        Route::StoredThrough => vec![
+            "int x0 = 0;".to_owned(),
+            "int *a2[2];".to_owned(),
+            "int **e = a2 + 2;".to_owned(),
+            format!(
+                "for (int i = 0; i < {}; i++) {{",
+                if hazard { 1 } else { 2 }
+            ),
+            "    e = e - 1;".to_owned(),
+            "    *e = &x0;".to_owned(),
+            "}".to_owned(),
+            if hazard {
+                "int *t_ = a2[0];"
+            } else {
+                "int *t_ = &x0;"
+            }
+            .to_owned(),
+        ],
+        // An element's address stored into memory, read back and written
+        // through: the second element for the hazard, the first for the
+        // control.
+        Route::ElementSlot => vec![
+            "int x0 = 0;".to_owned(),
+            "int *a2[2];".to_owned(),
+            "int **box2[1];".to_owned(),
+            format!("box2[0] = {};", if hazard { "a2 + 1" } else { "a2" }),
+            "int **f2 = box2[0];".to_owned(),
+            "*f2 = &x0;".to_owned(),
+        ],
         Route::Ret
         | Route::Restored
         | Route::MemcpyFromBlock
         | Route::CallStored
         | Route::CallDeep
-        | Route::ReallocParam => unreachable!("see `NOT_WRITTEN`"),
+        | Route::ReallocParam
+        | Route::KeptVoid
+        | Route::KeptBytes
+        | Route::KeptBlock => unreachable!("see `NOT_WRITTEN`"),
     };
     lines.extend(shaped(row.shape, slot, body));
     lines
@@ -1865,7 +2148,12 @@ fn program(row: Row, hazard: bool) -> String {
     let read = read_from(row);
     // **The read every belief shares**, but the one asked by address alone,
     // which hands the pointer read back on by its address.
+    let kept = matches!(
+        row.route,
+        Route::KeptVoid | Route::KeptBytes | Route::KeptBlock
+    );
     let tail: Vec<String> = match row.belief {
+        _ if kept => vec![format!("use1({read});"), "return 0;".to_owned()],
         Belief::Unreplaced => vec![format!("int *r = {read};"), "return use2(&r);".to_owned()],
         Belief::Width
         | Belief::Fresh
@@ -1898,6 +2186,11 @@ fn read_from(row: Row) -> String {
         Route::CallDeep => "*pp".to_owned(),
         Route::ReallocParam => "*a".to_owned(),
         Route::MemcpyPart => "m2[1]".to_owned(),
+        Route::MemcpyShort => "n2[1]".to_owned(),
+        Route::MemcpyIntoPart => "a2[1]".to_owned(),
+        Route::StoredThrough => "t_".to_owned(),
+        Route::ElementSlot => "a2[0]".to_owned(),
+        Route::KeptVoid | Route::KeptBytes | Route::KeptBlock => "w".to_owned(),
         Route::Store
         | Route::Memcpy
         | Route::Realloc
@@ -1906,7 +2199,11 @@ fn read_from(row: Row) -> String {
         | Route::MemcpyFromBlock
         | Route::MemcpyHalf
         | Route::MemcpyMaybe
-        | Route::Restored => container(row.depth).1.to_owned(),
+        | Route::Restored
+        | Route::MemcpyUnread
+        | Route::MemcpyUnplaced
+        | Route::MemcpyFromLocal
+        | Route::MemcpyFromLocalMaybe => container(row.depth).1.to_owned(),
     }
 }
 
@@ -1926,6 +2223,7 @@ fn parameters(row: Row, hazard: bool) -> &'static str {
     match (row.route, hazard) {
         (Route::ReallocParam, true) => "int k, void ***pm",
         (Route::ReallocParam, false) => "int k, int ***pm",
+        (Route::MemcpyUnplaced, _) => "int k, int **d",
         (
             Route::Store
             | Route::Memcpy
@@ -1938,7 +2236,17 @@ fn parameters(row: Row, hazard: bool) -> &'static str {
             | Route::MemcpyMaybe
             | Route::CallStored
             | Route::CallDeep
-            | Route::Restored,
+            | Route::Restored
+            | Route::MemcpyUnread
+            | Route::MemcpyShort
+            | Route::MemcpyIntoPart
+            | Route::MemcpyFromLocal
+            | Route::MemcpyFromLocalMaybe
+            | Route::StoredThrough
+            | Route::ElementSlot
+            | Route::KeptVoid
+            | Route::KeptBytes
+            | Route::KeptBlock,
             _,
         ) => "int k",
     }
@@ -2258,6 +2566,66 @@ const UNCERTAIN: &[(&str, &str)] = &[
         "width_restored_d0_one",
         "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
     ),
+    (
+        "fresh_memcpy_unread_d1_both",
+        "a copy of a length this check cannot read may not cover the slot, so what it leaves there is a doubt",
+    ),
+    (
+        "fresh_memcpy_unread_d1_one",
+        "a copy of a length this check cannot read may not cover the slot, so what it leaves there is a doubt",
+    ),
+    (
+        "fresh_memcpy_short_d1_both",
+        "a copy shorter than its destination leaves the rest as it was, one mark per block, so the rest is a doubt",
+    ),
+    (
+        "fresh_memcpy_into_part_d0_both",
+        "a copy shorter than a local array leaves the rest as it was, so the rest is a doubt",
+    ),
+    (
+        "fresh_memcpy_unplaced_d1_both",
+        "a copy into a destination this check cannot place may or may not land in the slot's block",
+    ),
+    (
+        "fresh_memcpy_unplaced_d1_one",
+        "a copy into a destination this check cannot place may or may not land in the slot's block",
+    ),
+    (
+        "fresh_memcpy_from_local_d0_one",
+        "the copy carries the mark into the slot on one arm and the other arm writes it, so the read after them is a doubt, where the store's proof is of its own load",
+    ),
+    (
+        "fresh_memcpy_from_local_d1_one",
+        "the copy carries the mark into the slot on one arm and the other arm writes it, so the read after them is a doubt, where the store's proof is of its own load",
+    ),
+    (
+        "fresh_memcpy_from_local_maybe_d0_both",
+        "the source is written on one arm, so what the copy carries may be written",
+    ),
+    (
+        "fresh_memcpy_from_local_maybe_d1_both",
+        "the source is written on one arm, so what the copy carries may be written",
+    ),
+    (
+        "fresh_element_slot_d0_both",
+        "a write through a pointer read back out of memory names no element, so the array is written in part and its start is a doubt (#667)",
+    ),
+    (
+        "width_kept_void_d0_both",
+        "what a call that kept an address may have stored is asked where the pointer leaves, as a doubt (ADR-0060)",
+    ),
+    (
+        "width_kept_bytes_d0_both",
+        "what a call that kept an address may have stored is asked where the pointer leaves, as a doubt (ADR-0060)",
+    ),
+    (
+        "width_kept_block_d0_both",
+        "what a call that kept an address may have stored is asked where the pointer leaves, as a doubt (ADR-0060)",
+    ),
+    (
+        "fresh_stored_through_d0_both",
+        "a walk off a local array's end writes it in part, so an element it may have missed is a doubt (#639)",
+    ),
 ];
 
 /// **A route is as certain as its plain store**: where the store spelling of
@@ -2311,9 +2679,112 @@ fn a_route_is_as_certain_as_its_plain_store() {
     );
 }
 
+/// A route, the one belief it is written for, the depths and shapes it is
+/// written at, and why the rest are not.
+type WrittenOnly = (
+    Route,
+    Belief,
+    &'static [Depth],
+    &'static [Shape],
+    &'static str,
+);
+
+/// The routes written for one belief alone, at the depths and shapes named,
+/// with why the rest are not: each asks one rule of the copy or of a kept
+/// call, built from the corpus case that rule's mutation fails (#785). A
+/// route here is excused everywhere else, and `NOT_WRITTEN` is not asked of
+/// it.
+const WRITTEN_ONLY: &[WrittenOnly] = &[
+    (
+        Route::MemcpyUnread,
+        Belief::Fresh,
+        &[Depth::D1],
+        &[Shape::Both, Shape::One],
+        "a copy's length is asked of freshness in a block, whose size is what it covers",
+    ),
+    (
+        Route::MemcpyShort,
+        Belief::Fresh,
+        &[Depth::D1],
+        &[Shape::Both],
+        "the destination is a block of its own, so the slot's depth and an arm do not move it",
+    ),
+    (
+        Route::MemcpyIntoPart,
+        Belief::Fresh,
+        &[Depth::D0],
+        &[Shape::Both],
+        "the destination is a local array of its own, so the slot's depth and an arm do not move it",
+    ),
+    (
+        Route::MemcpyUnplaced,
+        Belief::Fresh,
+        &[Depth::D1],
+        &[Shape::Both, Shape::One],
+        "a destination this check cannot place may be the slot's block, which a local is not",
+    ),
+    (
+        Route::MemcpyFromLocal,
+        Belief::Fresh,
+        &[Depth::D0, Depth::D1],
+        &[Shape::Both, Shape::One],
+        "a local source is asked of freshness, the belief it decides",
+    ),
+    (
+        Route::MemcpyFromLocalMaybe,
+        Belief::Fresh,
+        &[Depth::D0, Depth::D1],
+        &[Shape::Both],
+        "the source is written on an arm already",
+    ),
+    (
+        Route::StoredThrough,
+        Belief::Fresh,
+        &[Depth::D0],
+        &[Shape::Both],
+        "the array written is a local of its own, so the slot's depth and an arm do not move it",
+    ),
+    (
+        Route::ElementSlot,
+        Belief::Fresh,
+        &[Depth::D0],
+        &[Shape::Both],
+        "the array written is a local of its own, so the slot's depth and an arm do not move it",
+    ),
+    (
+        Route::KeptVoid,
+        Belief::Width,
+        &[Depth::D0],
+        &[Shape::Both],
+        "what a kept call may store is asked of width, at a pointer of its own",
+    ),
+    (
+        Route::KeptBytes,
+        Belief::Width,
+        &[Depth::D0],
+        &[Shape::Both],
+        "what a kept call may store is asked of width, at a pointer of its own",
+    ),
+    (
+        Route::KeptBlock,
+        Belief::Width,
+        &[Depth::D0],
+        &[Shape::Both],
+        "what a kept call may store is asked of width, at a pointer of its own",
+    ),
+];
+
 /// Whether `NOT_WRITTEN` says, with a reason, that no program is written for
 /// `row`.
 fn excused(row: Row) -> bool {
+    if let Some(&(_, belief, depths, shapes, why)) =
+        WRITTEN_ONLY.iter().find(|(route, ..)| *route == row.route)
+    {
+        return !why.is_empty()
+            && !(belief == row.belief
+                && depths.contains(&row.depth)
+                && shapes.contains(&row.shape));
+    }
     NOT_WRITTEN.iter().any(|unwritten| {
         !unwritten.why.is_empty()
             && unwritten.route == row.route
@@ -2391,6 +2862,17 @@ fn name_of(row: Row) -> String {
         Route::CallDeep => "call_deep",
         Route::ReallocParam => "realloc_param",
         Route::Restored => "restored",
+        Route::MemcpyUnread => "memcpy_unread",
+        Route::MemcpyShort => "memcpy_short",
+        Route::MemcpyIntoPart => "memcpy_into_part",
+        Route::MemcpyUnplaced => "memcpy_unplaced",
+        Route::MemcpyFromLocal => "memcpy_from_local",
+        Route::MemcpyFromLocalMaybe => "memcpy_from_local_maybe",
+        Route::StoredThrough => "stored_through",
+        Route::ElementSlot => "element_slot",
+        Route::KeptVoid => "kept_void",
+        Route::KeptBytes => "kept_bytes",
+        Route::KeptBlock => "kept_block",
     };
     let depth = match row.depth {
         Depth::D0 => "d0",
@@ -2591,6 +3073,10 @@ const APART: &[(&str, &str)] = &[
     ),
     (
         "fresh_memcpy_one",
+        "a copy into a local is believed as its type where its source is fresh, and a load out of memory that may be fresh on one path believes what was recorded (ADR-0061), so the block's form doubts a width the local's does not",
+    ),
+    (
+        "fresh_memcpy_from_local_one",
         "a copy into a local is believed as its type where its source is fresh, and a load out of memory that may be fresh on one path believes what was recorded (ADR-0061), so the block's form doubts a width the local's does not",
     ),
 ];

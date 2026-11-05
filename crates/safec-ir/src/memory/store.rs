@@ -363,6 +363,15 @@ impl Allocations<'_> {
         // A local there is read as memory is: `p = *param; t = &p; **t = y;`
         // takes `p`'s value, which may be what the caller stored, and its one
         // recorded site is no proof. Found by review.
+        //
+        // **This closure's `from_caller` is implied by `unrecorded_address`
+        // today, and nothing holds it apart** (this one, not the pointer's
+        // own `held.from_caller` below): a load out of a caller's memory marks
+        // `loaded` beside it, and the call that marks every escaped local
+        // `from_caller` has `Known::replaced` mark each of them `foreign`
+        // first, its `may_hold` being every local. Measured on #785:
+        // dropping it from the closure fails no case, no route row and no
+        // probe of either source. Kept so that a third source of the mark is not silent here.
         let unrecorded = |local: &Held| local.from_caller || local.beyond().unrecorded_address();
         let through_unrecorded = held.from_caller
             || above
