@@ -702,13 +702,9 @@ impl Allocations<'_> {
         // start, which is where an edge to a local points: asked as off its
         // start, a local written on one path only was not doubted, where its
         // two-step spelling is. See ADR-0057.
+        // `derefs` is zero for a place with anything but dereferences in it.
         let depth = derefs(source);
-        if depth > 1
-            && source
-                .projection
-                .iter()
-                .all(|step| matches!(step, Projection::Deref))
-        {
+        if depth > 1 {
             if !self.may_be_pointer(function, source) {
                 return false;
             }

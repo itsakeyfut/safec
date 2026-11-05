@@ -128,8 +128,9 @@ fn projected(place: &Place) -> Vec<&Place> {
     }
 }
 
-/// Where this element runs, and every `*l` it reads as a value there, each
-/// as the place `*l`.
+/// Where this element runs, and every place it reads a pointer's value out
+/// of memory at there: each `*l`, and each place of two dereferences or more
+/// read as a value, `**l` among them (#768).
 ///
 /// **Not only what an assignment copies.** A load reaches an operator or a
 /// call as an operand, and the lowering hands `*box == q`, `put(*box)` and
