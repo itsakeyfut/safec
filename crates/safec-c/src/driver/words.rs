@@ -879,7 +879,7 @@ pub(super) fn memory_finding(
         // through a pointer moved off it may have missed (#639), or a local
         // written on one path into a join and not the other (#668). Under the
         // same code, and saying no "array", since a pointer local reaches it
-        // too. See `Known::local_init`.
+        // too. See `Known::init`.
         (Kind::IndeterminateLoad { .. }, Conclusion::Unknown, _) => (
             UNASSIGNED,
             said(

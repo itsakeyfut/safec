@@ -32,9 +32,6 @@ pub(super) struct Allocations<'a> {
     /// [`Levels`](super::parts::Levels) gives; the margin is kept so that the length needs no
     /// argument to be long enough.
     pub(super) deepest_pointer: usize,
-    /// Each local's size on this target, `None` where it has none, by index:
-    /// what [`Held::recorded_width`](super::parts::Held::recorded_width) reads a local's address at.
-    pub(super) local_sizes: Table<LocalIdx, Option<u64>>,
     /// The locals a caller filled, which are sites because an allocation can
     /// arrive through one.
     pub(super) parameters: Vec<LocalId>,

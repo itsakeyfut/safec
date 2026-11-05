@@ -10,12 +10,12 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::ir::{LocalId, Operand, Place, TyId};
 use crate::source::{SourceMap, Span};
 
-use super::index::{LocalIdx, Site, Table};
+use super::index::{Loc, LocalIdx, Site, Table};
 use super::parts::{
-    AS_TYPED, Contents, Extent, Held, Init, Inits, Levels, Offset, PendingRead, Reached, Read,
-    ReadKey, Realloced, SiteState, read_key,
+    AS_TYPED, Cell, Extent, Held, Init, Inits, Levels, Offset, PendingRead, Reached, Read, ReadKey,
+    Realloced, SiteState, read_key,
 };
-use super::store::Certain;
+use super::store::{Certain, Strong};
 use super::{LostReason, named};
 use crate::reads::derefs;
 use crate::source::inside;
@@ -57,12 +57,133 @@ pub(super) struct Known {
     /// to one call may be returned or freed by the next. Every opaque call
     /// unproves every exposed allocation still live, and may return any of
     /// them. See ADR-0039.
-    pub(super) exposed: Table<Site, bool>,
-    /// Per site, what the memory it names may contain: what a pointer stored
-    /// there may hold, how wide it is believed, and the marks a load out of it
-    /// carries. One record per site so that a door moving a value into memory
-    /// answers for every field at once. See [`Contents`].
-    pub(super) contents: Table<Site, Contents>,
+    ///
+    /// **Per local, whether such code may hold its address**: what a call
+    /// may have written, for [`Self::init`], and nothing else reads that
+    /// half. `lost` and `foreign` are still given to every escaped
+    /// local, since a route missed there would be a free in silence
+    /// (ADR-0029).
+    ///
+    /// **A library copy sets no local here**, though it exposes the
+    /// allocations it is handed, because it keeps no address: it writes
+    /// only through its first argument, which the `Callee::Copies` arm of
+    /// the transfer answers for by itself.
+    ///
+    /// **Set by [`Self::expose_locals`] at a call this check cannot read**,
+    /// over what it can reach. A store this check cannot place sets nothing
+    /// here: it records the address in memory such code can reach,
+    /// [`Self::landed_where_unknown_code_points`], which the next call's walk
+    /// starts from. A union at a join. Never cleared while the local lives,
+    /// for the reason [`Self::exposed`] gives: nothing here can say that a
+    /// callee has dropped an address it kept, so `stash(m); tick();` may
+    /// write `m` at the second call. **Cleared at its `StorageLive`**, where
+    /// the local is a new object and an address kept from the old one is
+    /// indeterminate (C17 6.2.4 p2): kept across, `stash(m)` in one turn of
+    /// a loop made `tick()` in the next a write of the new `m`, and a read
+    /// nothing wrote was silent.
+    ///
+    /// **Wrong in both directions, and the two are not alike.** A route the
+    /// walk misses leaves the bit unset, and a program a call did write is
+    /// reported `SC0411`, which the reader sees. A bit set where no call can
+    /// reach clears a mark, and a read nothing wrote goes silent. See
+    /// ADR-0057.
+    pub(super) exposed: Table<Loc, bool>,
+    /// Per site, what its memory holds: the cell, a [`Held`] read as the
+    /// value a pointer stored there may be, and [`Held::none`] where nothing
+    /// was stored (#780). A store pours into it by [`Cell::absorb`]; a load
+    /// reads it in [`Self::load_into`]. What each field a cell uses says:
+    ///
+    /// **`names`**: the sites a pointer stored in that allocation may hold,
+    /// and the locals whose address it may be.
+    ///
+    /// What lets a pointer stored in the heap stay proved until something
+    /// that can reach the allocation holding it is handed to code this check
+    /// cannot read: `*tab = p; log_line();` leaves `p` alone, because nothing
+    /// exposed `tab`. Square in the locals, so a bit a pair, for the reason
+    /// [`Held::names`] gives. See ADR-0039.
+    ///
+    /// **A local's address is an edge, not a site** ([`Held::locals`],
+    /// ADR-0019), so a store of one recorded nothing and `*t3 = &slot; **t3
+    /// = r; free(r); return ***t3;` read nothing through `*t3`. Written by a
+    /// store of a value carrying edges, read by [`Known::levels_below`](super::known::Known::levels_below), so
+    /// a load out of the allocation carries the edges and a store two levels
+    /// down lands in the local. See ADR-0045.
+    ///
+    /// **`believed` and `contents_at_most`**: how wide what is stored there
+    /// is believed, level 0 and the levels below, as
+    /// [`Cell::stored_levels`] reads them.
+    /// How many bytes a pointer stored there is believed to point at, at
+    /// most, at level 0, and what each pointer stored there believed of its
+    /// own memory at the levels below, with no bound where nothing recorded
+    /// one. See [`Levels`].
+    ///
+    /// **Every pointer stored, and not only one the record cannot name**: a
+    /// local's address or an allocation at the width of what it names
+    /// ([`Held::recorded_width`]), since a load reading memory where nothing
+    /// is recorded believes nothing, and `*box = &q; int *t = *box; *t = 1;`
+    /// would be doubted (ADR-0061).
+    ///
+    /// **What the record cannot say**: `char *c = *cc; *m = c;` stores a
+    /// pointer read out of the caller's memory, whose object nothing here
+    /// records, and `m` handed on as an `int **` was believed to hold whole
+    /// `int`s (#632). **And what the stored pointer arrived as**: `*box =
+    /// m;` with `m` a `void **` parameter names `m`'s site, which the record
+    /// holds, and left behind on `m` that what `m` points at holds pointers
+    /// nobody was asked the width of, so `box` read back through an `int
+    /// ***` believed whole `int`s two levels down (#634). A bound, so the
+    /// lower of two at a join, and kept when the site is made again, as
+    /// `names` is. See ADR-0060.
+    ///
+    /// **`stale_read`**:
+    /// Whether what it contains may include an allocation that is
+    /// gone and whose site now names a new one.
+    ///
+    /// **The column of `names`, where [`Held::lose`] is a local's.** A
+    /// loop makes every allocation one `malloc` makes under one site, so `*t2 =
+    /// p; free(p);` on one turn and the next turn's `malloc` leave `t2`'s entry
+    /// naming the new, live allocation, and a load out of `t2` read it in
+    /// silence. Set where the site is reborn, the entry kept for what a call
+    /// reaches through it, and read by a
+    /// load out of the allocation as a pointer this check stopped following.
+    /// Set too where such a load is stored into another allocation, through
+    /// [`Held::stale_read`].
+    /// Nothing clears it: slots are not told apart, so a store into one may
+    /// leave the old pointer in another. See ADR-0045.
+    ///
+    /// **`unreplaced_read`**:
+    /// Whether it may contain a slot holding an allocation a call
+    /// this check cannot read reached through another route and could not
+    /// replace there. Set by [`Known::held_out_of_reach`](super::known::Known::held_out_of_reach), carried where what
+    /// a load out of it holds is stored or copied, and read through
+    /// [`Held::unreplaced_read`] by [`Known::handed_below`](super::known::Known::handed_below) alone. Nothing
+    /// clears it, since slots are not told apart. See ADR-0047.
+    ///
+    /// **`lost`**:
+    /// Whether a value this check lost may have been stored in it.
+    ///
+    /// **A lost value names no site**, so the free that releases it cannot
+    /// say which allocation went, and nothing links it to where it was
+    /// stored before: `*box = u; free(u); r = *box;` with `u` lost to a
+    /// rebirth read `*r` in silence (#503). [`Known::lost_may_be_gone`](super::known::Known::lost_may_be_gone) reads
+    /// this to mark every such allocation `stale_read`. Nothing clears it, as
+    /// nothing clears `stale_read`. See ADR-0045.
+    ///
+    /// **`from_caller`**:
+    /// Whether what it contains may include a pointer a caller or
+    /// a callee handed over: one [`Held::from_caller`] marks, stored here.
+    ///
+    /// **The mark lived on locals only**, so a store recorded the sites such
+    /// a pointer holds, which are none, and `*box = q; release_all(); r =
+    /// *box; return *r;` built where `return *q;` was reported. A load out of
+    /// a marked allocation reads caller memory, and a call this check cannot
+    /// read makes it `stale_read`. Nothing clears it, for `stale_read`'s
+    /// reason. See ADR-0040.
+    ///
+    /// **A store is not the only producer.** A pointer parameter's site is
+    /// marked where the function starts, since what it points at is the
+    /// caller's memory, and a call this check cannot read marks its result's
+    /// site once it returns, since that is the callee's (#482).
+    pub(super) contents: Table<Site, Cell>,
     /// Per site, what a `realloc` that returned it was handed, until a branch
     /// on a pointer holding it says whether it succeeded. See [`Realloced`]
     /// and ADR-0039.
@@ -85,14 +206,68 @@ pub(super) struct Known {
     /// **[`Init::Maybe`] where it may still be so on some path**: set at a
     /// forward join where one side left the site fresh and the other did not. A load out
     /// of it is the doubt `Allocations::reads_partly` reports, as one out of
-    /// a local [`Self::local_init`] is (#668): `if (k) *m = *pp; r =
+    /// an unwritten local is (#668): `if (k) *m = *pp; r =
     /// *m;` with `m` from `malloc` built in silence, where the same without
     /// the `if` is certain (#721). **Not at a loop's back edge**, so a loop
     /// that fills an allocation is not doubted for the path that skips the
     /// body, as for a local. Cleared wherever `fresh` is. A test that always
     /// holds, `if (d != 0) *d = *s;`, is a doubt it cannot tell from one
     /// that may fail, the cost #668 recorded for a local. See ADR-0057.
-    pub(super) block_init: Table<Site, Init>,
+    ///
+    /// **Per local whose address is taken, the same question**: whether
+    /// nothing may have written it since it was made, on every path: its value is indeterminate (C17 6.2.4 p6, 6.7.9 p10), and
+    /// Annex J.2 lists using it as undefined. That line of J.2 names no
+    /// condition on the address; the normative text makes such a read
+    /// undefined only through a trap representation (6.2.6.1 p5) where the
+    /// address is taken, and this reads J.2 as ADR-0057 does for an
+    /// allocation. Set where a local that may hold a pointer is made, at the
+    /// function's entry and at its `StorageLive`, never for a parameter, and
+    /// cleared only by [`Self::written_local`] and [`Self::replaced`], which a write
+    /// that may land there calls: an assignment, a placed store, a call's
+    /// result, a call, which writes only the locals in
+    /// [`Self::exposed`] (#643), and a store or a library copy this
+    /// check cannot pin down, which writes only the locals
+    /// [`Self::locals_a_write_may_land_in`] answers (#645). An intersection
+    /// at a join.
+    ///
+    /// **Wrong in both directions, and the two are not alike.** A write this
+    /// check does not see leaves the mark set, and a program that did write
+    /// the local is reported `Unsafe`, which the reader can see. A may-write
+    /// counted as a write clears it, and a read nothing wrote goes silent,
+    /// which is why no call, store or library copy writes every escaped
+    /// local any more, whatever it was handed or wherever it points.
+    ///
+    /// **What this table says of an allocation, it says of a local reached
+    /// by its address**: a pointer read out of one is reported where it is
+    /// read, `int *q = m[0];` with `m` a local array nothing wrote (#640).
+    /// A local whose address is never taken is `assigned.rs`'s, which reads
+    /// it by name. See ADR-0057.
+    ///
+    /// **[`Init::Maybe`], for a local with no per-element record, where it
+    /// may still be unwritten though it is not certainly.** An array kept per
+    /// element answers this in
+    /// [`Self::element_init`] instead, and this is not read for
+    /// one.
+    ///
+    /// **Set by a write that may have missed it**: an array longer than
+    /// [`ELEMENTS_KEPT`] written through a pointer moved off its start, which
+    /// may reach any element (C17 6.5.6 p8), so its write is neither a write
+    /// of every element nor of none (#639). A read at the array's start
+    /// afterwards is doubted rather than proved, by
+    /// `Allocations::reads_partly`.
+    ///
+    /// **And by a join of a path where the local is unwritten with one where
+    /// it was written** (#668): `if (c()) q = &x;` then `*pq` with `pq = &q`
+    /// read an indeterminate `q` on one path in silence, since
+    /// its proof joined by intersection. A doubt, read
+    /// through a pointer and by name, `report::unwritten_read`. Not at a
+    /// loop's back edge, where the path that skips the body would doubt every
+    /// loop that fills an array, which leaves a read in the body before the
+    /// body writes it silent too (#670); what either side already doubted is
+    /// kept there. An array kept per element gains no such doubt at any
+    /// join, its elements carrying it. Written by a write of the whole local,
+    /// and unwritten again at `StorageLive`. See ADR-0057.
+    pub(super) init: Table<Loc, Init>,
     /// What has been read through a pointer since the last sequence point.
     ///
     /// **Ordered containers because a lattice value has to be canonical, and
@@ -147,7 +322,13 @@ pub(super) struct Known {
     /// made, a parameter where the function starts and a call's destination
     /// where it returns, and read by the question whether an access fits the
     /// object it reaches. See ADR-0060.
-    pub(super) extent: Table<Site, Option<Extent>>,
+    ///
+    /// **And per local, its size on this target**, in the same table: one
+    /// kind of place (#779). [`Extent::Exactly`] where the local has a size
+    /// and `None` where it has none, written where the function starts and
+    /// never after, since a local is the one object its name stands for. What
+    /// [`Held::recorded_width`] reads a local's address at.
+    pub(super) extent: Table<Loc, Option<Extent>>,
     /// Per local, how many bytes a pointer a call may write into it is
     /// believed to point at, at most: the narrowest width the parameters
     /// it was handed through believe at its level, and `0` where one was a
@@ -181,63 +362,9 @@ pub(super) struct Known {
     /// and at a join, and kept when the site is made again as
     /// [`Self::handed_at_most`] is. See ADR-0060.
     pub(super) handed_contents_at_most: Table<LocalIdx, Levels>,
-    /// Per local, whether nothing may have written it since it was made, on
-    /// every path: its value is indeterminate (C17 6.2.4 p6, 6.7.9 p10), and
-    /// Annex J.2 lists using it as undefined. That line of J.2 names no
-    /// condition on the address; the normative text makes such a read
-    /// undefined only through a trap representation (6.2.6.1 p5) where the
-    /// address is taken, and this reads J.2 as ADR-0057 does for an
-    /// allocation. Set where a local that may hold a pointer is made, at the
-    /// function's entry and at its `StorageLive`, never for a parameter, and
-    /// cleared only by [`Self::written_local`] and [`Self::replaced`], which a write
-    /// that may land there calls: an assignment, a placed store, a call's
-    /// result, a call, which writes only the locals in
-    /// [`Self::exposed_locals`] (#643), and a store or a library copy this
-    /// check cannot pin down, which writes only the locals
-    /// [`Self::locals_a_write_may_land_in`] answers (#645). An intersection
-    /// at a join.
-    ///
-    /// **Wrong in both directions, and the two are not alike.** A write this
-    /// check does not see leaves the mark set, and a program that did write
-    /// the local is reported `Unsafe`, which the reader can see. A may-write
-    /// counted as a write clears it, and a read nothing wrote goes silent,
-    /// which is why no call, store or library copy writes every escaped
-    /// local any more, whatever it was handed or wherever it points.
-    ///
-    /// **What [`Self::block_init`] is for an allocation, for a local reached by
-    /// its address**: a pointer read out of one is reported where it is
-    /// read, `int *q = m[0];` with `m` a local array nothing wrote (#640).
-    /// A local whose address is never taken is `assigned.rs`'s, which reads
-    /// it by name. See ADR-0057.
-    ///
-    /// **[`Init::Maybe`], for a local with no per-element record, where it
-    /// may still be unwritten though it is not certainly.** An array kept per
-    /// element answers this in
-    /// [`Self::element_init`] instead, and this is not read for
-    /// one.
-    ///
-    /// **Set by a write that may have missed it**: an array longer than
-    /// [`ELEMENTS_KEPT`] written through a pointer moved off its start, which
-    /// may reach any element (C17 6.5.6 p8), so its write is neither a write
-    /// of every element nor of none (#639). A read at the array's start
-    /// afterwards is doubted rather than proved, by
-    /// `Allocations::reads_partly`.
-    ///
-    /// **And by a join of a path where the local is unwritten with one where
-    /// it was written** (#668): `if (c()) q = &x;` then `*pq` with `pq = &q`
-    /// read an indeterminate `q` on one path in silence, since
-    /// its proof joined by intersection. A doubt, read
-    /// through a pointer and by name, `report::unwritten_read`. Not at a
-    /// loop's back edge, where the path that skips the body would doubt every
-    /// loop that fills an array, which leaves a read in the body before the
-    /// body writes it silent too (#670); what either side already doubted is
-    /// kept there. An array kept per element gains no such doubt at any
-    /// join, its elements carrying it. Written by a write of the whole local,
-    /// and unwritten again at `StorageLive`. See ADR-0057.
-    pub(super) local_init: Table<LocalIdx, Init>,
     /// Per local array of at most [`ELEMENTS_KEPT`] innermost elements, one
-    /// [`Init`] per element: [`Self::local_init`] kept per element. Empty for every other local, which
-    /// [`Self::local_init`] answers for whole.
+    /// [`Init`] per element: [`Self::init`] kept per element. Empty for every other local, which
+    /// [`Self::init`] answers for whole.
     ///
     /// **So that a write to one element leaves another unwritten** (#667):
     /// `m[0] = &x; q = m[1];` read an `m[1]` nothing wrote, in silence, since
@@ -253,7 +380,7 @@ pub(super) struct Known {
     /// rather than a mark on the array** (#668), so that `if (c()) m[0] = &x;
     /// q = m[1];` stays the certain `SC0411` `main` gives, while `m[0]` read
     /// there is doubted. Joined per element as [`Init::joined`] says, so a
-    /// loop's back edge creates no doubt, as for [`Self::local_init`]. See
+    /// loop's back edge creates no doubt, as for [`Self::init`]. See
     /// ADR-0057.
     pub(super) element_init: Table<LocalIdx, Inits>,
     /// Per local array, whether code this check cannot read was handed it
@@ -271,37 +398,6 @@ pub(super) struct Known {
     /// reader sees, never a proof. A union at a join, and cleared at
     /// `StorageLive`. See `built::write_effects`.
     pub(super) stored_in_part: Table<LocalIdx, bool>,
-    /// Per local, whether code this check cannot read may hold its address:
-    /// what a call may have written, for [`Self::local_init`], and nothing
-    /// else reads it. `lost` and `foreign` are still given to every escaped
-    /// local, since a route missed there would be a free in silence
-    /// (ADR-0029).
-    ///
-    /// **Not [`Self::exposed`] for what is not a site**, though it is set by
-    /// the same kind of event. A library copy exposes the allocations it is
-    /// handed and sets nothing here, because it keeps no address: it writes
-    /// only through its first argument, which the `Callee::Copies` arm of
-    /// the transfer answers for by itself.
-    ///
-    /// **Set by [`Self::expose_locals`] at a call this check cannot read**,
-    /// over what it can reach. A store this check cannot place sets nothing
-    /// here: it records the address in memory such code can reach,
-    /// [`Self::landed_where_unknown_code_points`], which the next call's walk
-    /// starts from. A union at a join. Never cleared while the local lives,
-    /// for the reason [`Self::exposed`] gives: nothing here can say that a
-    /// callee has dropped an address it kept, so `stash(m); tick();` may
-    /// write `m` at the second call. **Cleared at its `StorageLive`**, where
-    /// the local is a new object and an address kept from the old one is
-    /// indeterminate (C17 6.2.4 p2): kept across, `stash(m)` in one turn of
-    /// a loop made `tick()` in the next a write of the new `m`, and a read
-    /// nothing wrote was silent.
-    ///
-    /// **Wrong in both directions, and the two are not alike.** A route the
-    /// walk misses leaves the bit unset, and a program a call did write is
-    /// reported `SC0411`, which the reader sees. A bit set where no call can
-    /// reach clears a mark, and a read nothing wrote goes silent. See
-    /// ADR-0057.
-    pub(super) exposed_locals: Table<LocalIdx, bool>,
     /// Per site, whether a pointer to it may have been stored where code
     /// outside this function may read it, by a store or a library copy whose
     /// `store::Store` leaves (#684): into a caller's memory through a parameter, into memory or a
@@ -323,7 +419,7 @@ pub(super) struct Known {
     /// the walk a departure takes, where that type is untyped somewhere
     /// below: `void`, `char` or `int` bytes, a pointer whose chain ends in
     /// `void` or `char`, or `None` below a type that stops being a pointer.
-    /// [`Self::handed_untyped_sites`] is the same for memory.
+    /// The same table says the same of memory, per site.
     ///
     /// **So that a later call bounds what is below it then** (#679): such a
     /// callee may keep the address and store any pointer through it at any
@@ -338,20 +434,20 @@ pub(super) struct Known {
     /// out-parameter is: walking from those doubted locals a may-set puts
     /// below a typed callee's memory at every later call. A union at a join,
     /// never cleared while the local lives, and cleared at its
-    /// `StorageLive`, as [`Self::exposed_locals`] is.
+    /// `StorageLive`, as [`Self::exposed`] is.
     ///
     /// **Wrong in both directions, and the two are not alike.** A mark
     /// missed leaves a local below it believed whole, and a program is
     /// silent. A mark set where no call kept anything doubts what is put
     /// below that local after any later call, which the reader sees. See
     /// ADR-0060.
-    pub(super) handed_untyped: Table<LocalIdx, Vec<Option<TyId>>>,
-    /// Per site, each type a call this check cannot read reached the memory
-    /// it names as, as [`Self::handed_untyped`] is for a local: `keep(m);
-    /// *m = &w; other();` may write `w`. Kept where the site is made again
-    /// (`Self::reborn`), as `inside` is, since the old allocation's address
+    ///
+    /// **And per site, each type such a call reached the memory it names
+    /// as**, in the same table: one kind of place (#779). `keep(m); *m = &w;
+    /// other();` may write `w`. Kept where the site is made again
+    /// (`Self::reborn`), as `names` is, since the old allocation's address
     /// may still be held and the slots of the two are not told apart.
-    pub(super) handed_untyped_sites: Table<Site, Vec<Option<TyId>>>,
+    pub(super) handed_untyped: Table<Loc, Vec<Option<TyId>>>,
 }
 
 impl Known {
@@ -360,9 +456,21 @@ impl Known {
         self.points_to[local].sites()
     }
 
-    /// Stop following whatever this local held.
+    /// Stop following whatever this local held, because its lifetime began
+    /// or ended or nothing reads it again: no write, which is
+    /// [`Self::replace`]'s, and so no [`Strong`] asked for.
     pub(super) fn clear(&mut self, local: LocalId) {
         self.points_to[local].clear();
+    }
+
+    /// The local `at` names holds `value` and nothing it held before: **the
+    /// strong update, not [`Self::replaced`]**, which a write that may land in
+    /// several escaped locals takes, and which replaces nothing. The one
+    /// replacement of a local's whole value, which only a [`Strong`] can ask
+    /// for. Every other write that may land in a local adds to what it held,
+    /// [`Self::target_union`]. See ADR-0028 and ADR-0063.
+    pub(super) fn replace(&mut self, at: Strong, value: Held) {
+        self.points_to[at.local()] = value;
     }
 
     /// Every site this local may hold, and whether it may hold more.
@@ -445,7 +553,7 @@ impl Known {
         // = &x; free(p); return *q;` was a proved use after free that the
         // `else` path does not commit. Found by review of ADR-0048, whose
         // join opened a second way to it.
-        if self.points_to[local].writes_to.any() && !reached.is_empty() {
+        if self.points_to[local].may_be_a_locals_address() && !reached.is_empty() {
             reached.push(Reached::Partial);
         }
 
@@ -483,14 +591,14 @@ impl Known {
     /// is reached, and a reachable one through this function's own memory is,
     /// since nothing about the call made it so: `*t = a; release(a); use2(t);`
     /// was silent. And a reachable one is asked where the address handed
-    /// passes through a pointer read out of an allocation
-    /// [`Contents::unreplaced`] marks: `c = *h; use2(&c);` after a call that
+    /// passes through a pointer read out of an allocation whose cell is
+    /// `unreplaced_read`: `c = *h; use2(&c);` after a call that
     /// reached what `*h` holds through another route. **Never a proof**:
     /// [`Reached::Partial`] is always beside them, since the callee may only
     /// write there. See ADR-0042.
     ///
     /// **And a pointer this check lost, where the memory pointed at is
-    /// [`Contents::stale`]**: it held an allocation a loop has since made again
+    /// a cell's `stale_read`**: it held an allocation a loop has since made again
     /// at the same site, so what it holds may be the old one, freed, while
     /// the site reads `Live` for the new one. A box filled on one turn and
     /// freed through on the next was returned, stored out or handed to a call
@@ -514,7 +622,7 @@ impl Known {
         let through_memory: BTreeSet<Site> = sites
             .iter()
             .copied()
-            .flat_map(|container| self.contents[container].inside.ones().collect::<Vec<_>>())
+            .flat_map(|container| self.contents[container].sites().collect::<Vec<_>>())
             .collect();
         let through_address: BTreeSet<Site> = locals
             .iter()
@@ -547,7 +655,7 @@ impl Known {
         // programs for nothing; not counting it at all left a pointer a call
         // may have freed, two boxes in, silent. Each local is walked once, not
         // again at every level below it.
-        // The memory walked through is read for `stale` at every level.
+        // The memory walked through is read for `stale_read` at every level.
         let mut walked = sites.clone();
         let mut below = first.clone();
         let mut seen_locals = locals.clone();
@@ -558,7 +666,7 @@ impl Known {
             let in_memory: BTreeSet<Site> = frontier
                 .0
                 .iter()
-                .flat_map(|&container| self.contents[container].inside.ones().collect::<Vec<_>>())
+                .flat_map(|&container| self.contents[container].sites().collect::<Vec<_>>())
                 .collect();
             let (next_sites, next_locals) = self.level_below(&frontier.0, &frontier.1);
             let new_sites: BTreeSet<Site> = next_sites.difference(&below).copied().collect();
@@ -583,7 +691,7 @@ impl Known {
         }
         if walked
             .iter()
-            .any(|&container| self.contents[container].stale)
+            .any(|&container| self.contents[container].stale_read())
         {
             reached.push(Reached::Lost(LostReason::Other));
         }
@@ -686,19 +794,19 @@ impl Known {
     }
 
     /// Whether a pointer read `depth` dereferences below `local` may be one
-    /// [`Contents::stale`] says this check stopped following: whether any
+    /// a cell's `stale_read` says this check stopped following: whether any
     /// allocation the chain reads through, at any level, is marked.
     ///
     /// Walked as [`Self::stored_below`] walks what the levels contain, so the
     /// two answer the same places. Not for a lost local, whose load is
     /// answered by [`Self::stored`]. See ADR-0045.
     pub(super) fn stale_below(&self, local: LocalId, depth: usize) -> bool {
-        self.marked_below(local, depth, |contents| contents.stale)
+        self.marked_below(local, depth, |contents| contents.stale_read())
     }
 
     /// Whether any allocation a pointer read `depth` dereferences below
     /// `local` reads through, at any level, is set in `marks`, a per-site
-    /// column: [`Contents::stale`] or [`Contents::from_caller`].
+    /// column: a cell's `stale_read` or a cell's `from_caller`.
     ///
     /// **One walk for both**, so that `r = **bb;` and `b = *bb; r = *b;` are
     /// asked about the same allocations: asked about the local's own sites
@@ -708,18 +816,26 @@ impl Known {
         &self,
         local: LocalId,
         depth: usize,
-        marked: impl Fn(&Contents) -> bool,
+        marked: impl Fn(&Cell) -> bool,
     ) -> bool {
+        self.cells_on_the_way(local, depth)
+            .into_iter()
+            .any(|site| marked(&self.contents[site]))
+    }
+
+    /// Every allocation a pointer read `depth` dereferences below `local`
+    /// reads through, at any level: what [`Self::marked_below`] asks, and
+    /// what [`Self::load_into`] takes its marks from.
+    fn cells_on_the_way(&self, local: LocalId, depth: usize) -> BTreeSet<Site> {
+        let mut passed = BTreeSet::new();
         let Some((mut sites, mut locals)) = self.level_zero(local) else {
-            return false;
+            return passed;
         };
         for _ in 0..depth {
-            if sites.iter().any(|&site| marked(&self.contents[site])) {
-                return true;
-            }
+            passed.extend(sites.iter().copied());
             (sites, locals) = self.level_below(&sites, &locals);
         }
-        false
+        passed
     }
 
     /// What a pointer read through `local` reads through first: the
@@ -745,7 +861,7 @@ impl Known {
     }
 
     /// One dereference further: what the allocations may contain
-    /// ([`Contents::inside`], [`Contents::inside_locals`]) and what the locals hold,
+    /// (a cell's `names`) and what the locals hold,
     /// their sites and the locals their own address edges name.
     ///
     /// **A local is stepped through as an allocation is**, the read half of
@@ -764,12 +880,12 @@ impl Known {
         let mut next_sites = BTreeSet::new();
         let mut next_locals = BTreeSet::new();
         for &container in sites {
-            next_sites.extend(self.contents[container].inside.ones());
-            next_locals.extend(self.contents[container].inside_locals.ones());
+            next_sites.extend(self.contents[container].sites());
+            next_locals.extend(self.contents[container].locals());
         }
         for &held in locals {
             next_sites.extend(self.points_to[held].sites());
-            next_locals.extend(self.points_to[held].writes_to.ones());
+            next_locals.extend(self.points_to[held].locals());
         }
         (next_sites, next_locals)
     }
@@ -797,12 +913,12 @@ impl Known {
         for level in 0..depth {
             (sites, locals) = self.level_below(&sites, &locals);
             // **What memory this check cannot place may hold**, beside what
-            // `Contents::inside` recorded. At the first dereference, `level ==
+            // a cell's `names` recorded. At the first dereference, `level ==
             // 0`, only when `local` is a load or a pointer a call wrote. At
             // every later one whatever `local` is, because the pointer
             // dereferenced there was read out of memory and is a load: `q =
             // **ppp;` reads what `t = *ppp; q = *t;` reads through `t`.
-            // Through `Contents::inside` alone, `**ppp = m; free(m); q = **ppp;
+            // Through a cell's `names` alone, `**ppp = m; free(m); q = **ppp;
             // return *q;` was believed at `*q` (#486). It reads more than a
             // chain of this function's own allocations can hold, a doubt the
             // reader sees, and the same one the chain written through locals
@@ -816,7 +932,7 @@ impl Known {
             // store there recorded: `*a = &x;` through a load `a` puts
             // `x` where `t = *b;` through another load may read it.
             for &site in &reached {
-                locals.extend(self.contents[site].inside_locals.ones());
+                locals.extend(self.contents[site].locals());
             }
             sites.extend(reached);
         }
@@ -860,7 +976,7 @@ impl Known {
     /// contain, from [`Self::level_zero`].
     ///
     /// **A chain written as one place is the chain written through locals**:
-    /// `q = **t3` is `q2 = *t3; q = *q2;`, and each step reads [`Contents::inside`]
+    /// `q = **t3` is `q2 = *t3; q = *q2;`, and each step reads a cell's `names`
     /// as a load through a load does, so the two spellings of a **read** cannot
     /// be answered differently, and a **store** written as one place, `**t3 =
     /// r`, is recorded where the level above may be, so it is here to be read.
@@ -906,18 +1022,12 @@ impl Known {
     /// **The one walk a load, a departure and a copy take**, so that the
     /// spellings of one read cannot believe different things. See
     /// [`Levels`], ADR-0060 and ADR-0061.
-    pub(super) fn memory_levels(
-        &self,
-        local: LocalId,
-        depth: usize,
-        depth_cap: usize,
-        sizes: &Table<LocalIdx, Option<u64>>,
-    ) -> Levels {
+    pub(super) fn memory_levels(&self, local: LocalId, depth: usize, depth_cap: usize) -> Levels {
         let mut levels = self.points_to[local].contents_at_most.below(depth - 1);
         for level in 0..depth {
             let (sites, locals) = self.levels_below(local, level);
             for site in sites {
-                levels.bound_by(&self.contents[site].stored_at_most.below(depth - 1 - level));
+                levels.bound_by(&self.contents[site].stored_levels().below(depth - 1 - level));
             }
             for slot in locals {
                 let own = &self.points_to[slot];
@@ -938,7 +1048,7 @@ impl Known {
                             .unwrap_or(AS_TYPED),
                     )
                 } else {
-                    own.recorded_width(&self.extent, sizes)
+                    own.recorded_width(&self.extent)
                 };
                 let held = own.contents_at_most.stored_under(first, depth_cap);
                 levels.bound_by(&held.below(depth - 1 - level));
@@ -1035,14 +1145,14 @@ impl Known {
     ///
     /// **The closure, and not [`Self::exposed`] read as it stands.** That is
     /// closed only inside [`Self::expose`], which runs at a call, so a store of
-    /// `a` into an allocation already exposed records `a` in [`Contents::inside`]
+    /// `a` into an allocation already exposed records `a` in a cell's `names`
     /// and leaves its bit unset until the next call. Its readers run after
     /// that call and are right to trust it; a pending read is recorded, and
     /// told what became reachable, between calls.
     pub(super) fn reachable_now(&self) -> BTreeSet<Site> {
         self.closure(
             self.exposed
-                .indices()
+                .sites()
                 .filter(|&site| self.exposed[site])
                 .collect(),
         )
@@ -1054,7 +1164,7 @@ impl Known {
         let mut closed: BTreeSet<Site> = sites.iter().copied().collect();
         let mut pending = sites;
         while let Some(site) = pending.pop() {
-            for held in self.contents[site].inside.ones() {
+            for held in self.contents[site].sites() {
                 if closed.insert(held) {
                     pending.push(held);
                 }
@@ -1079,12 +1189,12 @@ impl Known {
     /// another place the same store may land, and may hold what it carried
     /// as much as a named container does. Given the sites and locals alone, a
     /// lost value stored through a pointer that may alias other reachable
-    /// memory was marked `holds_lost` only where the store named, so its free
+    /// memory was marked `lost` only where the store named, so its free
     /// left a pointer read back by the other name believed (#705).
     ///
-    /// Mutation: give the landings `holds_lost` taken `false`, and
+    /// Mutation: give the landings `lost` taken `false`, and
     /// `a_lost_value_stored_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name`
-    /// goes silent at the read; `stale` taken `false`, and its `memcpy`
+    /// goes silent at the read; `stale_read` taken `false`, and its `memcpy`
     /// spelling does, since the copy's source is a lost local; the bound
     /// dropped, and
     /// `a_narrow_pointer_stored_through_an_unplaced_pointer_is_doubted_where_read_back_wider_by_another_name`
@@ -1102,7 +1212,7 @@ impl Known {
     /// the null it started as and was believed, found by review. ADR-0047
     /// keeps a local's address out of what is exposed, so that a holder is
     /// still asked; this records where it may be and exempts nobody.
-    pub(super) fn landed_where_unknown_code_points(&mut self, poured: &Contents) {
+    pub(super) fn landed_where_unknown_code_points(&mut self, poured: &Cell) {
         let landings: Vec<Site> = self.reachable_now().into_iter().collect();
         self.pour(&landings, poured, &[]);
     }
@@ -1120,10 +1230,10 @@ impl Known {
     /// `a_pointer_read_out_of_what_realloc_of_a_live_block_returns_is_not_reported`
     /// is `SC0411`.
     pub(super) fn names_nothing(&self, local: LocalId) -> bool {
-        !self.points_to[local].sites.any() && self.names_no_more_than_its_sites(local)
+        !self.points_to[local].holds_a_site() && self.names_no_more_than_its_sites(local)
     }
 
-    /// Whether every allocation `local` may name is unwritten, [`Self::block_init`], it names
+    /// Whether every allocation `local` may name is unwritten, [`Self::init`], it names
     /// at least one, and it names nothing else, by
     /// [`Self::names_no_more_than_its_sites`]. `realloc` handed it copies
     /// indeterminate bytes into what it returns, which is fresh then, and if
@@ -1134,22 +1244,18 @@ impl Known {
     /// goes silent.
     pub(super) fn names_only_fresh(&self, local: LocalId) -> bool {
         let held = &self.points_to[local];
-        held.sites.any()
-            && held
-                .sites
-                .ones()
-                .all(|site| self.block_init[site].is_unwritten())
+        held.holds_a_site()
+            && held.sites().all(|site| self.init[site].is_unwritten())
             && self.names_no_more_than_its_sites(local)
     }
 
     /// Whether any allocation `local` may name may be unwritten,
-    /// [`Self::block_init`]: what `realloc` or a library copy handed it may
+    /// [`Self::init`]: what `realloc` or a library copy handed it may
     /// copy is then indeterminate in part, whatever else it names (#724).
     pub(super) fn may_name_fresh(&self, local: LocalId) -> bool {
         self.points_to[local]
-            .sites
-            .ones()
-            .any(|site| self.block_init[site].may_be_unwritten())
+            .sites()
+            .any(|site| self.init[site].may_be_unwritten())
     }
 
     /// Whether what `local` may hold is the allocations it names and nothing
@@ -1166,7 +1272,7 @@ impl Known {
     /// is `SC0411` about two correct programs.
     fn names_no_more_than_its_sites(&self, local: LocalId) -> bool {
         let held = &self.points_to[local];
-        !held.writes_to.any() && held.beyond().is_nothing()
+        !held.may_be_a_locals_address() && held.beyond().is_nothing()
     }
 
     /// Pour `poured` into each of `containers`, and mark every array in
@@ -1177,19 +1283,20 @@ impl Known {
     ///
     /// **The one way a door that moves a value into memory writes it**: the
     /// store, the library copy, `realloc` and a store this check cannot
-    /// place. The store, the copy and the unplaced store each build a
-    /// [`Contents`] naming every field, so a field added there and not
-    /// answered at one of them fails to compile there; `realloc` pours the
-    /// old allocation's record whole, so a field added is carried with the
-    /// rest and asks it nothing. What each door carries is taken in by
-    /// [`Contents::absorbed`], as the join takes it. A place where an event
+    /// place. The store, the copy and the unplaced store each start from
+    /// [`Held::none`] and set what a cell records, its names, its bound and
+    /// its marks; `realloc` pours the old allocation's cell whole. What each
+    /// door carries is taken in by
+    /// [`Cell::absorb`](super::parts::Cell::absorb), as the join takes it,
+    /// which names every field of `Held`, so a field added is
+    /// `error[E0027]` there until it says what memory keeps of it. A place where an event
     /// rather than a value sets one mark (a site reborn, a slot a call could
     /// not replace, a lost value gone, caller memory at entry) sets that
     /// field directly, and so does a call this check cannot read where it
     /// writes into what it was handed, which records the sites alone.
-    pub(super) fn pour(&mut self, containers: &[Site], poured: &Contents, in_part: &[LocalIdx]) {
+    pub(super) fn pour(&mut self, containers: &[Site], poured: &Cell, in_part: &[LocalIdx]) {
         for &container in containers {
-            self.contents[container].absorbed(poured);
+            self.contents[container].absorb(poured);
         }
         for &array in in_part {
             self.stored_in_part[array] = true;
@@ -1200,7 +1307,9 @@ impl Known {
     /// memory it reads, onto `held`: the sites it may hold, at an offset
     /// nobody said; the locals whose address it may be, as edges, and
     /// whether it may be a pointer that reached an array only by #639's
-    /// rule; and the stale, unreplaced, lost and caller marks. Answers
+    /// rule; the element it names, where it is read out of one local's value
+    /// that names one local and nothing else; and the stale, unreplaced,
+    /// lost and caller marks. Answers
     /// whether it named any local, which `Allocations::read_through` asks.
     ///
     /// **One function for both loads**, `Allocations::read_through` for a
@@ -1231,7 +1340,7 @@ impl Known {
         // all of them, since the set is a lower bound. See ADR-0045.
         let named_a_local = !locals.is_empty();
         for target in locals {
-            held.writes_to.set(target);
+            held.name_local(target);
             // And it may be a pointer that reached an array only by #639's
             // rule. See `Known::stored_in_part`.
             if self.stored_in_part[target] {
@@ -1251,22 +1360,41 @@ impl Known {
         {
             held.array_edge = true;
         }
-        // Read out of an allocation that may hold one that is gone. See
-        // ADR-0045.
-        if self.stale_below(local, depth) {
-            held.lost = true;
-            held.stale_read = true;
+        // **And the element it names, where it is read out of one local and
+        // nothing else**: the value read is that local's, so `f = *pe;` with
+        // `pe = &e` and `e = m` names `m[0]` as `f = e;` does, and so does
+        // `memcpy(&g, &e, 8)`, a load of the same. Left unnamed, a write
+        // through it was a write of the whole array, and `m[1]`, which
+        // nothing wrote, was believed written (#706). Not an array read out
+        // of, whose record gathers every store into any of its elements, nor
+        // a block, which keeps no element (`Cell::absorb`), nor more than
+        // one local, whose elements this would have to join.
+        //
+        // **And only where that local's value names one local and nothing
+        // else**, which `!is_array` above has made sure is not an array
+        // read out of whole: an element is an index into each array a pointer may
+        // name, and a write through it is taken as a write of that element
+        // in all of them (`built::write_effects`). With `e` either `m` or
+        // `n`, or handed to a call this check cannot read, the element would
+        // write `m[0]` for certain on a path where `n[0]` was written, and a
+        // read of `m[0]` nothing wrote went silent. Found by review.
+        let (from_sites, from_locals) = self.levels_below(local, depth - 1);
+        let from_locals: Vec<LocalIdx> = from_locals.into_iter().collect();
+        if let (true, [read_from]) = (from_sites.is_empty(), from_locals.as_slice()) {
+            let value = &self.points_to[*read_from];
+            let mut names = value.locals();
+            let one_array = matches!((names.next(), names.next()), (Some(_), None))
+                && !value.holds_a_site()
+                && value.beyond().is_nothing();
+            if !is_array(*read_from) && one_array {
+                held.element = value.element;
+            }
         }
-        // Read out of an allocation that may hold a slot a call could not
-        // replace, which is asked where it is handed by address and nowhere
-        // else. See ADR-0047.
-        if self.marked_below(local, depth, |contents| contents.unreplaced) {
-            held.unreplaced_read = true;
-        }
-        // Read out of an allocation that may hold a lost value, which is made
-        // lost if a lost value goes. See `Held::lost_read`.
-        if self.marked_below(local, depth, |contents| contents.holds_lost) {
-            held.lost_read = true;
+        // What every block it reads through, at any level, gives what it
+        // reads, by the one rule a load out of memory has. See
+        // `Cell::taken_by_a_load` and `Self::cells_on_the_way`.
+        for site in self.cells_on_the_way(local, depth) {
+            self.contents[site].taken_by_a_load(held);
         }
         // Read through a pointer to a local this check lost, which may be
         // gone: the stricter of the two rules a load and a library copy once
@@ -1284,7 +1412,7 @@ impl Known {
 
     /// Record that a call this check cannot read was handed the address of
     /// each of `locals`: every local whose address it can find from them, at
-    /// any depth, is [`Self::exposed_locals`] from here on.
+    /// any depth, is [`Self::exposed`] from here on.
     ///
     /// **From everything it can reach, not only what it was handed**: every
     /// allocation [`Self::reachable_now`] names and every local already
@@ -1304,13 +1432,9 @@ impl Known {
     /// `*box = m; fill_box(box);` left `m` unwritten.
     pub(super) fn expose_locals(&mut self, locals: Vec<LocalIdx>) {
         let mut seeds: BTreeSet<LocalIdx> = locals.into_iter().collect();
-        seeds.extend(
-            self.exposed_locals
-                .indices()
-                .filter(|&local| self.exposed_locals[local]),
-        );
+        seeds.extend(self.exposed.locals().filter(|&local| self.exposed[local]));
         for local in self.closed_from(self.reachable_now(), seeds).locals {
-            self.exposed_locals[local] = true;
+            self.exposed[local] = true;
         }
     }
 
@@ -1342,10 +1466,7 @@ impl Known {
     /// every exposed local, so the sites and the locals cannot come from two
     /// different walks.
     fn unknown_code_reaches(&self) -> Closed {
-        let exposed = self
-            .exposed_locals
-            .indices()
-            .filter(|&local| self.exposed_locals[local]);
+        let exposed = self.exposed.locals().filter(|&local| self.exposed[local]);
         self.closed_from(self.reachable_now(), exposed.collect())
     }
 
@@ -1389,7 +1510,7 @@ impl Known {
     }
 
     /// Every local a write this check cannot place may land in, for
-    /// [`Self::local_init`], where the write goes through `dereferences`
+    /// [`Self::init`], where the write goes through `dereferences`
     /// dereferences of `local`:
     ///
     /// - at none, `local` itself, `m[0] = p`;
@@ -1440,7 +1561,7 @@ impl Known {
     /// **A pointer naming no local lands in none.** One moved off a local by
     /// arithmetic keeps its edge to it, an array (#639) or a local that is
     /// not one, read as an array of one (#647), so `*(&m[1] - 1) = p` writes
-    /// `m`, in part, [`Self::local_init`], and `&slot + 1` and back to
+    /// `m`, in part, [`Self::init`], and `&slot + 1` and back to
     /// `slot` writes `slot`. The store door and a library copy both ask this,
     /// so the two cannot answer one pointer differently.
     pub(super) fn locals_a_write_may_land_in(
@@ -1567,11 +1688,11 @@ impl Known {
     pub(super) fn written_through(&self, local: LocalId) -> Vec<LocalIdx> {
         self.points_to
             .indices()
-            .filter(|target| self.points_to[local].writes_to.get(*target))
+            .filter(|target| self.points_to[local].names_local(*target))
             .collect()
     }
 
-    /// Every local reachable from `from` through [`Held::writes_to`], at any
+    /// Every local reachable from `from` through [`Held::locals`], at any
     /// depth, `from` included: what a callee handed the address of one of
     /// them can reach by following addresses. A visited bit per local, so a
     /// cycle of addresses or a dense graph of them is walked once each,
@@ -1586,7 +1707,7 @@ impl Known {
             }
             found.push(local);
             let held = &self.points_to[local];
-            todo.extend(held.writes_to.ones());
+            todo.extend(held.locals());
         }
         found
     }
@@ -1622,14 +1743,15 @@ impl Known {
             realloced,
             // Not fresh, whatever it was: the caller says whether the new
             // allocation is, since only it knows which function made it.
-            block_init,
+            init,
             pending,
             calls: _,
             exposed_after_call,
             // About no site.
             lost_exposed: _,
             // Left to the caller, which writes what the new allocation takes
-            // on the line after this, since only it knows what made it.
+            // on the line after this, since only it knows what made it. A
+            // local's size is not about the site.
             extent: _,
             // About a local, not a site.
             handed_at_most: _,
@@ -1637,49 +1759,22 @@ impl Known {
             handed_contents_at_most: _,
             // About a local as well: the call that makes the site writes the
             // local it is named by, which the call's destination says.
-            local_init: _,
             element_init: _,
             exposed_in_part: _,
             stored_in_part: _,
             // A local's, as `escaped` is, and a site being reborn is not.
-            exposed_locals: _,
             // About the allocation the site named, whose address may have
             // been stored out; the new one's has not been.
             stored_out,
-            // About a local, as `exposed_locals` is.
-            handed_untyped: _,
-            // Kept, as `inside` is: a call may still hold the old
+            // Not a local's, which a site being reborn is not about, and
+            // kept for the site, as `names` is: a call may still hold the old
             // allocation's address, and the slots of the new one are not told
             // apart from the old one's. Found by review.
-            handed_untyped_sites: _,
+            handed_untyped: _,
         } = self;
-        // **What the site's own record keeps when it names a new
-        // allocation**, field by field, so that a field added to `Contents`
-        // is asked here what a site made again does to it.
-        let Contents {
-            // Kept: what the old allocation may hold stays in the row, below.
-            // See ADR-0045.
-            inside: _,
-            // Kept, as `inside` is. See ADR-0045.
-            inside_locals: _,
-            // Kept, as `inside` is: the slots of the new allocation are not
-            // told apart from the old one's, and a bound kept only doubts.
-            stored_at_most: _,
-            // Kept, and set below in every container that held the site.
-            stale: _,
-            // Kept, as `stale` is: the slots of the new allocation are not
-            // told apart from the old one's.
-            unreplaced: _,
-            // Kept, as `stale` is: the slots of the new allocation are not
-            // told apart from the old one's.
-            holds_lost: _,
-            // Kept, as the entry and `stale` are: the slots of the new
-            // allocation are not told apart from the old one's. No case
-            // tells this from clearing it, measured: every other local
-            // holding the site is lost a few lines below, so a load out of
-            // it is doubted either way.
-            from_caller: _,
-        } = &contents[site];
+        // **What the site's own cell keeps when it names a new
+        // allocation**, field by field. See `Cell::kept_when_reborn`.
+        contents[site].kept_when_reborn();
         stored_out[site] = false;
 
         // **A local that loses an allocation that is gone may hold one**, so
@@ -1692,7 +1787,7 @@ impl Known {
         // now belongs to a new allocation, and the branch that would have
         // settled the old fact is about another. See ADR-0039.
         realloced[site] = None;
-        block_init[site] = Init::Written;
+        init[site] = Init::Written;
         for fact in realloced.iter_mut() {
             if fact
                 .as_ref()
@@ -1708,7 +1803,7 @@ impl Known {
         let gone = !matches!(state[site], SiteState::Live(_));
         for (other, held) in points_to.enumerated_mut() {
             if other != site.local() {
-                if gone && held.sites.get(site) {
+                if gone && held.has_site(site) {
                     held.stale_read = true;
                 }
                 held.lose(site);
@@ -1730,8 +1825,8 @@ impl Known {
         // call that may free it, which built where `main` refused it. Found by
         // review; `a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held`.
         for row in contents.iter_mut() {
-            if gone && row.inside.get(site) {
-                row.stale = true;
+            if gone && row.has_site(site) {
+                row.mark_stale_read();
             }
         }
         state[site] = SiteState::Live(made);
@@ -1852,7 +1947,7 @@ impl Known {
     /// [`Certain`] and is named apart from
     /// [`Self::certainly_written`], by the author's decision (#778).
     fn believed_written_by_unknown_code(&mut self, site: Site) {
-        self.block_init[site] = Init::Written;
+        self.init[site] = Init::Written;
     }
 
     /// Whether `local` holds a pointer read out of fresh memory that nothing
@@ -1913,15 +2008,17 @@ impl Known {
 
     /// A write landed in this one allocation, so its contents are not
     /// indeterminate on this path. Only a landing that proves one place can
-    /// ask, which is what [`Certain`] is. See [`Self::block_init`].
+    /// ask, which is what [`Certain`] is. See [`Self::init`].
     pub(super) fn certainly_written(&mut self, at: Certain) {
-        self.block_init[at.site()] = Init::Written;
+        self.init[at.site()] = Init::Written;
     }
 
     /// Something may have written any allocation: a write this check cannot
-    /// place, or a library call it reads only by name. See [`Self::block_init`].
+    /// place, or a library call it reads only by name. See [`Self::init`].
     pub(super) fn written_all(&mut self) {
-        self.block_init.fill(Init::Written);
+        for site in self.init.sites() {
+            self.init[site] = Init::Written;
+        }
     }
 
     /// Which locals are certainly unwritten, [`Init::Unwritten`], as of now:
@@ -1929,17 +2026,17 @@ impl Known {
     /// it. See `Allocations::written_past_its_end`.
     pub(super) fn unwritten_locals(&self) -> Table<LocalIdx, bool> {
         Table::from_vec(
-            self.local_init
-                .iter()
-                .map(|init| init.is_unwritten())
+            self.init
+                .locals()
+                .map(|local| self.init[local].is_unwritten())
                 .collect(),
         )
     }
 
     /// Something may have written `local`, so its value is no longer known
-    /// to be indeterminate. See [`Self::local_init`].
+    /// to be indeterminate. See [`Self::init`].
     pub(super) fn written_local(&mut self, local: LocalIdx) {
-        self.local_init[local] = Init::Written;
+        self.init[local] = Init::Written;
         self.element_init[local].write_all();
     }
 
@@ -1963,7 +2060,7 @@ impl Known {
     /// again is not a second free of anything. The sites stay because
     /// keeping them is the conservative direction for a use after free; the
     /// proof goes because keeping *it* is the confident one. See ADR-0024.
-    /// **No program observes this, and it is here anyway.** `writes_to` is
+    /// **No program observes this, and it is here anyway.** `Held::locals` is
     /// written only where an address is taken, so a target of such a write
     /// has always escaped, and ADR-0017 answers `Reached::Lost` for an
     /// escaped local wherever a report is made, measured: removing it breaks
@@ -1988,7 +2085,7 @@ impl Known {
             .map(|(local, write)| PendingWrite {
                 local,
                 write,
-                init: self.local_init[local],
+                init: self.init[local],
                 elements: self.element_init[local].clone(),
             })
             .collect()
@@ -2007,7 +2104,7 @@ impl Known {
             // for a doubt only where the array is kept whole, and then the
             // arm below writes it again. It is kept so that #733 changes no
             // answer.
-            self.local_init[local] = match write.init {
+            self.init[local] = match write.init {
                 Init::Maybe => Init::Maybe,
                 Init::Unwritten | Init::Written => Init::Written,
             };
@@ -2026,7 +2123,7 @@ impl Known {
                 ArrayWrite::Maybe => {
                     let mut init = write.init;
                     init.may_write();
-                    self.local_init[local] = init;
+                    self.init[local] = init;
                 }
             }
         }
@@ -2038,7 +2135,7 @@ impl Known {
     pub(super) fn certainly_unwritten(&self, local: LocalIdx, element: Option<u64>) -> bool {
         let elements = &self.element_init[local];
         if elements.len() == 0 {
-            return self.local_init[local].is_unwritten();
+            return self.init[local].is_unwritten();
         }
         match element.and_then(|element| usize::try_from(element).ok()) {
             Some(element) if element < elements.len() => elements.get(element).is_unwritten(),
@@ -2051,7 +2148,7 @@ impl Known {
     /// that the read is a doubt: the element read may be unwritten, or it is
     /// not known and some element may be. A longer array, kept whole, and a
     /// local that is no array ask this at their start only. See
-    /// [`Self::local_init`] and [`Self::element_init`].
+    /// [`Self::init`] and [`Self::element_init`].
     ///
     /// **An element nobody can name may be any of them**, whether or not the
     /// array was written in part: `m[c]` after `m[1] = &x;` may read `m[0]`,
@@ -2066,7 +2163,7 @@ impl Known {
     ) -> bool {
         let elements = &self.element_init[local];
         if elements.len() == 0 {
-            return self.local_init[local] == Init::Maybe && at_start;
+            return self.init[local] == Init::Maybe && at_start;
         }
         match element.and_then(|element| usize::try_from(element).ok()) {
             Some(element) if element < elements.len() => elements.get(element).may_be_unwritten(),
@@ -2084,9 +2181,9 @@ impl Known {
         // `realloc` remembered, so the fact goes too. See ADR-0039.
         let exposed = self.exposed.clone();
         self.forget_reallocs_touching(|site| exposed[site]);
-        for (state, &exposed) in self.state.iter_mut().zip(&self.exposed) {
-            if exposed {
-                state.doubted();
+        for site in self.exposed.sites() {
+            if self.exposed[site] {
+                self.state[site].doubted();
             }
         }
     }
@@ -2115,7 +2212,7 @@ impl Known {
     /// liveness to say whether it is read again, so turning the site
     /// `Unknown` for one refused `*h = a; grow(&a); use2(&a);` with `*h`
     /// never read. Each allocation that may contain the site is marked
-    /// [`Contents::unreplaced`] instead, and a pointer later read out of it is
+    /// a cell's `unreplaced_read` instead, and a pointer later read out of it is
     /// asked about where it is handed by address, which
     /// [`Self::handed_below`] does. Every such allocation, not only those the
     /// call did not reach: a load out of one it reached is doubted already.
@@ -2127,8 +2224,8 @@ impl Known {
                 continue;
             }
             for container in self.contents.indices() {
-                if self.contents[container].inside.get(site) {
-                    self.contents[container].unreplaced = true;
+                if self.contents[container].has_site(site) {
+                    self.contents[container].mark_unreplaced_read();
                 }
             }
             let out_of_reach = self.points_to.indices().any(|holder| {
@@ -2160,7 +2257,7 @@ impl Known {
     /// silence: `grow(*k); grow(*k);` is asked at the second call.
     ///
     /// **Not what memory the call can reach may hold**, for the same reason:
-    /// what a slot was given stays in [`Contents::inside_locals`] after the slot
+    /// what a slot was given stays in a cell's `names` after the slot
     /// is given something else, so `*t = &a; *t = 0; stash(t);` exempted `a`
     /// though `stash` saw only null. The in-out idiom through memory a call
     /// can reach is asked for it. See ADR-0047.
@@ -2201,7 +2298,7 @@ impl Known {
     /// `*box = u; free(u);`, are no more or less likely to be what went than
     /// the local handed to `free`. So every lost local carries
     /// [`Held::stale_read`] from here, and a store of it marks where it
-    /// lands, and every allocation [`Contents::holds_lost`] marks is `stale`, so
+    /// lands, and every allocation whose cell is `lost` is `stale_read`, so
     /// a load out of it is one this check stopped following. Marking too much
     /// is a doubt; marking only the local handed over left the other three
     /// spellings read in silence (#503). See ADR-0045.
@@ -2217,8 +2314,8 @@ impl Known {
             }
         }
         for contents in &mut self.contents {
-            if contents.holds_lost {
-                contents.stale = true;
+            if contents.lost() {
+                contents.mark_stale_read();
             }
         }
     }
@@ -2244,8 +2341,8 @@ impl Known {
             }
         }
         for contents in &mut self.contents {
-            if contents.from_caller {
-                contents.stale = true;
+            if contents.holds_from_caller() {
+                contents.mark_stale_read();
             }
         }
         self.unproved_exposed();
@@ -2335,7 +2432,7 @@ impl Known {
             }
         }
         for contents in &self.contents {
-            for site in contents.inside.ones() {
+            for site in contents.sites() {
                 held[site] = true;
             }
         }
@@ -2368,7 +2465,7 @@ impl Known {
     ///
     /// What a pointer read out of memory this check cannot say which may be:
     /// wherever it was read from, it was stored there, and a store into an
-    /// allocation is recorded in [`Contents::inside`] or exposed at once, and the
+    /// allocation is recorded in a cell's `names` or exposed at once, and the
     /// exposed half is read by [`Self::levels_below`] rather than here, for a
     /// load through memory this check cannot place (#484). One read
     /// out of a local through its address is not here and need not be: that
@@ -2377,7 +2474,7 @@ impl Known {
     pub(super) fn stored(&self) -> Vec<Site> {
         self.contents
             .indices()
-            .filter(|&held| self.contents.iter().any(|row| row.inside.get(held)))
+            .filter(|&held| self.contents.iter().any(|row| row.has_site(held)))
             .collect()
     }
 
@@ -2401,6 +2498,9 @@ impl Known {
         }
     }
 
+    /// **The weak update, not [`Self::replace`]**, which is the one strong
+    /// one: this adds to what each local may hold and replaces none of it.
+    ///
     /// Everything an escaped local this writer could have reached holds may
     /// have been replaced.
     ///
@@ -2442,10 +2542,10 @@ impl Known {
     /// only until a later call that may free what it was handed (#394).
     ///
     /// **Which it may have written is a second answer, `may_write`**, about
-    /// [`Self::local_init`] alone. A store this check cannot pin down answers
+    /// [`Self::init`] alone. A store this check cannot pin down answers
     /// it with the locals its place may land in, of the type it stores; a
     /// call answers it with what it may reach,
-    /// [`Self::exposed_locals`], which is narrower than every escaped local,
+    /// [`Self::exposed`], which is narrower than every escaped local,
     /// so `int **p = m; tick(); q = *p;` reads `m` as nothing wrote it
     /// (#643). Two parameters rather than a second function, so that a new
     /// caller cannot give one answer and forget the other. See ADR-0057.
@@ -2487,7 +2587,7 @@ impl Known {
             // **And it may have been written**, which is what a write this
             // check cannot read is: `int *q; get(&q); *pq` is the
             // output-parameter idiom, and believing `q` unwritten after it
-            // reported a correct program. See `Self::local_init`. The escape
+            // reported a correct program. See `Self::init`. The escape
             // decides nothing here, measured: a mark is read only of a local
             // whose address is taken, which is escaped, so dropping it leaves
             // the suite green. It is kept so that `may_write` answers for the
@@ -2517,7 +2617,7 @@ pub(super) const ELEMENTS_KEPT: u64 = 64;
 pub(super) enum ArrayWrite {
     /// The element it lands in is known.
     Element(u64),
-    /// It may land in any element. See [`Known::local_init`].
+    /// It may land in any element. See [`Known::init`].
     Maybe,
 }
 

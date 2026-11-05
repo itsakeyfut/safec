@@ -119,7 +119,7 @@ pub(super) fn fits(
     // are walked and kept where the edge names them.
     let locals = function
         .locals()
-        .filter(|target| held.writes_to.get(LocalIdx::of(target)))
+        .filter(|target| held.names_local(LocalIdx::of(target)))
         .map(|target| {
             analysis
                 .unit
@@ -321,7 +321,7 @@ fn locals_reached(function: &Function, value: &Rvalue, known: &Known) -> Vec<Loc
             let held = &known.points_to[place.local];
             function
                 .locals()
-                .filter(|target| held.writes_to.get(LocalIdx::of(target)))
+                .filter(|target| held.names_local(LocalIdx::of(target)))
                 .collect()
         }
         Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
@@ -437,13 +437,11 @@ pub(super) fn slots_from(
             let Some(read_as) = read_as else {
                 if !untyped_sites.contains(&site) {
                     untyped_sites.push(site);
-                    sites.extend(known.contents[site].inside.ones().map(|next| (next, None)));
+                    sites.extend(known.contents[site].sites().map(|next| (next, None)));
                     locals.extend(
                         function
                             .locals()
-                            .filter(|local| {
-                                known.contents[site].inside_locals.get(LocalIdx::of(local))
-                            })
+                            .filter(|local| known.contents[site].names_local(LocalIdx::of(local)))
                             .map(|next| (next, None)),
                     );
                 }
@@ -454,11 +452,11 @@ pub(super) fn slots_from(
             }
             asked_sites.push((site, read_as));
             let below = pointee(analysis, read_as);
-            sites.extend(known.contents[site].inside.ones().map(|next| (next, below)));
+            sites.extend(known.contents[site].sites().map(|next| (next, below)));
             locals.extend(
                 function
                     .locals()
-                    .filter(|local| known.contents[site].inside_locals.get(LocalIdx::of(local)))
+                    .filter(|local| known.contents[site].names_local(LocalIdx::of(local)))
                     .map(|next| (next, below)),
             );
         } else {
@@ -546,7 +544,7 @@ mod tests {
         asked(|analysis, function, [_, a, p]| {
             let mut known = analysis.on_entry();
             let held = &mut known.points_to[p];
-            held.writes_to.set(LocalIdx::of(a));
+            held.name_local(LocalIdx::of(a));
             held.writes_elsewhere = false;
             held.inner_address = true;
             assert!(matches!(
@@ -576,7 +574,7 @@ mod tests {
         asked(|analysis, function, [c, a, p]| {
             let mut known = analysis.on_entry();
             let held = &mut known.points_to[p];
-            held.writes_to.set(LocalIdx::of(c));
+            held.name_local(LocalIdx::of(c));
             held.writes_elsewhere = false;
             held.loaded = true;
             held.believed = Some(4);
@@ -585,8 +583,8 @@ mod tests {
                 Some(Fit::Unknown)
             ));
             let held = &mut known.points_to[p];
-            held.writes_to.remove(LocalIdx::of(c));
-            held.writes_to.set(LocalIdx::of(a));
+            held.unname_local(LocalIdx::of(c));
+            held.name_local(LocalIdx::of(a));
             assert!(matches!(
                 fits(analysis, function, p, 4, &known, false),
                 Some(Fit::Inside)

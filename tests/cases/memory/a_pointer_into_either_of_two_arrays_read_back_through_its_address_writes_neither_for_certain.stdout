@@ -1,0 +1,137 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int" "x"
+  Local "_3" "int *[2]" "m"
+  Local "_4" "int *[2]" "n"
+  Local "_5" "int **" "e"
+  Local "_6" "int **"
+  Local "_7" "int **"
+  Local "_8" "int **"
+  Local "_9" "int **"
+  Local "_10" "int **"
+  Local "_11" "int **"
+  Local "_12" "int **"
+  Local "_13" "int ***" "pe"
+  Local "_14" "int ***"
+  Local "_15" "int **" "g"
+  Local "_16" "int *"
+  Local "_17" "int *"
+  Local "_18" "int *" "r"
+  Local "_19" "int **"
+  Local "_20" "int"
+  Block "bb0" entry
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:2:9 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:2:13 generated
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:5:15 generated
+      Destination "_6"
+      Address
+        Place "_3"
+          Index
+            Constant 0
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:5:15 written
+      Destination "_7"
+      Binary "Add"
+        Copy "_6"
+        Constant 1
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:5:15 written
+      Destination "_8"
+      Binary "Sub"
+        Copy "_7"
+        Constant 1
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:5:11 written
+      Destination "_5"
+      Use
+        Copy "_8"
+    Sequenced a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:5:15 generated
+    Branch a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:6:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:6:9 generated
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:6:16 generated
+      Destination "_9"
+      Address
+        Place "_4"
+          Index
+            Constant 0
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:6:16 written
+      Destination "_10"
+      Binary "Add"
+        Copy "_9"
+        Constant 1
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:6:16 written
+      Destination "_11"
+      Binary "Sub"
+        Copy "_10"
+        Constant 1
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:6:12 written
+      Destination "_5"
+      Use
+        Copy "_11"
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:6:12 written
+      Destination "_12"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:6:12 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:6:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:7:17 written
+      Destination "_14"
+      Address
+        Place "_5"
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:7:12 written
+      Destination "_13"
+      Use
+        Copy "_14"
+    Sequenced a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:7:17 generated
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:8:11 written
+      Destination "_15"
+      Use
+        Copy "_13"
+          Deref
+    Sequenced a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:8:15 generated
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:9:10 written
+      Destination "_16"
+      Address
+        Place "_2"
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:9:5 written
+      Destination "_15"
+        Deref
+      Use
+        Copy "_16"
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:9:5 written
+      Destination "_17"
+      Use
+        Copy "_15"
+          Deref
+    Sequenced a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:9:5 generated
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:10:14 generated
+      Destination "_19"
+      Address
+        Place "_3"
+          Index
+            Constant 0
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:10:10 written
+      Destination "_18"
+      Use
+        Copy "_19"
+          Deref
+    Sequenced a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:10:14 generated
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:11:12 written
+      Destination "_20"
+      Binary "Eq"
+        Copy "_18"
+        Constant 0
+    Operation a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:11:5 written
+      Destination "_0"
+      Use
+        Copy "_20"
+    Sequenced a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain.c:11:12 generated
+    Return

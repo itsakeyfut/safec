@@ -757,11 +757,60 @@ cases! {
         // (#687). Mutation: the copy pours with no array in part; this loses
         // its `SC0411`.
         a_local_array_written_through_a_moved_pointer_copied_into_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // And copied into a local through its address, which carries the
-        // mark as a store through the address gives it. Mutation: the copy
-        // into a local's address leaves `Held::array_edge` unset; this loses
-        // its `SC0411`.
-        a_local_array_written_through_a_moved_pointer_copied_into_a_local_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And copied into a local through its address, which is a load of
+        // `e`: it names `m[1]`, as `f = e;` does, so `m[0]` is a certain
+        // `SC0411` (#706). Mutation: a load takes no element from the one
+        // local it reads out of; this is a doubt again.
+        a_local_array_written_through_a_moved_pointer_copied_into_a_local_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // #706's program: a pointer to an array's start copied into a local
+        // through its address names the element `e` names, so a write
+        // through it writes `m[0]` alone and `m[1]` is a certain `SC0411`, as
+        // with `g = e;`. Mutation: a load takes no element from the one
+        // local it reads out of; this loses its `SC0411`.
+        a_pointer_to_an_array_s_start_copied_into_a_local_writes_only_the_element_it_names: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **But not where the value read names more than one array**, or
+        // anything beside one: an element is an index into every array a
+        // pointer names, so `e` either `m` or `n` read back through `pe`
+        // and written through would write `m[0]` for certain on the path
+        // where it wrote `n[0]`, and `m[0]` is a doubt. Mutation: take the
+        // element whatever the value read names; this goes silent. Found
+        // by review.
+        a_pointer_into_either_of_two_arrays_read_back_through_its_address_writes_neither_for_certain: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same copied into a local through its address, #706's shape.
+        // Mutation as above; this goes silent.
+        a_pointer_into_either_of_two_arrays_copied_into_a_local_writes_neither_for_certain: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same where the local was handed to a call this check cannot
+        // read, which may have pointed it elsewhere. Mutation as above;
+        // this goes silent.
+        a_pointer_into_an_array_handed_to_a_call_and_read_back_through_its_address_names_no_element: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read back out of a local or a block, whose element nothing keeps.
+        // Mutation: take the element though a site is read out of too; this
+        // goes silent. Found by review.
+        a_pointer_read_back_out_of_a_local_or_a_block_names_no_element: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read back out of either of two locals naming different elements.
+        // Mutation: take the first local's element; this goes silent. Found
+        // by review.
+        a_pointer_read_back_out_of_either_of_two_locals_names_no_element: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **Nor where the copy may write part of a pointer**: half of `e`
+        // copied into `g` is not a pointer to `m[1]`, so the write through
+        // `g` is no certain write of it and `m[1]` is a doubt. Mutation: a
+        // copy that does not replace its local carries the element; this
+        // goes silent. Found by review.
+        half_a_pointer_into_an_array_copied_into_a_local_names_no_element: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same by a length this check cannot read. Mutation as above;
+        // this goes silent.
+        a_pointer_into_an_array_copied_into_a_local_by_a_length_this_check_cannot_read_names_no_element: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A store that may land in either of two locals may have missed
+        // each**: `*g = &x;` with `g` either `&m` or `&n` wrote one of them,
+        // and `r = m;` may read what nothing wrote. Mutation: the placed
+        // store writes every local it names for certain; this goes silent.
+        // Mutation: `replaced_by` takes what such a store may write as
+        // written; this goes silent too. Found by review.
+        a_store_through_a_pointer_to_either_of_two_locals_may_have_missed_each: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with `g` either `m + 1` or an allocation: the write may
+        // have landed in the allocation, and `m[1]` may be unwritten.
+        // Mutation as the first above; this goes silent. Found by review.
+        a_store_through_a_pointer_into_an_array_or_an_allocation_may_have_missed_the_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And copied out of memory that holds such a pointer, `box[0] = m + 1;
         // memcpy(&g, box, 8); g[0] = &x;`, which the copy carries as a load of
         // the box does, `g = box[0];`: the copy is a load built by
@@ -870,10 +919,10 @@ cases! {
         // `SC0411` and `m[8]` goes silent.
         a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `f = *pe` reads `e = m + 1` back out of `e` itself, which no store
-        // marked, and the write through it may be of any element: `m[0]` is
-        // an `SC0411` doubt. Mutation: a load takes no edge from the local
-        // it reads out of; this goes silent.
-        a_local_array_written_through_a_moved_pointer_read_back_through_its_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // marked, and names `m[1]` as `e` does, so `m[0]` is a certain
+        // `SC0411`, as with `f = e;` (#706). Mutation: a load takes no
+        // element from the local it reads out of; this is a doubt again.
+        a_local_array_written_through_a_moved_pointer_read_back_through_its_address_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same read as an operand, `*pe - 1`, which moves it back onto
         // `m[0]`; `m[1]` is an `SC0411` doubt. Mutation: such an operand
         // takes no edge from the local it reads out of; this goes silent.
@@ -1006,14 +1055,14 @@ cases! {
         // Mutation: `leaves` does not ask `sites_named_by_unknown_code()`;
         // this loses its `SC0414`.
         a_freed_pointer_stored_in_memory_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `leaves` does not ask `exposed_locals`; this loses its
+        // Mutation: `leaves` does not ask `exposed` of a local; this loses its
         // `SC0414`.
         a_freed_pointer_stored_through_a_pointer_to_a_local_a_call_kept_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stays in sight: the read back is what is asked. Mutation: every
         // store leaves; this gains an `SC0414`.
         a_freed_pointer_stored_in_memory_only_this_function_reads_is_not_reported_where_it_is_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same store spelled without the pointer. Mutation: a write of a
-        // local `exposed_locals` holds is not asked; this goes silent.
+        // local `Known::exposed` holds is not asked; this goes silent.
         a_freed_pointer_written_into_a_local_a_call_kept_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A box that left through a local a call kept, `slot = b;`, is
         // memory such code may read (#655). Mutation: `leaves` asks
@@ -1033,11 +1082,11 @@ cases! {
         // A local whose address such a local holds, `slot = &t; t = x;`, is
         // a local code outside the function may read before any later call
         // marks it (#655). Mutation: `stored_away`'s direct write asks
-        // `exposed_locals` in place of `locals_named_by_unknown_code()`;
+        // `exposed` of a local in place of `locals_named_by_unknown_code()`;
         // this goes silent.
         a_freed_pointer_written_into_a_local_a_kept_local_points_at_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same store through a pointer, `*pt = x;`. Mutation: `leaves`
-        // asks `exposed_locals` of the locals the store may land in; this
+        // asks `exposed` of a local of the locals the store may land in; this
         // goes silent.
         a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points_at_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A box holding a freed pointer stored into a box a kept local
@@ -1086,7 +1135,7 @@ cases! {
         a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What a box held may be an allocation a loop has since made again
         // at the same site, freed on the turn after it was put there. The
-        // three doors. Mutation: `handed_below` does not read `stale`; these
+        // three doors. Mutation: `handed_below` does not read `stale_read`; these
         // three go silent.
         a_box_filled_on_one_turn_and_freed_through_on_the_next_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_box_filled_on_one_turn_and_freed_through_on_the_next_stored_through_a_parameter_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1114,18 +1163,18 @@ cases! {
         // Mutation: `Unknown` is not counted below the first level; this goes
         // silent.
         a_box_of_a_box_holding_a_pointer_a_call_was_handed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `stale` is read only at the first level's containers;
+        // Mutation: `stale_read` is read only at the first level's containers;
         // this goes silent.
         a_box_of_a_box_filled_on_one_turn_and_freed_through_on_the_next_handed_to_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // **A cost, recorded in ADR-0042.** The caller's pointer two boxes in,
         // after a call that may have freed the caller's memory, is doubted;
         // one box in, it already was. Two routes reach it: the caller's
         // allocation is `Reachable` and held in memory, and the call left
-        // the box `stale`. Either mutation alone, `Reachable` not counted
-        // below the first level or `stale` read only at the first level's
+        // the box `stale_read`. Either mutation alone, `Reachable` not counted
+        // below the first level or `stale_read` read only at the first level's
         // containers, leaves it doubted; both together silence it.
         a_box_of_a_box_holding_the_callers_pointer_handed_on_after_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A call writes only the locals it may reach, `Known::exposed_locals`
+        // A call writes only the locals it may reach, `Known::exposed` of a local
         // (#643). See ADR-0057.
         //
         // Mutation: an opaque call passes `|_| true` as `may_write`; this
@@ -1150,7 +1199,7 @@ cases! {
         // reaches, rather than in that memory itself. Mutation: the walk
         // does not start from `reachable_now()`; this is reported.
         a_local_array_stored_in_memory_reached_from_memory_already_handed_away_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `exposed_locals` joined by intersection; this is
+        // Mutation: `exposed` of a local joined by intersection; this is
         // reported.
         a_local_array_put_in_a_local_a_call_kept_on_one_arm_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An address stored through a pointer this check cannot place,
@@ -1161,7 +1210,7 @@ cases! {
         // Mutation: the opaque arm skips `levels_below` for an argument
         // read through a dereference; this is reported.
         a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `StorageLive` leaves `exposed_locals` alone; the second
+        // Mutation: `StorageLive` leaves `exposed` of a local alone; the second
         // turn's read goes silent.
         a_pointer_read_out_of_a_local_array_made_again_after_a_call_kept_the_old_one_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: a library copy whose first argument is a dereference
@@ -3099,7 +3148,7 @@ cases! {
         a_call_in_a_loop_may_return_what_it_returned_last_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And any escaped local's address, which a free of it would free
         // though it is no allocation. Mutation: give an opaque call's result
-        // no `writes_to` edge in `Allocations::terminator`'s opaque arm;
+        // no `Held::locals` edge in `Allocations::terminator`'s opaque arm;
         // `a_call_handed_a_locals_address_may_return_it` exits 0. Mutation:
         // give it an edge to every local, escaped or not;
         // `a_call_returns_none_of_this_functions_locals_where_none_escaped`
@@ -3458,7 +3507,7 @@ cases! {
         // first four go silent. Mutation: have `read_through` ignore the mark;
         // the first, third and fourth go silent. Mutation: have `built_from`
         // ignore it; the second. Mutation: have `stale_below` read one level
-        // only; the third. Mutation: drop `stale` at the join; the fourth.
+        // only; the third. Mutation: drop `stale_read` at the join; the fourth.
         a_pointer_stored_and_freed_last_turn_is_doubted_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And where a call that may have freed it reached it through memory,
         // which leaves it `Reachable` rather than `Unknown`: a doubt is gone to
@@ -3636,11 +3685,11 @@ cases! {
         // And through a store into this function's own memory, which marks
         // the allocation: read back after a call, or read back and then a
         // call, it is doubted; with no call it is not. See ADR-0040.
-        // Mutation: have the store never mark `Contents::from_caller`; the first
+        // Mutation: have the store never mark a cell's `from_caller`; the first
         // two go silent. Mutation: have the call never make a marked
-        // allocation `Contents::stale`; the first goes silent. Mutation: have
+        // allocation a cell's `stale_read`; the first goes silent. Mutation: have
         // `reads_caller_memory` ignore a marked site; the second goes silent.
-        // Mutation: have the store mark `Contents::stale` at once; the third
+        // Mutation: have the store mark a cell's `stale_read` at once; the third
         // reports. Mutation: have the join drop the mark; the fourth goes
         // silent. Mutation: have `realloc` drop it; the fifth goes silent.
         a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
@@ -3650,7 +3699,7 @@ cases! {
         a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And read back through more than one level, as one place or moved by
         // arithmetic, and copied by `memcpy` rather than stored. Found by
-        // review. Mutation: have `memcpy` carry no `Contents::from_caller`; the
+        // review. Mutation: have `memcpy` carry no a cell's `from_caller`; the
         // last two go silent. Having `reads_caller_memory` ask the local's
         // own allocations only silenced the first two until #486, and no
         // longer does: see that function's doc. It silences the use at
@@ -3709,7 +3758,7 @@ cases! {
         // value names no site and any of them may be the one freed (#503):
         // stored before the free, copied before it, freed through the box it
         // was stored in, and handed to a `realloc` that succeeded. Each reads
-        // freed memory at `*r`. Mutation: do not record `Contents::holds_lost` at
+        // freed memory at `*r`. Mutation: do not record a cell's `lost` at
         // a store; the first goes quiet. Mutation: mark only the local handed
         // to `free`; the second. Mutation: no trigger for a place read through
         // memory; the third. Mutation: no trigger for `realloc`; the fourth.
@@ -3718,11 +3767,11 @@ cases! {
         a_lost_pointer_freed_through_memory_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_reallocated_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Found by review: the store on one arm of a join, which holds the
-        // mark only if the join unions `Contents::holds_lost`; the free spelled
+        // mark only if the join unions a cell's `lost`; the free spelled
         // through a load of the box, `t = *box; free(t);`, which triggers as
         // `free(*box)` does; and the box copied by `memcpy` or grown by
         // `realloc` before the free, which carry the mark as they carry
-        // `stale`. Mutation: drop the union at the join; the first goes quiet.
+        // `stale_read`. Mutation: drop the union at the join; the first goes quiet.
         // Mutation: no trigger for a load; the second. Mutation: drop the mark
         // from the `memcpy` copy; the third. From the `realloc` copy; the
         // fourth.
@@ -3735,8 +3784,8 @@ cases! {
         // marks in every place it may land, so the allocation read back may
         // hold the lost value and is stale once it goes, `SC0402` (#705).
         // The same through `memcpy`. Mutation: the landing pours with
-        // `holds_lost` taken `false`, and the first goes silent at the read;
-        // with `stale` taken `false`, the second does, since what the copy
+        // `lost` taken `false`, and the first goes silent at the read;
+        // with `stale_read` taken `false`, the second does, since what the copy
         // reads is a lost local.
         a_lost_value_stored_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -3960,7 +4009,7 @@ cases! {
         // read through `***t3`, read back as `m` and written through, and
         // written two levels down into the local. Silent with `r` live. See
         // ADR-0045. Mutation: have the store never mark
-        // `Contents::inside_locals`; the first three go silent. Mutation: have a
+        // a cell's `names` of a local; the first three go silent. Mutation: have a
         // load carry no edges; the second goes silent. Mutation: have a store
         // two levels down land in no local; the third goes silent.
         a_locals_address_stored_in_an_allocation_is_followed_by_a_read_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
@@ -5295,7 +5344,7 @@ cases! {
         // And where paths meet and where the allocation is copied or grown.
         // Mutation:
         // have `Held::joined` intersect `unreplaced_read`; the first builds.
-        // Mutation: have the join intersect `Contents::unreplaced`; the second
+        // Mutation: have the join intersect a cell's `unreplaced_read`; the second
         // builds. Mutation: drop the mark where `built_from` reads a load;
         // the third builds. Mutation: drop it in the `memcpy` arm, or where
         // `realloc` carries a row to the new site; the fourth and fifth build.
@@ -5335,13 +5384,13 @@ cases! {
         // no second holder below is what holds it. See ADR-0047.
         a_single_address_read_out_of_memory_another_pointer_may_write_does_not_hand_its_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What memory a call can reach may hold is not handed to it: a slot
-        // keeps every address it was ever given in `inside_locals`, and the
+        // keeps every address it was ever given in a cell's `names` of a local, and the
         // second's slot holds null when `stash` sees it. Mutation: mark the
         // locals memory a call reached may hold; the first builds. Mutation:
-        // mark them only where `inside_locals` names one local and `inside`
-        // no site, the rejected half-measure; the second builds. The second's
+        // mark them only where a cell's `names` name one local and no site,
+        // the rejected half-measure; the second builds. The second's
         // report at `release_ref(&b)` is a false one C defines whatever the
-        // callees do: `stash` saw null, yet `inside_locals` still puts `a` in
+        // callees do: `stash` saw null, yet a cell's `names` of a local still puts `a` in
         // every call's reach, the cost #345 is about. See ADR-0047. So is its
         // `SC0413` at `use2(&a)`: `a` is reached below `b`'s `int` memory,
         // which `release_ref` was handed, and a local reached below a type that
@@ -5404,7 +5453,7 @@ cases! {
         // `Known::replaced` in the `Callee::Opaque` arm; the first builds.
         // Mutation: drop the opaque-result clause from
         // `Allocations::reads_caller_memory` together with the
-        // `Contents::from_caller` mark the `Callee::Opaque` arm sets on what
+        // a cell's `from_caller` mark the `Callee::Opaque` arm sets on what
         // it returned; the second builds, and six more. The clause alone
         // changes no case, since the mark answers first, and is held by its
         // unit test in `transfer.rs`; the mark alone fails
@@ -5557,7 +5606,7 @@ cases! {
         // Every exposed parameter is marked, not the first, and a mark made on
         // one arm survives the join. Mutation: mark only the first of
         // `exposed_parameters`; the first of these goes silent at the use.
-        // Mutation: join `Contents::from_caller` as an intersection; the second
+        // Mutation: join a cell's `from_caller` as an intersection; the second
         // does, since each call's result is marked on its own arm only.
         a_pointer_read_again_out_of_a_second_parameter_after_a_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -5676,7 +5725,7 @@ cases! {
         an_output_parameter_beside_an_exposed_allocation_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And two or three levels of address down, `pa = &a; copy2(&r,
-        // &pa);` (#513). Mutation: follow `writes_to` one level only; both go
+        // &pa);` (#513). Mutation: follow `Held::locals` one level only; both go
         // quiet at the use. What only a deeper level hands is kept out of a
         // local that holds a local's address, and what one level hands is
         // not: the third, `k = 0; r = &k; get(&r, u);`, was read in silence
@@ -5698,7 +5747,7 @@ cases! {
         // Memory a parameter can name is memory reachable to code this check
         // cannot read, not memory that holds a caller's pointer: a buffer
         // this function allocated and stored `*pp` in is no parameter's, and
-        // asking `Contents::from_caller` landed `m` stored there in every
+        // asking a cell's `from_caller` landed `m` stored there in every
         // parameter's memory and reported a use at `*q` that cannot happen.
         // Found by review. Mutation: ask `from_caller` of the containers of
         // the store; the first reports. Of the copy `memcpy` makes; the

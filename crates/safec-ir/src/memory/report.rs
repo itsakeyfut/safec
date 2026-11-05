@@ -1144,13 +1144,13 @@ fn say_leaving(
 /// stores were asked at the type they stored, and the receiver may read a
 /// wider one: `*m = c; use(pm);` with `m` a `void **` and `c` one `char` is
 /// asked what `m` holds, the objects the pointers stored there point at
-/// ([`Contents::inside`](super::parts::Contents::inside), [`Contents::inside_locals`](super::parts::Contents::inside_locals)) by their size. What the
+/// (a cell's `names`) by their size. What the
 /// record does not hold is not asked by its record, since asking it would
 /// doubt every pointer to a parameter's memory handed on (#627); it is
 /// asked by what it is believed to hold instead, from the type the
 /// departing value arrived as and from what was stored there
 /// ([`Held::contents_at_most`](super::parts::Held::contents_at_most),
-/// [`Contents::stored_at_most`](super::parts::Contents::stored_at_most), #632). See ADR-0060.
+/// a cell's `stored_levels`, #632). See ADR-0060.
 fn contents_leaving(
     findings: &mut Vec<Finding>,
     departed: &mut Vec<(Span, Departure, Option<LocalId>, usize)>,
@@ -1267,13 +1267,12 @@ fn contents_leaving(
             continue;
         };
         let extents: Vec<Extent> = known.contents[site]
-            .inside
-            .ones()
+            .sites()
             .map(|held| known.extent[held].unwrap_or(Extent::AtLeast(0)))
             .chain(
                 function
                     .locals()
-                    .filter(|local| known.contents[site].inside_locals.get(LocalIdx::of(local)))
+                    .filter(|local| known.contents[site].names_local(LocalIdx::of(local)))
                     .map(|held| {
                         analysis
                             .unit
@@ -1283,7 +1282,7 @@ fn contents_leaving(
             )
             .collect();
         // And what was stored there that the record does not name, by what it
-        // was believed ([`Contents::stored_at_most`](super::parts::Contents::stored_at_most), #632).
+        // was believed (a cell's `stored_levels`, #632).
         // A narrower stored bound is unknown even beside a record that
         // proves: the record names the objects the pointers it holds point
         // at, and the bound stands for a pointer it holds that names none,
@@ -1298,7 +1297,9 @@ fn contents_leaving(
             .type_levels(read_as)
             .unwrap_or_default()
             .stored_under(Some(width), analysis.deepest_pointer);
-        let stored_narrower = known.contents[site].stored_at_most.narrower_than(&receiver);
+        let stored_narrower = known.contents[site]
+            .stored_levels()
+            .narrower_than(&receiver);
         let fit = match (extents.is_empty(), stored_narrower) {
             (true, false) => continue,
             (true, true) => Fit::Unknown,
@@ -1620,7 +1621,7 @@ pub(super) fn loaded_indeterminate(
     for place in read {
         // A proof where nothing wrote what it reads, and a doubt where an
         // array it reads at its start was written only in part. See
-        // `Known::local_init`.
+        // `Known::init`.
         let certain = analysis.reads_fresh(function, &place, known);
         let maybe = !certain && analysis.reads_partly(function, &place, known);
         if !certain && !maybe {
@@ -1636,7 +1637,7 @@ pub(super) fn loaded_indeterminate(
         let through = &known.points_to[local];
         let kind = Kind::IndeterminateLoad {
             reaches_allocation: through.sites().next().is_some(),
-            reaches_local: through.writes_to.any(),
+            reaches_local: through.may_be_a_locals_address(),
         };
         let root = Place::local(local);
         let conclusion = if maybe || doubt_only {
@@ -1698,7 +1699,7 @@ fn may_say(
 ///
 /// `taken` is `assigned::address_taken`, so a local is asked here exactly
 /// where `memory::assigned` does not ask it: that analysis follows no write
-/// through an address and this one does ([`Known::local_init`]). See ADR-0057.
+/// through an address and this one does ([`Known::init`]). See ADR-0057.
 ///
 /// `doubt_only` as [`loaded_indeterminate`] takes it.
 #[allow(clippy::too_many_arguments)]
@@ -1715,8 +1716,8 @@ pub(super) fn unwritten_read(
     let function = analysis.unit.function(analysis.function);
     for (local, at) in reads {
         // **A doubt where an element may still be unwritten**, a proof
-        // where nothing wrote any of it. See `Known::local_init`.
-        let init = known.local_init[local];
+        // where nothing wrote any of it. See `Known::init`.
+        let init = known.init[local];
         let partly = init == Init::Maybe;
         if !taken.get(LocalIdx::of(local))
             || init == Init::Written
@@ -2034,7 +2035,7 @@ pub(super) fn copied_away(
     }
     let function = analysis.unit.function(analysis.function);
     let held = &known.points_to[from.local];
-    let named: Vec<LocalIdx> = held.writes_to.ones().collect();
+    let named: Vec<LocalIdx> = held.locals().collect();
     let source = match named.as_slice() {
         [only]
             if from.projection.is_empty()

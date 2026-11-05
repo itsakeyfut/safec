@@ -39,7 +39,7 @@ enum Belief {
     /// Whether a pointer there may be stale (ADR-0045), as a free leaves it
     /// before it is stored: the loop's lost allocation freed, then put there
     /// and read back, against the same with nothing freed. The mark a store
-    /// leaves in what it lands in (`Contents::stale`).
+    /// leaves in what it lands in, the cell's `stale_read`.
     Stale,
     /// Whether a pointer there names a site made again since it was freed
     /// (ADR-0045): a loop frees its allocation each turn and the next turn
@@ -49,6 +49,24 @@ enum Belief {
     /// does not mark a stale read on what held the freed site;
     /// `reborn_memcpy_block_d1_both` fails, among eighteen.
     Reborn,
+    /// Whether a pointer there was read out of the caller's memory
+    /// (ADR-0040): read through a parameter, put there, and read back after
+    /// a call this check cannot read, which may free what the caller handed
+    /// over, against the same with no call. The mark a store leaves in what
+    /// it lands in, the cell's `from_caller`, which no other belief reaches.
+    /// Mutation: `Cell::absorb` takes no `from_caller`;
+    /// `caller_store_d1_both` fails, among ten.
+    Caller,
+    /// Whether a pointer there was read out of a slot a call this check
+    /// cannot read reached by another route and could not replace
+    /// (ADR-0047): an allocation stored in a block, handed to such a call
+    /// through another local's address, read back out of the block, put
+    /// there, read back and handed on by address, against the same with no
+    /// call. Asked by address alone, as `Known::handed_below` asks it. The
+    /// cell's `unreplaced_read`, which no other belief reaches. Mutation:
+    /// `Cell::absorb` takes no `unreplaced_read`; `unreplaced_store_d1_both`
+    /// fails, among twelve.
+    Unreplaced,
 }
 
 /// How a pointer gets where it is read back from.
@@ -67,9 +85,9 @@ enum Route {
     /// Copied by `memcpy` out of a block holding it, rather than out of a
     /// local's address: `*blk_ = v; memcpy(&slot, blk_, 8);`. The copy that
     /// carries what memory holds, which `Route::Memcpy` from a local does not
-    /// reach. Mutation: the copy's `Contents` sets `holds_lost: false`;
-    /// `lost_memcpy_block_d1_both` fails, among four. Mutation: the store's
-    /// sets `stale: false`; `stale_memcpy_block_d1_both` fails, among twelve.
+    /// reach. Mutation: `Cell::poured` keeps no `lost`;
+    /// `lost_memcpy_block_d1_both` fails, among twenty. Mutation: it keeps no
+    /// `stale_read`; `stale_memcpy_block_d1_both` fails, among forty eight.
     MemcpyFromBlock,
     /// Half a pointer copied, `memcpy(&slot, b, 4)`, against the whole one:
     /// `CopiedPointers::NoneWhole`. Asked of freshness only. Mutation: drop
@@ -155,12 +173,14 @@ struct Row {
 /// `the_matrix_is_every_combination_of_its_axes` asks for; each row that
 /// disagrees in [`ACCEPTED`] and each less certain than its store in
 /// [`UNCERTAIN`]; and a blessing.
-const BELIEFS: [Belief; 5] = [
+const BELIEFS: [Belief; 7] = [
     Belief::Width,
     Belief::Fresh,
     Belief::Lost,
     Belief::Stale,
     Belief::Reborn,
+    Belief::Caller,
+    Belief::Unreplaced,
 ];
 const ROUTES: [Route; 13] = [
     Route::Store,
@@ -190,6 +210,8 @@ fn axis_place(row: Row) -> [usize; 4] {
         Belief::Lost => 2,
         Belief::Stale => 3,
         Belief::Reborn => 4,
+        Belief::Caller => 5,
+        Belief::Unreplaced => 6,
     };
     let route = match row.route {
         Route::Store => 0,
@@ -291,7 +313,13 @@ trait Axis {
 impl Axis for Belief {
     fn values(self) -> usize {
         match self {
-            Belief::Width | Belief::Fresh | Belief::Lost | Belief::Stale | Belief::Reborn => 5,
+            Belief::Width
+            | Belief::Fresh
+            | Belief::Lost
+            | Belief::Stale
+            | Belief::Reborn
+            | Belief::Caller
+            | Belief::Unreplaced => 7,
         }
     }
 }
@@ -533,6 +561,74 @@ routes! {
     reborn_restored_d1_one: Reborn Restored D1 One;
     reborn_restored_d2_both: Reborn Restored D2 Both;
     reborn_restored_d2_one: Reborn Restored D2 One;
+    caller_store_d0_both: Caller Store D0 Both;
+    caller_store_d0_one: Caller Store D0 One;
+    caller_store_d1_both: Caller Store D1 Both;
+    caller_store_d1_one: Caller Store D1 One;
+    caller_store_d2_both: Caller Store D2 Both;
+    caller_store_d2_one: Caller Store D2 One;
+    caller_memcpy_d0_both: Caller Memcpy D0 Both;
+    caller_memcpy_d0_one: Caller Memcpy D0 One;
+    caller_memcpy_d1_both: Caller Memcpy D1 Both;
+    caller_memcpy_d1_one: Caller Memcpy D1 One;
+    caller_memcpy_d2_both: Caller Memcpy D2 Both;
+    caller_memcpy_d2_one: Caller Memcpy D2 One;
+    caller_realloc_d1_both: Caller Realloc D1 Both;
+    caller_realloc_d1_one: Caller Realloc D1 One;
+    caller_realloc_d2_both: Caller Realloc D2 Both;
+    caller_realloc_d2_one: Caller Realloc D2 One;
+    caller_ret_d0_both: Caller Ret D0 Both;
+    caller_ret_d0_one: Caller Ret D0 One;
+    caller_ret_d1_both: Caller Ret D1 Both;
+    caller_ret_d1_one: Caller Ret D1 One;
+    caller_ret_d2_both: Caller Ret D2 Both;
+    caller_ret_d2_one: Caller Ret D2 One;
+    caller_memcpy_block_d0_both: Caller MemcpyFromBlock D0 Both;
+    caller_memcpy_block_d0_one: Caller MemcpyFromBlock D0 One;
+    caller_memcpy_block_d1_both: Caller MemcpyFromBlock D1 Both;
+    caller_memcpy_block_d1_one: Caller MemcpyFromBlock D1 One;
+    caller_memcpy_block_d2_both: Caller MemcpyFromBlock D2 Both;
+    caller_memcpy_block_d2_one: Caller MemcpyFromBlock D2 One;
+    caller_restored_d0_both: Caller Restored D0 Both;
+    caller_restored_d0_one: Caller Restored D0 One;
+    caller_restored_d1_both: Caller Restored D1 Both;
+    caller_restored_d1_one: Caller Restored D1 One;
+    caller_restored_d2_both: Caller Restored D2 Both;
+    caller_restored_d2_one: Caller Restored D2 One;
+    unreplaced_store_d0_both: Unreplaced Store D0 Both;
+    unreplaced_store_d0_one: Unreplaced Store D0 One;
+    unreplaced_store_d1_both: Unreplaced Store D1 Both;
+    unreplaced_store_d1_one: Unreplaced Store D1 One;
+    unreplaced_store_d2_both: Unreplaced Store D2 Both;
+    unreplaced_store_d2_one: Unreplaced Store D2 One;
+    unreplaced_memcpy_d0_both: Unreplaced Memcpy D0 Both;
+    unreplaced_memcpy_d0_one: Unreplaced Memcpy D0 One;
+    unreplaced_memcpy_d1_both: Unreplaced Memcpy D1 Both;
+    unreplaced_memcpy_d1_one: Unreplaced Memcpy D1 One;
+    unreplaced_memcpy_d2_both: Unreplaced Memcpy D2 Both;
+    unreplaced_memcpy_d2_one: Unreplaced Memcpy D2 One;
+    unreplaced_realloc_d1_both: Unreplaced Realloc D1 Both;
+    unreplaced_realloc_d1_one: Unreplaced Realloc D1 One;
+    unreplaced_realloc_d2_both: Unreplaced Realloc D2 Both;
+    unreplaced_realloc_d2_one: Unreplaced Realloc D2 One;
+    unreplaced_ret_d0_both: Unreplaced Ret D0 Both;
+    unreplaced_ret_d0_one: Unreplaced Ret D0 One;
+    unreplaced_ret_d1_both: Unreplaced Ret D1 Both;
+    unreplaced_ret_d1_one: Unreplaced Ret D1 One;
+    unreplaced_ret_d2_both: Unreplaced Ret D2 Both;
+    unreplaced_ret_d2_one: Unreplaced Ret D2 One;
+    unreplaced_memcpy_block_d0_both: Unreplaced MemcpyFromBlock D0 Both;
+    unreplaced_memcpy_block_d0_one: Unreplaced MemcpyFromBlock D0 One;
+    unreplaced_memcpy_block_d1_both: Unreplaced MemcpyFromBlock D1 Both;
+    unreplaced_memcpy_block_d1_one: Unreplaced MemcpyFromBlock D1 One;
+    unreplaced_memcpy_block_d2_both: Unreplaced MemcpyFromBlock D2 Both;
+    unreplaced_memcpy_block_d2_one: Unreplaced MemcpyFromBlock D2 One;
+    unreplaced_restored_d0_both: Unreplaced Restored D0 Both;
+    unreplaced_restored_d0_one: Unreplaced Restored D0 One;
+    unreplaced_restored_d1_both: Unreplaced Restored D1 Both;
+    unreplaced_restored_d1_one: Unreplaced Restored D1 One;
+    unreplaced_restored_d2_both: Unreplaced Restored D2 Both;
+    unreplaced_restored_d2_one: Unreplaced Restored D2 One;
 }
 
 /// A combination of the axes no program is written for, and why.
@@ -553,6 +649,118 @@ struct Unwritten {
 /// what holds the slot, since a local is not grown; `fresh` grows the block
 /// it reads from instead, so its rows at a local are written.
 const NOT_WRITTEN: &[Unwritten] = &[
+    Unwritten {
+        route: Route::Realloc,
+        depth: Some(Depth::D0),
+        belief: Some(Belief::Caller),
+        shape: None,
+        why: "a local is not grown by realloc",
+    },
+    Unwritten {
+        route: Route::Call,
+        depth: None,
+        belief: Some(Belief::Caller),
+        shape: None,
+        why: "a call writes a value of its own, not the one read out of the caller's memory",
+    },
+    Unwritten {
+        route: Route::MemcpyHalf,
+        depth: None,
+        belief: Some(Belief::Caller),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyPart,
+        depth: None,
+        belief: Some(Belief::Caller),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyMaybe,
+        depth: None,
+        belief: Some(Belief::Caller),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::CallStored,
+        depth: None,
+        belief: Some(Belief::Caller),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::CallDeep,
+        depth: None,
+        belief: Some(Belief::Caller),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::ReallocParam,
+        depth: None,
+        belief: Some(Belief::Caller),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::Realloc,
+        depth: Some(Depth::D0),
+        belief: Some(Belief::Unreplaced),
+        shape: None,
+        why: "a local is not grown by realloc",
+    },
+    Unwritten {
+        route: Route::Call,
+        depth: None,
+        belief: Some(Belief::Unreplaced),
+        shape: None,
+        why: "a call writes a value of its own, not the one read out of the slot",
+    },
+    Unwritten {
+        route: Route::MemcpyHalf,
+        depth: None,
+        belief: Some(Belief::Unreplaced),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyPart,
+        depth: None,
+        belief: Some(Belief::Unreplaced),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyMaybe,
+        depth: None,
+        belief: Some(Belief::Unreplaced),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::CallStored,
+        depth: None,
+        belief: Some(Belief::Unreplaced),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::CallDeep,
+        depth: None,
+        belief: Some(Belief::Unreplaced),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::ReallocParam,
+        depth: None,
+        belief: Some(Belief::Unreplaced),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
     Unwritten {
         route: Route::Realloc,
         depth: Some(Depth::D0),
@@ -949,6 +1157,58 @@ const REPORTED_ELSEWHERE: &str = "the free and the call a freed pointer is hande
 /// be told from it. Such a row holds only that the route is not silent
 /// altogether, and the blessed summary is what notices more. See ADR-0062.
 const ACCEPTED: &[(&str, Side, Why)] = &[
+    ("caller_ret_d0_both", Side::Control, Why::Belief(MAY_FREE)),
+    ("caller_ret_d0_one", Side::Control, Why::Belief(MAY_FREE)),
+    ("caller_ret_d1_both", Side::Control, Why::Belief(MAY_FREE)),
+    ("caller_ret_d1_one", Side::Control, Why::Belief(MAY_FREE)),
+    ("caller_ret_d2_both", Side::Control, Why::Belief(MAY_FREE)),
+    ("caller_ret_d2_one", Side::Control, Why::Belief(MAY_FREE)),
+    (
+        "caller_realloc_d2_both",
+        Side::Control,
+        Why::Cost(OLD_BLOCK),
+    ),
+    ("caller_realloc_d2_one", Side::Control, Why::Cost(OLD_BLOCK)),
+    (
+        "unreplaced_ret_d0_both",
+        Side::Control,
+        Why::Belief(MAY_FREE),
+    ),
+    (
+        "unreplaced_ret_d0_one",
+        Side::Control,
+        Why::Belief(MAY_FREE),
+    ),
+    (
+        "unreplaced_ret_d1_both",
+        Side::Control,
+        Why::Belief(MAY_FREE),
+    ),
+    (
+        "unreplaced_ret_d1_one",
+        Side::Control,
+        Why::Belief(MAY_FREE),
+    ),
+    (
+        "unreplaced_ret_d2_both",
+        Side::Control,
+        Why::Belief(MAY_FREE),
+    ),
+    (
+        "unreplaced_ret_d2_one",
+        Side::Control,
+        Why::Belief(MAY_FREE),
+    ),
+    (
+        "unreplaced_realloc_d2_both",
+        Side::Control,
+        Why::Cost(OLD_BLOCK),
+    ),
+    (
+        "unreplaced_realloc_d2_one",
+        Side::Control,
+        Why::Cost(OLD_BLOCK),
+    ),
     ("width_ret_d0_both", Side::Control, Why::Belief(VOID_RESULT)),
     ("width_ret_d0_one", Side::Control, Why::Belief(VOID_RESULT)),
     ("width_ret_d1_both", Side::Control, Why::Belief(VOID_RESULT)),
@@ -1150,7 +1410,8 @@ fn mark(row: Row) -> (&'static str, Option<&'static str>) {
     match row.belief {
         Belief::Width => ("SC0412", None),
         Belief::Fresh => ("SC0411", None),
-        Belief::Lost | Belief::Stale | Belief::Reborn => ("SC0402", None),
+        Belief::Lost | Belief::Stale | Belief::Reborn | Belief::Caller => ("SC0402", None),
+        Belief::Unreplaced => ("SC0407", None),
     }
 }
 
@@ -1163,6 +1424,9 @@ void get_narrow(char **p);
 void get_wide(int **p);
 void get_narrow2(char ***p);
 void get_wide2(int ***p);
+void release_all(void);
+void release_ref(int **pp);
+int use2(int **pp);
 ";
 
 /// The statements that make the slot, its spelling, and what it lives in.
@@ -1448,7 +1712,7 @@ fn lost(row: Row, hazard: bool) -> Vec<String> {
 /// The loop's lost allocation, as [`lost`] makes it, freed **before** the route
 /// puts it in the slot, for the hazard; the same with nothing freed for the
 /// control. A pointer freed and then stored carries the mark a store leaves
-/// in the memory it lands in (`Contents::stale`), which is what this belief
+/// in the memory it lands in, the cell's `stale_read`, which is what this belief
 /// asks; the free after the route is [`lost`]'s, and a site freed and made
 /// again is [`reborn`]'s.
 fn stale(row: Row, hazard: bool) -> Vec<String> {
@@ -1505,6 +1769,58 @@ fn reborn(row: Row, hazard: bool) -> Vec<String> {
     lines
 }
 
+/// A pointer read out of the caller's memory, through the parameter `cp`,
+/// put in the slot, and a call this check cannot read after it for the
+/// hazard; the same with no call for the control.
+fn caller(row: Row, hazard: bool) -> Vec<String> {
+    let (made, slot) = container(row.depth);
+    let mut lines: Vec<String> = ["if (!cp) return 0;", "int *v = *cp;", "if (!v) return 0;"]
+        .iter()
+        .map(|line| (*line).to_owned())
+        .collect();
+    lines.extend(made);
+    lines.extend(shaped(
+        row.shape,
+        slot,
+        put(row.route, row.depth, slot, "v"),
+    ));
+    if hazard {
+        lines.push("release_all();".to_owned());
+    }
+    lines
+}
+
+/// An allocation stored in a block, `*h = a`, and handed to a call this
+/// check cannot read through another local's address, `release_ref(&b)`,
+/// which may free it and cannot replace the slot in `h`, for the hazard; the
+/// same with no call for the control. What is read back out of `h` is put
+/// in the slot.
+fn unreplaced(row: Row, hazard: bool) -> Vec<String> {
+    let (made, slot) = container(row.depth);
+    let mut lines: Vec<String> = [
+        "int *a = malloc(4);",
+        "if (!a) return 0;",
+        "int **h = malloc(8);",
+        "if (!h) return 0;",
+        "*h = a;",
+        "int *b = a;",
+    ]
+    .iter()
+    .map(|line| (*line).to_owned())
+    .collect();
+    if hazard {
+        lines.push("release_ref(&b);".to_owned());
+    }
+    lines.push("int *v = *h;".to_owned());
+    lines.extend(made);
+    lines.extend(shaped(
+        row.shape,
+        slot,
+        put(row.route, row.depth, slot, "v"),
+    ));
+    lines
+}
+
 /// The whole program for one side of a row: the declarations, the belief's
 /// statements, and the read back that every belief shares, through an
 /// `int *` that is tested and written through.
@@ -1515,16 +1831,29 @@ fn program(row: Row, hazard: bool) -> String {
         Belief::Lost => lost(row, hazard),
         Belief::Stale => stale(row, hazard),
         Belief::Reborn => reborn(row, hazard),
+        Belief::Caller => caller(row, hazard),
+        Belief::Unreplaced => unreplaced(row, hazard),
     };
     let read = read_from(row);
+    // **The read every belief shares**, but the one asked by address alone,
+    // which hands the pointer read back on by its address.
+    let tail: Vec<String> = match row.belief {
+        Belief::Unreplaced => vec![format!("int *r = {read};"), "return use2(&r);".to_owned()],
+        Belief::Width
+        | Belief::Fresh
+        | Belief::Lost
+        | Belief::Stale
+        | Belief::Reborn
+        | Belief::Caller => vec![
+            format!("int *r = {read};"),
+            "if (!r) return 0;".to_owned(),
+            "*r = 1;".to_owned(),
+            "return 0;".to_owned(),
+        ],
+    };
     let mut text = String::from(DECLARATIONS);
     text.push_str(&format!("int f({}) {{\n", parameters(row, hazard)));
-    for line in body.iter().map(String::as_str).chain([
-        format!("int *r = {read};").as_str(),
-        "if (!r) return 0;",
-        "*r = 1;",
-        "return 0;",
-    ]) {
+    for line in body.iter().chain(&tail).map(String::as_str) {
         text.push_str("    ");
         text.push_str(line);
         text.push('\n');
@@ -1556,6 +1885,16 @@ fn read_from(row: Row) -> String {
 /// The parameters of a row's function: the parameter a route grows, typed
 /// for the side, beside the `k` every shape tests.
 fn parameters(row: Row, hazard: bool) -> &'static str {
+    match row.belief {
+        // The caller's memory a pointer is read out of.
+        Belief::Caller => return "int k, int **cp",
+        Belief::Width
+        | Belief::Fresh
+        | Belief::Lost
+        | Belief::Stale
+        | Belief::Reborn
+        | Belief::Unreplaced => {}
+    }
     match (row.route, hazard) {
         (Route::ReallocParam, true) => "int k, void ***pm",
         (Route::ReallocParam, false) => "int k, int ***pm",
@@ -1928,6 +2267,18 @@ fn a_route_is_as_certain_as_its_plain_store() {
     );
 }
 
+/// Whether `NOT_WRITTEN` says, with a reason, that no program is written for
+/// `row`.
+fn excused(row: Row) -> bool {
+    NOT_WRITTEN.iter().any(|unwritten| {
+        !unwritten.why.is_empty()
+            && unwritten.route == row.route
+            && unwritten.depth.is_none_or(|depth| depth == row.depth)
+            && unwritten.belief.is_none_or(|belief| belief == row.belief)
+            && unwritten.shape.is_none_or(|shape| shape == row.shape)
+    })
+}
+
 /// The table is every combination of its axes, less what `NOT_WRITTEN` says
 /// cannot be written, once each, and each row's name is spelled from its axes,
 /// so that a row left out is a failure rather than a gap and a name cannot
@@ -1936,15 +2287,6 @@ fn a_route_is_as_certain_as_its_plain_store() {
 /// Mutation: delete a row from `routes!`. This fails, naming it.
 #[test]
 fn the_matrix_is_every_combination_of_its_axes() {
-    let excused = |row: Row| {
-        NOT_WRITTEN.iter().any(|unwritten| {
-            !unwritten.why.is_empty()
-                && unwritten.route == row.route
-                && unwritten.depth.is_none_or(|depth| depth == row.depth)
-                && unwritten.belief.is_none_or(|belief| belief == row.belief)
-                && unwritten.shape.is_none_or(|shape| shape == row.shape)
-        })
-    };
     let mut missing = vec![];
     for belief in BELIEFS {
         for route in ROUTES {
@@ -1988,6 +2330,8 @@ fn name_of(row: Row) -> String {
         Belief::Lost => "lost",
         Belief::Stale => "stale",
         Belief::Reborn => "reborn",
+        Belief::Caller => "caller",
+        Belief::Unreplaced => "unreplaced",
     };
     let route = match row.route {
         Route::Store => "store",
@@ -2140,6 +2484,78 @@ fn the_matrix_answers_what_was_blessed() {
             moved.join("\n")
         );
     }
+}
+
+/// A route answers a slot in a local as it answers one a level below a
+/// local: every row at [`Depth::D0`] and its row at [`Depth::D1`] have the
+/// same hazard exit and the same control exit. One kind of place, whose
+/// rules may still differ in the codes they give and in what they prove,
+/// which is narrower than this and not asked here (#780).
+///
+/// **Read off the blessed summary**, which
+/// `the_matrix_answers_what_was_blessed` holds to what the matrix answers:
+/// a change that parts the two depths fails that test first, and this one
+/// once the summary is blessed, so that blessing it does not accept it.
+///
+/// Mutation: in `tests/routes.expected`, change `width_store_d1_both`'s
+/// `hazard=1` to `hazard=0`; this fails. Mutation: pair each row with
+/// the row at `Depth::D0` rather than `Depth::D1`; this fails, naming a row
+/// paired with itself.
+#[test]
+fn a_route_answers_alike_at_depth_zero_and_one() {
+    let summary = std::fs::read_to_string(expected_path())
+        .unwrap_or_else(|error| panic!("{}: {error}", expected_path().display()))
+        .replace("\r\n", "\n");
+    // The hazard's and the control's exit, by row, from `hazard=E:codes
+    // control=E:codes allowed=E:codes`.
+    let exits = |name: &str| -> (String, String) {
+        let line = summary
+            .lines()
+            .find(|line| line.split(' ').next() == Some(name))
+            .unwrap_or_else(|| panic!("the summary has no line for `{name}`"));
+        let exit = |side: &str| {
+            line.split(' ')
+                .find_map(|field| field.strip_prefix(side))
+                .and_then(|answer| answer.split(':').next())
+                .unwrap_or_else(|| panic!("`{name}` has no `{side}` in the summary"))
+                .to_owned()
+        };
+        (exit("hazard="), exit("control="))
+    };
+    let mut pairs = 0;
+    let mut parted = vec![];
+    for &(near, row) in ROWS.iter().filter(|(_, row)| row.depth == Depth::D0) {
+        let twin = Row {
+            depth: Depth::D1,
+            ..row
+        };
+        // **A row with no twin is one `NOT_WRITTEN` excuses**, not one this
+        // skips: `width_call_deep_d0_both` is written at one depth only, and
+        // says so there.
+        let Some(&(far, found)) = ROWS.iter().find(|(_, other)| *other == twin) else {
+            assert!(
+                excused(twin),
+                "`{near}` has no row at depth 1 and nothing excuses it"
+            );
+            continue;
+        };
+        // And it is a row one level below, not `near` itself.
+        assert_eq!(found.depth, Depth::D1, "`{near}` is paired with `{far}`");
+        pairs += 1;
+        let (here, there) = (exits(near), exits(far));
+        if here != there {
+            parted.push(format!(
+                "{near} hazard={} control={}, {far} hazard={} control={}",
+                here.0, here.1, there.0, there.1
+            ));
+        }
+    }
+    assert!(pairs > 0, "no row at depth 0 has its row at depth 1");
+    assert!(
+        parted.is_empty(),
+        "a route answers a local and the level below one differently:\n{}",
+        parted.join("\n")
+    );
 }
 
 fn expected_path() -> PathBuf {
