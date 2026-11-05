@@ -232,7 +232,7 @@ and `memory/`), applied and measured, and a named case in
   `a_freed_pointer_stored_into_a_box_two_levels_below_a_local_a_call_kept_is_reported`
   and `a_box_holding_a_freed_pointer_stored_into_a_box_a_local_a_call_kept_points_at_is_doubted`,
   and taking one step from the exposed locals and stopping fails the second
-  alone. Asking `exposed_locals` in place of
+  alone. Asking `Known::exposed` of a local in place of
   `locals_named_by_unknown_code()` fails
   `a_freed_pointer_written_into_a_local_a_kept_local_points_at_is_reported`
   at the direct write and
