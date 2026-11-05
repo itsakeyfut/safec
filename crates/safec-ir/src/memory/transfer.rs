@@ -2306,6 +2306,11 @@ impl Analysis for Allocations<'_> {
                         written.locals(),
                         &stored,
                         &written,
+                        // **No width, for a value that is not a pointer by
+                        // its type**: a pointer is given one above whatever it
+                        // names, and one with no `bound` names nothing, which
+                        // is a null. See `Cell::unrecorded`.
+                        !self.may_be_pointer(function, &operation.place),
                     );
                     self.land_contents(
                         value,
@@ -3233,6 +3238,13 @@ impl Analysis for Allocations<'_> {
                                 copied_locals.iter().copied(),
                                 &copied_bound,
                                 &read,
+                                // A copy records the width of the bytes it
+                                // copies (#711), so nothing it leaves is
+                                // without one; and marking a copy out of
+                                // memory nothing wrote doubted its width
+                                // beside the `SC0411` already said there,
+                                // measured on #767.
+                                false,
                             );
                             let in_part: Vec<LocalIdx> = if read.array_edge {
                                 copied_locals.iter().copied().collect()
