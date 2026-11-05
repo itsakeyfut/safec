@@ -143,7 +143,7 @@ point at one whole object of the type it arrives as. A pointer read out of
 memory is believed no wider than what was recorded where it was stored, which
 is the type it arrived as for memory a parameter or a call's result points at,
 and nothing where nothing was
-([ADR-0061](adr/0061-a-pointer-read-out-of-memory-is-believed-only-as-wide-as-was-recorded.md)).
+([ADR-0067](adr/0067-a-pointer-read-out-of-memory-holds-what-was-recorded-there-proves-nothing-with-it-and-is-believed-no-wider-than-was-recorded.md)).
 An access is proved to fit only from those; it is `Unsafe` where every object it
 may reach is known exactly and is narrower than the access, and `Unknown`
 everywhere else, a pointer moved off its start among them. What is believed
@@ -157,7 +157,7 @@ nothing of what it reads; what a callee writes into a local is believed so at
 the local's own level only, which is #636. What is
 asked there is
 never a proof, since C leaves the departure itself defined. See
-[ADR-0060](adr/0060-an-access-is-proved-inside-its-object-only-where-its-size-was-read.md).
+[ADR-0070](adr/0070-an-access-is-proved-inside-its-object-only-where-every-object-it-may-reach-was-read-wide-enough.md) and [ADR-0068](adr/0068-a-pointer-is-asked-where-it-leaves-by-a-call-a-return-or-a-store-what-the-other-side-will-believe-of-it.md).
 
 
 ## Incremental Safety Levels
@@ -431,14 +431,14 @@ list a command can print.
 whose body is not in the translation unit is believed to return a fresh
 allocation, or one code this check cannot read could already reach, and never
 one that the call itself, or another call this check cannot read, freed
-([ADR-0039](adr/0039-an-allocation-code-this-check-cannot-read-may-reach-stays-exposed-while-it-lives.md)).
+([ADR-0066](adr/0066-what-code-this-check-cannot-read-may-reach-is-exposed-while-it-lives-and-every-such-call-may-have-freed-any-of-it.md)).
 So a result that is no allocation at all, a string literal, an object with
 static storage duration or a local of another frame the callee was handed, is
 believed to be one, and freeing it is not detected either
 ([#375](https://github.com/itsakeyfut/safec/issues/375)).
 Where the callee's body is compiled here, what it returns is asked at its
 `return`
-([ADR-0041](adr/0041-a-pointer-a-function-returns-is-asked-at-its-return-as-a-dereference-of-it-would-be.md)),
+([ADR-0068](adr/0068-a-pointer-is-asked-where-it-leaves-by-a-call-a-return-or-a-store-what-the-other-side-will-believe-of-it.md)),
 so a callee that hands back what it freed itself is reported there. Where it
 is not, or where what it hands back was freed by another function, a wrong
 belief is not detected, as a wrong hatch promise is not: `release(); r =

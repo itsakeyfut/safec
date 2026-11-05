@@ -193,10 +193,8 @@ the same where the read runs on every turn, `r = q; q = &x;`, stays silent on
 an arm, and is the same doubt after a loop that may run zero times, at the
 loop's test when it is false. An integer read out of such a local is not
 followed.
-[ADR-0057](adr/0057-a-pointer-read-out-of-fresh-memory-is-reported-where-it-is-read.md)
-is the decision, and
-[ADR-0064](adr/0064-a-loop-may-run-zero-times-unless-its-test-is-shown-true-on-the-way-in.md)
-what it says of a loop's back edge.
+[ADR-0069](adr/0069-a-pointer-read-out-of-memory-nothing-wrote-is-reported-where-it-is-read-and-a-loop-may-run-zero-times-unless-it-is-shown-to-run.md)
+is the decision, a loop's back edge included.
 
 **`SC0412` is an access that may not fit the object it reaches.** It is a
 class of its own because it is about where in an object an access lands, not
@@ -219,13 +217,13 @@ as for memory a parameter or a call's result points at, and nothing where
 nothing was: `*box = &q; int *t = *box; *t = 1;` is silent, since the store
 recorded `q`'s size, and a pointer read out of memory no pointer was stored
 into, a `calloc` block or one `memset` filled, is unknown.
-[ADR-0061](adr/0061-a-pointer-read-out-of-memory-is-believed-only-as-wide-as-was-recorded.md)
+[ADR-0067](adr/0067-a-pointer-read-out-of-memory-holds-what-was-recorded-there-proves-nothing-with-it-and-is-believed-no-wider-than-was-recorded.md)
 is that part of the decision. A library
 function that takes a length, `memset`, `memcpy`, `memmove`, `memcmp`, `memchr`
 and `strncpy`'s destination, is asked about the length it is handed, and one
 that reads or writes as far as a string runs, `strlen`, `strcmp`, `strcpy` and
 their kind, is always unknown there.
-[ADR-0060](adr/0060-an-access-is-proved-inside-its-object-only-where-its-size-was-read.md)
+[ADR-0070](adr/0070-an-access-is-proved-inside-its-object-only-where-every-object-it-may-reach-was-read-wide-enough.md)
 is the decision.
 
 **`SC0413` is the same belief asked where a pointer leaves.** A pointer passed
@@ -238,7 +236,7 @@ pointer starts an object**: how wide it is, and what it points at, is asked
 by the load that reads it back and by the door the memory leaves by, as a
 write into a local is. So `*m = v;` with `m` this function's own block and
 `v` a `char`'s address is not `SC0413`, and `*box = p + 5;` still is
-([ADR-0065](adr/0065-a-store-nothing-outside-reads-asks-only-whether-its-pointer-is-off-its-start.md)).
+([ADR-0068](adr/0068-a-pointer-is-asked-where-it-leaves-by-a-call-a-return-or-a-store-what-the-other-side-will-believe-of-it.md)).
 A pointer to memory lets the pointers stored there leave with it, so `int *q
 = v; h(&q);` asks `q`, and `memcpy` asks what its source points at as a
 store.
@@ -312,7 +310,7 @@ free in the function at all. The fix is at the return or at the free, which is
 why it is not `SC0402`. A pointer returned live is asked what it points at
 holds, at every level, as `SC0407` asks what a call is handed: `this returns a
 pointer to where a pointer that may have been freed is stored`, always a doubt.
-[ADR-0041](adr/0041-a-pointer-a-function-returns-is-asked-at-its-return-as-a-dereference-of-it-would-be.md)
+[ADR-0068](adr/0068-a-pointer-is-asked-where-it-leaves-by-a-call-a-return-or-a-store-what-the-other-side-will-believe-of-it.md)
 is the decision and records what it costs.
 
 **`SC0414` is `SC0406` at the other door a pointer leaves by.** A pointer
@@ -359,7 +357,7 @@ and it is never a proof, since the callee may only write there. Not of
 `memcpy`'s or `memmove`'s destination, which the copy writes and does not
 read (C17 7.24.2.1, 7.24.2.2). The fix is at the call or at the free, which
 is why it is not `SC0402`.
-[ADR-0042](adr/0042-a-pointer-handed-to-a-call-is-asked-at-the-call-as-a-dereference-of-it-would-be.md)
+[ADR-0068](adr/0068-a-pointer-is-asked-where-it-leaves-by-a-call-a-return-or-a-store-what-the-other-side-will-believe-of-it.md)
 is the decision and records what it costs.
 
 **Either can be a proof or a suspicion, and freeing more than one allocation
@@ -385,7 +383,7 @@ read could reach may have been freed by that callee. What a call can reach is
 more than its arguments: once code this check cannot read may reach an
 allocation it stays exposed, every such call after it may free it, and a
 pointer any such call returns may be it.
-[ADR-0039](adr/0039-an-allocation-code-this-check-cannot-read-may-reach-stays-exposed-while-it-lives.md)
+[ADR-0066](adr/0066-what-code-this-check-cannot-read-may-reach-is-exposed-while-it-lives-and-every-such-call-may-have-freed-any-of-it.md)
 is that rule. Those read `this frees a value
 that may have been freed already` and `this uses a value that may have been
 freed`, and a reader is being told there is something to suspect without being

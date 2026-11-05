@@ -719,13 +719,14 @@ impl Allocations<'_> {
         }
     }
 
-    /// What a value read through a projection holds: no site, and whether it
-    /// may be a pointer, or a byte of one, read out of memory.
+    /// What a value read through a projection holds: what memory records
+    /// there, `Known::load_into`, marked as a load where it may be a pointer
+    /// or a byte of one, so that the report proves nothing with it.
     ///
     /// One answer for the three places a load is given to something: an
     /// assignment, a write through a pointer, and what a library copy returns
     /// when handed one. One rule in several places drifts apart.
-    /// See ADR-0040.
+    /// See ADR-0067.
     fn read_through(&self, function: &Function, source: &Place, value: &Known) -> Held {
         // Every mark a load gives before it reads anything, each said, so a
         // mark added is answered here (#732); what it reads is
@@ -933,12 +934,13 @@ impl Allocations<'_> {
     /// What an operand may reach beyond the sites it holds, because it may be
     /// a pointer read out of memory.
     ///
-    /// Read through one `Deref` of a local holding sites, and neither a load
-    /// nor a pointer it lost besides, what those allocations may contain. Read
-    /// any other way, or held by a local that may hold a load or a pointer it
-    /// lost, what is stored anywhere, [`Known::stored`]. **A local merely holding no site answers
+    /// Read through one `Deref` of a local holding sites, with nothing
+    /// `Beyond::unrecorded_address` names besides (a load, a pointer it lost,
+    /// one a call wrote), what those allocations may contain. Read any other
+    /// way, or held by a local that may hold such a pointer, what is stored
+    /// anywhere, [`Known::stored`]. **A local merely holding no site answers
     /// nothing**: `int *z = 0;` is one, and is not a load. What the report
-    /// reads is not this, and is ADR-0017's. See ADR-0040.
+    /// reads is not this, and is `Known::reached_by`'s. See ADR-0067.
     fn read_out(&self, function: &Function, operand: &Operand, known: &Known) -> Vec<Site> {
         let Operand::Copy(place) = operand else {
             return Vec::new();
@@ -2471,12 +2473,11 @@ impl Analysis for Allocations<'_> {
                         reached.moved_by_arithmetic(self.moved_by(function, *op, lhs, rhs));
                         value.replace(at, reached);
                     }
-                    // A read through a projection is not a pointer this check
-                    // follows, and the report reads it as holding nothing,
-                    // which is ADR-0017. It may be a pointer read out of
-                    // memory all the same, and what a call reaches and what a
-                    // write stores have to know it. See
-                    // `Allocations::read_through`.
+                    // A read through a projection holds what memory records
+                    // there, marked as a load, which the report reads beside
+                    // `Reached::Partial` and proves nothing with; what a call
+                    // reaches and what a write stores know it too. See
+                    // `Allocations::read_through` and ADR-0067.
                     Rvalue::Use(Operand::Copy(source)) => {
                         let read = self.read_through(function, source, value);
                         value.replace(at, read);

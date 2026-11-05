@@ -2396,8 +2396,18 @@ pub(super) fn handed(
     // where it is read. Asked, a destination block that once held a freed
     // pointer was `SC0407` where the same copy into a local was silent
     // (#791).
+    // A `match` rather than a `matches!`, so that a kind of callee added
+    // later answers here whether it writes a destination it does not read.
     let copies = !analysis.unit.function(*callee).is_defined()
-        && matches!(analysis.callee(*callee), Callee::Copies);
+        && match analysis.callee(*callee) {
+            Callee::Copies => true,
+            Callee::Frees
+            | Callee::Allocates
+            | Callee::Reallocates
+            | Callee::ReturnsFirst
+            | Callee::Ends
+            | Callee::Opaque => false,
+        };
     let destination = match arguments.first() {
         Some(Operand::Copy(place)) if copies => Some(place),
         Some(_) | None => None,
