@@ -1635,9 +1635,23 @@ pub(super) fn loaded_indeterminate(
         // `a_pointer_read_out_of_a_freed_table_and_returned` loses `SC0402`.
         let local = place.local;
         let through = &known.points_to[local];
+        // **Below the first dereference, what the pointer gone through last
+        // may name**, and no name: the slot is not `*l` but a level further,
+        // and saying `*m` of `int *r = **m;` named the wrong slot (#768).
+        let depth = derefs(&place);
+        let (reaches_allocation, reaches_local, named) = if depth > 1 {
+            let (sites, locals) = known.levels_below(local, depth - 1);
+            (!sites.is_empty(), !locals.is_empty(), None)
+        } else {
+            (
+                through.sites().next().is_some(),
+                through.may_be_a_locals_address(),
+                Some(local),
+            )
+        };
         let kind = Kind::IndeterminateLoad {
-            reaches_allocation: through.sites().next().is_some(),
-            reaches_local: through.may_be_a_locals_address(),
+            reaches_allocation,
+            reaches_local,
         };
         let root = Place::local(local);
         let conclusion = if maybe || doubt_only {
@@ -1658,7 +1672,7 @@ pub(super) fn loaded_indeterminate(
                 kind,
                 conclusion,
                 at,
-                local: Some(local),
+                local: named,
                 freed: None,
                 made: None,
                 unproven: None,

@@ -128,8 +128,9 @@ fn projected(place: &Place) -> Vec<&Place> {
     }
 }
 
-/// Where this element runs, and every `*l` it reads as a value there, each
-/// as the place `*l`.
+/// Where this element runs, and every place it reads a pointer's value out
+/// of memory at there: each `*l`, and each place of two dereferences or more
+/// read as a value, `**l` among them (#768).
 ///
 /// **Not only what an assignment copies.** A load reaches an operator or a
 /// call as an operand, and the lowering hands `*box == q`, `put(*box)` and
@@ -160,9 +161,7 @@ pub(crate) fn read_out_of_memory_in_element(element: &Element) -> Option<(Span, 
         }
         // Converted, so read (C17 6.3.2.1 p2), which is why the lowering
         // emits it.
-        Element::Evaluate { place, origin } => {
-            Some((origin.span(), read_as_value(place).into_iter().collect()))
-        }
+        Element::Evaluate { place, origin } => Some((origin.span(), read_as_value(place))),
         Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => None,
         Element::UnsequencedAccess {
             local: _,
@@ -183,6 +182,73 @@ pub(crate) fn read_out_of_memory_in_element(element: &Element) -> Option<(Span, 
     }
 }
 
+/// What [`read_out_of_memory_in_element`] answers for `element`, less a
+/// read of the place two dereferences or more deep that a store earlier in
+/// the block wrote, `stored`, where nothing has written since: the slot
+/// holds what was stored, whatever else the pointers on the way may name.
+/// Then `stored` is what this element leaves it.
+///
+/// **What the place reads back is what was stored** until something writes
+/// memory, or the local the place starts at, or that local's storage begins
+/// or ends: the lowering's own read of an assignment's value (C17 6.5.16
+/// p3), and `**h = *pp; g(**h);`, read `**h` a moment after writing it, and
+/// were doubted as reads of memory nothing wrote (#768). Reset at every
+/// block, since a call ends one (ADR-0010). A place one dereference deep is
+/// answered by `Held::stored_through` instead.
+pub(crate) fn read_out_of_memory_after(
+    stored: &mut Option<Place>,
+    element: &Element,
+) -> Option<(Span, Vec<Place>)> {
+    let read = read_out_of_memory_in_element(element).map(|(at, mut places)| {
+        if let Some(stored) = stored.as_ref() {
+            places.retain(|place| place != stored);
+        }
+        (at, places)
+    });
+    // Every field written out, as `dereferenced_in_element` does: an
+    // element that writes is what ends what a store's place is known to
+    // hold, and one that writes nothing leaves it.
+    *stored = match element {
+        Element::Assign(operation) if derefs(&operation.place) > 1 => Some(operation.place.clone()),
+        Element::Assign(operation) if !operation.place.projection.is_empty() => None,
+        Element::Assign(operation) => stored
+            .take()
+            .filter(|place| place.local != operation.place.local),
+        Element::StorageLive { local, origin: _ } | Element::StorageDead { origin: _, local } => {
+            stored.take().filter(|place| place.local != *local)
+        }
+        Element::Evaluate {
+            place: _,
+            origin: _,
+        }
+        | Element::Sequenced { origin: _ }
+        | Element::ArgumentsEvaluated { origin: _ }
+        | Element::UnsequencedAccess {
+            local: _,
+            written: _,
+            accessed: _,
+            both_write: _,
+            between: _,
+            origin: _,
+        } => stored.take(),
+    };
+    read
+}
+
+/// [`read_out_of_memory_in_terminator`], less a read of the place `stored`
+/// that [`read_out_of_memory_after`] left at the block's end.
+pub(crate) fn read_out_of_memory_in_terminator_after(
+    stored: &Option<Place>,
+    terminator: &Terminator,
+) -> Option<(Span, Vec<Place>)> {
+    read_out_of_memory_in_terminator(terminator).map(|(at, mut places)| {
+        if let Some(stored) = stored.as_ref() {
+            places.retain(|place| place != stored);
+        }
+        (at, places)
+    })
+}
+
 /// The same, for what a terminator reads.
 pub(crate) fn read_out_of_memory_in_terminator(
     terminator: &Terminator,
@@ -195,7 +261,7 @@ pub(crate) fn read_out_of_memory_in_terminator(
             then: _,
             origin,
         } => {
-            let mut places: Vec<Place> = arguments.iter().filter_map(read_in).collect();
+            let mut places: Vec<Place> = arguments.iter().flat_map(read_in).collect();
             if let Some(destination) = destination {
                 places.extend(first_of_two_derefs(destination));
             }
@@ -206,27 +272,45 @@ pub(crate) fn read_out_of_memory_in_terminator(
             then: _,
             otherwise: _,
             origin,
-        } => Some((origin.span(), read_in(condition).into_iter().collect())),
+        } => Some((origin.span(), read_in(condition))),
         Terminator::Goto(_) | Terminator::Return | Terminator::Abnormal { to: _ } => None,
     }
 }
 
-/// The `*l` an operand reads, if it reads one.
-fn read_in(operand: &Operand) -> Option<Place> {
+/// The places an operand reads out of memory, if it reads any.
+fn read_in(operand: &Operand) -> Vec<Place> {
     match operand {
         Operand::Copy(place) => read_as_value(place),
-        Operand::Constant(_) => None,
+        Operand::Constant(_) => Vec::new(),
     }
 }
 
-/// The `*l` a place read as a value reads: itself, where it is `*l`, or the
-/// first dereference on the way to a second.
-fn read_as_value(place: &Place) -> Option<Place> {
+/// The places a place read as a value reads out of memory: itself, where it
+/// is `*l`; and where it goes through two dereferences or more, the first
+/// on the way **and every level after it, where it is nothing but
+/// dereferences**, since
+/// `int *r = **m;` reads `**m` as much as `*m`. Left at the first, a read
+/// two levels down of memory nothing wrote was asked nothing, where `t =
+/// *m; r = *t;` is `SC0411` (#768). See ADR-0057.
+fn read_as_value(place: &Place) -> Vec<Place> {
     if place.projection.as_slice() == [Projection::Deref] {
-        Some(place.clone())
-    } else {
-        first_of_two_derefs(place)
+        return vec![place.clone()];
     }
+    // **Every level on the way, where it is nothing but dereferences**:
+    // `***m` reads `*m`, `**m` and `***m`, each a pointer read out of
+    // memory, and asking only the first and the last left an unwritten
+    // middle level silent where the step-by-step spelling is doubted.
+    // Found by review.
+    let depth = derefs(place);
+    if depth > 1 {
+        return (1..=depth)
+            .map(|level| Place {
+                local: place.local,
+                projection: vec![Projection::Deref; level],
+            })
+            .collect();
+    }
+    first_of_two_derefs(place).into_iter().collect()
 }
 
 /// The `*l` reaching a place reads on the way, read or written: the first

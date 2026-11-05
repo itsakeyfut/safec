@@ -1,0 +1,20 @@
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:10:5 ]
+    │
+ 10 │     **h = *pp; g(**h);
+    │     ────┬────  
+    │         ╰────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:10:16 ]
+    │
+ 10 │     **h = *pp; g(**h);
+    │                ───┬──  
+    │                   ╰──── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it

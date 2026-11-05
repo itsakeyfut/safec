@@ -811,6 +811,59 @@ cases! {
         // have landed in the allocation, and `m[1]` may be unwritten.
         // Mutation as the first above; this goes silent. Found by review.
         a_store_through_a_pointer_into_an_array_or_an_allocation_may_have_missed_the_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **The lowering's read of a deep store's value is no read of memory
+        // nothing wrote**, in a loop's first turn as in every turn: `**h =
+        // *pp;` in a loop body, with `*h` either of two blocks, reads `**h`
+        // back as the assignment's value (C17 6.5.16 p3). Mutation: the
+        // first-turn walk asks `read_out_of_memory_in_element` rather than
+        // `read_out_of_memory_after`; this gains `SC0411`. Found by review.
+        a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A read two levels down through locals' addresses asks the local
+        // it reaches** (#768): `int *r = **m;` with `m = &q` and `q = &x`
+        // reads `x`, which nothing wrote, and cites a local's clause. A doubt,
+        // as every read below the first dereference is. Mutation: the deep
+        // read asks no local; this goes silent. Mutation: its finding says it
+        // reaches no local; this loses the local's note. Found by review.
+        a_read_two_levels_down_through_locals_addresses_of_one_nothing_wrote_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with `x` written on one path only. Mutation: ask the local
+        // off its start; this goes silent. Found by review.
+        a_read_two_levels_down_through_locals_addresses_of_one_written_on_one_path_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A read two levels down handed straight to a call, which the
+        // terminator's reads give the report as an assignment's do. Mutation:
+        // a call's argument gives only the first place it reads; this goes
+        // silent. Found by review.
+        a_read_two_levels_down_handed_to_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **Not an array the read reaches**, whose element rules decide what
+        // a pointer read out of memory reads, by the user's decision on #728:
+        // `**m` with `*m = arr` reads `arr[0]`, which was written, and is not
+        // doubted. Mutation: the deep read asks arrays too; this gains a false
+        // `SC0411`. Found by review.
+        a_read_two_levels_down_of_a_local_array_written_first_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **Every level on the way is a read**: `***m` with `*m = n` and `n`
+        // fresh reads `**m`, which nothing wrote, as `t = *m; u = *t;` does.
+        // Mutation: give the report only the first and the last level; this
+        // goes silent. Found by review.
+        a_read_three_levels_down_of_a_middle_level_nothing_wrote_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A read two levels down as a branch's condition, which the
+        // terminator's reads give the report as a call's arguments are.
+        // Mutation: the condition gives no place two levels down; this goes
+        // silent. Found by review.
+        a_read_two_levels_down_in_a_branch_condition_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **The note cites the storage the read reaches last**, a local
+        // here, though the pointer read through first is an allocation.
+        // Mutation: take what it reaches from the first level; this cites
+        // `malloc`'s clause instead. Found by review.
+        a_read_two_levels_down_cites_the_storage_it_reaches_last: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **What a store two levels down wrote is what the place reads back**,
+        // until something writes: `**h = *pp; g(**h);` with `*h` either of
+        // two blocks reads the slot it just wrote. Mutation: any assignment
+        // ends what was stored, the lowering's read-back into a temporary
+        // among them; this gains `SC0411`. Found by review.
+        a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // But not once `*h` is written again: the slot `**h` names now is
+        // `q`'s, which nothing wrote. Mutation: a write through a projection
+        // leaves what was stored standing; this goes silent.
+        a_place_two_levels_down_read_after_its_pointer_is_moved_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And copied out of memory that holds such a pointer, `box[0] = m + 1;
         // memcpy(&g, box, 8); g[0] = &x;`, which the copy carries as a load of
         // the box does, `g = box[0];`: the copy is a load built by

@@ -1,0 +1,215 @@
+Target "x86_64-pc-windows-msvc"
+Function a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:2:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "k"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int **" parameter "pp"
+  Local "_4" "int"
+  Local "_5" "int **" "m"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int **" "o"
+  Local "_9" "void *"
+  Local "_10" "int"
+  Local "_11" "int ***" "h"
+  Local "_12" "void *"
+  Local "_13" "int"
+  Local "_14" "int **"
+  Local "_15" "int **"
+  Local "_16" "int" "i"
+  Local "_17" "int"
+  Local "_18" "int *"
+  Local "_19" "int"
+  Local "_20" "int"
+  Block "bb0" entry
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:3:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_3"
+    Branch a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:3:9 written "bb1" "bb2"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:3:9 generated
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:3:14 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:3:21 generated
+    Return
+  Block "bb2"
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:4:15 generated
+    Call a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:4:15 written "malloc" "bb4"
+      Destination "_6"
+      Constant 8
+  Block "bb4"
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:4:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:4:15 generated
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:4:30 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_5"
+    Branch a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:4:30 written "bb5" "bb6"
+      Copy "_7"
+  Block "bb5"
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:4:30 generated
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:4:34 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:4:41 generated
+    Return
+  Block "bb6"
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:4:30 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:5:15 generated
+    Call a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:5:15 written "malloc" "bb8"
+      Destination "_9"
+      Constant 8
+  Block "bb8"
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:5:11 written
+      Destination "_8"
+      Use
+        Copy "_9"
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:5:15 generated
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:5:30 written
+      Destination "_10"
+      Unary "Not"
+        Copy "_8"
+    Branch a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:5:30 written "bb9" "bb10"
+      Copy "_10"
+  Block "bb9"
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:5:30 generated
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:5:34 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:5:41 generated
+    Return
+  Block "bb10"
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:5:30 generated
+    Goto "bb11"
+  Block "bb11"
+    ArgumentsEvaluated a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:6:16 generated
+    Call a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:6:16 written "malloc" "bb12"
+      Destination "_12"
+      Constant 8
+  Block "bb12"
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:6:12 written
+      Destination "_11"
+      Use
+        Copy "_12"
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:6:16 generated
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:6:31 written
+      Destination "_13"
+      Unary "Not"
+        Copy "_11"
+    Branch a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:6:31 written "bb13" "bb14"
+      Copy "_13"
+  Block "bb13"
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:6:31 generated
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:6:35 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:6:42 generated
+    Return
+  Block "bb14"
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:6:31 generated
+    Goto "bb15"
+  Block "bb15"
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:7:5 written
+      Destination "_11"
+        Deref
+      Use
+        Copy "_8"
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:7:5 written
+      Destination "_14"
+      Use
+        Copy "_11"
+          Deref
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:7:5 generated
+    Branch a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:8:9 written "bb16" "bb17"
+      Copy "_2"
+  Block "bb16"
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:8:9 generated
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:8:12 written
+      Destination "_11"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:8:12 written
+      Destination "_15"
+      Use
+        Copy "_11"
+          Deref
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:8:12 generated
+    Goto "bb18"
+  Block "bb17"
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:8:9 generated
+    Goto "bb18"
+  Block "bb18"
+    StorageLive a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:9:10 generated "_16"
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:9:14 written
+      Destination "_16"
+      Use
+        Constant 0
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:9:18 generated
+    Goto "bb19"
+  Block "bb19"
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:9:21 written
+      Destination "_17"
+      Binary "Lt"
+        Copy "_16"
+        Copy "_1"
+    Branch a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:9:21 written "bb20" "bb21"
+      Copy "_17"
+  Block "bb20"
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:9:21 generated
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:9:35 written
+      Destination "_11"
+        Deref
+          Deref
+      Use
+        Copy "_3"
+          Deref
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:9:35 written
+      Destination "_18"
+      Use
+        Copy "_11"
+          Deref
+            Deref
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:9:35 generated
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:9:28 written
+      Destination "_19"
+      Use
+        Copy "_16"
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:9:28 written
+      Destination "_20"
+      Binary "Add"
+        Copy "_16"
+        Constant 1
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:9:28 written
+      Destination "_16"
+      Use
+        Copy "_20"
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:9:28 generated
+    Goto "bb19"
+  Block "bb21"
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:9:21 generated
+    StorageDead a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:9:46 generated "_16"
+    Operation a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:10:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value.c:10:12 generated
+    Return
