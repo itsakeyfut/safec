@@ -108,6 +108,10 @@ In `tests/cases/memory/`:
   if the head reads the first of its writes rather than the last.
 * `a_pointer_read_on_an_arm_that_leaves_a_loop_that_runs_before_its_write_is_doubted`
   goes silent if no block outside the loop is read as of its first turn.
+* `a_pointer_local_read_after_a_loop_that_may_run_zero_times_is_doubted` goes
+  silent if `memory::assigned` asks no loop's exit edge as of its first turn,
+  and `a_pointer_local_assigned_by_a_loop_its_constants_run_is_not_doubted`
+  gains `SC0411` if it asks one of a loop shown to run.
 
 The frontend reads neither `continue`, `break` nor `goto`, so no C program
 reaches the latch's refusal or the early exit's, and IR built by hand in
@@ -162,8 +166,8 @@ copies it.
 * [ADR-0057](./0057-a-pointer-read-out-of-fresh-memory-is-reported-where-it-is-read.md),
   whose back-edge rule this replaces.
 * `memory::assigned`, which asks a pointer local whose address is never taken
-  by name and keeps its own rule: a read after a loop that may run zero times
-  is silent there. Its module comment says why: that analysis follows no
-  condition a path took, and reporting every read some paths assigned refused
-  programs C defines, so it reports only after a branch edge that certainly
-  leads to the read unassigned, which a loop's exit edge is not.
+  by name, and reports a read some paths assigned only after a branch edge that
+  certainly leads to it unassigned. A loop's test is such a branch as of its
+  first turn, at the edge that leaves the loop, unless the loop is shown to
+  run, by the user's decision on #783: kept to the every-turn state, which the
+  back edge assigns, `while (i < n) q = &x; r = q;` was silent there.

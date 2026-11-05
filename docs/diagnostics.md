@@ -189,9 +189,10 @@ a read in the loop's own condition, are `SC0411` where the read runs on every
 turn, and a doubt on an arm, which costs a doubt about a read on an arm of
 last turn's value, `if (k == 1) q = *t2;`. So is a read on an arm that leaves
 the loop by a `return`. A pointer local whose address is never taken is asked
-the same where the read runs on every turn, `r = q; q = &x;`, and stays silent
-on an arm and after a loop that may run zero times. An integer read out of
-such a local is not followed.
+the same where the read runs on every turn, `r = q; q = &x;`, stays silent on
+an arm, and is the same doubt after a loop that may run zero times, at the
+loop's test when it is false. An integer read out of such a local is not
+followed.
 [ADR-0057](adr/0057-a-pointer-read-out-of-fresh-memory-is-reported-where-it-is-read.md)
 is the decision, and
 [ADR-0064](adr/0064-a-loop-may-run-zero-times-unless-its-test-is-shown-true-on-the-way-in.md)
