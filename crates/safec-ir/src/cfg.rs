@@ -348,6 +348,16 @@ impl Dominators {
             }
         }
     }
+
+    /// The block `block`'s immediate dominator: the one of its dominators
+    /// every other one dominates. `None` for the entry and for a block the
+    /// entry does not reach.
+    pub fn immediate(&self, block: BlockId) -> Option<BlockId> {
+        if Some(block) == self.entry {
+            return None;
+        }
+        self.immediate[block.index()]
+    }
 }
 
 /// The reachable blocks in an order where every loop, nested ones included,

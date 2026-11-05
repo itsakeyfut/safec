@@ -79,7 +79,7 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve_first_turn_within, solve_within};
 use crate::ir::{
-    Between, Element, FuncId, Function, LocalId, Place, Terminator, TranslationUnit, Ty,
+    Between, BlockId, Element, FuncId, Function, LocalId, Place, Terminator, TranslationUnit, Ty,
 };
 use crate::nullability::{self};
 use crate::reads::{
@@ -1062,8 +1062,35 @@ fn findings_within(
                 break;
             };
             left -= solution.walks();
+            // **And every block that leaves the loop from inside its body**,
+            // one a block of the body other than the head dominates: what runs
+            // there on the first turn is what arrived from before the loop
+            // too. The every-turn state of a loop shown to run creates no doubt
+            // at its back edge, and without this `if (c()) return *m[0] == 0;`
+            // before the body's write went silent in a loop that runs. A
+            // doubt, since it may not run on the first turn. See ADR-0064.
+            //
+            // **The nearest dominator in the loop, per block, in one pass**:
+            // the head dominates every block of the body, so some block of the
+            // body other than the head dominates a block exactly where the
+            // nearest one of its dominators in the loop is not the head.
+            // `Cfg::order` puts a block's immediate dominator before it. Asked
+            // of every block of the body by `Dominators::dominates` instead,
+            // this was a square in the blocks per loop.
+            let mut nearest_inside: Vec<Option<BlockId>> = vec![None; function.blocks().len()];
             for &id in cfg.order() {
-                if !each.contains(id) {
+                if let Some(up) = dominators.immediate(id) {
+                    nearest_inside[id.index()] = if each.contains(up) {
+                        Some(up)
+                    } else {
+                        nearest_inside[up.index()]
+                    };
+                }
+            }
+            for &id in cfg.order() {
+                let leaves_early = !each.contains(id)
+                    && nearest_inside[id.index()].is_some_and(|inside| inside != each.head());
+                if !each.contains(id) && !leaves_early {
                     continue;
                 }
                 let Some(mut turn) = solution.value(id).cloned() else {
@@ -1077,10 +1104,11 @@ fn findings_within(
                 // doubt, by the user's decision. Every latch and not any: no
                 // case tells the two apart, measured, since a loop this C can
                 // write has one, and `continue` is the first that will not.
-                let doubt_only = !each
-                    .latches()
-                    .iter()
-                    .all(|&latch| dominators.dominates(id, latch));
+                let doubt_only = leaves_early
+                    || !each
+                        .latches()
+                        .iter()
+                        .all(|&latch| dominators.dominates(id, latch));
                 let block = function.block(id);
                 let mut stored = None;
                 for element in &block.elements {
