@@ -818,6 +818,21 @@ cases! {
         // first-turn walk asks `read_out_of_memory_in_element` rather than
         // `read_out_of_memory_after`; this gains `SC0411`. Found by review.
         a_deep_store_in_a_loop_is_not_doubted_where_the_lowering_reads_its_value: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A read two levels down through locals' addresses asks the local
+        // it reaches** (#768): `int *r = **m;` with `m = &q` and `q = &x`
+        // reads `x`, which nothing wrote, and cites a local's clause. A doubt,
+        // as every read below the first dereference is. Mutation: the deep
+        // read asks no local; this goes silent. Mutation: its finding says it
+        // reaches no local; this loses the local's note. Found by review.
+        a_read_two_levels_down_through_locals_addresses_of_one_nothing_wrote_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with `x` written on one path only. Mutation: ask the local
+        // off its start; this goes silent. Found by review.
+        a_read_two_levels_down_through_locals_addresses_of_one_written_on_one_path_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A read two levels down handed straight to a call, which the
+        // terminator's reads give the report as an assignment's do. Mutation:
+        // a call's argument gives only the first place it reads; this goes
+        // silent. Found by review.
+        a_read_two_levels_down_handed_to_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And copied out of memory that holds such a pointer, `box[0] = m + 1;
         // memcpy(&g, box, 8); g[0] = &x;`, which the copy carries as a load of
         // the box does, `g = box[0];`: the copy is a load built by

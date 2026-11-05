@@ -698,7 +698,10 @@ impl Allocations<'_> {
         // **A doubt, never a proof**: that pointer was read out of memory,
         // so what the walk shows is a lower bound on what it may name, and
         // it is asked as a pointer read out of memory is below, a block or
-        // a local that is not an array, at no known element. See ADR-0057.
+        // a local that is not an array, at no known element, and at a local's
+        // start, which is where an edge to a local points: asked as off its
+        // start, a local written on one path only was not doubted, where its
+        // two-step spelling is. See ADR-0057.
         let depth = derefs(source);
         if depth > 1
             && source
@@ -716,7 +719,7 @@ impl Allocations<'_> {
                 || locals.into_iter().any(|local| {
                     !self.is_array(function, local)
                         && (value.certainly_unwritten(local, None)
-                            || value.may_be_unwritten(local, None, false))
+                            || value.may_be_unwritten(local, None, true))
                 });
         }
         let through = &value.points_to[source.local];

@@ -1,0 +1,98 @@
+Target "x86_64-pc-windows-msvc"
+Function a_read_two_levels_down_handed_to_a_call_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_read_two_levels_down_handed_to_a_call_is_doubted.c:2:6 "g" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+Function a_read_two_levels_down_handed_to_a_call_is_doubted.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "k"
+  Local "_2" "int ***" "m"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int **" "n"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int **"
+  Block "bb0" entry
+    ArgumentsEvaluated a_read_two_levels_down_handed_to_a_call_is_doubted.c:4:16 generated
+    Call a_read_two_levels_down_handed_to_a_call_is_doubted.c:4:16 written "malloc" "bb1"
+      Destination "_3"
+      Constant 8
+  Block "bb1"
+    Operation a_read_two_levels_down_handed_to_a_call_is_doubted.c:4:12 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_read_two_levels_down_handed_to_a_call_is_doubted.c:4:16 generated
+    Operation a_read_two_levels_down_handed_to_a_call_is_doubted.c:5:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_read_two_levels_down_handed_to_a_call_is_doubted.c:5:9 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_read_two_levels_down_handed_to_a_call_is_doubted.c:5:9 generated
+    Operation a_read_two_levels_down_handed_to_a_call_is_doubted.c:5:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_read_two_levels_down_handed_to_a_call_is_doubted.c:5:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_read_two_levels_down_handed_to_a_call_is_doubted.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_read_two_levels_down_handed_to_a_call_is_doubted.c:6:15 generated
+    Call a_read_two_levels_down_handed_to_a_call_is_doubted.c:6:15 written "malloc" "bb5"
+      Destination "_6"
+      Constant 8
+  Block "bb5"
+    Operation a_read_two_levels_down_handed_to_a_call_is_doubted.c:6:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_read_two_levels_down_handed_to_a_call_is_doubted.c:6:15 generated
+    Operation a_read_two_levels_down_handed_to_a_call_is_doubted.c:7:9 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_5"
+    Branch a_read_two_levels_down_handed_to_a_call_is_doubted.c:7:9 written "bb6" "bb7"
+      Copy "_7"
+  Block "bb6"
+    Sequenced a_read_two_levels_down_handed_to_a_call_is_doubted.c:7:9 generated
+    Operation a_read_two_levels_down_handed_to_a_call_is_doubted.c:7:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_read_two_levels_down_handed_to_a_call_is_doubted.c:7:20 generated
+    Return
+  Block "bb7"
+    Sequenced a_read_two_levels_down_handed_to_a_call_is_doubted.c:7:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_read_two_levels_down_handed_to_a_call_is_doubted.c:8:5 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_read_two_levels_down_handed_to_a_call_is_doubted.c:8:5 written
+      Destination "_8"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_read_two_levels_down_handed_to_a_call_is_doubted.c:8:5 generated
+    ArgumentsEvaluated a_read_two_levels_down_handed_to_a_call_is_doubted.c:9:5 generated
+    Call a_read_two_levels_down_handed_to_a_call_is_doubted.c:9:5 written "g" "bb9"
+      Copy "_2"
+        Deref
+          Deref
+  Block "bb9"
+    Sequenced a_read_two_levels_down_handed_to_a_call_is_doubted.c:9:5 generated
+    Operation a_read_two_levels_down_handed_to_a_call_is_doubted.c:10:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_read_two_levels_down_handed_to_a_call_is_doubted.c:10:12 generated
+    Return
