@@ -191,8 +191,8 @@ enum Route {
     /// A local's address handed to a call taking `void *` that keeps it, a
     /// pointer's address stored there after, a later call, the local moved
     /// on, and the pointer passed on after another: `SC0413`, against the
-    /// same handed typed. Width only, at a local. Mutation: `handed` records no read-as for `void`;
-    /// `width_kept_void_d0_both` goes silent.
+    /// same handed typed. Width only, at a local. Mutation: `handed` records
+    /// no read-as for `void`; `width_kept_void_d0_both` goes silent.
     KeptVoid,
     /// The same handed as `char *` through `void *`: memory read as bytes,
     /// which a later pointer below may be stored into. Width only, at a
