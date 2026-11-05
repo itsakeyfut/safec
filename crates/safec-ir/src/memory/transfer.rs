@@ -3170,12 +3170,14 @@ impl Analysis for Allocations<'_> {
                                 .at(0);
                             // **As its type where what it copies is read
                             // fresh**, as `believed_read` believes such a load:
-                            // the copy's read is reported as indeterminate
-                            // there, once, and nothing was stored to record a
-                            // width. Carried with none, `memcpy(&s, b, 8)` of
-                            // fresh `b` was doubted again at `*s` where
-                            // `memcpy(m, b, 8)` was not (#791). See ADR-0057
-                            // and ADR-0061.
+                            // the local then holds what nothing wrote, as one
+                            // never assigned does, and a read of it is
+                            // reported where it is read, once; nothing was
+                            // stored to record a width. Carried with none,
+                            // `memcpy(&s, b, 8)` of fresh `b` was doubted again
+                            // at `*s` where `memcpy(m, b, 8)` was not (#791).
+                            // **At depth zero only**, the one level `*source`
+                            // asks. See ADR-0057 and ADR-0061.
                             let fresh = from_depth == 0
                                 && self.reads_fresh(
                                     function,
