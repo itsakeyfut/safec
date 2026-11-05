@@ -208,10 +208,12 @@ pub(super) struct Known {
     /// of it is the doubt `Allocations::reads_partly` reports, as one out of
     /// an unwritten local is (#668): `if (k) *m = *pp; r =
     /// *m;` with `m` from `malloc` built in silence, where the same without
-    /// the `if` is certain (#721). **Not at a loop's back edge**, so a loop
-    /// that fills an allocation is not doubted for the path that skips the
-    /// body, as for a local. Cleared wherever `fresh` is. A test that always
-    /// holds, `if (d != 0) *d = *s;`, is a doubt it cannot tell from one
+    /// the `if` is certain (#721). **Not at the back edge of a loop shown to
+    /// run at least once**, so such a loop that fills an allocation is not
+    /// doubted for a path that skips the body, as for a local; after a loop
+    /// that may run zero times it is a doubt (#783, ADR-0064). Cleared
+    /// wherever `fresh` is. A test that always holds, `if (d != 0) *d =
+    /// *s;`, is a doubt it cannot tell from one
     /// that may fail, the cost #668 recorded for a local. See ADR-0057.
     ///
     /// **Per local whose address is taken, the same question**: whether
@@ -260,12 +262,14 @@ pub(super) struct Known {
     /// it was written** (#668): `if (c()) q = &x;` then `*pq` with `pq = &q`
     /// read an indeterminate `q` on one path in silence, since
     /// its proof joined by intersection. A doubt, read
-    /// through a pointer and by name, `report::unwritten_read`. Not at a
-    /// loop's back edge, where the path that skips the body would doubt every
-    /// loop that fills an array, which leaves a read in the body before the
-    /// body writes it silent too (#670); what either side already doubted is
-    /// kept there. An array kept per element gains no such doubt at any
-    /// join, its elements carrying it. Written by a write of the whole local,
+    /// through a pointer and by name, `report::unwritten_read`. Not at the
+    /// back edge of a loop shown to run at least once, where the path that
+    /// skips the body is one no execution takes, which leaves a read in the
+    /// body before the body writes it silent too (#670); what either side
+    /// already doubted is kept there. At any other loop's back edge it is the
+    /// doubt, since that loop may run zero times (#783, ADR-0064). An array
+    /// kept per element gains no such doubt at any join, its elements
+    /// carrying it. Written by a write of the whole local,
     /// and unwritten again at `StorageLive`. See ADR-0057.
     pub(super) init: Table<Loc, Init>,
     /// What has been read through a pointer since the last sequence point.
@@ -379,9 +383,9 @@ pub(super) struct Known {
     /// **[`Init::Maybe`] for an element that may be unwritten on some path,
     /// rather than a mark on the array** (#668), so that `if (c()) m[0] = &x;
     /// q = m[1];` stays the certain `SC0411` `main` gives, while `m[0]` read
-    /// there is doubted. Joined per element as [`Init::joined`] says, so a
-    /// loop's back edge creates no doubt, as for [`Self::init`]. See
-    /// ADR-0057.
+    /// there is doubted. Joined per element as [`Init::joined`] says, so the
+    /// back edge of a loop shown to run creates no doubt, as for
+    /// [`Self::init`]. See ADR-0057 and ADR-0064.
     pub(super) element_init: Table<LocalIdx, Inits>,
     /// Per local array, whether code this check cannot read was handed it
     /// only through a pointer moved off its start, so that a call writing it

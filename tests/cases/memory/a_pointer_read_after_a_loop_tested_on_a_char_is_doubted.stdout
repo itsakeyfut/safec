@@ -1,0 +1,96 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:1:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int" "x"
+  Local "_2" "int *[1]" "m"
+  Local "_3" "char" "c"
+  Local "_4" "int"
+  Local "_5" "int **"
+  Local "_6" "int *"
+  Local "_7" "int *"
+  Local "_8" "char"
+  Local "_9" "int *" "q"
+  Local "_10" "int **"
+  Local "_11" "int"
+  Block "bb0" entry
+    Operation a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:1:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:2:9 written
+      Destination "_1"
+      Use
+        Constant 1
+    Sequenced a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:2:13 generated
+    Operation a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:4:10 written
+      Destination "_3"
+      Use
+        Constant 200
+    Sequenced a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:4:14 generated
+    Goto "bb1"
+  Block "bb1"
+    Operation a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:5:12 written
+      Destination "_4"
+      Binary "Gt"
+        Copy "_3"
+        Constant 100
+    Branch a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:5:12 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:5:12 generated
+    Operation a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:6:9 generated
+      Destination "_5"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:6:16 written
+      Destination "_6"
+      Address
+        Place "_1"
+    Operation a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:6:9 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:6:9 written
+      Destination "_7"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:6:9 generated
+    Operation a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:7:9 written
+      Destination "_3"
+      Use
+        Constant 0
+    Operation a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:7:9 written
+      Destination "_8"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:7:9 generated
+    Goto "bb1"
+  Block "bb3"
+    Sequenced a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:5:12 generated
+    Operation a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:9:14 generated
+      Destination "_10"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:9:10 written
+      Destination "_9"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:9:14 generated
+    Operation a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:10:12 written
+      Destination "_11"
+      Binary "Eq"
+        Copy "_9"
+        Constant 0
+    Operation a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:10:5 written
+      Destination "_0"
+      Use
+        Copy "_11"
+    Sequenced a_pointer_read_after_a_loop_tested_on_a_char_is_doubted.c:10:12 generated
+    Return

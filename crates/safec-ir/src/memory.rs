@@ -71,6 +71,7 @@ mod init;
 mod known;
 mod parts;
 mod report;
+mod runs;
 mod store;
 mod transfer;
 
@@ -658,7 +659,14 @@ fn analysis<'a>(
         live_in: crate::liveness::live_in(function),
         cfg: Cfg::of(function),
         opaque_results: Table::from_vec(Vec::new()),
+        runs_once: Vec::new(),
     };
+    analysis.runs_once = vec![false; function.blocks().len()];
+    let taken = assigned::address_taken(function);
+    for each in analysis.cfg.loops() {
+        analysis.runs_once[each.head().index()] =
+            runs::shown_to_run(unit, function, &analysis.cfg, &each, &taken);
+    }
     analysis.opaque_results = analysis.opaque_results_of(function);
     analysis
 }
@@ -1017,10 +1025,11 @@ fn findings_within(
         // **And every read inside a loop, as of that loop's first turn**
         // (#670): whatever turn reaches a read, the first ran before it, and
         // what it sees is what arrived from before the loop. The join at the
-        // head creates no doubt along a back edge, so a loop that fills an
-        // array is not doubted for the path that skips it (#668), and with
-        // nothing else every read the head reached before a write went
-        // silent, `r = m[0]; m[0] = &x;` in the body among them. Per loop
+        // head of a loop shown to run creates no doubt along a back edge, so
+        // such a loop that fills an array is not doubted for a path that
+        // skips it (#668, ADR-0064), and with nothing else every read the
+        // head reached before a write went silent, `r = m[0]; m[0] = &x;` in
+        // the body among them. Per loop
         // rather than every back edge at once, which doubted a local made in
         // an outer loop and filled by an inner one wherever it was read after
         // the inner loop. After the every-turn walk above, so that a proof it

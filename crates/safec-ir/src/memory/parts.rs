@@ -292,11 +292,13 @@ pub(super) enum Init {
 
 impl Init {
     /// The two where paths meet. Two that differ meet as `Maybe`, **except
-    /// `Unwritten` and `Written` at a loop's back edge**, which meet as
-    /// `Written`: the path that skips a loop's body is not a path that
-    /// leaves what the loop fills unwritten, which would doubt every loop
-    /// that fills a block or an array (#668, #670, #721). A doubt either side
-    /// already held is kept there too.
+    /// `Unwritten` and `Written` where `back` is set**, which meet as
+    /// `Written`. It is set at the back edge of a loop shown to run its body
+    /// at least once, whose path that skips the body no execution takes, so
+    /// such a loop that fills a block or an array is not doubted (#668,
+    /// #670, #721). Any other loop may run zero times and leave what it fills
+    /// unwritten, so at its back edge they meet as `Maybe` (#783). A doubt
+    /// either side already held is kept there too. See ADR-0064.
     pub(super) fn joined(self, other: Self, back: bool) -> Self {
         match (self, other) {
             (Self::Unwritten, Self::Unwritten) => Self::Unwritten,

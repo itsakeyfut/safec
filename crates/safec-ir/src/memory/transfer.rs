@@ -1295,9 +1295,10 @@ impl Allocations<'_> {
     }
 
     /// [`Analysis::join`], and along a loop's back edge [`Analysis::join_back`]
-    /// where `back` is set: one body, so the two cannot drift apart. They
-    /// differ only in what a local unwritten on one side and written on
-    /// the other becomes. See `Known::init`.
+    /// where `back` is set, which it is for a loop shown to run at least
+    /// once, `Allocations::runs_once`: one body, so the two cannot drift
+    /// apart. They differ only in what a local unwritten on one side and
+    /// written on the other becomes. See `Known::init`.
     fn joined(&self, into: &mut Known, from: &Known, back: bool) {
         // **Every field named, never `..`.** A lattice value whose join
         // forgets a field reaches a fixpoint over a value nobody is joining,
@@ -1362,10 +1363,10 @@ impl Allocations<'_> {
         }
         // **Joined as `Init::joined` says**: unwritten only where no path
         // wrote it, and maybe unwritten where one path wrote it and the other
-        // left it unwritten, which is the doubt itself, but not at a back
-        // edge. An array kept per element has its own doubt above, and its
-        // record here gains none, at either kind of join. See
-        // `Known::init`.
+        // left it unwritten, which is the doubt itself, but not at the back
+        // edge of a loop shown to run. An array kept per element has its own
+        // doubt above, and its record here gains none, at either kind of
+        // join. See `Known::init`.
         //
         // **One loop over every place, each kind by its own rule** (#779).
         // Both rules read `state` as it was before this join: `state` is
@@ -1842,8 +1843,8 @@ impl Analysis for Allocations<'_> {
         self.joined(into, from, false);
     }
 
-    fn join_back(&self, _head: BlockId, into: &mut Self::Value, from: &Self::Value) {
-        self.joined(into, from, true);
+    fn join_back(&self, head: BlockId, into: &mut Self::Value, from: &Self::Value) {
+        self.joined(into, from, self.runs_once[head.index()]);
     }
 
     /// A back edge folded in, then every place written on the paths into the
@@ -1858,12 +1859,12 @@ impl Analysis for Allocations<'_> {
     /// kind (#760).
     fn join_back_beside(
         &self,
-        _head: BlockId,
+        head: BlockId,
         into: &mut Self::Value,
         from: &Self::Value,
         before: &Self::Value,
     ) {
-        self.joined(into, from, true);
+        self.joined(into, from, self.runs_once[head.index()]);
         for place in into.init.indices() {
             let again = into.init[place].unwritten_again(before.init[place], from.init[place]);
             match place {

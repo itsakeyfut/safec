@@ -915,6 +915,31 @@ cases! {
         // what it had; this gains an `SC0411` doubt, which `main` does not
         // give. Found by review of #668.
         a_local_array_made_in_an_outer_loop_and_filled_by_an_inner_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `n` may be zero, so the read after the loop may be of `m` nothing
+        // wrote: `SC0411`, a doubt (#783). See ADR-0064. Mutation:
+        // `Allocations::runs_once` true at every head, which was ADR-0057's
+        // rule; this goes silent.
+        a_pointer_read_after_a_loop_that_may_run_zero_times_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Its constants say the loop runs no turn: the doubt stays. Mutation:
+        // `runs::shown_to_run` takes a test it can evaluate as true whatever
+        // it answers; this goes silent.
+        a_pointer_read_after_a_loop_its_constants_do_not_run_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `char c = 200;` stores what C converts 200 to, which the IR does
+        // not say, so the test is not evaluated. Mutation: a `char` local is
+        // taken to hold the constant written to it; this goes silent.
+        a_pointer_read_after_a_loop_tested_on_a_char_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `i = 0; i = 3;`: the last write is what the test reads. Mutation:
+        // the walk back takes the first write in a block rather than the
+        // last; this goes silent.
+        a_pointer_read_after_a_loop_whose_counter_was_given_another_constant_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `i` is 0 on the arm and 3 on the path that skips it. Mutation: the
+        // walk back goes on past a block with two predecessors by its last;
+        // this goes silent.
+        a_pointer_read_after_a_loop_whose_counter_one_arm_set_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `i` is 0 on one arm and 3 on the other, each arm a block that goes
+        // on only into the loop. Mutation: the walk back goes on past a
+        // block with two predecessors by its first; this goes silent.
+        a_pointer_read_after_a_loop_whose_counter_each_arm_set_apart_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read on every turn before the body writes it, so the first turn reads it
         // unwritten: `SC0411`, a proof (#670). See ADR-0057. Mutation: ask no read
         // as of a loop's first turn; this goes silent.

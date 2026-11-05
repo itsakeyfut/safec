@@ -186,10 +186,10 @@ pub trait Analysis {
     /// that does not ask which edge a value arrived along**, which is every
     /// one but the memory check's. That one doubts a local unwritten on one
     /// path into a join and written on the other, and the path that skips a
-    /// loop's body is such a path into every loop that fills an array, so
-    /// at a back edge it creates no doubt (#668). See ADR-0057. `head` is
-    /// the loop's head, so that an analysis can ask what it knows of that
-    /// loop.
+    /// loop's body is such a path into every loop that fills an array. It
+    /// is no path of a loop shown to run at least once, so at that loop's
+    /// back edge alone it creates no doubt (#668, #783), and `head` says
+    /// which loop this is. See ADR-0064.
     fn join_back(&self, head: BlockId, into: &mut Self::Value, from: &Self::Value) {
         let _ = head;
         self.join(into, from);
