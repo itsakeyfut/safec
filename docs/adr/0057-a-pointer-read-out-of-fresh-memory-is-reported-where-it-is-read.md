@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "superseded by ADR-0069"
 date: 2026-10-24
 decision-makers: itsakeyfut
 ---
