@@ -839,6 +839,21 @@ cases! {
         // doubted. Mutation: the deep read asks arrays too; this gains a false
         // `SC0411`. Found by review.
         a_read_two_levels_down_of_a_local_array_written_first_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **Every level on the way is a read**: `***m` with `*m = n` and `n`
+        // fresh reads `**m`, which nothing wrote, as `t = *m; u = *t;` does.
+        // Mutation: give the report only the first and the last level; this
+        // goes silent. Found by review.
+        a_read_three_levels_down_of_a_middle_level_nothing_wrote_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A read two levels down as a branch's condition, which the
+        // terminator's reads give the report as a call's arguments are.
+        // Mutation: the condition gives no place two levels down; this goes
+        // silent. Found by review.
+        a_read_two_levels_down_in_a_branch_condition_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **The note cites the storage the read reaches last**, a local
+        // here, though the pointer read through first is an allocation.
+        // Mutation: take what it reaches from the first level; this cites
+        // `malloc`'s clause instead. Found by review.
+        a_read_two_levels_down_cites_the_storage_it_reaches_last: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And copied out of memory that holds such a pointer, `box[0] = m + 1;
         // memcpy(&g, box, 8); g[0] = &x;`, which the copy carries as a load of
         // the box does, `g = box[0];`: the copy is a load built by

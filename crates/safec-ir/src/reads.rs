@@ -241,7 +241,8 @@ fn read_in(operand: &Operand) -> Vec<Place> {
 
 /// The places a place read as a value reads out of memory: itself, where it
 /// is `*l`; and where it goes through two dereferences or more, the first
-/// on the way **and itself, where it is nothing but dereferences**, since
+/// on the way **and every level after it, where it is nothing but
+/// dereferences**, since
 /// `int *r = **m;` reads `**m` as much as `*m`. Left at the first, a read
 /// two levels down of memory nothing wrote was asked nothing, where `t =
 /// *m; r = *t;` is `SC0411` (#768). See ADR-0057.
@@ -249,11 +250,21 @@ fn read_as_value(place: &Place) -> Vec<Place> {
     if place.projection.as_slice() == [Projection::Deref] {
         return vec![place.clone()];
     }
-    let mut places: Vec<Place> = first_of_two_derefs(place).into_iter().collect();
-    if !places.is_empty() && derefs(place) == place.projection.len() {
-        places.push(place.clone());
+    // **Every level on the way, where it is nothing but dereferences**:
+    // `***m` reads `*m`, `**m` and `***m`, each a pointer read out of
+    // memory, and asking only the first and the last left an unwritten
+    // middle level silent where the step-by-step spelling is doubted.
+    // Found by review.
+    let depth = derefs(place);
+    if depth > 1 {
+        return (1..=depth)
+            .map(|level| Place {
+                local: place.local,
+                projection: vec![Projection::Deref; level],
+            })
+            .collect();
     }
-    places
+    first_of_two_derefs(place).into_iter().collect()
 }
 
 /// The `*l` reaching a place reads on the way, read or written: the first
