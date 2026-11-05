@@ -182,25 +182,71 @@ pub(crate) fn read_out_of_memory_in_element(element: &Element) -> Option<(Span, 
     }
 }
 
-/// What [`read_out_of_memory_in_element`] answers for `element`, less the
-/// lowering's own read of the value the assignment `before` it just stored
-/// at the same caret, where that place is two dereferences or more: the
-/// value of an assignment is what was stored (C17 6.5.16 p3), and the slot
-/// was written a moment ago whatever else it may name. A place one
-/// dereference deep is answered by `Held::stored_through` instead. Left in,
-/// `**t = y;` doubted its own write as a read of memory nothing wrote
-/// (#768).
+/// What [`read_out_of_memory_in_element`] answers for `element`, less a
+/// read of the place two dereferences or more deep that a store earlier in
+/// the block wrote, `stored`, where nothing has written since: the slot
+/// holds what was stored, whatever else the pointers on the way may name.
+/// Then `stored` is what this element leaves it.
+///
+/// **What the place reads back is what was stored** until something writes
+/// memory, or the local the place starts at, or that local's storage begins
+/// or ends: the lowering's own read of an assignment's value (C17 6.5.16
+/// p3), and `**h = *pp; g(**h);`, read `**h` a moment after writing it, and
+/// were doubted as reads of memory nothing wrote (#768). Reset at every
+/// block, since a call ends one (ADR-0010). A place one dereference deep is
+/// answered by `Held::stored_through` instead.
 pub(crate) fn read_out_of_memory_after(
-    before: Option<&Element>,
+    stored: &mut Option<Place>,
     element: &Element,
 ) -> Option<(Span, Vec<Place>)> {
-    let (at, mut places) = read_out_of_memory_in_element(element)?;
-    if let Some(Element::Assign(stored)) = before {
-        if stored.origin.span() == at {
-            places.retain(|place| place.projection.len() < 2 || *place != stored.place);
+    let read = read_out_of_memory_in_element(element).map(|(at, mut places)| {
+        if let Some(stored) = stored.as_ref() {
+            places.retain(|place| place != stored);
         }
-    }
-    Some((at, places))
+        (at, places)
+    });
+    // Every field written out, as `dereferenced_in_element` does: an
+    // element that writes is what ends what a store's place is known to
+    // hold, and one that writes nothing leaves it.
+    *stored = match element {
+        Element::Assign(operation) if derefs(&operation.place) > 1 => Some(operation.place.clone()),
+        Element::Assign(operation) if !operation.place.projection.is_empty() => None,
+        Element::Assign(operation) => stored
+            .take()
+            .filter(|place| place.local != operation.place.local),
+        Element::StorageLive { local, origin: _ } | Element::StorageDead { origin: _, local } => {
+            stored.take().filter(|place| place.local != *local)
+        }
+        Element::Evaluate {
+            place: _,
+            origin: _,
+        }
+        | Element::Sequenced { origin: _ }
+        | Element::ArgumentsEvaluated { origin: _ }
+        | Element::UnsequencedAccess {
+            local: _,
+            written: _,
+            accessed: _,
+            both_write: _,
+            between: _,
+            origin: _,
+        } => stored.take(),
+    };
+    read
+}
+
+/// [`read_out_of_memory_in_terminator`], less a read of the place `stored`
+/// that [`read_out_of_memory_after`] left at the block's end.
+pub(crate) fn read_out_of_memory_in_terminator_after(
+    stored: &Option<Place>,
+    terminator: &Terminator,
+) -> Option<(Span, Vec<Place>)> {
+    read_out_of_memory_in_terminator(terminator).map(|(at, mut places)| {
+        if let Some(stored) = stored.as_ref() {
+            places.retain(|place| place != stored);
+        }
+        (at, places)
+    })
 }
 
 /// The same, for what a terminator reads.

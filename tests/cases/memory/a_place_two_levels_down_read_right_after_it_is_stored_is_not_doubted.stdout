@@ -1,0 +1,185 @@
+Target "x86_64-pc-windows-msvc"
+Function a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:2:6 "g" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+Function a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int **" parameter "pp"
+  Local "_3" "int"
+  Local "_4" "int **" "m"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int **" "o"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int ***" "h"
+  Local "_11" "void *"
+  Local "_12" "int"
+  Local "_13" "int **"
+  Local "_14" "int **"
+  Local "_15" "int *"
+  Block "bb0" entry
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:4:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_2"
+    Branch a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:4:9 written "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:4:9 generated
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:4:14 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:4:21 generated
+    Return
+  Block "bb2"
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:4:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:5:15 generated
+    Call a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:5:15 written "malloc" "bb4"
+      Destination "_5"
+      Constant 8
+  Block "bb4"
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:5:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:5:15 generated
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:5:30 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_4"
+    Branch a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:5:30 written "bb5" "bb6"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:5:30 generated
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:5:34 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:5:41 generated
+    Return
+  Block "bb6"
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:5:30 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:6:15 generated
+    Call a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:6:15 written "malloc" "bb8"
+      Destination "_8"
+      Constant 8
+  Block "bb8"
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:6:11 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:6:15 generated
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:6:30 written
+      Destination "_9"
+      Unary "Not"
+        Copy "_7"
+    Branch a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:6:30 written "bb9" "bb10"
+      Copy "_9"
+  Block "bb9"
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:6:30 generated
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:6:34 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:6:41 generated
+    Return
+  Block "bb10"
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:6:30 generated
+    Goto "bb11"
+  Block "bb11"
+    ArgumentsEvaluated a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:7:16 generated
+    Call a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:7:16 written "malloc" "bb12"
+      Destination "_11"
+      Constant 8
+  Block "bb12"
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:7:12 written
+      Destination "_10"
+      Use
+        Copy "_11"
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:7:16 generated
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:7:31 written
+      Destination "_12"
+      Unary "Not"
+        Copy "_10"
+    Branch a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:7:31 written "bb13" "bb14"
+      Copy "_12"
+  Block "bb13"
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:7:31 generated
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:7:35 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:7:42 generated
+    Return
+  Block "bb14"
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:7:31 generated
+    Goto "bb15"
+  Block "bb15"
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:8:5 written
+      Destination "_10"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:8:5 written
+      Destination "_13"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:8:5 generated
+    Branch a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:9:9 written "bb16" "bb17"
+      Copy "_1"
+  Block "bb16"
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:9:9 generated
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:9:12 written
+      Destination "_10"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:9:12 written
+      Destination "_14"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:9:12 generated
+    Goto "bb18"
+  Block "bb17"
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:9:9 generated
+    Goto "bb18"
+  Block "bb18"
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:10:5 written
+      Destination "_10"
+        Deref
+          Deref
+      Use
+        Copy "_2"
+          Deref
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:10:5 written
+      Destination "_15"
+      Use
+        Copy "_10"
+          Deref
+            Deref
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:10:5 generated
+    ArgumentsEvaluated a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:10:16 generated
+    Call a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:10:16 written "g" "bb19"
+      Copy "_10"
+        Deref
+          Deref
+  Block "bb19"
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:10:16 generated
+    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:11:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:11:12 generated
+    Return

@@ -854,6 +854,16 @@ cases! {
         // Mutation: take what it reaches from the first level; this cites
         // `malloc`'s clause instead. Found by review.
         a_read_two_levels_down_cites_the_storage_it_reaches_last: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **What a store two levels down wrote is what the place reads back**,
+        // until something writes: `**h = *pp; g(**h);` with `*h` either of
+        // two blocks reads the slot it just wrote. Mutation: any assignment
+        // ends what was stored, the lowering's read-back into a temporary
+        // among them; this gains `SC0411`. Found by review.
+        a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // But not once `*h` is written again: the slot `**h` names now is
+        // `q`'s, which nothing wrote. Mutation: a write through a projection
+        // leaves what was stored standing; this goes silent.
+        a_place_two_levels_down_read_after_its_pointer_is_moved_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And copied out of memory that holds such a pointer, `box[0] = m + 1;
         // memcpy(&g, box, 8); g[0] = &x;`, which the copy carries as a load of
         // the box does, `g = box[0];`: the copy is a load built by
