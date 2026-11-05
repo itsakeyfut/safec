@@ -564,8 +564,8 @@ pub(super) enum Reached {
 
 /// What one local may hold, and what a block holds: a block's memory is
 /// the value a pointer stored there may be, its cell (`Known::contents`),
-/// gathered by [`Held::absorb`], made by [`Held::poured`] and read by
-/// [`Held::taken_by_a_load`], which between them name the fields a cell
+/// gathered by [`Cell::absorb`], made by [`Cell::poured`] and read by
+/// [`Cell::taken_by_a_load`], which between them name the fields a cell
 /// uses. A cell's `lost` is a lost value stored there, which a load takes as
 /// `lost_read`.
 ///
@@ -1132,7 +1132,7 @@ impl Held {
     }
 
     /// A local holding nothing, in a function with this many sites, and a
-    /// block nothing was stored in, which is [`Held::absorb`]'s identity.
+    /// block nothing was stored in, which is [`Cell::absorb`]'s identity.
     pub(super) fn none(sites: usize) -> Self {
         Held::from_marks(
             sites,
@@ -1741,23 +1741,138 @@ fn joined_element(
 }
 
 /// What a block holds: the one record a site's memory keeps, a [`Held`]
-/// read as the value a pointer stored there may be (#780). These methods
-/// are what memory asks of it beside what a local's value is asked.
-impl Held {
+/// read as the value a pointer stored there may be (#780).
+///
+/// **A type of its own around the `Held`, with no `Deref`**, so that what a
+/// cell is asked is what these methods answer and nothing else: a cell sets
+/// its names, its bound and four marks, and every other field of the `Held`
+/// inside it is the default [`Held::none`] gives, which a value's question,
+/// `Held::beyond` or `Held::certain_target`, would read as a fact about
+/// what is stored there. Asking one of a cell does not compile: measured,
+/// `contents[site].beyond()` and `contents[site].certain_target()` are
+/// `error[E0599]`. Found by review. See ADR-0063.
+#[derive(Clone, PartialEq, Eq)]
+pub(super) struct Cell(Held);
+
+impl Cell {
+    /// A block nothing was stored in, which is [`Cell::absorb`]'s identity.
+    pub(super) fn none(locals: usize) -> Self {
+        Cell(Held::none(locals))
+    }
+
+    /// Every site a pointer stored there may hold.
+    pub(super) fn sites(&self) -> impl Iterator<Item = Site> + '_ {
+        self.0.sites()
+    }
+
+    /// Every local whose address a pointer stored there may be.
+    pub(super) fn locals(&self) -> impl Iterator<Item = LocalIdx> + '_ {
+        self.0.locals()
+    }
+
+    /// Whether a pointer stored there may hold `site`.
+    pub(super) fn has_site(&self, site: Site) -> bool {
+        self.0.has_site(site)
+    }
+
+    /// Whether a pointer stored there may be `local`'s address.
+    pub(super) fn names_local(&self, local: LocalIdx) -> bool {
+        self.0.names_local(local)
+    }
+
+    /// Whether what is stored there may be a pointer to an allocation that
+    /// is gone and whose site names a new one. See `Known::contents`.
+    pub(super) fn stale_read(&self) -> bool {
+        self.0.stale_read
+    }
+
+    /// Mark what is stored there as possibly gone. See `Known::contents`.
+    pub(super) fn mark_stale_read(&mut self) {
+        self.0.stale_read = true;
+    }
+
+    /// Mark a slot there as one a call could not replace.
+    pub(super) fn mark_unreplaced_read(&mut self) {
+        self.0.unreplaced_read = true;
+    }
+
+    /// Whether a value this check lost may have been stored there.
+    pub(super) fn lost(&self) -> bool {
+        self.0.lost
+    }
+
+    /// Whether what is stored there may be a pointer a caller or a callee
+    /// handed over. See `Known::contents`.
+    pub(super) fn holds_from_caller(&self) -> bool {
+        self.0.from_caller
+    }
+
+    /// Mark what is stored there as a caller's or a callee's.
+    pub(super) fn mark_from_caller(&mut self) {
+        self.0.from_caller = true;
+    }
+
+    /// The fields a site made again keeps, each answered: called by
+    /// `Known::reborn` so that a field added to `Held` is `error[E0027]`
+    /// here until it says what a site made again does to it.
+    pub(super) fn kept_when_reborn(&self) {
+        // **What the site's own cell keeps when it names a new
+        // allocation**, field by field, so that a field added to `Held`
+        // is asked here what a site made again does to it.
+        let Held {
+            // Kept: what the old allocation may hold stays in the row, below.
+            // See ADR-0045.
+            names: _,
+            // Kept, as `names` is: the slots of the new allocation are not
+            // told apart from the old one's, and a bound kept only doubts.
+            believed: _,
+            contents_at_most: _,
+            // Kept, and set below in every container that held the site.
+            stale_read: _,
+            // Kept, as `stale_read` is: the slots of the new allocation are
+            // not told apart from the old one's.
+            unreplaced_read: _,
+            // Kept, as `stale_read` is: the slots of the new allocation are
+            // not told apart from the old one's.
+            lost: _,
+            // Kept, as the entry and `stale_read` are: the slots of the new
+            // allocation are not told apart from the old one's. No case
+            // tells this from clearing it, measured: every other local
+            // holding the site is lost a few lines below, so a load out of
+            // it is doubted either way.
+            from_caller: _,
+            // Not recorded in memory. See `Cell::absorb`.
+            lost_read: _,
+            freed: _,
+            writes_elsewhere: _,
+            offset: _,
+            loaded: _,
+            named_at_read: _,
+            foreign: _,
+            returned_by: _,
+            fresh_read: _,
+            inner_address: _,
+            element: _,
+            array_edge: _,
+            stored_through: _,
+        } = &self.0;
+    }
+
     /// How many bytes each pointer stored there, and each level below it,
-    /// is believed to point at: [`Self::believed`] above
-    /// [`Self::contents_at_most`], which is what a store records
+    /// is believed to point at: [`Held::believed`] above
+    /// [`Held::contents_at_most`], which is what a store records
     /// (`Levels::stored_under`). See `Known::contents`.
     pub(super) fn stored_levels(&self) -> Levels {
-        self.contents_at_most
-            .stored_under(self.believed, usize::MAX)
+        self.0
+            .contents_at_most
+            .stored_under(self.0.believed, usize::MAX)
     }
 
     /// Bound what is stored there by `levels`, the lower of the two at every
     /// level, as a store's own record is joined in by [`Self::absorb`].
     pub(super) fn bound_stored(&mut self, levels: &Levels) {
-        self.believed = bounded(self.believed, levels.at(0));
-        self.contents_at_most.bound_by(&levels.below(1));
+        self.0.believed = bounded(self.0.believed, levels.at(0));
+        self.0.contents_at_most.bound_by(&levels.below(1));
     }
 
     /// What a load that reads through this block gives the value it reads:
@@ -1789,7 +1904,7 @@ impl Held {
             // Read by `Allocations::reads_caller_memory`, which is the
             // caller's answer to `load_into`.
             from_caller: _,
-            // Not recorded in memory. See `Held::absorb`.
+            // Not recorded in memory. See `Cell::absorb`.
             lost_read: _,
             freed: _,
             writes_elsewhere: _,
@@ -1803,7 +1918,7 @@ impl Held {
             element: _,
             array_edge: _,
             stored_through: _,
-        } = self;
+        } = &self.0;
         // Read out of an allocation that may hold one that is gone. See
         // ADR-0045.
         if *stale_read {
@@ -1837,15 +1952,15 @@ impl Held {
         named: impl IntoIterator<Item = LocalIdx>,
         stored: &Levels,
         from: &Held,
-    ) -> Held {
-        let mut poured = Held::none(locals);
+    ) -> Cell {
+        let mut poured = Cell::none(locals);
         for site in sites {
             poured.name_site(site);
         }
         // And the locals whose address it carries, which are no site. See
         // ADR-0045.
         for target in named {
-            poured.name_local(target);
+            poured.0.name_local(target);
         }
         poured.bound_stored(stored);
         // Every field named, never `..`, as `Self::absorb` and
@@ -1878,28 +1993,28 @@ impl Held {
             array_edge: _,
             stored_through: _,
         } = from;
-        poured.stale_read = *stale_read;
-        poured.unreplaced_read = *unreplaced_read;
-        poured.lost = *lost || *lost_read;
-        poured.from_caller = *from_caller;
+        poured.0.stale_read = *stale_read;
+        poured.0.unreplaced_read = *unreplaced_read;
+        poured.0.lost = *lost || *lost_read;
+        poured.0.from_caller = *from_caller;
         poured
     }
 
     /// A pointer stored there may also hold `site`.
     pub(super) fn name_site(&mut self, site: Site) {
-        self.names.set(Loc::Heap(site));
+        self.0.names.set(Loc::Heap(site));
     }
 
     /// `other`, poured into this block or brought by another path: a union
     /// of what may be stored there, the lower of the two bounds at every
-    /// level, and every mark either has. **Not [`Self::joined`]**, which is
+    /// level, and every mark either has. **Not [`Held::joined`]**, which is
     /// a value's join where two paths meet and believes a width only where
     /// every path read one: a block gathers every store into it, and nothing
     /// stored is no bound, as [`bounded`] says, so [`Held::none`] is this
     /// join's identity and a block nothing was stored in is one. `other` is
     /// destructured with no `..`, so a field added to `Held` is
     /// `error[E0027]` here until it says what memory keeps of it.
-    pub(super) fn absorb(&mut self, other: &Held) {
+    pub(super) fn absorb(&mut self, other: &Cell) {
         let Held {
             names,
             believed,
@@ -1923,14 +2038,14 @@ impl Held {
             element: _,
             array_edge: _,
             stored_through: _,
-        } = other;
-        self.names.union_with(names);
-        self.believed = bounded(self.believed, *believed);
-        self.contents_at_most.bound_by(contents_at_most);
-        self.stale_read |= *stale_read;
-        self.unreplaced_read |= *unreplaced_read;
-        self.lost |= *lost;
-        self.from_caller |= *from_caller;
+        } = &other.0;
+        self.0.names.union_with(names);
+        self.0.believed = bounded(self.0.believed, *believed);
+        self.0.contents_at_most.bound_by(contents_at_most);
+        self.0.stale_read |= *stale_read;
+        self.0.unreplaced_read |= *unreplaced_read;
+        self.0.lost |= *lost;
+        self.0.from_caller |= *from_caller;
     }
 }
 

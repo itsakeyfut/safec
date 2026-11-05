@@ -54,7 +54,7 @@ enum Belief {
     /// a call this check cannot read, which may free what the caller handed
     /// over, against the same with no call. The mark a store leaves in what
     /// it lands in, the cell's `from_caller`, which no other belief reaches.
-    /// Mutation: `Held::absorb` takes no `from_caller`;
+    /// Mutation: `Cell::absorb` takes no `from_caller`;
     /// `caller_store_d1_both` fails, among ten.
     Caller,
     /// Whether a pointer there was read out of a slot a call this check
@@ -64,7 +64,7 @@ enum Belief {
     /// there, read back and handed on by address, against the same with no
     /// call. Asked by address alone, as `Known::handed_below` asks it. The
     /// cell's `unreplaced_read`, which no other belief reaches. Mutation:
-    /// `Held::absorb` takes no `unreplaced_read`; `unreplaced_store_d1_both`
+    /// `Cell::absorb` takes no `unreplaced_read`; `unreplaced_store_d1_both`
     /// fails, among twelve.
     Unreplaced,
 }
@@ -85,7 +85,7 @@ enum Route {
     /// Copied by `memcpy` out of a block holding it, rather than out of a
     /// local's address: `*blk_ = v; memcpy(&slot, blk_, 8);`. The copy that
     /// carries what memory holds, which `Route::Memcpy` from a local does not
-    /// reach. Mutation: `Held::poured` keeps no `lost`;
+    /// reach. Mutation: `Cell::poured` keeps no `lost`;
     /// `lost_memcpy_block_d1_both` fails, among twenty. Mutation: it keeps no
     /// `stale_read`; `stale_memcpy_block_d1_both` fails, among forty eight.
     MemcpyFromBlock,

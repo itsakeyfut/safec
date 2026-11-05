@@ -20,8 +20,8 @@ use super::index::{Idx, Loc, LocalIdx, Site, Table};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known};
 use super::parts::{
-    AS_TYPED, Extent, Freeing, Held, Init, Inits, Levels, Marks, Offset, PendingRead, Reached,
-    Read, Realloced, SiteState, bounded,
+    AS_TYPED, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, Offset, PendingRead,
+    Reached, Read, Realloced, SiteState, bounded,
 };
 use super::store::{Landing, StoreKind, Strong};
 use crate::library::{Callee, LIBRARY, Leaves, Library, Makes};
@@ -498,7 +498,7 @@ impl Allocations<'_> {
         &self,
         value: &mut Known,
         landing: &Landing,
-        poured: &Held,
+        poured: &Cell,
         in_part: &[LocalIdx],
         pours: Pours,
     ) {
@@ -881,7 +881,7 @@ impl Allocations<'_> {
         // At least the local's own allocations, which a load with no
         // dereference in its place, an element, still reads through.
         held.from_caller
-            || value.marked_below(local, depth.max(1), |contents| contents.from_caller)
+            || value.marked_below(local, depth.max(1), |contents| contents.holds_from_caller())
             || value.caller_through(local, depth)
             // **Only for a local this check lost**, measured: an exposed
             // parameter's site is marked `from_caller` where the function
@@ -1502,7 +1502,7 @@ impl Allocations<'_> {
             *here = *here || *there;
         }
         // What each allocation may contain, every field at once. See
-        // `Held::absorb`.
+        // `Cell::absorb`.
         for (here, there) in contents.iter_mut().zip(&from.contents) {
             here.absorb(there);
         }
@@ -1740,7 +1740,7 @@ impl Analysis for Allocations<'_> {
             escaped: Table::filled(false, self.locals),
             handed_away: Table::filled(false, self.locals),
             exposed: Table::filled(false, Loc::count(self.locals)),
-            contents: Table::filled(Held::none(self.locals), self.locals),
+            contents: Table::filled(Cell::none(self.locals), self.locals),
             realloced: Table::filled(None, self.locals),
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
@@ -1832,7 +1832,7 @@ impl Analysis for Allocations<'_> {
         // following. Unmarked, `q = *pp; free(q); q = *pp; return *q;` read
         // `*pp` again as a fresh value and was believed (#482). See ADR-0040.
         for parameter in &self.exposed_parameters {
-            known.contents[Site::of(LocalIdx::of(parameter))].from_caller = true;
+            known.contents[Site::of(LocalIdx::of(parameter))].mark_from_caller();
         }
 
         known
@@ -2270,7 +2270,7 @@ impl Analysis for Allocations<'_> {
                     // parameter, read back through an `int ***`, believed
                     // whole `int`s two levels down (#634). A local's
                     // address and an allocation believe nothing here, so
-                    // record nothing. See `Held::stored_levels`.
+                    // record nothing. See `Cell::stored_levels`.
                     //
                     // Mutation: record level 0 alone, and
                     // `a_parameter_stored_in_memory_and_read_back_is_believed_as_it_arrived_below_its_first_level`
@@ -2279,7 +2279,7 @@ impl Analysis for Allocations<'_> {
                         .contents_at_most
                         .stored_under(bound, self.deepest_pointer);
                     // **What the store carries, poured into each allocation it
-                    // lands in**, as `Held::poured` builds it, which names
+                    // lands in**, as `Cell::poured` builds it, which names
                     // every field. **After the landing and the exposure**:
                     // poured
                     // first, a container already reachable makes what it
@@ -2300,7 +2300,7 @@ impl Analysis for Allocations<'_> {
                     // value can find it (#503, ADR-0045); and a pointer read
                     // out of caller memory keeps that fact where it is stored
                     // (ADR-0040).
-                    let poured = Held::poured(
+                    let poured = Cell::poured(
                         value.points_to.len(),
                         carried.iter().copied(),
                         written.locals(),
@@ -2829,8 +2829,9 @@ impl Analysis for Allocations<'_> {
                 Operand::Copy(place) => {
                     may_hold_lost(&value.points_to[place.local])
                         || (!place.projection.is_empty()
-                            && value
-                                .marked_below(place.local, derefs(place), |contents| contents.lost))
+                            && value.marked_below(place.local, derefs(place), |contents| {
+                                contents.lost()
+                            }))
                         || value
                             .written_through(place.local)
                             .into_iter()
@@ -2840,7 +2841,7 @@ impl Analysis for Allocations<'_> {
             }) || value
                 .closure(handed_memory)
                 .into_iter()
-                .any(|site| value.contents[site].lost)
+                .any(|site| value.contents[site].lost())
                 || value
                     .escaped
                     .indices()
@@ -3226,7 +3227,7 @@ impl Analysis for Allocations<'_> {
                                 from_depth + 1,
                                 self.deepest_pointer,
                             ));
-                            let poured = Held::poured(
+                            let poured = Cell::poured(
                                 value.points_to.len(),
                                 copied.iter().copied(),
                                 copied_locals.iter().copied(),
@@ -3898,7 +3899,7 @@ impl Analysis for Allocations<'_> {
                 // because a site's allocations are not told apart. So a load
                 // out of each turn's result is doubted, a false report the
                 // reader can see. See ADR-0040.
-                value.contents[site].from_caller = true;
+                value.contents[site].mark_from_caller();
                 // **And it may be the lost value it was handed**, `id(*box)`
                 // returning `u` (#508), **or one an earlier call was handed**,
                 // as it holds every exposed site: `stash(u); r = fetch();`

@@ -367,7 +367,7 @@ impl Allocations<'_> {
         let through_unrecorded = held.from_caller
             || above
                 .iter()
-                .any(|&site| value.exposed[site] || value.contents[site].from_caller)
+                .any(|&site| value.exposed[site] || value.contents[site].holds_from_caller())
             || above_locals
                 .iter()
                 .any(|&local| unrecorded(&value.points_to[local]));
