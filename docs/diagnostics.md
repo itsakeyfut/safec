@@ -232,9 +232,16 @@ is the decision.
 to a call, returned, or stored is believed by whoever receives it to point at
 the start of an object as wide as the type it leaves as, so it is asked there
 whether it does: `g(p + 5)`, `return p + 5;` and `*box = p + 5;` are each
-`SC0413`, labelled `passed here`, `returned here` or `stored here`. A pointer
-to memory lets the pointers stored there leave with it, so `int *q = v;
-h(&q);` asks `q`, and `memcpy` asks what its source points at as a store.
+`SC0413`, labelled `passed here`, `returned here` or `stored here`. **A store
+into memory nothing outside the function reads is asked only whether the
+pointer starts an object**: how wide it is, and what it points at, is asked
+by the load that reads it back and by the door the memory leaves by, as a
+write into a local is. So `*m = v;` with `m` this function's own block and
+`v` a `char`'s address is not `SC0413`, and `*box = p + 5;` still is
+([ADR-0065](adr/0065-a-store-nothing-outside-reads-asks-only-whether-its-pointer-is-off-its-start.md)).
+A pointer to memory lets the pointers stored there leave with it, so `int *q
+= v; h(&q);` asks `q`, and `memcpy` asks what its source points at as a
+store.
 A `memcpy` whose destination's or source's type says it copies pointers, and
 whose length ends part way through one, stores a pointer nobody wrote whole,
 and is asked as one that may not point at an object as wide as its type

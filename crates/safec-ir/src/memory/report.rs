@@ -1371,7 +1371,31 @@ pub(super) fn departed_in_element(
         Departure::Return
     } else {
         match store.kind {
-            StoreKind::Through { .. } => Departure::Store,
+            StoreKind::Through { .. } if store.leaves => Departure::Store,
+            // **Into memory nothing outside this function reads, only
+            // whether the pointer is off its start.** What it points at and
+            // how wide is asked by the load that reads it back (ADR-0061) and
+            // by the door the memory leaves by, as a write into a local is;
+            // where it starts is not, since no distance is carried
+            // (ADR-0036), and `*box = p + 5;` read by nothing was reported
+            // only here. See ADR-0065.
+            StoreKind::Through { .. } => {
+                if let Some(width) = analysis
+                    .unit
+                    .place_ty(function, &operation.place)
+                    .and_then(|ty| pointee_width(analysis, ty))
+                {
+                    say_leaving(
+                        findings,
+                        departed,
+                        analysis,
+                        (operation.origin.span(), Departure::Store, width),
+                        at_its_start(analysis, function, &operation.value, known),
+                        false,
+                    );
+                }
+                return;
+            }
             // A write to a local by name is asked here where code this check
             // cannot read may read the local, which is what `leaves` says of
             // a direct write: `keep(&slot); slot = v;` is a store a later
@@ -1411,6 +1435,26 @@ pub(super) fn departed_in_element(
         answer,
         false,
     );
+}
+
+/// What a store into memory nothing outside reads asks of the pointer it
+/// stores: whether it starts an object, as [`leaving`] answers for one byte,
+/// so that where it starts is asked and how wide it is is not. A pointer off
+/// its start, or one this check cannot say starts one, is `Unknown`; one
+/// read out of memory is believed as its type, as `fits` believes it. See
+/// ADR-0065.
+fn at_its_start(
+    analysis: &Allocations<'_>,
+    function: &Function,
+    value: &Rvalue,
+    known: &Known,
+) -> Option<(Fit, Option<LocalId>)> {
+    leaving(analysis, function, value, 1, known).map(|(fit, local)| match fit {
+        // One byte outside is no object at all, which is a width and
+        // not a start; asked by the load and the door instead.
+        Fit::Outside { .. } => (Fit::Inside, local),
+        Fit::Inside | Fit::Unknown => (fit, local),
+    })
 }
 
 /// Report a pointer this call is handed where this check cannot show it

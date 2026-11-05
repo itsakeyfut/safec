@@ -4467,6 +4467,13 @@ cases! {
         a_pointer_moved_past_its_allocation_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_moved_off_its_start_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_moved_off_its_start_stored_into_memory: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `char`'s address stored as an `int *` into this function's own
+        // block, which nothing reads back and nothing outside reads: its
+        // width is asked by a load and by a door, and neither happens, as
+        // `s = v;` into a local is asked nothing (#791). Mutation: ask the
+        // store door at every store through a pointer; this gains `SC0413`.
+        // See ADR-0065.
+        a_narrow_pointer_stored_into_a_block_nothing_outside_reads_is_not_asked_where_it_is_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A write by name into a local whose address code this check cannot
         // read kept is the same store door, since a read through the kept
         // address believes it (#690). Mutation: drop the
