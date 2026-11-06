@@ -1,0 +1,55 @@
+warning[SC0414]: this stores a pointer that may point to a freed allocation where code outside this function may read it
+    ╭─[ a_freed_source_copied_through_a_local_s_address_is_still_proved_freed.c:12:5 ]
+    │
+  4 │     int *x = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+  9 │     free(x);
+    │     ───┬───  
+    │        ╰───── freed here
+    │ 
+ 12 │     memcpy(*t, b, 8);
+    │     ────────┬───────  
+    │             ╰───────── stored here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0407]: this passes a pointer that may point to a freed allocation
+    ╭─[ a_freed_source_copied_through_a_local_s_address_is_still_proved_freed.c:12:5 ]
+    │
+ 12 │     memcpy(*t, b, 8);
+    │     ────────┬───────  
+    │             ╰───────── passed here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0407]: this passes `b`, which points to an allocation that was freed
+    ╭─[ a_freed_source_copied_through_a_local_s_address_is_still_proved_freed.c:12:5 ]
+    │
+  6 │     int **b = malloc(8);
+    │               ────┬────  
+    │                   ╰────── allocated here
+    │ 
+ 10 │     free(b);
+    │     ───┬───  
+    │        ╰───── freed here
+    │ 
+ 12 │     memcpy(*t, b, 8);
+    │     ────────┬───────  
+    │             ╰───────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = help: pass a pointer that is still allocated, or do not free this one before passing it
+warning[SC0401]: this frees `p`, which may have been freed already
+    ╭─[ a_freed_source_copied_through_a_local_s_address_is_still_proved_freed.c:13:5 ]
+    │
+ 13 │     free(p);
+    │     ───┬───  
+    │        ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
