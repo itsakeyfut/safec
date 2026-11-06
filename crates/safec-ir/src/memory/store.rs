@@ -44,6 +44,11 @@ pub(super) struct Store<'a> {
     /// read `p`'s value directly and the first stayed, though the transfer
     /// took it as unnamed and exposed what it carried (#802). Settled on the
     /// side that doubts. See ADR-0071 rule 2.
+    ///
+    /// **Unplaced as well as unnamed**, since the transfer exposes on either.
+    /// The unplaced half decides no case today, measured: in every program
+    /// the corpus and the route matrix hold, a write that lands nowhere named
+    /// is also unnamed or reaches what `Known::leaves` answers.
     pub(super) leaves: bool,
     /// Where it is, which a finding about it points at.
     pub(super) at: Span,

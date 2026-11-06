@@ -1974,9 +1974,11 @@ impl Known {
     }
 
     /// Whether a store to `place`, a place of dereferences, may land where code
-    /// outside this function may read it. One answer for the store door,
-    /// `report::stored_away`, and for what [`Self::stored_out`] records, so the
-    /// two orders of a store and a free agree (#650):
+    /// outside this function may read it, by what the value reaches. Half of
+    /// `store::Store::leaves`, which adds where the write's landing is unnamed
+    /// or unplaced (#802), and that one answer is what the store door,
+    /// `report::stored_away`, and what [`Self::stored_out`] records both read,
+    /// so the two orders of a store and a free agree (#650):
     ///
     /// - anywhere at all, where the pointer or a level on the way down may hold
     ///   an address this function never recorded, [`Known::through_unnamed`]:
