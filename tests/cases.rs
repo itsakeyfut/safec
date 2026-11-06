@@ -2673,11 +2673,13 @@ cases! {
         // third build, and the read after the call is asked of nothing.
         code_after_abort_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_function_defined_here_named_abort_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // And a definition of a name the memory check reads by name, `memcpy`
-        // here, is refused the same way (#800): a unit that only declares it
-        // reads the call by name as the library copy, and a body in another
-        // file of the run, which is what runs, freed what it was handed in
-        // silence. See ADR-0071. Mutation: answer `false` in
+        // And where the memory check runs, a definition of a name it reads by
+        // name, `memcpy` here, is refused the same way, at the definition
+        // (#800). This case holds the refusal in one file; why it is made,
+        // a body in another file of the run read by name where it is only
+        // declared, is held by the driver's
+        // `a_library_name_defined_in_another_file_of_the_run_is_refused`. See
+        // ADR-0071 rule 1. Mutation: answer `false` in
         // `library::reads_by_name`; this is two `SC0401` doubts instead.
         a_function_defined_here_named_memcpy_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_function_defined_below_its_call_named_abort_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

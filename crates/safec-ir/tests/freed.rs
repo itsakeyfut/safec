@@ -3070,31 +3070,59 @@ fn a_free_of_a_byte_read_out_of_memory_proves_nothing() {
 
 /// A function this unit defines under a library name is read as any call
 /// this check cannot read, so what it is handed may have been freed by it,
-/// and a free after it is a doubt. Read by name, as a library copy, it would
-/// free nothing and the free after it would be proved clean.
+/// and a free after it is a doubt. Read by name it would be the library's:
+/// a copy, or a function returning its first argument, frees nothing and the
+/// free after it is clean, and a `free` frees and the free after it is a
+/// proved double free.
 ///
-/// **Built as IR because no C reaches it**: the frontend refuses a definition
-/// of every name the memory check reads by name (`SC0319`), so this is what
-/// holds the check's own answer, for IR no such refusal reached. See ADR-0071.
+/// **One row of each kind this shape can tell apart**, a copy (`memcpy`), one
+/// that returns its first argument (`strcpy`), and one that frees (`free`),
+/// since the answer is one decision for every name and a name excused from
+/// it would be read by its row again. Not a name the table already reads as
+/// a call it cannot read, `memcmp` among them, which answers alike either
+/// way, nor an allocator, which makes what this shape would hand it.
+///
+/// **Built as IR because no C reaches it**: where the memory check runs, the
+/// frontend refuses a definition of every name it reads by name (`SC0319`),
+/// so this is what holds the check's own answer, for IR no such refusal
+/// reached. See ADR-0071 rule 1.
 ///
 /// Mutation: let `Allocations::library` answer by name whether or not the
-/// function is defined. Nothing is reported and this fails.
+/// function is defined; this fails for every name. Mutation: excuse `strcpy`
+/// or `free` from it; this fails for that name.
 #[test]
 fn a_function_defined_here_under_a_library_name_is_read_as_any_call() {
+    for name in ["memcpy", "strcpy", "free"] {
+        let (found, the_free) = defined_under(name);
+        let at_the_free: Vec<_> = found
+            .iter()
+            .filter(|finding| finding.at == the_free)
+            .collect();
+        assert_eq!(at_the_free.len(), 1, "{name}: {found:?}");
+        assert_eq!(at_the_free[0].kind, Kind::DoubleFree, "{name}");
+        assert_eq!(at_the_free[0].conclusion, Conclusion::Unknown, "{name}");
+    }
+}
+
+/// What the check concludes of `p = malloc(); name(p, p); free(p);`, with
+/// `name` a function defined in the unit, and where the last free is.
+fn defined_under(name: &str) -> (Vec<memory::Finding>, Span) {
+    let text = format!("{name} free malloc f a b c\n");
     let mut sources = SourceMap::new();
-    let file = sources.add_virtual(
-        "d.c",
-        "memcpy free malloc f a b c
-",
-    );
-    let memcpy_name = Span::new(file, 0, 6);
-    let free_name = Span::new(file, 7, 11);
-    let malloc_name = Span::new(file, 12, 18);
-    let function_name = Span::new(file, 19, 20);
+    let file = sources.add_virtual("d.c", &text);
+    let word = |at: &str, from: usize| {
+        let start = text[from..].find(at).expect("the word is in the text") + from;
+        Span::new(file, start as u32, (start + at.len()) as u32)
+    };
+    let defined_name = word(name, 0);
+    let after = name.len();
+    let free_name = word("free", after);
+    let malloc_name = word("malloc", after);
+    let function_name = word("f", free_name.end() as usize);
     let at = [
-        Span::new(file, 21, 22),
-        Span::new(file, 23, 24),
-        Span::new(file, 25, 26),
+        word("a", function_name.end() as usize),
+        word("b", function_name.end() as usize),
+        word("c", function_name.end() as usize),
     ];
 
     let mut unit = TranslationUnit::new(
@@ -3107,8 +3135,8 @@ fn a_function_defined_here_under_a_library_name_is_read_as_any_call() {
         free: unit.push_function(Function::declaration(free_name, void, [ptr])),
         malloc: unit.push_function(Function::declaration(malloc_name, ptr, [])),
         helper: {
-            // `memcpy`, with a body: the one this test is about.
-            let mut defined = Function::new(memcpy_name, void, vec![ptr, ptr]);
+            // The function with the library's name and a body of its own.
+            let mut defined = Function::new(defined_name, void, vec![ptr, ptr]);
             let only = defined.reserve_block();
             defined.fill_block(only, returns());
             unit.push_function(defined)
@@ -3118,12 +3146,12 @@ fn a_function_defined_here_under_a_library_name_is_read_as_any_call() {
     let mut function = Function::new(function_name, int, vec![]);
     let held = function.push_local(ptr);
     let allocate = function.reserve_block();
-    let copied = function.reserve_block();
+    let called = function.reserve_block();
     let freed = function.reserve_block();
     let exit = function.reserve_block();
-    function.fill_block(allocate, malloc(&callees, held, at[0], copied));
+    function.fill_block(allocate, malloc(&callees, held, at[0], called));
     function.fill_block(
-        copied,
+        called,
         Block {
             elements: vec![],
             terminator: Terminator::Call {
@@ -3144,10 +3172,5 @@ fn a_function_defined_here_under_a_library_name_is_read_as_any_call() {
     );
     function.fill_block(exit, after_the_statement(at[2], returns()));
 
-    let found = concluded(unit, &sources, function);
-
-    let at_the_free: Vec<_> = found.iter().filter(|finding| finding.at == at[2]).collect();
-    assert_eq!(at_the_free.len(), 1, "{found:?}");
-    assert_eq!(at_the_free[0].kind, Kind::DoubleFree);
-    assert_eq!(at_the_free[0].conclusion, Conclusion::Unknown);
+    (concluded(unit, &sources, function), at[2])
 }
