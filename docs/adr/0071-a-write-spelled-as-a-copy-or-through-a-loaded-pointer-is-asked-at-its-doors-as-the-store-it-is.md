@@ -126,6 +126,12 @@ beliefs (#801) list the pairs that still differ until each lands.
    and `a_freed_source_copied_out_through_a_parameter_is_still_proved_freed`,
    which then build under `--allow-unknown`: the wider leaving of this rule
    reached that skip.
+3. `report::reported` pushing `FreedAfterStore` only where `verdict` found no
+   double free fails
+   `a_live_pointer_copied_out_through_a_parameter_and_freed_after_is_doubted`,
+   the program #684 found, and fourteen more cases where an escape or a call
+   that may free doubts the free, and in `tests/routes.rs` the seventeen
+   `stored_out` rows that were `ACCEPTED` for it until this landed.
 
 ### Consequences
 
