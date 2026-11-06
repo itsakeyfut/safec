@@ -60,11 +60,13 @@ refining after the call.
   that may be null are `SC0403` as `*d` is, and #815's narrowing no longer
   silences the null destination it stood in for.
 * Bad, because every pointer handed to such a function that this check has not
-  shown is not null is a doubt now, a parameter above all: measured on a
-  prototype, sixty-five corpus cases gain an `SC0403` doubt and nine of them go
-  from exit 0 to exit 1. None gains a proof or loses a report, and none changes
-  its exit under `--allow-unknown`. This is the doubt `*out = x;` already raises
-  about the same parameter.
+  shown is not null is a doubt now, a parameter above all: sixty-five corpus
+  cases gain an `SC0403` doubt and seven of them go from exit 0 to exit 1, as
+  the corpus runs them, and eight route-matrix rows gain it on the hazard and
+  the control alike. None loses a report, and none of them changes its exit
+  under `--allow-unknown`. This is the doubt `*out = x;` already raises about
+  the same parameter. One case more gains a proof, `memcpy(0, b, 8)`, and its
+  exit under `--allow-unknown` goes to 1, which a null destination is.
 * What would reverse this: a function that reads through an argument and
   accepts a null one, which C17 says of some outside these rows (`free`,
   `realloc`, `fflush`); such a row would need a field saying so before it could

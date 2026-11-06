@@ -31,3 +31,13 @@ error[SC0401]: this frees `a`, which may have been freed already
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0403]: this may dereference `a` while it is null
+    ╭─[ an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report.c:11:13 ]
+    │
+ 11 │     return (memset(a, 0, 4) != 0) + (free(a), 0);
+    │             ───────┬───────  
+    │                    ╰───────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

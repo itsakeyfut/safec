@@ -18,3 +18,13 @@ error[SC0413]: this lets a pointer leave that may not point at the start of an o
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: let a pointer leave as a `void *` only at the start of an object
+error[SC0403]: this may dereference `d` while it is null
+   ╭─[ a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:7:5 ]
+   │
+ 7 │     memcpy(d, s, 4);
+   │     ───────┬───────  
+   │            ╰───────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

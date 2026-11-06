@@ -387,6 +387,46 @@ impl Nullability<'_> {
     /// diagnostic that disappears. Mutation: drop the call there.
     /// `a_free_of_an_int_that_holds_zero_is_not_exempt` fails, and nothing else
     /// in the suite moves.
+    /// Which arguments a call's callee reads or writes through, by its row
+    /// of [`crate::library::LIBRARY`], where the callee is not defined in
+    /// this unit: a body here is what runs, whatever it is called (ADR-0071
+    /// rule 1). Empty for every other terminator. See ADR-0072.
+    fn reached_indices(&self, terminator: &Terminator) -> Vec<usize> {
+        let Terminator::Call { callee, .. } = terminator else {
+            return Vec::new();
+        };
+        let callee = self.unit.function(*callee);
+        if callee.is_defined() {
+            return Vec::new();
+        }
+        let name = self.sources.snippet(callee.name);
+        crate::library::LIBRARY
+            .iter()
+            .find(|row| row.name == name)
+            .map(|row| row.reaches.iter().map(|&(index, _)| index).collect())
+            .unwrap_or_default()
+    }
+
+    /// The places a library call reads or writes through, `*argument` for
+    /// each argument [`Self::reached_indices`] names that is a place: what
+    /// [`report`] asks and what [`met`] refines.
+    fn reached_by_library(&self, terminator: &Terminator) -> Vec<Place> {
+        let Terminator::Call { arguments, .. } = terminator else {
+            return Vec::new();
+        };
+        self.reached_indices(terminator)
+            .into_iter()
+            .filter_map(|index| match arguments.get(index) {
+                Some(Operand::Copy(place)) => {
+                    let mut through = place.clone();
+                    through.projection.push(Projection::Deref);
+                    Some(through)
+                }
+                Some(Operand::Constant(_)) | None => None,
+            })
+            .collect()
+    }
+
     fn is_pointer(&self, function: &Function, local: LocalId) -> bool {
         matches!(self.unit.ty(function.local(local)), Ty::Pointer(_))
     }
@@ -1024,6 +1064,13 @@ impl Analysis for Nullability<'_> {
         // where the call is reached and the destination is written when it
         // returns.
         met(dereferenced_in_terminator(terminator), value);
+        // **And what a library function read or wrote through**, as a
+        // dereference that did not trap: a null one made the call undefined
+        // and was asked at it. See ADR-0072.
+        if let Terminator::Call { origin, .. } = terminator {
+            let reached = self.reached_by_library(terminator);
+            met(Some((origin.span(), reached.iter().collect())), value);
+        }
 
         match terminator {
             Terminator::Call {
@@ -1349,6 +1396,54 @@ fn report_arguments(
     }
 }
 
+/// One finding for each argument a library function reads or writes through
+/// that may be null, asked as the dereference of it, and one proof for each
+/// such argument that is the null pointer constant itself.
+///
+/// **Through [`report`]**, so an argument is asked as `*argument` is: its own
+/// row where it is a local, and a pointer read out of memory where it is one,
+/// `memcpy(*pp, s, 8)` asking `**pp` (#333). A constant has no place to ask
+/// through, so `memcpy(0, s, 8)` is concluded here: C17 6.3.2.3 p3 makes a
+/// zero a null pointer constant. Any other constant reaching a pointer needs
+/// a cast this subset refuses. See ADR-0072.
+fn report_library(
+    analysis: &Nullability<'_>,
+    findings: &mut Vec<(Finding, About)>,
+    terminator: &Terminator,
+    known: &[Nullness],
+    function: FuncId,
+) {
+    let Terminator::Call {
+        arguments, origin, ..
+    } = terminator
+    else {
+        return;
+    };
+    let at = origin.span();
+    let reached = analysis.reached_by_library(terminator);
+    report(
+        analysis,
+        findings,
+        Some((at, reached.iter().collect())),
+        known,
+        function,
+    );
+    for index in analysis.reached_indices(terminator) {
+        if let Some(Operand::Constant(0)) = arguments.get(index) {
+            let finding = Finding {
+                function,
+                conclusion: Conclusion::Unsafe,
+                at,
+                asked: Asked::Dereference {
+                    through_memory: false,
+                },
+                local: None,
+            };
+            findings.push((finding, About::Question));
+        }
+    }
+}
+
 /// One finding for a `return` of a function that promised the pointer it
 /// returns is not null, unless the pointer is established not null there.
 ///
@@ -1507,6 +1602,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 func,
             );
             report_arguments(&analysis, &mut findings, &block.terminator, &known.of, func);
+            report_library(&analysis, &mut findings, &block.terminator, &known.of, func);
             report_return(
                 &analysis,
                 &mut findings,

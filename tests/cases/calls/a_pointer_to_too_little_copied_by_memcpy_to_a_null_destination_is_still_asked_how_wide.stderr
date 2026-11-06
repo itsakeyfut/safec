@@ -8,3 +8,12 @@ error[SC0413]: this lets a pointer to 1 byte leave where 4 bytes are believed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0403]: this dereferences a null pointer
+   ╭─[ a_pointer_to_too_little_copied_by_memcpy_to_a_null_destination_is_still_asked_how_wide.c:6:5 ]
+   │
+ 6 │     memcpy(0, b, 8);
+   │     ───────┬───────  
+   │            ╰───────── this is null when it is read through
+───╯
+  = note: this check belongs to safety level 1
+  = help: give this pointer a value before reading through it, or do not read through it here
