@@ -29,16 +29,6 @@ error[SC0403]: this may dereference `t` while it is null
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: test this pointer against null before reading through it
-error[SC0403]: this may dereference `t` while it is null
-    ╭─[ a_copy_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:10:5 ]
-    │
- 10 │     memcpy(*t, y, 8);
-    │     ────────┬───────  
-    │             ╰───────── this check cannot say this is not null
-────╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: read each pointer this goes through into a local, and test that local against null before reading through it
 error[SC0403]: this may dereference `y` while it is null
     ╭─[ a_copy_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:10:5 ]
     │

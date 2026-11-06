@@ -3025,6 +3025,10 @@ cases! {
         // dereference (ADR-0025): two doubts, at the call. Mutation: refine
         // nothing after it; the two reads after it are doubted again.
         a_pointer_handed_to_a_library_copy_is_not_doubted_again_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An argument that is a load is asked once with its load, as `**pp`
+        // is one finding. Mutation: key what the library asks by `**pp`; `pp`
+        // is said twice at the call.
+        a_library_copy_through_a_pointer_read_out_of_memory_is_said_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer tested first is not asked.
         a_library_copy_through_a_pointer_tested_first_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // One element that dereferences two pointers, one proved null and one

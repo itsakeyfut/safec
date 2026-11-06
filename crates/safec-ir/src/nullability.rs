@@ -387,6 +387,10 @@ impl Nullability<'_> {
     /// diagnostic that disappears. Mutation: drop the call there.
     /// `a_free_of_an_int_that_holds_zero_is_not_exempt` fails, and nothing else
     /// in the suite moves.
+    fn is_pointer(&self, function: &Function, local: LocalId) -> bool {
+        matches!(self.unit.ty(function.local(local)), Ty::Pointer(_))
+    }
+
     /// Which arguments a call's callee reads or writes through, by its row
     /// of [`crate::library::LIBRARY`], where the callee is not defined in
     /// this unit: a body here is what runs, whatever it is called (ADR-0071
@@ -425,10 +429,6 @@ impl Nullability<'_> {
                 Some(Operand::Constant(_)) | None => None,
             })
             .collect()
-    }
-
-    fn is_pointer(&self, function: &Function, local: LocalId) -> bool {
-        matches!(self.unit.ty(function.local(local)), Ty::Pointer(_))
     }
 }
 
@@ -1404,8 +1404,9 @@ fn report_arguments(
 /// row where it is a local, and a pointer read out of memory where it is one,
 /// `memcpy(*pp, s, 8)` asking `**pp` (#333). A constant has no place to ask
 /// through, so `memcpy(0, s, 8)` is concluded here: C17 6.3.2.3 p3 makes a
-/// zero a null pointer constant. Any other constant reaching a pointer needs
-/// a cast this subset refuses. See ADR-0072.
+/// zero a null pointer constant. Any other constant is refused before it
+/// reaches a pointer: through a cast as `SC0207`, and as itself as `SC0302`.
+/// See ADR-0072.
 fn report_library(
     analysis: &Nullability<'_>,
     findings: &mut Vec<(Finding, About)>,
@@ -1421,6 +1422,7 @@ fn report_library(
     };
     let at = origin.span();
     let reached = analysis.reached_by_library(terminator);
+    let before = findings.len();
     report(
         analysis,
         findings,
@@ -1428,6 +1430,20 @@ fn report_library(
         known,
         function,
     );
+    // **About the argument's own place where it is a load**, so that
+    // `memcpy(*pp, s, 4)` is one thing to say: the argument's load already
+    // asks `pp` at this caret, about `*pp`, and asking `**pp` here asks `pp`
+    // again beside what it loaded. Keyed by `*pp`, the two fold and the worse
+    // survives, as `**pp = x;` is one finding. Found by review.
+    for (_, about) in &mut findings[before..] {
+        if let About::Place(place) = about {
+            let mut argument = place.clone();
+            argument.projection.pop();
+            if !argument.projection.is_empty() {
+                *place = argument;
+            }
+        }
+    }
     for index in analysis.reached_indices(terminator) {
         if let Some(Operand::Constant(0)) = arguments.get(index) {
             let finding = Finding {
