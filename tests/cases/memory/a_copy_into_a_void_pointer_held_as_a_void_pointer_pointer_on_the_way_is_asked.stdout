@@ -1,0 +1,76 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:1:46 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:1:67 "realloc" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "p"
+  Local "_2" "int" parameter "n"
+Function a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:1:97 "use" declared
+  Local "_0" "void" return
+Function a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "v"
+  Local "_2" "int" "i"
+  Local "_3" "int"
+  Local "_4" "void **" "q"
+  Local "_5" "void *" "d"
+  Local "_6" "void *" "s"
+  Local "_7" "int *"
+  Local "_8" "void *"
+  Block "bb0" entry
+    Operation a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:23 written
+      Destination "_2"
+      Use
+        Constant 1
+    Sequenced a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:27 generated
+    Operation a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:34 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:34 written "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:34 generated
+    Return
+  Block "bb2"
+    Sequenced a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:34 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:53 written
+      Destination "_4"
+      Use
+        Copy "_1"
+    Sequenced a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:57 generated
+    Operation a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:66 written
+      Destination "_5"
+      Use
+        Copy "_4"
+    Sequenced a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:70 generated
+    Operation a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:83 written
+      Destination "_7"
+      Address
+        Place "_2"
+    Operation a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:79 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:83 generated
+    ArgumentsEvaluated a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:87 generated
+    Call a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:87 written "memcpy" "bb4"
+      Destination "_8"
+      Copy "_5"
+      Copy "_6"
+      Constant 4
+  Block "bb4"
+    Sequenced a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:87 generated
+    ArgumentsEvaluated a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:104 generated
+    Call a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:104 written "use" "bb5"
+  Block "bb5"
+    Sequenced a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked.c:2:104 generated
+    Return

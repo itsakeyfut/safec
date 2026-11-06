@@ -405,6 +405,25 @@ cases! {
         // so it is not believed to hold pointers. Mutation: the copy's read
         // says it does; this is `SC0413`.
         a_void_pointer_a_library_copy_wrote_is_not_believed_to_point_at_pointers: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An allocator's result arrives as no type, and says it holds
+        // pointers once it is held as a `void **` (#830). See ADR-0073 rule
+        // 4. Mutation: an assignment adds nothing of the local it lands in;
+        // this and the next four go silent.
+        a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_an_allocator_returned_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Held as an `int **`, asked whether it starts an object, since the
+        // width an allocator's result believes is unchanged.
+        a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_into_a_void_pointer_made_from_what_realloc_returned_as_a_void_pointer_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Not only an allocator's result: a `void *` parameter held as a
+        // `void **` on the way.
+        a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read out of memory as a `void *` and held as a `void **`, which a
+        // door inside the copy arm alone would miss. Mutation: add it in
+        // the copy arm only; this goes silent.
+        a_copy_into_a_void_pointer_read_out_of_memory_and_held_as_a_void_pointer_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block nothing types, held only as a `void *`. Mutation: add it
+        // for every pointer type; this is `SC0413`.
+        a_copy_into_a_block_nothing_types_is_not_asked_whether_it_holds_pointers: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Two locals of different widths name the narrower, a `void *`'s
         // none. Mutation: name the wider; it says "as wide as its type".
         a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

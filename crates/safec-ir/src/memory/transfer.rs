@@ -2604,6 +2604,15 @@ impl Analysis for Allocations<'_> {
                 // through the copy, and a mutation of the arithmetic arm broke
                 // nothing at all. One call cannot be put in the wrong place.
                 value.unproved(LocalIdx::of(destination));
+                // **And as the local it is held in**, which adds what that
+                // local's type says of the memory it points at: an
+                // allocator's result arrives as no type, in a `void *`
+                // temporary, and is held as a `void **` or an `int **` by the
+                // copy out of it (#830). A union, as everywhere else, and
+                // after the match for the reason above. See ADR-0073 rule 4.
+                if self.first_level_holds_a_pointer(function.local(destination)) {
+                    value.points_to[destination].arrived_holds_pointer = true;
+                }
                 // What an escaped local is given, every call reaches through
                 // `Known::reach_of`, as an exposure does. Here and not in
                 // `Known::unproved`, which `settle` also runs at a join, where

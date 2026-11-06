@@ -1,0 +1,10 @@
+error[SC0413]: this lets a pointer leave that may not point at the start of an object
+   ╭─[ a_copy_into_a_void_pointer_made_from_what_realloc_returned_as_a_void_pointer_pointer_is_asked.c:2:105 ]
+   │
+ 2 │ void f(void **out) { int i = 1; void **q = realloc(out, 16); if (!q) return; void *d = q; void *s = &i; memcpy(d, s, 4); use(); }
+   │                                                                                                         ───────┬───────  
+   │                                                                                                                ╰───────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave as a `void *` only at the start of an object
