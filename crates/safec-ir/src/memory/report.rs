@@ -2344,18 +2344,25 @@ pub(super) fn handed(
     // freed pointer passed, which says more than what `tab` holds behind it.
     let mut silent: Vec<&Place> = Vec::new();
     for place in handed_places(analysis, function, *callee, arguments) {
-        // Not a copy's source [`copied_away`] has said, which is the one
-        // report about it (#652).
-        if copied == Some(place) {
-            continue;
-        }
+        // **A copy's source [`copied_away`] has said is still asked itself,
+        // and not what it points at**, which is what that said: the one
+        // report about it (#652). Skipped whole, `memcpy(*t, b, 8)` with `b`
+        // freed lost the proof that `b` was freed, and `--allow-unknown`
+        // built it, once #802 made that copy leave. A source that is a
+        // local's address, `&x`, reaches the local, which nothing frees, so
+        // asking it says nothing twice. **And kept out of `silent`**, the
+        // pointers whose targets `freed_behind` asks below, since what this
+        // source points at is what `copied_away` already said.
+        let said_behind = copied == Some(place);
         let Some(verdict) = verdict(
             analysis.sources,
             Kind::ArgumentAfterFree,
             known.handed_reached(place),
             known,
         ) else {
-            silent.push(place);
+            if !said_behind {
+                silent.push(place);
+            }
             continue;
         };
         say(

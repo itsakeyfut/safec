@@ -1,0 +1,34 @@
+warning[SC0414]: this stores a pointer that may point to a freed allocation where code outside this function may read it
+    ╭─[ a_freed_source_copied_out_through_a_parameter_is_still_proved_freed.c:10:5 ]
+    │
+  4 │     int *x = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+  8 │     free(x);
+    │     ───┬───  
+    │        ╰───── freed here
+    │ 
+ 10 │     memcpy(pp, b, 8);
+    │     ────────┬───────  
+    │             ╰───────── stored here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0407]: this passes `b`, which points to an allocation that was freed
+    ╭─[ a_freed_source_copied_out_through_a_parameter_is_still_proved_freed.c:10:5 ]
+    │
+  5 │     int **b = malloc(8);
+    │               ────┬────  
+    │                   ╰────── allocated here
+    │ 
+  9 │     free(b);
+    │     ───┬───  
+    │        ╰───── freed here
+ 10 │     memcpy(pp, b, 8);
+    │     ────────┬───────  
+    │             ╰───────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = help: pass a pointer that is still allocated, or do not free this one before passing it

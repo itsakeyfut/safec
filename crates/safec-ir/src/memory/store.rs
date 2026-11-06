@@ -32,9 +32,23 @@ pub(super) struct Store<'a> {
     /// Whether code outside this function may read what it writes: for a
     /// direct write, whether such code names the local; for a write through
     /// at least one dereference and for a copy, [`Known::leaves`] of
-    /// [`Self::into`]; and `false` for a projection with no dereference,
-    /// which lands in this function's own object and which `Known::leaves`
-    /// cannot be asked of.
+    /// [`Self::into`], or its [`Landing`] unnamed or unplaced, which is where
+    /// the transfer exposes what it carries; and `false` for a projection
+    /// with no dereference, which lands in this function's own object and
+    /// which `Known::leaves` cannot be asked of.
+    ///
+    /// **The landing too, so that the door and the transfer cannot answer
+    /// one write two ways.** `**t = x;` and `int **q = *t; *q = x;` with
+    /// `t = &p` write one place: the load marks `q` as possibly holding an
+    /// address never recorded, so the second left, while `Known::leaves`
+    /// read `p`'s value directly and the first stayed, though the transfer
+    /// took it as unnamed and exposed what it carried (#802). Settled on the
+    /// side that doubts. See ADR-0071 rule 2.
+    ///
+    /// **Unplaced as well as unnamed**, since the transfer exposes on either.
+    /// The unplaced half decides no case today, measured: in every program
+    /// the corpus and the route matrix hold, a write that lands nowhere named
+    /// is also unnamed or reaches what `Known::leaves` answers.
     pub(super) leaves: bool,
     /// Where it is, which a finding about it points at.
     pub(super) at: Span,
@@ -85,10 +99,13 @@ impl Allocations<'_> {
             (StoreKind::Direct, leaves)
         } else {
             let derefs = derefs(&into);
-            (
-                StoreKind::Through { derefs },
-                derefs > 0 && known.leaves(&into),
-            )
+            let kind = StoreKind::Through { derefs };
+            let leaves = derefs > 0 && {
+                let one_step = into.projection.as_slice() == [Projection::Deref];
+                let landing = self.landing(known, into.local, derefs, one_step, kind);
+                known.leaves(&into) || landing.unnamed(known) || landing.unplaced()
+            };
+            (kind, leaves)
         };
         Some(Store {
             into,
@@ -138,7 +155,17 @@ impl Allocations<'_> {
         };
         let mut into = to.clone();
         into.projection.push(Projection::Deref);
-        let leaves = known.leaves(&into);
+        // Where it lands as the transfer finds it: a store one dereference
+        // further than its destination, so one exact dereference down where
+        // the destination is a plain local, as `store_in`'s `[Deref]` is.
+        let landing = self.landing(
+            known,
+            to.local,
+            derefs(to) + 1,
+            to.projection.is_empty(),
+            StoreKind::Copy,
+        );
+        let leaves = known.leaves(&into) || landing.unnamed(known) || landing.unplaced();
         Some(Store {
             into,
             from: Written::Bytes(from),
@@ -274,15 +301,14 @@ impl Landing {
     /// pointer's own value, and a store through one dereference writes its
     /// targets after.
     ///
-    /// **The depth at which a write is unnamed differs between the doors**,
-    /// and is kept as it was: a store deeper than one dereference, a copy
-    /// deeper than two, which is a copy whose destination itself has more
-    /// than one dereference. Found while designing #737, and not shown to
-    /// decide a case; this match is where a change to either answers.
+    /// **A store and a copy are unnamed at the same depth**, more than one
+    /// dereference below the pointer they go through: the copy once took two,
+    /// so that `memcpy(*t, ...)` landed named where `**t = ...` did not, and
+    /// the answer that doubts is the one both take (#802, ADR-0071 rule 2).
+    /// A `match`, so that a kind added answers here.
     pub(super) fn unnamed(&self, value: &Known) -> bool {
         let deep_enough = match self.kind {
-            StoreKind::Direct | StoreKind::Through { .. } => self.deep > 1,
-            StoreKind::Copy => self.deep > 2,
+            StoreKind::Direct | StoreKind::Through { .. } | StoreKind::Copy => self.deep > 1,
         };
         let held = &value.points_to[self.pointer];
         held.beyond().unrecorded_address() || deep_enough
@@ -290,16 +316,21 @@ impl Landing {
 
     /// Whether it lands nowhere this check names: no allocation and no local.
     ///
-    /// **Which locals count differs between the doors**, and is kept as it
-    /// was: a store counts only the pointer's own edges, at one exact
-    /// dereference, and a copy counts the locals the level above may be as
-    /// well. Found while implementing #737, and not shown to decide a case.
+    /// **A store and a copy count the same locals**, the pointer's own edges
+    /// at one exact dereference: the copy once counted the locals the level
+    /// above may be as well, and so took as placed a write the store took as
+    /// unplaced; the answer that doubts is the one both take (#802, ADR-0071
+    /// rule 2). A `match`, so that a kind added answers here.
+    ///
+    /// **Measured to decide no case**: a copy that is not one exact
+    /// dereference down is deeper than one too in every case the corpus and
+    /// the route matrix hold, and so already [`Self::unnamed`], and taking the
+    /// copy's old count back changes no answer.
     pub(super) fn unplaced(&self) -> bool {
         let no_local = match self.kind {
-            StoreKind::Direct | StoreKind::Through { .. } => {
+            StoreKind::Direct | StoreKind::Through { .. } | StoreKind::Copy => {
                 !self.one_step || self.targets.is_empty()
             }
-            StoreKind::Copy => self.targets.is_empty(),
         };
         self.containers.is_empty() && no_local
     }

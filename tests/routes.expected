@@ -76,8 +76,8 @@ fresh_store_d1_one hazard=1:SC0411 control=0:- allowed=1:SC0411
 fresh_store_d2_both hazard=1:SC0403,SC0411 control=1:SC0403 allowed=1:SC0403,SC0411
 fresh_store_d2_one hazard=1:SC0403,SC0411 control=1:SC0403 allowed=1:SC0403,SC0411
 fresh_stored_through_d0_both hazard=1:SC0403,SC0411,SC0412 control=1:SC0403,SC0412 allowed=0:SC0403,SC0411,SC0412
-left_behind_by_address_d1_both hazard=1:SC0402,SC0403,SC0407 control=1:SC0402,SC0403,SC0407 allowed=0:SC0402,SC0403,SC0407
-left_behind_by_address_d1_one hazard=1:SC0402,SC0403,SC0407 control=1:SC0402,SC0403,SC0407 allowed=0:SC0402,SC0403,SC0407
+left_behind_by_address_d1_both hazard=1:SC0402,SC0403,SC0407,SC0414 control=1:SC0402,SC0403,SC0407 allowed=0:SC0402,SC0403,SC0407,SC0414
+left_behind_by_address_d1_one hazard=1:SC0402,SC0403,SC0407,SC0414 control=1:SC0402,SC0403,SC0407 allowed=0:SC0402,SC0403,SC0407,SC0414
 left_behind_by_address_loaded_d1_both hazard=1:SC0402,SC0403,SC0407,SC0414 control=1:SC0402,SC0403,SC0407 allowed=0:SC0402,SC0403,SC0407,SC0414
 left_behind_by_address_loaded_d1_one hazard=1:SC0402,SC0403,SC0407,SC0414 control=1:SC0402,SC0403,SC0407 allowed=0:SC0402,SC0403,SC0407,SC0414
 left_behind_memcpy_block_d0_both hazard=1:SC0407 control=0:- allowed=0:SC0407
@@ -216,8 +216,8 @@ stale_store_d1_both hazard=1:SC0401,SC0402,SC0412 control=1:SC0412 allowed=0:SC0
 stale_store_d1_one hazard=1:SC0401,SC0402,SC0412 control=1:SC0412 allowed=0:SC0401,SC0402,SC0412
 stale_store_d2_both hazard=1:SC0401,SC0402,SC0403,SC0412,SC0414 control=1:SC0403,SC0412,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0412,SC0414
 stale_store_d2_one hazard=1:SC0401,SC0402,SC0403,SC0412,SC0414 control=1:SC0403,SC0412,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0412,SC0414
-stored_freed_by_address_d1_both hazard=1:SC0402,SC0403,SC0414 control=1:SC0402,SC0403 allowed=1:SC0402,SC0403,SC0414
-stored_freed_by_address_d1_one hazard=1:SC0402,SC0403,SC0414 control=1:SC0402,SC0403 allowed=1:SC0402,SC0403,SC0414
+stored_freed_by_address_d1_both hazard=1:SC0402,SC0403,SC0414 control=1:SC0402,SC0403,SC0414 allowed=1:SC0402,SC0403,SC0414
+stored_freed_by_address_d1_one hazard=1:SC0402,SC0403,SC0414 control=1:SC0402,SC0403,SC0414 allowed=1:SC0402,SC0403,SC0414
 stored_freed_by_address_loaded_d1_both hazard=1:SC0402,SC0403,SC0414 control=1:SC0402,SC0403,SC0414 allowed=1:SC0402,SC0403,SC0414
 stored_freed_by_address_loaded_d1_one hazard=1:SC0402,SC0403,SC0414 control=1:SC0402,SC0403,SC0414 allowed=1:SC0402,SC0403,SC0414
 stored_freed_memcpy_block_d0_both hazard=1:SC0414 control=1:SC0407 allowed=0:SC0414
@@ -254,8 +254,8 @@ stored_freed_store_d1_both hazard=1:SC0402,SC0414 control=0:- allowed=1:SC0402,S
 stored_freed_store_d1_one hazard=1:SC0402,SC0414 control=0:- allowed=1:SC0402,SC0414
 stored_freed_store_d2_both hazard=1:SC0402,SC0403,SC0412,SC0414 control=1:SC0403,SC0414 allowed=1:SC0402,SC0403,SC0412,SC0414
 stored_freed_store_d2_one hazard=1:SC0402,SC0403,SC0412,SC0414 control=1:SC0403,SC0414 allowed=1:SC0402,SC0403,SC0412,SC0414
-stored_out_by_address_d1_both hazard=1:SC0402,SC0403,SC0414 control=1:SC0402,SC0403 allowed=0:SC0402,SC0403,SC0414
-stored_out_by_address_d1_one hazard=1:SC0402,SC0403,SC0414 control=1:SC0402,SC0403 allowed=0:SC0402,SC0403,SC0414
+stored_out_by_address_d1_both hazard=1:SC0402,SC0403,SC0414 control=1:SC0402,SC0403,SC0414 allowed=0:SC0402,SC0403,SC0414
+stored_out_by_address_d1_one hazard=1:SC0402,SC0403,SC0414 control=1:SC0402,SC0403,SC0414 allowed=0:SC0402,SC0403,SC0414
 stored_out_by_address_loaded_d1_both hazard=1:SC0402,SC0403,SC0414 control=1:SC0402,SC0403,SC0414 allowed=0:SC0402,SC0403,SC0414
 stored_out_by_address_loaded_d1_one hazard=1:SC0402,SC0403,SC0414 control=1:SC0402,SC0403,SC0414 allowed=0:SC0402,SC0403,SC0414
 stored_out_memcpy_block_d0_both hazard=1:SC0414 control=0:- allowed=0:SC0414
