@@ -101,6 +101,19 @@ adds its rule's cases and the mutation that fails each here.
    `a_char_buffer_written_whole_and_read_as_a_pointer_is_not_reported`; and
    `report::unwritten_read` dropping its `holds_a_pointer` filter fails
    `an_integer_local_whose_address_is_taken_read_before_anything_wrote_it_is_not_followed`.
+3. `report::report_returned_unwritten` never doubting fails
+   `a_block_nothing_wrote_returned_as_a_table_of_pointers_is_doubted` and
+   `a_block_a_copy_wrote_half_a_pointer_into_is_doubted_where_it_is_returned`;
+   doubting every block returned, written or not, fails
+   `a_block_written_before_it_is_returned_is_not_doubted`; doubting a block
+   possibly unwritten fails
+   `a_block_written_on_the_path_its_allocation_succeeded_is_not_doubted`;
+   doubting whatever the return type fails
+   `a_block_returned_as_a_table_of_integers_is_not_doubted`; doubting only
+   when every block the pointer may name is unwritten fails
+   `a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted`; and
+   asking the return type's pointee without looking through an array fails
+   `a_block_of_arrays_of_pointers_nothing_wrote_returned_is_doubted`.
 
 ### Consequences
 
