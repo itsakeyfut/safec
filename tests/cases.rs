@@ -392,7 +392,8 @@ cases! {
         // four cases elsewhere that copy into a block twice or into a
         // parameter. Mutation: ask the source's bytes nothing; the same.
         a_copy_of_a_local_array_nothing_wrote_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Out of a block `malloc` made, as out of a local.
+        // Out of a block `malloc` made, as out of a local. Mutation: ask no
+        // allocation; it goes silent.
         a_copy_of_a_block_nothing_wrote_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A destination that says nothing by its type, asked by what it
         // points at, as #746's ask is. Mutation: ask the destination's type
@@ -402,7 +403,8 @@ cases! {
         // element and the length is a constant. Mutation: ask every element;
         // it is doubted for `a[1]`, which it does not copy.
         a_copy_of_the_written_element_of_a_partly_written_array_into_caller_memory_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // And past the element written, where it copies both.
+        // And past the element written, where it copies both. Mutation: ask
+        // the first element alone; it goes silent.
         a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy of written bytes says nothing.
         a_copy_of_a_written_array_into_caller_memory_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -428,6 +430,13 @@ cases! {
         // Which stays silent where that block was written. Mutation: answer
         // `true` for it; it is doubted.
         a_copy_of_a_written_block_spelled_through_a_dereference_into_caller_memory_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Twelve bytes cover the second pointer in part, which is counted.
+        // Mutation: round the length down; it goes silent.
+        a_copy_ending_part_way_through_an_unwritten_element_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A length this check cannot read may cover any element. Mutation:
+        // answer `false` where the covered elements are not known; it goes
+        // silent.
+        a_copy_of_a_length_this_check_cannot_read_out_of_a_partly_written_array_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block that may be unwritten keeps its mark where it is carried:
         // across a join where one side does not name it, through realloc,
         // and through a copy out of it (#724). Mutation: drop `realloc`'s
