@@ -81,6 +81,10 @@ enum Belief {
     /// free as stored out (`FreedAfterStore`). Mutation: the free's door never
     /// pushes `FreedAfterStore`; `stored_out_store_d1_both` fails, among
     /// twenty one of this belief's thirty eight.
+    /// Mutation: a library copy marks nothing it carries stored out (its
+    /// `StoreKind::Copy` arm in the transfer answers `false`);
+    /// `stored_out_memcpy_block_d1_both` fails, among five. The copy out of a
+    /// local's address cannot, since `ACCEPTED` lists its rows (#684).
     StoredOut,
     /// Freed, then put there, which the store's door doubts or proves
     /// (`StoreAfterFree`) only where the slot leaves (ADR-0068 rules 2 and 3).
@@ -1730,7 +1734,9 @@ const LOST_HANDED: &str = "a lost pointer handed through a call this check canno
 const OLD_BLOCK: &str = "the old block a store replaced in memory is still taken to be there after realloc moves it (#656)";
 const REPORTED_ELSEWHERE: &str = "the free and the call a freed pointer is handed to are each reported where they happen (SC0401, SC0407), and not again at its use; agreeing would report the use too";
 const WRITES_WHAT_IT_IS_HANDED: &str = "a call this check cannot read is believed to write what it is handed, which `docs/safety-model.md` states beside the other boundary beliefs; not believing it refused correct programs that rely on the callee writing (#782)";
-// The door questions' reasons (#801).
+// The door questions' reasons (#801). Measured: reporting `FreedAfterStore`
+// beside a double free, as #684 asks, makes every row listed for
+// `DOUBLE_FREE_FIRST` agree, so each fails as fixed until its entry goes.
 const DOUBLE_FREE_FIRST: &str = "a double-free doubt on a free hides the stored-out doubt on the same free, where an escape or a call this check cannot read raised it (#684)";
 const LOADED_ON_THE_WAY: &str = "a pointer loaded on the way down is taken as possibly holding an address never recorded, so the write through it leaves where the same write through the local's address does not (#802)";
 const DEEP_WRITE_LEAVES: &str = "a write more than one dereference below the pointer it goes through is taken as landing where this check cannot place it, and so as leaving, into memory only this function reads too (#802)";
@@ -2923,9 +2929,6 @@ fn unreplaced(row: Row, hazard: bool) -> Vec<String> {
     lines
 }
 
-/// The whole program for one side of a row: the declarations, the belief's
-/// statements, and the read back that every belief shares, through an
-/// `int *` that is tested and written through.
 /// The call that hands the slot's container to code this check cannot read:
 /// the local's address at depth zero, the block below it deeper.
 fn handed_over(depth: Depth) -> &'static str {
@@ -2987,6 +2990,9 @@ fn door(row: Row, hazard: bool) -> Vec<String> {
     lines
 }
 
+/// The whole program for one side of a row: the declarations, the belief's
+/// statements, and the read back every belief but a door question shares,
+/// through an `int *` that is tested and written through.
 fn program(row: Row, hazard: bool) -> String {
     let body = match row.belief {
         Belief::Width => width(row, hazard),
