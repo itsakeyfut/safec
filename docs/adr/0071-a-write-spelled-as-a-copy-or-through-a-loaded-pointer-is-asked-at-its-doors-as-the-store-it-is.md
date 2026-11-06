@@ -81,10 +81,13 @@ the door questions (#801) and these are fixed.
    double-free finding**, `FreedAfterStore` with `DoubleFree` on one caret, as
    `SC0401` and `SC0404` already share one (#684).
 4. **A copy that writes part of a pointer is asked where what its operands
-   point at holds a pointer**, by the declared type of a local they name and
-   the record of an allocation they name, where the operands' own types say
-   nothing, a `void *` or a `char *` made from one; an operand that names
-   nothing this check followed asks nothing more than today (#746).
+   point at holds a pointer**, where the operands' own types say nothing, a
+   `void *` or a `char *` made from one: by the declared type of a local
+   they name, or of its elements where it is an array; by what the operand
+   was believed to point at when it arrived, from the type it arrived as,
+   which a conversion to `void *` keeps, as `void *d = out;` with `out` an
+   `int **` does; and by the record of an allocation they name. An operand
+   that points at none of these asks nothing more than today (#746).
 5. **A copy into memory that leaves, of bytes that may be unwritten, over a
    slot believed to hold a pointer, is doubted at the copy**, by a `Kind` of
    its own reported under `SC0411` with the words of a copy rather than a
@@ -134,11 +137,14 @@ beliefs (#801) list the pairs that still differ until each lands.
    `stored_out` rows that were `ACCEPTED` for it until this landed.
 4. `report::part_of_what_operands_point_at` answering nothing fails
    `a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_local_it_points_at`
-   and `a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block_it_points_at`;
-   asking no block fails the second alone; counting a local of any type
-   fails `a_byte_copy_of_an_int_between_void_pointers_is_not_asked`, which
-   is then `SC0413`; asking only an operand typed `void *` fails
-   `a_copy_of_part_of_a_pointer_through_a_char_pointer_is_asked_by_the_local_it_points_at`.
+   and every other case beside it in `tests/cases.rs` that reports, each
+   built with a destination that answers nothing so that one way of
+   answering decides it. The case each further mutation fails is named
+   beside it there: asking no block, a block naming only a site or only a
+   local, a local of any type, only an operand typed `void *`, an array by
+   its own type, no copy ending part way through its last pointer, the
+   source alone, no arrived belief, the wider of two widths, a block before
+   a local, and an arrived belief of `0` counted as a pointer held.
 
 ### Consequences
 
