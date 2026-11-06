@@ -1977,10 +1977,10 @@ fn a_null_handed_to_a_declared_memcpy_is_proved() {
 /// A library name declared with another shape than its row's is read as any
 /// call: `int strlen(int n);` handed an `int` holding zero is no null
 /// dereference. **IR built by hand**, because the frontend refuses such a
-/// declaration wherever this check runs (`SC0320`); `library::row` is the
+/// declaration wherever this check runs (`SC0320`); `library::read_as_library` is the
 /// one answer both checks read. See ADR-0073 rule 1.
 ///
-/// Mutation: have `library::row` skip the shape; the `int` is proved a null
+/// Mutation: have `library::read_as_library` skip the shape; the `int` is proved a null
 /// pointer dereferenced.
 #[test]
 fn a_library_name_declared_with_another_shape_is_read_as_any_call() {
@@ -2023,4 +2023,68 @@ fn a_library_name_declared_with_another_shape_is_read_as_any_call() {
     let found = concluded(&map, unit, function);
 
     assert!(found.is_empty(), "{found:?}");
+}
+
+/// A library function declared over a `char` where its row says an integer is
+/// read by its row, as the frontend accepts it: `void *memset(void *d, char c,
+/// int n);` handed a null destination is a proved null dereference. The
+/// frontend half is `a_library_name_declared_over_a_char_is_not_refused` in
+/// `crates/safec-c/src/sema.rs`; the two map a type to a shape apart, and a
+/// disagreement read the call as any call in silence. Found by review.
+///
+/// Mutation: have `library::read_as_library` read only `int` as an integer;
+/// this finds nothing.
+#[test]
+fn a_library_call_declared_over_a_char_is_read_by_its_row() {
+    let text = "memset f a\n";
+    let mut map = SourceMap::new();
+    let file = map.add_virtual("m.c", text);
+    let callee_name = Span::new(file, 0, 6);
+    let function_name = Span::new(file, 7, 8);
+    let at = Span::new(file, 9, 10);
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let char_ty = unit.push_type(Ty::Char);
+    let void = unit.push_type(Ty::Void);
+    let pointer = unit.push_type(Ty::Pointer(void));
+    let callee = unit.push_function(Function::declaration(
+        callee_name,
+        pointer,
+        [pointer, char_ty, int],
+    ));
+
+    let mut function = Function::new(function_name, int, vec![]);
+    let d = function.push_local(pointer);
+    let entry = function.reserve_block();
+    let exit = function.reserve_block();
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![Element::Assign(Operation {
+                place: Place::local(d),
+                value: Rvalue::Use(Operand::Constant(0)),
+                origin: Origin::Written(at),
+            })],
+            terminator: Terminator::Call {
+                callee,
+                arguments: vec![
+                    Operand::Copy(Place::local(d)),
+                    Operand::Constant(0),
+                    Operand::Constant(4),
+                ],
+                destination: None,
+                then: Some(exit),
+                origin: Origin::Written(at),
+            },
+        },
+    );
+    function.fill_block(exit, returns());
+
+    let found = concluded(&map, unit, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
 }

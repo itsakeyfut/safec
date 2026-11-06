@@ -388,6 +388,51 @@ fn an_allocating_call_handed_a_pointer_leaves_its_allocation_alone() {
     assert_eq!(found[0].at, names.at[2]);
 }
 
+/// A `free` declared with another shape than the library's, `void free(int
+/// n);`, is read as any call by the memory check, as by the nullability check,
+/// since both ask `library::read_as_library`: two calls of it on one pointer
+/// are no proved double free. **IR built by hand**, because the frontend
+/// refuses such a declaration wherever this check runs (`SC0320`). See
+/// ADR-0073 rule 1.
+///
+/// Mutation: have `Allocations::library` look the row up by name alone, as it
+/// did before; the two calls are a proved double free.
+#[test]
+fn a_free_declared_with_another_shape_is_read_as_any_call() {
+    let (sources, names) = sources();
+    let (mut unit, mut function, types, callees) = a_unit(&names, 0);
+    let void = unit.push_type(Ty::Void);
+    let misdeclared = unit.push_function(Function::declaration(names.free, void, [types.int]));
+    let callees = Callees {
+        free: misdeclared,
+        ..callees
+    };
+    let held = function.push_local(types.ptr);
+
+    let allocate = function.reserve_block();
+    let first = function.reserve_block();
+    let second = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], first));
+    function.fill_block(first, free(&callees, held, names.at[1], second));
+    function.fill_block(
+        second,
+        after_the_statement(names.at[1], free(&callees, held, names.at[2], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[2], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert!(
+        !found
+            .iter()
+            .any(|finding| finding.kind == Kind::DoubleFree
+                && finding.conclusion == Conclusion::Unsafe),
+        "{found:?}"
+    );
+}
+
 /// Freeing through a copy is the same allocation, and is proved rather than
 /// suspected.
 ///

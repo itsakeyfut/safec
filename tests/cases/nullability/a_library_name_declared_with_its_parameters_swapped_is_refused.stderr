@@ -1,0 +1,8 @@
+error[SC0320]: this declares `strchr` unlike the library's
+   ╭─[ a_library_name_declared_with_its_parameters_swapped_is_refused.c:1:7 ]
+   │
+ 1 │ char *strchr(int c, char *s);
+   │       ───┬──  
+   │          ╰──── declared here
+───╯
+  = note: C17 7.1.4 p2 permits declaring a library function without its header only with its own type, and this compiler reads a call to `strchr` as the library's, which takes a pointer, an integer

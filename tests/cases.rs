@@ -2792,6 +2792,12 @@ cases! {
         // ADR-0071 rule 1. Mutation: answer `false` in
         // `library::reads_by_name`; this is two `SC0401` doubts instead.
         a_function_defined_here_named_memcpy_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a declaration of one unlike the library's, the program #821
+        // found read at the wrong positions, refused as `SC0320` with the
+        // library's shape in its note. See ADR-0073 rule 1. Mutation:
+        // `library::misdeclares_library` answers `false`; the call's null at
+        // its second argument builds silent.
+        a_library_name_declared_with_its_parameters_swapped_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_function_defined_below_its_call_named_abort_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local or a parameter named `abort` or `exit` has no linkage, so
         // 7.1.3 p1 does not reserve it there, and names never asks. (`_Exit`
