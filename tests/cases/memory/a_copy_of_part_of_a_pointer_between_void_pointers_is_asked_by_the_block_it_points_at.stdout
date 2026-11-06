@@ -11,7 +11,7 @@ Function a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block
   Local "_0" "void" return
 Function a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block_it_points_at.c:2:6 "f"
   Local "_0" "void" return
-  Local "_1" "int **" parameter "out"
+  Local "_1" "void *" parameter "out"
   Local "_2" "int" "x"
   Local "_3" "int **" "b"
   Local "_4" "void *"
