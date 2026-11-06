@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-11-06
 decision-makers: itsakeyfut
 ---
@@ -96,11 +96,11 @@ the door questions (#801) and these are fixed.
 
 ### Confirmation
 
-Proposed until the last of #800, #802, #684, #746 and #764 lands; each pull
-request adds its rule's case and the mutation that fails it here, as ADR-0063
-did per stage. Each rule's guard is a case in `tests/cases.rs` that fails
-under the reversal its rule names, and the route matrix's door-question
-beliefs (#801) list the pairs that still differ until each lands.
+Accepted with #764, the last of #800, #802, #684, #746 and #764 to land;
+each pull request added its rule's case and the mutation that fails it here,
+as ADR-0063 did per stage. Each rule's guard is a case in `tests/cases.rs`
+that fails under the reversal its rule names, and the route matrix's
+door-question beliefs (#801) list the pairs that still differ.
 
 1. `library::reads_by_name` answering `false` fails
    `each_name_the_memory_check_reads_by_name_is_refused_where_it_is_defined`
@@ -145,6 +145,17 @@ beliefs (#801) list the pairs that still differ until each lands.
    its own type, no copy ending part way through its last pointer, the
    source alone, no arrived belief, the wider of two widths, a block before
    a local, and an arrived belief of `0` counted as a pointer held.
+5. `report::copied_unwritten` answering `false` fails
+   `a_copy_of_a_local_array_nothing_wrote_into_caller_memory_is_doubted`,
+   `a_copy_of_a_block_nothing_wrote_into_caller_memory_is_doubted` and every
+   other case beside them in `tests/cases.rs` that reports, and four cases
+   elsewhere that copy into a block twice or into a parameter; so does
+   `report::copies_unwritten` answering `false`. The case each further
+   mutation fails is named beside it there: asking the destination nothing
+   of whether it leaves, taking any destination as holding a pointer, the
+   destination's type alone, every element of an array kept element by
+   element, its first element alone, no allocation, no local kept whole,
+   and no source read out of memory.
 
 ### Consequences
 
@@ -157,6 +168,10 @@ beliefs (#801) list the pairs that still differ until each lands.
 * Bad, because the false reports a precise side would remove stay: `**t = x;`
   into memory nothing outside reads is now `SC0414` at a later free, and
   `memcpy(pp, &x, 8); free(x);` keeps its `SC0401` beside the `SC0414`.
+* Bad, because rule 5 asks whether a copy leaves by the store's own answer,
+  and a library copy exposes what it is handed: a second copy of unwritten
+  bytes into a block the function made is doubted at the copy, beside the
+  read that already reports it, or alone where the block is freed unread.
 * What would reverse this: a points-to representation that says who holds a
   local's address exactly, so that the escape and the `loaded` mark stop
   standing in for it (#810).
