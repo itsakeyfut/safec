@@ -421,6 +421,13 @@ cases! {
         // naming. Mutation: ask no source read out of memory; it goes
         // silent.
         a_copy_of_a_block_nothing_wrote_through_a_pointer_read_out_of_memory_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And spelled through a dereference, which the call is handed as the
+        // place itself, asked as a load one level further reads. Mutation:
+        // answer `false` for a source with a projection; it goes silent.
+        a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Which stays silent where that block was written. Mutation: answer
+        // `true` for it; it is doubted.
+        a_copy_of_a_written_block_spelled_through_a_dereference_into_caller_memory_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block that may be unwritten keeps its mark where it is carried:
         // across a join where one side does not name it, through realloc,
         // and through a copy out of it (#724). Mutation: drop `realloc`'s

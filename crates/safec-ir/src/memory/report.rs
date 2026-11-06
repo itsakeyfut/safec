@@ -1386,7 +1386,7 @@ fn part_of_what_operands_point_at(
 
 /// Whether a library copy may copy bytes nothing wrote into memory that
 /// leaves this function and is believed to hold a pointer. Copying them is
-/// defined (C17 7.24.2.1); a caller reading the pointer they leave is not,
+/// defined (C17 7.24.2.1, 7.24.2.2); a caller reading the pointer they leave is not,
 /// and the copy is the last place this check sees it (ADR-0071 rule 5).
 ///
 /// All three are asked, and each one alone keeps a copy silent:
@@ -1445,10 +1445,14 @@ fn copied_unwritten(
 /// covers**, where `from` points at a known element of an array kept element
 /// by element and the length is a constant, so that `a[0] = &x; memcpy(out,
 /// a, 8);` with `a` two pointers long is not doubted for `a[1]`; at any
-/// element otherwise, which doubts. **A source read out of memory is asked
-/// too**, by what it was read as naming: a doubt, as a load through it is
-/// (`Allocations::reads_partly`), and leaving it out left a copy of a block
-/// nothing wrote, reached through a pointer stored and read back, silent.
+/// element otherwise, which doubts. Elements are counted in pointers, since
+/// only an array of pointers is kept element by element (`Known::element_init`),
+/// and a copy ending part way through one covers it, hence the rounding up.
+/// Any other local is kept whole and asked as one.
+///
+/// **A source that holds a pointer read out of memory is asked by what it
+/// holds**, as any source is, which is a doubt where a load through it is one
+/// (`Allocations::reads_partly`).
 fn source_may_be_unwritten(
     analysis: &Allocations<'_>,
     callee: FuncId,
@@ -1456,8 +1460,25 @@ fn source_may_be_unwritten(
     from: &Place,
     known: &Known,
 ) -> bool {
+    // **A source spelled through dereferences**, `memcpy(out, *b, 8)`, is
+    // handed to the call as the place itself, not loaded into a local
+    // first, so what it copies is what a load one level further reads
+    // (`Known::levels_below`): answering `false` for it said the bytes were
+    // written whenever the source was spelled that way. A place of
+    // anything but dereferences names memory this check does not follow,
+    // and is doubted. Found by review.
     if !from.projection.is_empty() {
-        return false;
+        let depth = derefs(from);
+        if depth == 0 {
+            return true;
+        }
+        let (sites, locals) = known.levels_below(from.local, depth);
+        return sites
+            .into_iter()
+            .any(|site| known.init[site].may_be_unwritten())
+            || locals.into_iter().any(|local| {
+                known.certainly_unwritten(local, None) || known.may_be_unwritten(local, None, true)
+            });
     }
     let held = &known.points_to[from.local];
     if held.sites().any(|site| known.init[site].may_be_unwritten()) {
