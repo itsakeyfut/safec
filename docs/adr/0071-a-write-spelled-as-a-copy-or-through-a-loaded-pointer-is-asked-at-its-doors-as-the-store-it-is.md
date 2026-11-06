@@ -60,10 +60,16 @@ copy's escape was tried once under #652 and taken back for that. The third is
 not chosen now: whether it is needed is measured once the route matrix asks
 the door questions (#801) and these are fixed.
 
-1. **Whether a function is a library function is answered once,**
-   `Allocations::library`, which answers nothing for a body this unit
-   defines, so `Allocations::callee` answers `Callee::Opaque` for it and the
-   transfer and every door read the same kind (#800).
+1. **A function named for one the memory check reads by name is refused
+   where it is defined**, `SC0319` as a definition of `exit` is (ADR-0051), in
+   whichever file of the run it is: whether a body is defined is answered per
+   translation unit, so a unit that only declares `memcpy` read its call by
+   name while a body in another file was what ran, and a double free built in
+   silence (#800). `library::reads_by_name` is the one table the frontend and
+   the check both read. **And the check still answers it once**, for IR no
+   such refusal reached: `Allocations::library` answers nothing for a body
+   its unit defines, so `Allocations::callee` answers `Callee::Opaque` for it
+   and the transfer and every door read the same kind.
 2. **A store leaves where `Known::leaves` says so or its `Landing` is
    unnamed**, and `Landing::unnamed` and `Landing::unplaced` answer a store and
    a copy at one depth alike, by the rule that doubts: a write more than one
@@ -91,13 +97,16 @@ did per stage. Each rule's guard is a case in `tests/cases.rs` that fails
 under the reversal its rule names, and the route matrix's door-question
 beliefs (#801) list the pairs that still differ until each lands.
 
-1. `Allocations::library` answering by name whether or not the function is
-   defined makes
-   `a_pointer_a_memcpy_defined_here_leaves_its_caller_and_freed_after_is_doubted`
-   and `a_pointer_copied_out_by_a_memcpy_defined_here_is_not_asked_as_a_library_copy`
-   read the body as a library copy, and fails both, with
-   `a_function_defined_with_a_library_name_is_asked_as_any_function` and
-   `a_defined_memcpy_s_destination_is_asked_what_it_held`.
+1. `library::reads_by_name` answering `false` fails
+   `each_name_the_memory_check_reads_by_name_is_refused_where_it_is_defined`
+   in `crates/safec-c/src/sema.rs`, which lists every name, and
+   `a_library_name_defined_in_another_file_of_the_run_is_refused` in
+   `crates/safec-c/src/driver/tests.rs`, where the run then succeeds with
+   nothing said; the case `a_function_defined_here_named_memcpy_is_refused`
+   becomes two `SC0401` doubts. `Allocations::library` answering by name
+   whether or not the function is defined fails
+   `a_function_defined_here_under_a_library_name_is_read_as_any_call` in
+   `crates/safec-ir/tests/freed.rs`, which then reports nothing at the free.
 
 ### Consequences
 
