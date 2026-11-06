@@ -102,10 +102,10 @@ and Cons below.
 
 ### Confirmation
 
-Each of #821, #822, #823 and #818 added its rule's cases and the mutation that
-fails each here. Proposed still, since #828 and #830 may change what rules 3
-and 4 decide, and a record accepted before them would have to be superseded
-rather than amended.
+Each of #821, #822, #823, #818 and #830 added its rule's cases and the
+mutation that fails each here. Proposed until #828 and #826 have added theirs,
+the last of the rules as amended on #824, so that it is accepted once rather
+than superseded.
 
 1. `library::misdeclares_library` answering `false` fails
    `a_library_name_declared_with_its_parameters_swapped_is_refused`, the
@@ -166,6 +166,16 @@ rather than amended.
    `a_copy_into_a_void_pointer_pointer_a_call_returned_behind_a_void_pointer_is_asked`,
    and a library copy's read setting it fails
    `a_void_pointer_a_library_copy_wrote_is_not_believed_to_point_at_pointers`.
+   An assignment adding nothing of the local it lands in fails
+   `a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_an_allocator_returned_is_asked`,
+   its `int **`, `realloc`, `void *` parameter, load, array and null-element
+   cases, and `a_block_a_copy_wrote_half_a_pointer_into_is_doubted_where_it_is_returned`;
+   adding it only where the value is a copy of a local by name fails
+   `a_copy_into_a_void_pointer_read_out_of_memory_and_held_as_a_void_pointer_pointer_is_asked`;
+   adding it for every pointer type fails
+   `a_copy_into_a_block_nothing_types_is_not_asked_whether_it_holds_pointers`;
+   and asking the local's type without looking through an array fails
+   `a_copy_into_a_void_pointer_made_from_a_pointer_to_an_array_of_void_pointers_an_allocator_returned_is_asked`.
 
 ### Consequences
 
