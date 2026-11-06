@@ -1246,6 +1246,7 @@ cases! {
         // the store does and is doubted alike: a copy's destination is a store
         // one dereference further, unnamed past one as a store is. Mutation:
         // a copy is unnamed only past two, as it was; this loses its `SC0414`.
+        // Mutation: `store_at` does not read the landing; the same.
         a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same store spelled without the pointer. Mutation: a write of a
         // local `Known::exposed` holds is not asked; this goes silent.
