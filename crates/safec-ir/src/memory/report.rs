@@ -1386,15 +1386,14 @@ fn part_of_what_operands_point_at(
         .find_map(|operand| points_at_a_pointer(analysis, function, operand, known))
 }
 
-/// Report a `return` of a pointer that names a block **certainly** unwritten,
-/// at least one and every one it names, where the return type points at a
-/// pointer. Certainly, not possibly: `if (m) *m = x; return m;` joins the path
-/// where the allocation failed, which wrote nothing, with the one that wrote,
-/// and doubting that measured three false reports in the corpus. Only a
-/// `return`: a block handed to a call is how a callee is given memory to fill.
-/// The cost is a function that allocates a table of pointers and hands it back
-/// unfilled for the caller to fill, which is doubted. See ADR-0073 rule 3.
-fn returned_unwritten(
+/// Report a `return` of a pointer that may name a block **certainly**
+/// unwritten, where the return type points at memory holding pointers: the
+/// return-side counterpart of `loaded_indeterminate`, which reports a read of
+/// such a block inside this function. Certainly, not possibly, since
+/// `if (m) *m = x; return m;` joins a path with no block at all; only a
+/// `return`, since a block handed to a call is how a callee is given memory to
+/// fill. See ADR-0073 rule 3, which says what both cost (#828).
+fn report_returned_unwritten(
     findings: &mut Vec<Finding>,
     analysis: &Allocations<'_>,
     function: &Function,
@@ -1407,17 +1406,24 @@ fn returned_unwritten(
     if !place.projection.is_empty() {
         return;
     }
-    let holds = analysis
+    // **Whether the caller reads pointers out of it**, by `pointee_width`,
+    // which answers only for a pointer, `void *` as `0`; through an array to
+    // its element, as `int *(*)[2]` holds pointers too. Found by review.
+    let returns_pointers = analysis
         .unit
         .place_ty(function, &Place::local(function.return_place()))
         .and_then(|ty| pointee(analysis, ty))
-        .and_then(|ty| pointee_width(analysis, ty))
+        .and_then(|ty| pointee_width(analysis, innermost_element(analysis.unit, ty)))
         .is_some();
-    let mut sites = known.sites_of(place.local).peekable();
-    if !holds || sites.peek().is_none() {
-        return;
-    }
-    if sites.all(|site| known.init[site].is_unwritten()) {
+    // **Any block it may name**, not every: one written elsewhere does not
+    // make the other one written, and `r = c ? a : b;` with only `a` written
+    // was silent. The path where an allocation failed names no block, so it
+    // adds nothing here. Found by review.
+    if returns_pointers
+        && known
+            .sites_of(place.local)
+            .any(|site| known.init[site].is_unwritten())
+    {
         findings.push(Finding {
             function: analysis.function,
             kind: Kind::ReturnedUnwritten,
@@ -1614,7 +1620,8 @@ fn points_at_a_pointer(
 /// Report a pointer this element hands back by a `return`, stores through
 /// a pointer, or writes by name into a local code this check cannot read
 /// may read (#690), where this check cannot show it points at one whole
-/// object of the type it leaves as.
+/// object of the type it leaves as. And a `return` of a block nothing wrote,
+/// [`report_returned_unwritten`].
 ///
 /// **The departure half of ADR-0060.** A caller believes what it is handed
 /// back, and a later load believes what it reads, so this is where either
@@ -1635,10 +1642,11 @@ pub(super) fn departed_in_element(
         return;
     };
     let how = if store.into == Place::local(function.return_place()) {
-        // **And whether the block it returns was written**: `int **b =
+        // **Whether the block it returns was written**: `int **b =
         // malloc(8); return b;` hands the caller pointers nobody wrote, where
-        // `int *p = *b;` here is `SC0411` (#823). See ADR-0073 rule 3.
-        returned_unwritten(findings, analysis, function, operation, known);
+        // reading `*b` in this function is `SC0411` by `loaded_indeterminate`
+        // (#823). See ADR-0073 rule 3.
+        report_returned_unwritten(findings, analysis, function, operation, known);
         Departure::Return
     } else {
         match store.kind {

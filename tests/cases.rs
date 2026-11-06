@@ -433,6 +433,14 @@ cases! {
         // pointer out of it. Mutation: doubt whatever the return type; this
         // is doubted.
         a_block_returned_as_a_table_of_integers_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer that may name a written block or one nothing wrote is
+        // asked of each. Mutation: doubt it only when every block it may
+        // name is unwritten; this goes silent.
+        a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block holding arrays of pointers holds pointers too. Mutation:
+        // ask the return type's pointee without looking through an array;
+        // this goes silent.
+        a_block_of_arrays_of_pointers_nothing_wrote_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Out of a pointer local nothing wrote, kept whole. Mutation: ask a
         // local kept whole nothing; it goes silent.
         a_copy_of_a_pointer_local_nothing_wrote_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
