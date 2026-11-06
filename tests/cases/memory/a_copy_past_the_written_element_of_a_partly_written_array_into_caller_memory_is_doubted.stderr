@@ -1,0 +1,20 @@
+error[SC0412]: this may reach outside the object `out` points at
+   ╭─[ a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:7:5 ]
+   │
+ 7 │     memcpy(out, a, 16);
+   │     ─────────┬────────  
+   │              ╰────────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0411]: this copies bytes that may not have been written into memory code outside this function reads as a pointer
+   ╭─[ a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:7:5 ]
+   │
+ 7 │     memcpy(out, a, 16);
+   │     ─────────┬────────  
+   │              ╰────────── copied here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write what is copied on every path before the copy

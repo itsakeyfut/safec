@@ -941,6 +941,20 @@ pub(super) fn memory_finding(
             "read here",
             "assign it where it is declared, `= 0` if nothing else",
         ),
+        // **Bytes copied out before anything wrote them**, under the same
+        // code as a read of them, since what is undefined is the read code
+        // outside makes of the pointer they leave (#764). Only ever
+        // `Unknown`, for the reason `Kind::CopiedUnwritten` gives; `Unsafe`
+        // takes the same words so the match stays exhaustive. No name: what
+        // was not written is the source's bytes, which no one local names.
+        (Kind::CopiedUnwritten, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            UNASSIGNED,
+            "this copies bytes that may not have been written into memory code outside this \
+             function reads as a pointer"
+                .to_owned(),
+            "copied here",
+            "write what is copied on every path before the copy",
+        ),
         // Only ever `Unknown`, since the edge may be one no execution takes.
         // `Unsafe` takes the same words so the match stays exhaustive.
         (Kind::SometimesUnassigned { .. }, Conclusion::Unknown | Conclusion::Unsafe, _) => (

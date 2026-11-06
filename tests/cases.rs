@@ -384,6 +384,34 @@ cases! {
         // A local before a block, the local's width. Mutation: ask the
         // block first; it says "the start of an object".
         a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A library copy of bytes nothing wrote into memory that leaves
+        // and is believed to hold a pointer is doubted at the copy, `SC0411`
+        // as a read of them is, since the read that is undefined is code
+        // outside's (#764). See ADR-0071 rule 5. Mutation: never doubt it;
+        // this and the next three that report go silent. Mutation: ask the
+        // source's bytes nothing; the same four go silent.
+        a_copy_of_a_local_array_nothing_wrote_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Out of a block `malloc` made, as out of a local.
+        a_copy_of_a_block_nothing_wrote_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A destination that says nothing by its type, asked by what it
+        // points at, as #746's ask is. Mutation: ask the destination's type
+        // alone; it goes silent.
+        a_copy_of_unwritten_bytes_into_caller_memory_behind_a_void_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The elements the copy covers, where the array is kept element by
+        // element and the length is a constant. Mutation: ask every element;
+        // it is doubted for `a[1]`, which it does not copy.
+        a_copy_of_the_written_element_of_a_partly_written_array_into_caller_memory_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And past the element written, where it copies both.
+        a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy of written bytes says nothing.
+        a_copy_of_a_written_array_into_caller_memory_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Nor into memory only this function reads, which is asked where it
+        // is read. Mutation: ask the destination nothing of whether it
+        // leaves; it is doubted.
+        a_copy_of_unwritten_bytes_into_memory_only_this_function_reads_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Nor into memory believed to hold no pointer. Mutation: take any
+        // destination as holding one; it is doubted.
+        a_copy_of_unwritten_ints_into_caller_memory_of_ints_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block that may be unwritten keeps its mark where it is carried:
         // across a join where one side does not name it, through realloc,
         // and through a copy out of it (#724). Mutation: drop `realloc`'s

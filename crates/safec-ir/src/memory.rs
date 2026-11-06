@@ -303,6 +303,16 @@ pub enum Kind {
         /// which the words then say (#636).
         below: bool,
     },
+    /// `int *a[1]; memcpy(out, a, 8);` with `out` an `int **` parameter.
+    ///
+    /// A library copy of bytes that may not have been written, into memory
+    /// that leaves this function and is believed to hold a pointer. Copying
+    /// them is defined (C17 7.24.2.1), and what is undefined is the caller
+    /// reading the pointer it leaves; this check reads one function at a
+    /// time (ADR-0027), so the copy is the last place anything can be said.
+    /// **Always `Unknown`**, for that reason, as [`Kind::HandedOnNarrow`] is.
+    /// See ADR-0071 rule 5.
+    CopiedUnwritten,
 }
 
 /// Where a pointer leaves the function it was followed in.

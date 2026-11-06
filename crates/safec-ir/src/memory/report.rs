@@ -241,6 +241,8 @@ fn verdict(
         Kind::OutsideItsObject { .. } => true,
         // Never asked: it is said where a pointer leaves, about no free.
         Kind::HandedOnNarrow { .. } => true,
+        // Never asked: it is said where a copy leaves, about no free.
+        Kind::CopiedUnwritten => true,
     };
 
     match earliest {
@@ -1382,6 +1384,109 @@ fn part_of_what_operands_point_at(
         .find_map(|operand| points_at_a_pointer(analysis, function, operand, known))
 }
 
+/// Whether a library copy may copy bytes nothing wrote into memory that
+/// leaves this function and is believed to hold a pointer. Copying them is
+/// defined (C17 7.24.2.1); a caller reading the pointer they leave is not,
+/// and the copy is the last place this check sees it (ADR-0071 rule 5).
+///
+/// All three are asked, and each one alone keeps a copy silent:
+///
+/// - **the destination leaves**, as the store the copy is leaves
+///   (`Allocations::store_at`): a copy into memory only this function reads
+///   is asked at the read, as any read of it is;
+/// - **what it lands in is believed to hold a pointer**, by the
+///   destination's type or by what it points at ([`points_at_a_pointer`]);
+/// - **what it copies may be unwritten** ([`copies_unwritten`]).
+///
+/// **Leaving is the store's answer, and a library copy exposes what it is
+/// handed**, so a second copy into a block this function made, a copy in a
+/// loop among them, is asked as leaving: copying unwritten bytes into it is
+/// doubted there as well as where it is read, and a block filled that way
+/// and freed unread is doubted though nothing reads it. That is the
+/// conservative side of the store's question, and answering it otherwise
+/// here would answer one destination two ways (#737).
+fn copied_unwritten(
+    analysis: &Allocations<'_>,
+    function: &Function,
+    terminator: &Terminator,
+    into_ty: Option<TyId>,
+    known: &Known,
+) -> bool {
+    let Terminator::Call {
+        callee, arguments, ..
+    } = terminator
+    else {
+        return false;
+    };
+    let Some(store) = analysis.store_at(terminator, known) else {
+        return false;
+    };
+    let (StoreKind::Copy, Written::Bytes(from)) = (store.kind, &store.from) else {
+        return false;
+    };
+    if !store.leaves {
+        return false;
+    }
+    let typed = into_ty
+        .and_then(|ty| pointee(analysis, ty))
+        .and_then(|ty| pointee_width(analysis, ty))
+        .is_some();
+    let holds = typed
+        || arguments
+            .first()
+            .and_then(|into| points_at_a_pointer(analysis, function, into, known))
+            .is_some();
+    holds && copies_unwritten(analysis, *callee, arguments, from, known)
+}
+
+/// Whether the bytes a library copy reads through `from` may not have been
+/// written: an allocation it points at that nothing may have written, or a
+/// local it points at that may be unwritten. **At the elements the copy
+/// covers**, where `from` points at a known element of an array kept element
+/// by element and the length is a constant, so that `a[0] = &x; memcpy(out,
+/// a, 8);` with `a` two pointers long is not doubted for `a[1]`; at any
+/// element otherwise, which doubts. A source read out of memory, or one that
+/// may point inside a local, names memory this check did not record, and
+/// is not asked, as a load through it is not (`Allocations::reads_fresh`).
+fn copies_unwritten(
+    analysis: &Allocations<'_>,
+    callee: FuncId,
+    arguments: &[Operand],
+    from: &Place,
+    known: &Known,
+) -> bool {
+    if !from.projection.is_empty() {
+        return false;
+    }
+    let held = &known.points_to[from.local];
+    if held.beyond().unrecorded_address() || held.inner_address {
+        return false;
+    }
+    if held.sites().any(|site| known.init[site].may_be_unwritten()) {
+        return true;
+    }
+    let target = analysis.unit.target();
+    let pointer = u64::from(target.pointer_bits() / target.char().bits());
+    let covered = analysis
+        .constant_argument(callee, arguments, 2)
+        .map(|length| length.div_ceil(pointer));
+    held.locals().any(|local| {
+        let elements = &known.element_init[local];
+        if elements.len() == 0 {
+            return known.init[local].may_be_unwritten();
+        }
+        match (held.element, covered) {
+            (Some(start), Some(count)) => (start..start.saturating_add(count)).any(|element| {
+                usize::try_from(element)
+                    .ok()
+                    .filter(|&element| element < elements.len())
+                    .is_some_and(|element| elements.get(element).may_be_unwritten())
+            }),
+            (Some(_) | None, _) => elements.any_may_be_unwritten(),
+        }
+    })
+}
+
 /// Whether what `operand` points at holds a pointer, by what it points at
 /// rather than by its type, and if so the width that pointer is believed to
 /// point at. Asked of a library copy's operands, where their types said
@@ -1668,6 +1773,22 @@ pub(super) fn departed_at_call(
                     Some((Fit::Unknown, None)),
                     false,
                 );
+            }
+            // **And whether what it copies was written**: `int *a[1];
+            // memcpy(out, a, 8);` leaves the caller a pointer nobody wrote,
+            // where `*out = a[0];` is `SC0411` at the read (#764). See
+            // ADR-0071 rule 5.
+            if copied_unwritten(analysis, function, terminator, into_ty, known) {
+                findings.push(Finding {
+                    function: analysis.function,
+                    kind: Kind::CopiedUnwritten,
+                    conclusion: Conclusion::Unknown,
+                    at,
+                    local: None,
+                    freed: None,
+                    made: None,
+                    unproven: None,
+                });
             }
             return;
         }

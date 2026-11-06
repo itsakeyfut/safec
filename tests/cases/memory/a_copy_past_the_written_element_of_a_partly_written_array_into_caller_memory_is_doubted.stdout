@@ -1,0 +1,75 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:1:28 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "out"
+  Local "_2" "int"
+  Local "_3" "int" "x"
+  Local "_4" "int *[2]" "a"
+  Local "_5" "int **"
+  Local "_6" "int *"
+  Local "_7" "int *"
+  Local "_8" "int **"
+  Local "_9" "void *"
+  Block "bb0" entry
+    Operation a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:3:9 written
+      Destination "_2"
+      Unary "Not"
+        Copy "_1"
+    Branch a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:3:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:3:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:4:9 written
+      Destination "_3"
+      Use
+        Constant 1
+    Sequenced a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:4:13 generated
+    Operation a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:6:5 generated
+      Destination "_5"
+      Address
+        Place "_4"
+          Index
+            Constant 0
+    Operation a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:6:12 written
+      Destination "_6"
+      Address
+        Place "_3"
+    Operation a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:6:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:6:5 written
+      Destination "_7"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:6:5 generated
+    Operation a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:7:17 generated
+      Destination "_8"
+      Address
+        Place "_4"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:7:5 generated
+    Call a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:7:5 written "memcpy" "bb4"
+      Destination "_9"
+      Copy "_1"
+      Copy "_8"
+      Constant 16
+  Block "bb4"
+    Sequenced a_copy_past_the_written_element_of_a_partly_written_array_into_caller_memory_is_doubted.c:7:5 generated
+    Return

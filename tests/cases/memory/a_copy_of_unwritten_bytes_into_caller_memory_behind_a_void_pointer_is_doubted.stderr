@@ -1,0 +1,10 @@
+error[SC0411]: this copies bytes that may not have been written into memory code outside this function reads as a pointer
+   ╭─[ a_copy_of_unwritten_bytes_into_caller_memory_behind_a_void_pointer_is_doubted.c:6:5 ]
+   │
+ 6 │     memcpy(d, s, 8);
+   │     ───────┬───────  
+   │            ╰───────── copied here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write what is copied on every path before the copy
