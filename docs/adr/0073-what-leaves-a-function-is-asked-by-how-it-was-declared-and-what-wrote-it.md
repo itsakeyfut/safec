@@ -70,6 +70,23 @@ and Cons below.
 Proposed until the last of #821, #822, #823 and #818 lands; each pull request
 adds its rule's cases and the mutation that fails each here.
 
+1. `library::misdeclares_library` answering `false` fails
+   `a_library_name_declared_with_its_parameters_swapped_is_refused`, the
+   corpus case and the `sema.rs` test of that name, and the block-scope and
+   too-few cases beside the latter; reading no prototype as a match fails
+   `a_library_name_declared_without_a_prototype_is_refused`; refusing whatever
+   the safety level fails
+   `a_library_name_declared_unlike_its_row_is_refused_only_where_the_memory_check_runs`;
+   and a row's shape written wrong fails
+   `each_library_name_declared_with_its_own_shape_is_not_refused` for that
+   name. In IR, `library::read_as_library` skipping the shape fails
+   `a_library_name_declared_with_another_shape_is_read_as_any_call` in
+   `crates/safec-ir/tests/nulls.rs`, `Allocations::library` looking the row up
+   by name alone fails `a_free_declared_with_another_shape_is_read_as_any_call`
+   in `crates/safec-ir/tests/freed.rs`, and either side reading a `char` as no
+   integer fails `a_library_name_declared_over_a_char_is_not_refused` or
+   `a_library_call_declared_over_a_char_is_read_by_its_row`.
+
 ### Consequences
 
 * Good, because each of the four programs above is reported.
