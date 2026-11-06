@@ -706,7 +706,7 @@ cases! {
         a_char_buffer_nothing_wrote_copied_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_char_buffer_nothing_wrote_read_as_a_pointer_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written whole first, by a copy of a pointer, it says nothing.
-        // Mutation: a copy into a local writes nothing; this is reported.
+        // Mutation: `Known::written_local` writes nothing; this is reported.
         a_char_buffer_written_whole_and_read_as_a_pointer_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `holds_a_pointer` answers `true` for `char`; this is
         // reported.
