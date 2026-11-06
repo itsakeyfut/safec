@@ -24,7 +24,7 @@ use super::parts::{
     Reached, Read, Realloced, SiteState, bounded,
 };
 use super::store::{Landing, StoreKind, Strong};
-use crate::library::{Callee, LIBRARY, Leaves, Library, Makes};
+use crate::library::{Callee, Leaves, Library, Makes};
 use crate::reads::{dereferenced_in_element, dereferenced_in_terminator, derefs};
 
 /// What [`Allocations::land_contents`] is told of one write beyond where it
@@ -152,20 +152,18 @@ impl Allocations<'_> {
         self.library(id).map_or(Callee::Opaque, |row| row.callee)
     }
 
-    /// The row of [`LIBRARY`] this function's name is, if any, and none for a
+    /// The row of `LIBRARY` this function's name is, if any, and none for a
     /// body this unit defines: that body is what runs, whatever it is called,
     /// so [`Self::callee`] answers [`Callee::Opaque`] for it and the transfer
     /// and every door read one kind. Defining a library name is undefined
     /// (C17 7.1.3 p2); a `memcpy` defined here once took the copy's transfer
     /// and an ordinary call's doors, and a program leaving its caller a freed
-    /// pointer built silent (#800). See ADR-0071.
+    /// pointer built silent (#800). See ADR-0071. **And none for a
+    /// declaration of another shape than the row's**, read as any call by
+    /// this check and the nullability check alike, since both ask
+    /// [`crate::library::read_as_library`] (ADR-0073 rule 1).
     pub(super) fn library(&self, id: FuncId) -> Option<&'static Library> {
-        let function = self.unit.function(id);
-        if function.is_defined() {
-            return None;
-        }
-        let name = self.sources.snippet(function.name);
-        LIBRARY.iter().find(|row| row.name == name)
+        crate::library::read_as_library(self.unit, self.sources, id)
     }
 
     /// What a write through a pointer carries: the sites the written value may

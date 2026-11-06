@@ -3,8 +3,12 @@
 //!
 //! At crate level rather than inside the memory check, its only reader so
 //! far, so that an analysis besides it can read these rows rather than keep
-//! a copy of them to drift. See ADR-0063. Only [`reads_by_name`] leaves the
-//! crate: the frontend asks it which definitions to refuse.
+//! a copy of them to drift. See ADR-0063. Only [`reads_by_name`],
+//! [`misdeclares_library`], [`takes`] and [`Shape`] leave the crate: the frontend asks
+//! them which definitions and which declarations to refuse.
+
+use crate::ir::{FuncId, TranslationUnit, Ty};
+use crate::source::SourceMap;
 
 /// Whether a call to `name` is read by its name, a row of `LIBRARY`.
 ///
@@ -15,6 +19,93 @@
 /// rule 1.
 pub fn reads_by_name(name: &str) -> bool {
     LIBRARY.iter().any(|row| row.name == name)
+}
+
+/// What a library function's parameter is, as far as this subset can compare
+/// it with a declaration: this subset has neither `const` nor `size_t`, so a
+/// pointer of any type is a pointer and an `int` or a `char` is an integer.
+/// When `const`, `unsigned` or `long` are read, a library's own prototype
+/// becomes writable and this is to be replaced by the parameter's type. A declaration
+/// of the right shape is not thereby the library's own type: `memcpy` declared
+/// `(void *, void *, int)`, as the corpus does, is incompatible with the
+/// library's in C, and this subset cannot spell one closer. See ADR-0073 rule
+/// 1.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Shape {
+    /// A pointer, to anything.
+    Pointer,
+    /// An `int` or a `char`.
+    Integer,
+}
+
+/// Whether a declaration of `name` misdeclares a library function: `name` is a
+/// row, and its parameters are not the row's shape as far as [`Shape`] can
+/// say. A parameter of no shape is passed as `None` in its place and matches
+/// nothing. The frontend asks this to refuse a mismatch where the memory check
+/// runs (`SC0320`).
+///
+/// **A declaration with no prototype, `parameters` `None`, misdeclares one.**
+/// It is compatible with any (C17 6.7.6.3 p15), but nothing then compares a
+/// call's arguments with the row the checks read it by, and a call whose
+/// arguments differ is undefined (6.5.2.2 p6): `char *strchr(); strchr(1, 0);`
+/// built silent. Found by review. See ADR-0073 rule 1.
+pub fn misdeclares_library(name: &str, parameters: Option<&[Option<Shape>]>) -> bool {
+    LIBRARY
+        .iter()
+        .find(|row| row.name == name)
+        .is_some_and(|row| {
+            !parameters.is_some_and(|parameters| {
+                parameters.len() == row.parameters.len()
+                    && parameters
+                        .iter()
+                        .zip(row.parameters)
+                        .all(|(declared, expected)| *declared == Some(*expected))
+            })
+        })
+}
+
+/// The shape the library's `name` takes, where `name` is a row: what a refusal
+/// tells the reader to declare instead.
+pub fn takes(name: &str) -> Option<&'static [Shape]> {
+    LIBRARY
+        .iter()
+        .find(|row| row.name == name)
+        .map(|row| row.parameters)
+}
+
+/// The row a call to `callee` is read by, where it is read by one: `None` for
+/// a body this unit defines, which is what runs whatever it is called
+/// (ADR-0071 rule 1), for a name no row has, and for a declaration whose
+/// parameters are not the row's shape, which C leaves undefined and which is
+/// read as any call (ADR-0073 rule 1). A declaration with no parameters is
+/// read by its row, since IR does not tell `()` from `(void)`, and the
+/// frontend refuses both for a row's name, so no C reaches it. **The one answer both checks read**, the
+/// memory check's `Allocations::library` and the nullability check's
+/// `reached_indices`, so that one declaration cannot be a library call to one
+/// and any call to the other.
+pub(crate) fn read_as_library(
+    unit: &TranslationUnit,
+    sources: &SourceMap,
+    callee: FuncId,
+) -> Option<&'static Library> {
+    let function = unit.function(callee);
+    if function.is_defined() {
+        return None;
+    }
+    let name = sources.snippet(function.name);
+    let row = LIBRARY.iter().find(|row| row.name == name)?;
+    let declared: Vec<Option<Shape>> = function
+        .parameters()
+        .map(|parameter| match unit.ty(function.local(parameter)) {
+            Ty::Pointer(_) => Some(Shape::Pointer),
+            Ty::Int | Ty::Char => Some(Shape::Integer),
+            Ty::Void | Ty::Array { .. } => None,
+        })
+        .collect();
+    if declared.is_empty() {
+        return Some(row);
+    }
+    (!misdeclares_library(name, Some(&declared))).then_some(row)
 }
 
 /// What the memory check can read in a callee's name.
@@ -146,6 +237,11 @@ pub(crate) enum Leaves {
 pub(crate) struct Library {
     /// What the source calls it.
     pub(crate) name: &'static str,
+    /// What it is declared to take, per parameter, as far as this subset can
+    /// say: a declaration of `name` of another shape is refused where the
+    /// memory check runs and read as any call where IR reaches it without
+    /// that refusal. See ADR-0073 rule 1.
+    pub(crate) parameters: &'static [Shape],
     /// What it does to what it is handed.
     pub(crate) callee: Callee,
     /// How far it reaches through each argument it reads or writes through.
@@ -171,6 +267,7 @@ pub(crate) struct Library {
 pub(crate) const LIBRARY: &[Library] = &[
     Library {
         name: "free",
+        parameters: &[Shape::Pointer],
         callee: Callee::Frees,
         reaches: &[],
         makes: None,
@@ -178,6 +275,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "malloc",
+        parameters: &[Shape::Integer],
         callee: Callee::Allocates,
         reaches: &[],
         makes: Some(Makes::Argument(0)),
@@ -185,6 +283,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "calloc",
+        parameters: &[Shape::Integer, Shape::Integer],
         callee: Callee::Allocates,
         reaches: &[],
         makes: Some(Makes::Product(0, 1)),
@@ -192,6 +291,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "aligned_alloc",
+        parameters: &[Shape::Integer, Shape::Integer],
         callee: Callee::Allocates,
         reaches: &[],
         makes: Some(Makes::Argument(1)),
@@ -199,6 +299,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "realloc",
+        parameters: &[Shape::Pointer, Shape::Integer],
         callee: Callee::Reallocates,
         reaches: &[],
         makes: Some(Makes::Argument(1)),
@@ -206,6 +307,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "memcpy",
+        parameters: &[Shape::Pointer, Shape::Pointer, Shape::Integer],
         callee: Callee::Copies,
         reaches: &[(0, Reach::Length(2)), (1, Reach::Length(2))],
         makes: None,
@@ -213,6 +315,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "memmove",
+        parameters: &[Shape::Pointer, Shape::Pointer, Shape::Integer],
         callee: Callee::Copies,
         reaches: &[(0, Reach::Length(2)), (1, Reach::Length(2))],
         makes: None,
@@ -220,6 +323,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "memset",
+        parameters: &[Shape::Pointer, Shape::Integer, Shape::Integer],
         callee: Callee::ReturnsFirst,
         reaches: &[(0, Reach::Length(2))],
         makes: None,
@@ -227,6 +331,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "strcpy",
+        parameters: &[Shape::Pointer, Shape::Pointer],
         callee: Callee::ReturnsFirst,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         makes: None,
@@ -234,6 +339,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "strncpy",
+        parameters: &[Shape::Pointer, Shape::Pointer, Shape::Integer],
         callee: Callee::ReturnsFirst,
         reaches: &[(0, Reach::Length(2)), (1, Reach::String)],
         makes: None,
@@ -241,6 +347,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "strcat",
+        parameters: &[Shape::Pointer, Shape::Pointer],
         callee: Callee::ReturnsFirst,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         makes: None,
@@ -248,6 +355,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "strncat",
+        parameters: &[Shape::Pointer, Shape::Pointer, Shape::Integer],
         callee: Callee::ReturnsFirst,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         makes: None,
@@ -255,6 +363,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "memcmp",
+        parameters: &[Shape::Pointer, Shape::Pointer, Shape::Integer],
         callee: Callee::Opaque,
         reaches: &[(0, Reach::Length(2)), (1, Reach::Length(2))],
         makes: None,
@@ -262,6 +371,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "memchr",
+        parameters: &[Shape::Pointer, Shape::Integer, Shape::Integer],
         callee: Callee::Opaque,
         reaches: &[(0, Reach::Length(2))],
         makes: None,
@@ -269,6 +379,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "strlen",
+        parameters: &[Shape::Pointer],
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String)],
         makes: None,
@@ -276,6 +387,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "strcmp",
+        parameters: &[Shape::Pointer, Shape::Pointer],
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         makes: None,
@@ -283,6 +395,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "strncmp",
+        parameters: &[Shape::Pointer, Shape::Pointer, Shape::Integer],
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         makes: None,
@@ -290,6 +403,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "strchr",
+        parameters: &[Shape::Pointer, Shape::Integer],
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String)],
         makes: None,
@@ -297,6 +411,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "strrchr",
+        parameters: &[Shape::Pointer, Shape::Integer],
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String)],
         makes: None,
@@ -304,6 +419,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     },
     Library {
         name: "strstr",
+        parameters: &[Shape::Pointer, Shape::Pointer],
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         makes: None,

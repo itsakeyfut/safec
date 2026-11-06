@@ -328,6 +328,111 @@ fn a_value_freed_twice_is_unsafe() {
     assert_eq!(found[0].made, Some(names.at[0]), "where the `malloc` was");
 }
 
+/// An allocating call handed a pointer leaves the allocation that pointer
+/// names alone: `q = malloc(..); malloc(q); free(q); free(q);` is still a
+/// proved double free of `q`'s allocation.
+///
+/// **IR built by hand**, since no C reaches it any more: the corpus case this
+/// was declared `void *malloc(int *n);` to hand `malloc` a pointer, which
+/// `SC0320` now refuses where the memory check runs, and a `malloc` declared as
+/// the library's takes no pointer (ADR-0073 rule 1). Here `malloc` is declared
+/// with no parameters, which the checks read by its row.
+///
+/// Mutation: have `Callee::Allocates` poison its arguments as
+/// `Callee::Opaque` does. The site `q` holds becomes `Unknown` at the middle
+/// call and the double free is no longer proved.
+#[test]
+fn an_allocating_call_handed_a_pointer_leaves_its_allocation_alone() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+
+    let allocate = function.reserve_block();
+    let handed = function.reserve_block();
+    let first = function.reserve_block();
+    let second = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], handed));
+    function.fill_block(
+        handed,
+        after_the_statement(
+            names.at[0],
+            Block {
+                elements: vec![],
+                terminator: Terminator::Call {
+                    callee: callees.malloc,
+                    arguments: vec![Operand::Copy(Place::local(held))],
+                    destination: None,
+                    then: Some(first),
+                    origin: Origin::Written(names.at[3]),
+                },
+            },
+        ),
+    );
+    function.fill_block(
+        first,
+        after_the_statement(names.at[3], free(&callees, held, names.at[1], second)),
+    );
+    function.fill_block(
+        second,
+        after_the_statement(names.at[1], free(&callees, held, names.at[2], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[2], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::DoubleFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].at, names.at[2]);
+}
+
+/// A `free` declared with another shape than the library's, `void free(int
+/// n);`, is read as any call by the memory check, as by the nullability check,
+/// since both ask `library::read_as_library`: two calls of it on one pointer
+/// are no proved double free. **IR built by hand**, because the frontend
+/// refuses such a declaration wherever this check runs (`SC0320`). See
+/// ADR-0073 rule 1.
+///
+/// Mutation: have `Allocations::library` look the row up by name alone, as it
+/// did before; the two calls are a proved double free.
+#[test]
+fn a_free_declared_with_another_shape_is_read_as_any_call() {
+    let (sources, names) = sources();
+    let (mut unit, mut function, types, callees) = a_unit(&names, 0);
+    let void = unit.push_type(Ty::Void);
+    let misdeclared = unit.push_function(Function::declaration(names.free, void, [types.int]));
+    let callees = Callees {
+        free: misdeclared,
+        ..callees
+    };
+    let held = function.push_local(types.ptr);
+
+    let allocate = function.reserve_block();
+    let first = function.reserve_block();
+    let second = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], first));
+    function.fill_block(first, free(&callees, held, names.at[1], second));
+    function.fill_block(
+        second,
+        after_the_statement(names.at[1], free(&callees, held, names.at[2], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[2], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert!(
+        !found
+            .iter()
+            .any(|finding| finding.kind == Kind::DoubleFree
+                && finding.conclusion == Conclusion::Unsafe),
+        "{found:?}"
+    );
+}
+
 /// Freeing through a copy is the same allocation, and is proved rather than
 /// suspected.
 ///

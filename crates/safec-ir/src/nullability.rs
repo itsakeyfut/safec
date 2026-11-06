@@ -399,14 +399,7 @@ impl Nullability<'_> {
         let Terminator::Call { callee, .. } = terminator else {
             return Vec::new();
         };
-        let callee = self.unit.function(*callee);
-        if callee.is_defined() {
-            return Vec::new();
-        }
-        let name = self.sources.snippet(callee.name);
-        crate::library::LIBRARY
-            .iter()
-            .find(|row| row.name == name)
+        crate::library::read_as_library(self.unit, self.sources, *callee)
             .map(|row| row.reaches.iter().map(|&(index, _)| index).collect())
             .unwrap_or_default()
     }

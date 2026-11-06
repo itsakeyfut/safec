@@ -48,7 +48,7 @@ records why the prefix is this one and what was rejected.
 | `SC00xx` | not a topic: examples and tests, never emitted by the compiler | `SC0001` |
 | `SC01xx` | lexical, what a character, a token or a directive is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105`, `SC0106`, `SC0107`, `SC0108`, `SC0109`, `SC0110`, `SC0111`, `SC0112`, `SC0113`, `SC0114`, `SC0115`, `SC0116`, `SC0117` |
 | `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203`, `SC0204`, `SC0205`, `SC0206`, `SC0207` |
-| `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305`, `SC0306`, `SC0307`, `SC0308`, `SC0309`, `SC0310`, `SC0311`, `SC0312`, `SC0313`, `SC0314`, `SC0315`, `SC0316`, `SC0317`, `SC0318`, `SC0319` |
+| `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305`, `SC0306`, `SC0307`, `SC0308`, `SC0309`, `SC0310`, `SC0311`, `SC0312`, `SC0313`, `SC0314`, `SC0315`, `SC0316`, `SC0317`, `SC0318`, `SC0319`, `SC0320` |
 | `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406`, `SC0407`, `SC0408`, `SC0409`, `SC0410`, `SC0411`, `SC0412`, `SC0413`, `SC0414` |
 | `SC05xx` | lifetime | none yet |
 | `SC06xx` | ownership | `SC0601` |
@@ -301,6 +301,22 @@ and the second only where the memory check runs, since nothing else does.
 the decision for the first, and rule 1 of
 [ADR-0071](adr/0071-a-write-spelled-as-a-copy-or-through-a-loaded-pointer-is-asked-at-its-doors-as-the-store-it-is.md)
 for the second.
+
+**`SC0320` refuses a declaration of one of those library names unlike the
+library's**, where the memory check runs: `char *strchr(int c, char *s);`. The
+checks read a call to it at the positions the library's own takes a pointer,
+and C17 7.1.4 p2 permits declaring a library function without its header only
+with its own type. What is compared is what this subset can say, the number of
+parameters and whether each is a pointer or an integer, and the note says what
+the library's takes. So `memcpy` declared `(void *, void *, int)`, as the
+corpus does, is accepted though C still finds it incompatible with the
+library's: this subset can spell nothing closer. A declaration with no
+prototype is refused too: it is compatible with any, but then nothing compares
+a call's arguments with the shape the checks read it by, and `char *strchr();
+strchr(1, 0);` built silent. `clang` builds a misdeclaration with a warning,
+`-Wincompatible-library-redeclaration`, and refuses that call.
+[ADR-0073](adr/0073-what-leaves-a-function-is-asked-by-how-it-was-declared-and-what-wrote-it.md)
+rule 1 is the decision.
 
 The frontend refusals that come with these, `SC0204` for a
 nullability specifier where it cannot apply, `SC0307` for two declarations
