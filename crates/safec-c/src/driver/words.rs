@@ -957,6 +957,29 @@ pub(super) fn memory_finding(
             "copied here",
             "write what is copied on every path before the copy",
         ),
+        // **A block nothing wrote, handed back**, under the same code as a
+        // read of it, since what is undefined is the caller's read of the
+        // pointers in it (#823). Only ever `Unknown`, for the reason
+        // `Kind::ReturnedUnwritten` gives; `Unsafe` takes the same words so the
+        // match stays exhaustive. "Wrote" rather than "assigned", as the copy
+        // says, since what is unwritten is a block, not a local; and "may
+        // read", since the caller is only believed to read pointers out of it,
+        // by the return type.
+        (Kind::ReturnedUnwritten, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            UNASSIGNED,
+            said(
+                name,
+                "this returns memory nothing wrote, and the caller may read pointers out of it",
+                |name| {
+                    format!(
+                        "`{name}` points at memory nothing wrote, and the caller may read \
+                         pointers out of it"
+                    )
+                },
+            ),
+            "returned here",
+            "write every pointer in it before returning it, or allocate it with `calloc`",
+        ),
         // Only ever `Unknown`, since the edge may be one no execution takes.
         // `Unsafe` takes the same words so the match stays exhaustive.
         (Kind::SometimesUnassigned { .. }, Conclusion::Unknown | Conclusion::Unsafe, _) => (

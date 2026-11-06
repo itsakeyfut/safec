@@ -313,6 +313,16 @@ pub enum Kind {
     /// **Always `Unknown`**, for that reason, as [`Kind::HandedOnNarrow`] is.
     /// See ADR-0071 rule 5.
     CopiedUnwritten,
+    /// `int **f(void) { int **b = malloc(8); if (!b) return 0; return b; }`
+    ///
+    /// A `return` of a pointer to a block nothing wrote, certainly, from a
+    /// function whose return type points at a pointer: the caller reads
+    /// pointers out of it, and a read of one nothing wrote is undefined (C17
+    /// 7.22.3.4 p2, Annex J.2). This check reads one function at a time
+    /// (ADR-0027), so the `return` is the last place it can be said. **Always
+    /// `Unknown`**, as [`Kind::CopiedUnwritten`] is. `local` is the local
+    /// returned. See ADR-0073 rule 3.
+    ReturnedUnwritten,
 }
 
 /// Where a pointer leaves the function it was followed in.

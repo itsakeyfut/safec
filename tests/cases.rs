@@ -416,6 +416,36 @@ cases! {
         // parameter's. Mutation: take any destination as holding one; it
         // is doubted.
         a_copy_of_unwritten_bytes_into_caller_memory_of_ints_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block nothing wrote, handed back to a caller that reads pointers
+        // out of it, is doubted at the `return` (#823). See ADR-0073 rule 3.
+        // Mutation: never doubt it; this and the next go silent.
+        a_block_nothing_wrote_returned_as_a_table_of_pointers_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy of half a pointer into it, four of the target's eight
+        // bytes, writes no pointer whole and leaves it unwritten (#745);
+        // it goes silent under the mutation above.
+        a_block_a_copy_wrote_half_a_pointer_into_is_doubted_where_it_is_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written before it is returned, nothing. Mutation: ask every block
+        // returned whether or not it was written; this is doubted.
+        a_block_written_before_it_is_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written on the path where its allocation succeeded, nothing: the
+        // block is possibly unwritten only through the path where there is
+        // none. Mutation: doubt a block possibly unwritten; this is doubted.
+        a_block_written_on_the_path_its_allocation_succeeded_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Returned as a table of integers, nothing: the caller reads no
+        // pointer out of it. Mutation: doubt whatever the return type; this
+        // is doubted.
+        a_block_returned_as_a_table_of_integers_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer that may name a written block or one nothing wrote is
+        // asked of each. Mutation: doubt it only when every block it may
+        // name is unwritten; this goes silent.
+        a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block holding arrays of pointers holds pointers too. Mutation:
+        // ask the return type's pointee without looking through an array;
+        // this goes silent.
+        a_block_of_arrays_of_pointers_nothing_wrote_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Returned through a conditional, which no local names, in the words
+        // that name none. Mutation: change those words; this fails.
+        a_block_nothing_wrote_returned_through_a_conditional_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Out of a pointer local nothing wrote, kept whole. Mutation: ask a
         // local kept whole nothing; it goes silent.
         a_copy_of_a_pointer_local_nothing_wrote_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

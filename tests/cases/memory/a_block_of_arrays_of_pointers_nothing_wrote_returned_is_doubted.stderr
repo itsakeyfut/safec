@@ -1,0 +1,10 @@
+error[SC0411]: `b` points at memory nothing wrote, and the caller may read pointers out of it
+   ╭─[ a_block_of_arrays_of_pointers_nothing_wrote_returned_is_doubted.c:5:5 ]
+   │
+ 5 │     return b;
+   │     ────┬────  
+   │         ╰────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before returning it, or allocate it with `calloc`

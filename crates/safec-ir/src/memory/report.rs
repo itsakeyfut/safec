@@ -7,8 +7,8 @@ use std::collections::BTreeSet;
 
 use crate::analysis::Conclusion;
 use crate::ir::{
-    BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
-    TyId,
+    BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Place, Projection, Rvalue,
+    Terminator, TyId,
 };
 use crate::library::{Callee, Reach};
 use crate::nullability::NullAtTerminators;
@@ -243,6 +243,8 @@ fn verdict(
         Kind::HandedOnNarrow { .. } => true,
         // Never asked: it is said where a copy leaves, about no free.
         Kind::CopiedUnwritten => true,
+        // Never asked: it is said where a block is returned, about no free.
+        Kind::ReturnedUnwritten => true,
     };
 
     match earliest {
@@ -1384,6 +1386,57 @@ fn part_of_what_operands_point_at(
         .find_map(|operand| points_at_a_pointer(analysis, function, operand, known))
 }
 
+/// Report a `return` of a pointer that may name a block **certainly**
+/// unwritten, where the return type points at memory holding pointers: the
+/// return-side counterpart of `loaded_indeterminate`, which reports a read of
+/// such a block inside this function. Certainly, not possibly, since
+/// `if (m) *m = x; return m;` joins a path with no block at all; only a
+/// `return`, since a block handed to a call is how a callee is given memory to
+/// fill. See ADR-0073 rule 3, which says what both cost (#828).
+fn report_returned_unwritten(
+    findings: &mut Vec<Finding>,
+    analysis: &Allocations<'_>,
+    function: &Function,
+    operation: &Operation,
+    known: &Known,
+) {
+    let Rvalue::Use(Operand::Copy(place)) = &operation.value else {
+        return;
+    };
+    if !place.projection.is_empty() {
+        return;
+    }
+    // **Whether the caller reads pointers out of it**, by `pointee_width`,
+    // which answers only for a pointer, `void *` as `0`; through an array to
+    // its element, as `int *(*)[2]` holds pointers too. Found by review.
+    let returns_pointers = analysis
+        .unit
+        .place_ty(function, &Place::local(function.return_place()))
+        .and_then(|ty| pointee(analysis, ty))
+        .and_then(|ty| pointee_width(analysis, innermost_element(analysis.unit, ty)))
+        .is_some();
+    // **Any block it may name**, not every: one written elsewhere does not
+    // make the other one written, and `r = c ? a : b;` with only `a` written
+    // was silent. The path where an allocation failed names no block, so it
+    // adds nothing here. Found by review.
+    if returns_pointers
+        && known
+            .sites_of(place.local)
+            .any(|site| known.init[site].is_unwritten())
+    {
+        findings.push(Finding {
+            function: analysis.function,
+            kind: Kind::ReturnedUnwritten,
+            conclusion: Conclusion::Unknown,
+            at: operation.origin.span(),
+            local: Some(place.local),
+            freed: None,
+            made: None,
+            unproven: None,
+        });
+    }
+}
+
 /// Whether a library copy may copy bytes nothing wrote into memory that
 /// leaves this function and is believed to hold a pointer. Copying them is
 /// defined (C17 7.24.2.1, 7.24.2.2); a caller reading the pointer they leave is not,
@@ -1567,7 +1620,8 @@ fn points_at_a_pointer(
 /// Report a pointer this element hands back by a `return`, stores through
 /// a pointer, or writes by name into a local code this check cannot read
 /// may read (#690), where this check cannot show it points at one whole
-/// object of the type it leaves as.
+/// object of the type it leaves as. And a `return` of a block nothing wrote,
+/// [`report_returned_unwritten`].
 ///
 /// **The departure half of ADR-0060.** A caller believes what it is handed
 /// back, and a later load believes what it reads, so this is where either
@@ -1588,6 +1642,11 @@ pub(super) fn departed_in_element(
         return;
     };
     let how = if store.into == Place::local(function.return_place()) {
+        // **Whether the block it returns was written**: `int **b =
+        // malloc(8); return b;` hands the caller pointers nobody wrote, where
+        // reading `*b` in this function is `SC0411` by `loaded_indeterminate`
+        // (#823). See ADR-0073 rule 3.
+        report_returned_unwritten(findings, analysis, function, operation, known);
         Departure::Return
     } else {
         match store.kind {
