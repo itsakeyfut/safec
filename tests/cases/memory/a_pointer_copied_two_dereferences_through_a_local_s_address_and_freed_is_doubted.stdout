@@ -1,0 +1,172 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:3:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:4:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *" "x"
+  Local "_2" "void *"
+  Local "_3" "int **" "p"
+  Local "_4" "void *"
+  Local "_5" "int **" "b"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int"
+  Local "_12" "int *"
+  Local "_13" "int ***" "t"
+  Local "_14" "int ***"
+  Local "_15" "void *"
+  Block "bb0" entry
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:4:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:5:14 generated
+    Call a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:5:14 written "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:5:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:5:14 generated
+    ArgumentsEvaluated a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:6:15 generated
+    Call a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:6:15 written "malloc" "bb2"
+      Destination "_4"
+      Constant 8
+  Block "bb2"
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:6:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:6:15 generated
+    ArgumentsEvaluated a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:7:15 generated
+    Call a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:7:15 written "malloc" "bb3"
+      Destination "_6"
+      Constant 8
+  Block "bb3"
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:7:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:7:15 generated
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:9 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_1"
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:9 written
+      Destination "_8"
+      Binary "Ne"
+        Copy "_7"
+        Constant 0
+    Branch a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:9 written "bb4" "bb5"
+      Copy "_8"
+  Block "bb4"
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:9 written
+      Destination "_10"
+      Binary "Ne"
+        Copy "_8"
+        Constant 0
+    Branch a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:9 written "bb8" "bb7"
+      Copy "_10"
+  Block "bb5"
+    Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:9 generated
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:15 written
+      Destination "_9"
+      Unary "Not"
+        Copy "_3"
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:15 written
+      Destination "_8"
+      Binary "Ne"
+        Copy "_9"
+        Constant 0
+    Goto "bb4"
+  Block "bb6"
+    Branch a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:9 written "bb8" "bb9"
+      Copy "_10"
+  Block "bb7"
+    Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:9 generated
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:21 written
+      Destination "_11"
+      Unary "Not"
+        Copy "_5"
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:21 written
+      Destination "_10"
+      Binary "Ne"
+        Copy "_11"
+        Constant 0
+    Goto "bb6"
+  Block "bb8"
+    Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:9 generated
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:25 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:32 generated
+    Return
+  Block "bb9"
+    Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:9 generated
+    Goto "bb10"
+  Block "bb10"
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:9:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_1"
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:9:5 written
+      Destination "_12"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:9:5 generated
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:10:16 written
+      Destination "_14"
+      Address
+        Place "_3"
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:10:12 written
+      Destination "_13"
+      Use
+        Copy "_14"
+    Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:10:16 generated
+    ArgumentsEvaluated a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:11:5 generated
+    Call a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:11:5 written "memcpy" "bb11"
+      Destination "_15"
+      Copy "_13"
+        Deref
+      Copy "_5"
+      Constant 8
+  Block "bb11"
+    Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:11:5 generated
+    ArgumentsEvaluated a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:12:5 generated
+    Call a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:12:5 written "free" "bb12"
+      Copy "_1"
+  Block "bb12"
+    Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:12:5 generated
+    ArgumentsEvaluated a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:13:5 generated
+    Call a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:13:5 written "free" "bb13"
+      Copy "_5"
+  Block "bb13"
+    Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:13:5 generated
+    ArgumentsEvaluated a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:14:5 generated
+    Call a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:14:5 written "free" "bb14"
+      Copy "_3"
+  Block "bb14"
+    Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:14:5 generated
+    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:15:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:15:12 generated
+    Return

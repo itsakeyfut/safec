@@ -1,0 +1,34 @@
+error[SC0407]: this passes a pointer that may point to a freed allocation
+    ╭─[ a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:11:5 ]
+    │
+ 11 │     memcpy(*t, b, 8);
+    │     ────────┬───────  
+    │             ╰───────── passed here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0414]: this frees `x`, a pointer that was stored where code outside this function may read it
+    ╭─[ a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:12:5 ]
+    │
+  5 │     int *x = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 12 │     free(x);
+    │     ───┬───  
+    │        ╰───── freed here, perhaps still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free
+error[SC0401]: this frees `p`, which may have been freed already
+    ╭─[ a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:14:5 ]
+    │
+ 14 │     free(p);
+    │     ───┬───  
+    │        ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

@@ -241,9 +241,10 @@ enum Route {
     ByAddress,
     /// The same with the level above loaded first, `int ***t_ = &m;
     /// int **q_ = *t_; *q_ = v;`. The load marks what it reads as possibly
-    /// holding an address never recorded, so the door takes the write as
-    /// leaving where [`Route::ByAddress`] does not, which `ACCEPTED` lists
-    /// against #802.
+    /// holding an address never recorded, so the door took the write as
+    /// leaving where [`Route::ByAddress`] did not, until both were settled on
+    /// the side that doubts (#802): the two now answer alike, and both are in
+    /// `ACCEPTED` for leaving where nothing outside reads.
     ByAddressLoaded,
 }
 
@@ -1738,8 +1739,7 @@ const WRITES_WHAT_IT_IS_HANDED: &str = "a call this check cannot read is believe
 // beside a double free, as #684 asks, makes every row listed for
 // `DOUBLE_FREE_FIRST` agree, so each fails as fixed until its entry goes.
 const DOUBLE_FREE_FIRST: &str = "a double-free doubt on a free hides the stored-out doubt on the same free, where an escape or a call this check cannot read raised it (#684)";
-const LOADED_ON_THE_WAY: &str = "a pointer loaded on the way down is taken as possibly holding an address never recorded, so the write through it leaves where the same write through the local's address does not (#802)";
-const DEEP_WRITE_LEAVES: &str = "a write more than one dereference below the pointer it goes through is taken as landing where this check cannot place it, and so as leaving, into memory only this function reads too (#802)";
+const DEEP_WRITE_LEAVES: &str = "a write more than one dereference below the pointer it goes through is taken as landing where this check cannot place it, and so as leaving, into memory only this function reads too, which both spellings of it answer alike (ADR-0071 rule 2, #802)";
 const ESCAPED_SOURCE: &str = "the address a copy takes of its source local escapes it (ADR-0017), so what the local holds is doubted behind a later call with nothing freed (#345)";
 const ESCAPED_HOLDER: &str = "the address of `m` taken makes `m` itself doubted where it is handed (ADR-0017), and what lies behind a pointer is asked only where the pointer itself drew nothing (ADR-0068)";
 // End of the reasons `ACCEPTED` gives.
@@ -2058,12 +2058,12 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
     (
         "stored_freed_by_address_loaded_d1_both",
         Side::Control,
-        Why::Cost(LOADED_ON_THE_WAY),
+        Why::Cost(DEEP_WRITE_LEAVES),
     ),
     (
         "stored_freed_by_address_loaded_d1_one",
         Side::Control,
-        Why::Cost(LOADED_ON_THE_WAY),
+        Why::Cost(DEEP_WRITE_LEAVES),
     ),
     (
         "stored_freed_memcpy_block_d2_both",
@@ -2128,12 +2128,12 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
     (
         "stored_out_by_address_loaded_d1_both",
         Side::Control,
-        Why::Cost(LOADED_ON_THE_WAY),
+        Why::Cost(DEEP_WRITE_LEAVES),
     ),
     (
         "stored_out_by_address_loaded_d1_one",
         Side::Control,
-        Why::Cost(LOADED_ON_THE_WAY),
+        Why::Cost(DEEP_WRITE_LEAVES),
     ),
     (
         "stored_out_memcpy_block_d0_one",
@@ -2257,6 +2257,26 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
     ),
     (
         "stored_out_store_d2_one",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_freed_by_address_d1_both",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_freed_by_address_d1_one",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_out_by_address_d1_both",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_out_by_address_d1_one",
         Side::Control,
         Why::Cost(DEEP_WRITE_LEAVES),
     ),

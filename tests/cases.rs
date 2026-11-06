@@ -1232,6 +1232,21 @@ cases! {
         // Stays in sight: the read back is what is asked. Mutation: every
         // store leaves; this gains an `SC0414`.
         a_freed_pointer_stored_in_memory_only_this_function_reads_is_not_reported_where_it_is_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // One write spelled two ways answers alike (#802): `**t = x;` and
+        // `int **q = *t; *q = x;` with `t = &p` both land in `p`'s block, and
+        // both are doubted as stored out at `free(x)`, `SC0414`, though nothing
+        // outside reads that block, since a write more than one dereference
+        // down is taken as landing where this check cannot place it. The
+        // loaded spelling alone left before. See ADR-0071 rule 2. The other
+        // reports are the escape `&p` makes. Mutation: `Store::leaves` does
+        // not read the landing; the first loses its `SC0414`.
+        a_pointer_stored_two_dereferences_through_a_local_s_address_and_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_stored_through_one_loaded_from_a_local_s_address_and_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a copy through the same place, `memcpy(*t, b, 8);`, lands where
+        // the store does and is doubted alike: a copy's destination is a store
+        // one dereference further, unnamed past one as a store is. Mutation:
+        // a copy is unnamed only past two, as it was; this loses its `SC0414`.
+        a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same store spelled without the pointer. Mutation: a write of a
         // local `Known::exposed` holds is not asked; this goes silent.
         a_freed_pointer_written_into_a_local_a_call_kept_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
