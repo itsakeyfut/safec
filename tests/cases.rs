@@ -3010,8 +3010,9 @@ cases! {
         a_pointer_dereferenced_twice_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_dereferenced_on_one_arm_is_not_proved_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A library function's argument is asked as the dereference of it,
-        // by the library table's rows (#819). See ADR-0072. Mutation: ask no
-        // argument; this and the next three go silent.
+        // by the library table's rows (#819). See ADR-0072. Mutation:
+        // `reached_indices` answers nothing; this and the next three go
+        // silent, the constant's among them.
         a_library_copy_into_a_null_pointer_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A doubt where it may be null.
         a_library_copy_into_a_pointer_that_may_be_null_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -3021,6 +3022,11 @@ cases! {
         // Every row, not the copies alone. Mutation: ask only `memcpy` and
         // `memmove`; it goes silent.
         a_memset_of_a_pointer_that_may_be_null_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The source as well as the destination, each argument the row
+        // names. Mutation: ask the first argument alone, by place and as a
+        // constant; these two go silent.
+        a_library_copy_out_of_a_null_pointer_constant_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_library_copy_out_of_a_pointer_that_may_be_null_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // After the call the arguments are not null on that path, as after a
         // dereference (ADR-0025): two doubts, at the call. Mutation: refine
         // nothing after it; the two reads after it are doubted again.
@@ -3029,7 +3035,9 @@ cases! {
         // is one finding. Mutation: key what the library asks by `**pp`; `pp`
         // is said twice at the call.
         a_library_copy_through_a_pointer_read_out_of_memory_is_said_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A pointer tested first is not asked.
+        // A pointer tested first is asked by what this check knows of it, and
+        // is not doubted. Mutation: ask the arguments as though nothing were
+        // known; it is doubted.
         a_library_copy_through_a_pointer_tested_first_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // One element that dereferences two pointers, one proved null and one
         // nothing is known about. Each is a diagnostic of its own that names

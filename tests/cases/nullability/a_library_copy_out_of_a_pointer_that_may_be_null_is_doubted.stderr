@@ -1,0 +1,10 @@
+error[SC0403]: this may dereference `s` while it is null
+   ╭─[ a_library_copy_out_of_a_pointer_that_may_be_null_is_doubted.c:5:5 ]
+   │
+ 5 │     memcpy(&k, s, 4);
+   │     ────────┬───────  
+   │             ╰───────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
