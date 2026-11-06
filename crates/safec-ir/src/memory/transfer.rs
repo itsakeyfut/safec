@@ -406,6 +406,20 @@ impl Allocations<'_> {
         Some(Levels::from_bounds(levels))
     }
 
+    /// Whether a value of type `ty` points at memory that holds pointers,
+    /// through an array to its element as [`Self::type_levels`] reads it:
+    /// `void **` and `int *(*)[2]` do, `int *` and `void *` do not. See
+    /// [`Held::arrived_holds_pointer`] and ADR-0073 rule 4.
+    pub(super) fn first_level_holds_a_pointer(&self, ty: TyId) -> bool {
+        let Ty::Pointer(stored) = self.unit.ty(ty) else {
+            return false;
+        };
+        matches!(
+            self.unit.ty(innermost_element(self.unit, stored)),
+            Ty::Pointer(_)
+        )
+    }
+
     /// What a pointer read as `place` believes the memory it points at
     /// holds, by level: the type it is read as, no more than what the
     /// memory it is read out of was believed one level further down
@@ -782,6 +796,12 @@ impl Allocations<'_> {
                 // `a_void_pointer_three_levels_deep_converted_whole_is_believed_below_its_first_level`
                 // goes silent.
                 contents_at_most: self.contents_read(function, source, value),
+                // And whether that type holds pointers in its memory, which
+                // `0` there does not say. See `Held::arrived_holds_pointer`.
+                arrived_holds_pointer: self
+                    .unit
+                    .place_ty(function, source)
+                    .is_some_and(|ty| self.first_level_holds_a_pointer(ty)),
                 inner_address: false,
                 element: None,
                 array_edge: false,
@@ -1819,6 +1839,8 @@ impl Analysis for Allocations<'_> {
             known.points_to[parameter].contents_at_most = self
                 .type_levels(function.local(parameter))
                 .unwrap_or_default();
+            known.points_to[parameter].arrived_holds_pointer =
+                self.first_level_holds_a_pointer(function.local(parameter));
             known.extent[Site::of(LocalIdx::of(parameter))] = Some(Extent::AtLeast(
                 self.pointee_size(function, &Place::local(parameter))
                     .unwrap_or(0),
@@ -3118,6 +3140,8 @@ impl Analysis for Allocations<'_> {
                                     fresh_read: false,
                                     believed: None,
                                     contents_at_most: Levels::default(),
+                                    // Nor any type, as `contents_at_most`.
+                                    arrived_holds_pointer: false,
                                     inner_address: false,
                                     element: None,
                                     array_edge: false,
@@ -3830,6 +3854,10 @@ impl Analysis for Allocations<'_> {
                 .place_ty(function, place)
                 .and_then(|ty| self.type_levels(ty))
                 .unwrap_or_default();
+            value.points_to[result].arrived_holds_pointer = self
+                .unit
+                .place_ty(function, place)
+                .is_some_and(|ty| self.first_level_holds_a_pointer(ty));
         }
         // **Its contents are indeterminate** where its row says so, and for
         // `realloc` where it was handed a pointer that is certainly null, as

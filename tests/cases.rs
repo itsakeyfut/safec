@@ -376,8 +376,23 @@ cases! {
         a_copy_of_an_int_into_a_pointer_parameter_behind_a_void_pointer_is_asked_by_the_type_it_arrived_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An `int *` arrives believing `0` below it, as a `void **` does,
         // which is no pointer held. Mutation: count an arrived belief of
-        // `0`; it is `SC0413`.
+        // `0`; it is `SC0413`. Or say every pointer type arrived holding
+        // pointers; it is `SC0413` too.
         a_byte_copy_of_an_int_through_an_int_pointer_parameter_behind_a_void_pointer_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `void **` arrives holding pointers, though it believes `0` there
+        // too, and is asked (#818). See ADR-0073 rule 4. Mutation: never
+        // say a type arrived holding pointers; this and the next three go
+        // silent.
+        a_copy_of_an_int_into_a_void_pointer_pointer_behind_a_void_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Holding pointers on one path is enough. Mutation: join it by
+        // intersection; this goes silent.
+        a_copy_into_a_void_pointer_that_may_have_arrived_as_a_void_pointer_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read out of memory as a `void **`. Mutation: the load says
+        // nothing of it; this goes silent.
+        a_copy_into_a_void_pointer_pointer_read_out_of_memory_behind_a_void_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Returned by a call as a `void **`. Mutation: the call's result
+        // says nothing of it; this goes silent.
+        a_copy_into_a_void_pointer_pointer_a_call_returned_behind_a_void_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Two locals of different widths name the narrower, a `void *`'s
         // none. Mutation: name the wider; it says "as wide as its type".
         a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
