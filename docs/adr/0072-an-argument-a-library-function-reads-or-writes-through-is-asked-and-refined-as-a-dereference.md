@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-11-06
 decision-makers: itsakeyfut
 ---
@@ -50,9 +50,23 @@ as the memory check reads it (ADR-0071 rule 1).
 
 ### Confirmation
 
-Filled when #819 lands: the cases its pull request adds, each failing under the
-mutation it names, for asking no argument, asking only the copies, and not
-refining after the call.
+In `tests/cases.rs`, the nullability group: `Nullability::reached_indices`
+answering nothing fails `a_library_copy_into_a_null_pointer_is_reported` and
+the three cases after it, the constant's among them; asking `memcpy` and
+`memmove` alone fails `a_memset_of_a_pointer_that_may_be_null_is_doubted`;
+asking the first argument alone fails
+`a_library_copy_out_of_a_null_pointer_constant_is_reported` and
+`a_library_copy_out_of_a_pointer_that_may_be_null_is_doubted`; refining nothing
+after the call fails
+`a_pointer_handed_to_a_library_copy_is_not_doubted_again_after_it`; asking the
+arguments as though nothing were known fails
+`a_library_copy_through_a_pointer_tested_first_is_not_doubted`; and keying what
+the library asks of a load by `**pp` rather than `*pp` fails
+`a_library_copy_through_a_pointer_read_out_of_memory_is_said_once`. No C
+reaches a body defined under a library name where this check runs, so
+`a_function_defined_under_a_library_name_is_not_asked_as_one` in
+`crates/safec-ir/tests/nulls.rs` builds it by hand and fails if `is_defined`
+is not asked.
 
 ### Consequences
 
