@@ -150,12 +150,14 @@ door-question beliefs (#801) list the pairs that still differ.
    `a_copy_of_a_block_nothing_wrote_into_caller_memory_is_doubted` and every
    other case beside them in `tests/cases.rs` that reports, and four cases
    elsewhere that copy into a block twice or into a parameter; so does
-   `report::copies_unwritten` answering `false`. The case each further
-   mutation fails is named beside it there: asking the destination nothing
-   of whether it leaves, taking any destination as holding a pointer, the
-   destination's type alone, every element of an array kept element by
-   element, its first element alone, no allocation, no local kept whole,
-   and no source read out of memory.
+   `report::source_may_be_unwritten` answering `false`. The case each
+   further mutation fails is named beside it there: asking the destination
+   nothing of whether it leaves, taking any destination as holding a
+   pointer, the destination's type alone, every element of an array kept
+   element by element, its first element alone, the length rounded down,
+   nothing where the covered elements are not known, no allocation, no
+   local kept whole, no source read out of memory, and a source spelled
+   through a dereference answered either way.
 
 ### Consequences
 
@@ -172,6 +174,11 @@ door-question beliefs (#801) list the pairs that still differ.
   and a library copy exposes what it is handed: a second copy of unwritten
   bytes into a block the function made is doubted at the copy, beside the
   read that already reports it, or alone where the block is freed unread.
+* Neutral, because rule 5 asks only what this check already follows as
+  unwritten, a local holding a pointer and an allocation, and asks whether
+  a block leaves when the copy is made: an `int` array copied out, and a
+  block filled by a copy and handed back afterwards, say nothing, as a block
+  handed back with nothing written into it already says nothing.
 * What would reverse this: a points-to representation that says who holds a
   local's address exactly, so that the escape and the `loaded` mark stop
   standing in for it (#810).

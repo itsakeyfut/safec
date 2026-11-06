@@ -1466,7 +1466,9 @@ fn source_may_be_unwritten(
     // (`Known::levels_below`): answering `false` for it said the bytes were
     // written whenever the source was spelled that way. A place of
     // anything but dereferences names memory this check does not follow,
-    // and is doubted. Found by review.
+    // and is doubted. Found by review. **Nothing guards that last arm**: an
+    // indexed source, `a[0]` or `a[k]`, reaches the call as a dereference,
+    // measured, and no C program found reaches it otherwise.
     if !from.projection.is_empty() {
         let depth = derefs(from);
         if depth == 0 {
