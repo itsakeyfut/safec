@@ -416,6 +416,23 @@ cases! {
         // parameter's. Mutation: take any destination as holding one; it
         // is doubted.
         a_copy_of_unwritten_bytes_into_caller_memory_of_ints_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block nothing wrote, handed back to a caller that reads pointers
+        // out of it, is doubted at the `return` (#823). See ADR-0073 rule 3.
+        // Mutation: never doubt it; this and the next go silent.
+        a_block_nothing_wrote_returned_as_a_table_of_pointers_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy of half a pointer into it writes no pointer whole and
+        // leaves it unwritten.
+        a_block_a_copy_wrote_half_a_pointer_into_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written before it is returned, nothing.
+        a_block_written_before_it_is_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written on the path where its allocation succeeded, nothing: the
+        // block is possibly unwritten only through the path where there is
+        // none. Mutation: doubt a block possibly unwritten; this is doubted.
+        a_block_written_on_the_path_its_allocation_succeeded_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Returned as a table of integers, nothing: the caller reads no
+        // pointer out of it. Mutation: doubt whatever the return type; this
+        // is doubted.
+        a_block_returned_as_a_table_of_integers_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Out of a pointer local nothing wrote, kept whole. Mutation: ask a
         // local kept whole nothing; it goes silent.
         a_copy_of_a_pointer_local_nothing_wrote_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

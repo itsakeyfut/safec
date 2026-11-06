@@ -1,0 +1,10 @@
+error[SC0411]: `b` points at memory nothing wrote, which the caller reads as holding pointers
+   ╭─[ a_block_nothing_wrote_returned_as_a_table_of_pointers_is_doubted.c:5:5 ]
+   │
+ 5 │     return b;
+   │     ────┬────  
+   │         ╰────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before returning it, or allocate it with `calloc`

@@ -7,8 +7,8 @@ use std::collections::BTreeSet;
 
 use crate::analysis::Conclusion;
 use crate::ir::{
-    BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
-    TyId,
+    BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Place, Projection, Rvalue,
+    Terminator, TyId,
 };
 use crate::library::{Callee, Reach};
 use crate::nullability::NullAtTerminators;
@@ -243,6 +243,8 @@ fn verdict(
         Kind::HandedOnNarrow { .. } => true,
         // Never asked: it is said where a copy leaves, about no free.
         Kind::CopiedUnwritten => true,
+        // Never asked: it is said where a block is returned, about no free.
+        Kind::ReturnedUnwritten => true,
     };
 
     match earliest {
@@ -1384,6 +1386,51 @@ fn part_of_what_operands_point_at(
         .find_map(|operand| points_at_a_pointer(analysis, function, operand, known))
 }
 
+/// Report a `return` of a pointer that names a block **certainly** unwritten,
+/// at least one and every one it names, where the return type points at a
+/// pointer. Certainly, not possibly: `if (m) *m = x; return m;` joins the path
+/// where the allocation failed, which wrote nothing, with the one that wrote,
+/// and doubting that measured three false reports in the corpus. Only a
+/// `return`: a block handed to a call is how a callee is given memory to fill.
+/// The cost is a function that allocates a table of pointers and hands it back
+/// unfilled for the caller to fill, which is doubted. See ADR-0073 rule 3.
+fn returned_unwritten(
+    findings: &mut Vec<Finding>,
+    analysis: &Allocations<'_>,
+    function: &Function,
+    operation: &Operation,
+    known: &Known,
+) {
+    let Rvalue::Use(Operand::Copy(place)) = &operation.value else {
+        return;
+    };
+    if !place.projection.is_empty() {
+        return;
+    }
+    let holds = analysis
+        .unit
+        .place_ty(function, &Place::local(function.return_place()))
+        .and_then(|ty| pointee(analysis, ty))
+        .and_then(|ty| pointee_width(analysis, ty))
+        .is_some();
+    let mut sites = known.sites_of(place.local).peekable();
+    if !holds || sites.peek().is_none() {
+        return;
+    }
+    if sites.all(|site| known.init[site].is_unwritten()) {
+        findings.push(Finding {
+            function: analysis.function,
+            kind: Kind::ReturnedUnwritten,
+            conclusion: Conclusion::Unknown,
+            at: operation.origin.span(),
+            local: Some(place.local),
+            freed: None,
+            made: None,
+            unproven: None,
+        });
+    }
+}
+
 /// Whether a library copy may copy bytes nothing wrote into memory that
 /// leaves this function and is believed to hold a pointer. Copying them is
 /// defined (C17 7.24.2.1, 7.24.2.2); a caller reading the pointer they leave is not,
@@ -1588,6 +1635,10 @@ pub(super) fn departed_in_element(
         return;
     };
     let how = if store.into == Place::local(function.return_place()) {
+        // **And whether the block it returns was written**: `int **b =
+        // malloc(8); return b;` hands the caller pointers nobody wrote, where
+        // `int *p = *b;` here is `SC0411` (#823). See ADR-0073 rule 3.
+        returned_unwritten(findings, analysis, function, operation, known);
         Departure::Return
     } else {
         match store.kind {

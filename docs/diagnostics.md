@@ -184,9 +184,21 @@ element by element and the length is a constant, only the elements the copy
 covers are asked. A second copy into a block the function made is asked as
 leaving, since a library copy exposes what it is handed, so unwritten bytes
 copied into it twice are doubted at the copy as well as where they are read.
-One limit is inherited rather than chosen here: a block is asked whether it
-leaves when the copy is made, so a block filled by a copy and handed back afterwards says nothing, as
-a block handed back with nothing written into it says nothing.
+A block is asked whether it leaves when the copy is made, so a block filled by
+a copy and handed back afterwards is asked where it is handed back, below.
+
+A `return` of a pointer to a block nothing wrote, certainly, from a function
+whose return type points at a pointer is `SC0411` as a doubt at the `return`:
+"this returns memory nothing wrote, which the caller reads as holding
+pointers" (#823). `int **b = malloc(8); if (!b) return 0; return b;` is the
+program, and so is the same after a copy of half a pointer into it. Only
+certainly: a block written on the path where its allocation succeeded,
+`if (m) *m = p; return m;`, says nothing, though the path where it failed
+wrote nothing. Only a `return`: a block handed to a call is how a callee is
+given memory to fill. The cost is a function that allocates a table of
+pointers and hands it back unfilled for its caller to fill, which is doubted.
+[ADR-0073](adr/0073-what-leaves-a-function-is-asked-by-how-it-was-declared-and-what-wrote-it.md)
+rule 3 is the decision.
 
 A local whose address is taken, a local array among them, is indeterminate in
 the same way until something writes it (C17 6.2.4 p6, 6.7.9 p10), and the same
