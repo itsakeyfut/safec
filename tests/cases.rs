@@ -3009,6 +3009,24 @@ cases! {
         // fact is per path: the arm that skips the dereference joins back in.
         a_pointer_dereferenced_twice_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_dereferenced_on_one_arm_is_not_proved_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A library function's argument is asked as the dereference of it,
+        // by the library table's rows (#819). See ADR-0072. Mutation: ask no
+        // argument; this and the next three go silent.
+        a_library_copy_into_a_null_pointer_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A doubt where it may be null.
+        a_library_copy_into_a_pointer_that_may_be_null_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A null pointer constant has no place to ask through, and is a
+        // proof. Mutation: drop the constant's arm; it goes silent.
+        a_library_copy_into_a_null_pointer_constant_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Every row, not the copies alone. Mutation: ask only `memcpy` and
+        // `memmove`; it goes silent.
+        a_memset_of_a_pointer_that_may_be_null_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // After the call the arguments are not null on that path, as after a
+        // dereference (ADR-0025): two doubts, at the call. Mutation: refine
+        // nothing after it; the two reads after it are doubted again.
+        a_pointer_handed_to_a_library_copy_is_not_doubted_again_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer tested first is not asked.
+        a_library_copy_through_a_pointer_tested_first_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // One element that dereferences two pointers, one proved null and one
         // nothing is known about. Each is a diagnostic of its own that names
         // its pointer, because a dereference is one finding per place: the
