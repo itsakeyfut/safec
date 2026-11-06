@@ -156,7 +156,8 @@ impl Allocations<'_> {
         let mut into = to.clone();
         into.projection.push(Projection::Deref);
         // Where it lands as the transfer finds it: a store one dereference
-        // further than its destination.
+        // further than its destination, so one exact dereference down where
+        // the destination is a plain local, as `store_in`'s `[Deref]` is.
         let landing = self.landing(
             known,
             to.local,

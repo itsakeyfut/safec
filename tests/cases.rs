@@ -1237,25 +1237,27 @@ cases! {
         // both are doubted as stored out at `free(x)`, `SC0414`, though nothing
         // outside reads that block, since a write more than one dereference
         // down is taken as landing where this check cannot place it. The
-        // loaded spelling alone left before. See ADR-0071 rule 2. The other
-        // reports are the escape `&p` makes. Mutation: `Store::leaves` does
-        // not read the landing; the first loses its `SC0414`.
+        // loaded spelling alone left before. See ADR-0071 rule 2. The
+        // `SC0402`, `SC0401` and `SC0403` beside it are the escape `&p` makes.
+        // Mutation: `store_in` does not ask the landing for `leaves`; the
+        // first loses its `SC0414`.
         a_pointer_stored_two_dereferences_through_a_local_s_address_and_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_stored_through_one_loaded_from_a_local_s_address_and_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And a copy through the same place, `memcpy(*t, b, 8);`, lands where
         // the store does and is doubted alike: a copy's destination is a store
         // one dereference further, unnamed past one as a store is. Mutation:
         // a copy is unnamed only past two, as it was; this loses its `SC0414`.
-        // Mutation: `store_at` does not read the landing; the same.
+        // Mutation: `store_at`, the copy's door, does not ask the landing for
+        // `leaves`; this loses its `SC0414` too.
         a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy whose source is itself freed is a proof that it was handed a
         // freed pointer, `SC0407` as an error, beside the doubt `copied_away`
         // raises about what that source points at: the two are two defects.
         // Under `--allow-unknown` the proof alone decides the exit. Found by
-        // review of #802, where making the first copy leave dropped the proof
-        // and the run built; the second, through a parameter, had dropped it
-        // before. Mutation: `handed` skips a source `copied_away` said, whole;
-        // both build.
+        // review of #802: the copy through a local's address dropped the proof
+        // once it left, and the copy through a parameter, which left already,
+        // had dropped it on `main`. Mutation: `handed` skips a source
+        // `copied_away` said, whole; both build under `--allow-unknown`.
         a_freed_source_copied_through_a_local_s_address_is_still_proved_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_freed_source_copied_out_through_a_parameter_is_still_proved_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // The same store spelled without the pointer. Mutation: a write of a

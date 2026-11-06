@@ -2350,7 +2350,9 @@ pub(super) fn handed(
         // freed lost the proof that `b` was freed, and `--allow-unknown`
         // built it, once #802 made that copy leave. A source that is a
         // local's address, `&x`, reaches the local, which nothing frees, so
-        // asking it says nothing twice.
+        // asking it says nothing twice. **And kept out of `silent`**, the
+        // pointers whose targets `freed_behind` asks below, since what this
+        // source points at is what `copied_away` already said.
         let said_behind = copied == Some(place);
         let Some(verdict) = verdict(
             analysis.sources,

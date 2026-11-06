@@ -73,7 +73,7 @@ the door questions (#801) and these are fixed.
    its unit defines, so `Allocations::callee` answers `Callee::Opaque` for it
    and the transfer and every door read the same kind.
 2. **A store leaves where `Known::leaves` says so or its `Landing` is
-   unnamed**, and `Landing::unnamed` and `Landing::unplaced` answer a store and
+   unnamed or unplaced**, and `Landing::unnamed` and `Landing::unplaced` answer a store and
    a copy at one depth alike, by the rule that doubts: a write more than one
    dereference below the pointer it goes through is unnamed, for both kinds
    (#802).
@@ -120,7 +120,12 @@ beliefs (#801) list the pairs that still differ until each lands.
    The store and the copy counting different locals as placed decides no
    case, measured. In `tests/routes.rs` both spellings through a local's
    address, `ByAddress` and `ByAddressLoaded`, are listed as leaving where
-   nothing outside reads (`DEEP_WRITE_LEAVES`).
+   nothing outside reads (`DEEP_WRITE_LEAVES`). A copy's door that skips its
+   source whole once `copied_away` has said what the source points at fails
+   `a_freed_source_copied_through_a_local_s_address_is_still_proved_freed`
+   and `a_freed_source_copied_out_through_a_parameter_is_still_proved_freed`,
+   which then build under `--allow-unknown`: the wider leaving of this rule
+   reached that skip.
 
 ### Consequences
 
