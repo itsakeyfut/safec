@@ -121,7 +121,8 @@ an argument of the same call.
 [ADR-0052](adr/0052-an-argument-that-writes-a-pointer-another-argument-reads-is-reported-where-it-is-lowered.md)
 is the decision.
 
-**`SC0411` is a pointer local read before anything was assigned to it.** C17
+**`SC0411` is a pointer local read before anything was assigned to it**, and,
+below, memory nothing wrote leaving for code this check cannot read. C17
 6.3.2.1 p2 leaves reading a local whose address is never taken undefined
 while it is indeterminate, whatever the read is for, so `int *p; if (p != 0) {
 *p = 1; }` is reported at the comparison and at the write. Where no path to
@@ -188,15 +189,20 @@ A block is asked whether it leaves when the copy is made, so a block filled by
 a copy and handed back afterwards is asked where it is handed back, below.
 
 A `return` of a pointer to a block nothing wrote, certainly, from a function
-whose return type points at a pointer is `SC0411` as a doubt at the `return`:
-"this returns memory nothing wrote, which the caller reads as holding
-pointers" (#823). `int **b = malloc(8); if (!b) return 0; return b;` is the
-program, and so is the same after a copy of half a pointer into it. Only
-certainly: a block written on the path where its allocation succeeded,
-`if (m) *m = p; return m;`, says nothing, though the path where it failed
-wrote nothing. Only a `return`: a block handed to a call is how a callee is
-given memory to fill. The cost is a function that allocates a table of
-pointers and hands it back unfilled for its caller to fill, which is doubted.
+whose return type points at memory holding pointers is `SC0411` as a doubt
+at the `return`: "this returns memory nothing wrote, and the caller may read
+pointers out of it" (#823). `int **b = malloc(8); if (!b) return 0; return
+b;` is the program, and so is the same after a copy of half a pointer into
+it. Only certainly: a block written on the path where its allocation
+succeeded, `if (m) *m = p; return m;`, says nothing, though the path where
+it failed wrote nothing; and so, for now, does a block left unwritten on one
+path where the allocation succeeded, `if (c) *b = p; return b;`, which this
+cannot yet tell from the first (#828). A pointer that may name either of two
+blocks is asked of each. Only a `return`: a block handed to a call is how a
+callee is given memory to fill, and a block handed back through a parameter,
+`*out = b;`, is not asked either, for now. The cost is a function that
+allocates a table of pointers and hands it back unfilled for its caller to
+fill, which is doubted.
 [ADR-0073](adr/0073-what-leaves-a-function-is-asked-by-how-it-was-declared-and-what-wrote-it.md)
 rule 3 is the decision.
 

@@ -1,4 +1,4 @@
-error[SC0411]: `b` points at memory nothing wrote, which the caller reads as holding pointers
+error[SC0411]: `b` points at memory nothing wrote, and the caller may read pointers out of it
    ╭─[ a_block_nothing_wrote_returned_as_a_table_of_pointers_is_doubted.c:5:5 ]
    │
  5 │     return b;

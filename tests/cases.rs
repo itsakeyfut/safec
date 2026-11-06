@@ -441,6 +441,9 @@ cases! {
         // ask the return type's pointee without looking through an array;
         // this goes silent.
         a_block_of_arrays_of_pointers_nothing_wrote_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Returned through a conditional, which no local names, in the words
+        // that name none. Mutation: change those words; this fails.
+        a_block_nothing_wrote_returned_through_a_conditional_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Out of a pointer local nothing wrote, kept whole. Mutation: ask a
         // local kept whole nothing; it goes silent.
         a_copy_of_a_pointer_local_nothing_wrote_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
