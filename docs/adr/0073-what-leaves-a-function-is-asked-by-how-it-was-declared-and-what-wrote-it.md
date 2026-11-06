@@ -88,6 +88,17 @@ adds its rule's cases and the mutation that fails each here.
    in `crates/safec-ir/tests/freed.rs`, and either side reading a `char` as no
    integer fails `a_library_name_declared_over_a_char_is_not_refused` or
    `a_library_call_declared_over_a_char_is_read_by_its_row`.
+2. `Allocations::unwritten_at_entry` keeping only a local that holds a
+   pointer fails `a_char_buffer_nothing_wrote_copied_into_caller_memory_is_doubted`
+   and `a_char_buffer_nothing_wrote_read_as_a_pointer_is_reported`; `StorageLive`
+   keeping its old rule for a local that holds no pointer fails
+   `a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next`, and the
+   two together fail
+   `an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_reported`;
+   `Known::written_local` writing nothing fails
+   `a_char_buffer_written_whole_and_read_as_a_pointer_is_not_reported`; and
+   `report::unwritten_read` dropping its `holds_a_pointer` filter fails
+   `an_integer_local_whose_address_is_taken_read_before_anything_wrote_it_is_not_followed`.
 
 ### Consequences
 
