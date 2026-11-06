@@ -3151,4 +3151,99 @@ mod tests {
         let exit = resolved_at("void exit(int status) { }\n", false);
         assert_eq!(exit.diagnostics.diagnostics().len(), 1, "exit");
     }
+
+    /// Each name the memory check reads by name, declared with the library's
+    /// own shape, is not refused, written out one declaration per name so that
+    /// a row whose `parameters` were written wrong fails for that name. This
+    /// is also every shape the corpus declares them with. Mutation: give
+    /// `memset`'s row `[Pointer, Integer]`; this fails on `memset`. See
+    /// ADR-0073 rule 1.
+    #[test]
+    fn each_library_name_declared_with_its_own_shape_is_not_refused() {
+        for declaration in [
+            "void free(void *p);",
+            "void *malloc(int n);",
+            "void *calloc(int n, int size);",
+            "void *aligned_alloc(int alignment, int size);",
+            "void *realloc(void *p, int n);",
+            "void *memcpy(void *d, void *s, int n);",
+            "void *memmove(void *d, void *s, int n);",
+            "void *memset(void *d, int c, int n);",
+            "char *strcpy(char *d, char *s);",
+            "char *strncpy(char *d, char *s, int n);",
+            "char *strcat(char *d, char *s);",
+            "char *strncat(char *d, char *s, int n);",
+            "int memcmp(void *a, void *b, int n);",
+            "void *memchr(void *s, int c, int n);",
+            "int strlen(char *s);",
+            "int strcmp(char *a, char *b);",
+            "int strncmp(char *a, char *b, int n);",
+            "char *strchr(char *s, int c);",
+            "char *strrchr(char *s, int c);",
+            "char *strstr(char *a, char *b);",
+        ] {
+            let resolved = resolved(&format!("{declaration}\n"));
+            assert_eq!(resolved.diagnostics.diagnostics(), [], "{declaration}");
+        }
+    }
+
+    /// The code and the words a declaration unlike the library's takes.
+    fn refused_as_misdeclared(source: &str) {
+        let resolved = resolved(source);
+        let [reported] = resolved.diagnostics.diagnostics() else {
+            panic!("{source}: {:?}", resolved.diagnostics.diagnostics());
+        };
+        assert_eq!(
+            reported.code().map(|code| code.to_string()).as_deref(),
+            Some("SC0320"),
+            "{source}"
+        );
+        assert!(
+            reported.message().contains("unlike the library's"),
+            "{source}"
+        );
+    }
+
+    /// A library name declared with its parameters swapped is refused, which
+    /// is the program #821 found the checks reading at the wrong positions.
+    /// Mutation: `library::declared_as_its_row` answers `Some(true)` always;
+    /// this fails. See ADR-0073 rule 1.
+    #[test]
+    fn a_library_name_declared_with_its_parameters_swapped_is_refused() {
+        refused_as_misdeclared("char *strchr(int c, char *s);\n");
+    }
+
+    /// One parameter too few is a shape too. Mutation: compare the parameters
+    /// position by position, not their count; this fails.
+    #[test]
+    fn a_library_name_declared_with_too_few_parameters_is_refused() {
+        refused_as_misdeclared("void *memcpy(void *d, void *s);\n");
+    }
+
+    /// A function declared in a block has external linkage too (C17 6.2.2
+    /// p5), so it is asked as one at file scope is. Mutation: ask only at file
+    /// scope; this fails.
+    #[test]
+    fn a_library_name_declared_in_a_block_unlike_its_row_is_refused() {
+        refused_as_misdeclared("int f(void) { char *strchr(int c, char *s); return 0; }\n");
+    }
+
+    /// A declaration with no prototype is compatible with any (C17 6.7.6.3
+    /// p15), and is not refused. Mutation: read no prototype as a mismatch;
+    /// this fails.
+    #[test]
+    fn a_library_name_declared_without_a_prototype_is_not_refused() {
+        let resolved = resolved("void *memcpy();\n");
+        assert_eq!(resolved.diagnostics.diagnostics(), []);
+    }
+
+    /// Where the memory check does not run, nothing reads the call by the
+    /// library's row, and a declaration unlike it is not refused, as a
+    /// definition is not. Mutation: refuse whether or not the check runs;
+    /// this fails.
+    #[test]
+    fn a_library_name_declared_unlike_its_row_is_refused_only_where_the_memory_check_runs() {
+        let resolved = resolved_at("char *strchr(int c, char *s);\n", false);
+        assert_eq!(resolved.diagnostics.diagnostics(), []);
+    }
 }

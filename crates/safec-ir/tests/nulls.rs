@@ -1973,3 +1973,54 @@ fn a_null_handed_to_a_declared_memcpy_is_proved() {
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].conclusion, Conclusion::Unsafe);
 }
+
+/// A library name declared with another shape than its row's is read as any
+/// call: `int strlen(int n);` handed an `int` holding zero is no null
+/// dereference. **IR built by hand**, because the frontend refuses such a
+/// declaration wherever this check runs (`SC0320`); `library::row` is the
+/// one answer both checks read. See ADR-0073 rule 1.
+///
+/// Mutation: have `library::row` skip the shape; the `int` is proved a null
+/// pointer dereferenced.
+#[test]
+fn a_library_name_declared_with_another_shape_is_read_as_any_call() {
+    let text = "strlen f a\n";
+    let mut map = SourceMap::new();
+    let file = map.add_virtual("s.c", text);
+    let callee_name = Span::new(file, 0, 6);
+    let function_name = Span::new(file, 7, 8);
+    let at = Span::new(file, 9, 10);
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let callee = unit.push_function(Function::declaration(callee_name, int, [int]));
+
+    let mut function = Function::new(function_name, int, vec![]);
+    let x = function.push_local(int);
+    let entry = function.reserve_block();
+    let exit = function.reserve_block();
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![Element::Assign(Operation {
+                place: Place::local(x),
+                value: Rvalue::Use(Operand::Constant(0)),
+                origin: Origin::Written(at),
+            })],
+            terminator: Terminator::Call {
+                callee,
+                arguments: vec![Operand::Copy(Place::local(x))],
+                destination: None,
+                then: Some(exit),
+                origin: Origin::Written(at),
+            },
+        },
+    );
+    function.fill_block(exit, returns());
+
+    let found = concluded(&map, unit, function);
+
+    assert!(found.is_empty(), "{found:?}");
+}
