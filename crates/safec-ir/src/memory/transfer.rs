@@ -410,14 +410,18 @@ impl Allocations<'_> {
     /// through an array to its element as [`Self::type_levels`] reads it:
     /// `void **` and `int *(*)[2]` do, `int *` and `void *` do not. See
     /// [`Held::arrived_holds_pointer`] and ADR-0073 rule 4.
+    ///
+    /// Written out rather than as a `matches!`, so a kind of type added
+    /// later, a structure holding a pointer, is asked here too.
     pub(super) fn first_level_holds_a_pointer(&self, ty: TyId) -> bool {
         let Ty::Pointer(stored) = self.unit.ty(ty) else {
             return false;
         };
-        matches!(
-            self.unit.ty(innermost_element(self.unit, stored)),
-            Ty::Pointer(_)
-        )
+        match self.unit.ty(innermost_element(self.unit, stored)) {
+            Ty::Pointer(_) => true,
+            Ty::Int | Ty::Char | Ty::Void => false,
+            Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
+        }
     }
 
     /// What a pointer read as `place` believes the memory it points at

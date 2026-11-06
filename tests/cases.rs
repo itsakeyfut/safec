@@ -381,8 +381,8 @@ cases! {
         a_byte_copy_of_an_int_through_an_int_pointer_parameter_behind_a_void_pointer_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `void **` arrives holding pointers, though it believes `0` there
         // too, and is asked (#818). See ADR-0073 rule 4. Mutation: never
-        // say a type arrived holding pointers; this and the next three go
-        // silent.
+        // say a type arrived holding pointers; this and the five cases after
+        // it go silent.
         a_copy_of_an_int_into_a_void_pointer_pointer_behind_a_void_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Holding pointers on one path is enough. Mutation: join it by
         // intersection; this goes silent.

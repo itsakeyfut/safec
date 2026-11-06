@@ -68,6 +68,10 @@ and Cons below.
    level**, beside the width it believes there, and an operand of a library copy
    is asked by it: `void **` holds `void *`s, `int *` holds none, which the width
    `0` both say. Joined by union, so a path that says pointers asks (#818).
+   Only where a value arrives from a type: a parameter, a load, an opaque
+   call's result. An allocator's result believes nothing of what its memory
+   holds (ADR-0060), so `void **q = malloc(16); void *d = q;` is asked
+   nothing, as `int **q` is; that is #830.
 
 ### Confirmation
 

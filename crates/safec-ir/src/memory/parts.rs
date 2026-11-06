@@ -2129,7 +2129,8 @@ impl Cell {
             element: _,
             array_edge: _,
             stored_through: _,
-            // Nor this: a load takes it from the type it is read as.
+            // Not recorded in memory: a load takes it from the type it is
+            // read as. See `Held::arrived_holds_pointer`.
             arrived_holds_pointer: _,
         } = &other.held;
         self.held.names.union_with(names);
