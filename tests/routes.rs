@@ -67,6 +67,33 @@ enum Belief {
     /// `Cell::absorb` takes no `unreplaced_read`; `unreplaced_store_d1_both`
     /// fails, among twelve.
     Unreplaced,
+    /// **The door questions start here**: what a door asks of a write, and
+    /// not what a load believes of what it reads back (ADR-0068). Each puts an
+    /// allocation `x` into the slot and frees it, nothing is read back, and
+    /// its hazard and control differ in one thing, so that the code a row
+    /// asks for can only come from the door (#801). For this one and
+    /// [`Belief::StoredFreed`] that thing is the one the door asks, whether
+    /// code outside the function can read the slot: the hazard hands the
+    /// slot's container to a call this check cannot read before the write,
+    /// the control does not. [`Belief::LeftBehind`] says its own.
+    ///
+    /// This one: put there, then freed, which `report::reported` doubts at the
+    /// free as stored out (`FreedAfterStore`). Mutation: the free's door never
+    /// pushes `FreedAfterStore`; `stored_out_store_d1_both` fails, among
+    /// twenty one of this belief's thirty eight.
+    StoredOut,
+    /// Freed, then put there, which the store's door doubts or proves
+    /// (`StoreAfterFree`) only where the slot leaves (ADR-0068 rules 2 and 3).
+    /// Mutation: `report::stored_away` asks every store, leaving or not;
+    /// `stored_freed_store_d1_both` fails, among twenty four.
+    StoredFreed,
+    /// Put there in memory only this function reads, freed, and the slot's
+    /// container then handed to a call this check cannot read, which doubts
+    /// what it holds behind it (`FreedBehindArgument`, ADR-0068 rule 4). Its
+    /// control frees nothing, since the container is handed in both.
+    /// Mutation: `report::freed_behind` asks nothing;
+    /// `left_behind_store_d1_both` fails, among thirty four.
+    LeftBehind,
 }
 
 /// How a pointer gets where it is read back from.
@@ -203,6 +230,17 @@ enum Route {
     /// kept through `void *`. Width only, in a block. Mutation: `handed_site`
     /// records nothing untyped; `width_kept_block_d0_both` goes silent.
     KeptBlock,
+    /// The slot a level below a local reached through that local's address,
+    /// `int ***t_ = &m; **t_ = v;`: the same place `Route::Store` writes as
+    /// `*m = v;`, two dereferences down. Asked of the door questions only, at
+    /// the one depth whose slot has a local above it to take the address of.
+    ByAddress,
+    /// The same with the level above loaded first, `int ***t_ = &m;
+    /// int **q_ = *t_; *q_ = v;`. The load marks what it reads as possibly
+    /// holding an address never recorded, so the door takes the write as
+    /// leaving where [`Route::ByAddress`] does not, which `ACCEPTED` lists
+    /// against #802.
+    ByAddressLoaded,
 }
 
 /// Where the slot is: a local, or one or two levels below one.
@@ -234,14 +272,15 @@ struct Row {
 /// **Adding a value** is: its variant, its arm in [`axis_place`] and
 /// [`name_of`], which `E0004` asks for; its place here, which
 /// `every_axis_holds_every_value_once` asks for; for a belief its [`mark`],
-/// its template and its arm in [`program`], and for a route its arm in every
-/// template, [`put`], [`read_from`], [`parameters`] and [`mark`], each an
-/// exhaustive `match`, so `E0004` names what is left; its rows in `routes!`
+/// its template, and its arm in [`program`] and in [`compared_by_depth`],
+/// and for a route its arm in every template, [`put`], [`read_from`],
+/// [`parameters`] and [`mark`], each an exhaustive `match`, so `E0004`
+/// names what is left; its rows in `routes!`
 /// and what cannot be written in [`NOT_WRITTEN`], which
 /// `the_matrix_is_every_combination_of_its_axes` asks for; each row that
 /// disagrees in [`ACCEPTED`] and each less certain than its store in
 /// [`UNCERTAIN`]; and a blessing.
-const BELIEFS: [Belief; 7] = [
+const BELIEFS: [Belief; 10] = [
     Belief::Width,
     Belief::Fresh,
     Belief::Lost,
@@ -249,8 +288,11 @@ const BELIEFS: [Belief; 7] = [
     Belief::Reborn,
     Belief::Caller,
     Belief::Unreplaced,
+    Belief::StoredOut,
+    Belief::StoredFreed,
+    Belief::LeftBehind,
 ];
-const ROUTES: [Route; 24] = [
+const ROUTES: [Route; 26] = [
     Route::Store,
     Route::Memcpy,
     Route::Realloc,
@@ -275,6 +317,8 @@ const ROUTES: [Route; 24] = [
     Route::KeptVoid,
     Route::KeptBytes,
     Route::KeptBlock,
+    Route::ByAddress,
+    Route::ByAddressLoaded,
 ];
 const DEPTHS: [Depth; 3] = [Depth::D0, Depth::D1, Depth::D2];
 const SHAPES: [Shape; 2] = [Shape::Both, Shape::One];
@@ -291,6 +335,9 @@ fn axis_place(row: Row) -> [usize; 4] {
         Belief::Reborn => 4,
         Belief::Caller => 5,
         Belief::Unreplaced => 6,
+        Belief::StoredOut => 7,
+        Belief::StoredFreed => 8,
+        Belief::LeftBehind => 9,
     };
     let route = match row.route {
         Route::Store => 0,
@@ -317,6 +364,8 @@ fn axis_place(row: Row) -> [usize; 4] {
         Route::KeptVoid => 21,
         Route::KeptBytes => 22,
         Route::KeptBlock => 23,
+        Route::ByAddress => 24,
+        Route::ByAddressLoaded => 25,
     };
     let depth = match row.depth {
         Depth::D0 => 0,
@@ -409,7 +458,10 @@ impl Axis for Belief {
             | Belief::Stale
             | Belief::Reborn
             | Belief::Caller
-            | Belief::Unreplaced => 7,
+            | Belief::Unreplaced
+            | Belief::StoredOut
+            | Belief::StoredFreed
+            | Belief::LeftBehind => 10,
         }
     }
 }
@@ -440,7 +492,9 @@ impl Axis for Route {
             | Route::ElementSlot
             | Route::KeptVoid
             | Route::KeptBytes
-            | Route::KeptBlock => 24,
+            | Route::KeptBlock
+            | Route::ByAddress
+            | Route::ByAddressLoaded => 26,
         }
     }
 }
@@ -751,6 +805,120 @@ routes! {
     width_kept_void_d0_both: Width KeptVoid D0 Both;
     width_kept_bytes_d0_both: Width KeptBytes D0 Both;
     width_kept_block_d0_both: Width KeptBlock D0 Both;
+    stored_out_store_d0_both: StoredOut Store D0 Both;
+    stored_out_store_d0_one: StoredOut Store D0 One;
+    stored_out_store_d1_both: StoredOut Store D1 Both;
+    stored_out_store_d1_one: StoredOut Store D1 One;
+    stored_out_store_d2_both: StoredOut Store D2 Both;
+    stored_out_store_d2_one: StoredOut Store D2 One;
+    stored_out_memcpy_d0_both: StoredOut Memcpy D0 Both;
+    stored_out_memcpy_d0_one: StoredOut Memcpy D0 One;
+    stored_out_memcpy_d1_both: StoredOut Memcpy D1 Both;
+    stored_out_memcpy_d1_one: StoredOut Memcpy D1 One;
+    stored_out_memcpy_d2_both: StoredOut Memcpy D2 Both;
+    stored_out_memcpy_d2_one: StoredOut Memcpy D2 One;
+    stored_out_realloc_d1_both: StoredOut Realloc D1 Both;
+    stored_out_realloc_d1_one: StoredOut Realloc D1 One;
+    stored_out_realloc_d2_both: StoredOut Realloc D2 Both;
+    stored_out_realloc_d2_one: StoredOut Realloc D2 One;
+    stored_out_ret_d0_both: StoredOut Ret D0 Both;
+    stored_out_ret_d0_one: StoredOut Ret D0 One;
+    stored_out_ret_d1_both: StoredOut Ret D1 Both;
+    stored_out_ret_d1_one: StoredOut Ret D1 One;
+    stored_out_ret_d2_both: StoredOut Ret D2 Both;
+    stored_out_ret_d2_one: StoredOut Ret D2 One;
+    stored_out_memcpy_block_d0_both: StoredOut MemcpyFromBlock D0 Both;
+    stored_out_memcpy_block_d0_one: StoredOut MemcpyFromBlock D0 One;
+    stored_out_memcpy_block_d1_both: StoredOut MemcpyFromBlock D1 Both;
+    stored_out_memcpy_block_d1_one: StoredOut MemcpyFromBlock D1 One;
+    stored_out_memcpy_block_d2_both: StoredOut MemcpyFromBlock D2 Both;
+    stored_out_memcpy_block_d2_one: StoredOut MemcpyFromBlock D2 One;
+    stored_out_restored_d0_both: StoredOut Restored D0 Both;
+    stored_out_restored_d0_one: StoredOut Restored D0 One;
+    stored_out_restored_d1_both: StoredOut Restored D1 Both;
+    stored_out_restored_d1_one: StoredOut Restored D1 One;
+    stored_out_restored_d2_both: StoredOut Restored D2 Both;
+    stored_out_restored_d2_one: StoredOut Restored D2 One;
+    stored_freed_store_d0_both: StoredFreed Store D0 Both;
+    stored_freed_store_d0_one: StoredFreed Store D0 One;
+    stored_freed_store_d1_both: StoredFreed Store D1 Both;
+    stored_freed_store_d1_one: StoredFreed Store D1 One;
+    stored_freed_store_d2_both: StoredFreed Store D2 Both;
+    stored_freed_store_d2_one: StoredFreed Store D2 One;
+    stored_freed_memcpy_d0_both: StoredFreed Memcpy D0 Both;
+    stored_freed_memcpy_d0_one: StoredFreed Memcpy D0 One;
+    stored_freed_memcpy_d1_both: StoredFreed Memcpy D1 Both;
+    stored_freed_memcpy_d1_one: StoredFreed Memcpy D1 One;
+    stored_freed_memcpy_d2_both: StoredFreed Memcpy D2 Both;
+    stored_freed_memcpy_d2_one: StoredFreed Memcpy D2 One;
+    stored_freed_realloc_d1_both: StoredFreed Realloc D1 Both;
+    stored_freed_realloc_d1_one: StoredFreed Realloc D1 One;
+    stored_freed_realloc_d2_both: StoredFreed Realloc D2 Both;
+    stored_freed_realloc_d2_one: StoredFreed Realloc D2 One;
+    stored_freed_ret_d0_both: StoredFreed Ret D0 Both;
+    stored_freed_ret_d0_one: StoredFreed Ret D0 One;
+    stored_freed_ret_d1_both: StoredFreed Ret D1 Both;
+    stored_freed_ret_d1_one: StoredFreed Ret D1 One;
+    stored_freed_ret_d2_both: StoredFreed Ret D2 Both;
+    stored_freed_ret_d2_one: StoredFreed Ret D2 One;
+    stored_freed_memcpy_block_d0_both: StoredFreed MemcpyFromBlock D0 Both;
+    stored_freed_memcpy_block_d0_one: StoredFreed MemcpyFromBlock D0 One;
+    stored_freed_memcpy_block_d1_both: StoredFreed MemcpyFromBlock D1 Both;
+    stored_freed_memcpy_block_d1_one: StoredFreed MemcpyFromBlock D1 One;
+    stored_freed_memcpy_block_d2_both: StoredFreed MemcpyFromBlock D2 Both;
+    stored_freed_memcpy_block_d2_one: StoredFreed MemcpyFromBlock D2 One;
+    stored_freed_restored_d0_both: StoredFreed Restored D0 Both;
+    stored_freed_restored_d0_one: StoredFreed Restored D0 One;
+    stored_freed_restored_d1_both: StoredFreed Restored D1 Both;
+    stored_freed_restored_d1_one: StoredFreed Restored D1 One;
+    stored_freed_restored_d2_both: StoredFreed Restored D2 Both;
+    stored_freed_restored_d2_one: StoredFreed Restored D2 One;
+    left_behind_store_d0_both: LeftBehind Store D0 Both;
+    left_behind_store_d0_one: LeftBehind Store D0 One;
+    left_behind_store_d1_both: LeftBehind Store D1 Both;
+    left_behind_store_d1_one: LeftBehind Store D1 One;
+    left_behind_store_d2_both: LeftBehind Store D2 Both;
+    left_behind_store_d2_one: LeftBehind Store D2 One;
+    left_behind_memcpy_d0_both: LeftBehind Memcpy D0 Both;
+    left_behind_memcpy_d0_one: LeftBehind Memcpy D0 One;
+    left_behind_memcpy_d1_both: LeftBehind Memcpy D1 Both;
+    left_behind_memcpy_d1_one: LeftBehind Memcpy D1 One;
+    left_behind_memcpy_d2_both: LeftBehind Memcpy D2 Both;
+    left_behind_memcpy_d2_one: LeftBehind Memcpy D2 One;
+    left_behind_realloc_d1_both: LeftBehind Realloc D1 Both;
+    left_behind_realloc_d1_one: LeftBehind Realloc D1 One;
+    left_behind_realloc_d2_both: LeftBehind Realloc D2 Both;
+    left_behind_realloc_d2_one: LeftBehind Realloc D2 One;
+    left_behind_ret_d0_both: LeftBehind Ret D0 Both;
+    left_behind_ret_d0_one: LeftBehind Ret D0 One;
+    left_behind_ret_d1_both: LeftBehind Ret D1 Both;
+    left_behind_ret_d1_one: LeftBehind Ret D1 One;
+    left_behind_ret_d2_both: LeftBehind Ret D2 Both;
+    left_behind_ret_d2_one: LeftBehind Ret D2 One;
+    left_behind_memcpy_block_d0_both: LeftBehind MemcpyFromBlock D0 Both;
+    left_behind_memcpy_block_d0_one: LeftBehind MemcpyFromBlock D0 One;
+    left_behind_memcpy_block_d1_both: LeftBehind MemcpyFromBlock D1 Both;
+    left_behind_memcpy_block_d1_one: LeftBehind MemcpyFromBlock D1 One;
+    left_behind_memcpy_block_d2_both: LeftBehind MemcpyFromBlock D2 Both;
+    left_behind_memcpy_block_d2_one: LeftBehind MemcpyFromBlock D2 One;
+    left_behind_restored_d0_both: LeftBehind Restored D0 Both;
+    left_behind_restored_d0_one: LeftBehind Restored D0 One;
+    left_behind_restored_d1_both: LeftBehind Restored D1 Both;
+    left_behind_restored_d1_one: LeftBehind Restored D1 One;
+    left_behind_restored_d2_both: LeftBehind Restored D2 Both;
+    left_behind_restored_d2_one: LeftBehind Restored D2 One;
+    stored_out_by_address_d1_both: StoredOut ByAddress D1 Both;
+    stored_out_by_address_d1_one: StoredOut ByAddress D1 One;
+    stored_out_by_address_loaded_d1_both: StoredOut ByAddressLoaded D1 Both;
+    stored_out_by_address_loaded_d1_one: StoredOut ByAddressLoaded D1 One;
+    stored_freed_by_address_d1_both: StoredFreed ByAddress D1 Both;
+    stored_freed_by_address_d1_one: StoredFreed ByAddress D1 One;
+    stored_freed_by_address_loaded_d1_both: StoredFreed ByAddressLoaded D1 Both;
+    stored_freed_by_address_loaded_d1_one: StoredFreed ByAddressLoaded D1 One;
+    left_behind_by_address_d1_both: LeftBehind ByAddress D1 Both;
+    left_behind_by_address_d1_one: LeftBehind ByAddress D1 One;
+    left_behind_by_address_loaded_d1_both: LeftBehind ByAddressLoaded D1 Both;
+    left_behind_by_address_loaded_d1_one: LeftBehind ByAddressLoaded D1 One;
 }
 
 /// A combination of the axes no program is written for, and why.
@@ -1226,6 +1394,300 @@ const NOT_WRITTEN: &[Unwritten] = &[
         shape: None,
         why: "a restore loads what it stores, which the store row already asks of freshness",
     },
+    Unwritten {
+        route: Route::Realloc,
+        depth: Some(Depth::D0),
+        belief: Some(Belief::StoredOut),
+        shape: None,
+        why: "a local is not grown by realloc",
+    },
+    Unwritten {
+        route: Route::Call,
+        depth: None,
+        belief: Some(Belief::StoredOut),
+        shape: None,
+        why: "a call writes a value of its own, not the allocation the door question frees",
+    },
+    Unwritten {
+        route: Route::MemcpyHalf,
+        depth: None,
+        belief: Some(Belief::StoredOut),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyPart,
+        depth: None,
+        belief: Some(Belief::StoredOut),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyMaybe,
+        depth: None,
+        belief: Some(Belief::StoredOut),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::CallStored,
+        depth: None,
+        belief: Some(Belief::StoredOut),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::CallDeep,
+        depth: None,
+        belief: Some(Belief::StoredOut),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::ReallocParam,
+        depth: None,
+        belief: Some(Belief::StoredOut),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::Realloc,
+        depth: Some(Depth::D0),
+        belief: Some(Belief::StoredFreed),
+        shape: None,
+        why: "a local is not grown by realloc",
+    },
+    Unwritten {
+        route: Route::Call,
+        depth: None,
+        belief: Some(Belief::StoredFreed),
+        shape: None,
+        why: "a call writes a value of its own, not the allocation the door question frees",
+    },
+    Unwritten {
+        route: Route::MemcpyHalf,
+        depth: None,
+        belief: Some(Belief::StoredFreed),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyPart,
+        depth: None,
+        belief: Some(Belief::StoredFreed),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyMaybe,
+        depth: None,
+        belief: Some(Belief::StoredFreed),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::CallStored,
+        depth: None,
+        belief: Some(Belief::StoredFreed),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::CallDeep,
+        depth: None,
+        belief: Some(Belief::StoredFreed),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::ReallocParam,
+        depth: None,
+        belief: Some(Belief::StoredFreed),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::Realloc,
+        depth: Some(Depth::D0),
+        belief: Some(Belief::LeftBehind),
+        shape: None,
+        why: "a local is not grown by realloc",
+    },
+    Unwritten {
+        route: Route::Call,
+        depth: None,
+        belief: Some(Belief::LeftBehind),
+        shape: None,
+        why: "a call writes a value of its own, not the allocation the door question frees",
+    },
+    Unwritten {
+        route: Route::MemcpyHalf,
+        depth: None,
+        belief: Some(Belief::LeftBehind),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyPart,
+        depth: None,
+        belief: Some(Belief::LeftBehind),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyMaybe,
+        depth: None,
+        belief: Some(Belief::LeftBehind),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::CallStored,
+        depth: None,
+        belief: Some(Belief::LeftBehind),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::CallDeep,
+        depth: None,
+        belief: Some(Belief::LeftBehind),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::ReallocParam,
+        depth: None,
+        belief: Some(Belief::LeftBehind),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::ByAddress,
+        depth: Some(Depth::D0),
+        belief: None,
+        shape: None,
+        why: "a local slot has no local above it to take the address of",
+    },
+    Unwritten {
+        route: Route::ByAddress,
+        depth: Some(Depth::D2),
+        belief: None,
+        shape: None,
+        why: "the slot two levels down has a block above it, not the local whose address is taken",
+    },
+    Unwritten {
+        route: Route::ByAddress,
+        depth: None,
+        belief: Some(Belief::Width),
+        shape: None,
+        why: "a write through a local's address is asked of the door questions, where #802 found the loaded spelling apart",
+    },
+    Unwritten {
+        route: Route::ByAddress,
+        depth: None,
+        belief: Some(Belief::Fresh),
+        shape: None,
+        why: "a write through a local's address is asked of the door questions, where #802 found the loaded spelling apart",
+    },
+    Unwritten {
+        route: Route::ByAddress,
+        depth: None,
+        belief: Some(Belief::Lost),
+        shape: None,
+        why: "a write through a local's address is asked of the door questions, where #802 found the loaded spelling apart",
+    },
+    Unwritten {
+        route: Route::ByAddress,
+        depth: None,
+        belief: Some(Belief::Stale),
+        shape: None,
+        why: "a write through a local's address is asked of the door questions, where #802 found the loaded spelling apart",
+    },
+    Unwritten {
+        route: Route::ByAddress,
+        depth: None,
+        belief: Some(Belief::Reborn),
+        shape: None,
+        why: "a write through a local's address is asked of the door questions, where #802 found the loaded spelling apart",
+    },
+    Unwritten {
+        route: Route::ByAddress,
+        depth: None,
+        belief: Some(Belief::Caller),
+        shape: None,
+        why: "a write through a local's address is asked of the door questions, where #802 found the loaded spelling apart",
+    },
+    Unwritten {
+        route: Route::ByAddress,
+        depth: None,
+        belief: Some(Belief::Unreplaced),
+        shape: None,
+        why: "a write through a local's address is asked of the door questions, where #802 found the loaded spelling apart",
+    },
+    Unwritten {
+        route: Route::ByAddressLoaded,
+        depth: Some(Depth::D0),
+        belief: None,
+        shape: None,
+        why: "a local slot has no local above it to take the address of",
+    },
+    Unwritten {
+        route: Route::ByAddressLoaded,
+        depth: Some(Depth::D2),
+        belief: None,
+        shape: None,
+        why: "the slot two levels down has a block above it, not the local whose address is taken",
+    },
+    Unwritten {
+        route: Route::ByAddressLoaded,
+        depth: None,
+        belief: Some(Belief::Width),
+        shape: None,
+        why: "a write through a local's address is asked of the door questions, where #802 found the loaded spelling apart",
+    },
+    Unwritten {
+        route: Route::ByAddressLoaded,
+        depth: None,
+        belief: Some(Belief::Fresh),
+        shape: None,
+        why: "a write through a local's address is asked of the door questions, where #802 found the loaded spelling apart",
+    },
+    Unwritten {
+        route: Route::ByAddressLoaded,
+        depth: None,
+        belief: Some(Belief::Lost),
+        shape: None,
+        why: "a write through a local's address is asked of the door questions, where #802 found the loaded spelling apart",
+    },
+    Unwritten {
+        route: Route::ByAddressLoaded,
+        depth: None,
+        belief: Some(Belief::Stale),
+        shape: None,
+        why: "a write through a local's address is asked of the door questions, where #802 found the loaded spelling apart",
+    },
+    Unwritten {
+        route: Route::ByAddressLoaded,
+        depth: None,
+        belief: Some(Belief::Reborn),
+        shape: None,
+        why: "a write through a local's address is asked of the door questions, where #802 found the loaded spelling apart",
+    },
+    Unwritten {
+        route: Route::ByAddressLoaded,
+        depth: None,
+        belief: Some(Belief::Caller),
+        shape: None,
+        why: "a write through a local's address is asked of the door questions, where #802 found the loaded spelling apart",
+    },
+    Unwritten {
+        route: Route::ByAddressLoaded,
+        depth: None,
+        belief: Some(Belief::Unreplaced),
+        shape: None,
+        why: "a write through a local's address is asked of the door questions, where #802 found the loaded spelling apart",
+    },
 ];
 
 /// Which side of a row disagrees with its belief's rule.
@@ -1268,6 +1730,12 @@ const LOST_HANDED: &str = "a lost pointer handed through a call this check canno
 const OLD_BLOCK: &str = "the old block a store replaced in memory is still taken to be there after realloc moves it (#656)";
 const REPORTED_ELSEWHERE: &str = "the free and the call a freed pointer is handed to are each reported where they happen (SC0401, SC0407), and not again at its use; agreeing would report the use too";
 const WRITES_WHAT_IT_IS_HANDED: &str = "a call this check cannot read is believed to write what it is handed, which `docs/safety-model.md` states beside the other boundary beliefs; not believing it refused correct programs that rely on the callee writing (#782)";
+// The door questions' reasons (#801).
+const DOUBLE_FREE_FIRST: &str = "a double-free doubt on a free hides the stored-out doubt on the same free, where an escape or a call this check cannot read raised it (#684)";
+const LOADED_ON_THE_WAY: &str = "a pointer loaded on the way down is taken as possibly holding an address never recorded, so the write through it leaves where the same write through the local's address does not (#802)";
+const DEEP_WRITE_LEAVES: &str = "a write more than one dereference below the pointer it goes through is taken as landing where this check cannot place it, and so as leaving, into memory only this function reads too (#802)";
+const ESCAPED_SOURCE: &str = "the address a copy takes of its source local escapes it (ADR-0017), so what the local holds is doubted behind a later call with nothing freed (#345)";
+const ESCAPED_HOLDER: &str = "the address of `m` taken makes `m` itself doubted where it is handed (ADR-0017), and what lies behind a pointer is asked only where the pointer itself drew nothing (ADR-0068)";
 // End of the reasons `ACCEPTED` gives.
 
 /// The rows whose answer is not their belief's rule, each with the issue or
@@ -1501,6 +1969,291 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Cost(OLD_BLOCK),
     ),
     ("reborn_realloc_d2_one", Side::Control, Why::Cost(OLD_BLOCK)),
+    (
+        "left_behind_by_address_d1_both",
+        Side::Hazard,
+        Why::Cost(ESCAPED_HOLDER),
+    ),
+    (
+        "left_behind_by_address_d1_one",
+        Side::Hazard,
+        Why::Cost(ESCAPED_HOLDER),
+    ),
+    (
+        "left_behind_by_address_loaded_d1_both",
+        Side::Hazard,
+        Why::Cost(ESCAPED_HOLDER),
+    ),
+    (
+        "left_behind_by_address_loaded_d1_one",
+        Side::Hazard,
+        Why::Cost(ESCAPED_HOLDER),
+    ),
+    (
+        "left_behind_memcpy_d1_both",
+        Side::Control,
+        Why::Cost(ESCAPED_SOURCE),
+    ),
+    (
+        "left_behind_memcpy_d1_one",
+        Side::Control,
+        Why::Cost(ESCAPED_SOURCE),
+    ),
+    (
+        "left_behind_memcpy_d2_both",
+        Side::Control,
+        Why::Cost(ESCAPED_SOURCE),
+    ),
+    (
+        "left_behind_memcpy_d2_one",
+        Side::Control,
+        Why::Cost(ESCAPED_SOURCE),
+    ),
+    (
+        "left_behind_realloc_d2_both",
+        Side::Control,
+        Why::Cost(OLD_BLOCK),
+    ),
+    (
+        "left_behind_realloc_d2_one",
+        Side::Control,
+        Why::Cost(OLD_BLOCK),
+    ),
+    (
+        "left_behind_ret_d0_both",
+        Side::Control,
+        Why::Belief(MAY_FREE),
+    ),
+    (
+        "left_behind_ret_d0_one",
+        Side::Control,
+        Why::Belief(MAY_FREE),
+    ),
+    (
+        "left_behind_ret_d1_both",
+        Side::Control,
+        Why::Belief(MAY_FREE),
+    ),
+    (
+        "left_behind_ret_d1_one",
+        Side::Control,
+        Why::Belief(MAY_FREE),
+    ),
+    (
+        "left_behind_ret_d2_both",
+        Side::Control,
+        Why::Belief(MAY_FREE),
+    ),
+    (
+        "left_behind_ret_d2_one",
+        Side::Control,
+        Why::Belief(MAY_FREE),
+    ),
+    (
+        "stored_freed_by_address_loaded_d1_both",
+        Side::Control,
+        Why::Cost(LOADED_ON_THE_WAY),
+    ),
+    (
+        "stored_freed_by_address_loaded_d1_one",
+        Side::Control,
+        Why::Cost(LOADED_ON_THE_WAY),
+    ),
+    (
+        "stored_freed_memcpy_block_d2_both",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_freed_memcpy_block_d2_one",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_freed_memcpy_d2_both",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_freed_memcpy_d2_one",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_freed_realloc_d2_both",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_freed_realloc_d2_one",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_freed_restored_d2_both",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_freed_restored_d2_one",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_freed_ret_d2_both",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_freed_ret_d2_one",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_freed_store_d2_both",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_freed_store_d2_one",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_out_by_address_loaded_d1_both",
+        Side::Control,
+        Why::Cost(LOADED_ON_THE_WAY),
+    ),
+    (
+        "stored_out_by_address_loaded_d1_one",
+        Side::Control,
+        Why::Cost(LOADED_ON_THE_WAY),
+    ),
+    (
+        "stored_out_memcpy_block_d0_one",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_memcpy_block_d2_both",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_out_memcpy_block_d2_one",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_out_memcpy_d0_both",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_memcpy_d0_one",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_memcpy_d1_both",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_memcpy_d1_one",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_memcpy_d2_both",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_memcpy_d2_one",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_realloc_d2_both",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_out_realloc_d2_one",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_out_restored_d0_both",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_restored_d0_one",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_restored_d2_both",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_out_restored_d2_one",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_out_ret_d0_both",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_ret_d0_one",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_ret_d1_both",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_ret_d1_one",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_ret_d2_both",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_ret_d2_one",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_store_d0_both",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_store_d0_one",
+        Side::Hazard,
+        Why::Cost(DOUBLE_FREE_FIRST),
+    ),
+    (
+        "stored_out_store_d2_both",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_out_store_d2_one",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
 ];
 
 /// What a row's hazard is reported as: a code, and where the control reports
@@ -1541,13 +2294,24 @@ fn mark(row: Row) -> (&'static str, Option<&'static str>) {
         | Route::MemcpyFromLocal
         | Route::MemcpyFromLocalMaybe
         | Route::StoredThrough
-        | Route::ElementSlot => {}
+        | Route::ElementSlot
+        | Route::ByAddress
+        | Route::ByAddressLoaded => {}
     }
     match row.belief {
         Belief::Width => ("SC0412", None),
         Belief::Fresh => ("SC0411", None),
         Belief::Lost | Belief::Stale | Belief::Reborn | Belief::Caller => ("SC0402", None),
         Belief::Unreplaced => ("SC0407", None),
+        // **A phrase for each door question**, since `SC0414` is both the
+        // free after a store and the store after a free, and each words it
+        // its own way.
+        Belief::StoredOut => ("SC0414", Some("was stored where code outside")),
+        Belief::StoredFreed => ("SC0414", Some("this stores")),
+        Belief::LeftBehind => (
+            "SC0407",
+            Some("where a pointer that may have been freed is stored"),
+        ),
     }
 }
 
@@ -1652,6 +2416,28 @@ fn put(route: Route, depth: Depth, slot: &str, value: &str) -> Vec<String> {
         }
         Route::KeptVoid | Route::KeptBytes | Route::KeptBlock => {
             unreachable!("only `Belief::Width` asks a kept call; see `width`")
+        }
+        // **Through the address of the local above the slot**, at the one
+        // depth whose slot, `*m`, has one; `NOT_WRITTEN` excuses the others.
+        Route::ByAddress => {
+            assert_eq!(
+                depth,
+                Depth::D1,
+                "only the slot at depth one is a level below a local"
+            );
+            vec!["int ***t_ = &m;".to_owned(), format!("**t_ = {value};")]
+        }
+        Route::ByAddressLoaded => {
+            assert_eq!(
+                depth,
+                Depth::D1,
+                "only the slot at depth one is a level below a local"
+            );
+            vec![
+                "int ***t_ = &m;".to_owned(),
+                "int **q_ = *t_;".to_owned(),
+                format!("*q_ = {value};"),
+            ]
         }
     }
 }
@@ -1810,6 +2596,9 @@ fn width(row: Row, hazard: bool) -> Vec<String> {
         | Route::StoredThrough
         | Route::ElementSlot => {
             unreachable!("asked of freshness only; see `NOT_WRITTEN`")
+        }
+        Route::ByAddress | Route::ByAddressLoaded => {
+            unreachable!("asked of the door questions only; see `NOT_WRITTEN`")
         }
     };
     lines.extend(shaped(row.shape, slot, body));
@@ -1981,7 +2770,9 @@ fn fresh(row: Row, hazard: bool) -> Vec<String> {
         | Route::ReallocParam
         | Route::KeptVoid
         | Route::KeptBytes
-        | Route::KeptBlock => unreachable!("see `NOT_WRITTEN`"),
+        | Route::KeptBlock
+        | Route::ByAddress
+        | Route::ByAddressLoaded => unreachable!("see `NOT_WRITTEN`"),
     };
     lines.extend(shaped(row.shape, slot, body));
     lines
@@ -2135,6 +2926,67 @@ fn unreplaced(row: Row, hazard: bool) -> Vec<String> {
 /// The whole program for one side of a row: the declarations, the belief's
 /// statements, and the read back that every belief shares, through an
 /// `int *` that is tested and written through.
+/// The call that hands the slot's container to code this check cannot read:
+/// the local's address at depth zero, the block below it deeper.
+fn handed_over(depth: Depth) -> &'static str {
+    match depth {
+        Depth::D0 => "touch(&s);",
+        Depth::D1 => "touch(m);",
+        Depth::D2 => "keep_t(m);",
+    }
+}
+
+/// The door questions' program: an allocation `x`, the slot's container, the
+/// route putting `x` there, and the free.
+///
+/// **The hazard and the control differ in one thing each**, so that the code
+/// a row asks for can only come from what the door asks. For
+/// [`Belief::StoredOut`] and [`Belief::StoredFreed`] it is whether the
+/// container was handed to code this check cannot read before the write, which
+/// is whether the write leaves; both free `x`, after the write and before it.
+/// For [`Belief::LeftBehind`] the container is handed after the write in
+/// both, and only the hazard frees `x` first.
+fn door(row: Row, hazard: bool) -> Vec<String> {
+    let (made, slot) = container(row.depth);
+    let mut lines = vec![
+        "int *x = malloc(4);".to_owned(),
+        "if (!x) return 0;".to_owned(),
+    ];
+    lines.extend(made);
+    let put_x = shaped(row.shape, slot, put(row.route, row.depth, slot, "x"));
+    match row.belief {
+        Belief::StoredOut => {
+            if hazard {
+                lines.push(handed_over(row.depth).to_owned());
+            }
+            lines.extend(put_x);
+            lines.push("free(x);".to_owned());
+        }
+        Belief::StoredFreed => {
+            if hazard {
+                lines.push(handed_over(row.depth).to_owned());
+            }
+            lines.push("free(x);".to_owned());
+            lines.extend(put_x);
+        }
+        Belief::LeftBehind => {
+            lines.extend(put_x);
+            if hazard {
+                lines.push("free(x);".to_owned());
+            }
+            lines.push(handed_over(row.depth).to_owned());
+        }
+        Belief::Width
+        | Belief::Fresh
+        | Belief::Lost
+        | Belief::Stale
+        | Belief::Reborn
+        | Belief::Caller
+        | Belief::Unreplaced => unreachable!("not a door question; see `program`"),
+    }
+    lines
+}
+
 fn program(row: Row, hazard: bool) -> String {
     let body = match row.belief {
         Belief::Width => width(row, hazard),
@@ -2144,6 +2996,7 @@ fn program(row: Row, hazard: bool) -> String {
         Belief::Reborn => reborn(row, hazard),
         Belief::Caller => caller(row, hazard),
         Belief::Unreplaced => unreplaced(row, hazard),
+        Belief::StoredOut | Belief::StoredFreed | Belief::LeftBehind => door(row, hazard),
     };
     let read = read_from(row);
     // **The read every belief shares**, but the one asked by address alone,
@@ -2154,6 +3007,11 @@ fn program(row: Row, hazard: bool) -> String {
     );
     let tail: Vec<String> = match row.belief {
         _ if kept => vec![format!("use1({read});"), "return 0;".to_owned()],
+        // **Nothing read back**: a door question is asked at the write, the
+        // free or the call, and `door` ends at it.
+        Belief::StoredOut | Belief::StoredFreed | Belief::LeftBehind => {
+            vec!["return 0;".to_owned()]
+        }
         Belief::Unreplaced => vec![format!("int *r = {read};"), "return use2(&r);".to_owned()],
         Belief::Width
         | Belief::Fresh
@@ -2203,7 +3061,9 @@ fn read_from(row: Row) -> String {
         | Route::MemcpyUnread
         | Route::MemcpyUnplaced
         | Route::MemcpyFromLocal
-        | Route::MemcpyFromLocalMaybe => container(row.depth).1.to_owned(),
+        | Route::MemcpyFromLocalMaybe
+        | Route::ByAddress
+        | Route::ByAddressLoaded => container(row.depth).1.to_owned(),
     }
 }
 
@@ -2218,7 +3078,10 @@ fn parameters(row: Row, hazard: bool) -> &'static str {
         | Belief::Lost
         | Belief::Stale
         | Belief::Reborn
-        | Belief::Unreplaced => {}
+        | Belief::Unreplaced
+        | Belief::StoredOut
+        | Belief::StoredFreed
+        | Belief::LeftBehind => {}
     }
     match (row.route, hazard) {
         (Route::ReallocParam, true) => "int k, void ***pm",
@@ -2246,7 +3109,9 @@ fn parameters(row: Row, hazard: bool) -> &'static str {
             | Route::ElementSlot
             | Route::KeptVoid
             | Route::KeptBytes
-            | Route::KeptBlock,
+            | Route::KeptBlock
+            | Route::ByAddress
+            | Route::ByAddressLoaded,
             _,
         ) => "int k",
     }
@@ -2626,6 +3491,102 @@ const UNCERTAIN: &[(&str, &str)] = &[
         "fresh_stored_through_d0_both",
         "a walk off a local array's end writes it in part, so an element it may have missed is a doubt (#639)",
     ),
+    (
+        "stored_freed_memcpy_d0_both",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
+        "stored_freed_memcpy_d0_one",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
+        "stored_freed_memcpy_d1_both",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
+        "stored_freed_memcpy_d1_one",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
+        "stored_freed_memcpy_d2_both",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
+        "stored_freed_memcpy_d2_one",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
+        "stored_freed_memcpy_block_d0_both",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
+        "stored_freed_memcpy_block_d0_one",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
+        "stored_freed_memcpy_block_d1_both",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
+        "stored_freed_memcpy_block_d1_one",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
+        "stored_freed_memcpy_block_d2_both",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
+        "stored_freed_memcpy_block_d2_one",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
+        "stored_freed_restored_d0_both",
+        "a pointer read back out of memory may hold what was never recorded, so it proves nothing freed where it is stored (ADR-0045)",
+    ),
+    (
+        "stored_freed_restored_d0_one",
+        "a pointer read back out of memory may hold what was never recorded, so it proves nothing freed where it is stored (ADR-0045)",
+    ),
+    (
+        "stored_freed_restored_d1_both",
+        "a pointer read back out of memory may hold what was never recorded, so it proves nothing freed where it is stored (ADR-0045)",
+    ),
+    (
+        "stored_freed_restored_d1_one",
+        "a pointer read back out of memory may hold what was never recorded, so it proves nothing freed where it is stored (ADR-0045)",
+    ),
+    (
+        "stored_freed_restored_d2_both",
+        "a pointer read back out of memory may hold what was never recorded, so it proves nothing freed where it is stored (ADR-0045)",
+    ),
+    (
+        "stored_freed_restored_d2_one",
+        "a pointer read back out of memory may hold what was never recorded, so it proves nothing freed where it is stored (ADR-0045)",
+    ),
+    (
+        "stored_freed_ret_d0_both",
+        "a pointer a call this check cannot read returns is lost, and a lost pointer proves nothing freed where it is stored (ADR-0045)",
+    ),
+    (
+        "stored_freed_ret_d0_one",
+        "a pointer a call this check cannot read returns is lost, and a lost pointer proves nothing freed where it is stored (ADR-0045)",
+    ),
+    (
+        "stored_freed_ret_d1_both",
+        "a pointer a call this check cannot read returns is lost, and a lost pointer proves nothing freed where it is stored (ADR-0045)",
+    ),
+    (
+        "stored_freed_ret_d1_one",
+        "a pointer a call this check cannot read returns is lost, and a lost pointer proves nothing freed where it is stored (ADR-0045)",
+    ),
+    (
+        "stored_freed_ret_d2_both",
+        "a pointer a call this check cannot read returns is lost, and a lost pointer proves nothing freed where it is stored (ADR-0045)",
+    ),
+    (
+        "stored_freed_ret_d2_one",
+        "a pointer a call this check cannot read returns is lost, and a lost pointer proves nothing freed where it is stored (ADR-0045)",
+    ),
 ];
 
 /// **A route is as certain as its plain store**: where the store spelling of
@@ -2847,6 +3808,9 @@ fn name_of(row: Row) -> String {
         Belief::Reborn => "reborn",
         Belief::Caller => "caller",
         Belief::Unreplaced => "unreplaced",
+        Belief::StoredOut => "stored_out",
+        Belief::StoredFreed => "stored_freed",
+        Belief::LeftBehind => "left_behind",
     };
     let route = match row.route {
         Route::Store => "store",
@@ -2873,6 +3837,8 @@ fn name_of(row: Row) -> String {
         Route::KeptVoid => "kept_void",
         Route::KeptBytes => "kept_bytes",
         Route::KeptBlock => "kept_block",
+        Route::ByAddress => "by_address",
+        Route::ByAddressLoaded => "by_address_loaded",
     };
     let depth = match row.depth {
         Depth::D0 => "d0",
@@ -3082,10 +4048,11 @@ const APART: &[(&str, &str)] = &[
 ];
 
 /// A route answers a slot in a local as it answers one a level below a
-/// local: every row at [`Depth::D0`] and its row at [`Depth::D1`] give the
-/// same codes and the same exit on the hazard, on the control and under
-/// `--allow-unknown`, unless [`APART`] says why the two differ (#791), and
-/// a pair it lists still has the same hazard and control exits.
+/// local: every row at [`Depth::D0`] of a belief [`compared_by_depth`] and
+/// its row at [`Depth::D1`] give the same codes and the same exit on the
+/// hazard, on the control and under `--allow-unknown`, unless [`APART`] says
+/// why the two differ (#791), and a pair it lists still has the same hazard
+/// and control exits.
 ///
 /// **Read off the blessed summary**, which
 /// `the_matrix_answers_what_was_blessed` holds to what the matrix answers:
@@ -3151,10 +4118,41 @@ fn every_pair_kept_apart_still_differs() {
     }
 }
 
+/// Whether a belief's rows at depth zero and one are held to answer alike.
+///
+/// **Not the door questions** (#801): their hazard hands the slot's container
+/// to a call this check cannot read, and that is a local's address at depth
+/// zero and a block at depth one. The address makes the local escape
+/// (ADR-0017), so a free of what it holds is a double-free doubt; the block
+/// handed may be freed by the call (ADR-0039), so a write into it is a use
+/// doubt. The two depths differ by what the hazard does to its container, not
+/// by the route, so comparing them would ask the escape rather than the door.
+/// The door's own answer is asked by each row's rule and against the plain
+/// store by `a_route_is_as_certain_as_its_plain_store`. A `match`, so that a
+/// belief added answers here.
+///
+/// Mutation: answer `true` for every belief; `a_route_answers_alike_at_depth_zero_and_one`
+/// fails, `stored_out_store_d0_both` among twenty three pairs it names.
+fn compared_by_depth(belief: Belief) -> bool {
+    match belief {
+        Belief::Width
+        | Belief::Fresh
+        | Belief::Lost
+        | Belief::Stale
+        | Belief::Reborn
+        | Belief::Caller
+        | Belief::Unreplaced => true,
+        Belief::StoredOut | Belief::StoredFreed | Belief::LeftBehind => false,
+    }
+}
+
 /// Every row at depth zero beside its row at depth one.
 fn depth_pairs() -> Vec<(&'static str, &'static str)> {
     let mut pairs = vec![];
-    for &(near, row) in ROWS.iter().filter(|(_, row)| row.depth == Depth::D0) {
+    for &(near, row) in ROWS
+        .iter()
+        .filter(|(_, row)| row.depth == Depth::D0 && compared_by_depth(row.belief))
+    {
         let twin = Row {
             depth: Depth::D1,
             ..row
