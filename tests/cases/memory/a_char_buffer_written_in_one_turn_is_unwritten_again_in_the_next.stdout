@@ -1,0 +1,119 @@
+Target "x86_64-pc-windows-msvc"
+Function a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "out"
+  Local "_2" "int *" parameter "x"
+  Local "_3" "int" parameter "n"
+  Local "_4" "int"
+  Local "_5" "int" "i"
+  Local "_6" "int"
+  Local "_7" "char[8]" "b"
+  Local "_8" "int"
+  Local "_9" "char *"
+  Local "_10" "void *"
+  Local "_11" "char *"
+  Local "_12" "int **"
+  Local "_13" "void *"
+  Local "_14" "int"
+  Local "_15" "int"
+  Block "bb0" entry
+    Operation a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:3:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_1"
+    Branch a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:3:9 written "bb1" "bb2"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:3:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:4:9 written
+      Destination "_5"
+      Use
+        Constant 0
+    Sequenced a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:4:13 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:5:12 written
+      Destination "_6"
+      Binary "Lt"
+        Copy "_5"
+        Copy "_3"
+    Branch a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:5:12 written "bb5" "bb6"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:5:12 generated
+    StorageLive a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:6:9 generated "_7"
+    Operation a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:7:13 written
+      Destination "_8"
+      Binary "Eq"
+        Copy "_5"
+        Constant 1
+    Branch a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:7:13 written "bb7" "bb8"
+      Copy "_8"
+  Block "bb6"
+    Sequenced a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:5:12 generated
+    Return
+  Block "bb7"
+    Sequenced a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:7:13 generated
+    Operation a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:7:33 generated
+      Destination "_9"
+      Address
+        Place "_7"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:7:21 generated
+    Call a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:7:21 written "memcpy" "bb10"
+      Destination "_10"
+      Copy "_1"
+      Copy "_9"
+      Constant 8
+  Block "bb8"
+    Sequenced a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:7:13 generated
+    Goto "bb9"
+  Block "bb9"
+    Operation a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:8:16 generated
+      Destination "_11"
+      Address
+        Place "_7"
+          Index
+            Constant 0
+    Operation a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:8:19 written
+      Destination "_12"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:8:9 generated
+    Call a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:8:9 written "memcpy" "bb11"
+      Destination "_13"
+      Copy "_11"
+      Copy "_12"
+      Constant 8
+  Block "bb10"
+    Sequenced a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:7:21 generated
+    Goto "bb9"
+  Block "bb11"
+    Sequenced a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:8:9 generated
+    Operation a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:9:13 written
+      Destination "_14"
+      Binary "Add"
+        Copy "_5"
+        Constant 1
+    Operation a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:9:9 written
+      Destination "_5"
+      Use
+        Copy "_14"
+    Operation a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:9:9 written
+      Destination "_15"
+      Use
+        Copy "_5"
+    Sequenced a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:9:9 generated
+    StorageDead a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:10:5 generated "_7"
+    Goto "bb4"

@@ -699,12 +699,17 @@ cases! {
         an_integer_local_whose_address_is_taken_read_before_anything_wrote_it_is_not_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local that holds no pointer starts unwritten too, at entry and at
         // each `StorageLive`, and is asked where it is read as a pointer
-        // (#822). See ADR-0073 rule 2. Mutation: `unwritten_at_entry` and
-        // `StorageLive` keep only locals that hold a pointer; this and the
-        // next two go silent.
+        // (#822). See ADR-0073 rule 2. Mutation: `unwritten_at_entry` keeps
+        // only locals that hold a pointer; the next two go silent, and this
+        // loses its `SC0411` with `StorageLive`'s old rule kept beside it.
         an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_char_buffer_nothing_wrote_copied_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_char_buffer_nothing_wrote_read_as_a_pointer_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A new object at each `StorageLive`, whatever its type: written in
+        // one turn, copied out early in the next. Mutation: `StorageLive`
+        // makes only a local that holds a pointer unwritten again; this
+        // goes silent.
+        a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written whole first, by a copy of a pointer, it says nothing.
         // Mutation: `Known::written_local` writes nothing; this is reported.
         a_char_buffer_written_whole_and_read_as_a_pointer_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

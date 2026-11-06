@@ -1,0 +1,10 @@
+error[SC0411]: this copies bytes that may not have been written into memory that code outside this function reads as a pointer
+   ╭─[ a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next.c:7:21 ]
+   │
+ 7 │         if (i == 1) memcpy(out, b, 8);
+   │                     ────────┬────────  
+   │                             ╰────────── copied here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write what is copied on every path before the copy
