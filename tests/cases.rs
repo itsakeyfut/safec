@@ -336,6 +336,54 @@ cases! {
         // `void *`. Mutation: ask by the destination's type alone; it goes
         // silent.
         a_copy_of_part_of_a_pointer_through_a_void_pointer_destination_is_asked_by_its_source: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And by what each operand points at, where neither type says (#746),
+        // each case with a destination that answers nothing, a `void *`
+        // parameter, so that the source alone decides. See ADR-0071 rule 4.
+        //
+        // A local declared as a pointer, at the width its type points at.
+        // Mutation: `part_of_what_operands_point_at` answers nothing; this
+        // and every case below that reports goes silent.
+        a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_local_it_points_at: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block a pointer to a local was stored in, at none, as a `void *`
+        // is asked only whether it starts an object. Mutation: ask no
+        // block; it goes silent. Mutation: count only a block naming a
+        // site; it goes silent.
+        a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block_it_points_at: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a block a parameter was stored in, which names a site.
+        // Mutation: count only a block naming a local; it goes silent.
+        a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy of an `int`'s bytes reaches no pointer and is asked
+        // nothing. Mutation: count a local of any type, at none; it is
+        // `SC0413`.
+        a_byte_copy_of_an_int_between_void_pointers_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Through a `char *` made from a `void *` as through a `void *`.
+        // Mutation: ask only an operand typed `void *`; it goes silent.
+        a_copy_of_part_of_a_pointer_through_a_char_pointer_is_asked_by_the_local_it_points_at: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An array of pointers, by its elements' type. Mutation: ask a
+        // local by its own type, which says no pointer for an array; it
+        // goes silent.
+        a_copy_of_part_of_a_pointer_out_of_an_array_of_pointers_behind_a_void_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Twelve bytes, one pointer whole and part of the next. Mutation:
+        // answer nothing for a copy ending part way through its last
+        // pointer; it goes silent.
+        a_copy_ending_part_way_through_a_second_pointer_between_void_pointers_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The destination, where the source answers nothing. Mutation: ask
+        // the source alone; it goes silent at the copy.
+        a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The memory an `int **` parameter was believed to hold when it
+        // arrived, kept by its conversion to `void *`, whatever the source
+        // holds. Mutation: ask no arrived belief; it goes silent.
+        a_copy_of_an_int_into_a_pointer_parameter_behind_a_void_pointer_is_asked_by_the_type_it_arrived_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An `int *` arrives believing `0` below it, as a `void **` does,
+        // which is no pointer held. Mutation: count an arrived belief of
+        // `0`; it is `SC0413`.
+        a_byte_copy_of_an_int_through_an_int_pointer_parameter_behind_a_void_pointer_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Two locals of different widths name the narrower, a `void *`'s
+        // none. Mutation: name the wider; it says "as wide as its type".
+        a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local before a block, the local's width. Mutation: ask the
+        // block first; it says "the start of an object".
+        a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block that may be unwritten keeps its mark where it is carried:
         // across a join where one side does not name it, through realloc,
         // and through a copy out of it (#724). Mutation: drop `realloc`'s

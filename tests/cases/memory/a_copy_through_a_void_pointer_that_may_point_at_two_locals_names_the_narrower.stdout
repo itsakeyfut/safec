@@ -1,0 +1,96 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:1:45 "use" declared
+  Local "_0" "void" return
+Function a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "out"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" "x"
+  Local "_4" "int *" "v"
+  Local "_5" "int *"
+  Local "_6" "void *" "w"
+  Local "_7" "int *"
+  Local "_8" "void *" "s"
+  Local "_9" "int **"
+  Local "_10" "void **"
+  Local "_11" "void *"
+  Local "_12" "void *" "d"
+  Local "_13" "void *"
+  Block "bb0" entry
+    Operation a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:3:9 written
+      Destination "_3"
+      Use
+        Constant 1
+    Sequenced a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:3:13 generated
+    Operation a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:3:25 written
+      Destination "_5"
+      Address
+        Place "_3"
+    Operation a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:3:21 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:3:25 generated
+    Operation a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:3:39 written
+      Destination "_7"
+      Address
+        Place "_3"
+    Operation a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:3:35 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:3:39 generated
+    Operation a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:4:15 written
+      Destination "_9"
+      Address
+        Place "_4"
+    Operation a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:4:11 written
+      Destination "_8"
+      Use
+        Copy "_9"
+    Sequenced a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:4:15 generated
+    Branch a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:5:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:5:9 generated
+    Operation a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:5:16 written
+      Destination "_10"
+      Address
+        Place "_6"
+    Operation a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:5:12 written
+      Destination "_8"
+      Use
+        Copy "_10"
+    Operation a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:5:12 written
+      Destination "_11"
+      Use
+        Copy "_8"
+    Sequenced a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:5:12 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:5:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:6:11 written
+      Destination "_12"
+      Use
+        Copy "_1"
+    Sequenced a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:6:15 generated
+    ArgumentsEvaluated a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:7:5 generated
+    Call a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:7:5 written "memcpy" "bb4"
+      Destination "_13"
+      Copy "_12"
+      Copy "_8"
+      Constant 4
+  Block "bb4"
+    Sequenced a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:7:5 generated
+    ArgumentsEvaluated a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:8:5 generated
+    Call a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:8:5 written "use" "bb5"
+  Block "bb5"
+    Sequenced a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower.c:8:5 generated
+    Return

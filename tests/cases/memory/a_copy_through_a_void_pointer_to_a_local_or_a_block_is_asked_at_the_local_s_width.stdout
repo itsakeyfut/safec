@@ -1,0 +1,126 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:1:28 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:1:66 "use" declared
+  Local "_0" "void" return
+Function a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "out"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" "x"
+  Local "_4" "int *" "v"
+  Local "_5" "int *"
+  Local "_6" "int **" "b"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int *"
+  Local "_10" "int *"
+  Local "_11" "void *" "s"
+  Local "_12" "int **"
+  Local "_13" "void *"
+  Local "_14" "void *" "d"
+  Local "_15" "void *"
+  Block "bb0" entry
+    Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:3:9 written
+      Destination "_3"
+      Use
+        Constant 1
+    Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:3:13 generated
+    Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:3:25 written
+      Destination "_5"
+      Address
+        Place "_3"
+    Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:3:21 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:3:25 generated
+    ArgumentsEvaluated a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:4:15 generated
+    Call a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:4:15 written "malloc" "bb1"
+      Destination "_7"
+      Constant 8
+  Block "bb1"
+    Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:4:11 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:4:15 generated
+    Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:5:9 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_6"
+    Branch a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:5:9 written "bb2" "bb3"
+      Copy "_8"
+  Block "bb2"
+    Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:5:9 generated
+    Return
+  Block "bb3"
+    Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:6:10 written
+      Destination "_9"
+      Address
+        Place "_3"
+    Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:6:5 written
+      Destination "_6"
+        Deref
+      Use
+        Copy "_9"
+    Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:6:5 written
+      Destination "_10"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:6:5 generated
+    Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:7:15 written
+      Destination "_12"
+      Address
+        Place "_4"
+    Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:7:11 written
+      Destination "_11"
+      Use
+        Copy "_12"
+    Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:7:15 generated
+    Branch a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:8:9 written "bb5" "bb6"
+      Copy "_2"
+  Block "bb5"
+    Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:8:9 generated
+    Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:8:12 written
+      Destination "_11"
+      Use
+        Copy "_6"
+    Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:8:12 written
+      Destination "_13"
+      Use
+        Copy "_11"
+    Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:8:12 generated
+    Goto "bb7"
+  Block "bb6"
+    Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:8:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:9:11 written
+      Destination "_14"
+      Use
+        Copy "_1"
+    Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:9:15 generated
+    ArgumentsEvaluated a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:10:5 generated
+    Call a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:10:5 written "memcpy" "bb8"
+      Destination "_15"
+      Copy "_14"
+      Copy "_11"
+      Constant 4
+  Block "bb8"
+    Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:10:5 generated
+    ArgumentsEvaluated a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:11:5 generated
+    Call a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:11:5 written "use" "bb9"
+  Block "bb9"
+    Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:11:5 generated
+    Return

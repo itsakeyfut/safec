@@ -1,0 +1,20 @@
+error[SC0412]: this may reach outside the object `in` points at
+   ╭─[ a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:5:5 ]
+   │
+ 5 │     memcpy(d, in, 4);
+   │     ────────┬───────  
+   │             ╰───────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+   ╭─[ a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:5:5 ]
+   │
+ 5 │     memcpy(d, in, 4);
+   │     ────────┬───────  
+   │             ╰───────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

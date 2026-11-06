@@ -15,7 +15,7 @@ use crate::nullability::NullAtTerminators;
 use crate::reads::derefs;
 use crate::source::{SourceMap, Span, inside};
 
-use super::allocations::{Allocations, handed_places};
+use super::allocations::{Allocations, handed_places, innermost_element};
 use super::bits::Bits;
 use super::built::named;
 use super::fit::{
@@ -1353,6 +1353,74 @@ fn part_of_a_pointer(
     }
 }
 
+/// [`part_of_a_pointer`] asked of what each operand points at rather than of
+/// its type: the width a pointer held there is believed to point at, where
+/// the copy writes only part of one. Reached only where both typed asks
+/// answered nothing, and asked whatever the operand's type, since a `void *`
+/// says nothing and a `char *` made from one, `void *vv = &v; char *s = vv;`,
+/// says bytes, and both built silent where the same copy through an `int **`
+/// is asked (#746). See ADR-0071 rule 4.
+///
+/// What an operand points at holds a pointer three ways, each asked here:
+///
+/// - **a local it holds the address of**, by the local's declared type, or
+///   its elements' where it is an array, at the width that type points at;
+/// - **the memory it was believed to point at when it arrived**, from the
+///   type it arrived as, which a conversion to `void *` keeps: `void *d =
+///   out;` with `out` an `int **` (`Held::contents_at_most`);
+/// - **an allocation it points at**, where a pointer was stored in it, of a
+///   width nothing records here, so `0`, as a `void *` is asked only whether
+///   it starts an object.
+///
+/// Where several locals answer, the narrowest width is said, as the message
+/// names a width a reader may believe; it decides no report. The destination
+/// first, then the source, as the typed asks are, and the first answer is
+/// the report: the width is all it carries. An operand that points at none
+/// of these answers nothing, so a copy of an `int`'s bytes into a local that
+/// holds no pointer stays silent however its operands are typed.
+fn part_of_what_operands_point_at(
+    analysis: &Allocations<'_>,
+    function: &Function,
+    callee: FuncId,
+    arguments: &[Operand],
+    known: &Known,
+) -> Option<u64> {
+    match analysis.copied_pointers(callee, arguments) {
+        CopiedPointers::Whole => return None,
+        CopiedPointers::LastInPart | CopiedPointers::NoneWhole => {}
+    }
+    arguments.iter().take(2).find_map(|operand| {
+        let Operand::Copy(place) = operand else {
+            return None;
+        };
+        if !place.projection.is_empty() {
+            return None;
+        }
+        let named = known.written_through(place.local);
+        let local = function
+            .locals()
+            .filter(|&local| named.contains(&LocalIdx::of(local)))
+            .filter_map(|local| {
+                let ty = innermost_element(analysis.unit, function.local(local));
+                pointee_width(analysis, ty)
+            })
+            .min();
+        // `0` is no belief that a pointer is held: `type_levels` says it
+        // from the first level that holds none, so an `int *` arrives
+        // believing `0` as a `void **` does, and counting it doubted every
+        // copy of an `int` through an `int *` parameter.
+        let arrived = known.points_to[place.local]
+            .contents_at_most
+            .at(0)
+            .filter(|&width| width > 0);
+        let stored = known.sites_of(place.local).any(|site| {
+            let cell = &known.contents[site];
+            cell.sites().next().is_some() || cell.locals().next().is_some()
+        });
+        local.or(arrived).or(stored.then_some(0))
+    })
+}
+
 /// Report a pointer this element hands back by a `return`, stores through
 /// a pointer, or writes by name into a local code this check cannot read
 /// may read (#690), where this check cannot show it points at one whole
@@ -1565,9 +1633,15 @@ pub(super) fn departed_at_call(
             // asked nothing (#717). Unknown, as every departure is. **By the
             // source's type too**, as the asks above are: `void *d = out;
             // memcpy(d, &v, 4);` hides the destination's and not the
-            // source's, and was asked nothing. Found by review.
+            // source's, and was asked nothing. Found by review. **And by what
+            // the operands point at**, where neither type says: `void *d =
+            // out; void *s = &v; memcpy(d, s, 4);` hid both (#746). See
+            // ADR-0071 rule 4.
             if let Some(width) = part_of_a_pointer(analysis, *callee, arguments, into_ty)
                 .or_else(|| part_of_a_pointer(analysis, *callee, arguments, source_ty))
+                .or_else(|| {
+                    part_of_what_operands_point_at(analysis, function, *callee, arguments, known)
+                })
             {
                 say_leaving(
                     findings,
