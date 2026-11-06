@@ -1396,7 +1396,7 @@ fn part_of_what_operands_point_at(
 ///   is asked at the read, as any read of it is;
 /// - **what it lands in is believed to hold a pointer**, by the
 ///   destination's type or by what it points at ([`points_at_a_pointer`]);
-/// - **what it copies may be unwritten** ([`copies_unwritten`]).
+/// - **what it copies may be unwritten** ([`source_may_be_unwritten`]).
 ///
 /// **Leaving is the store's answer, and a library copy exposes what it is
 /// handed**, so a second copy into a block this function made, a copy in a
@@ -1436,7 +1436,7 @@ fn copied_unwritten(
             .first()
             .and_then(|into| points_at_a_pointer(analysis, function, into, known))
             .is_some();
-    holds && copies_unwritten(analysis, *callee, arguments, from, known)
+    holds && source_may_be_unwritten(analysis, *callee, arguments, from, known)
 }
 
 /// Whether the bytes a library copy reads through `from` may not have been
@@ -1449,7 +1449,7 @@ fn copied_unwritten(
 /// too**, by what it was read as naming: a doubt, as a load through it is
 /// (`Allocations::reads_partly`), and leaving it out left a copy of a block
 /// nothing wrote, reached through a pointer stored and read back, silent.
-fn copies_unwritten(
+fn source_may_be_unwritten(
     analysis: &Allocations<'_>,
     callee: FuncId,
     arguments: &[Operand],
