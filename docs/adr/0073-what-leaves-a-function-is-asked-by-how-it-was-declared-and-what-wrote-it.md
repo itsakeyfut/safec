@@ -93,7 +93,12 @@ and Cons below.
    every assignment into a local whose declared type says so, so that an
    allocator's result, which arrives as no type (ADR-0060), says it once it is
    held as a `void **` or an `int **` (#830). The width ADR-0060 believes is
-   not changed: a pointer held so is asked whether it starts an object.
+   not changed: a pointer held so is asked whether it starts an object. **On
+   the value, not on the allocation**, so a block reached by a pointer that
+   never held the belief is still asked nothing: an alias made before the
+   typed hold, a copy before it, a block handed to a function that takes it
+   as a `void **`, and one stored into a `void **` slot with no typed local;
+   that is #832.
 
 ### Confirmation
 
@@ -236,10 +241,12 @@ rather than amended.
 
 ### Rule 4, rejected: record on the allocation the type it was held as
 
-* Good, because it survives a pointer stored in memory and read back.
+* Good, because it survives a pointer stored in memory and read back, and
+  answers an alias made before the typed hold and a block stored into a
+  `void **` slot with no typed local, which the local's type does not (#832).
 * Bad, because it adds a fact to every site for a question one door asks, and
-  is a larger change than the local's declared type, which answered every
-  measured program.
+  still answers nothing where the copy comes before anything typed reaches
+  the block, so it does not close #832 either.
 
 ## More Information
 
