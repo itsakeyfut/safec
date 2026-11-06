@@ -80,6 +80,16 @@ const CONFLICTING: Code = Code::new("SC0313");
 /// rename. See ADR-0051, and ADR-0071 rule 1 for the second.
 const RESERVED_DEFINITION: Code = Code::new("SC0319");
 
+/// A declaration of a name the memory check reads by name, of another shape
+/// than the library's, `char *strchr(int c, char *s);`: C17 7.1.4 p2 permits
+/// declaring a library function without its header only with its own type,
+/// and the checks read a call to it at the library's argument positions.
+///
+/// Its own code rather than [`CONFLICTING`]'s, which compares two
+/// declarations the program wrote: here one disagrees with the library, which
+/// the program never wrote down. See ADR-0073 rule 1.
+const MISDECLARED_LIBRARY: Code = Code::new("SC0320");
+
 /// A member of a struct whose type a member cannot have, which C17 6.7.2.1 p3
 /// forbids: "A structure or union shall not contain a member with incomplete
 /// or function type", except for the flexible array member p18 allows last.
@@ -1234,6 +1244,54 @@ impl Resolver<'_> {
         self.declare_in(innermost, name, ty, definition, diagnostics);
     }
 
+    /// Refuse a declaration of a name the memory check reads by name whose
+    /// parameters are not the library's shape, where that check runs, as
+    /// [`Resolver::define`] refuses a definition of one. A declaration with no
+    /// prototype is compatible with any and is not refused. Asked at any scope:
+    /// a function declared in a block has external linkage as one at file
+    /// scope does (C17 6.2.2 p5). See ADR-0073 rule 1.
+    fn misdeclared_library(&self, name: Span, ty: TypeId, diagnostics: &mut DiagnosticSink) {
+        if !self.memory_checked {
+            return;
+        }
+        let Type::Function { parameters, .. } = self.ast.ty(ty) else {
+            return;
+        };
+        let shapes: Option<Vec<Option<library::Shape>>> = match parameters {
+            Parameters::Prototype(declared) => Some(
+                declared
+                    .iter()
+                    .map(|parameter| match self.ast.ty(parameter.ty) {
+                        Type::Pointer(_) => Some(library::Shape::Pointer),
+                        Type::Int | Type::Char => Some(library::Shape::Integer),
+                        // A parameter is adjusted from an array or a function to a
+                        // pointer (C17 6.7.6.3 p7, p8) before this reads it; `void`
+                        // alone is `(void)`, an empty list; and a struct is no row's.
+                        Type::Void
+                        | Type::Array { .. }
+                        | Type::Function { .. }
+                        | Type::Struct { .. } => None,
+                    })
+                    .collect(),
+            ),
+            Parameters::Unspecified => None,
+        };
+        let spelled = self.sources.snippet(name);
+        if library::declared_as_its_row(spelled, shapes.as_deref()) != Some(false) {
+            return;
+        }
+        diagnostics.report(
+            Diagnostic::error(format!("this declares `{spelled}` unlike the library's"))
+                .with_code(MISDECLARED_LIBRARY)
+                .with_label(Label::primary(name, "declared here"))
+                .with_note(format!(
+                    "C17 7.1.4 p2 permits declaring a library function without its header only \
+                 with its own type, and this compiler reads a call to `{spelled}` as the \
+                 library's"
+                )),
+        );
+    }
+
     /// [`Resolver::declare`], into the scope at `scope`, counted from the
     /// file scope at 0: a function definition's name, declared into the file
     /// scope while its body's scope is open.
@@ -1245,6 +1303,9 @@ impl Resolver<'_> {
         definition: bool,
         diagnostics: &mut DiagnosticSink,
     ) {
+        if !definition {
+            self.misdeclared_library(name, ty, diagnostics);
+        }
         let spelled = self.sources.snippet(name);
         let here = &self.spelled[scope];
         let earlier = here.get(spelled).copied();
