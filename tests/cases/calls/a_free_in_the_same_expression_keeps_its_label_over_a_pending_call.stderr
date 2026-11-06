@@ -21,3 +21,13 @@ error[SC0401]: this frees `a`, which may have been freed already
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0414]: this frees `a`, a pointer that was stored where code outside this function may read it
+    ╭─[ a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:20:57 ]
+    │
+ 20 │     r = release_all() + (x = a[0]) + (holder = a, 0) + (free(a), 0);
+    │                                                         ───┬───  
+    │                                                            ╰───── freed here, perhaps still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free

@@ -394,10 +394,15 @@ pub(super) fn reported(
     let mut found = Vec::new();
     if let Some(verdict) = verdict(analysis.sources, Kind::DoubleFree, reached, known) {
         found.push(finding(Kind::DoubleFree, verdict));
-    } else if !stored_out.is_empty() {
-        // **Only where it is no double free**, which says more about the
-        // same free. A doubt, since whoever reads that memory may only write
-        // it (#650). See ADR-0041.
+    }
+    if !stored_out.is_empty() {
+        // **Beside any double free, not only where there is none**: an escape,
+        // `memcpy(pp, &x, 8)` taking `&x`, or a call that may free what it was
+        // handed, doubts a double free on a free nothing came before, and the
+        // stored-out doubt is the reason a reader can act on (#684). Second,
+        // so a caret carrying both reads `SC0401` above `SC0414`. A doubt,
+        // since whoever reads that memory may only write it (#650). See
+        // ADR-0071 rule 3.
         let made = made_where_all_agree(&stored_out, known);
         found.push(Finding {
             function: analysis.function,
