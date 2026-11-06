@@ -388,8 +388,9 @@ cases! {
         // and is believed to hold a pointer is doubted at the copy, `SC0411`
         // as a read of them is, since the read that is undefined is code
         // outside's (#764). See ADR-0071 rule 5. Mutation: never doubt it;
-        // this and the next three that report go silent. Mutation: ask the
-        // source's bytes nothing; the same four go silent.
+        // this and every case below that reports goes silent, and so do
+        // four cases elsewhere that copy into a block twice or into a
+        // parameter. Mutation: ask the source's bytes nothing; the same.
         a_copy_of_a_local_array_nothing_wrote_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Out of a block `malloc` made, as out of a local.
         a_copy_of_a_block_nothing_wrote_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
