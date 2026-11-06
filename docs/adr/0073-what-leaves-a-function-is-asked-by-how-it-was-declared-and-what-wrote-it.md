@@ -60,8 +60,10 @@ and Cons below.
    caller reads pointers out of it and this check reads one function at a time
    (ADR-0027). Certainly, not possibly: a block on a path where its allocation
    failed joins the written one as possibly unwritten, measured as three false
-   reports in the corpus. Only a `return`: a block handed to a call is how a
-   callee is given memory to fill (#823).
+   reports in the corpus. The cost is that a block left unwritten on a path
+   where its allocation succeeded is silent too, which only knowing the pointer
+   is not null at the `return` tells apart (#828). Only a `return`: a block
+   handed to a call is how a callee is given memory to fill (#823).
 4. **A value records whether the type it arrived as holds a pointer in its first
    level**, beside the width it believes there, and an operand of a library copy
    is asked by it: `void **` holds `void *`s, `int *` holds none, which the width

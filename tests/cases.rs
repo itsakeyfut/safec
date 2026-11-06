@@ -420,10 +420,12 @@ cases! {
         // out of it, is doubted at the `return` (#823). See ADR-0073 rule 3.
         // Mutation: never doubt it; this and the next go silent.
         a_block_nothing_wrote_returned_as_a_table_of_pointers_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A copy of half a pointer into it writes no pointer whole and
-        // leaves it unwritten.
-        a_block_a_copy_wrote_half_a_pointer_into_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Written before it is returned, nothing.
+        // A copy of half a pointer into it, four of the target's eight
+        // bytes, writes no pointer whole and leaves it unwritten (#745);
+        // it goes silent under the mutation above.
+        a_block_a_copy_wrote_half_a_pointer_into_is_doubted_where_it_is_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written before it is returned, nothing. Mutation: ask every block
+        // returned whether or not it was written; this is doubted.
         a_block_written_before_it_is_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written on the path where its allocation succeeded, nothing: the
         // block is possibly unwritten only through the path where there is
