@@ -1,6 +1,7 @@
 void *malloc(int n); void *memcpy(void *d, void *s, int n);
 void f(int *out) {
     if (!out) return;
-    int a[1];
-    memcpy(out, a, 4);
+    int *m = malloc(4);
+    if (!m) return;
+    memcpy(out, m, 4);
 }

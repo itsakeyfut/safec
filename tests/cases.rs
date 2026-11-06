@@ -409,9 +409,17 @@ cases! {
         // is read. Mutation: ask the destination nothing of whether it
         // leaves; it is doubted.
         a_copy_of_unwritten_bytes_into_memory_only_this_function_reads_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Nor into memory believed to hold no pointer. Mutation: take any
-        // destination as holding one; it is doubted.
-        a_copy_of_unwritten_ints_into_caller_memory_of_ints_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Nor into memory believed to hold no pointer, an `int *`
+        // parameter's. Mutation: take any destination as holding one; it
+        // is doubted.
+        a_copy_of_unwritten_bytes_into_caller_memory_of_ints_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Out of a pointer local nothing wrote, kept whole. Mutation: ask a
+        // local kept whole nothing; it goes silent.
+        a_copy_of_a_pointer_local_nothing_wrote_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And through a pointer read out of memory, by what it was read as
+        // naming. Mutation: ask no source read out of memory; it goes
+        // silent.
+        a_copy_of_a_block_nothing_wrote_through_a_pointer_read_out_of_memory_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block that may be unwritten keeps its mark where it is carried:
         // across a join where one side does not name it, through realloc,
         // and through a copy out of it (#724). Mutation: drop `realloc`'s

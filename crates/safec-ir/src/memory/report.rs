@@ -1445,9 +1445,10 @@ fn copied_unwritten(
 /// covers**, where `from` points at a known element of an array kept element
 /// by element and the length is a constant, so that `a[0] = &x; memcpy(out,
 /// a, 8);` with `a` two pointers long is not doubted for `a[1]`; at any
-/// element otherwise, which doubts. A source read out of memory, or one that
-/// may point inside a local, names memory this check did not record, and
-/// is not asked, as a load through it is not (`Allocations::reads_fresh`).
+/// element otherwise, which doubts. **A source read out of memory is asked
+/// too**, by what it was read as naming: a doubt, as a load through it is
+/// (`Allocations::reads_partly`), and leaving it out left a copy of a block
+/// nothing wrote, reached through a pointer stored and read back, silent.
 fn copies_unwritten(
     analysis: &Allocations<'_>,
     callee: FuncId,
@@ -1459,9 +1460,6 @@ fn copies_unwritten(
         return false;
     }
     let held = &known.points_to[from.local];
-    if held.beyond().unrecorded_address() || held.inner_address {
-        return false;
-    }
     if held.sites().any(|site| known.init[site].may_be_unwritten()) {
         return true;
     }
