@@ -2016,7 +2016,9 @@ pub(super) fn unwritten_read(
     let function = analysis.unit.function(analysis.function);
     for (local, at) in reads {
         // **A doubt where an element may still be unwritten**, a proof
-        // where nothing wrote any of it. See `Known::init`.
+        // where nothing wrote any of it. See `Known::init`. **Only a local
+        // that holds a pointer**: every local starts unwritten, and an
+        // integer read as itself is not followed (ADR-0073 rule 2).
         let init = known.init[local];
         let partly = init == Init::Maybe;
         if !taken.get(LocalIdx::of(local))

@@ -475,9 +475,10 @@ impl Allocations<'_> {
     }
 
     /// Whether an object of type `ty` holds a pointer: a pointer, or an array
-    /// of them through every dimension. What [`Known::init`] watches,
-    /// since a pointer is what ADR-0057 reports read out of memory nothing
-    /// wrote, and an integer or a byte is not followed there either.
+    /// of them through every dimension. What a read by name is asked of,
+    /// `report::unwritten_read`, since an integer read as itself is not
+    /// followed; [`Known::init`] watches every local whatever its type, since
+    /// a byte buffer may be read as a pointer (ADR-0073 rule 2).
     ///
     /// Written out rather than as a `matches!`, so a kind of type added later
     /// is asked whether it holds one.
@@ -1775,11 +1776,10 @@ impl Analysis for Allocations<'_> {
             // Nothing stored and nothing handed to a call yet.
             handed_at_most: Table::filled(None, self.locals),
             handed_contents_at_most: Table::filled(Levels::default(), self.locals),
-            // Every local that may hold a pointer, but the parameters, which
-            // the caller wrote. See `Known::init`.
-            // Every place written but the locals `unwritten_at_entry` names:
-            // a parameter's memory is the caller's, which may have written it,
-            // and an allocation is made fresh where it is made.
+            // Every place written but the locals `unwritten_at_entry` names,
+            // every local but a parameter: a parameter's memory is the
+            // caller's, which may have written it, and an allocation is made
+            // fresh where it is made.
             init: {
                 let unwritten = self.unwritten_at_entry();
                 let mut init = Table::filled(Init::Written, Loc::count(self.locals));
@@ -2594,12 +2594,11 @@ impl Analysis for Allocations<'_> {
                 value.clear(*local);
                 // **A new object, indeterminate again** (C17 6.2.4 p6), so an
                 // array written late in one turn of a loop is unwritten at
-                // the start of the next. See `Known::init`.
-                if self.holds_a_pointer(function.local(*local)) {
-                    value.init[local] = Init::Unwritten;
-                } else if value.init[local] == Init::Maybe {
-                    value.init[local] = Init::Written;
-                }
+                // the start of the next. See `Known::init`. **Whatever its
+                // type**, as at entry (ADR-0073 rule 2): a `char` buffer
+                // written late in one turn and copied out early in the next
+                // copied what the new object never had. Found by review.
+                value.init[local] = Init::Unwritten;
                 // And every element of it, with nothing written in part and
                 // nothing handed over. See `Known::element_init`.
                 value.element_init[local].unwrite_all();

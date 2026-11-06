@@ -222,8 +222,9 @@ pub(super) struct Known {
     /// condition on the address; the normative text makes such a read
     /// undefined only through a trap representation (6.2.6.1 p5) where the
     /// address is taken, and this reads J.2 as ADR-0057 does for an
-    /// allocation. Set where a local that may hold a pointer is made, at the
-    /// function's entry and at its `StorageLive`, never for a parameter, and
+    /// allocation. Set where a local is made, whatever its type, at the
+    /// function's entry and at its `StorageLive`, never for a parameter
+    /// (ADR-0073 rule 2), and
     /// cleared only by [`Self::written_local`] and [`Self::replaced`], which a write
     /// that may land there calls: an assignment, a placed store, a call's
     /// result, a call, which writes only the locals in
