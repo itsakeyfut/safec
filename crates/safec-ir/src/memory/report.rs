@@ -1496,18 +1496,15 @@ pub(super) fn departed_at_call(
     };
     let at = origin.span();
     let declared = analysis.unit.function(*callee);
-    // **A body here is what runs, whatever it is called.** Defining a
-    // library name is undefined (C17 7.1.3 p2), and the check reads such a
-    // call by name everywhere else; but the departure is asked of the body
-    // that believes its parameters, so a definition of `memcmp` taking
-    // `int *` is asked as any function is. Found by review.
-    let defined = declared.is_defined();
-    match (defined, analysis.callee(*callee)) {
-        (true, _) | (false, Callee::Opaque) => {}
+    // **A body here is what runs, whatever it is called**, so a definition of
+    // `memcmp` taking `int *` is asked as any function is: `callee` answers
+    // `Callee::Opaque` for every body this unit defines (ADR-0071).
+    match analysis.callee(*callee) {
+        Callee::Opaque => {}
         // **`memcpy` and `memmove` store what they copy**, so the pointers
         // their source reaches leave into the destination as a store would
         // put them there. Found by review.
-        (false, Callee::Copies) => {
+        Callee::Copies => {
             // **What the source points at, whatever the destination is**,
             // and so not through `store_at`, which makes a `Store` only where
             // both are places: what this asks is how wide what the source
@@ -1578,18 +1575,14 @@ pub(super) fn departed_at_call(
         // read nothing they are handed as an object, and a library function
         // that returns its first argument is asked how far it reaches by
         // `reached_by_library` instead.
-        (
-            false,
-            Callee::Frees
-            | Callee::Allocates
-            | Callee::Reallocates
-            | Callee::ReturnsFirst
-            | Callee::Ends,
-        ) => return,
+        Callee::Frees
+        | Callee::Allocates
+        | Callee::Reallocates
+        | Callee::ReturnsFirst
+        | Callee::Ends => return,
     }
     let reached: Vec<usize> = analysis
         .library(*callee)
-        .filter(|_| !defined)
         .map(|row| row.reaches.iter().map(|&(index, _)| index).collect())
         .unwrap_or_default();
     let parameters: Vec<LocalId> = declared.parameters().collect();
@@ -2398,16 +2391,15 @@ pub(super) fn handed(
     // (#791).
     // A `match` rather than a `matches!`, so that a kind of callee added
     // later answers here whether it writes a destination it does not read.
-    let copies = !analysis.unit.function(*callee).is_defined()
-        && match analysis.callee(*callee) {
-            Callee::Copies => true,
-            Callee::Frees
-            | Callee::Allocates
-            | Callee::Reallocates
-            | Callee::ReturnsFirst
-            | Callee::Ends
-            | Callee::Opaque => false,
-        };
+    let copies = match analysis.callee(*callee) {
+        Callee::Copies => true,
+        Callee::Frees
+        | Callee::Allocates
+        | Callee::Reallocates
+        | Callee::ReturnsFirst
+        | Callee::Ends
+        | Callee::Opaque => false,
+    };
     let destination = match arguments.first() {
         Some(Operand::Copy(place)) if copies => Some(place),
         Some(_) | None => None,

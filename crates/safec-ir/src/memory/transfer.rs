@@ -152,9 +152,19 @@ impl Allocations<'_> {
         self.library(id).map_or(Callee::Opaque, |row| row.callee)
     }
 
-    /// The row of [`LIBRARY`] this function's name is, if any.
+    /// The row of [`LIBRARY`] this function's name is, if any, and none for a
+    /// body this unit defines: that body is what runs, whatever it is called,
+    /// so [`Self::callee`] answers [`Callee::Opaque`] for it and the transfer
+    /// and every door read one kind. Defining a library name is undefined
+    /// (C17 7.1.3 p2); a `memcpy` defined here once took the copy's transfer
+    /// and an ordinary call's doors, and a program leaving its caller a freed
+    /// pointer built silent (#800). See ADR-0071.
     pub(super) fn library(&self, id: FuncId) -> Option<&'static Library> {
-        let name = self.sources.snippet(self.unit.function(id).name);
+        let function = self.unit.function(id);
+        if function.is_defined() {
+            return None;
+        }
+        let name = self.sources.snippet(function.name);
         LIBRARY.iter().find(|row| row.name == name)
     }
 

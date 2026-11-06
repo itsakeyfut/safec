@@ -5762,12 +5762,22 @@ cases! {
         // What a copy out stores out is what the sites it copies hold too, at
         // every level: `*box = x; *b = box; memcpy(pp, b, 8); free(x);` is
         // `SC0414`. Mutation: mark the sites a load of the source reads
-        // alone, not their closure; this goes silent. And a `memcpy` defined
-        // here is its body, not a library copy, so nothing is stored out by
-        // name. Mutation: let `Allocations::store_at` ignore whether the
-        // callee is defined; the second is `SC0414`. Found by review of #688.
+        // alone, not their closure; this goes silent. Found by review of #688.
         a_pointer_held_by_a_box_copied_out_by_memcpy_and_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A `memcpy` defined here is its body, not a library copy**, and
+        // this check reads one function at a time, so it is a call this check
+        // cannot read: it may free what it is handed, and both frees are a
+        // doubt, as they are for the same body under another name. The second
+        // is the program #800 found, whose body does store what it copies:
+        // the transfer read it as a library copy by name and the doors as a
+        // call, so neither doubted the free, and it built silent. See
+        // ADR-0071. Mutation: let `Allocations::library` answer by name whether
+        // or not the function is defined; both are read as a library copy and
+        // are `SC0414` at `free(x)` alone, and
+        // `a_function_defined_with_a_library_name_is_asked_as_any_function` and
+        // `a_defined_memcpy_s_destination_is_asked_what_it_held` fail beside them.
         a_pointer_copied_out_by_a_memcpy_defined_here_is_not_asked_as_a_library_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_a_memcpy_defined_here_leaves_its_caller_and_freed_after_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What `malloc` returns is this function's, not handed over, so a
         // pointer read out of it is not doubted at a later call; the
         // `SC0403`s are the nullability check's. Mutation: count

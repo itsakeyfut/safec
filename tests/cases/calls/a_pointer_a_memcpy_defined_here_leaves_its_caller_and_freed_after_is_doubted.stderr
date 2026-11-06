@@ -1,0 +1,20 @@
+error[SC0401]: this frees `b`, which may have been freed already
+    ╭─[ a_pointer_a_memcpy_defined_here_leaves_its_caller_and_freed_after_is_doubted.c:14:5 ]
+    │
+ 14 │     free(b);
+    │     ───┬───  
+    │        ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0401]: this frees `x`, which may have been freed already
+    ╭─[ a_pointer_a_memcpy_defined_here_leaves_its_caller_and_freed_after_is_doubted.c:15:5 ]
+    │
+ 15 │     free(x);
+    │     ───┬───  
+    │        ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
