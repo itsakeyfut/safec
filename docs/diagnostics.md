@@ -334,8 +334,9 @@ box stored out holds, and a call this check cannot read handed it, which may
 free it (#672). A `memcpy` or `memmove` out of the function of a pointer
 certainly freed is `SC0414` too, as a doubt, since C defines copying the
 pointer's bytes and leaves undefined only a later read of them (#652); a live
-pointer copied out and freed after is doubted at the free in other words
-(#684). Only a doubt, since
+pointer copied out and freed after is `SC0414` at the free as its store is,
+beside the `SC0401` the copy's escape of `&x` raises (#684, ADR-0071 rule 3).
+Only a doubt, since
 whoever reads that memory may only write it, so `*pp = 0;` after the free is
 doubted too until this check follows what one place there holds (#656). The
 same ADR records it and what it costs.

@@ -79,12 +79,12 @@ enum Belief {
     ///
     /// This one: put there, then freed, which `report::reported` doubts at the
     /// free as stored out (`FreedAfterStore`). Mutation: the free's door never
-    /// pushes `FreedAfterStore`; `stored_out_store_d1_both` fails, among
-    /// twenty one of this belief's thirty eight.
+    /// pushes `FreedAfterStore`; `stored_out_store_d1_both` fails, among all
+    /// thirty eight of this belief's rows.
     /// Mutation: a library copy marks nothing it carries stored out (its
     /// `StoreKind::Copy` arm in the transfer answers `false`);
-    /// `stored_out_memcpy_block_d1_both` fails, among five. The copy out of a
-    /// local's address cannot, since `ACCEPTED` lists its rows (#684).
+    /// `stored_out_memcpy_block_d1_both` fails, among twelve, the copies out
+    /// of a local's address with them.
     StoredOut,
     /// Freed, then put there, which the store's door doubts or proves
     /// (`StoreAfterFree`) only where the slot leaves (ADR-0068 rules 2 and 3).
