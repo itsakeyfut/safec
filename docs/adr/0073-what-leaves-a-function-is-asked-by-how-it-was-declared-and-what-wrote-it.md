@@ -52,7 +52,9 @@ and Cons below.
    as any call, by one function both checks read (#821).
 2. **Every local but a parameter starts out unwritten**, and is asked where it
    is read as a pointer, by a load or by a copy into memory that leaves; a read
-   of an integer by name is asked nothing, as before (#822).
+   of an integer by name is asked nothing, as before (#822). A local that holds
+   no pointer is kept whole, so a write of part of it writes all of it, which
+   leaves a read of the rest unasked; that is #826's.
 3. **A `return` of a block certainly unwritten is doubted** where the function's
    return type points at a pointer, as `SC0411` with words of its own: the
    caller reads pointers out of it and this check reads one function at a time
@@ -94,9 +96,10 @@ adds its rule's cases and the mutation that fails each here.
   (`-Wincompatible-library-redeclaration`), where the memory check runs.
 * Bad, because rule 3 doubts a function that allocates a table of pointers and
   hands it back unfilled for the caller to fill, a common shape.
-* Bad, because rule 2 turns a case written to hold the old boundary,
-  `an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_not_followed`,
-  into a report, which it now is.
+* Bad, because rule 2 turns a case written to hold the old boundary, an
+  `int` made again in a loop and read as a pointer, into a report, which it now
+  is, renamed
+  `an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_reported`.
 * What would reverse rule 3: a check that follows a pointer across a call, so
   the caller's read is where it is asked.
 
@@ -133,4 +136,6 @@ adds its rule's cases and the mutation that fails each here.
 * [ADR-0072](./0072-an-argument-a-library-function-reads-or-writes-through-is-asked-and-refined-as-a-dereference.md),
   the second reader of the library table that rule 1 serves.
 * [ADR-0069](./0069-a-pointer-read-out-of-memory-nothing-wrote-is-reported-where-it-is-read-and-a-loop-may-run-zero-times-unless-it-is-shown-to-run.md),
-  whose rule 1 asks a read as a pointer, which rule 2 extends to every local.
+  whose rule 1 asks a read as a pointer, which rule 2 extends to every local,
+  and whose rule 2 started only a local that may hold a pointer unwritten,
+  which rule 2 here widens to every local but a parameter.

@@ -630,11 +630,10 @@ impl Allocations<'_> {
     ///
     /// **Whatever its type**: a `char` buffer nothing wrote, read as a pointer
     /// or copied out into memory that leaves, is as indeterminate as a pointer
-    /// local nothing wrote, and was believed written. What asks it is unchanged
-    /// and asks only a read as a pointer: a load (ADR-0069 rule 1) and a library
-    /// copy into memory that leaves (ADR-0071 rule 5), while a read of an
-    /// integer by name stays unasked (`report::unwritten_read`). See ADR-0073
-    /// rule 2.
+    /// local nothing wrote. What asks it asks only a read as a pointer: a load
+    /// (ADR-0069 rule 1) and a library copy into memory that leaves (ADR-0071
+    /// rule 5), while a read of an integer by name is unasked
+    /// (`report::unwritten_read`). See ADR-0073 rule 2.
     pub(super) fn unwritten_at_entry(&self) -> Vec<bool> {
         let function = self.unit.function(self.function);
         function

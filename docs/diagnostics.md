@@ -184,18 +184,20 @@ element by element and the length is a constant, only the elements the copy
 covers are asked. A second copy into a block the function made is asked as
 leaving, since a library copy exposes what it is handed, so unwritten bytes
 copied into it twice are doubted at the copy as well as where they are read.
-Two limits are inherited rather than chosen here: a local that holds no
-pointer, an `int` or `char` array, is never followed as unwritten, so copying
-it out says nothing; and a block is asked whether it leaves when the copy is
-made, so a block filled by a copy and handed back afterwards says nothing, as
+One limit is inherited rather than chosen here: a block is asked whether it
+leaves when the copy is made, so a block filled by a copy and handed back afterwards says nothing, as
 a block handed back with nothing written into it says nothing.
 
 A local whose address is taken, a local array among them, is indeterminate in
 the same way until something writes it (C17 6.2.4 p6, 6.7.9 p10), and the same
 line of Annex J.2 lists using it, whatever its type: a `char` buffer nothing
 wrote, read as a pointer or copied into memory that leaves, is asked as a
-pointer local is (#822), while an integer read by name is not followed. A
-pointer read out of one, through a pointer or by name, is `SC0411` at the read: `int *m[1]; int *q = m[0];` and `int *q;
+pointer local is (#822), while an integer read by name is not followed. Such a
+buffer is kept whole, so a write of any part of it, `b[0] = 0;` or a `memcpy`
+of four bytes into it, counts as writing all of it, and a read of the rest as
+a pointer afterwards says nothing (#826). A
+pointer read out of one, through a pointer or by name, is `SC0411` at the
+read: `int *m[1]; int *q = m[0];` and `int *q;
 int **pq = &q; return q == 0;` (#640). Any write that may land in it ends it:
 an assignment to it, a store through a pointer that may point at it, a copy
 into it, a call's result, or a call it was handed. **A local array of at most 64
