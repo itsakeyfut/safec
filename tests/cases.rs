@@ -417,10 +417,20 @@ cases! {
         // Not only an allocator's result: a `void *` parameter held as a
         // `void **` on the way.
         a_copy_into_a_void_pointer_held_as_a_void_pointer_pointer_on_the_way_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Read out of memory as a `void *` and held as a `void **`, which a
-        // door inside the copy arm alone would miss. Mutation: add it in
-        // the copy arm only; this goes silent.
+        // Read out of memory as a `void *` and held as a `void **`.
+        // Mutation: add it only where the value is a copy of a local by
+        // name; this goes silent. The other arms are answered by other
+        // routes for a pointer held so, an address by the local it names
+        // and arithmetic by the copy out of its temporary, and no case
+        // tells their door apart.
         a_copy_into_a_void_pointer_read_out_of_memory_and_held_as_a_void_pointer_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Held as a pointer to an array of `void *`s, through the array to
+        // its element. Mutation: ask the local's type without looking
+        // through an array; this goes silent.
+        a_copy_into_a_void_pointer_made_from_a_pointer_to_an_array_of_void_pointers_an_allocator_returned_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A null stored in the first element first leaves the second half
+        // of it still a pointer nobody wrote whole.
+        a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_holding_a_null_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block nothing types, held only as a `void *`. Mutation: add it
         // for every pointer type; this is `SC0413`.
         a_copy_into_a_block_nothing_types_is_not_asked_whether_it_holds_pointers: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
