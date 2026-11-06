@@ -23,6 +23,16 @@ and each an undefined program built with nothing said:
   belief a value arrived with says `0` alike for a level holding a `void *` and
   for one holding no pointer (#818).
 
+Their reviews found three more, each the edge of one of the four rules:
+
+- `char b[8]; b[0] = 0;` then `b` read as a pointer builds silent: a write of
+  part of a local kept whole writes all of it (#826).
+- `if (!b) return 0; if (c) *b = p; return b;` builds silent: a block left
+  unwritten on a path where its allocation succeeded is not certainly
+  unwritten (#828).
+- `void **q = malloc(16); void *d = q; memcpy(d, &i, 4);` builds silent, and so
+  does `int **q`: an allocator's result arrives as no type (#830).
+
 ## Decision Drivers
 
 * Each is row 6: `safec` says nothing about a program C leaves undefined.
@@ -52,33 +62,50 @@ and Cons below.
    as any call, by one function both checks read (#821).
 2. **Every local but a parameter starts out unwritten**, and is asked where it
    is read as a pointer, by a load or by a copy into memory that leaves; a read
-   of an integer by name is asked nothing, as before (#822). A local that holds
-   no pointer is kept whole, so a write of part of it writes all of it, which
-   leaves a read of the rest unasked; that is #826's.
-3. **A `return` of a block certainly unwritten is doubted** where the function's
+   of an integer by name is asked nothing, as before (#822). **A write of part
+   of a local kept whole leaves it possibly unwritten** rather than written:
+   a store at an index this check reads into an array of integers or
+   characters, and a library copy of a length it reads that is shorter than
+   the local. A store at an index it cannot read, and a copy of a length it
+   cannot read, still write it whole, so a loop that fills it is not doubted.
+   An array of pointers is written whole by a store, which writes a pointer
+   whole, so one kept whole is put in doubt only by a copy that ends part way
+   through a pointer, and one kept per element is written by a copy only in
+   the elements it covers whole (#826).
+3. **A `return` of a block unwritten is doubted** where the function's
    return type points at a pointer, as `SC0411` with words of its own: the
    caller reads pointers out of it and this check reads one function at a time
-   (ADR-0027). Certainly, not possibly: a block on a path where its allocation
-   failed joins the written one as possibly unwritten, measured as three false
-   reports in the corpus. The cost is that a block left unwritten on a path
-   where its allocation succeeded is silent too, which only knowing the pointer
-   is not null at the `return` tells apart (#828). Only a `return`: a block
-   handed to a call is how a callee is given memory to fill (#823).
-4. **A value records whether the type it arrived as holds a pointer in its first
-   level**, beside the width it believes there, and an operand of a library copy
-   is asked by it: `void **` holds `void *`s, `int *` holds none, which the width
-   `0` both say. Joined by union, so a path that says pointers asks (#818).
-   Only where a value arrives from a type: a parameter, a load, an opaque
-   call's result. An allocator's result believes nothing of what its memory
-   holds (ADR-0060), so `void **q = malloc(16); void *d = q;` is asked
-   nothing, as `int **q` is; that is #830.
+   (ADR-0027). Certainly unwritten in general, since a block on a path where
+   its allocation failed joins the written one as possibly unwritten, measured
+   as three false reports in the corpus (#823). **Possibly unwritten where the
+   nullability check established the pointer not null at the `return`**, since
+   then no path that reaches it is one where the allocation failed (#828): the
+   nullability check hands that fact over beside the null it hands over
+   already (ADR-0027), and a wrong answer from it is a doubt too many, not one
+   too few. Only a `return`: a block handed to a call is how a callee is given
+   memory to fill (#823).
+4. **A value records whether the type it arrived as, or the local it is held
+   in, holds a pointer in its first level**, beside the width it believes
+   there, and an operand of a library copy is asked by it: `void **` holds
+   `void *`s, `int *` holds none, which the width `0` both say. Joined by
+   union, so a path that says pointers asks (#818). Set where a value arrives
+   from a type, a parameter, a load or an opaque call's result, and added by
+   every assignment into a local whose declared type says so, so that an
+   allocator's result, which arrives as no type (ADR-0060), says it once it is
+   held as a `void **` or an `int **` (#830). The width ADR-0060 believes is
+   not changed: a pointer held so is asked whether it starts an object. **On
+   the value, not on the allocation**, so a block reached by a pointer that
+   never held the belief is still asked nothing: an alias made before the
+   typed hold, a copy before it, a block handed to a function that takes it
+   as a `void **`, and one stored into a `void **` slot with no typed local;
+   that is #832.
 
 ### Confirmation
 
-Each of #821, #822, #823 and #818 added its rule's cases and the mutation that
-fails each here. Proposed still, since #828 and #830 may change what rules 3
-and 4 decide, and a record accepted before them would have to be superseded
-rather than amended.
+Each of #821, #822, #823, #818 and #830 added its rule's cases and the
+mutation that fails each here. Proposed until #828 and #826 have added theirs,
+the last of the rules as amended on #824, so that it is accepted once rather
+than superseded.
 
 1. `library::misdeclares_library` answering `false` fails
    `a_library_name_declared_with_its_parameters_swapped_is_refused`, the
@@ -139,6 +166,16 @@ rather than amended.
    `a_copy_into_a_void_pointer_pointer_a_call_returned_behind_a_void_pointer_is_asked`,
    and a library copy's read setting it fails
    `a_void_pointer_a_library_copy_wrote_is_not_believed_to_point_at_pointers`.
+   An assignment adding nothing of the local it lands in fails
+   `a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_an_allocator_returned_is_asked`,
+   its `int **`, `realloc`, `void *` parameter, load, array and null-element
+   cases, and `a_block_a_copy_wrote_half_a_pointer_into_is_doubted_where_it_is_returned`;
+   adding it only where the value is a copy of a local by name fails
+   `a_copy_into_a_void_pointer_read_out_of_memory_and_held_as_a_void_pointer_pointer_is_asked`;
+   adding it for every pointer type fails
+   `a_copy_into_a_block_nothing_types_is_not_asked_whether_it_holds_pointers`;
+   and asking the local's type without looking through an array fails
+   `a_copy_into_a_void_pointer_made_from_a_pointer_to_an_array_of_void_pointers_an_allocator_returned_is_asked`.
 
 ### Consequences
 
@@ -147,6 +184,12 @@ rather than amended.
   (`-Wincompatible-library-redeclaration`), where the memory check runs.
 * Bad, because rule 3 doubts a function that allocates a table of pointers and
   hands it back unfilled for the caller to fill, a common shape.
+* Bad, because rule 2 doubts `char b[8]` written one element at a time at
+  every index and then read as a pointer, since a local kept whole cannot say
+  which parts were written (#826).
+* Bad, because rule 3 doubts `if (b) *b = p; if (!b) return 0; return b;`,
+  where the pointer is shown not null only after the join that made the block
+  possibly unwritten (#828).
 * Bad, because rule 2 turns a case written to hold the old boundary, an
   `int` made again in a loop and read as a pointer, into a report, which it now
   is, renamed
@@ -168,17 +211,52 @@ rather than amended.
 * Bad, because a `char` buffer read as a pointer stays silent, and nothing in the
   representation needed the boundary: `Known::init` holds every local already.
 
+### Rule 2, rejected: keep every array of at most `ELEMENTS_KEPT` elements per element
+
+* Good, because a buffer written one element at a time is not doubted, and a
+  read as a pointer asks exactly the elements it spans.
+* Bad, because `Held::element` is counted in innermost elements and would
+  change for every array of integers or characters, a wide change to the
+  machinery #667 built, where a mistake is a silence.
+
+### Rule 2, rejected: put an array of pointers kept whole in doubt on any store at an index
+
+* Good, because a read of an element no store wrote is doubted.
+* Bad, because `big[0] = &x; p = big[0];` is doubted, a common shape, and the
+  element read cannot be told from the one written in a local kept whole.
+
 ### Rule 3, rejected: hold, until a check follows a pointer across a call
 
 * Good, because no allocator idiom is doubted.
 * Bad, because `int **b = malloc(8); return b;` and the same after a copy of half
   a pointer stay silent with no date on what would end it.
 
+### Rule 3, rejected: doubt a block possibly unwritten wherever it is returned
+
+* Good, because nothing is asked of the nullability check.
+* Bad, because three corpus cases were doubted on the path where the
+  allocation failed, `if (m) *m = x; return m;` among them, which C defines.
+
 ### Rule 4, rejected: give `Levels` a pointer bit at every level
 
 * Good, because the ambiguity is gone at every level, not the first.
 * Bad, because `contents_at_most` is read and written in fifty-four places across
   ADR-0060's machinery, for a question asked at one.
+
+### Rule 4, rejected: add it only where an allocator's result is held
+
+* Good, because ADR-0060's rule for an allocator's result moves least.
+* Bad, because `void f(void *v) { void **q = v; void *d = q; ... }` stays
+  silent, the same loss by another route.
+
+### Rule 4, rejected: record on the allocation the type it was held as
+
+* Good, because it survives a pointer stored in memory and read back, and
+  answers an alias made before the typed hold and a block stored into a
+  `void **` slot with no typed local, which the local's type does not (#832).
+* Bad, because it adds a fact to every site for a question one door asks, and
+  still answers nothing where the copy comes before anything typed reaches
+  the block, so it does not close #832 either.
 
 ## More Information
 

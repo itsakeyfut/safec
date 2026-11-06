@@ -844,7 +844,8 @@ pub(super) struct Held {
     /// Whether the type this value arrived as says the memory it points at
     /// holds pointers, at its first level: `void **` does, though the width
     /// [`Self::contents_at_most`] believes there is `0`, and `int *` does
-    /// not, believing the same `0`. Set where that is set from a type.
+    /// not, believing the same `0`. Set where that is set from a type, and
+    /// added by an assignment into a local whose type says so (#830).
     ///
     /// **What `0` alone could not say** (#818). A level that holds a `void *`
     /// and the first level that holds no pointer both believe `0`, so

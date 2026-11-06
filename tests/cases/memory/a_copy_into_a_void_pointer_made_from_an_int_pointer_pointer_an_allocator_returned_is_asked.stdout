@@ -1,0 +1,108 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:1:46 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:1:67 "realloc" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "p"
+  Local "_2" "int" parameter "n"
+Function a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:1:97 "use" declared
+  Local "_0" "void" return
+Function a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "pp"
+  Local "_2" "int" "i"
+  Local "_3" "int"
+  Local "_4" "int **" "q"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int **"
+  Local "_8" "void *" "d"
+  Local "_9" "void *" "s"
+  Local "_10" "int *"
+  Local "_11" "void *"
+  Block "bb0" entry
+    Operation a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:25 written
+      Destination "_2"
+      Use
+        Constant 1
+    Sequenced a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:29 generated
+    Operation a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:36 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:36 written "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:36 generated
+    Return
+  Block "bb2"
+    Sequenced a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:36 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:59 generated
+    Call a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:59 written "malloc" "bb4"
+      Destination "_5"
+      Constant 16
+  Block "bb4"
+    Operation a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:55 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:59 generated
+    Operation a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:75 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_4"
+    Branch a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:75 written "bb5" "bb6"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:75 generated
+    Return
+  Block "bb6"
+    Sequenced a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:75 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:87 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:87 written
+      Destination "_7"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:87 generated
+    Operation a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:102 written
+      Destination "_8"
+      Use
+        Copy "_4"
+    Sequenced a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:106 generated
+    Operation a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:119 written
+      Destination "_10"
+      Address
+        Place "_2"
+    Operation a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:115 written
+      Destination "_9"
+      Use
+        Copy "_10"
+    Sequenced a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:119 generated
+    ArgumentsEvaluated a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:123 generated
+    Call a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:123 written "memcpy" "bb8"
+      Destination "_11"
+      Copy "_8"
+      Copy "_9"
+      Constant 4
+  Block "bb8"
+    Sequenced a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:123 generated
+    ArgumentsEvaluated a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:140 generated
+    Call a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:140 written "use" "bb9"
+  Block "bb9"
+    Sequenced a_copy_into_a_void_pointer_made_from_an_int_pointer_pointer_an_allocator_returned_is_asked.c:2:140 generated
+    Return

@@ -296,9 +296,13 @@ whose length ends part way through one, stores a pointer nobody wrote whole,
 and is asked as one that may not point at an object as wide as its type
 (#717). Where both are `void *`, it is asked by what they point at: a local's
 type, a pointer stored in an allocation, or the type the value arrived as,
-so `void *d = out;` with `out` a `void **` parameter is asked (#818). A
-pointer an allocator returned arrives as nothing, so `void **q =
-malloc(16); void *d = q;` is asked nothing, for now (#830).
+so `void *d = out;` with `out` a `void **` parameter is asked (#818), and
+so is the local a value is held in: a pointer an allocator returned arrives
+as nothing, and `void **q = malloc(16); void *d = q;` is asked whether it
+starts an object (#830). The belief is on the value, not on the block, so a
+block reached by a pointer that never held it, an alias made first, a copy
+before the typed hold, or a block handed on or stored as memory of pointers
+without a typed local, is asked nothing, for now (#832).
 Each is asked at the wider of its own type and the type the receiver reads it
 as, so a `void *` local's address passed as an `int **` asks the local four
 bytes wide, and memory by what its record says the pointers stored there point
