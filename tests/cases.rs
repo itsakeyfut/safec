@@ -393,6 +393,14 @@ cases! {
         // Returned by a call as a `void **`. Mutation: the call's result
         // says nothing of it; this goes silent.
         a_copy_into_a_void_pointer_pointer_a_call_returned_behind_a_void_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Through an array to its element: `void *(*)[2]` holds `void *`s.
+        // Mutation: ask the pointee without looking through an array; this
+        // goes silent.
+        a_copy_into_a_void_pointer_made_from_a_pointer_to_an_array_of_void_pointers_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Moved along by arithmetic, it points into the same memory, which
+        // holds what it held. Mutation: arithmetic drops it; this loses its
+        // `SC0413`.
+        a_copy_into_a_void_pointer_moved_along_a_void_pointer_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Two locals of different widths name the narrower, a `void *`'s
         // none. Mutation: name the wider; it says "as wide as its type".
         a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
