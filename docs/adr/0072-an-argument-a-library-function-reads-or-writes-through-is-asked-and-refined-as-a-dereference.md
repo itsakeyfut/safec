@@ -67,6 +67,11 @@ refining after the call.
   under `--allow-unknown`. This is the doubt `*out = x;` already raises about
   the same parameter. One case more gains a proof, `memcpy(0, b, 8)`, and its
   exit under `--allow-unknown` goes to 1, which a null destination is.
+* Neutral, because the refinement reaches the memory check too, which reads a
+  pointer this check established is null to excuse a `free` of it: `p = 0;
+  memcpy(p, &k, 4); free(p);` no longer excuses the free, as `*p = k;` before
+  it already did not. Only a program that the copy already made undefined, and
+  was proved so at it, says more.
 * What would reverse this: a function that reads through an argument and
   accepts a null one, which C17 says of some outside these rows (`free`,
   `realloc`, `fflush`); such a row would need a field saying so before it could
@@ -76,8 +81,8 @@ refining after the call.
 
 ### The copies alone
 
-* Good, because fifty-two cases move rather than sixty-five, and seven exits
-  rather than nine.
+* Good, because fifty-two corpus cases move rather than sixty-five, measured on
+  a prototype.
 * Bad, because `memset(0, …)`, `strlen(0)` and `memcmp(0, …)` stay silent, the
   same undefined behaviour, and the rule becomes a list of names to keep beside
   the table.
