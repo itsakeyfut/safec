@@ -241,6 +241,8 @@ fn verdict(
         Kind::OutsideItsObject { .. } => true,
         // Never asked: it is said where a pointer leaves, about no free.
         Kind::HandedOnNarrow { .. } => true,
+        // Never asked: it is said where a copy leaves, about no free.
+        Kind::CopiedUnwritten => true,
     };
 
     match earliest {
@@ -1361,6 +1363,157 @@ fn part_of_a_pointer(
 /// says bytes, and both built silent where the same copy through an `int **`
 /// is asked (#746). See ADR-0071 rule 4.
 ///
+/// The destination first, then the source, as the typed asks are, each by
+/// [`points_at_a_pointer`], and the first answer is the report: the width is
+/// all it carries. A copy of an `int`'s bytes into a local that holds no
+/// pointer stays silent however its operands are typed.
+fn part_of_what_operands_point_at(
+    analysis: &Allocations<'_>,
+    function: &Function,
+    callee: FuncId,
+    arguments: &[Operand],
+    known: &Known,
+) -> Option<u64> {
+    match analysis.copied_pointers(callee, arguments) {
+        CopiedPointers::Whole => return None,
+        CopiedPointers::LastInPart | CopiedPointers::NoneWhole => {}
+    }
+    arguments
+        .iter()
+        .take(2)
+        .find_map(|operand| points_at_a_pointer(analysis, function, operand, known))
+}
+
+/// Whether a library copy may copy bytes nothing wrote into memory that
+/// leaves this function and is believed to hold a pointer. Copying them is
+/// defined (C17 7.24.2.1, 7.24.2.2); a caller reading the pointer they leave is not,
+/// and the copy is the last place this check sees it (ADR-0071 rule 5).
+///
+/// All three are asked, and each one alone keeps a copy silent:
+///
+/// - **the destination leaves**, as the store the copy is leaves
+///   (`Allocations::store_at`): a copy into memory only this function reads
+///   is asked at the read, as any read of it is;
+/// - **what it lands in is believed to hold a pointer**, by the
+///   destination's type or by what it points at ([`points_at_a_pointer`]);
+/// - **what it copies may be unwritten** ([`source_may_be_unwritten`]).
+///
+/// **Leaving is the store's answer, and a library copy exposes what it is
+/// handed**, so a second copy into a block this function made, a copy in a
+/// loop among them, is asked as leaving: copying unwritten bytes into it is
+/// doubted there as well as where it is read, and a block filled that way
+/// and freed unread is doubted though nothing reads it. That is the
+/// conservative side of the store's question, and answering it otherwise
+/// here would answer one destination two ways (#737).
+fn copied_unwritten(
+    analysis: &Allocations<'_>,
+    function: &Function,
+    terminator: &Terminator,
+    into_ty: Option<TyId>,
+    known: &Known,
+) -> bool {
+    let Terminator::Call {
+        callee, arguments, ..
+    } = terminator
+    else {
+        return false;
+    };
+    let Some(store) = analysis.store_at(terminator, known) else {
+        return false;
+    };
+    let (StoreKind::Copy, Written::Bytes(from)) = (store.kind, &store.from) else {
+        return false;
+    };
+    if !store.leaves {
+        return false;
+    }
+    let typed = into_ty
+        .and_then(|ty| pointee(analysis, ty))
+        .and_then(|ty| pointee_width(analysis, ty))
+        .is_some();
+    let holds = typed
+        || arguments
+            .first()
+            .and_then(|into| points_at_a_pointer(analysis, function, into, known))
+            .is_some();
+    holds && source_may_be_unwritten(analysis, *callee, arguments, from, known)
+}
+
+/// Whether the bytes a library copy reads through `from` may not have been
+/// written: an allocation it points at that nothing may have written, or a
+/// local it points at that may be unwritten. **At the elements the copy
+/// covers**, where `from` points at a known element of an array kept element
+/// by element and the length is a constant, so that `a[0] = &x; memcpy(out,
+/// a, 8);` with `a` two pointers long is not doubted for `a[1]`; at any
+/// element otherwise, which doubts. Elements are counted in pointers, since
+/// only an array of pointers is kept element by element (`Known::element_init`),
+/// and a copy ending part way through one covers it, hence the rounding up.
+/// Any other local is kept whole and asked as one.
+///
+/// **A source that holds a pointer read out of memory is asked by what it
+/// holds**, as any source is, which is a doubt where a load through it is one
+/// (`Allocations::reads_partly`).
+fn source_may_be_unwritten(
+    analysis: &Allocations<'_>,
+    callee: FuncId,
+    arguments: &[Operand],
+    from: &Place,
+    known: &Known,
+) -> bool {
+    // **A source spelled through dereferences**, `memcpy(out, *b, 8)`, is
+    // handed to the call as the place itself, not loaded into a local
+    // first, so what it copies is what a load one level further reads
+    // (`Known::levels_below`): answering `false` for it said the bytes were
+    // written whenever the source was spelled that way. A place of
+    // anything but dereferences names memory this check does not follow,
+    // and is doubted. Found by review. **Nothing guards that last arm**: an
+    // indexed source, `a[0]` or `a[k]`, reaches the call as a dereference,
+    // measured, and no C program found reaches it otherwise.
+    if !from.projection.is_empty() {
+        let depth = derefs(from);
+        if depth == 0 {
+            return true;
+        }
+        let (sites, locals) = known.levels_below(from.local, depth);
+        return sites
+            .into_iter()
+            .any(|site| known.init[site].may_be_unwritten())
+            || locals.into_iter().any(|local| {
+                known.certainly_unwritten(local, None) || known.may_be_unwritten(local, None, true)
+            });
+    }
+    let held = &known.points_to[from.local];
+    if held.sites().any(|site| known.init[site].may_be_unwritten()) {
+        return true;
+    }
+    let target = analysis.unit.target();
+    let pointer = u64::from(target.pointer_bits() / target.char().bits());
+    let covered = analysis
+        .constant_argument(callee, arguments, 2)
+        .map(|length| length.div_ceil(pointer));
+    held.locals().any(|local| {
+        let elements = &known.element_init[local];
+        if elements.len() == 0 {
+            return known.init[local].may_be_unwritten();
+        }
+        match (held.element, covered) {
+            (Some(start), Some(count)) => (start..start.saturating_add(count)).any(|element| {
+                usize::try_from(element)
+                    .ok()
+                    .filter(|&element| element < elements.len())
+                    .is_some_and(|element| elements.get(element).may_be_unwritten())
+            }),
+            (Some(_) | None, _) => elements.any_may_be_unwritten(),
+        }
+    })
+}
+
+/// Whether what `operand` points at holds a pointer, by what it points at
+/// rather than by its type, and if so the width that pointer is believed to
+/// point at. Asked of a library copy's operands, where their types said
+/// nothing (#746) or where only the destination is asked (#764). See
+/// ADR-0071 rules 4 and 5.
+///
 /// What an operand points at holds a pointer three ways, each asked here:
 ///
 /// - **a local it holds the address of**, by the local's declared type, or
@@ -1373,52 +1526,42 @@ fn part_of_a_pointer(
 ///   it starts an object.
 ///
 /// Where several locals answer, the narrowest width is said, as the message
-/// names a width a reader may believe; it decides no report. The destination
-/// first, then the source, as the typed asks are, and the first answer is
-/// the report: the width is all it carries. An operand that points at none
-/// of these answers nothing, so a copy of an `int`'s bytes into a local that
-/// holds no pointer stays silent however its operands are typed.
-fn part_of_what_operands_point_at(
+/// names a width a reader may believe; it decides no report. An operand
+/// that points at none of these answers nothing.
+fn points_at_a_pointer(
     analysis: &Allocations<'_>,
     function: &Function,
-    callee: FuncId,
-    arguments: &[Operand],
+    operand: &Operand,
     known: &Known,
 ) -> Option<u64> {
-    match analysis.copied_pointers(callee, arguments) {
-        CopiedPointers::Whole => return None,
-        CopiedPointers::LastInPart | CopiedPointers::NoneWhole => {}
+    let Operand::Copy(place) = operand else {
+        return None;
+    };
+    if !place.projection.is_empty() {
+        return None;
     }
-    arguments.iter().take(2).find_map(|operand| {
-        let Operand::Copy(place) = operand else {
-            return None;
-        };
-        if !place.projection.is_empty() {
-            return None;
-        }
-        let named = known.written_through(place.local);
-        let local = function
-            .locals()
-            .filter(|&local| named.contains(&LocalIdx::of(local)))
-            .filter_map(|local| {
-                let ty = innermost_element(analysis.unit, function.local(local));
-                pointee_width(analysis, ty)
-            })
-            .min();
-        // `0` is no belief that a pointer is held: `type_levels` says it
-        // from the first level that holds none, so an `int *` arrives
-        // believing `0` as a `void **` does, and counting it doubted every
-        // copy of an `int` through an `int *` parameter.
-        let arrived = known.points_to[place.local]
-            .contents_at_most
-            .at(0)
-            .filter(|&width| width > 0);
-        let stored = known.sites_of(place.local).any(|site| {
-            let cell = &known.contents[site];
-            cell.sites().next().is_some() || cell.locals().next().is_some()
-        });
-        local.or(arrived).or(stored.then_some(0))
-    })
+    let named = known.written_through(place.local);
+    let local = function
+        .locals()
+        .filter(|&local| named.contains(&LocalIdx::of(local)))
+        .filter_map(|local| {
+            let ty = innermost_element(analysis.unit, function.local(local));
+            pointee_width(analysis, ty)
+        })
+        .min();
+    // `0` is no belief that a pointer is held: `type_levels` says it from
+    // the first level that holds none, so an `int *` arrives believing `0`
+    // as a `void **` does, and counting it doubted every copy of an `int`
+    // through an `int *` parameter.
+    let arrived = known.points_to[place.local]
+        .contents_at_most
+        .at(0)
+        .filter(|&width| width > 0);
+    let stored = known.sites_of(place.local).any(|site| {
+        let cell = &known.contents[site];
+        cell.sites().next().is_some() || cell.locals().next().is_some()
+    });
+    local.or(arrived).or(stored.then_some(0))
 }
 
 /// Report a pointer this element hands back by a `return`, stores through
@@ -1651,6 +1794,22 @@ pub(super) fn departed_at_call(
                     Some((Fit::Unknown, None)),
                     false,
                 );
+            }
+            // **And whether what it copies was written**: `int *a[1];
+            // memcpy(out, a, 8);` leaves the caller a pointer nobody wrote,
+            // where `*out = a[0];` is `SC0411` at the read (#764). See
+            // ADR-0071 rule 5.
+            if copied_unwritten(analysis, function, terminator, into_ty, known) {
+                findings.push(Finding {
+                    function: analysis.function,
+                    kind: Kind::CopiedUnwritten,
+                    conclusion: Conclusion::Unknown,
+                    at,
+                    local: None,
+                    freed: None,
+                    made: None,
+                    unproven: None,
+                });
             }
             return;
         }

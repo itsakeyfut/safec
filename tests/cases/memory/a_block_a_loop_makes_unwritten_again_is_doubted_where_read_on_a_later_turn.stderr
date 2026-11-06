@@ -9,6 +9,16 @@ error[SC0411]: `*m` may be read before anything was assigned to it
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: assign it on every path before it is read
+error[SC0411]: this copies bytes that may not have been written into memory that code outside this function reads as a pointer
+    ╭─[ a_block_a_loop_makes_unwritten_again_is_doubted_where_read_on_a_later_turn.c:15:9 ]
+    │
+ 15 │         memcpy(m, s, 8);
+    │         ───────┬───────  
+    │                ╰───────── copied here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write what is copied on every path before the copy
 error[SC0403]: this may dereference `r` while it is null
     ╭─[ a_block_a_loop_makes_unwritten_again_is_doubted_where_read_on_a_later_turn.c:12:9 ]
     │

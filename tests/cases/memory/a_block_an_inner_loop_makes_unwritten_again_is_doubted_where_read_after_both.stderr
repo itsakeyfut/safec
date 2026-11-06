@@ -1,3 +1,13 @@
+error[SC0411]: this copies bytes that may not have been written into memory that code outside this function reads as a pointer
+    ╭─[ a_block_an_inner_loop_makes_unwritten_again_is_doubted_where_read_after_both.c:14:13 ]
+    │
+ 14 │             memcpy(m, s, 8);
+    │             ───────┬───────  
+    │                    ╰───────── copied here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write what is copied on every path before the copy
 error[SC0411]: `*m` may be read before anything was assigned to it
     ╭─[ a_block_an_inner_loop_makes_unwritten_again_is_doubted_where_read_after_both.c:20:10 ]
     │

@@ -1,0 +1,102 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:1:28 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "out"
+  Local "_2" "int"
+  Local "_3" "int ***" "b"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int **" "m"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int **"
+  Local "_10" "void *"
+  Block "bb0" entry
+    Operation a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:3:9 written
+      Destination "_2"
+      Unary "Not"
+        Copy "_1"
+    Branch a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:3:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:3:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:4:16 generated
+    Call a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:4:16 written "malloc" "bb4"
+      Destination "_4"
+      Constant 8
+  Block "bb4"
+    Operation a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:4:12 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:4:16 generated
+    Operation a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:5:9 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:5:9 written "bb5" "bb6"
+      Copy "_5"
+  Block "bb5"
+    Sequenced a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:5:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:5:9 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:6:15 generated
+    Call a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:6:15 written "malloc" "bb8"
+      Destination "_7"
+      Constant 8
+  Block "bb8"
+    Operation a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:6:11 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:6:15 generated
+    Operation a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:7:9 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_6"
+    Branch a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:7:9 written "bb9" "bb10"
+      Copy "_8"
+  Block "bb9"
+    Sequenced a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:7:9 generated
+    Return
+  Block "bb10"
+    Sequenced a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:7:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:8:5 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:8:5 written
+      Destination "_9"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:8:5 generated
+    ArgumentsEvaluated a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:9:5 generated
+    Call a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:9:5 written "memcpy" "bb12"
+      Destination "_10"
+      Copy "_1"
+      Copy "_3"
+        Deref
+      Constant 8
+  Block "bb12"
+    Sequenced a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:9:5 generated
+    Return

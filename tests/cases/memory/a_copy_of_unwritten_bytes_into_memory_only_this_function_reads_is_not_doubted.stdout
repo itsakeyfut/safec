@@ -1,0 +1,38 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_of_unwritten_bytes_into_memory_only_this_function_reads_is_not_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_copy_of_unwritten_bytes_into_memory_only_this_function_reads_is_not_doubted.c:1:28 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_of_unwritten_bytes_into_memory_only_this_function_reads_is_not_doubted.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int *[1]" "a"
+  Local "_2" "int *[1]" "b"
+  Local "_3" "int **"
+  Local "_4" "int **"
+  Local "_5" "void *"
+  Block "bb0" entry
+    Operation a_copy_of_unwritten_bytes_into_memory_only_this_function_reads_is_not_doubted.c:5:12 generated
+      Destination "_3"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_copy_of_unwritten_bytes_into_memory_only_this_function_reads_is_not_doubted.c:5:15 generated
+      Destination "_4"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_copy_of_unwritten_bytes_into_memory_only_this_function_reads_is_not_doubted.c:5:5 generated
+    Call a_copy_of_unwritten_bytes_into_memory_only_this_function_reads_is_not_doubted.c:5:5 written "memcpy" "bb1"
+      Destination "_5"
+      Copy "_3"
+      Copy "_4"
+      Constant 8
+  Block "bb1"
+    Sequenced a_copy_of_unwritten_bytes_into_memory_only_this_function_reads_is_not_doubted.c:5:5 generated
+    Return

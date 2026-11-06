@@ -1,0 +1,10 @@
+error[SC0411]: this copies bytes that may not have been written into memory that code outside this function reads as a pointer
+   ╭─[ a_copy_of_a_local_array_nothing_wrote_into_caller_memory_is_doubted.c:5:5 ]
+   │
+ 5 │     memcpy(out, a, 8);
+   │     ────────┬────────  
+   │             ╰────────── copied here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write what is copied on every path before the copy
