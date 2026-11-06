@@ -283,8 +283,9 @@ Each mutation applied on its own, the workspace run, and the file restored.
   `a_pointer_assigned_after_its_local_s_address_was_taken_is_asked_where_the_address_leaves`
   or `a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store` goes silent.
   A callee defined here asked by its library name:
-  `a_function_defined_with_a_library_name_is_asked_as_any_function` goes
-  silent.
+  `a_function_defined_here_under_a_library_name_is_read_as_any_call` in
+  `crates/safec-ir/tests/freed.rs` fails, since C defining one is refused
+  first (ADR-0071).
 * a callee's write into an escaped local believed whatever the local held:
   `a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call`
   loses its `SC0413`; never believed: `a_pointer_handed_by_address_twice_builds`

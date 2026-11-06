@@ -2233,3 +2233,52 @@ mod unassigned {
         );
     }
 }
+
+/// A function named for one the memory check reads by name, defined in
+/// another file of the run, is refused in that file, and the run stops (#800).
+///
+/// **Two files, because one would not show it**: a unit that only declares
+/// `memcpy` reads its call by name as the library copy, while the body in the
+/// other file, which frees its source, is what runs; each unit answered
+/// "defined here" of itself, so the double free built with nothing said. The
+/// same text in one file was already doubted. See ADR-0071.
+///
+/// Mutation: answer `false` in `library::reads_by_name`. The run succeeds
+/// with nothing said and this fails.
+#[test]
+fn a_library_name_defined_in_another_file_of_the_run_is_refused() {
+    let caller = TempFile::new(
+        "safec_driver_library_name_a.c",
+        "void *malloc(int n);
+void free(void *p);
+void *memcpy(void *d, void *s, int n);
+int main(void) {
+    char *b = malloc(8);
+    char *d = malloc(8);
+    if (!b || !d) return 1;
+    memcpy(d, b, 8);
+    free(b);
+    free(d);
+    return 0;
+}
+",
+    );
+    let definer = TempFile::new(
+        "safec_driver_library_name_b.c",
+        "void free(void *p);
+void *memcpy(void *d, void *s, int n) { free(s); return 0; }
+",
+    );
+    let mut options = options(vec![
+        caller.path().to_path_buf(),
+        definer.path().to_path_buf(),
+    ]);
+    options.safety = SafetyLevel::Memory;
+    options.emit = EmitKind::SafetyIr;
+
+    let (report, outcome) = rendered(&options);
+
+    assert_eq!(report.matches("SC0319").count(), 1, "{report}");
+    assert!(report.contains("safec_driver_library_name_b.c"), "{report}");
+    assert_eq!(outcome, Outcome::Failed, "{report}");
+}

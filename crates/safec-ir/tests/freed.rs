@@ -3067,3 +3067,87 @@ fn a_free_of_a_byte_read_out_of_memory_proves_nothing() {
         .expect("the free of the allocation is asked about");
     assert_eq!(second.conclusion, Conclusion::Unknown, "{found:?}");
 }
+
+/// A function this unit defines under a library name is read as any call
+/// this check cannot read, so what it is handed may have been freed by it,
+/// and a free after it is a doubt. Read by name, as a library copy, it would
+/// free nothing and the free after it would be proved clean.
+///
+/// **Built as IR because no C reaches it**: the frontend refuses a definition
+/// of every name the memory check reads by name (`SC0319`), so this is what
+/// holds the check's own answer, for IR no such refusal reached. See ADR-0071.
+///
+/// Mutation: let `Allocations::library` answer by name whether or not the
+/// function is defined. Nothing is reported and this fails.
+#[test]
+fn a_function_defined_here_under_a_library_name_is_read_as_any_call() {
+    let mut sources = SourceMap::new();
+    let file = sources.add_virtual(
+        "d.c",
+        "memcpy free malloc f a b c
+",
+    );
+    let memcpy_name = Span::new(file, 0, 6);
+    let free_name = Span::new(file, 7, 11);
+    let malloc_name = Span::new(file, 12, 18);
+    let function_name = Span::new(file, 19, 20);
+    let at = [
+        Span::new(file, 21, 22),
+        Span::new(file, 23, 24),
+        Span::new(file, 25, 26),
+    ];
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let void = unit.push_type(Ty::Void);
+    let ptr = unit.push_type(Ty::Pointer(int));
+    let callees = Callees {
+        free: unit.push_function(Function::declaration(free_name, void, [ptr])),
+        malloc: unit.push_function(Function::declaration(malloc_name, ptr, [])),
+        helper: {
+            // `memcpy`, with a body: the one this test is about.
+            let mut defined = Function::new(memcpy_name, void, vec![ptr, ptr]);
+            let only = defined.reserve_block();
+            defined.fill_block(only, returns());
+            unit.push_function(defined)
+        },
+    };
+
+    let mut function = Function::new(function_name, int, vec![]);
+    let held = function.push_local(ptr);
+    let allocate = function.reserve_block();
+    let copied = function.reserve_block();
+    let freed = function.reserve_block();
+    let exit = function.reserve_block();
+    function.fill_block(allocate, malloc(&callees, held, at[0], copied));
+    function.fill_block(
+        copied,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Call {
+                callee: callees.helper,
+                arguments: vec![
+                    Operand::Copy(Place::local(held)),
+                    Operand::Copy(Place::local(held)),
+                ],
+                destination: None,
+                then: Some(freed),
+                origin: Origin::Written(at[1]),
+            },
+        },
+    );
+    function.fill_block(
+        freed,
+        after_the_statement(at[1], free(&callees, held, at[2], exit)),
+    );
+    function.fill_block(exit, after_the_statement(at[2], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    let at_the_free: Vec<_> = found.iter().filter(|finding| finding.at == at[2]).collect();
+    assert_eq!(at_the_free.len(), 1, "{found:?}");
+    assert_eq!(at_the_free[0].kind, Kind::DoubleFree);
+    assert_eq!(at_the_free[0].conclusion, Conclusion::Unknown);
+}

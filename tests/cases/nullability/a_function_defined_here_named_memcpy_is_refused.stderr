@@ -1,0 +1,8 @@
+error[SC0319]: this defines `memcpy`, which C reserves for the library
+   ╭─[ a_function_defined_here_named_memcpy_is_refused.c:3:7 ]
+   │
+ 3 │ int **memcpy(int ** _Nonnull d, int ** _Nonnull s, int n) {
+   │       ───┬──  
+   │          ╰──── defined here
+───╯
+  = note: C17 7.1.3 p2 makes a program that defines it undefined, and this compiler believes the library's: a call to `memcpy` is read as what C says the library's does, so rename this function
