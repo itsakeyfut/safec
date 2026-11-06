@@ -15,3 +15,13 @@ error[SC0401]: this frees `p`, which was freed already
 ────╯
   = note: this check belongs to safety level 1
   = help: remove one of the two frees, or take this one off the path that reaches the first
+error[SC0403]: this may dereference `p` while it is null
+   ╭─[ a_free_proved_before_a_call_stays_proved_after_it.c:8:5 ]
+   │
+ 8 │     memset(p, 0, 4);
+   │     ───────┬───────  
+   │            ╰───────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

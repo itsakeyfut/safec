@@ -8,3 +8,13 @@ error[SC0411]: this copies bytes that may not have been written into memory that
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: write what is copied on every path before the copy
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:9:5 ]
+   │
+ 9 │     memcpy(out, *b, 8);
+   │     ─────────┬────────  
+   │              ╰────────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it

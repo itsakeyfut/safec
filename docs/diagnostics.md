@@ -78,6 +78,15 @@ about one that may never have pointed anywhere. A reader filtering on a code is
 looking for programs to fix, and the fix for a use after free is about where the
 `free` went while the fix for this is a test the source does not have.
 
+A pointer handed to a library function that reads or writes through it,
+`memcpy`, `memset`, `strlen` and every other function the memory check reads
+by name, is asked as the dereference of it, at the call: C17 7.1.4 p1 makes a
+null one undefined, and 7.24.1 p2 keeps that so for a length of zero. After the
+call it is not null on that path, as after a dereference. A null pointer
+constant handed over, `memcpy(0, s, 8)`, is certain.
+[ADR-0072](adr/0072-an-argument-a-library-function-reads-or-writes-through-is-asked-and-refined-as-a-dereference.md)
+is the decision.
+
 **`SC0405` asks `SC0403`'s question somewhere else, and is a class of its own
 for the reason the two above are.** A parameter declared `_Nonnull` is believed
 by the function's body, so the read that would have been `SC0403` inside it is

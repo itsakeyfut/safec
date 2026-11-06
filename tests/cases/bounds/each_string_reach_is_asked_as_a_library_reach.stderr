@@ -78,3 +78,53 @@ error[SC0412]: this may reach outside the object it points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0403]: this may dereference a null pointer
+    ╭─[ each_string_reach_is_asked_as_a_library_reach.c:15:12 ]
+    │
+ 15 │     return strcmp(p, p + 1) == 0;
+    │            ────────┬───────  
+    │                    ╰───────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ each_string_reach_is_asked_as_a_library_reach.c:24:12 ]
+    │
+ 24 │     return strncmp(p, p + 2, 4) == 0;
+    │            ──────────┬─────────  
+    │                      ╰─────────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ each_string_reach_is_asked_as_a_library_reach.c:33:12 ]
+    │
+ 33 │     return strstr(p, p + 3) == 0;
+    │            ────────┬───────  
+    │                    ╰───────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ each_string_reach_is_asked_as_a_library_reach.c:42:12 ]
+    │
+ 42 │     return strchr(p + 4, 0) == 0;
+    │            ────────┬───────  
+    │                    ╰───────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ each_string_reach_is_asked_as_a_library_reach.c:51:12 ]
+    │
+ 51 │     return strrchr(p + 5, 0) == 0;
+    │            ────────┬────────  
+    │                    ╰────────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

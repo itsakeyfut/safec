@@ -48,3 +48,43 @@ error[SC0412]: this may reach outside the object `s` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0403]: this may dereference a null pointer
+    ╭─[ what_the_other_library_copies_return_is_what_they_were_handed.c:14:15 ]
+    │
+ 14 │     char *a = memmove(malloc(4), s, 1);
+    │               ────────────┬───────────  
+    │                           ╰───────────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ what_the_other_library_copies_return_is_what_they_were_handed.c:15:15 ]
+    │
+ 15 │     char *b = strncpy(malloc(4), s, 1);
+    │               ────────────┬───────────  
+    │                           ╰───────────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ what_the_other_library_copies_return_is_what_they_were_handed.c:16:15 ]
+    │
+ 16 │     char *c = strcat(malloc(4), s);
+    │               ──────────┬─────────  
+    │                         ╰─────────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ what_the_other_library_copies_return_is_what_they_were_handed.c:17:15 ]
+    │
+ 17 │     char *d = strncat(malloc(4), s, 1);
+    │               ────────────┬───────────  
+    │                           ╰───────────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

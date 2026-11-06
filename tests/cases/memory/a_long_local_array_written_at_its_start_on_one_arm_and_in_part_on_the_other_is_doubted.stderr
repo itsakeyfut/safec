@@ -19,3 +19,13 @@ error[SC0411]: this may read a pointer out of memory before anything was assigne
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: assign it on every path before it is read
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_long_local_array_written_at_its_start_on_one_arm_and_in_part_on_the_other_is_doubted.c:10:9 ]
+    │
+ 10 │         memcpy(m + 1, &v, 8);
+    │         ──────────┬─────────  
+    │                   ╰─────────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

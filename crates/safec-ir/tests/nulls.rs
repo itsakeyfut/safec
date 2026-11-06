@@ -1888,3 +1888,88 @@ fn a_write_to_the_pointer_after_a_goto_refuses_the_comparison_before_it() {
     let found = concluded(&map, unit, function);
     assert_eq!(found.len(), 2, "{found:?}");
 }
+
+/// What the check concludes of `d = 0; memcpy(d, d, 4);`, with the callee
+/// named `memcpy` and declared or defined as asked.
+fn a_null_handed_to_a_function_named_memcpy(defined: bool) -> Vec<nullability::Finding> {
+    let text = "memcpy f a\n";
+    let mut map = SourceMap::new();
+    let file = map.add_virtual("m.c", text);
+    let callee_name = Span::new(file, 0, 6);
+    let function_name = Span::new(file, 7, 8);
+    let at = Span::new(file, 9, 10);
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let void = unit.push_type(Ty::Void);
+    let pointer = unit.push_type(Ty::Pointer(void));
+    let callee = if defined {
+        let mut body = Function::new(callee_name, pointer, vec![pointer, pointer, int]);
+        let only = body.reserve_block();
+        body.fill_block(only, returns());
+        unit.push_function(body)
+    } else {
+        unit.push_function(Function::declaration(
+            callee_name,
+            pointer,
+            [pointer, pointer, int],
+        ))
+    };
+
+    let mut function = Function::new(function_name, int, vec![]);
+    let d = function.push_local(pointer);
+    let entry = function.reserve_block();
+    let exit = function.reserve_block();
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![Element::Assign(Operation {
+                place: Place::local(d),
+                value: Rvalue::Use(Operand::Constant(0)),
+                origin: Origin::Written(at),
+            })],
+            terminator: Terminator::Call {
+                callee,
+                arguments: vec![
+                    Operand::Copy(Place::local(d)),
+                    Operand::Copy(Place::local(d)),
+                    Operand::Constant(4),
+                ],
+                destination: None,
+                then: Some(exit),
+                origin: Origin::Written(at),
+            },
+        },
+    );
+    function.fill_block(exit, returns());
+    concluded(&map, unit, function)
+}
+
+/// A function this unit defines under a library function's name is what
+/// runs, whatever it is called, so the arguments it is handed are not asked
+/// as the library function's: its body is asked instead (ADR-0071 rule 1).
+///
+/// **IR built by hand**, because the frontend refuses such a definition
+/// wherever this check runs (`SC0319`), so no C reaches it. See ADR-0072.
+///
+/// Mutation: drop the `is_defined` answer in `Nullability::reached_indices`;
+/// the null handed to the defined `memcpy` is a proof.
+#[test]
+fn a_function_defined_under_a_library_name_is_not_asked_as_one() {
+    let found = a_null_handed_to_a_function_named_memcpy(true);
+
+    assert!(found.is_empty(), "{found:?}");
+}
+
+/// The same call to a `memcpy` only declared asks the arguments it reaches as
+/// the dereferences of them, so the test above can fail: one proof, since both
+/// read through the same place and one place at one caret is one thing to say.
+#[test]
+fn a_null_handed_to_a_declared_memcpy_is_proved() {
+    let found = a_null_handed_to_a_function_named_memcpy(false);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+}

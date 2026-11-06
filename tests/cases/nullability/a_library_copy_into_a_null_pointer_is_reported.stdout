@@ -1,0 +1,41 @@
+Target "x86_64-pc-windows-msvc"
+Function a_library_copy_into_a_null_pointer_is_reported.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_library_copy_into_a_null_pointer_is_reported.c:1:46 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
+Function a_library_copy_into_a_null_pointer_is_reported.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int" "k"
+  Local "_2" "int *" "d"
+  Local "_3" "int *"
+  Local "_4" "void *"
+  Block "bb0" entry
+    Operation a_library_copy_into_a_null_pointer_is_reported.c:3:9 written
+      Destination "_1"
+      Use
+        Constant 1
+    Sequenced a_library_copy_into_a_null_pointer_is_reported.c:3:13 generated
+    Operation a_library_copy_into_a_null_pointer_is_reported.c:4:10 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_library_copy_into_a_null_pointer_is_reported.c:4:14 generated
+    Operation a_library_copy_into_a_null_pointer_is_reported.c:5:15 written
+      Destination "_3"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_library_copy_into_a_null_pointer_is_reported.c:5:5 generated
+    Call a_library_copy_into_a_null_pointer_is_reported.c:5:5 written "memcpy" "bb1"
+      Destination "_4"
+      Copy "_2"
+      Copy "_3"
+      Constant 4
+  Block "bb1"
+    Sequenced a_library_copy_into_a_null_pointer_is_reported.c:5:5 generated
+    Return

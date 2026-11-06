@@ -9,3 +9,13 @@ error[SC0411]: `*n` may be read before anything was assigned to it
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: assign it on every path before it is read
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_copy_out_of_a_local_nothing_wrote_read_through_dereferences_is_doubted_where_read.c:2:97 ]
+   │
+ 2 │ int f(int *x) { int *p; int **pp = &p; int ***ppp = &pp; int **n = malloc(8); if (!n) return 0; memcpy(n, *ppp, 8); int *r = *n; return r == x; }
+   │                                                                                                 ─────────┬────────  
+   │                                                                                                          ╰────────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it
