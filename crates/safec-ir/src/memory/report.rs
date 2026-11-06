@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 use crate::analysis::Conclusion;
 use crate::ir::{
     BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
-    Ty, TyId,
+    TyId,
 };
 use crate::library::{Callee, Reach};
 use crate::nullability::NullAtTerminators;
@@ -1353,10 +1353,9 @@ fn part_of_a_pointer(
     }
 }
 
-/// [`part_of_a_pointer`] for a copy whose operands are `void *`, asked of what
-/// each operand points at rather than of its type, which says nothing: the
-/// width a pointer held there is believed to point at, where the copy writes
-/// only part of one. A local it points at holds a pointer by its declared
+/// [`part_of_a_pointer`] for a copy whose operands' types say nothing, asked
+/// of what each operand points at instead: the width a pointer held there is
+/// believed to point at, where the copy writes only part of one. A local it points at holds a pointer by its declared
 /// type, and is asked at the width that type points at, which
 /// [`pointee_width`] answers only for a pointer; an allocation holds
 /// one where a pointer stored in it names a site or a local, of a width
@@ -1365,10 +1364,13 @@ fn part_of_a_pointer(
 /// first, then the source, as the typed asks are. An operand that names
 /// nothing this check followed answers nothing, as before (ADR-0071 rule 4).
 ///
-/// **Only a `void *` operand**: a typed one is asked by its type above, and a
-/// byte copy of an `int` through `void *` reaches a local that holds no
-/// pointer, so it stays silent.
-fn part_of_what_void_points_at(
+/// **Whatever the operand's type**, once the types above answered nothing: a
+/// `void *` says nothing, and a `char *` made from one, `void *vv = &v; char
+/// *s = vv;`, says bytes, and both built silent where the same copy through an
+/// `int **` is asked (#746). What is asked is what the copy writes part of,
+/// so a copy of an `int`'s bytes reaches a local that holds no pointer and
+/// stays silent however its operands are typed.
+fn part_of_what_operands_point_at(
     analysis: &Allocations<'_>,
     function: &Function,
     callee: FuncId,
@@ -1383,7 +1385,7 @@ fn part_of_what_void_points_at(
         let Operand::Copy(place) = operand else {
             return None;
         };
-        if !place.projection.is_empty() || !points_at_void(analysis, function, place) {
+        if !place.projection.is_empty() {
             return None;
         }
         let named = known.written_through(place.local);
@@ -1398,22 +1400,6 @@ fn part_of_what_void_points_at(
         });
         local.or(stored.then_some(0))
     })
-}
-
-/// Whether `place` is a `void *` by its type. A `match`, so that a kind of
-/// type added later answers here whether a copy through it is asked by what it
-/// points at.
-fn points_at_void(analysis: &Allocations<'_>, function: &Function, place: &Place) -> bool {
-    let Some(ty) = analysis.unit.place_ty(function, place) else {
-        return false;
-    };
-    let Some(pointee) = pointee(analysis, ty) else {
-        return false;
-    };
-    match analysis.unit.ty(pointee) {
-        Ty::Void => true,
-        Ty::Int | Ty::Char | Ty::Pointer(_) | Ty::Array { .. } => false,
-    }
 }
 
 /// Report a pointer this element hands back by a `return`, stores through
@@ -1629,13 +1615,13 @@ pub(super) fn departed_at_call(
             // source's type too**, as the asks above are: `void *d = out;
             // memcpy(d, &v, 4);` hides the destination's and not the
             // source's, and was asked nothing. Found by review. **And by what
-            // a `void *` operand points at**, where neither type says: `void
-            // *d = out; void *s = &v; memcpy(d, s, 4);` hid both (#746). See
+            // the operands point at**, where neither type says: `void *d =
+            // out; void *s = &v; memcpy(d, s, 4);` hid both (#746). See
             // ADR-0071 rule 4.
             if let Some(width) = part_of_a_pointer(analysis, *callee, arguments, into_ty)
                 .or_else(|| part_of_a_pointer(analysis, *callee, arguments, source_ty))
                 .or_else(|| {
-                    part_of_what_void_points_at(analysis, function, *callee, arguments, known)
+                    part_of_what_operands_point_at(analysis, function, *callee, arguments, known)
                 })
             {
                 say_leaving(

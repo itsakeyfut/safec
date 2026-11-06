@@ -82,9 +82,9 @@ the door questions (#801) and these are fixed.
    `SC0401` and `SC0404` already share one (#684).
 4. **A copy that writes part of a pointer is asked where what its operands
    point at holds a pointer**, by the declared type of a local they name and
-   the record of an allocation they name, where an operand's own type is
-   `void *`; an operand that names nothing this check followed asks nothing
-   more than today (#746).
+   the record of an allocation they name, where the operands' own types say
+   nothing, a `void *` or a `char *` made from one; an operand that names
+   nothing this check followed asks nothing more than today (#746).
 5. **A copy into memory that leaves, of bytes that may be unwritten, over a
    slot believed to hold a pointer, is doubted at the copy**, by a `Kind` of
    its own reported under `SC0411` with the words of a copy rather than a
@@ -132,12 +132,13 @@ beliefs (#801) list the pairs that still differ until each lands.
    the program #684 found, and fourteen more cases where an escape or a call
    that may free doubts the free, and in `tests/routes.rs` the seventeen
    `stored_out` rows that were `ACCEPTED` for it until this landed.
-4. `report::part_of_what_void_points_at` answering nothing fails
+4. `report::part_of_what_operands_point_at` answering nothing fails
    `a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_local_it_points_at`
    and `a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block_it_points_at`;
    asking no block fails the second alone; counting a local of any type
    fails `a_byte_copy_of_an_int_between_void_pointers_is_not_asked`, which
-   is then `SC0413`.
+   is then `SC0413`; asking only an operand typed `void *` fails
+   `a_copy_of_part_of_a_pointer_through_a_char_pointer_is_asked_by_the_local_it_points_at`.
 
 ### Consequences
 
