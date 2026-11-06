@@ -1,0 +1,54 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:1:45 "use" declared
+  Local "_0" "void" return
+Function a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "in"
+  Local "_2" "int" "x"
+  Local "_3" "int *" "v"
+  Local "_4" "int *"
+  Local "_5" "void *" "d"
+  Local "_6" "int **"
+  Local "_7" "void *"
+  Block "bb0" entry
+    Operation a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:3:9 written
+      Destination "_2"
+      Use
+        Constant 1
+    Sequenced a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:3:13 generated
+    Operation a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:3:25 written
+      Destination "_4"
+      Address
+        Place "_2"
+    Operation a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:3:21 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:3:25 generated
+    Operation a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:4:15 written
+      Destination "_6"
+      Address
+        Place "_3"
+    Operation a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:4:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:4:15 generated
+    ArgumentsEvaluated a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:5:5 generated
+    Call a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:5:5 written "memcpy" "bb1"
+      Destination "_7"
+      Copy "_5"
+      Copy "_1"
+      Constant 4
+  Block "bb1"
+    Sequenced a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:5:5 generated
+    ArgumentsEvaluated a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:6:5 generated
+    Call a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:6:5 written "use" "bb2"
+  Block "bb2"
+    Sequenced a_copy_into_part_of_a_local_pointer_through_a_void_pointer_is_asked_by_its_destination.c:6:5 generated
+    Return

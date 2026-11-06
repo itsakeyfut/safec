@@ -1,0 +1,80 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:1:28 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:1:66 "use" declared
+  Local "_0" "void" return
+Function a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "out"
+  Local "_2" "int *" parameter "p"
+  Local "_3" "int **" "b"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int *"
+  Local "_7" "void *" "d"
+  Local "_8" "void *" "s"
+  Local "_9" "void *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:3:15 generated
+    Call a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:3:15 written "malloc" "bb1"
+      Destination "_4"
+      Constant 8
+  Block "bb1"
+    Operation a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:3:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:3:15 generated
+    Operation a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:4:9 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:4:9 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:4:9 generated
+    Return
+  Block "bb3"
+    Sequenced a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:4:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:5:5 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_2"
+    Operation a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:5:5 written
+      Destination "_6"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:5:5 generated
+    Operation a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:6:11 written
+      Destination "_7"
+      Use
+        Copy "_1"
+    Sequenced a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:6:15 generated
+    Operation a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:6:26 written
+      Destination "_8"
+      Use
+        Copy "_3"
+    Sequenced a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:6:30 generated
+    ArgumentsEvaluated a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:7:5 generated
+    Call a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:7:5 written "memcpy" "bb5"
+      Destination "_9"
+      Copy "_7"
+      Copy "_8"
+      Constant 4
+  Block "bb5"
+    Sequenced a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:7:5 generated
+    ArgumentsEvaluated a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:8:5 generated
+    Call a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:8:5 written "use" "bb6"
+  Block "bb6"
+    Sequenced a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:8:5 generated
+    Return
