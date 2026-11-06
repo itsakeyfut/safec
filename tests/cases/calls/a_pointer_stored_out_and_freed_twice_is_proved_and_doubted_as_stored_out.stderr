@@ -1,0 +1,44 @@
+warning[SC0414]: this frees `x`, a pointer that was stored where code outside this function may read it
+   ╭─[ a_pointer_stored_out_and_freed_twice_is_proved_and_doubted_as_stored_out.c:6:5 ]
+   │
+ 3 │     int *x = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+   │ 
+ 6 │     free(x);
+   │     ───┬───  
+   │        ╰───── freed here, perhaps still stored where it may be read
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free
+error[SC0401]: this frees `x`, which was freed already
+   ╭─[ a_pointer_stored_out_and_freed_twice_is_proved_and_doubted_as_stored_out.c:7:5 ]
+   │
+ 3 │     int *x = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+   │ 
+ 6 │     free(x);
+   │     ───┬───  
+   │        ╰───── freed here
+ 7 │     free(x);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first
+warning[SC0414]: this frees `x`, a pointer that was stored where code outside this function may read it
+   ╭─[ a_pointer_stored_out_and_freed_twice_is_proved_and_doubted_as_stored_out.c:7:5 ]
+   │
+ 3 │     int *x = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+   │ 
+ 7 │     free(x);
+   │     ───┬───  
+   │        ╰───── freed here, perhaps still stored where it may be read
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free

@@ -8,3 +8,13 @@ warning[SC0401]: this frees `x`, which may have been freed already
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0414]: this frees `x`, a pointer that was stored where code outside this function may read it
+    ╭─[ a_live_pointer_copied_out_through_a_parameter_and_freed_after_is_doubted.c:10:5 ]
+    │
+ 10 │     free(x);
+    │     ───┬───  
+    │        ╰───── freed here, perhaps still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free

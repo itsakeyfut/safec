@@ -5768,8 +5768,17 @@ cases! {
         // A live pointer copied out and freed after: the caller is left holding
         // a freed pointer, a doubt at the free, which the address the copy took
         // carries. Mutation: let an address handed only to a copy's source not
-        // escape; this goes silent, found by review of #652.
+        // escape; this goes silent, found by review of #652. And it is doubted
+        // as stored out, `SC0414`, beside the double free the escape doubts,
+        // as `*pp = x;` is (#684). Mutation: report a free stored out only
+        // where it is no double free; this loses its `SC0414`.
         a_live_pointer_copied_out_through_a_parameter_and_freed_after_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A pointer stored out and freed twice: the second free is a proved
+        // double free, an error even under `--allow-unknown`, and still doubted
+        // as stored out beside it, `SC0414` as a warning (ADR-0071 rule 3).
+        // Mutation: report the stored-out doubt only where no double free is
+        // proved; the second free loses its `SC0414`.
+        a_pointer_stored_out_and_freed_twice_is_proved_and_doubted_as_stored_out: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A live pointer copied out of memory, `*b = x; memcpy(pp, b, 8);`,
         // is stored out as `*pp = *b;` stores it, so freeing it after, or
         // handing it to a call that may free it, is the `SC0414` doubt the

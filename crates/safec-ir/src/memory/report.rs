@@ -300,13 +300,16 @@ fn verdict(
 ///
 /// One finding per call and question rather than one per site: a local may
 /// point at several allocations where a branch put them there, and two carets
-/// on one `free` say one thing twice. **Two questions, though, and one caret
-/// can carry both**: in `free(p); free(p + 1);` the second call frees an
-/// allocation already freed, and through a pointer that is not its start.
+/// on one `free` say one thing twice. **Three questions, though, and one caret
+/// can carry them all**: in `free(p); free(p + 1);` the second call frees an
+/// allocation already freed, and through a pointer that is not its start; and
+/// a free of what was stored where code outside reads it is doubted as that
+/// beside either (ADR-0071 rule 3).
 ///
-/// The double free first, so that a caret carrying both reads `SC0401` above
-/// `SC0404`: the sort at the end of [`findings`](super::findings) is stable and the two share a
-/// span. See ADR-0036.
+/// Pushed in that order, the double free, then the stored-out doubt, then the
+/// interior free, so that a caret carrying them reads `SC0401`, `SC0414`,
+/// `SC0404` from the top: the sort at the end of [`findings`](super::findings)
+/// is stable and they share a span. See ADR-0036.
 pub(super) fn reported(
     analysis: &Allocations<'_>,
     terminator: &Terminator,
@@ -378,7 +381,7 @@ pub(super) fn reported(
     };
 
     // Asked first because `verdict` takes what was reached by value; pushed
-    // second, for the reason above.
+    // last, for the order the doc comment gives.
     let inside = interior(&reached, offset, known);
 
     // What it frees that was stored where code outside may read it, asked
@@ -394,10 +397,16 @@ pub(super) fn reported(
     let mut found = Vec::new();
     if let Some(verdict) = verdict(analysis.sources, Kind::DoubleFree, reached, known) {
         found.push(finding(Kind::DoubleFree, verdict));
-    } else if !stored_out.is_empty() {
-        // **Only where it is no double free**, which says more about the
-        // same free. A doubt, since whoever reads that memory may only write
-        // it (#650). See ADR-0041.
+    }
+    if !stored_out.is_empty() {
+        // **Beside any double free, not only where there is none**: the
+        // double-free doubt may come from no earlier free at all, but from an
+        // escape, `memcpy(pp, &x, 8)` taking `&x`, or a call that may free
+        // what it was handed, and then the stored-out doubt is the reason a
+        // reader can act on (#684). Second,
+        // so a caret carrying both reads `SC0401` above `SC0414`. A doubt,
+        // since whoever reads that memory may only write it (#650). See
+        // ADR-0071 rule 3.
         let made = made_where_all_agree(&stored_out, known);
         found.push(Finding {
             function: analysis.function,

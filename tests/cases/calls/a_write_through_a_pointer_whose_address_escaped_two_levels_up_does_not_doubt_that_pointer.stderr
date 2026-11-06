@@ -28,6 +28,20 @@ warning[SC0401]: this frees `p`, which may have been freed already
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0414]: this frees `p`, a pointer that was stored where code outside this function may read it
+    ╭─[ a_write_through_a_pointer_whose_address_escaped_two_levels_up_does_not_doubt_that_pointer.c:11:5 ]
+    │
+  6 │     int *q = malloc(8);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 11 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here, perhaps still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free
 warning[SC0402]: this uses `q`, which may have been freed
     ╭─[ a_write_through_a_pointer_whose_address_escaped_two_levels_up_does_not_doubt_that_pointer.c:12:5 ]
     │

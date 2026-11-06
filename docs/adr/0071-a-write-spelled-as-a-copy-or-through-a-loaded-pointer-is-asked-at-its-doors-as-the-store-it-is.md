@@ -9,9 +9,9 @@ decision-makers: itsakeyfut
 ## Context and Problem Statement
 
 ADR-0068 asks a pointer at the door it leaves by, and its rules name the code
-that holds each one: `Known::leaves` answers whether a store leaves (rule 3), a
-free of a site stored out is doubted only where it is no double free (rule 5),
-and a library copy is asked at its source's and its destination's type
+that holds each one: `Known::leaves` answered whether a store leaves (rule 3), a
+free of a site stored out was doubted only where it is no double free (rule 5),
+and a library copy was asked at its source's and its destination's type
 (rule 6). The architecture review of 2026-11-06 found the same write answered
 differently at those doors by how it was spelled, on programs:
 
@@ -126,6 +126,12 @@ beliefs (#801) list the pairs that still differ until each lands.
    and `a_freed_source_copied_out_through_a_parameter_is_still_proved_freed`,
    which then build under `--allow-unknown`: the wider leaving of this rule
    reached that skip.
+3. `report::reported` pushing `FreedAfterStore` only where `verdict` found no
+   double free fails
+   `a_live_pointer_copied_out_through_a_parameter_and_freed_after_is_doubted`,
+   the program #684 found, and fourteen more cases where an escape or a call
+   that may free doubts the free, and in `tests/routes.rs` the seventeen
+   `stored_out` rows that were `ACCEPTED` for it until this landed.
 
 ### Consequences
 

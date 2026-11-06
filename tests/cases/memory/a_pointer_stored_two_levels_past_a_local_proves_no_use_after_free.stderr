@@ -28,6 +28,20 @@ error[SC0401]: this frees `z`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0414]: this frees `z`, a pointer that was stored where code outside this function may read it
+    ╭─[ a_pointer_stored_two_levels_past_a_local_proves_no_use_after_free.c:10:5 ]
+    │
+  5 │     int *q = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 10 │     free(z);
+    │     ───┬───  
+    │        ╰───── freed here, perhaps still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free
 error[SC0402]: this uses `q`, which may have been freed
     ╭─[ a_pointer_stored_two_levels_past_a_local_proves_no_use_after_free.c:11:5 ]
     │

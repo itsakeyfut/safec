@@ -38,3 +38,13 @@ error[SC0401]: this frees `node`, which may have been freed already
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0414]: this frees `node`, a pointer that was stored where code outside this function may read it
+    ╭─[ a_list_built_and_appended_to_in_one_function_is_refused.c:30:5 ]
+    │
+ 30 │     free(node);
+    │     ─────┬────  
+    │          ╰────── freed here, perhaps still stored where it may be read
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free
