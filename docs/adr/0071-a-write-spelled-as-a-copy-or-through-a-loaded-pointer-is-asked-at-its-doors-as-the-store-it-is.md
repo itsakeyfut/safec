@@ -60,9 +60,11 @@ copy's escape was tried once under #652 and taken back for that. The third is
 not chosen now: whether it is needed is measured once the route matrix asks
 the door questions (#801) and these are fixed.
 
-1. **A function named for one the memory check reads by name is refused
-   where it is defined**, `SC0319` as a definition of `exit` is (ADR-0051), in
-   whichever file of the run it is: whether a body is defined is answered per
+1. **Where the memory check runs, a function named for one it reads by name
+   is refused where it is defined**, `SC0319` as a definition of `exit` is
+   (ADR-0051), in whichever file of the run it is. Only there, since that
+   check is the one reader of the library table, where the lowering itself
+   believes `exit` and refuses it at every level: whether a body is defined is answered per
    translation unit, so a unit that only declares `memcpy` read its call by
    name while a body in another file was what ran, and a double free built in
    silence (#800). `library::reads_by_name` is the one table the frontend and
@@ -103,15 +105,23 @@ beliefs (#801) list the pairs that still differ until each lands.
    `a_library_name_defined_in_another_file_of_the_run_is_refused` in
    `crates/safec-c/src/driver/tests.rs`, where the run then succeeds with
    nothing said; the case `a_function_defined_here_named_memcpy_is_refused`
-   becomes two `SC0401` doubts. `Allocations::library` answering by name
+   becomes two `SC0401` doubts. Matching a name by its start or ignoring case
+   fails `a_name_beside_one_the_memory_check_reads_is_not_refused`, and
+   refusing whether or not the memory check runs fails
+   `a_library_name_is_refused_only_where_the_memory_check_runs`. `Allocations::library` answering by name
    whether or not the function is defined fails
    `a_function_defined_here_under_a_library_name_is_read_as_any_call` in
-   `crates/safec-ir/tests/freed.rs`, which then reports nothing at the free.
+   `crates/safec-ir/tests/freed.rs`, which then reads `memcpy` and `strcpy`
+   as freeing nothing and `free` as a proved free, for each name it asks.
 
 ### Consequences
 
 * Good, because a reader is told the same thing about one write whichever
   way it was spelled, and a door added later reads one answer.
+* Bad, because where the memory check runs, a program that defines its own
+  `memcpy`, `memset`, `malloc` or `free` is refused, which `clang -std=c17
+  -pedantic-errors` builds and freestanding code is written as; C17 7.1.3 p2
+  leaves it undefined in a hosted program, and `--safety off` still builds it.
 * Bad, because the false reports a precise side would remove stay: `**t = x;`
   into memory nothing outside reads is now `SC0414` at a later free, and
   `memcpy(pp, &x, 8); free(x);` keeps its `SC0401` beside the `SC0414`.

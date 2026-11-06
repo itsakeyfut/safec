@@ -77,7 +77,7 @@ const CONFLICTING: Code = Code::new("SC0313");
 ///
 /// Its own code rather than [`REDEFINED`]'s or [`CONFLICTING`]'s: nothing is
 /// given twice and nothing disagrees, the name is the fault, and the fix is a
-/// rename. See ADR-0051 and ADR-0071.
+/// rename. See ADR-0051, and ADR-0071 rule 1 for the second.
 const RESERVED_DEFINITION: Code = Code::new("SC0319");
 
 /// A member of a struct whose type a member cannot have, which C17 6.7.2.1 p3
@@ -396,10 +396,20 @@ impl Resolution {
 /// thing it cannot read, and in both cases the tree is a record of a program
 /// this compiler did not finish reading. A name diagnostic drawn from one of
 /// those is a claim about a program nobody wrote.
-pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink) -> Resolution {
+///
+/// `memory_checked` is whether the memory check runs on what this resolves,
+/// which is when a definition of a name it reads by name is refused
+/// (ADR-0071 rule 1).
+pub fn resolve(
+    sources: &SourceMap,
+    ast: &Ast,
+    memory_checked: bool,
+    diagnostics: &mut DiagnosticSink,
+) -> Resolution {
     let mut resolver = Resolver {
         sources,
         ast,
+        memory_checked,
         resolution: Resolution {
             bindings: Vec::new(),
             resolved: HashMap::new(),
@@ -444,6 +454,15 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
 
 struct Resolver<'a> {
     sources: &'a SourceMap,
+    /// Whether the memory check runs on this unit, and so whether a
+    /// definition of a name it reads by name is refused (ADR-0071 rule 1).
+    /// Only then: that check is the one reader of the library table, so a run
+    /// it does not reach believes nothing a definition could break, and
+    /// refusing there would refuse a program `clang -std=c17
+    /// -pedantic-errors` builds, a `memset` of its own among them, for
+    /// nothing. The names that do not return are refused whatever runs,
+    /// since the lowering itself believes them (ADR-0051).
+    memory_checked: bool,
     /// Shared, and held in a field rather than passed per method.
     ///
     /// That is what lets `let ast = self.ast;` free the walk below to borrow
@@ -1373,17 +1392,18 @@ impl Resolver<'_> {
         // to ask linkage, and the lowering's belief with it: see ADR-0051.
         // See [`DOES_NOT_RETURN`].
         //
-        // **And every name the memory check reads by name**, refused in the
-        // file that defines it, so that a unit which only declares it, reading
-        // the call by name, never runs beside the body that is what runs:
-        // `memcpy` defined in another file of the run to free its source left
-        // a double free built in silence (#800). See ADR-0071.
+        // **And every name the memory check reads by name**, where that check
+        // runs, refused in the file that defines it, so that a unit which only
+        // declares it, reading the call by name, never runs beside the body
+        // that is what runs: `memcpy` defined in another file of the run to
+        // free its source left a double free built in silence (#800). See
+        // ADR-0071 rule 1 and [`Resolver::memory_checked`].
         let believed = if let Some(&(_, clause)) = DOES_NOT_RETURN
             .iter()
             .find(|&&(reserved, _)| reserved == spelled)
         {
             Some(format!("`{spelled}` does not return ({clause})"))
-        } else if library::reads_by_name(spelled) {
+        } else if self.memory_checked && library::reads_by_name(spelled) {
             Some(format!(
                 "a call to `{spelled}` is read as what C says the library's does"
             ))
@@ -1623,8 +1643,14 @@ mod tests {
         file: FileId,
     }
 
-    /// Scan, parse and resolve, the way the driver does.
+    /// Scan, parse and resolve, the way the driver does where the memory
+    /// check runs.
     fn resolved(text: &str) -> Resolved {
+        resolved_at(text, true)
+    }
+
+    /// [`resolved`], saying whether the memory check runs.
+    fn resolved_at(text: &str, memory_checked: bool) -> Resolved {
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("test.c", text);
         let mut diagnostics = DiagnosticSink::new();
@@ -1644,7 +1670,7 @@ mod tests {
             "the input did not parse: {:?}",
             diagnostics.diagnostics()
         );
-        let resolution = resolve(&sources, &ast, &mut diagnostics);
+        let resolution = resolve(&sources, &ast, memory_checked, &mut diagnostics);
 
         Resolved {
             ast,
@@ -3015,10 +3041,7 @@ mod tests {
             "strrchr",
             "strstr",
         ] {
-            let resolved = resolved(&format!(
-                "int {name}(void) {{ return 0; }}
-"
-            ));
+            let resolved = resolved(&format!("int {name}(void) {{ return 0; }}\n"));
             let [reported] = resolved.diagnostics.diagnostics() else {
                 panic!("{name}: {:?}", resolved.diagnostics.diagnostics());
             };
@@ -3041,5 +3064,30 @@ mod tests {
                 reported.notes()
             );
         }
+    }
+
+    /// A name that only looks like one the memory check reads by name is not
+    /// refused: the table is matched whole and by case. Mutation: match a
+    /// name that starts with a row's, or ignoring case; this fails.
+    #[test]
+    fn a_name_beside_one_the_memory_check_reads_is_not_refused() {
+        for name in ["memcpy_s", "freed", "Free", "strlen2", "my_malloc"] {
+            let resolved = resolved(&format!("int {name}(void) {{ return 0; }}\n"));
+            assert_eq!(resolved.diagnostics.diagnostics(), [], "{name}");
+        }
+    }
+
+    /// Where the memory check does not run, a definition of a name it reads by
+    /// name is not refused, since nothing in the run believes it, while a name
+    /// that does not return still is, since the lowering believes that one
+    /// (ADR-0051). Mutation: refuse a library name whether or not the memory
+    /// check runs; this fails on `memset`. Mutation: ask whether the check runs
+    /// of the names that do not return too; this fails on `exit`.
+    #[test]
+    fn a_library_name_is_refused_only_where_the_memory_check_runs() {
+        let memset = resolved_at("int memset(void) { return 0; }\n", false);
+        assert_eq!(memset.diagnostics.diagnostics(), [], "memset");
+        let exit = resolved_at("void exit(int status) { }\n", false);
+        assert_eq!(exit.diagnostics.diagnostics().len(), 1, "exit");
     }
 }

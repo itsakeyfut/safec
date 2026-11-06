@@ -266,9 +266,10 @@ a call to a library function the memory check reads by name, `memcpy` or
 only true of a program that does not define the function: C17 7.1.3 reserves
 the names, and p2 makes a program defining one undefined. So a definition of
 one is refused at its name, in whichever file of the run it is, and the fix is
-a rename.
+a rename: the first at every safety level, since the lowering believes them,
+and the second only where the memory check runs, since nothing else does.
 [ADR-0051](adr/0051-a-call-that-does-not-return-has-no-edge-out-of-it.md) is
-the decision for the first, and
+the decision for the first, and rule 1 of
 [ADR-0071](adr/0071-a-write-spelled-as-a-copy-or-through-a-loaded-pointer-is-asked-at-its-doors-as-the-store-it-is.md)
 for the second.
 

@@ -33,7 +33,7 @@ fn checked(text: &str) -> Checked {
         "the input did not parse: {:?}",
         diagnostics.diagnostics()
     );
-    let resolution = resolve(&sources, &ast, &mut diagnostics);
+    let resolution = resolve(&sources, &ast, false, &mut diagnostics);
     // Named rather than taken from the host: what a constant's type is
     // turns on the range of `int`, so a test that did not name a target
     // would be asserting about whichever machine ran it. `int` is 32 bits

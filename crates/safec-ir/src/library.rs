@@ -8,10 +8,11 @@
 
 /// Whether a call to `name` is read by its name, a row of `LIBRARY`.
 ///
-/// The frontend refuses a definition of every such name (`SC0319`), in
-/// whichever file of the run it is, since a unit that only declares it reads
-/// the call by name while the definition is what runs; the same table answers
-/// both, so a row added is refused too. See ADR-0071.
+/// Where the memory check runs, the frontend refuses a definition of every
+/// such name (`SC0319`), in whichever file of the run it is, since a unit that
+/// only declares it reads the call by name while the definition is what runs;
+/// the same table answers both, so a row added is refused too. See ADR-0071
+/// rule 1.
 pub fn reads_by_name(name: &str) -> bool {
     LIBRARY.iter().any(|row| row.name == name)
 }
@@ -27,7 +28,7 @@ pub fn reads_by_name(name: &str) -> bool {
 /// C17 7.1.3 reserves the identifiers the library declares, so a program
 /// that defines its own `free` has no behaviour C defines. `clang -std=c17
 /// -pedantic-errors` does not diagnose one, measured; this compiler refuses
-/// it, [`reads_by_name`].
+/// it where the memory check runs, [`reads_by_name`].
 /// **No `PartialEq`**, so that every reader is a `match` and a new kind is
 /// `error[E0004]` wherever it has to be answered. A comparison lets it through
 /// in silence: the rule for what an opaque call returns was once gated by one.

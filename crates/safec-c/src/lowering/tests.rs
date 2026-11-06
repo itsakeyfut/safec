@@ -72,7 +72,7 @@ fn compiled(text: &str, must_check: bool) -> Lowered {
     let mut ast = parse(&tokens, &sources, &mut diagnostics);
     assert!(!diagnostics.has_errors(), "the input did not parse");
 
-    let resolution = resolve(&sources, &ast, &mut diagnostics);
+    let resolution = resolve(&sources, &ast, false, &mut diagnostics);
     // A target this test suite does not otherwise care about: what a
     // program lowers to does not turn on the machine, and the one test
     // that is about the machine names its own. It reaches the type check
