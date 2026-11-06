@@ -68,11 +68,17 @@ and Cons below.
    level**, beside the width it believes there, and an operand of a library copy
    is asked by it: `void **` holds `void *`s, `int *` holds none, which the width
    `0` both say. Joined by union, so a path that says pointers asks (#818).
+   Only where a value arrives from a type: a parameter, a load, an opaque
+   call's result. An allocator's result believes nothing of what its memory
+   holds (ADR-0060), so `void **q = malloc(16); void *d = q;` is asked
+   nothing, as `int **q` is; that is #830.
 
 ### Confirmation
 
-Proposed until the last of #821, #822, #823 and #818 lands; each pull request
-adds its rule's cases and the mutation that fails each here.
+Each of #821, #822, #823 and #818 added its rule's cases and the mutation that
+fails each here. Proposed still, since #828 and #830 may change what rules 3
+and 4 decide, and a record accepted before them would have to be superseded
+rather than amended.
 
 1. `library::misdeclares_library` answering `false` fails
    `a_library_name_declared_with_its_parameters_swapped_is_refused`, the
@@ -114,6 +120,25 @@ adds its rule's cases and the mutation that fails each here.
    `a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted`; and
    asking the return type's pointee without looking through an array fails
    `a_block_of_arrays_of_pointers_nothing_wrote_returned_is_doubted`.
+4. `Allocations::first_level_holds_a_pointer` never answering `true` fails
+   `a_copy_of_an_int_into_a_void_pointer_pointer_behind_a_void_pointer_is_asked`
+   and the five cases after it; answering `true` for every pointer type fails
+   `a_byte_copy_of_an_int_through_an_int_pointer_parameter_behind_a_void_pointer_is_not_asked`;
+   and not reading through an array fails
+   `a_copy_into_a_void_pointer_made_from_a_pointer_to_an_array_of_void_pointers_is_asked`.
+   `Held::joined` keeping the field by intersection fails
+   `a_copy_into_a_void_pointer_that_may_have_arrived_as_a_void_pointer_pointer_is_asked`,
+   `Held::accumulated` dropping it fails
+   `a_copy_into_a_void_pointer_moved_along_a_void_pointer_pointer_is_asked`, and
+   `Held::clear` keeping it fails the unit test
+   `clearing_a_local_leaves_it_no_site_and_no_edge`. A parameter leaving it
+   unset fails the base, one-path, array and arithmetic cases above; the load
+   leaving it unset fails
+   `a_copy_into_a_void_pointer_pointer_read_out_of_memory_behind_a_void_pointer_is_asked`,
+   an opaque call's result leaving it unset fails
+   `a_copy_into_a_void_pointer_pointer_a_call_returned_behind_a_void_pointer_is_asked`,
+   and a library copy's read setting it fails
+   `a_void_pointer_a_library_copy_wrote_is_not_believed_to_point_at_pointers`.
 
 ### Consequences
 

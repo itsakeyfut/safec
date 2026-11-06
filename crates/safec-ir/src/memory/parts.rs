@@ -841,6 +841,20 @@ pub(super) struct Held {
     /// the lower of two and a side with none is no bound, the reverse of
     /// [`Self::believed`]. See ADR-0060.
     pub(super) contents_at_most: Levels,
+    /// Whether the type this value arrived as says the memory it points at
+    /// holds pointers, at its first level: `void **` does, though the width
+    /// [`Self::contents_at_most`] believes there is `0`, and `int *` does
+    /// not, believing the same `0`. Set where that is set from a type.
+    ///
+    /// **What `0` alone could not say** (#818). A level that holds a `void *`
+    /// and the first level that holds no pointer both believe `0`, so
+    /// `void *d = out;` with `out` a `void **` was asked as an `int *` is,
+    /// and a library copy of part of a pointer through `d` was silent. A
+    /// may-fact, so a union where two paths meet and where a value is built
+    /// from several, and copied with the value and dropped by an assignment
+    /// like every field here (ADR-0018). Only the first level, since nothing
+    /// asks a deeper one. See ADR-0073 rule 4.
+    pub(super) arrived_holds_pointer: bool,
     /// Whether an edge in [`Self::locals`] may be the address of
     /// something inside the local it names rather than of the local itself.
     ///
@@ -1166,6 +1180,7 @@ impl Held {
                 fresh_read: false,
                 believed: None,
                 contents_at_most: Levels::default(),
+                arrived_holds_pointer: false,
                 inner_address: false,
                 element: None,
                 array_edge: false,
@@ -1194,6 +1209,7 @@ impl Held {
             fresh_read,
             believed,
             contents_at_most,
+            arrived_holds_pointer,
             inner_address,
             element,
             array_edge,
@@ -1216,6 +1232,7 @@ impl Held {
             fresh_read,
             believed,
             contents_at_most,
+            arrived_holds_pointer,
             inner_address,
             element,
             array_edge,
@@ -1316,6 +1333,7 @@ impl Held {
             fresh_read,
             believed,
             contents_at_most,
+            arrived_holds_pointer,
             inner_address,
             element,
             array_edge,
@@ -1325,6 +1343,7 @@ impl Held {
         *fresh_read = false;
         *believed = None;
         *contents_at_most = Levels::default();
+        *arrived_holds_pointer = false;
         *inner_address = false;
         *element = None;
         *array_edge = false;
@@ -1387,6 +1406,7 @@ impl Held {
             fresh_read,
             believed,
             contents_at_most,
+            arrived_holds_pointer,
             inner_address,
             element,
             array_edge,
@@ -1395,6 +1415,8 @@ impl Held {
         *inner_address = *inner_address || other.inner_address;
         // A bound, so the lower of two, and a side with none is no bound.
         contents_at_most.bound_by(&other.contents_at_most);
+        // A may-fact, so a union: a path that says pointers asks.
+        *arrived_holds_pointer = *arrived_holds_pointer || other.arrived_holds_pointer;
         if *returned_by != other.returned_by {
             *returned_by = None;
         }
@@ -1480,6 +1502,7 @@ impl Held {
             fresh_read,
             believed,
             contents_at_most,
+            arrived_holds_pointer,
             inner_address,
             element,
             array_edge,
@@ -1488,6 +1511,7 @@ impl Held {
         *inner_address = *inner_address || other.inner_address;
         // `*tab + 1` points into the same memory, which holds what it held.
         contents_at_most.bound_by(&other.contents_at_most);
+        *arrived_holds_pointer = *arrived_holds_pointer || other.arrived_holds_pointer;
         *from_caller = *from_caller || other.from_caller;
         // Arithmetic builds a new value, which is no longer exactly what a
         // `realloc` returned. See ADR-0039.
@@ -1875,6 +1899,9 @@ impl Cell {
             // told apart from the old one's, and a bound kept only doubts.
             believed: _,
             contents_at_most: _,
+            // Not recorded in memory: a load takes it from the type it is
+            // read as. See `Held::arrived_holds_pointer`.
+            arrived_holds_pointer: _,
             // Kept, and set below in every container that held the site.
             stale_read: _,
             // Kept, as `stale_read` is: the slots of the new allocation are
@@ -1949,6 +1976,9 @@ impl Cell {
             // `Known::memory_levels`', which reads every level.
             believed: _,
             contents_at_most: _,
+            // Not recorded in memory: a load takes it from the type it is
+            // read as. See `Held::arrived_holds_pointer`.
+            arrived_holds_pointer: _,
             // Read by `Allocations::reads_caller_memory`, which is the
             // caller's answer to `load_into`.
             from_caller: _,
@@ -2029,6 +2059,9 @@ impl Cell {
             names: _,
             believed: _,
             contents_at_most: _,
+            // Not recorded in memory: a load takes it from the type it is
+            // read as. See `Held::arrived_holds_pointer`.
+            arrived_holds_pointer: _,
             // Not recorded in memory. See `Self::absorb`.
             freed: _,
             writes_elsewhere: _,
@@ -2096,6 +2129,9 @@ impl Cell {
             element: _,
             array_edge: _,
             stored_through: _,
+            // Not recorded in memory: a load takes it from the type it is
+            // read as. See `Held::arrived_holds_pointer`.
+            arrived_holds_pointer: _,
         } = &other.held;
         self.held.names.union_with(names);
         self.held.believed = bounded(self.held.believed, *believed);
@@ -2128,6 +2164,7 @@ pub(super) struct Marks {
     pub(super) fresh_read: bool,
     pub(super) believed: Option<u64>,
     pub(super) contents_at_most: Levels,
+    pub(super) arrived_holds_pointer: bool,
     pub(super) inner_address: bool,
     pub(super) element: Option<u64>,
     pub(super) array_edge: bool,
@@ -2422,8 +2459,9 @@ mod tests {
     /// every mark about how it came by them.
     ///
     /// Mutation: have `clear` leave `Held::locals`, `sites`, `offset`,
-    /// `lost_read`, `unreplaced_read`, `foreign` or `freed`. This fails. The
-    /// marks beside those have corpus cases of their own.
+    /// `lost_read`, `unreplaced_read`, `foreign`, `freed` or
+    /// `arrived_holds_pointer`. This fails. The marks beside those have
+    /// corpus cases of their own.
     #[test]
     fn clearing_a_local_leaves_it_no_site_and_no_edge() {
         let mut held = Held::none(4);
@@ -2434,6 +2472,7 @@ mod tests {
         held.lost_read = true;
         held.unreplaced_read = true;
         held.foreign = true;
+        held.arrived_holds_pointer = true;
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", "free(p);");
         held.freed = Some(Freeing {
@@ -2449,6 +2488,7 @@ mod tests {
         assert!(!held.unreplaced_read);
         assert!(!held.foreign);
         assert!(held.freed.is_none());
+        assert!(!held.arrived_holds_pointer);
     }
 
     /// One edge that is all of where a write lands is one certain local, and

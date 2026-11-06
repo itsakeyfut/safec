@@ -1,0 +1,20 @@
+error[SC0413]: this lets a pointer leave that may not point at the start of an object
+   ╭─[ a_copy_into_a_void_pointer_made_from_a_pointer_to_an_array_of_void_pointers_is_asked.c:2:67 ]
+   │
+ 2 │ void f(void *(*out)[2]) { int i = 1; void *d = out; void *s = &i; memcpy(d, s, 4); use(); }
+   │                                                                   ───────┬───────  
+   │                                                                          ╰───────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave as a `void *` only at the start of an object
+error[SC0403]: this may dereference `d` while it is null
+   ╭─[ a_copy_into_a_void_pointer_made_from_a_pointer_to_an_array_of_void_pointers_is_asked.c:2:67 ]
+   │
+ 2 │ void f(void *(*out)[2]) { int i = 1; void *d = out; void *s = &i; memcpy(d, s, 4); use(); }
+   │                                                                   ───────┬───────  
+   │                                                                          ╰───────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

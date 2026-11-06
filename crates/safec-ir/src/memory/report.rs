@@ -1573,7 +1573,9 @@ fn source_may_be_unwritten(
 ///   its elements' where it is an array, at the width that type points at;
 /// - **the memory it was believed to point at when it arrived**, from the
 ///   type it arrived as, which a conversion to `void *` keeps: `void *d =
-///   out;` with `out` an `int **` (`Held::contents_at_most`);
+///   out;` with `out` an `int **` (`Held::contents_at_most`), or a
+///   `void **`, which believes `0` there as an `int *` does and is told
+///   apart by `Held::arrived_holds_pointer` (#818);
 /// - **an allocation it points at**, where a pointer was stored in it, of a
 ///   width nothing records here, so `0`, as a `void *` is asked only whether
 ///   it starts an object.
@@ -1602,14 +1604,17 @@ fn points_at_a_pointer(
             pointee_width(analysis, ty)
         })
         .min();
-    // `0` is no belief that a pointer is held: `type_levels` says it from
-    // the first level that holds none, so an `int *` arrives believing `0`
-    // as a `void **` does, and counting it doubted every copy of an `int`
-    // through an `int *` parameter.
-    let arrived = known.points_to[place.local]
+    // `0` alone is no belief that a pointer is held: `type_levels` says it
+    // from the first level that holds none, so an `int *` arrives believing
+    // `0` as a `void **` does, and counting it doubted every copy of an
+    // `int` through an `int *` parameter. Whether the type it arrived as
+    // holds a pointer there tells them apart (#818). See ADR-0073 rule 4.
+    let held = &known.points_to[place.local];
+    let arrived = held
         .contents_at_most
         .at(0)
-        .filter(|&width| width > 0);
+        .filter(|&width| width > 0)
+        .or(held.arrived_holds_pointer.then_some(0));
     let stored = known.sites_of(place.local).any(|site| {
         let cell = &known.contents[site];
         cell.sites().next().is_some() || cell.locals().next().is_some()
