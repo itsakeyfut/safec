@@ -401,6 +401,10 @@ cases! {
         // holds what it held. Mutation: arithmetic drops it; this loses its
         // `SC0413`.
         a_copy_into_a_void_pointer_moved_along_a_void_pointer_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What a library copy writes into a `void *` local comes with no type,
+        // so it is not believed to hold pointers. Mutation: the copy's read
+        // says it does; this is `SC0413`.
+        a_void_pointer_a_library_copy_wrote_is_not_believed_to_point_at_pointers: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Two locals of different widths name the narrower, a `void *`'s
         // none. Mutation: name the wider; it says "as wide as its type".
         a_copy_through_a_void_pointer_that_may_point_at_two_locals_names_the_narrower: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
