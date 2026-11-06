@@ -1,4 +1,4 @@
-error[SC0411]: this copies bytes that may not have been written into memory code outside this function reads as a pointer
+error[SC0411]: this copies bytes that may not have been written into memory that code outside this function reads as a pointer
    ╭─[ a_copy_of_a_block_nothing_wrote_into_caller_memory_is_doubted.c:6:5 ]
    │
  6 │     memcpy(out, m, 8);

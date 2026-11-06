@@ -164,8 +164,8 @@ memory, are not followed.
 A `memcpy` or `memmove` of bytes that may not have been written, into memory
 that leaves the function and is believed to hold a pointer, is `SC0411` as a
 doubt at the copy: "this copies bytes that may not have been written into
-memory code outside this function reads as a pointer". Copying them is
-defined (C17 7.24.2.1); what is undefined is the caller's read of the pointer
+memory that code outside this function reads as a pointer". Copying them is
+defined (C17 7.24.2.1, 7.24.2.2); what is undefined is the caller's read of the pointer
 they leave, which this check, reading one function at a time, never sees, so
 the copy is where it is said (#764). `int *a[1]; memcpy(out, a, 8);` with
 `out` an `int **` parameter is the program; a copy of a written `a`, a copy
@@ -175,6 +175,11 @@ element by element and the length is a constant, only the elements the copy
 covers are asked. A second copy into a block the function made is asked as
 leaving, since a library copy exposes what it is handed, so unwritten bytes
 copied into it twice are doubted at the copy as well as where they are read.
+Two limits are inherited rather than chosen here: a local that holds no
+pointer, an `int` or `char` array, is never followed as unwritten, so copying
+it out says nothing; and a block is asked whether it leaves when the copy is
+made, so a block filled by a copy and handed back afterwards says nothing, as
+a block handed back with nothing written into it says nothing.
 
 A local whose address is taken, a local array among them, is indeterminate in
 the same way until something writes it (C17 6.2.4 p6, 6.7.9 p10), and the same
