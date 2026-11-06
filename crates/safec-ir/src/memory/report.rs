@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 use crate::analysis::Conclusion;
 use crate::ir::{
     BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
-    TyId,
+    Ty, TyId,
 };
 use crate::library::{Callee, Reach};
 use crate::nullability::NullAtTerminators;
@@ -1353,6 +1353,69 @@ fn part_of_a_pointer(
     }
 }
 
+/// [`part_of_a_pointer`] for a copy whose operands are `void *`, asked of what
+/// each operand points at rather than of its type, which says nothing: the
+/// width a pointer held there is believed to point at, where the copy writes
+/// only part of one. A local it points at holds a pointer by its declared
+/// type, and is asked at the width that type points at, which
+/// [`pointee_width`] answers only for a pointer; an allocation holds
+/// one where a pointer stored in it names a site or a local, of a width
+/// nothing records here, so `0`,
+/// as a `void *` is asked only whether it starts an object. The destination
+/// first, then the source, as the typed asks are. An operand that names
+/// nothing this check followed answers nothing, as before (ADR-0071 rule 4).
+///
+/// **Only a `void *` operand**: a typed one is asked by its type above, and a
+/// byte copy of an `int` through `void *` reaches a local that holds no
+/// pointer, so it stays silent.
+fn part_of_what_void_points_at(
+    analysis: &Allocations<'_>,
+    function: &Function,
+    callee: FuncId,
+    arguments: &[Operand],
+    known: &Known,
+) -> Option<u64> {
+    match analysis.copied_pointers(callee, arguments) {
+        CopiedPointers::Whole => return None,
+        CopiedPointers::LastInPart | CopiedPointers::NoneWhole => {}
+    }
+    arguments.iter().take(2).find_map(|operand| {
+        let Operand::Copy(place) = operand else {
+            return None;
+        };
+        if !place.projection.is_empty() || !points_at_void(analysis, function, place) {
+            return None;
+        }
+        let named = known.written_through(place.local);
+        let local = function
+            .locals()
+            .filter(|&local| named.contains(&LocalIdx::of(local)))
+            .filter_map(|local| pointee_width(analysis, function.local(local)))
+            .min();
+        let stored = known.sites_of(place.local).any(|site| {
+            let cell = &known.contents[site];
+            cell.sites().next().is_some() || cell.locals().next().is_some()
+        });
+        local.or(stored.then_some(0))
+    })
+}
+
+/// Whether `place` is a `void *` by its type. A `match`, so that a kind of
+/// type added later answers here whether a copy through it is asked by what it
+/// points at.
+fn points_at_void(analysis: &Allocations<'_>, function: &Function, place: &Place) -> bool {
+    let Some(ty) = analysis.unit.place_ty(function, place) else {
+        return false;
+    };
+    let Some(pointee) = pointee(analysis, ty) else {
+        return false;
+    };
+    match analysis.unit.ty(pointee) {
+        Ty::Void => true,
+        Ty::Int | Ty::Char | Ty::Pointer(_) | Ty::Array { .. } => false,
+    }
+}
+
 /// Report a pointer this element hands back by a `return`, stores through
 /// a pointer, or writes by name into a local code this check cannot read
 /// may read (#690), where this check cannot show it points at one whole
@@ -1565,9 +1628,15 @@ pub(super) fn departed_at_call(
             // asked nothing (#717). Unknown, as every departure is. **By the
             // source's type too**, as the asks above are: `void *d = out;
             // memcpy(d, &v, 4);` hides the destination's and not the
-            // source's, and was asked nothing. Found by review.
+            // source's, and was asked nothing. Found by review. **And by what
+            // a `void *` operand points at**, where neither type says: `void
+            // *d = out; void *s = &v; memcpy(d, s, 4);` hid both (#746). See
+            // ADR-0071 rule 4.
             if let Some(width) = part_of_a_pointer(analysis, *callee, arguments, into_ty)
                 .or_else(|| part_of_a_pointer(analysis, *callee, arguments, source_ty))
+                .or_else(|| {
+                    part_of_what_void_points_at(analysis, function, *callee, arguments, known)
+                })
             {
                 say_leaving(
                     findings,
