@@ -346,11 +346,13 @@ pub fn compile(options: &Options) -> Compiled {
             // parser reads, and are not this input's.
             Emitted::Tokens(out) => dump_tokens(&source, &scanned, out),
             Emitted::Ast(out) => {
+                // No safety check runs on a tree dumped as itself.
                 let Some(analysed) = analysed(
                     &sources,
                     &tokens,
                     read_whole,
                     options.target.int(),
+                    false,
                     &mut diagnostics,
                 ) else {
                     continue;
@@ -570,11 +572,16 @@ struct Analysed {
 /// the one written: `return;` where a pointer was promised was followed by
 /// an `SC0408` saying the body can end without a `return`, and `*x` with
 /// `int x` by an `SC0304` calling the program this compiler's gap.
+///
+/// `memory_checked` is whether the memory check will run on this input,
+/// which decides whether names refuses a definition of a name that check
+/// reads by name (ADR-0071 rule 1).
 fn analysed(
     sources: &SourceMap,
     tokens: &Preprocessed,
     read_whole: usize,
     int_range: Integer,
+    memory_checked: bool,
     diagnostics: &mut DiagnosticSink,
 ) -> Option<Analysed> {
     if diagnostics.error_count() != read_whole {
@@ -586,7 +593,7 @@ fn analysed(
         return Some(Analysed { ast, typed: None });
     }
 
-    let resolution = resolve(sources, &ast, diagnostics);
+    let resolution = resolve(sources, &ast, memory_checked, diagnostics);
     let types = check(sources, &mut ast, &resolution, int_range, diagnostics);
     if diagnostics.error_count() != read_whole {
         return Some(Analysed { ast, typed: None });
@@ -611,11 +618,13 @@ fn lowered(
     options: &Options,
     diagnostics: &mut DiagnosticSink,
 ) -> Option<(TranslationUnit, Vec<Hatched>)> {
+    // The memory check runs below on exactly this comparison.
     let analysed = analysed(
         sources,
         tokens,
         read_whole,
         options.target.int(),
+        options.safety >= SafetyLevel::Memory,
         diagnostics,
     )?;
     // Nothing to lower from a tree the frontend did not finish with: the

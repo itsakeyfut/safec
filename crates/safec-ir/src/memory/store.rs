@@ -99,12 +99,12 @@ impl Allocations<'_> {
         })
     }
 
-    /// The store a terminator is, if it is one: a call to an undefined
+    /// The store a terminator is, if it is one: a call to a
     /// [`Callee::Copies`] function handed a place for each of its first two
     /// arguments, always of kind [`StoreKind::Copy`]. A copy whose
     /// destination is no place makes none, so a reader that asks only of the
-    /// source does not come here (`report::departed_at_call`). A body defined here is what runs, whatever it is called,
-    /// as the departure door reads one.
+    /// source does not come here (`report::departed_at_call`). A body defined
+    /// here is no copy, since `Allocations::library` answers nothing for it.
     pub(super) fn store_at<'t>(
         &self,
         terminator: &'t Terminator,
@@ -128,7 +128,7 @@ impl Allocations<'_> {
             | Callee::Ends
             | Callee::Opaque => false,
         };
-        if self.unit.function(*callee).is_defined() || !copies {
+        if !copies {
             return None;
         }
         let (Some(Operand::Copy(to)), Some(Operand::Copy(from))) =

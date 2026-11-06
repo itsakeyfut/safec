@@ -153,7 +153,9 @@ Per rule, a named case in `tests/cases.rs` unless it says otherwise:
    `a_pointer_stored_by_name_into_a_local_whose_address_was_kept_is_asked_how_wide`;
    a copy asked nothing fails `a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store`;
    a defined callee asked by its library name fails
-   `a_function_defined_with_a_library_name_is_asked_as_any_function`; the
+   `a_function_defined_here_under_a_library_name_is_read_as_any_call` in
+   `crates/safec-ir/tests/freed.rs`, since C defining one is refused first
+   (ADR-0071); the
    locals a pointer lets leave not asked fails
    `a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type`; a
    narrower one proved fails `a_char_handed_to_an_int_parameter_is_shown_narrower`.

@@ -1008,11 +1008,6 @@ cases! {
         // recorded. Found by review. Mutation: ask a copy's source fresh at
         // any depth; this loses `SC0412`.
         a_pointer_copied_into_a_local_through_a_pointer_read_out_of_fresh_memory_keeps_its_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `memcpy` defined in this unit reads its destination, and is asked
-        // as any function is: its destination's freed pointer is `SC0407`.
-        // Found by review. Mutation: skip the destination of every call
-        // named `memcpy`, defined or not; this loses `SC0407`.
-        a_defined_memcpy_s_destination_is_asked_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read on every turn before the body writes it, so the first turn reads it
         // unwritten: `SC0411`, a proof (#670). See ADR-0057. Mutation: ask no read
         // as of a loop's first turn; this goes silent.
@@ -2678,6 +2673,15 @@ cases! {
         // third build, and the read after the call is asked of nothing.
         code_after_abort_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_function_defined_here_named_abort_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And where the memory check runs, a definition of a name it reads by
+        // name, `memcpy` here, is refused the same way, at the definition
+        // (#800). This case holds the refusal in one file; why it is made,
+        // a body in another file of the run read by name where it is only
+        // declared, is held by the driver's
+        // `a_library_name_defined_in_another_file_of_the_run_is_refused`. See
+        // ADR-0071 rule 1. Mutation: answer `false` in
+        // `library::reads_by_name`; this is two `SC0401` doubts instead.
+        a_function_defined_here_named_memcpy_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_function_defined_below_its_call_named_abort_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local or a parameter named `abort` or `exit` has no linkage, so
         // 7.1.3 p1 does not reserve it there, and names never asks. (`_Exit`
@@ -5012,10 +5016,6 @@ cases! {
         a_pointer_in_a_local_whose_address_leaves_is_asked_at_its_own_type: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_assigned_after_its_local_s_address_was_taken_is_asked_where_the_address_leaves: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A body is what runs, whatever it is called. Mutation: ask a call by
-        // its library row even where the callee is defined here; this goes
-        // silent.
-        a_function_defined_with_a_library_name_is_asked_as_any_function: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A callee's write into an escaped local is believed only where the
         // local was whole before it. Mutation: believe it whatever the local
         // held, in the opaque call's write in `transfer.rs`; the `SC0413` at
@@ -5762,12 +5762,8 @@ cases! {
         // What a copy out stores out is what the sites it copies hold too, at
         // every level: `*box = x; *b = box; memcpy(pp, b, 8); free(x);` is
         // `SC0414`. Mutation: mark the sites a load of the source reads
-        // alone, not their closure; this goes silent. And a `memcpy` defined
-        // here is its body, not a library copy, so nothing is stored out by
-        // name. Mutation: let `Allocations::store_at` ignore whether the
-        // callee is defined; the second is `SC0414`. Found by review of #688.
+        // alone, not their closure; this goes silent. Found by review of #688.
         a_pointer_held_by_a_box_copied_out_by_memcpy_and_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_pointer_copied_out_by_a_memcpy_defined_here_is_not_asked_as_a_library_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What `malloc` returns is this function's, not handed over, so a
         // pointer read out of it is not doubted at a later call; the
         // `SC0403`s are the nullability check's. Mutation: count

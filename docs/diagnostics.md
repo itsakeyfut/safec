@@ -261,12 +261,17 @@ it reaches instead.
 
 **`SC0319` refuses a name the checks believe.** A call to `abort`, `exit`,
 `_Exit` or `quick_exit` gets no continuation, because C says none returns, and
-that belief is only true of a program that does not define one: C17 7.1.3
-reserves the names, and p2 makes a program defining one undefined. So a
-definition of one is refused at its name, in whichever file of the run it is,
-and the fix is a rename.
+a call to a library function the memory check reads by name, `memcpy` or
+`free` among them, is read as what its clause says it does. Each belief is
+only true of a program that does not define the function: C17 7.1.3 reserves
+the names, and p2 makes a program defining one undefined. So a definition of
+one is refused at its name, in whichever file of the run it is, and the fix is
+a rename: the first at every safety level, since the lowering believes them,
+and the second only where the memory check runs, since nothing else does.
 [ADR-0051](adr/0051-a-call-that-does-not-return-has-no-edge-out-of-it.md) is
-the decision.
+the decision for the first, and rule 1 of
+[ADR-0071](adr/0071-a-write-spelled-as-a-copy-or-through-a-loaded-pointer-is-asked-at-its-doors-as-the-store-it-is.md)
+for the second.
 
 The frontend refusals that come with these, `SC0204` for a
 nullability specifier where it cannot apply, `SC0307` for two declarations

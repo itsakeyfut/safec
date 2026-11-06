@@ -24,7 +24,7 @@ pub mod cfg;
 pub mod dataflow;
 pub mod interp;
 pub mod ir;
-mod library;
+pub mod library;
 mod liveness;
 pub mod memory;
 pub mod nullability;

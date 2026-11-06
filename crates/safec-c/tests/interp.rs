@@ -46,7 +46,7 @@ fn ran_for(triple: &str, text: &str) -> Result<Value, Trap> {
     let tokens = lex(file, sources.file(file), &mut diagnostics);
     let tokens = preprocess(file, &tokens, target, &[], &mut sources, &mut diagnostics);
     let mut ast = parse(&tokens, &sources, &mut diagnostics);
-    let resolution = resolve_names(&sources, &ast, &mut diagnostics);
+    let resolution = resolve_names(&sources, &ast, false, &mut diagnostics);
     let types = check(
         &sources,
         &mut ast,
@@ -491,7 +491,7 @@ fn a_trap_points_at_what_stopped_it() {
         &mut diagnostics,
     );
     let mut ast = parse(&tokens, &sources, &mut diagnostics);
-    let resolution = resolve_names(&sources, &ast, &mut diagnostics);
+    let resolution = resolve_names(&sources, &ast, false, &mut diagnostics);
     let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
     let types = check(
         &sources,
@@ -546,7 +546,7 @@ fn a_trap_on_a_call_points_at_the_call() {
         &mut diagnostics,
     );
     let mut ast = parse(&tokens, &sources, &mut diagnostics);
-    let resolution = resolve_names(&sources, &ast, &mut diagnostics);
+    let resolution = resolve_names(&sources, &ast, false, &mut diagnostics);
     let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
     let types = check(
         &sources,
