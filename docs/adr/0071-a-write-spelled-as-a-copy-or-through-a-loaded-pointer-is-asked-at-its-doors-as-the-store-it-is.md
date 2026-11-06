@@ -9,9 +9,9 @@ decision-makers: itsakeyfut
 ## Context and Problem Statement
 
 ADR-0068 asks a pointer at the door it leaves by, and its rules name the code
-that holds each one: `Known::leaves` answers whether a store leaves (rule 3), a
-free of a site stored out is doubted only where it is no double free (rule 5),
-and a library copy is asked at its source's and its destination's type
+that holds each one: `Known::leaves` answered whether a store leaves (rule 3), a
+free of a site stored out was doubted only where it is no double free (rule 5),
+and a library copy was asked at its source's and its destination's type
 (rule 6). The architecture review of 2026-11-06 found the same write answered
 differently at those doors by how it was spelled, on programs:
 
