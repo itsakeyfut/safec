@@ -1247,7 +1247,9 @@ impl Resolver<'_> {
     /// Refuse a declaration of a name the memory check reads by name whose
     /// parameters are not the library's shape, where that check runs, as
     /// [`Resolver::define`] refuses a definition of one. A declaration with no
-    /// prototype is compatible with any and is not refused. Asked at any scope:
+    /// prototype is refused too, since nothing then compares a call's
+    /// arguments with the shape the checks read it by
+    /// (`library::misdeclares_library`). Asked at any scope:
     /// a function declared in a block has external linkage as one at file
     /// scope does (C17 6.2.2 p5). See ADR-0073 rule 1.
     fn misdeclared_library(&self, name: Span, ty: TypeId, diagnostics: &mut DiagnosticSink) {
@@ -1265,8 +1267,9 @@ impl Resolver<'_> {
                         Type::Pointer(_) => Some(library::Shape::Pointer),
                         Type::Int | Type::Char => Some(library::Shape::Integer),
                         // A parameter is adjusted from an array or a function to a
-                        // pointer (C17 6.7.6.3 p7, p8) before this reads it; `void`
-                        // alone is `(void)`, an empty list; and a struct is no row's.
+                        // pointer (C17 6.7.6.3 p7, p8) before this reads it, and
+                        // `(void)` is parsed as an empty list, so neither these nor
+                        // `void` arrive from this parser; a struct is no row's.
                         Type::Void
                         | Type::Array { .. }
                         | Type::Function { .. }
@@ -1277,7 +1280,7 @@ impl Resolver<'_> {
             Parameters::Unspecified => None,
         };
         let spelled = self.sources.snippet(name);
-        if library::declared_as_its_row(spelled, shapes.as_deref()) != Some(false) {
+        if !library::misdeclares_library(spelled, shapes.as_deref()) {
             return;
         }
         diagnostics.report(
@@ -1287,7 +1290,19 @@ impl Resolver<'_> {
                 .with_note(format!(
                     "C17 7.1.4 p2 permits declaring a library function without its header only \
                  with its own type, and this compiler reads a call to `{spelled}` as the \
-                 library's"
+                 library's, which takes {}",
+                    library::takes(spelled)
+                        .map(|shape| {
+                            shape
+                                .iter()
+                                .map(|parameter| match parameter {
+                                    library::Shape::Pointer => "a pointer",
+                                    library::Shape::Integer => "an integer",
+                                })
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        })
+                        .unwrap_or_default()
                 )),
         );
     }
@@ -3206,7 +3221,7 @@ mod tests {
 
     /// A library name declared with its parameters swapped is refused, which
     /// is the program #821 found the checks reading at the wrong positions.
-    /// Mutation: `library::declared_as_its_row` answers `Some(true)` always;
+    /// Mutation: `library::misdeclares_library` answers `false` always;
     /// this fails. See ADR-0073 rule 1.
     #[test]
     fn a_library_name_declared_with_its_parameters_swapped_is_refused() {
@@ -3228,12 +3243,43 @@ mod tests {
         refused_as_misdeclared("int f(void) { char *strchr(int c, char *s); return 0; }\n");
     }
 
-    /// A declaration with no prototype is compatible with any (C17 6.7.6.3
-    /// p15), and is not refused. Mutation: read no prototype as a mismatch;
+    /// A declaration with no prototype is refused too: it is compatible with
+    /// any (C17 6.7.6.3 p15), but then nothing compares a call's arguments
+    /// with the row the checks read it by, and `char *strchr(); strchr(1, 0);`
+    /// built silent. Found by review. Mutation: read no prototype as a match;
     /// this fails.
     #[test]
-    fn a_library_name_declared_without_a_prototype_is_not_refused() {
-        let resolved = resolved("void *memcpy();\n");
+    fn a_library_name_declared_without_a_prototype_is_refused() {
+        refused_as_misdeclared("void *memcpy();\n");
+    }
+
+    /// The note says what the library's takes, which is what to declare
+    /// instead. Mutation: leave the shape out of the note; this fails.
+    #[test]
+    fn a_misdeclared_library_name_is_told_what_the_library_s_takes() {
+        let resolved = resolved("char *strchr(int c, char *s);\n");
+        let [reported] = resolved.diagnostics.diagnostics() else {
+            panic!("{:?}", resolved.diagnostics.diagnostics());
+        };
+        assert!(
+            reported
+                .notes()
+                .iter()
+                .any(|note| note.ends_with("which takes a pointer, an integer")),
+            "{:?}",
+            reported.notes()
+        );
+    }
+
+    /// A `char` is an integer to the shape, as `int` is, in the frontend and
+    /// in `library::read_as_library` alike, so a `memset` declared over a `char` is the
+    /// library's in both. Mutation: read only `int` as an integer here; this
+    /// fails. The IR half is
+    /// `a_library_call_declared_over_a_char_is_read_by_its_row` in
+    /// `crates/safec-ir/tests/nulls.rs`.
+    #[test]
+    fn a_library_name_declared_over_a_char_is_not_refused() {
+        let resolved = resolved("void *memset(void *d, char c, int n);\n");
         assert_eq!(resolved.diagnostics.diagnostics(), []);
     }
 

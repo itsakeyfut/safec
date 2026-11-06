@@ -4,7 +4,7 @@
 //! At crate level rather than inside the memory check, its only reader so
 //! far, so that an analysis besides it can read these rows rather than keep
 //! a copy of them to drift. See ADR-0063. Only [`reads_by_name`],
-//! [`declared_as_its_row`] and [`Shape`] leave the crate: the frontend asks
+//! [`misdeclares_library`], [`takes`] and [`Shape`] leave the crate: the frontend asks
 //! them which definitions and which declarations to refuse.
 
 use crate::ir::{FuncId, TranslationUnit, Ty};
@@ -22,9 +22,14 @@ pub fn reads_by_name(name: &str) -> bool {
 }
 
 /// What a library function's parameter is, as far as this subset can compare
-/// it with a declaration: it has neither `const` nor `size_t`, and its corpus
-/// declares `memcpy` as `(void *, void *, int)`, so a pointer of any type is a
-/// pointer and an `int` or a `char` is an integer. See ADR-0073 rule 1.
+/// it with a declaration: this subset has neither `const` nor `size_t`, so a
+/// pointer of any type is a pointer and an `int` or a `char` is an integer.
+/// When `const`, `unsigned` or `long` are read, a library's own prototype
+/// becomes writable and this is to be replaced by the parameter's type. A declaration
+/// of the right shape is not thereby the library's own type: `memcpy` declared
+/// `(void *, void *, int)`, as the corpus does, is incompatible with the
+/// library's in C, and this subset cannot spell one closer. See ADR-0073 rule
+/// 1.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Shape {
     /// A pointer, to anything.
@@ -33,21 +38,39 @@ pub enum Shape {
     Integer,
 }
 
-/// Whether a declaration of `name` takes what the library's does: `None` where
-/// `name` is no row, and `Some(true)` where `parameters` is `None`, a
-/// declaration with no prototype, which is compatible with any (C17 6.7.6.3
-/// p15). A parameter of no [`Shape`] is passed as `None` in its place and
-/// matches nothing. The frontend asks this to refuse a mismatch where the
-/// memory check runs (`SC0320`). See ADR-0073 rule 1.
-pub fn declared_as_its_row(name: &str, parameters: Option<&[Option<Shape>]>) -> Option<bool> {
-    let row = LIBRARY.iter().find(|row| row.name == name)?;
-    Some(parameters.is_none_or(|parameters| {
-        parameters.len() == row.parameters.len()
-            && parameters
-                .iter()
-                .zip(row.parameters)
-                .all(|(declared, expected)| *declared == Some(*expected))
-    }))
+/// Whether a declaration of `name` misdeclares a library function: `name` is a
+/// row, and its parameters are not the row's shape as far as [`Shape`] can
+/// say. A parameter of no shape is passed as `None` in its place and matches
+/// nothing. The frontend asks this to refuse a mismatch where the memory check
+/// runs (`SC0320`).
+///
+/// **A declaration with no prototype, `parameters` `None`, misdeclares one.**
+/// It is compatible with any (C17 6.7.6.3 p15), but nothing then compares a
+/// call's arguments with the row the checks read it by, and a call whose
+/// arguments differ is undefined (6.5.2.2 p6): `char *strchr(); strchr(1, 0);`
+/// built silent. Found by review. See ADR-0073 rule 1.
+pub fn misdeclares_library(name: &str, parameters: Option<&[Option<Shape>]>) -> bool {
+    LIBRARY
+        .iter()
+        .find(|row| row.name == name)
+        .is_some_and(|row| {
+            !parameters.is_some_and(|parameters| {
+                parameters.len() == row.parameters.len()
+                    && parameters
+                        .iter()
+                        .zip(row.parameters)
+                        .all(|(declared, expected)| *declared == Some(*expected))
+            })
+        })
+}
+
+/// The shape the library's `name` takes, where `name` is a row: what a refusal
+/// tells the reader to declare instead.
+pub fn takes(name: &str) -> Option<&'static [Shape]> {
+    LIBRARY
+        .iter()
+        .find(|row| row.name == name)
+        .map(|row| row.parameters)
 }
 
 /// The row a call to `callee` is read by, where it is read by one: `None` for
@@ -55,12 +78,12 @@ pub fn declared_as_its_row(name: &str, parameters: Option<&[Option<Shape>]>) -> 
 /// (ADR-0071 rule 1), for a name no row has, and for a declaration whose
 /// parameters are not the row's shape, which C leaves undefined and which is
 /// read as any call (ADR-0073 rule 1). A declaration with no parameters is
-/// read by its row, since IR does not tell `()` from `(void)` and the
-/// frontend refuses the second. **The one answer both checks read**, the
+/// read by its row, since IR does not tell `()` from `(void)`, and the
+/// frontend refuses both for a row's name, so no C reaches it. **The one answer both checks read**, the
 /// memory check's `Allocations::library` and the nullability check's
 /// `reached_indices`, so that one declaration cannot be a library call to one
 /// and any call to the other.
-pub(crate) fn row(
+pub(crate) fn read_as_library(
     unit: &TranslationUnit,
     sources: &SourceMap,
     callee: FuncId,
@@ -79,10 +102,10 @@ pub(crate) fn row(
             Ty::Void | Ty::Array { .. } => None,
         })
         .collect();
-    let parameters = (!declared.is_empty()).then_some(declared.as_slice());
-    declared_as_its_row(name, parameters)
-        .unwrap_or(false)
-        .then_some(row)
+    if declared.is_empty() {
+        return Some(row);
+    }
+    (!misdeclares_library(name, Some(&declared))).then_some(row)
 }
 
 /// What the memory check can read in a callee's name.

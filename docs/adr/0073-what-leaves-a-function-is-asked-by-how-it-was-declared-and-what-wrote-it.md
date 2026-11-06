@@ -43,8 +43,11 @@ and Cons below.
    the memory check runs**, as `SC0320`, as a definition of one is `SC0319`
    (ADR-0071 rule 1). The shape is the number of parameters and whether each is
    a pointer or an integer, since this subset has neither `const` nor `size_t`
-   and the corpus declares `memcpy` as `(void *, void *, int)`; a declaration
-   with no prototype is compatible with any (C17 6.7.6.3 p15). Where IR reaches
+   and the corpus declares `memcpy` as `(void *, void *, int)`. A declaration
+   with no prototype is refused too: it is compatible with any (C17 6.7.6.3
+   p15), but nothing then compares a call's arguments with the row, and a call
+   whose arguments differ is undefined (6.5.2.2 p6), so `char *strchr();
+   strchr(1, 0);` would build silent. Where IR reaches
    either check without that refusal, a call through such a declaration is read
    as any call, by one function both checks read (#821).
 2. **Every local but a parameter starts out unwritten**, and is asked where it

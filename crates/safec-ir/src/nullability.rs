@@ -399,7 +399,7 @@ impl Nullability<'_> {
         let Terminator::Call { callee, .. } = terminator else {
             return Vec::new();
         };
-        crate::library::row(self.unit, self.sources, *callee)
+        crate::library::read_as_library(self.unit, self.sources, *callee)
             .map(|row| row.reaches.iter().map(|&(index, _)| index).collect())
             .unwrap_or_default()
     }

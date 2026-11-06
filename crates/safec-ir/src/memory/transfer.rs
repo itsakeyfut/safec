@@ -161,9 +161,9 @@ impl Allocations<'_> {
     /// pointer built silent (#800). See ADR-0071. **And none for a
     /// declaration of another shape than the row's**, read as any call by
     /// this check and the nullability check alike, since both ask
-    /// [`crate::library::row`] (ADR-0073 rule 1).
+    /// [`crate::library::read_as_library`] (ADR-0073 rule 1).
     pub(super) fn library(&self, id: FuncId) -> Option<&'static Library> {
-        crate::library::row(self.unit, self.sources, id)
+        crate::library::read_as_library(self.unit, self.sources, id)
     }
 
     /// What a write through a pointer carries: the sites the written value may

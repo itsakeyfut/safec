@@ -307,10 +307,14 @@ library's**, where the memory check runs: `char *strchr(int c, char *s);`. The
 checks read a call to it at the positions the library's own takes a pointer,
 and C17 7.1.4 p2 permits declaring a library function without its header only
 with its own type. What is compared is what this subset can say, the number of
-parameters and whether each is a pointer or an integer, so `memcpy` declared
-`(void *, void *, int)` is the library's; a declaration with no prototype is
-compatible with any and is not refused. `clang` builds such a declaration with
-a warning, `-Wincompatible-library-redeclaration`.
+parameters and whether each is a pointer or an integer, and the note says what
+the library's takes. So `memcpy` declared `(void *, void *, int)`, as the
+corpus does, is accepted though C still finds it incompatible with the
+library's: this subset can spell nothing closer. A declaration with no
+prototype is refused too: it is compatible with any, but then nothing compares
+a call's arguments with the shape the checks read it by, and `char *strchr();
+strchr(1, 0);` built silent. `clang` builds a misdeclaration with a warning,
+`-Wincompatible-library-redeclaration`, and refuses that call.
 [ADR-0073](adr/0073-what-leaves-a-function-is-asked-by-how-it-was-declared-and-what-wrote-it.md)
 rule 1 is the decision.
 
