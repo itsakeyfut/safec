@@ -132,6 +132,12 @@ beliefs (#801) list the pairs that still differ until each lands.
    the program #684 found, and fourteen more cases where an escape or a call
    that may free doubts the free, and in `tests/routes.rs` the seventeen
    `stored_out` rows that were `ACCEPTED` for it until this landed.
+4. `report::part_of_what_void_points_at` answering nothing fails
+   `a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_local_it_points_at`
+   and `a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block_it_points_at`;
+   asking no block fails the second alone; counting a local of any type
+   fails `a_byte_copy_of_an_int_between_void_pointers_is_not_asked`, which
+   is then `SC0413`.
 
 ### Consequences
 
