@@ -697,9 +697,17 @@ cases! {
         // Mutation: `holds_a_pointer` answers `true` for every type; this is
         // reported where `v` is read by name.
         an_integer_local_whose_address_is_taken_read_before_anything_wrote_it_is_not_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `StorageLive` makes every local unwritten again,
-        // whatever its type; this gains an `SC0411`.
-        an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_not_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local that holds no pointer starts unwritten too, at entry and at
+        // each `StorageLive`, and is asked where it is read as a pointer
+        // (#822). See ADR-0073 rule 2. Mutation: `unwritten_at_entry` and
+        // `StorageLive` keep only locals that hold a pointer; this and the
+        // next two go silent.
+        an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_char_buffer_nothing_wrote_copied_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_char_buffer_nothing_wrote_read_as_a_pointer_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written whole first, by a copy of a pointer, it says nothing.
+        // Mutation: a copy into a local writes nothing; this is reported.
+        a_char_buffer_written_whole_and_read_as_a_pointer_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `holds_a_pointer` answers `true` for `char`; this is
         // reported.
         a_character_local_whose_address_is_taken_read_before_anything_wrote_it_is_not_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

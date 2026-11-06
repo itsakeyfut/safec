@@ -192,8 +192,10 @@ a block handed back with nothing written into it says nothing.
 
 A local whose address is taken, a local array among them, is indeterminate in
 the same way until something writes it (C17 6.2.4 p6, 6.7.9 p10), and the same
-line of Annex J.2 lists using it. A pointer read out of one, through a pointer
-or by name, is `SC0411` at the read: `int *m[1]; int *q = m[0];` and `int *q;
+line of Annex J.2 lists using it, whatever its type: a `char` buffer nothing
+wrote, read as a pointer or copied into memory that leaves, is asked as a
+pointer local is (#822), while an integer read by name is not followed. A
+pointer read out of one, through a pointer or by name, is `SC0411` at the read: `int *m[1]; int *q = m[0];` and `int *q;
 int **pq = &q; return q == 0;` (#640). Any write that may land in it ends it:
 an assignment to it, a store through a pointer that may point at it, a copy
 into it, a call's result, or a call it was handed. **A local array of at most 64

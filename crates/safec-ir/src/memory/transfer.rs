@@ -1777,9 +1777,10 @@ impl Analysis for Allocations<'_> {
             handed_contents_at_most: Table::filled(Levels::default(), self.locals),
             // Every local that may hold a pointer, but the parameters, which
             // the caller wrote. See `Known::init`.
-            // Every place written but the locals `unwritten_at_entry` names:
-            // a parameter's memory is the caller's, which may have written it,
-            // and an allocation is made fresh where it is made.
+            // Every place written but the locals `unwritten_at_entry` names,
+            // every local but a parameter: a parameter's memory is the
+            // caller's, which may have written it, and an allocation is made
+            // fresh where it is made.
             init: {
                 let unwritten = self.unwritten_at_entry();
                 let mut init = Table::filled(Init::Written, Loc::count(self.locals));
@@ -2594,12 +2595,9 @@ impl Analysis for Allocations<'_> {
                 value.clear(*local);
                 // **A new object, indeterminate again** (C17 6.2.4 p6), so an
                 // array written late in one turn of a loop is unwritten at
-                // the start of the next. See `Known::init`.
-                if self.holds_a_pointer(function.local(*local)) {
-                    value.init[local] = Init::Unwritten;
-                } else if value.init[local] == Init::Maybe {
-                    value.init[local] = Init::Written;
-                }
+                // the start of the next. See `Known::init`. **Whatever its
+                // type**, as at entry (ADR-0073 rule 2).
+                value.init[local] = Init::Unwritten;
                 // And every element of it, with nothing written in part and
                 // nothing handed over. See `Known::element_init`.
                 value.element_init[local].unwrite_all();
