@@ -431,7 +431,7 @@ pub(super) fn write_effects(
                 .map(|id| function.local(id));
             let size = ty.and_then(|ty| unit.size_of(ty));
             let holds_pointers =
-                ty.is_some_and(|ty| matches!(unit.ty(innermost_element(unit, ty)), Ty::Pointer(_)));
+                ty.is_some_and(|ty| unit.ty(innermost_element(unit, ty)).is_pointer());
             let placed = if array {
                 element.is_some()
             } else {

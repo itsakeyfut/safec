@@ -43,7 +43,7 @@ use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve, solve_first_turn_within};
 use crate::ir::{
     BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Operation, Place,
-    Projection, Rvalue, Terminator, TranslationUnit, Ty,
+    Projection, Rvalue, Terminator, TranslationUnit,
 };
 use crate::source::{SourceMap, Span};
 
@@ -385,7 +385,7 @@ pub(super) fn findings(
     for local in function.locals() {
         if function.name_of(local).is_some()
             && !parameters.contains(&local)
-            && matches!(unit.ty(function.local(local)), Ty::Pointer(_))
+            && unit.ty(function.local(local)).is_pointer()
         {
             watched.set(LocalIdx::of(local));
         }

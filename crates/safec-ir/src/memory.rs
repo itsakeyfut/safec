@@ -79,7 +79,7 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve_first_turn_within, solve_within};
 use crate::ir::{
-    Between, BlockId, Element, FuncId, Function, LocalId, Place, Terminator, TranslationUnit, Ty,
+    Between, BlockId, Element, FuncId, Function, LocalId, Place, Terminator, TranslationUnit,
 };
 use crate::nullability::{self};
 use crate::reads::{
@@ -678,14 +678,9 @@ fn analysis<'a>(
         exposed_parameters: function
             .parameters()
             .filter(|_| sources.snippet(function.name) != "main")
-            // A `match` for `Allocations::is_pointer`'s reason: a kind of
-            // type added later is asked whether it is exposed.
-            .filter(|&local| match unit.ty(function.local(local)) {
-                Ty::Pointer(_) => true,
-                // No parameter is an array: C17 6.7.6.3 p7 adjusts it to a
-                // pointer.
-                Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => false,
-            })
+            // No parameter is an array: C17 6.7.6.3 p7 adjusts it to a
+            // pointer.
+            .filter(|&local| unit.ty(function.local(local)).is_pointer())
             .collect(),
         live_in: crate::liveness::live_in(function),
         cfg: Cfg::of(function),
