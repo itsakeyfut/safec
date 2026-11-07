@@ -304,11 +304,7 @@ pub(super) fn replaced_by(
         .indices()
         .filter(|&local| lands[local] && may_hold[local])
         .collect();
-    let alone = written_alone(
-        &landing,
-        derefs(place) == 1 && value.points_to[place.local].holds_a_site(),
-        &value.points_to[place.local],
-    );
+    let alone = written_alone(value, place.local, derefs(place), &landing);
     let one_place = alone.is_some();
     let before: Vec<(LocalIdx, Init, Inits)> = if one_place {
         Vec::new()

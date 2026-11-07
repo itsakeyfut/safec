@@ -49,8 +49,13 @@ for it, each a read of a pointer nothing wrote:
 1. **`WrittenLocal`**, in `memory::store` with a private field, is the only
    thing `Known::written_local` takes. Two places make one: a `Strong`, the
    local an assignment or a call's result replaces whole; and
-   `Landing::writes_local_for_certain`, a landing with exactly one local target,
-   no allocation, and a pointer that holds nothing this check did not follow.
+   `store::written_alone`, handed the pointer, how many dereferences down the
+   write lands and its targets, which asks for itself that there is exactly one
+   local target and that every pointer the write goes through last names no
+   allocation and holds nothing this check did not follow. Handed those
+   premises by each door, the store two dereferences down was asked of the
+   pointer it starts from and wrote a local for certain through one read out of
+   a caller's memory; found by review.
 2. **A store or a library copy that has no `WrittenLocal` is a may-write** of
    every local it may land in: `Init::may_write`, and every element of an array
    kept per element likewise. It no longer goes through the call's belief.
@@ -63,7 +68,9 @@ for it, each a read of a pointer nothing wrote:
    `foreign`, `from_caller`, `lost_read` and `stale_read`, asked as one
    question on `Beyond`. Not `loaded`: a pointer read out of memory this
    function recorded all of is believed to reach what the record says, as a
-   block's one container is (#726).
+   block's one container is (#726). Not `unreplaced_read`: it says a call may
+   have left an old value in the slot read, which `Known::handed_below` asks,
+   not that the address is one this check did not follow.
 5. **`Known::written_all`**, which writes every allocation for certain where a
    call's result is stored through a pointer this does not place, writes them
    as a may-write. No C program reaches it: the lowering calls into a temporary.

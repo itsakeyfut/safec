@@ -10,7 +10,7 @@
 //! its [`StoreKind`] with no wildcard, so a kind added later is
 //! `error[E0004]` at each of them (#688).
 
-use crate::ir::{Element, Operand, Place, Projection, Rvalue, Terminator};
+use crate::ir::{Element, LocalId, Operand, Place, Projection, Rvalue, Terminator};
 use crate::library::Callee;
 use crate::source::Span;
 
@@ -263,8 +263,11 @@ impl Strong {
     }
 }
 
-/// A write of exactly one local, every byte of what it lands on, on every path
-/// that reaches it: the one fact that lets the unwritten belief say a local
+/// A write of exactly one local, on every path that reaches it, and of all of
+/// it as far as the door can tell: a library copy of a length this check
+/// cannot read is taken as whole, as ADR-0073 rule 2 takes it, and a write of
+/// part is answered apart by `built::write_effects`. Found by review.
+/// The token is the one fact that lets the unwritten belief say a local
 /// was written for certain, [`Known::written_local`], as [`Certain`] is for a
 /// block. Only this module makes one, since its field is private here: from a
 /// [`Strong`], the local an assignment or a call's result replaces, or by
@@ -289,21 +292,42 @@ impl From<Strong> for WrittenLocal {
     }
 }
 
-/// The one local a write through `held` lands in, where it lands there alone:
-/// exactly one local target, no allocation beside it (`blocks`), and a pointer
-/// that holds nothing this check did not follow,
+/// The one local a write through `pointer`, `depth` dereferences down,
+/// lands in, where it lands there alone: exactly one local target, and every
+/// pointer the write goes through last naming no allocation beside it and
+/// holding nothing this check did not follow,
 /// [`Beyond::follows_what_it_names`](super::parts::Beyond::follows_what_it_names).
-/// The rule a placed store, a store this check cannot place and a library
-/// copy each ask, so that the three cannot answer it apart. See ADR-0074.
+/// **Asked here of what it finds, not handed premises**: given the base
+/// pointer's marks for a write two dereferences down, a store landing
+/// through a pointer read out of a caller's memory, or one that may be a
+/// block, was written for certain where the same as a copy was doubted.
+/// Found by review. The rule a placed store, a store this check cannot
+/// place and a library copy each ask, so that the three cannot answer it
+/// apart. See ADR-0074.
 pub(super) fn written_alone(
+    value: &Known,
+    pointer: LocalId,
+    depth: usize,
     targets: &[LocalIdx],
-    blocks: bool,
-    held: &Held,
 ) -> Option<WrittenLocal> {
-    match targets {
-        [local] if !blocks && held.beyond().follows_what_it_names() => Some(WrittenLocal(*local)),
-        _ => None,
-    }
+    let [local] = targets else {
+        return None;
+    };
+    let follows = |held: &Held| held.beyond().follows_what_it_names() && !held.holds_a_site();
+    let alone = match depth {
+        0 => false,
+        1 => follows(&value.points_to[pointer]),
+        _ => {
+            let (sites, locals) = value.levels_below(pointer, depth - 2);
+            value.points_to[pointer].beyond().follows_what_it_names()
+                && sites.is_empty()
+                && !locals.is_empty()
+                && locals
+                    .iter()
+                    .all(|&through| follows(&value.points_to[through]))
+        }
+    };
+    alone.then_some(WrittenLocal(*local))
 }
 
 impl Landing {

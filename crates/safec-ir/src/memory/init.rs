@@ -169,9 +169,7 @@ impl Allocations<'_> {
                         // in beside another place may still be unwritten,
                         // and each element of it. Found by review.
                         // See ADR-0074.
-                        if let Some(at) =
-                            written_alone(&edges, !sites.is_empty(), &value.points_to[pointer])
-                        {
+                        if let Some(at) = written_alone(value, pointer, 1, &edges) {
                             let pending = value.array_writes_before(writes);
                             value.written_local(at);
                             value.array_writes_after(pending);
@@ -583,13 +581,19 @@ impl Allocations<'_> {
                     // cannot read wrote a local the copy may have missed,
                     // `memcpy(g, &px, 8)` with `g` either `&m` or `&n` (#803).
                     // See ADR-0074.
-                    value.replaced(|_| true, |local| may_write[local], Writer::StoreOrCopy);
+                    // Asked before `replaced`, which marks every escaped local
+                    // the copy may write as one code this check cannot read
+                    // may have written, so that a pointer the copy goes
+                    // through, `p` in `memcpy(*pp, ..)`, would no longer
+                    // follow what it names. Found while implementing.
                     let alone = match (dest, &written) {
                         (Some(Operand::Copy(dest)), Some(lands)) => {
-                            written_alone(lands, !lands_in_no_block, &value.points_to[dest.local])
+                            written_alone(value, dest.local, derefs(dest) + 1, lands)
+                                .filter(|_| lands_in_no_block)
                         }
                         _ => None,
                     };
+                    value.replaced(|_| true, |local| may_write[local], Writer::StoreOrCopy);
                     if let Some(at) = alone {
                         value.written_local(at);
                     }

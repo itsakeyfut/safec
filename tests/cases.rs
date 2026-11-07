@@ -1507,6 +1507,12 @@ cases! {
         // Mutation: ask nothing of a block beside the one local; this goes
         // silent.
         a_store_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same two, through two dereferences: the pointer the store
+        // goes through last is asked, not the one it starts from. Mutation:
+        // ask the base pointer's marks alone, and nothing of a block, below
+        // one dereference; both go silent.
+        a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An `int` stored through a pointer that may be the array cannot be
         // a write of its pointer elements (C17 6.5 p7). Mutation:
         // `replaced_by` drops the type from its write answer; this goes
