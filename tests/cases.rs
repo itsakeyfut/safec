@@ -517,9 +517,13 @@ cases! {
         a_block_left_unwritten_inside_a_test_of_its_pointer_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A write of part of a local kept whole leaves it possibly unwritten
         // (#826). See ADR-0073 rule 2. Mutation: a write of part writes the
-        // local whole, as before; this and the next three go silent.
+        // local whole, as before; this, the next, the copy below and the
+        // pointer local's go silent.
         a_char_buffer_written_at_its_first_element_copied_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_char_buffer_written_at_its_first_element_read_as_a_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // At a constant index past the first, doubted by #639's rule for a
+        // pointer moved off an array's start as well, so no mutation of this
+        // change alone silences it.
         a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_char_buffer_a_short_copy_wrote_read_as_a_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy of the buffer's whole length writes it whole. Mutation:
@@ -544,9 +548,10 @@ cases! {
         an_array_of_two_pointers_a_copy_of_one_wrote_read_at_the_second_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An array of pointers kept whole: a store writes one whole, and a
         // copy ending part way through one is not asked, since a read of
-        // such an array is asked only at its start. Mutation: put it in
-        // doubt for any write of part; the first is doubted. For a copy
-        // ending part way through a pointer; the second is.
+        // such an array is asked only at its start, `big[0]` here, which the
+        // copy wrote whole. Mutation: put it in doubt for any write of part;
+        // the first is doubted. For a copy ending part way through a
+        // pointer; the second is.
         an_array_of_many_pointers_written_at_one_element_and_read_there_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_array_of_many_pointers_a_copy_ended_part_way_through_one_wrote_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The cost: the pointer is shown not null only after the join that
