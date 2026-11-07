@@ -197,8 +197,8 @@ impl Allocations<'_> {
             // direct assignment had just been taught to drop.
             Rvalue::Binary { op, lhs, rhs } => {
                 let mut reached = built_from(
-                    *op,
-                    [lhs, rhs],
+                    Some(*op),
+                    &[lhs, rhs],
                     value,
                     |local| self.is_pointer(function, local),
                     |place| self.may_be_pointer(function, place),
@@ -218,11 +218,28 @@ impl Allocations<'_> {
             // it may be a pointer read out of memory, and says so. See
             // `Allocations::read_through`.
             Rvalue::Use(Operand::Copy(source)) => self.read_through(function, source, value),
-            // A constant, a unary operator, an address. None is a pointer
-            // this check follows to an allocation, so the target is given
-            // nothing: a write this check cannot follow is not evidence that
-            // the old contents are gone.
-            Rvalue::Use(Operand::Constant(_)) | Rvalue::Unary { .. } | Rvalue::Address(_) => {
+            // **A unary operator keeps what its operand reaches**, as a
+            // binary one with no pointer operand does, by the same function
+            // (#806). See `built::built_from`.
+            Rvalue::Unary { operand, .. } => {
+                let mut reached = built_from(
+                    None,
+                    &[operand],
+                    value,
+                    |local| self.is_pointer(function, local),
+                    |place| self.may_be_pointer(function, place),
+                    |place| self.reads_a_byte(function, place),
+                    |local, depth| self.reads_caller_memory(local, depth, value),
+                    |local| self.is_array(function, local),
+                );
+                reached.moved_by_arithmetic(None);
+                reached
+            }
+            // A constant, an address. Neither is a pointer this check
+            // follows to an allocation, so the target is given nothing: a
+            // write this check cannot follow is not evidence that the old
+            // contents are gone.
+            Rvalue::Use(Operand::Constant(_)) | Rvalue::Address(_) => {
                 Held::none(value.points_to.len())
             }
         }
@@ -2479,8 +2496,8 @@ impl Analysis for Allocations<'_> {
                     // held rather than clearing it and unioning the result.
                     Rvalue::Binary { op, lhs, rhs } => {
                         let mut reached = built_from(
-                            *op,
-                            [lhs, rhs],
+                            Some(*op),
+                            &[lhs, rhs],
                             value,
                             |local| self.is_pointer(function, local),
                             |place| self.may_be_pointer(function, place),
@@ -2507,10 +2524,30 @@ impl Analysis for Allocations<'_> {
                         let read = self.read_through(function, source, value);
                         value.replace(at, read);
                     }
-                    // A constant or a unary operator. Neither is a pointer this
-                    // check can follow: C17 6.5.3.3 gives unary `+`, `-` and
-                    // `~` arithmetic operands only, and `!` yields an `int`.
-                    Rvalue::Use(Operand::Constant(_)) | Rvalue::Unary { .. } => {
+                    // **A unary operator keeps what its operand reaches.** C17
+                    // 6.5.3.3 gives unary `+`, `-` and `~` arithmetic operands
+                    // only, and an integer can hold sites: one a call this
+                    // check cannot read returned holds what the call was
+                    // handed. A binary operation with no pointer operand keeps
+                    // them, by the same function; giving none here lost them
+                    // at `-i` (#806). An edge is given up on, as a move by an
+                    // unknown amount is. See `built::built_from`.
+                    Rvalue::Unary { operand, .. } => {
+                        let mut reached = built_from(
+                            None,
+                            &[operand],
+                            value,
+                            |local| self.is_pointer(function, local),
+                            |place| self.may_be_pointer(function, place),
+                            |place| self.reads_a_byte(function, place),
+                            |local, depth| self.reads_caller_memory(local, depth, value),
+                            |local| self.is_array(function, local),
+                        );
+                        reached.moved_by_arithmetic(None);
+                        value.replace(at, reached);
+                    }
+                    // A constant is not a pointer this check can follow.
+                    Rvalue::Use(Operand::Constant(_)) => {
                         value.replace(at, Held::none(value.points_to.len()));
                     }
                     // The address of a place is not an allocation this check

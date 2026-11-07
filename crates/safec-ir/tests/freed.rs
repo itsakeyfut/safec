@@ -15,7 +15,7 @@
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::{
     BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin, Place,
-    Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
+    Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::memory::{self, Kind, LostReason, Unproven};
 use safec_ir::source::{SourceMap, Span};
@@ -2255,6 +2255,95 @@ fn an_addition_of_two_integers_carries_what_both_hold() {
     assert_eq!(found[0].made, Some(names.at[0]));
     assert_eq!(found[1].kind, Kind::InteriorFree);
     assert_eq!(found[1].unproven, Some(Unproven::Offset));
+}
+
+/// `to = -of`, where `to` is a local or a place through a pointer.
+fn negated(to: Place, of: LocalId, at: Span, then: BlockId) -> Block {
+    Block {
+        elements: vec![Element::Assign(Operation {
+            place: to,
+            value: Rvalue::Unary {
+                op: UnOp::Neg,
+                operand: Operand::Copy(Place::local(of)),
+            },
+            origin: Origin::Written(at),
+        })],
+        terminator: Terminator::Goto(then),
+    }
+}
+
+/// A unary operator carries what its operand holds, as an addition of two
+/// integers does: `int n = malloc(..); int m = -n; free(n); free(m);` frees
+/// the one allocation there is twice. No C program reaches it, since `int n
+/// = p;` is refused; an integer a call this check cannot read returned is
+/// the shape it is for (#806). See `built::built_from`.
+///
+/// Mutation: give the assignment's `Rvalue::Unary` arm in
+/// `Allocations::element` `Held::none`, as it was; `m` reaches no site, the
+/// second free answers `Reached::Lost`, and this fails on the kind.
+#[test]
+fn a_unary_operator_carries_what_its_operand_holds() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let n = function.push_local(types.int);
+    let m = function.push_local(types.int);
+
+    let allocate = function.reserve_block();
+    let negate = function.reserve_block();
+    let release = function.reserve_block();
+    let again = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, n, names.at[0], negate));
+    function.fill_block(negate, negated(Place::local(m), n, names.at[1], release));
+    function.fill_block(release, free(&callees, n, names.at[2], again));
+    function.fill_block(
+        again,
+        after_the_statement(names.at[2], free(&callees, m, names.at[3], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[3], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found[0].kind, Kind::DoubleFree, "{found:?}");
+    assert_eq!(found[0].at, names.at[3]);
+    assert_eq!(found[0].made, Some(names.at[0]));
+}
+
+/// The same through a store, `*pp = -n;` with `pp` the address of `m`: the
+/// value a store puts down is built by the same rule as an assignment's.
+///
+/// Mutation: give the store's `Rvalue::Unary` arm in `Allocations::carried`
+/// `Held::none`, as it was; `m` reaches no site and this fails on the kind.
+#[test]
+fn a_unary_operator_stored_through_a_pointer_carries_what_its_operand_holds() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let n = function.push_local(types.int);
+    let m = function.push_local(types.int);
+    let pm = function.push_local(types.ptr);
+
+    let allocate = function.reserve_block();
+    let take = function.reserve_block();
+    let negate = function.reserve_block();
+    let release = function.reserve_block();
+    let again = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, n, names.at[0], take));
+    function.fill_block(take, address_of(pm, m, names.at[4], negate));
+    function.fill_block(negate, negated(deref(pm), n, names.at[1], release));
+    function.fill_block(release, free(&callees, n, names.at[2], again));
+    function.fill_block(
+        again,
+        after_the_statement(names.at[2], free(&callees, m, names.at[3], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[3], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found[0].kind, Kind::DoubleFree, "{found:?}");
+    assert_eq!(found[0].at, names.at[3]);
 }
 
 /// The address of a dereference names no local a write through it lands in.
