@@ -1742,6 +1742,7 @@ pub(crate) fn null_at_terminators(
     let solution = solve(&analysis, function, cfg);
 
     let mut null = vec![vec![false; function.locals().len()]; function.blocks().len()];
+    let mut non_null = null.clone();
 
     for &id in cfg.order() {
         // What a `None` says is that no execution reaches this block, and the
@@ -1808,6 +1809,11 @@ pub(crate) fn null_at_terminators(
             block.elements.last(),
             Some(Element::ArgumentsEvaluated { .. })
         );
+        // **And at the end of a full expression**, for not null alone: every
+        // side effect of it is complete there (C17 6.8 p4), which is where a
+        // `return` ends its block. The free exemption asks at a call and
+        // reads only `null`, which keeps its condition (#828).
+        let ended = ordered || matches!(block.elements.last(), Some(Element::Sequenced { .. }));
 
         // Before the terminator's own transfer, which is the position
         // [`findings`] reports from and the position the free is reached at.
@@ -1833,10 +1839,21 @@ pub(crate) fn null_at_terminators(
             null[id.index()][local.index()] = ordered
                 && analysis.is_pointer(function, local)
                 && analysis.known(&known.of, local) == Nullness::Null;
+            // **And not null, by the same conditions but where it ends**, for a reader
+            // that adds a doubt where it holds and so is wrong only loudly:
+            // the memory check doubts a block possibly unwritten where it is
+            // returned only where the pointer is not null there (#828). See
+            // ADR-0073 rule 3.
+            non_null[id.index()][local.index()] = ended
+                && analysis.is_pointer(function, local)
+                && analysis.known(&known.of, local) == Nullness::NonNull;
         }
     }
 
-    NullAtTerminators { rows: null }
+    NullAtTerminators {
+        rows: null,
+        non_null,
+    }
 }
 
 /// What [`null_at_terminators`] answered, keyed by the two things it is about.
@@ -1859,6 +1876,14 @@ pub(crate) struct NullAtTerminators {
     /// One row per block, one `bool` per local, both in the order the function
     /// hands its ids out.
     rows: Vec<Vec<bool>>,
+    /// The same, for established not null.
+    ///
+    /// **Its reader is the other way round from `rows`'s.** A free exempted
+    /// where `rows` says null is a report taken away, so a wrong `true` there
+    /// is a silence; a `return` doubted where this says not null is a report
+    /// added, so a wrong `true` here is a doubt too many, and a wrong `false`
+    /// is the silence there was before it (#828).
+    non_null: Vec<Vec<bool>>,
 }
 
 impl NullAtTerminators {
@@ -1872,6 +1897,16 @@ impl NullAtTerminators {
     /// rather than an input's.
     pub(crate) fn established(&self, block: BlockId, local: LocalId) -> bool {
         self.rows[block.index()][local.index()]
+    }
+
+    /// Whether this check established that `local` is not null where
+    /// `block`'s terminator runs.
+    ///
+    /// # Panics
+    ///
+    /// As [`Self::established`] does.
+    pub(crate) fn established_non_null(&self, block: BlockId, local: LocalId) -> bool {
+        self.non_null[block.index()][local.index()]
     }
 }
 

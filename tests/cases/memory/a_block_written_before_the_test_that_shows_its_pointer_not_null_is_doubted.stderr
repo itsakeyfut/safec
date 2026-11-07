@@ -1,0 +1,10 @@
+error[SC0411]: `b` points at memory that may not have been written, and the caller may read pointers out of it
+   ╭─[ a_block_written_before_the_test_that_shows_its_pointer_not_null_is_doubted.c:6:5 ]
+   │
+ 6 │     return b;
+   │     ────┬────  
+   │         ╰────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it on every path before returning it, or allocate it with `calloc`

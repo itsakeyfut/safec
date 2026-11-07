@@ -485,8 +485,19 @@ cases! {
         a_block_written_before_it_is_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written on the path where its allocation succeeded, nothing: the
         // block is possibly unwritten only through the path where there is
-        // none. Mutation: doubt a block possibly unwritten; this is doubted.
+        // none, and the pointer is not shown not null at the `return`.
+        // Mutation: answer not null everywhere; this is doubted.
         a_block_written_on_the_path_its_allocation_succeeded_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Left unwritten on one arm where the allocation succeeded, and the
+        // pointer not null at the `return`: possibly unwritten is doubted
+        // there, in words of its own (#828). See ADR-0073 rule 3. Mutation:
+        // ask only a block certainly unwritten; this and the next go silent.
+        a_block_left_unwritten_on_one_arm_where_its_allocation_succeeded_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_written_only_by_a_loop_that_may_not_run_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The cost: the pointer is shown not null only after the join that
+        // left the block possibly unwritten, so a block every path wrote is
+        // doubted.
+        a_block_written_before_the_test_that_shows_its_pointer_not_null_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Returned as a table of integers, nothing: the caller reads no
         // pointer out of it. Mutation: doubt whatever the return type; this
         // is doubted.

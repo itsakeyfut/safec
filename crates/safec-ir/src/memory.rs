@@ -323,6 +323,16 @@ pub enum Kind {
     /// `Unknown`**, as [`Kind::CopiedUnwritten`] is. `local` is the local
     /// returned. See ADR-0073 rule 3.
     ReturnedUnwritten,
+    /// `int **f(int c, int *p) { int **b = malloc(8); if (!b) return 0; if (c)
+    /// *b = p; return b; }`
+    ///
+    /// A `return` of a pointer to a block that may be unwritten, where the
+    /// pointer is established not null at the `return`, so the path that left
+    /// it unwritten is one where the allocation succeeded. Apart from
+    /// [`Kind::ReturnedUnwritten`] because "nothing wrote" is false of a block
+    /// written on some path. **Always `Unknown`**, as that is. `local` is the
+    /// local returned. See ADR-0073 rule 3 (#828).
+    ReturnedMaybeUnwritten,
 }
 
 /// Where a pointer leaves the function it was followed in.
@@ -881,6 +891,8 @@ fn findings_within(
                     function,
                     element,
                     &known,
+                    &null,
+                    id,
                 );
                 // Just before what is pending is cleared, so that a free in
                 // the same expression has reported first, with its label.

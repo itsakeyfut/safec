@@ -189,7 +189,10 @@ than superseded.
   which parts were written (#826).
 * Bad, because rule 3 doubts `if (b) *b = p; if (!b) return 0; return b;`,
   where the pointer is shown not null only after the join that made the block
-  possibly unwritten (#828).
+  possibly unwritten (#828), and a block written in a loop's first turn under
+  a test this check cannot evaluate, measured on one corpus case,
+  `a_box_filled_on_one_turn_and_freed_through_on_the_next_returned_is_doubted`,
+  which gains the doubt beside the report it held.
 * Bad, because rule 2 turns a case written to hold the old boundary, an
   `int` made again in a loop and read as a pointer, into a report, which it now
   is, renamed
