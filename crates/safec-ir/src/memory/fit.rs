@@ -100,7 +100,9 @@ pub(super) fn fits(
     // doubted every `**pi`, since that address is what escapes it. An access
     // through the local itself still doubts all three, which costs a false
     // report and not a silence. See ADR-0060.
-    if doubt_unseen_writes && (held.lost || held.foreign || known.escaped[local]) {
+    if doubt_unseen_writes
+        && (held.beyond().lost() || held.beyond().foreign() || known.escaped[local])
+    {
         return Some(Fit::Unknown);
     }
     // **What a call may have written is no wider than the local was handed
@@ -109,7 +111,7 @@ pub(super) fn fits(
     // bound is kept: `if (c) put(pv, &c);` with `put` taking `void **` left
     // `v` holding nothing believed and nothing named, and a read through its
     // address believed a whole `int` (#632).
-    if held.foreign && known.handed_at_most[local].is_some_and(|most| most < width) {
+    if held.beyond().foreign() && known.handed_at_most[local].is_some_and(|most| most < width) {
         return Some(Fit::Unknown);
     }
     let sites = held
@@ -146,7 +148,7 @@ pub(super) fn fits(
             Fit::Unknown
         });
     }
-    if held.loaded || held.offset != Offset::Zero {
+    if held.beyond().loaded() || held.offset != Offset::Zero {
         return Some(Fit::Unknown);
     }
     if held.may_be_a_locals_address() && held.inner_address {
@@ -576,7 +578,7 @@ mod tests {
             let held = &mut known.points_to[p];
             held.name_local(LocalIdx::of(c));
             held.writes_elsewhere = false;
-            held.loaded = true;
+            held.read_out_of_memory();
             held.believed = Some(4);
             assert!(matches!(
                 fits(analysis, function, p, 4, &known, false),

@@ -626,7 +626,7 @@ pub(super) struct Held {
     /// address had escaped when a write through a pointer this check cannot
     /// pin down wrote its type, which is ADR-0031 and is the same sentence
     /// with the writer inside this function.
-    pub(super) lost: bool,
+    lost: bool,
     /// Where the allocation this local held was freed, when the free could not
     /// say which member of the set it was.
     ///
@@ -680,7 +680,7 @@ pub(super) struct Held {
     /// It says that the value was read out of memory and not from where, so a
     /// write through it is unplaced for that part: what it carries is
     /// exposed. See ADR-0044.
-    pub(super) loaded: bool,
+    loaded: bool,
     /// The locals code this check cannot read could name where this value
     /// was read out of memory, or where such code may have written it
     /// ([`Held::foreign`], #661), what
@@ -707,7 +707,7 @@ pub(super) struct Held {
     /// not report an output parameter. So `get(&u)` sets this instead, and
     /// the report never reads it. A write through such a local exposes what
     /// it carries, as one through a load does. See ADR-0044.
-    pub(super) foreign: bool,
+    foreign: bool,
     /// Whether this was read out of an allocation whose cell is `stale_read`, or
     /// otherwise lost an allocation that may be gone, and may be one.
     ///
@@ -725,7 +725,7 @@ pub(super) struct Held {
     /// A store of a lost value marking its container doubted every walk of
     /// that list, measured; a store of this one marks it, so a doubted load
     /// copied into another allocation stays doubted. See ADR-0045.
-    pub(super) stale_read: bool,
+    stale_read: bool,
     /// Whether this was read out of an allocation whose cell is
     /// `unreplaced_read`, which may
     /// hold a slot a call this check cannot read could not replace, or built
@@ -736,7 +736,7 @@ pub(super) struct Held {
     /// return *d;` after `c = *h;`, a read of a proved free. This one is read
     /// by [`Known::handed_below`](super::known::Known::handed_below) alone.
     /// See ADR-0047.
-    pub(super) unreplaced_read: bool,
+    unreplaced_read: bool,
     /// Whether this was read out of an allocation whose cell is `lost`,
     /// which
     /// may hold a value this check lost, or built from such a value.
@@ -749,7 +749,7 @@ pub(super) struct Held {
     /// `*r` in silence, since `r` was read out before the free (#505). A
     /// store of it marks where it lands, as a store of a lost value does, so
     /// a copy into another allocation carries it. See ADR-0045.
-    pub(super) lost_read: bool,
+    lost_read: bool,
     /// Whether this was read out of memory a pointer parameter points at, so
     /// may be what the caller stored there.
     ///
@@ -764,7 +764,7 @@ pub(super) struct Held {
     /// it, which is ADR-0040's reason for exposing the parameter itself, one
     /// level in; and its cost, a read after any such call doubted, is the same
     /// one level in. See ADR-0040.
-    pub(super) from_caller: bool,
+    from_caller: bool,
     /// The site a `realloc` returned, where this local holds exactly that
     /// value: the call's destination and plain copies of it.
     ///
@@ -1111,6 +1111,56 @@ impl Held {
         } else {
             Beyond::Nothing
         }
+    }
+
+    // **The marks are set by event, not by name**: each method below sets
+    // every mark its event sets, so a writer outside this file cannot set
+    // one of a pair and forget the other. See [`Beyond`] for why the marks
+    // are private here.
+
+    /// Read out of memory: what a cell records of where it was read from
+    /// may be missing members. Sets [`Held::loaded`].
+    pub(super) fn read_out_of_memory(&mut self) {
+        self.loaded = true;
+    }
+
+    /// May hold an allocation this check can no longer name: written past a
+    /// local's end, written by a call this check cannot read through an
+    /// escaped local holding a site, or the result of such a call where a
+    /// lost value was exposed. Sets [`Held::lost`].
+    pub(super) fn lost_its_allocation(&mut self) {
+        self.lost = true;
+    }
+
+    /// Lost, and what it holds may be gone: read through a pointer to a
+    /// lost local, a caller's or a callee's value at a call that may free
+    /// it, or a lost value when one is freed. Sets [`Held::lost`] and
+    /// [`Held::stale_read`].
+    pub(super) fn lost_and_may_be_gone(&mut self) {
+        self.lost = true;
+        self.stale_read = true;
+    }
+
+    /// Lost a site whose allocation is not live. Sets [`Held::stale_read`].
+    pub(super) fn lost_a_site_that_may_be_gone(&mut self) {
+        self.stale_read = true;
+    }
+
+    /// Read out of memory a lost value may have been stored in. Sets
+    /// [`Held::lost_read`].
+    pub(super) fn read_where_a_lost_value_may_be(&mut self) {
+        self.lost_read = true;
+    }
+
+    /// Handed over by a caller or a callee. Sets [`Held::from_caller`].
+    pub(super) fn handed_over(&mut self) {
+        self.from_caller = true;
+    }
+
+    /// Written through its address by a call this check cannot read. Sets
+    /// [`Held::foreign`].
+    pub(super) fn written_by_unknown_code(&mut self) {
+        self.foreign = true;
     }
 
     /// Whether this local may hold a local's address, on some path.
@@ -2181,10 +2231,18 @@ pub(super) struct Marks {
 /// [`Beyond::unrecorded_address`] asks; `from_caller`, `stale_read`,
 /// `lost_read` and `unreplaced_read` say where what it names came from, and
 /// [`Beyond::is_nothing`] asks whether any of the seven is set, for a reader
-/// that has to know the value names exactly its sites. Every place that reads
-/// a mark names every mark, `_` for one it does not read, so a mark added is
-/// `error[E0063]` where [`Held::beyond`] builds it and `error[E0027]` where it
-/// is read. See ADR-0063.
+/// that has to know the value names exactly its sites. Every question here
+/// that asks more than one mark names every mark, `_` for one it does not
+/// read, so a mark added is `error[E0063]` where [`Held::beyond`] builds it
+/// and `error[E0027]` where it is read. See ADR-0063.
+///
+/// **The marks are private to this file**, and this is the only way to read
+/// one elsewhere: naming `held.foreign` from `transfer.rs` is `error[E0616]`.
+/// Five readers once each asked whether a value may be unrecorded with
+/// `lost` and `loaded` and not `foreign`, each composing its own subset
+/// (f46b9f9c); a question asked here is written once and read by name.
+/// [`Held`]'s setters are named for the event that sets a mark, for the
+/// same reason.
 pub(super) enum Beyond {
     /// It names exactly what its sites and edges say.
     Nothing,
@@ -2221,6 +2279,63 @@ impl Unrecorded {
 }
 
 impl Beyond {
+    /// [`Held::lost`]: this check stopped following the value.
+    pub(super) fn lost(&self) -> bool {
+        matches!(self, Beyond::Unrecorded(Unrecorded { lost: true, .. }))
+    }
+
+    /// [`Held::loaded`]: the value was read out of memory.
+    pub(super) fn loaded(&self) -> bool {
+        matches!(self, Beyond::Unrecorded(Unrecorded { loaded: true, .. }))
+    }
+
+    /// [`Held::foreign`]: a call this check cannot read wrote the value.
+    pub(super) fn foreign(&self) -> bool {
+        matches!(self, Beyond::Unrecorded(Unrecorded { foreign: true, .. }))
+    }
+
+    /// [`Held::from_caller`]: a caller or a callee handed the value over.
+    pub(super) fn is_from_caller(&self) -> bool {
+        matches!(
+            self,
+            Beyond::Unrecorded(Unrecorded {
+                from_caller: true,
+                ..
+            })
+        )
+    }
+
+    /// [`Held::unreplaced_read`]: the value may be a slot a call could not
+    /// replace.
+    pub(super) fn unreplaced_read(&self) -> bool {
+        matches!(
+            self,
+            Beyond::Unrecorded(Unrecorded {
+                unreplaced_read: true,
+                ..
+            })
+        )
+    }
+
+    /// Whether the value may be a lost one: lost, or read out of memory a
+    /// lost value may have been stored in. Asked by
+    /// `Known::lost_may_be_gone`, which makes such a value gone at a free,
+    /// and by what a call is handed, where it may free one.
+    pub(super) fn may_hold_a_lost_value(&self) -> bool {
+        match self {
+            Beyond::Nothing => false,
+            Beyond::Unrecorded(Unrecorded {
+                lost,
+                loaded: _,
+                foreign: _,
+                from_caller: _,
+                stale_read: _,
+                lost_read,
+                unreplaced_read: _,
+            }) => *lost || *lost_read,
+        }
+    }
+
     /// Whether the value names exactly its sites and edges.
     pub(super) fn is_nothing(&self) -> bool {
         match self {

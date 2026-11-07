@@ -150,7 +150,9 @@ pub(super) fn built_from(
         }
         Operand::Constant(_) => false,
     });
-    reached.loaded |= read_here;
+    if read_here {
+        reached.read_out_of_memory();
+    }
     // As of the read, as `read_through` records it, and only for a read made
     // here: an operand read earlier carries its own, and `t + 1` after
     // `*b = m;` is still `t`. See `Held::named_at_read`.
