@@ -497,6 +497,14 @@ cases! {
         // Through a conditional, which no local names, in the words that
         // name none. Mutation: change those words; this fails.
         a_block_left_unwritten_on_one_arm_returned_through_a_conditional_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // From a scope that declares a local, whose block ends in that
+        // local's lifetime after the full expression; and from the scope of
+        // the returned pointer itself, which ends that pointer's. Mutation:
+        // answer not null only where the block's last element ends a full
+        // expression; the first goes silent. Ask the local returned rather
+        // than the return place; the second goes silent.
+        a_block_left_unwritten_returned_from_a_scope_that_declares_a_local_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_left_unwritten_returned_from_the_scope_of_its_own_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The cost: the pointer is shown not null only after the join that
         // left the block possibly unwritten, so a block every path wrote is
         // doubted.

@@ -1436,8 +1436,11 @@ fn report_returned_unwritten(
     // possibly unwritten was left so where it succeeded (#828). A wrong
     // answer from the nullability check is a doubt too many, never one too
     // few. See `NullAtTerminators::established_non_null`.
-    let possibly = !certainly
-        && null.established_non_null(block, place.local)
+    //
+    // **Asked of the value returned**, the return place, rather than of the
+    // local it was copied out of, whose lifetime may end with the scope the
+    // `return` leaves and take what was known of it along. Found by review.
+    let possibly = null.established_non_null(block, function.return_place())
         && known
             .sites_of(place.local)
             .any(|site| known.init[site].may_be_unwritten());

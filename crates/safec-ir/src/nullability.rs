@@ -1811,9 +1811,20 @@ pub(crate) fn null_at_terminators(
         );
         // **And at the end of a full expression**, for not null alone: every
         // side effect of it is complete there (C17 6.8 p4), which is where a
-        // `return` ends its block. The free exemption asks at a call and
-        // reads only `null`, which keeps its condition (#828).
-        let ended = ordered || matches!(block.elements.last(), Some(Element::Sequenced { .. }));
+        // `return` ends its block, before the lifetimes that end with the
+        // scope it leaves: `{ int k; ... return b; }` ends `Sequenced`, then
+        // `StorageDead`. Found by review. The free exemption asks at a call
+        // and reads only `null`, which keeps its condition (#828). Its only
+        // reader asks at a `return`, which always ends a full expression, so
+        // no case tells this condition from none; it is here so that a
+        // reader asking elsewhere is not handed an answer from mid-expression.
+        let ended = matches!(
+            block.elements.iter().rev().find(|element| !matches!(
+                element,
+                Element::StorageDead { .. } | Element::StorageLive { .. }
+            )),
+            Some(Element::Sequenced { .. })
+        );
 
         // Before the terminator's own transfer, which is the position
         // [`findings`] reports from and the position the free is reached at.
