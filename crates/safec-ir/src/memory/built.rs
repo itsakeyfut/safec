@@ -6,7 +6,7 @@ use crate::ir::{BinOp, Function, LocalId, Operand, Place, TranslationUnit, Ty};
 
 use super::allocations::innermost_element;
 use super::index::{Idx, LocalIdx, Site, Table};
-use super::known::{ArrayWrite, Known, Writer};
+use super::known::{ArrayWrite, Known, WrittenBy};
 use super::parts::{Held, Init, Inits, Offset, Reached};
 use super::store::written_alone;
 use crate::reads::derefs;
@@ -294,7 +294,7 @@ pub(super) fn replaced_by(
     // let a read of `m` or `m[1]` nothing wrote go silent. Found by review.
     // **It writes a local for certain only where it lands there alone**,
     // through a pointer that follows what it names (`store::written_alone`),
-    // and is otherwise a may-write, `Writer::StoreOrCopy`: it is no call, and
+    // and is otherwise a may-write, `WrittenBy::StoreOrCopy`: it is no call, and
     // borrowing a call's belief that it writes what it reaches left a
     // pointer read out of a caller's memory, naming one local and landing
     // elsewhere, taken as certain (#803). A pointer read out of memory this
@@ -305,8 +305,8 @@ pub(super) fn replaced_by(
         .filter(|&local| lands[local] && may_hold[local])
         .collect();
     let alone = written_alone(value, place.local, derefs(place), &landing);
-    let one_place = alone.is_some();
-    let before: Vec<(LocalIdx, Init, Inits)> = if one_place {
+    let proved_alone = alone.is_some();
+    let before: Vec<(LocalIdx, Init, Inits)> = if proved_alone {
         Vec::new()
     } else {
         landing
@@ -318,7 +318,7 @@ pub(super) fn replaced_by(
     value.replaced(
         |local| may_hold[local],
         |local| may_hold[local] && lands[local],
-        Writer::StoreOrCopy,
+        WrittenBy::StoreOrCopy,
     );
     if let Some(at) = alone {
         value.written_local(at);

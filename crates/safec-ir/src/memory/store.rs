@@ -266,8 +266,8 @@ impl Strong {
 /// A write of exactly one local, on every path that reaches it, and of all of
 /// it as far as the door can tell: a library copy of a length this check
 /// cannot read is taken as whole, as ADR-0073 rule 2 takes it, and a write of
-/// part is answered apart by `built::write_effects`. Found by review.
-/// The token is the one fact that lets the unwritten belief say a local
+/// part is answered apart by `built::write_effects` (found by review). The
+/// token is the one fact that lets the unwritten belief say a local
 /// was written for certain, [`Known::written_local`], as [`Certain`] is for a
 /// block. Only this module makes one, since its field is private here: from a
 /// [`Strong`], the local an assignment or a call's result replaces, or by
@@ -296,7 +296,7 @@ impl From<Strong> for WrittenLocal {
 /// lands in, where it lands there alone: exactly one local target, and every
 /// pointer the write goes through last naming no allocation beside it and
 /// holding nothing this check did not follow,
-/// [`Beyond::follows_what_it_names`](super::parts::Beyond::follows_what_it_names).
+/// [`Beyond::believed_to_reach_only_its_edges`](super::parts::Beyond::believed_to_reach_only_its_edges).
 /// **Asked here of what it finds, not handed premises**: given the base
 /// pointer's marks for a write two dereferences down, a store landing
 /// through a pointer read out of a caller's memory, or one that may be a
@@ -313,13 +313,16 @@ pub(super) fn written_alone(
     let [local] = targets else {
         return None;
     };
-    let follows = |held: &Held| held.beyond().follows_what_it_names() && !held.holds_a_site();
+    let follows =
+        |held: &Held| held.beyond().believed_to_reach_only_its_edges() && !held.holds_a_site();
     let alone = match depth {
         0 => false,
         1 => follows(&value.points_to[pointer]),
         _ => {
             let (sites, locals) = value.levels_below(pointer, depth - 2);
-            value.points_to[pointer].beyond().follows_what_it_names()
+            value.points_to[pointer]
+                .beyond()
+                .believed_to_reach_only_its_edges()
                 && sites.is_empty()
                 && !locals.is_empty()
                 && locals

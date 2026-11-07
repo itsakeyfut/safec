@@ -1495,8 +1495,9 @@ cases! {
         // as well, so the same mutation leaves the next case reported.)
         a_copy_that_may_land_in_either_of_two_locals_may_have_missed_each: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store through a pointer read out of the caller's memory, which
-        // names one local and may land elsewhere. Mutation: ask the pointer
-        // nothing of what it may hold beyond its edges; this goes silent.
+        // names one local and may land elsewhere. Mutation: leave
+        // `from_caller` out of `Beyond::believed_to_reach_only_its_edges`; this goes
+        // silent. The other four marks there have no case of their own.
         a_store_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local_it_names: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read out of an allocation this function recorded all of, the one
         // local it names is written, as a block's one container is (#726).

@@ -2065,7 +2065,7 @@ impl Known {
     /// What a call this check cannot read is believed to have done to a local
     /// it may reach: written it, the output-parameter idiom (#782). A belief
     /// at the boundary, as [`Self::believed_written_by_unknown_code`] is for
-    /// a site, and asked by [`Self::replaced`] for [`Writer::Call`] alone. See
+    /// a site, and asked by [`Self::replaced`] for [`WrittenBy::Call`] alone. See
     /// ADR-0074 rule 3.
     fn believed_written_local_by_unknown_code(&mut self, local: LocalIdx) {
         self.init[local] = Init::Written;
@@ -2593,7 +2593,7 @@ impl Known {
         &mut self,
         may_hold: impl Fn(LocalIdx) -> bool,
         may_write: impl Fn(LocalIdx) -> bool,
-        writer: Writer,
+        writer: WrittenBy,
     ) {
         let named_now = self.locals_named_by_unknown_code();
         for local in self.escaped.indices() {
@@ -2639,8 +2639,8 @@ impl Known {
             // call's belief wrote it for certain (#803). See ADR-0074.
             if may_write(local) && self.escaped[local] {
                 match writer {
-                    Writer::Call => self.believed_written_local_by_unknown_code(local),
-                    Writer::StoreOrCopy => {
+                    WrittenBy::Call => self.believed_written_local_by_unknown_code(local),
+                    WrittenBy::StoreOrCopy => {
                         self.init[local].may_write();
                         self.element_init[local].may_write_all();
                     }
@@ -2660,7 +2660,7 @@ struct Closed {
 /// Who [`Known::replaced`] answers for, matched without a default arm so
 /// that a writer added answers what it does to a local it may reach.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Writer {
+pub(super) enum WrittenBy {
     /// A call this check cannot read, believed to write what it may reach
     /// (#782).
     Call,

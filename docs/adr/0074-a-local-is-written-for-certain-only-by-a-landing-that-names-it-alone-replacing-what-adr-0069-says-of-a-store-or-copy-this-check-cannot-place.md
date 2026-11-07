@@ -78,7 +78,12 @@ for it, each a read of a pointer nothing wrote:
 ### Confirmation
 
 Filled by #803's pull request: the build failure that calling `written_local`
-with a bare `LocalIdx` is, and the cases and mutations of each rule.
+with a bare `LocalIdx` is, and the cases and mutations of each rule. Of rule
+4's five marks only `from_caller` is held by a case; leaving out any of the
+other four fails nothing, since where each is set the belief for a call this
+check cannot read has already written the local. They are kept by the
+author's decision, a mark kept being at worst a doubt too many. Rule 5 has no
+case, since no C program reaches it.
 
 ### Consequences
 

@@ -14,7 +14,7 @@ use crate::source::Span;
 use super::allocations::Allocations;
 use super::built::replaced_by;
 use super::index::{Idx, LocalIdx, Site, Table};
-use super::known::{Known, Writer};
+use super::known::{Known, WrittenBy};
 use super::parts::{Extent, Init, Offset};
 use super::store::{Certain, Landing, StoreKind, Strong, written_alone};
 use super::transfer::CopiedPointers;
@@ -593,7 +593,7 @@ impl Allocations<'_> {
                         }
                         _ => None,
                     };
-                    value.replaced(|_| true, |local| may_write[local], Writer::StoreOrCopy);
+                    value.replaced(|_| true, |local| may_write[local], WrittenBy::StoreOrCopy);
                     if let Some(at) = alone {
                         value.written_local(at);
                     }

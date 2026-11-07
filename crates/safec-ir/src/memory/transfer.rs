@@ -18,7 +18,7 @@ use super::built::{built_from, named, replaced_by};
 use super::fit::{Fit, fits, slots_from, slots_leaving};
 use super::index::{Idx, Loc, LocalIdx, Site, Table};
 use super::init::Wrote;
-use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, Writer};
+use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
     AS_TYPED, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, Offset, PendingRead,
     Reached, Read, Realloced, SiteState, bounded,
@@ -3531,7 +3531,7 @@ impl Analysis for Allocations<'_> {
                     value.exposed_in_part[*local] = true;
                 }
                 let pending = value.array_writes_before(partial);
-                value.replaced(|_| true, |local| may_write[local], Writer::Call);
+                value.replaced(|_| true, |local| may_write[local], WrittenBy::Call);
                 value.array_writes_after(pending);
                 // **And as what each local it reaches was handed**, which is
                 // the most its body can be asked to have written there: a
