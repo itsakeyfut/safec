@@ -106,10 +106,10 @@ and Cons below.
 
 ### Confirmation
 
-Each of #821, #822, #823, #818 and #830 added its rule's cases and the
-mutation that fails each here. Proposed until #828 and #826 have added theirs,
-the last of the rules as amended on #824, so that it is accepted once rather
-than superseded.
+Each of #821, #822, #823, #818, #830 and #828 added its rule's cases and the
+mutation that fails each here. Proposed until #826 has added its own, the last
+of the rules as amended on #824, so that it is accepted once rather than
+superseded.
 
 1. `library::misdeclares_library` answering `false` fails
    `a_library_name_declared_with_its_parameters_swapped_is_refused`, the
@@ -151,6 +151,21 @@ than superseded.
    `a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted`; and
    asking the return type's pointee without looking through an array fails
    `a_block_of_arrays_of_pointers_nothing_wrote_returned_is_doubted`.
+   Never asking a block possibly unwritten fails
+   `a_block_left_unwritten_on_one_arm_where_its_allocation_succeeded_is_doubted`,
+   `a_block_written_only_by_a_loop_that_may_not_run_is_doubted`,
+   `a_block_written_before_the_test_that_shows_its_pointer_not_null_is_doubted`
+   and `a_box_filled_on_one_turn_and_freed_through_on_the_next_returned_is_doubted`;
+   `NullAtTerminators::established_non_null` answering `true` everywhere fails
+   `a_block_written_on_the_path_its_allocation_succeeded_is_not_doubted`;
+   answering it only where a block's last element ends a full expression fails
+   `a_block_left_unwritten_returned_from_a_scope_that_declares_a_local_is_doubted`,
+   and asking it of the local returned rather than the return place fails
+   `a_block_left_unwritten_returned_from_the_scope_of_its_own_pointer_is_doubted`;
+   asking every block, or the first alone, fails
+   `a_pointer_that_may_name_a_block_left_unwritten_second_returned_is_doubted`
+   or its `first` counterpart; and the two kinds' words exchanged fail those
+   cases and #823's.
 4. `Allocations::first_level_holds_a_pointer` never answering `true` fails
    `a_copy_of_an_int_into_a_void_pointer_pointer_behind_a_void_pointer_is_asked`
    and the five cases after it; answering `true` for every pointer type fails
