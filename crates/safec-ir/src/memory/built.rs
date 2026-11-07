@@ -11,7 +11,8 @@ use super::parts::{Held, Init, Inits, Offset, Reached};
 use super::store::written_alone;
 use crate::reads::derefs;
 
-/// What the operands of a binary operation build.
+/// What the operands of an operation build: a binary one's two, `op` its
+/// operator, or a unary one's one, `op` `None` (#806).
 ///
 /// **Where one operand is a pointer, it is the only one that contributed.**
 /// C17 6.5.6 p8 keeps the result of pointer arithmetic inside the object the
@@ -38,8 +39,8 @@ use crate::reads::derefs;
 /// module has no handle on; bundling them would be a type with one caller.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn built_from(
-    op: BinOp,
-    operands: [&Operand; 2],
+    op: Option<BinOp>,
+    operands: &[&Operand],
     value: &Known,
     is_pointer: impl Fn(LocalId) -> bool,
     may_be_pointer: impl Fn(&Place) -> bool,
@@ -66,10 +67,12 @@ pub(super) fn built_from(
     // local that reaches no site is reported by nothing at all.
     //
     // **`i + j` reaches this constantly**, and what is rare is one of those
-    // integers holding an allocation. It takes a program C forbids, which this
-    // compiler does not yet refuse: `int i = p;` is a constraint violation
-    // under C17 6.5.16.1 p1 and #154 is the check that is missing. See
-    // ADR-0030, which measures what this branch is worth on such a program.
+    // integers holding an allocation. `int i = p;` is a constraint violation
+    // under C17 6.5.16.1 p1 and is refused (`SC0302`), so what reaches this
+    // with sites is an integer a call this check cannot read returned, which
+    // holds what the call was handed. **A unary operator is the same case**
+    // with one operand, `-i`, and keeps them too (#806). See ADR-0030, which
+    // measures what this branch is worth on such a program.
     // **A load that may be a pointer is the pointer operand**, so the
     // integers beside it contribute nothing, as below for a local pointer:
     // `*tab + i` stays inside what `*tab` points into, whatever `i` holds,
@@ -186,16 +189,22 @@ pub(super) fn built_from(
 ///   `r` back at the start, and nothing here carries a distance to know it.
 ///
 /// Every other operator answers `Unknown`, a `*` included: C17 6.5.5 p2 gives
-/// it arithmetic operands only, and a hand-built IR can hold one anyway. See
+/// it arithmetic operands only, and a hand-built IR can hold one anyway. So
+/// does a unary operator, `op` `None`: none moves a pointer by a known amount. See
 /// ADR-0036.
-fn offset_of(op: BinOp, operands: [&Operand; 2], followed: &[LocalIdx], value: &Known) -> Offset {
+fn offset_of(
+    op: Option<BinOp>,
+    operands: &[&Operand],
+    followed: &[LocalIdx],
+    value: &Known,
+) -> Offset {
     let [one] = followed[..] else {
         return Offset::Unknown;
     };
 
     let moved = match (op, operands) {
-        (BinOp::Add | BinOp::Sub, [Operand::Copy(_), Operand::Constant(by)])
-        | (BinOp::Add, [Operand::Constant(by), Operand::Copy(_)]) => *by != 0,
+        (Some(BinOp::Add | BinOp::Sub), [Operand::Copy(_), Operand::Constant(by)])
+        | (Some(BinOp::Add), [Operand::Constant(by), Operand::Copy(_)]) => *by != 0,
         _ => false,
     };
 
