@@ -2247,6 +2247,29 @@ impl Beyond {
             }) => *lost || *loaded || *foreign,
         }
     }
+
+    /// Whether a write through the value lands only where its edges say: none
+    /// of the marks that say it may hold what this check did not follow,
+    /// lost, written by code this check cannot read, read out of a caller's
+    /// memory, or read where a free or a lost value may have left something.
+    /// **Not `loaded`**: a pointer read out of memory this function recorded
+    /// all of is believed to reach what the record says, as a block's one
+    /// container is (#726). What a write of a local for certain asks,
+    /// `store::written_alone`. See ADR-0074 rule 4.
+    pub(super) fn follows_what_it_names(&self) -> bool {
+        match self {
+            Beyond::Nothing => true,
+            Beyond::Unrecorded(Unrecorded {
+                lost,
+                loaded: _,
+                foreign,
+                from_caller,
+                stale_read,
+                lost_read,
+                unreplaced_read: _,
+            }) => !(*lost || *foreign || *from_caller || *stale_read || *lost_read),
+        }
+    }
 }
 
 #[cfg(test)]

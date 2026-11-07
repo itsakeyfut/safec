@@ -263,6 +263,49 @@ impl Strong {
     }
 }
 
+/// A write of exactly one local, every byte of what it lands on, on every path
+/// that reaches it: the one fact that lets the unwritten belief say a local
+/// was written for certain, [`Known::written_local`], as [`Certain`] is for a
+/// block. Only this module makes one, since its field is private here: from a
+/// [`Strong`], the local an assignment or a call's result replaces, or by
+/// [`written_alone`]. A door that has not proved its one local has
+/// `Init::may_write`, and handing [`Known::written_local`] a bare `LocalIdx`
+/// is `error[E0308]`. A store or a copy that may have missed a local once
+/// borrowed the belief for a call this check cannot read and wrote it for
+/// certain (#803). See ADR-0074.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct WrittenLocal(LocalIdx);
+
+impl WrittenLocal {
+    /// The local written.
+    pub(super) fn local(self) -> LocalIdx {
+        self.0
+    }
+}
+
+impl From<Strong> for WrittenLocal {
+    fn from(at: Strong) -> Self {
+        WrittenLocal(at.local())
+    }
+}
+
+/// The one local a write through `held` lands in, where it lands there alone:
+/// exactly one local target, no allocation beside it (`blocks`), and a pointer
+/// that holds nothing this check did not follow,
+/// [`Beyond::follows_what_it_names`](super::parts::Beyond::follows_what_it_names).
+/// The rule a placed store, a store this check cannot place and a library
+/// copy each ask, so that the three cannot answer it apart. See ADR-0074.
+pub(super) fn written_alone(
+    targets: &[LocalIdx],
+    blocks: bool,
+    held: &Held,
+) -> Option<WrittenLocal> {
+    match targets {
+        [local] if !blocks && held.beyond().follows_what_it_names() => Some(WrittenLocal(*local)),
+        _ => None,
+    }
+}
+
 impl Landing {
     /// The one allocation this write lands in, where it lands in exactly one
     /// and in no local, found through memory this function recorded all of.

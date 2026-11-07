@@ -15,7 +15,7 @@ use super::parts::{
     AS_TYPED, Cell, Extent, Held, Init, Inits, Levels, Offset, PendingRead, Reached, Read, ReadKey,
     Realloced, SiteState, read_key,
 };
-use super::store::{Certain, Strong};
+use super::store::{Certain, Strong, WrittenLocal};
 use super::{LostReason, named};
 use crate::reads::derefs;
 use crate::source::inside;
@@ -193,9 +193,10 @@ pub(super) struct Known {
     /// its contents are indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2). Joined
     /// by [`Init::joined`]. Marked written by [`Self::certainly_written`],
     /// where a store proved one place, by
-    /// [`Self::believed_written_by_unknown_code`], at the boundary, and by
-    /// [`Self::written_all`]; every other door weakens it with
-    /// `Init::may_write` or `Init::doubt`, or restores what it was. A pointer read out of it is
+    /// [`Self::believed_written_by_unknown_code`], at the boundary; every
+    /// other door weakens it with `Init::may_write` or `Init::doubt`, or
+    /// restores what it was, [`Self::may_write_all_sites`] among them
+    /// (ADR-0074 rule 5). A pointer read out of it is
     /// reported where it is read, and is
     /// [`Held::fresh_read`](super::parts::Held::fresh_read). Any store clears
     /// it, a store of an indeterminate pointer included; a free does not.
@@ -2032,10 +2033,11 @@ impl Known {
     }
 
     /// Something may have written any allocation: a write this check cannot
-    /// place, or a library call it reads only by name. See [`Self::init`].
-    pub(super) fn written_all(&mut self) {
+    /// place, or a library call it reads only by name. A may-write, since
+    /// no landing says which (ADR-0074 rule 5). See [`Self::init`].
+    pub(super) fn may_write_all_sites(&mut self) {
         for site in self.init.sites() {
-            self.init[site] = Init::Written;
+            self.init[site].may_write();
         }
     }
 
@@ -2051,9 +2053,21 @@ impl Known {
         )
     }
 
-    /// Something may have written `local`, so its value is no longer known
-    /// to be indeterminate. See [`Self::init`].
-    pub(super) fn written_local(&mut self, local: LocalIdx) {
+    /// `at` wrote its local whole, on every path that reaches here: what only
+    /// a [`WrittenLocal`] says. A write that may have missed it is
+    /// `Init::may_write` instead. See [`Self::init`] and ADR-0074.
+    pub(super) fn written_local(&mut self, at: WrittenLocal) {
+        let local = at.local();
+        self.init[local] = Init::Written;
+        self.element_init[local].write_all();
+    }
+
+    /// What a call this check cannot read is believed to have done to a local
+    /// it may reach: written it, the output-parameter idiom (#782). A belief
+    /// at the boundary, as [`Self::believed_written_by_unknown_code`] is for
+    /// a site, and asked by [`Self::replaced`] for [`Writer::Call`] alone. See
+    /// ADR-0074 rule 3.
+    fn believed_written_local_by_unknown_code(&mut self, local: LocalIdx) {
         self.init[local] = Init::Written;
         self.element_init[local].write_all();
     }
@@ -2579,6 +2593,7 @@ impl Known {
         &mut self,
         may_hold: impl Fn(LocalIdx) -> bool,
         may_write: impl Fn(LocalIdx) -> bool,
+        writer: Writer,
     ) {
         let named_now = self.locals_named_by_unknown_code();
         for local in self.escaped.indices() {
@@ -2618,8 +2633,18 @@ impl Known {
             // whose address is taken, which is escaped, so dropping it leaves
             // the suite green. It is kept so that `may_write` answers for the
             // same locals `may_hold` does.
+            //
+            // **Only for a call**: a store or a library copy this check could
+            // not prove one local for may have missed it, and borrowing the
+            // call's belief wrote it for certain (#803). See ADR-0074.
             if may_write(local) && self.escaped[local] {
-                self.written_local(local);
+                match writer {
+                    Writer::Call => self.believed_written_local_by_unknown_code(local),
+                    Writer::StoreOrCopy => {
+                        self.init[local].may_write();
+                        self.element_init[local].may_write_all();
+                    }
+                }
             }
         }
     }
@@ -2630,6 +2655,18 @@ impl Known {
 struct Closed {
     sites: BTreeSet<Site>,
     locals: BTreeSet<LocalIdx>,
+}
+
+/// Who [`Known::replaced`] answers for, matched without a default arm so
+/// that a writer added answers what it does to a local it may reach.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Writer {
+    /// A call this check cannot read, believed to write what it may reach
+    /// (#782).
+    Call,
+    /// A store or a library copy this check could not prove one local for,
+    /// which may have missed each it may reach. See ADR-0074.
+    StoreOrCopy,
 }
 
 /// How many innermost elements a local array may have and still be kept

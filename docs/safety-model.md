@@ -465,4 +465,8 @@ review that found it measured 17 of them, with 86 cases moved
 writes less than it was handed is not detected, as a wrong hatch promise is
 not, and the route matrix's `fresh_call_*` rows hold it as a belief rather
 than a cost. Saying what a callee writes is the declaration the `owner`
-sketch above would carry, not a reading of the caller.
+sketch above would carry, not a reading of the caller. A store or a library
+copy is no call: one this check cannot place writes a local for certain only
+where it lands there alone, through a pointer that holds nothing this check
+did not follow, and may have missed it otherwise
+([ADR-0074](adr/0074-a-local-is-written-for-certain-only-by-a-landing-that-names-it-alone-replacing-what-adr-0069-says-of-a-store-or-copy-this-check-cannot-place.md)).
