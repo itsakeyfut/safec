@@ -52,16 +52,21 @@ non-zero, C17 6.3.2.1 p2 leaves the read undefined.
 
 ## Decision Outcome
 
-1. **A pointer local whose address is never taken is doubted where it is
-   `Init::Maybe` at the read**, by `report::unwritten_read`, as a local whose
-   address is taken is: `SC0411`, `Unknown`, `Kind::IndeterminateLocal`. So the
-   joins, the loops shown to run (ADR-0069 rules 5 and 6) and the first turn of
-   a loop (rule 7) answer both kinds of local by one implementation.
+1. **A pointer local whose address is never taken is doubted wherever a read
+   of it would be a doubt** for a local whose address is taken, by
+   `report::unwritten_read`: `Init::Maybe` at the read, or unwritten on a
+   loop's first turn at a read on an arm. `SC0411`, `Unknown`,
+   `Kind::IndeterminateLocal`. So the joins, the loops shown to run (ADR-0069
+   rules 5 and 6) and the first turn of a loop (rule 7) answer both kinds of
+   local by one implementation. Asked of `Maybe` alone, a comparison on an arm
+   of a loop shown to run built silent; found by review.
 2. **`memory::assigned` keeps what it says first**: a read no path assigned is
    `Kind::Unassigned`, `Unsafe`, and a read after a branch edge that certainly
    leads to it unassigned is `Kind::SometimesUnassigned`, `Unknown`, with the
    edge. `unwritten_read` asks a local whose address is never taken only where
-   neither said anything at that caret, so no read is reported twice.
+   neither said anything of it at that caret, so no read is reported twice. A
+   finding of another kind there, a free's, does not count: it says nothing
+   about whether the local was assigned.
 3. **What this replaces**: ADR-0069 rule 8's "a read on an arm is not asked
    so, and stays silent where the memory check doubts it". The rest of rule 8,
    the first-turn proof and the doubt at a loop's exit edge, stands.
@@ -79,6 +84,14 @@ Each in `tests/cases/memory/`, with its mutation in its note in
   already reported at the caret reports the read twice:
   `a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read`
   fails, and seven more.
+* Skipping it where `memory::assigned` said anything of the local at any caret
+  fails `a_pointer_some_path_left_unassigned_is_doubted_at_each_of_its_reads`;
+  where anything was said at the caret of any local,
+  `two_locals_read_at_one_caret_are_each_answered`; where a finding of any kind
+  was, `a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned`.
+* Asking it only where it is `Maybe` fails
+  `a_pointer_compared_on_an_arm_of_a_loop_shown_to_run_before_the_body_assigns_it_is_doubted`
+  and the case before.
 
 ### Consequences
 
