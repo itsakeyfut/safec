@@ -93,13 +93,15 @@ pub(super) fn innermost_element(unit: &TranslationUnit, ty: TyId) -> TyId {
 /// element, and `None` where it holds no pointer: `int *` for `int *`,
 /// `int *[1]` and `int *[2][3]`, nothing for `int` or `int [4]`.
 ///
-/// **The one answer to whether memory holds pointers**, for its four
-/// readers: `Allocations::first_level_holds_a_pointer`, and in
-/// `report.rs` `report_returned_unwritten`, `copied_unwritten` and
-/// `part_of_a_pointer`. Two of them once stopped at an array, so a copy of
-/// unwritten bytes into a caller's `int *[1]` was silent where one into an
-/// `int *` was `SC0411` (#843). A kind of type added later is asked at
-/// [`Ty::is_pointer`], an exhaustive `match`.
+/// **The one answer to whether memory holds pointers**:
+/// `Allocations::first_level_holds_a_pointer`, and in `report.rs`
+/// `report_returned_unwritten`, `copied_unwritten`, `part_of_a_pointer`,
+/// and `contents_leaving` for what the receiver reads and for each slot it
+/// reads. Five of them once stopped at an array, so a copy of unwritten
+/// bytes into a caller's `int *[1]` was silent where one into an `int *`
+/// was `SC0411`, and a `char`'s address read through an `int *(*)[1]` was
+/// silent where through an `int **` it was `SC0413` (#843). A kind of type
+/// added later is asked at [`Ty::is_pointer`], an exhaustive `match`.
 pub(super) fn stored_pointer(unit: &TranslationUnit, stored: TyId) -> Option<TyId> {
     let element = innermost_element(unit, stored);
     unit.ty(element).is_pointer().then_some(element)

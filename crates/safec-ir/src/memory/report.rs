@@ -1209,9 +1209,10 @@ fn contents_leaving(
             Levels::default()
         }
     };
-    if let (Some(receiver), Some(width)) =
-        (analysis.type_levels(ty), pointee_width(analysis, read_as))
-    {
+    if let (Some(receiver), Some(width)) = (
+        analysis.type_levels(ty),
+        stored_pointer(analysis.unit, read_as).and_then(|stored| pointee_width(analysis, stored)),
+    ) {
         if arrived.narrower_than(&receiver) {
             // **Named by the local that leaves, where one does**, so that
             // this and a doubt about the local's own level at the same
@@ -1241,7 +1242,9 @@ fn contents_leaving(
         // A local that holds no pointer, read as none, has nothing a reader
         // believes of it; a `void *` is asked whether it starts an object.
         let own = pointee_width(analysis, function.local(local));
-        let receiver = read_as.and_then(|ty| pointee_width(analysis, ty));
+        let receiver = read_as
+            .and_then(|ty| stored_pointer(analysis.unit, ty))
+            .and_then(|ty| pointee_width(analysis, ty));
         let Some(width) = own.max(receiver) else {
             continue;
         };
@@ -1280,7 +1283,10 @@ fn contents_leaving(
         // A `void *` receiver believes only a start, which the store that put
         // each pointer here asked; and memory recorded to hold nothing says
         // nothing.
-        let Some(width) = pointee_width(analysis, read_as).filter(|&width| width > 0) else {
+        let Some(width) = stored_pointer(analysis.unit, read_as)
+            .and_then(|ty| pointee_width(analysis, ty))
+            .filter(|&width| width > 0)
+        else {
             continue;
         };
         let extents: Vec<Extent> = known.contents[site]
