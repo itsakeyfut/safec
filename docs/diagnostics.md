@@ -220,14 +220,15 @@ wrote, read as a pointer or copied into memory that leaves, is asked as a
 pointer local is (#822), while an integer read by name is not followed. Such a
 buffer is kept whole, so a write of part of it, `b[0] = 0;` or a `memcpy` of
 four bytes into it, leaves it possibly unwritten, and a read of it as a
-pointer afterwards is `SC0411` as a doubt (#826); so is a `memcpy` of four
-bytes into an `int *` local. A store at an index this check cannot read,
-`b[i] = 0;`, and a copy of a length it cannot read, write the whole buffer,
-so a loop that fills it is not doubted. The cost is a buffer written one
-element at a time at every index and then read as a pointer, which is
-doubted. An array of pointers longer than 64 is not asked for a copy ending
-part way through one of them, since a read of it is asked only at its start.
-A
+pointer afterwards is `SC0411` as a doubt (#826); so is a write of four bytes,
+or of none, into an `int *` local, by a `memcpy` or through an `int *` made
+from its address. A `memcpy` that may land in either of two arrays of pointers
+writes neither for certain. A store at an index this check cannot read, `b[i]
+= 0;`, and a copy of a length it cannot read, write the whole buffer, so a
+loop that fills it is not doubted. The cost is a buffer written one element at
+a time at every index and then read as a pointer, which is doubted. An array
+of pointers longer than 64 is not asked for a copy ending part way through one
+of them, since a read of it is asked only at its start. A
 pointer read out of one, through a pointer or by name, is `SC0411` at the
 read: `int *m[1]; int *q = m[0];` and `int *q;
 int **pq = &q; return q == 0;` (#640). Any write that may land in it ends it:

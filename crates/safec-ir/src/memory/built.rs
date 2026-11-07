@@ -365,13 +365,15 @@ pub(super) fn write_effects(
     if call {
         through.extend(lands.iter().copied());
     }
+    let one_landing = lands.len() == 1;
     let target = unit.target();
     let pointer_width = u64::from(target.pointer_bits() / target.char().bits());
     lands
         .into_iter()
-        // **And a local that is no array, for a library copy of a length it
-        // reads**, which may write part of it: `memcpy(&p, &x, 4)` (#826).
-        .filter(|&each| is_array(unit, function, each) || (call && width.is_some()))
+        // **And a local that is no array, for a write of a width this check
+        // reads**, which may write part of it: `memcpy(&p, &x, 4)`, or a
+        // store through an `int *` made from `&p` (#826). Found by review.
+        .filter(|&each| is_array(unit, function, each) || width.is_some())
         .filter_map(|each| {
             let naming: Vec<&super::parts::Held> = through
                 .iter()
@@ -416,13 +418,15 @@ pub(super) fn write_effects(
             } else {
                 !naming.is_empty() && naming.iter().all(|held| !held.inner_address)
             };
-            if !kept && !array_edge && placed {
+            // Neither an array kept per element, which holds pointers, nor one a
+            // pointer reaches by #639's rule, which the arm below doubts, can
+            // reach this. Found by review.
+            if placed {
                 if let (Some(width), Some(size)) = (width, size) {
-                    let in_part = if holds_pointers {
-                        !array && call && width % pointer_width != 0
-                    } else {
-                        width < size
-                    };
+                    // Narrower than the local, a copy of nothing included: a
+                    // test of where it ends in a pointer let `memcpy(&p, &x,
+                    // 0)` write `p` whole. Found by review.
+                    let in_part = !(holds_pointers && array) && width < size;
                     if in_part {
                         return Some((each, ArrayWrite::Maybe));
                     }
@@ -432,7 +436,14 @@ pub(super) fn write_effects(
                 // **A copy into an array kept per element writes the
                 // elements it covers whole**, from its start (#826): `int
                 // *m[2]; memcpy(m, &x, 12);` writes `m[0]` and leaves `m[1]`.
+                //
+                // **Only where it lands in this one array**: a copy that may
+                // land in either of two writes neither for certain, as a
+                // store that may land in two does not (`before` in
+                // `replaced_by`), so each may have been missed. Found by
+                // review.
                 Some(0) if call && !array_edge => match width.map(|width| width / pointer_width) {
+                    Some(_) if kept && !one_landing => Some(ArrayWrite::Maybe),
                     Some(covered) if kept && covered < value.element_init[each].len() as u64 => {
                         Some(ArrayWrite::Covered(covered))
                     }
