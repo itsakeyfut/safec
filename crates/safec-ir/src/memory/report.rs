@@ -567,7 +567,9 @@ fn asked<'o>(
 /// asked. It is written out so the arm says which rule owns it.
 fn established_null(argument: &Operand, null: &NullAtTerminators, block: BlockId) -> bool {
     match argument {
-        Operand::Copy(place) if place.projection.is_empty() => null.established(block, place.local),
+        Operand::Copy(place) if place.projection.is_empty() => {
+            null.established_null(block, place.local)
+        }
         Operand::Copy(_) | Operand::Constant(_) => false,
     }
 }
@@ -2919,7 +2921,7 @@ pub(super) fn say(
 /// **It asks [`Allocations::touching`] over the arguments themselves, where
 /// [`reported`] asks it over [`asked`], and the two cannot be made to agree
 /// because they can never both have something to say.** ADR-0027's exemption
-/// takes an argument out wherever [`NullAtTerminators::established`] holds, and
+/// takes an argument out wherever [`NullAtTerminators::established_null`] holds, and
 /// three lines put that answer and this walk in different programs:
 ///
 /// 1. `nullability::null_at_terminators` zeroes a block's whole row unless
