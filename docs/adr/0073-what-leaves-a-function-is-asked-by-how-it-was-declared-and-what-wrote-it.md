@@ -82,7 +82,11 @@ and Cons below.
    then no path that reaches it is one where the allocation failed (#828): the
    nullability check hands that fact over beside the null it hands over
    already (ADR-0027), and a wrong answer from it is a doubt too many, not one
-   too few. Only a `return`: a block handed to a call is how a callee is given
+   too few. Where it is not shown not null there, a test of it that encloses
+   the write rather than returning early, or a conditional with a null arm
+   returned, the block possibly unwritten is silent, since the two checks
+   join apart and nothing says the unwritten path is the null one; that is
+   #834. Only a `return`: a block handed to a call is how a callee is given
    memory to fill (#823).
 4. **A value records whether the type it arrived as, or the local it is held
    in, holds a pointer in its first level**, beside the width it believes

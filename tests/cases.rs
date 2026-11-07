@@ -510,6 +510,11 @@ cases! {
         // ask the first block alone; one of these goes silent.
         a_pointer_that_may_name_a_block_left_unwritten_first_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_that_may_name_a_block_left_unwritten_second_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The limit: the pointer is not shown not null at the `return`, so
+        // the block possibly unwritten is silent, though C leaves the
+        // caller's read undefined where `c` is zero (#834). Held so that
+        // closing it is seen.
+        a_block_left_unwritten_inside_a_test_of_its_pointer_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The cost: the pointer is shown not null only after the join that
         // left the block possibly unwritten, so a block every path wrote is
         // doubted.
