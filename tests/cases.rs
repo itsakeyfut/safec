@@ -5039,6 +5039,13 @@ cases! {
         // Mutation: `contents_leaving` asks `pointee_width` of what the
         // receiver reads without `stored_pointer`; this goes silent.
         a_void_pointer_to_pointer_parameter_handed_on_as_an_array_of_one_int_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Each slot a pointer to an array of one `int *` lets leave is read
+        // as holding `int *`s: a local, then a block, holding a `char`'s
+        // address (#843). Mutation: `contents_leaving` asks a local slot's
+        // reader without `stored_pointer`; the first goes silent. The same
+        // for a site's slot; the second does.
+        a_local_holding_a_char_s_address_handed_as_an_array_of_one_int_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_holding_a_char_s_address_handed_as_an_array_of_one_int_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local a callee was handed is believed written no wider than it
         // was handed as, and as nothing through a `void *`. Mutation: ignore
         // `handed_at_most` where a call writes an escaped local; both go
