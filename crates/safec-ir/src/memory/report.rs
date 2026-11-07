@@ -245,6 +245,8 @@ fn verdict(
         Kind::CopiedUnwritten => true,
         // Never asked: it is said where a block is returned, about no free.
         Kind::ReturnedUnwritten => true,
+        // Never asked, as the one above.
+        Kind::ReturnedMaybeUnwritten => true,
     };
 
     match earliest {
@@ -565,7 +567,9 @@ fn asked<'o>(
 /// asked. It is written out so the arm says which rule owns it.
 fn established_null(argument: &Operand, null: &NullAtTerminators, block: BlockId) -> bool {
     match argument {
-        Operand::Copy(place) if place.projection.is_empty() => null.established(block, place.local),
+        Operand::Copy(place) if place.projection.is_empty() => {
+            null.established_null(block, place.local)
+        }
         Operand::Copy(_) | Operand::Constant(_) => false,
     }
 }
@@ -1387,18 +1391,22 @@ fn part_of_what_operands_point_at(
 }
 
 /// Report a `return` of a pointer that may name a block **certainly**
-/// unwritten, where the return type points at memory holding pointers: the
-/// return-side counterpart of `loaded_indeterminate`, which reports a read of
-/// such a block inside this function. Certainly, not possibly, since
-/// `if (m) *m = x; return m;` joins a path with no block at all; only a
-/// `return`, since a block handed to a call is how a callee is given memory to
-/// fill. See ADR-0073 rule 3, which says what both cost (#828).
+/// unwritten, or **possibly** unwritten where the pointer is established not
+/// null at the `return`, where the return type points at memory holding
+/// pointers: the return-side counterpart of `loaded_indeterminate`, which
+/// reports a read of such a block inside this function. Possibly only where
+/// not null, since `if (m) *m = x; return m;` joins a path with no block at
+/// all, which reaches the `return` with `m` null; only a `return`, since a
+/// block handed to a call is how a callee is given memory to fill. See
+/// ADR-0073 rule 3, which says what both cost.
 fn report_returned_unwritten(
     findings: &mut Vec<Finding>,
     analysis: &Allocations<'_>,
     function: &Function,
     operation: &Operation,
     known: &Known,
+    null: &NullAtTerminators,
+    block: BlockId,
 ) {
     let Rvalue::Use(Operand::Copy(place)) = &operation.value else {
         return;
@@ -1415,26 +1423,46 @@ fn report_returned_unwritten(
         .and_then(|ty| pointee(analysis, ty))
         .and_then(|ty| pointee_width(analysis, innermost_element(analysis.unit, ty)))
         .is_some();
+    if !returns_pointers {
+        return;
+    }
     // **Any block it may name**, not every: one written elsewhere does not
     // make the other one written, and `r = c ? a : b;` with only `a` written
     // was silent. The path where an allocation failed names no block, so it
     // adds nothing here. Found by review.
-    if returns_pointers
+    let certainly = known
+        .sites_of(place.local)
+        .any(|site| known.init[site].is_unwritten());
+    // **Possibly, where the pointer is not null at the `return`**: then no
+    // path that reaches it is one where the allocation failed, and a block
+    // possibly unwritten was left so where it succeeded (#828). A wrong
+    // answer from the nullability check is a doubt too many, never one too
+    // few. See `NullAtTerminators::established_non_null`.
+    //
+    // **Asked of the value returned**, the return place, rather than of the
+    // local it was copied out of, whose lifetime may end with the scope the
+    // `return` leaves and take what was known of it along. Found by review.
+    let possibly = null.established_non_null(block, function.return_place())
         && known
             .sites_of(place.local)
-            .any(|site| known.init[site].is_unwritten())
-    {
-        findings.push(Finding {
-            function: analysis.function,
-            kind: Kind::ReturnedUnwritten,
-            conclusion: Conclusion::Unknown,
-            at: operation.origin.span(),
-            local: Some(place.local),
-            freed: None,
-            made: None,
-            unproven: None,
-        });
-    }
+            .any(|site| known.init[site].may_be_unwritten());
+    let kind = if certainly {
+        Kind::ReturnedUnwritten
+    } else if possibly {
+        Kind::ReturnedMaybeUnwritten
+    } else {
+        return;
+    };
+    findings.push(Finding {
+        function: analysis.function,
+        kind,
+        conclusion: Conclusion::Unknown,
+        at: operation.origin.span(),
+        local: Some(place.local),
+        freed: None,
+        made: None,
+        unproven: None,
+    });
 }
 
 /// Whether a library copy may copy bytes nothing wrote into memory that
@@ -1632,6 +1660,7 @@ fn points_at_a_pointer(
 /// back, and a later load believes what it reads, so this is where either
 /// belief is asked. A `void *` is asked only whether it starts an object, and
 /// a constant is a null, which the nullability check answers.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn departed_in_element(
     findings: &mut Vec<Finding>,
     departed: &mut Vec<(Span, Departure, Option<LocalId>, usize)>,
@@ -1639,6 +1668,8 @@ pub(super) fn departed_in_element(
     function: &Function,
     element: &Element,
     known: &Known,
+    null: &NullAtTerminators,
+    block: BlockId,
 ) {
     let Element::Assign(operation) = element else {
         return;
@@ -1651,7 +1682,7 @@ pub(super) fn departed_in_element(
         // malloc(8); return b;` hands the caller pointers nobody wrote, where
         // reading `*b` in this function is `SC0411` by `loaded_indeterminate`
         // (#823). See ADR-0073 rule 3.
-        report_returned_unwritten(findings, analysis, function, operation, known);
+        report_returned_unwritten(findings, analysis, function, operation, known, null, block);
         Departure::Return
     } else {
         match store.kind {
@@ -2890,7 +2921,7 @@ pub(super) fn say(
 /// **It asks [`Allocations::touching`] over the arguments themselves, where
 /// [`reported`] asks it over [`asked`], and the two cannot be made to agree
 /// because they can never both have something to say.** ADR-0027's exemption
-/// takes an argument out wherever [`NullAtTerminators::established`] holds, and
+/// takes an argument out wherever [`NullAtTerminators::established_null`] holds, and
 /// three lines put that answer and this walk in different programs:
 ///
 /// 1. `nullability::null_at_terminators` zeroes a block's whole row unless

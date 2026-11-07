@@ -1,0 +1,10 @@
+error[SC0411]: `r` points at memory that may not have been written, and the caller may read pointers out of it
+    ╭─[ a_pointer_that_may_name_a_block_left_unwritten_first_returned_is_doubted.c:10:5 ]
+    │
+ 10 │     return r;
+    │     ────┬────  
+    │         ╰────── returned here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it on every path before returning it, or allocate it with `calloc`

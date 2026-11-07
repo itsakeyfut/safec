@@ -1742,6 +1742,7 @@ pub(crate) fn null_at_terminators(
     let solution = solve(&analysis, function, cfg);
 
     let mut null = vec![vec![false; function.locals().len()]; function.blocks().len()];
+    let mut non_null = null.clone();
 
     for &id in cfg.order() {
         // What a `None` says is that no execution reaches this block, and the
@@ -1808,6 +1809,22 @@ pub(crate) fn null_at_terminators(
             block.elements.last(),
             Some(Element::ArgumentsEvaluated { .. })
         );
+        // **And at the end of a full expression**, for not null alone: every
+        // side effect of it is complete there (C17 6.8 p4), which is where a
+        // `return` ends its block, before the lifetimes that end with the
+        // scope it leaves: `{ int k; ... return b; }` ends `Sequenced`, then
+        // `StorageDead`. Found by review. The free exemption asks at a call
+        // and reads only `null`, which keeps its condition (#828). Its only
+        // reader asks at a `return`, which always ends a full expression, so
+        // no case tells this condition from none; it is here so that a
+        // reader asking elsewhere is not handed an answer from mid-expression.
+        let at_full_expression_end = matches!(
+            block.elements.iter().rev().find(|element| !matches!(
+                element,
+                Element::StorageDead { .. } | Element::StorageLive { .. }
+            )),
+            Some(Element::Sequenced { .. })
+        );
 
         // Before the terminator's own transfer, which is the position
         // [`findings`] reports from and the position the free is reached at.
@@ -1833,10 +1850,18 @@ pub(crate) fn null_at_terminators(
             null[id.index()][local.index()] = ordered
                 && analysis.is_pointer(function, local)
                 && analysis.known(&known.of, local) == Nullness::Null;
+            // **And not null, at the end of a full expression rather than at a call**, for a reader
+            // that adds a doubt where it holds and so is wrong only loudly:
+            // the memory check doubts a block possibly unwritten where it is
+            // returned only where the pointer is not null there (#828). See
+            // ADR-0073 rule 3.
+            non_null[id.index()][local.index()] = at_full_expression_end
+                && analysis.is_pointer(function, local)
+                && analysis.known(&known.of, local) == Nullness::NonNull;
         }
     }
 
-    NullAtTerminators { rows: null }
+    NullAtTerminators { null, non_null }
 }
 
 /// What [`null_at_terminators`] answered, keyed by the two things it is about.
@@ -1858,7 +1883,15 @@ pub(crate) fn null_at_terminators(
 pub(crate) struct NullAtTerminators {
     /// One row per block, one `bool` per local, both in the order the function
     /// hands its ids out.
-    rows: Vec<Vec<bool>>,
+    null: Vec<Vec<bool>>,
+    /// The same, for established not null.
+    ///
+    /// **Its reader is the other way round from `null`'s.** A free exempted
+    /// where `null` says null is a report taken away, so a wrong `true` there
+    /// is a silence; a `return` doubted where this says not null is a report
+    /// added, so a wrong `true` here is a doubt too many, and a wrong `false`
+    /// is the silence there was before it (#828).
+    non_null: Vec<Vec<bool>>,
 }
 
 impl NullAtTerminators {
@@ -1870,8 +1903,18 @@ impl NullAtTerminators {
     /// If either id belongs to a different function than the one this was built
     /// for, which is the only way to be out of range and is a caller's mistake
     /// rather than an input's.
-    pub(crate) fn established(&self, block: BlockId, local: LocalId) -> bool {
-        self.rows[block.index()][local.index()]
+    pub(crate) fn established_null(&self, block: BlockId, local: LocalId) -> bool {
+        self.null[block.index()][local.index()]
+    }
+
+    /// Whether this check established that `local` is not null where
+    /// `block`'s terminator runs.
+    ///
+    /// # Panics
+    ///
+    /// As [`Self::established_null`] does.
+    pub(crate) fn established_non_null(&self, block: BlockId, local: LocalId) -> bool {
+        self.non_null[block.index()][local.index()]
     }
 }
 

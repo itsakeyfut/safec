@@ -980,6 +980,27 @@ pub(super) fn memory_finding(
             "returned here",
             "write every pointer in it before returning it, or allocate it with `calloc`",
         ),
+        // **A block that may not have been written, handed back** where the
+        // pointer is not null, so not the path where the allocation failed
+        // (#828). "May not have been written", since some path wrote it.
+        // Only ever `Unknown`, as the one above; `Unsafe` takes the same words.
+        (Kind::ReturnedMaybeUnwritten, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            UNASSIGNED,
+            said(
+                name,
+                "this returns memory that may not have been written, and the caller may read \
+                 pointers out of it",
+                |name| {
+                    format!(
+                        "`{name}` points at memory that may not have been written, and the \
+                         caller may read pointers out of it"
+                    )
+                },
+            ),
+            "returned here",
+            "write every pointer in it on every path before returning it, or allocate it with \
+             `calloc`",
+        ),
         // Only ever `Unknown`, since the edge may be one no execution takes.
         // `Unsafe` takes the same words so the match stays exhaustive.
         (Kind::SometimesUnassigned { .. }, Conclusion::Unknown | Conclusion::Unsafe, _) => (

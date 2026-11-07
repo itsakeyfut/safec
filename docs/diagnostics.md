@@ -193,16 +193,23 @@ whose return type points at memory holding pointers is `SC0411` as a doubt
 at the `return`: "this returns memory nothing wrote, and the caller may read
 pointers out of it" (#823). `int **b = malloc(8); if (!b) return 0; return
 b;` is the program, and so is the same after a copy of half a pointer into
-it. Only certainly: a block written on the path where its allocation
-succeeded, `if (m) *m = p; return m;`, says nothing, though the path where
-it failed wrote nothing; and so, for now, does a block left unwritten on one
-path where the allocation succeeded, `if (c) *b = p; return b;`, which this
-cannot yet tell from the first (#828). A pointer that may name either of two
-blocks is asked of each. Only a `return`: a block handed to a call is how a
-callee is given memory to fill, and a block handed back through a parameter,
-`*out = b;`, is not asked either, for now. The cost is a function that
-allocates a table of pointers and hands it back unfilled for its caller to
-fill, which is doubted.
+it. A block written on the path where its allocation succeeded, `if (m) *m =
+p; return m;`, says nothing, though the path where it failed wrote nothing.
+Where the pointer is not null at the `return`, so that no path reaching it
+is one where the allocation failed, a block possibly unwritten is doubted
+too, in words of its own: "this returns memory that may not have been
+written, and the caller may read pointers out of it", for `if (!b) return 0;
+if (c) *b = p; return b;` (#828). The cost is a block written on a path this
+check cannot show is taken, a loop's first turn under `if (i == 0)`, or
+before the test that shows the pointer not null, `if (b) *b = p; if (!b)
+return 0; return b;`, which is doubted. Where the pointer is not shown not
+null at the `return`, a test of it that encloses the write, `if (b) { if (c)
+*b = p; } return b;`, or `return c ? b : 0;`, the block possibly unwritten
+is silent, for now (#834). A pointer that may name either of two blocks is
+asked of each. Only a `return`: a block handed to a call is how a callee is
+given memory to fill, and a block handed back through a parameter, `*out =
+b;`, is not asked either, for now. And a function that allocates a table of
+pointers and hands it back unfilled for its caller to fill is doubted.
 [ADR-0073](adr/0073-what-leaves-a-function-is-asked-by-how-it-was-declared-and-what-wrote-it.md)
 rule 3 is the decision.
 
