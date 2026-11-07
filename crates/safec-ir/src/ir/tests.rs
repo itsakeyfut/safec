@@ -47,6 +47,26 @@ fn the_type_a_place_reaches_follows_its_projections() {
     );
 }
 
+/// A pointer is a pointer, and an array of pointers is not: no whole array
+/// is a value (C17 6.3.2.1 p3), and no parameter is one (6.7.6.3 p7).
+///
+/// Mutation: answer `true` for `Ty::Array` in `Ty::is_pointer`. The
+/// assertion on `pointers` fails, and no case in the corpus does: what an
+/// array would be asked as a pointer for, nothing reaches yet.
+#[test]
+fn a_pointer_is_a_pointer_and_an_array_of_pointers_is_not() {
+    let int = TyId(0);
+    assert!(Ty::Pointer(int).is_pointer());
+    let pointers = Ty::Array {
+        element: int,
+        length: 2,
+    };
+    assert!(!pointers.is_pointer());
+    for scalar in [Ty::Int, Ty::Char, Ty::Void] {
+        assert!(!scalar.is_pointer());
+    }
+}
+
 /// What a type is worth is the target's answer, and `void` has none.
 ///
 /// Mutation: answer `Some` for a pointer or for `void`. The last two
