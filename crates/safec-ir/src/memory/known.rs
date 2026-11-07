@@ -546,13 +546,13 @@ impl Known {
             reached.push(Reached::SetFreed(freed));
         }
 
-        if self.points_to[local].lost || (self.escaped[local] && !reached.is_empty()) {
+        if self.points_to[local].beyond().lost() || (self.escaped[local] && !reached.is_empty()) {
             reached.push(Reached::Lost(LostReason::Other));
         }
         // **A load's sites are what was stored where it was read from**, which
         // may not be all it holds: the report may doubt from them and never
         // prove. See ADR-0045.
-        if self.points_to[local].loaded && !reached.is_empty() {
+        if self.points_to[local].beyond().loaded() && !reached.is_empty() {
             reached.push(Reached::Partial);
         }
         // **And so is a set beside a local's address**: on the path that gave
@@ -639,7 +639,7 @@ impl Known {
             .collect();
         let read_unreplaced = locals
             .iter()
-            .any(|&target| self.points_to[target].unreplaced_read);
+            .any(|&target| self.points_to[target].beyond().unreplaced_read());
         let (first, first_locals) = self.level_below(&sites, &locals);
         let mut reached: Vec<Reached> = first
             .iter()
@@ -754,7 +754,7 @@ impl Known {
     pub(super) fn lost_through(&self, local: LocalId, depth: usize) -> bool {
         self.locals_read_through(local, depth)
             .into_iter()
-            .any(|target| self.points_to[target].lost)
+            .any(|target| self.points_to[target].beyond().lost())
     }
 
     /// The locals a read `depth` dereferences below `local` passes through:
@@ -784,7 +784,7 @@ impl Known {
     pub(super) fn caller_through(&self, local: LocalId, depth: usize) -> bool {
         self.locals_read_through(local, depth)
             .into_iter()
-            .any(|target| self.points_to[target].from_caller)
+            .any(|target| self.points_to[target].beyond().is_from_caller())
     }
 
     /// What a pointer handed to a call holds: the allocations it may point
@@ -859,7 +859,7 @@ impl Known {
     /// loads through locals is followed, however long. See ADR-0045.
     fn level_zero(&self, local: LocalId) -> Option<(BTreeSet<Site>, BTreeSet<LocalIdx>)> {
         let held = &self.points_to[local];
-        if held.lost {
+        if held.beyond().lost() {
             return None;
         }
         Some((
@@ -972,7 +972,7 @@ impl Known {
     /// See [`Self::reachable_now`].
     fn exposed_through(&self, local: LocalId) -> Vec<Site> {
         let from = &self.points_to[local];
-        if from.loaded || from.foreign {
+        if from.beyond().loaded() || from.beyond().foreign() {
             self.reachable_now().into_iter().collect()
         } else {
             Vec::new()
@@ -1053,9 +1053,9 @@ impl Known {
                 // since a load reading through nothing recorded believes
                 // nothing (ADR-0061): `int *x = malloc(4); int **pp = &x;
                 // int *t = *pp;` reads `t` as `x`'s allocation is wide.
-                let first = if own.loaded {
+                let first = if own.beyond().loaded() {
                     Some(own.believed.unwrap_or(0))
-                } else if own.foreign {
+                } else if own.beyond().foreign() {
                     Some(
                         own.believed
                             .or(self.handed_at_most[slot])
@@ -1418,11 +1418,10 @@ impl Known {
         // kept apart, so that a copy can be a load (#777). Taking it for
         // every load moved no case, measured. See ADR-0045.
         if self.lost_through(local, depth) {
-            held.lost = true;
-            held.stale_read = true;
+            held.lost_and_may_be_gone();
         }
         if from_caller {
-            held.from_caller = true;
+            held.handed_over();
         }
         named_a_local
     }
@@ -1518,7 +1517,7 @@ impl Known {
     pub(super) fn named_after_a_store(&mut self, landed: &[LocalIdx]) {
         let named = self.locals_named_by_unknown_code();
         for &local in landed {
-            if self.points_to[local].foreign {
+            if self.points_to[local].beyond().foreign() {
                 for &each in &named {
                     self.points_to[local].named_at_read.set(each);
                 }
@@ -1594,9 +1593,9 @@ impl Known {
         let held = &self.points_to[local];
         // `Beyond::unrecorded_address` with `loaded` and `foreign` taken
         // apart: keep the two in step.
-        if self.unnamed_below(local, dereferences) || held.lost {
+        if self.unnamed_below(local, dereferences) || held.beyond().lost() {
             lands.extend(self.locals_named_by_unknown_code());
-        } else if held.loaded || held.foreign {
+        } else if held.beyond().loaded() || held.beyond().foreign() {
             lands.extend(held.named_at_read.ones());
         }
         lands.into_iter().collect()
@@ -1821,7 +1820,7 @@ impl Known {
         for (other, held) in points_to.enumerated_mut() {
             if other != site.local() {
                 if gone && held.has_site(site) {
-                    held.stale_read = true;
+                    held.lost_a_site_that_may_be_gone();
                 }
                 held.lose(site);
             }
@@ -2346,11 +2345,8 @@ impl Known {
         for held in self.points_to.iter_mut() {
             // A value read out of memory a lost value may be in may be it.
             // See `Held::lost_read`.
-            if held.lost_read {
-                held.lost = true;
-            }
-            if held.lost {
-                held.stale_read = true;
+            if held.beyond().may_hold_a_lost_value() {
+                held.lost_and_may_be_gone();
             }
         }
         for contents in &mut self.contents {
@@ -2375,9 +2371,8 @@ impl Known {
     /// ADR-0040.
     pub(super) fn callers_memory_may_be_freed(&mut self) {
         for held in self.points_to.iter_mut() {
-            if held.from_caller {
-                held.lost = true;
-                held.stale_read = true;
+            if held.beyond().is_from_caller() {
+                held.lost_and_may_be_gone();
             }
         }
         for contents in &mut self.contents {
@@ -2462,7 +2457,7 @@ impl Known {
         // every site, so the same idiom is doubted beside `get(&u)`,
         // `a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote`.
         // See ADR-0048.
-        if self.points_to.iter().any(|held| held.foreign) {
+        if self.points_to.iter().any(|held| held.beyond().foreign()) {
             return Table::filled(true, sites);
         }
         let mut held: Table<Site, bool> = Table::filled(false, sites);
@@ -2601,14 +2596,14 @@ impl Known {
                 && self.escaped[local]
                 && self.points_to[local].sites().next().is_some()
             {
-                self.points_to[local].lost = true;
+                self.points_to[local].lost_its_allocation();
             }
             // **Whatever it holds**, since the writer may have put a pointer
             // to memory this check does not model there. A local holding no
             // site is given this and not `lost`, which is the output-parameter
             // idiom above: the report does not read it. See ADR-0044.
             if may_hold(local) && self.escaped[local] {
-                self.points_to[local].foreign = true;
+                self.points_to[local].written_by_unknown_code();
             }
             // **And, where it may have been written, what such code could
             // name as it wrote**, added rather than set since it may not have

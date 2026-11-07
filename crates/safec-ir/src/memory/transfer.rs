@@ -813,7 +813,7 @@ impl Allocations<'_> {
             },
         );
         // What could be named as this was read. See `Held::named_at_read`.
-        if held.loaded {
+        if held.beyond().loaded() {
             for named in value.locals_named_by_unknown_code() {
                 held.named_at_read.set(named);
             }
@@ -823,7 +823,7 @@ impl Allocations<'_> {
         // point at. `loaded` stays set, which is what marks the set as
         // possibly incomplete for every reader. See ADR-0045.
         let depth = derefs(source);
-        if held.loaded && depth > 0 {
+        if held.beyond().loaded() && depth > 0 {
             // What memory holds there, and the marks a load out of it
             // carries, read as `built::built_from` reads them. See
             // `Known::load_into`.
@@ -914,7 +914,7 @@ impl Allocations<'_> {
         let held = &value.points_to[local];
         // At least the local's own allocations, which a load with no
         // dereference in its place, an element, still reads through.
-        held.from_caller
+        held.beyond().is_from_caller()
             || value.marked_below(local, depth.max(1), |contents| contents.holds_from_caller())
             || value.caller_through(local, depth)
             // **Only for a local this check lost**, measured: an exposed
@@ -952,7 +952,7 @@ impl Allocations<'_> {
             };
             if place.projection.is_empty() {
                 let held = &value.points_to[place.local];
-                held.from_caller
+                held.beyond().is_from_caller()
                     || self
                         .exposed_parameters
                         .iter()
@@ -1208,9 +1208,12 @@ impl Allocations<'_> {
             // `MayBeALocal`, which `LostReason::joined` keeps (#213).
             let reasons = [
                 (reached.len() == before, LostReason::NoSiteKnown),
-                (held.loaded, LostReason::ReadOutOfMemory),
+                (held.beyond().loaded(), LostReason::ReadOutOfMemory),
                 (held.may_be_a_locals_address(), LostReason::MayBeALocal),
-                (held.foreign && reached.len() > before, LostReason::Other),
+                (
+                    held.beyond().foreign() && reached.len() > before,
+                    LostReason::Other,
+                ),
             ];
             if let Some(reason) = reasons
                 .iter()
@@ -1303,7 +1306,7 @@ impl Allocations<'_> {
         let (Some(returned), None) = (sites.next(), sites.next()) else {
             return;
         };
-        if held.lost || held.returned_by != Some(returned) {
+        if held.beyond().lost() || held.returned_by != Some(returned) {
             return;
         }
         let Some(fact) = value.realloced[returned].clone() else {
@@ -2286,9 +2289,9 @@ impl Analysis for Allocations<'_> {
                     // it proved when a load believed its type (ADR-0061).
                     let bound = if !self.may_be_pointer(function, &operation.place) {
                         None
-                    } else if written.loaded {
+                    } else if written.beyond().loaded() {
                         Some(written.believed.unwrap_or(0))
-                    } else if written.foreign {
+                    } else if written.beyond().foreign() {
                         // And what the local was handed as, which a join
                         // keeps where `believed` does not. A join with a null
                         // keeps `believed` too (#719).
@@ -2791,8 +2794,8 @@ impl Analysis for Allocations<'_> {
                         | SiteState::Unheld => None,
                     })
                     .collect();
-                (!held.lost
-                    && !held.foreign
+                (!held.beyond().lost()
+                    && !held.beyond().foreign()
                     && !old.is_empty()
                     && old.len() == held.sites().count())
                 .then_some(old)
@@ -2879,7 +2882,7 @@ impl Analysis for Allocations<'_> {
                     }
                 }
             }
-            let may_hold_lost = |held: &Held| held.lost || held.lost_read;
+            let may_hold_lost = |held: &Held| held.beyond().may_hold_a_lost_value();
             handed.iter().any(|argument| match argument {
                 Operand::Copy(place) => {
                     may_hold_lost(&value.points_to[place.local])
@@ -3716,13 +3719,13 @@ impl Analysis for Allocations<'_> {
                         }
                     }
                     if !stored.is_empty() {
-                        held.loaded = true;
+                        held.read_out_of_memory();
                         for &named in &named_now {
                             held.named_at_read.set(named);
                         }
                     }
                     if hands_a_lost_value {
-                        held.lost_read = true;
+                        held.read_where_a_lost_value_may_be();
                     }
                 }
                 for &container in &stored {
@@ -3739,7 +3742,7 @@ impl Analysis for Allocations<'_> {
                 // not. See ADR-0040.
                 for (held, &escaped) in value.points_to.iter_mut().zip(&value.escaped) {
                     if escaped {
-                        held.from_caller = true;
+                        held.handed_over();
                     }
                 }
 
@@ -4002,7 +4005,7 @@ impl Analysis for Allocations<'_> {
                 // place of the free read in silence, since nothing after the
                 // call made it lost. Found by review. See ADR-0045.
                 if value.lost_exposed {
-                    value.points_to[result].lost = true;
+                    value.points_to[result].lost_its_allocation();
                 }
                 let exposed: Vec<Site> = value
                     .exposed
@@ -4110,7 +4113,7 @@ mod caller_memory {
         let analysis = crate::memory::analysis(&sources, &unit, func);
         let mut value = analysis.on_entry();
         assert!(analysis.reads_caller_memory(pp, 1, &value));
-        value.points_to[pp].lost = true;
+        value.points_to[pp].lost_its_allocation();
         assert!(analysis.reads_caller_memory(pp, 1, &value));
     }
 

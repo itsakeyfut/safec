@@ -66,7 +66,7 @@ impl Allocations<'_> {
         if self.is_array(function, target) {
             return;
         }
-        value.points_to[target].lost = true;
+        value.points_to[target].lost_its_allocation();
         if unwritten_before[target] {
             value.init[target].doubt();
         }
@@ -764,7 +764,9 @@ impl Allocations<'_> {
         source.projection.as_slice() == [Projection::Deref]
             && self.may_be_pointer(function, source)
             && (through.may_be_a_locals_address() || through.sites().next().is_some())
-            && !(through.lost || through.foreign || through.inner_address || through.stored_through)
+            && !(through.beyond().lost()
+                || through.beyond().foreign()
+                || through.inner_address || through.stored_through)
             // **A pointer read out of memory is asked about its blocks
             // alone**: it may name what it does not show, so what it shows is
             // no proof (`reads_fresh` refuses it), and a block it names that
@@ -775,7 +777,7 @@ impl Allocations<'_> {
             // array, by the user's decision on #728: asking about every local
             // moved twelve cases, most of them arrays whose element rules
             // (#639, #667) decide what such a pointer writes and reads.
-            && if through.loaded {
+            && if through.beyond().loaded() {
                 through.sites().any(site_maybe)
                     || through.locals().any(|local| {
                         !self.is_array(function, local)

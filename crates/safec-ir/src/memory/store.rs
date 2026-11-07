@@ -473,8 +473,9 @@ impl Allocations<'_> {
         // first, its `may_hold` being every local. Measured on #785:
         // dropping it from the closure fails no case, no route row and no
         // probe of either source. Kept so that a third source of the mark is not silent here.
-        let unrecorded = |local: &Held| local.from_caller || local.beyond().unrecorded_address();
-        let through_unrecorded = held.from_caller
+        let unrecorded =
+            |local: &Held| local.beyond().is_from_caller() || local.beyond().unrecorded_address();
+        let through_unrecorded = held.beyond().is_from_caller()
             || above
                 .iter()
                 .any(|&site| value.exposed[site] || value.contents[site].holds_from_caller())
