@@ -308,20 +308,12 @@ impl Allocations<'_> {
     /// it, which is the question [`built_from`] asks and C17 6.5.6 p8 answers.
     /// See ADR-0030.
     ///
-    /// **Written out rather than as a `matches!`, because the answer for a kind
-    /// nobody has added yet is not `false`.** A type this does not recognise is
-    /// dropped from an addition that has a pointer beside it, and a dropped
-    /// operand is a site nothing reports: `error[E0004]` here is what asks a
-    /// fourth kind of type whether it is one. `E0004` makes somebody look and
-    /// that is all it makes them do, and this is the case where a reader has
-    /// something to decide rather than a line to fill in.
+    /// **[`Ty::is_pointer`] answers, an exhaustive `match`, because the
+    /// answer for a kind nobody has added yet is not `false`.** A type this
+    /// does not recognise is dropped from an addition that has a pointer
+    /// beside it, and a dropped operand is a site nothing reports.
     pub(super) fn is_pointer(&self, function: &Function, local: LocalId) -> bool {
-        match self.unit.ty(function.local(local)) {
-            Ty::Pointer(_) => true,
-            // No whole array is an operand of arithmetic: it is converted to
-            // a pointer to its first element first (C17 6.3.2.1 p3).
-            Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => false,
-        }
+        self.unit.ty(function.local(local)).is_pointer()
     }
 
     /// Whether a place may hold a pointer, by its type.

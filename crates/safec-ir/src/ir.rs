@@ -186,6 +186,26 @@ pub enum Ty {
     },
 }
 
+impl Ty {
+    /// Whether a value of this type is a pointer.
+    ///
+    /// **An exhaustive `match`, the one answer every analysis reads**, so
+    /// that a kind of type added later, a function pointer, is
+    /// `error[E0004]` here rather than "not a pointer" at each reader that
+    /// spelled `matches!(.., Ty::Pointer(_))`. What a kind nobody has added
+    /// yet is decides what the memory and nullability checks follow, so a
+    /// `_` arm would answer it without anybody deciding.
+    ///
+    /// **An array answers no.** No whole array is a value: C converts it to
+    /// a pointer to its first element where it is used (C17 6.3.2.1 p3).
+    pub fn is_pointer(self) -> bool {
+        match self {
+            Ty::Pointer(_) => true,
+            Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => false,
+        }
+    }
+}
+
 /// A step from a local towards the thing an operation means.
 ///
 /// `docs/safety-model.md`'s Place is a local plus however many of these it

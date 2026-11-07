@@ -41,7 +41,7 @@ use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
     BinOp, BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place,
-    Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, UnOp,
+    Projection, Promise, Rvalue, Terminator, TranslationUnit, UnOp,
 };
 use crate::reads::{dereferenced_in_element, dereferenced_in_terminator};
 use crate::source::{SourceMap, Span};
@@ -388,7 +388,7 @@ impl Nullability<'_> {
     /// `a_free_of_an_int_that_holds_zero_is_not_exempt` fails, and nothing else
     /// in the suite moves.
     fn is_pointer(&self, function: &Function, local: LocalId) -> bool {
-        matches!(self.unit.ty(function.local(local)), Ty::Pointer(_))
+        self.unit.ty(function.local(local)).is_pointer()
     }
 
     /// Which arguments a call's callee reads or writes through, by its row
@@ -859,7 +859,7 @@ fn zero_beside<'a>(lhs: &'a Operand, rhs: &'a Operand) -> Option<&'a Operand> {
 /// Whether a local's type is a pointer, so that a branch on an `int` is not
 /// read as a branch on a pointer.
 fn pointer_typed(unit: &TranslationUnit, function: &Function, local: LocalId) -> bool {
-    matches!(unit.ty(function.local(local)), Ty::Pointer(_))
+    unit.ty(function.local(local)).is_pointer()
 }
 
 /// What an rvalue is worth as a pointer.
