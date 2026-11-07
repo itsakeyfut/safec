@@ -1136,6 +1136,11 @@ impl Held {
     /// lost local, a caller's or a callee's value at a call that may free
     /// it, or a lost value when one is freed. Sets [`Held::lost`] and
     /// [`Held::stale_read`].
+    ///
+    /// Mutations: leave out `stale_read`, and
+    /// `a_lost_pointer_freed_then_stored_is_doubted_when_read_back` fails;
+    /// leave out `lost`, and
+    /// `a_local_this_check_lost_read_through_its_address_is_doubted` does.
     pub(super) fn lost_and_may_be_gone(&mut self) {
         self.lost = true;
         self.stale_read = true;
@@ -2321,6 +2326,11 @@ impl Beyond {
     /// lost value may have been stored in. Asked by
     /// `Known::lost_may_be_gone`, which makes such a value gone at a free,
     /// and by what a call is handed, where it may free one.
+    ///
+    /// Mutations: leave out `lost_read`, and
+    /// `a_lost_pointer_read_back_before_its_free_is_doubted_when_used`
+    /// fails; leave out `lost`, and
+    /// `a_lost_pointer_freed_then_stored_is_doubted_when_read_back` does.
     pub(super) fn may_hold_a_lost_value(&self) -> bool {
         match self {
             Beyond::Nothing => false,
