@@ -1,0 +1,20 @@
+error[SC0411]: this copies bytes that may not have been written into memory that code outside this function reads as a pointer
+   ╭─[ a_copy_of_unwritten_bytes_into_a_callers_array_of_one_pointer_is_reported.c:4:5 ]
+   │
+ 4 │     memcpy(*out, &m, 8);
+   │     ─────────┬─────────  
+   │              ╰─────────── copied here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write what is copied on every path before the copy
+error[SC0403]: this may dereference `out` while it is null
+   ╭─[ a_copy_of_unwritten_bytes_into_a_callers_array_of_one_pointer_is_reported.c:4:5 ]
+   │
+ 4 │     memcpy(*out, &m, 8);
+   │     ─────────┬─────────  
+   │              ╰─────────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

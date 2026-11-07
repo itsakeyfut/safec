@@ -1514,6 +1514,11 @@ cases! {
         // one dereference; both go silent.
         a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Memory that holds an array of pointers holds pointers: a copy of
+        // bytes nothing wrote into a caller's `int *[1]` is reported as one
+        // into an `int *` is (#843). Mutation: `stored_pointer` strips no
+        // array; this goes silent.
+        a_copy_of_unwritten_bytes_into_a_callers_array_of_one_pointer_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An `int` stored through a pointer that may be the array cannot be
         // a write of its pointer elements (C17 6.5 p7). Mutation:
         // `replaced_by` drops the type from its write answer; this goes

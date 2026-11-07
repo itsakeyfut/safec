@@ -13,7 +13,7 @@ use crate::ir::{
 use crate::source::Span;
 
 use super::LostReason;
-use super::allocations::{Allocations, handed_places, innermost_element};
+use super::allocations::{Allocations, handed_places, innermost_element, stored_pointer};
 use super::built::{built_from, named, replaced_by};
 use super::fit::{Fit, fits, slots_from, slots_leaving};
 use super::index::{Idx, Loc, LocalIdx, Site, Table};
@@ -409,11 +409,7 @@ impl Allocations<'_> {
         let Ty::Pointer(stored) = self.unit.ty(ty) else {
             return false;
         };
-        match self.unit.ty(innermost_element(self.unit, stored)) {
-            Ty::Pointer(_) => true,
-            Ty::Int | Ty::Char | Ty::Void => false,
-            Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
-        }
+        stored_pointer(self.unit, stored).is_some()
     }
 
     /// What a pointer read as `place` believes the memory it points at
