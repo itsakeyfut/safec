@@ -1,0 +1,11 @@
+error[SC0411]: `p` may be read before anything was assigned to it
+    ╭─[ a_pointer_read_in_a_loop_only_after_its_first_turn_is_doubted.c:14:22 ]
+    │
+ 14 │             r = r + (p == q);
+    │                      ───┬──  
+    │                         ╰──── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else

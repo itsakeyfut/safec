@@ -1,3 +1,14 @@
+error[SC0411]: `keep` may be read before anything was assigned to it
+    ╭─[ a_double_free_across_a_loop_names_the_free_that_is_wrong.c:10:13 ]
+    │
+ 10 │             free(keep);
+    │             ─────┬────  
+    │                  ╰────── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else
 error[SC0401]: this frees `keep`, which this check stopped following
     ╭─[ a_double_free_across_a_loop_names_the_free_that_is_wrong.c:10:13 ]
     │

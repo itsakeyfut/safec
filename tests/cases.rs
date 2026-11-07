@@ -83,26 +83,68 @@ cases! {
         // The loop test's exit edge carries the later turns, which assigned `p`.
         // Mutation: drop (a). It is refused.
         a_pointer_assigned_in_a_loop_that_runs_once_is_read_after_it_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Read under `i > 0`, after the turn that assigned it. No one clause
-        // holds it: drop (a) together with (b) or (c), or join with `&&`, and
-        // it is refused.
-        a_pointer_read_in_a_loop_only_after_its_first_turn_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read under `i > 0`, after the turn that assigned it. Doubted by the
+        // memory check's first turn, as it is for a local whose address is
+        // taken (ADR-0075). Mutation: `unwritten_read` asks only a local
+        // whose address is taken; this goes silent.
+        a_pointer_read_in_a_loop_only_after_its_first_turn_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read by name on every turn before the body assigns it: a proof, as
         // of the loop's first turn (#670). Mutation: ask no read in
         // `memory::assigned` as of a first turn; this goes silent.
         a_pointer_local_read_in_a_loop_before_the_body_assigns_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Assigned on one arm and read under another test: the read some
+        // path left unassigned, which no edge leads to on every path. It
+        // built silent where the same with the local's address taken was
+        // `SC0411` (#730).
+        // Doubted, as it is for a local whose address is taken: no path's
+        // condition is followed (ADR-0075). Mutation: `unwritten_read` asks
+        // only a local whose address is taken; this goes silent.
+        a_pointer_assigned_on_one_arm_and_read_under_another_test_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Each read is its own caret: the first is `memory::assigned`'s edge
+        // doubt, the second only the memory check's. Mutation: skip the doubt
+        // where `memory::assigned` said anything of the local, at any caret;
+        // the second goes silent.
+        a_pointer_some_path_left_unassigned_is_doubted_at_each_of_its_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `r` is proved unassigned and `p` doubted at one caret, and each is
+        // answered. Mutation: skip the doubt where anything was said at the
+        // caret, of any local; `p`'s goes.
+        two_locals_read_at_one_caret_are_each_answered: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Freed on a later turn before the body assigns it: the free is a
+        // doubt, and so is the read of nothing assigned on the first turn,
+        // as for a local whose address is taken. Mutation: let any finding
+        // at the caret skip the doubt, the free's included; the read's goes.
+        // Mutation: ask a local whose address is never taken only where it
+        // is `Maybe`, not on a first turn's doubt; it goes too.
+        a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Compared on an arm of a loop shown to run, before the body assigns
+        // it: only the first turn reaches the read unassigned, and only as a
+        // doubt. It built silent where with the address taken it was
+        // `SC0411`, found by review. Mutation: ask a local whose address is
+        // never taken only where it is `Maybe`; this goes silent.
+        a_pointer_compared_on_an_arm_of_a_loop_shown_to_run_before_the_body_assigns_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The read is under `saved`, so `c`'s false edge does not lead to it
-        // on every path. Mutation: drop (c). It is refused.
-        a_pointer_assigned_beside_a_flag_is_read_under_it_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same with a parameter tested twice. Mutation: drop (c). It is
-        // refused.
-        a_pointer_assigned_and_read_under_one_parameter_tested_twice_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The unassigned path ends in a call that does not return. Mutation:
-        // count such a call as going on. It is refused.
-        a_pointer_whose_unassigned_path_ends_in_abort_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // on every path and no edge names the doubt.
+        // Doubted, as it is for a local whose address is taken: no path's
+        // condition is followed (ADR-0075). Mutation: `unwritten_read` asks
+        // only a local whose address is taken; this goes silent.
+        a_pointer_assigned_beside_a_flag_and_read_under_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with a parameter tested twice.
+        // Doubted, as it is for a local whose address is taken: no path's
+        // condition is followed (ADR-0075). Mutation: `unwritten_read` asks
+        // only a local whose address is taken; this goes silent.
+        a_pointer_assigned_and_read_under_one_parameter_tested_twice_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The unassigned path ends in a call that does not return, behind a
+        // test of `!c` this check does not tie to `c`.
+        // Doubted, as it is for a local whose address is taken: no path's
+        // condition is followed (ADR-0075). Mutation: `unwritten_read` asks
+        // only a local whose address is taken; this goes silent.
+        a_pointer_whose_unassigned_path_ends_in_abort_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Assigned under `c` and under `!c`: a path from `c`'s false edge
-        // assigns it. Mutation: drop (b). It is refused.
-        a_pointer_assigned_on_both_arms_of_a_test_and_its_negation_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // assigns it, so no edge names the doubt.
+        // Doubted, as it is for a local whose address is taken: no path's
+        // condition is followed (ADR-0075). Mutation: `unwritten_read` asks
+        // only a local whose address is taken; this goes silent.
+        a_pointer_assigned_on_both_arms_of_a_test_and_its_negation_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // **The cost**: `n < 0` cannot be false where `n >= 0` was, and C
         // defines this, but its false edge leads to the read unassigned. It is
         // refused, as clang's `-Wall` warns. It is here so the cost is seen,
@@ -113,9 +155,12 @@ cases! {
         // is refused.
         a_pointer_read_after_an_arm_that_never_ends_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The unassigned path ends in `exit` inside a larger expression,
-        // where the lowering keeps the call's edge. Mutation: read only
-        // `then` in `reaches_certainly`. It is refused.
-        a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // where the lowering keeps the call's edge, behind a test this check
+        // does not tie to the assignment's.
+        // Doubted, as it is for a local whose address is taken: no path's
+        // condition is followed (ADR-0075). Mutation: `unwritten_read` asks
+        // only a local whose address is taken; this goes silent.
+        a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // **A cost**: `c || 1` is never false, but `||` is lowered as a
         // second branch on its result, whose false edge leads to the read
         // unassigned. It is refused, which clang does not do. It is here so
@@ -2304,6 +2349,8 @@ cases! {
         a_pointer_saved_across_a_loop_that_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_of_a_local_that_lost_its_allocation_lost_it_too: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_that_kept_one_allocation_and_lost_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Its `keep` is read under the flag `saved` sets beside the
+        // assignment, so it is doubted too (ADR-0075).
         a_double_free_across_a_loop_names_the_free_that_is_wrong: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_given_something_fresh_forgets_what_it_lost: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

@@ -20,16 +20,23 @@
 //! undefined on the others, and this analysis follows no condition a path
 //! took, so `if (key && (p = find(key)) != 0) use(p);`, a loop that runs at
 //! least once and a flag set beside the assignment look the same as the
-//! undefined read. Reporting every such read refused programs C defines.
+//! undefined read.
 //!
-//! **So a read some paths assigned is reported only after a branch edge that
-//! certainly leads to it unassigned**, as `Unknown`: the local is unassigned
+//! **So this analysis reports a read some paths assigned only after a branch
+//! edge that certainly leads to it unassigned**, as `Unknown`: the local is unassigned
 //! on every path to the branch, no path from the edge to the read assigns it,
 //! and every path from the edge reaches the read. `if (c) p = q; use(p);` is
 //! that read, on `c`'s false edge. Each of those programs carries an assigned
 //! path through every edge before its read, or a path from the edge that
 //! avoids it. The cost is an edge no execution takes: `if (n >= 0) p = q;
 //! else if (n < 0) p = r; use(p);` is refused, which C defines.
+//!
+//! **Every other read some paths assigned is the memory check's doubt**, as
+//! it is for a local whose address is taken: `report::unwritten_read` asks
+//! `Known::init`, which is `Maybe` there, where nothing here was said at the
+//! caret. So the flag set beside the assignment, a test made twice and a
+//! read on a later turn of a loop are doubted, as programs C may define; the
+//! edge above is what this analysis adds, a place to say why. See ADR-0075.
 //!
 //! **A loop's own test is such a branch as of its first turn**, unless
 //! `runs::shown_to_run` shows the loop runs (#783): its edge out of the loop
@@ -286,7 +293,7 @@ fn assigned_between(
 /// an edge**, which the lowering gives it inside a larger full expression:
 /// `ok = n > 0 ? 1 : (exit(2), 0);` before the read was refused, and C
 /// defines it. Mutation: read only `then`. Then
-/// `a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_read_in_silence`
+/// `a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted`
 /// is refused.
 fn reaches_certainly(
     unit: &TranslationUnit,
@@ -341,7 +348,9 @@ fn reaches_certainly(
 /// analysis does not watch, since a write through that address is not
 /// followed here, and what the memory check's [`Known::init`] asks by
 /// name instead, since it does follow one. One answer for both, so that a
-/// local is asked by exactly one of them (#640).
+/// local whose address is taken is asked by that check alone (#640); one
+/// whose address is never taken is asked here first, and by that check
+/// only for its doubt (ADR-0075).
 ///
 /// [`Known::init`]: super::known::Known::init
 pub(super) fn address_taken(function: &Function) -> Bits<LocalIdx> {
@@ -423,12 +432,10 @@ pub(super) fn findings(
     // **And every read a loop runs on every turn, as of its first turn**
     // (#670): whatever turn reaches it, the first passed it, so `r = q; q =
     // &x;` in the body is a proof. Only where the read's block dominates every
-    // block the loop's back edges leave from. A read on an arm stays silent,
-    // as the module comment says a loop that runs at least once and a flag
-    // set beside the assignment are, by the user's decision, where the memory
-    // check doubts it: `if (i > 0) use(p); p = find(i);` is C this check
-    // reads as defined. Not bounded, for the reason this analysis's own walk
-    // is not. See ADR-0057.
+    // block the loop's back edges leave from. A read on an arm is not asked
+    // so here: the memory check's first turn doubts it, `if (i > 0) use(p);
+    // p = find(i);` included (ADR-0075). Not bounded, for the reason this
+    // analysis's own walk is not. See ADR-0057.
     let loops = cfg.loops();
     let dominators = cfg.dominators();
     let first_turns: Vec<_> = loops

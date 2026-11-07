@@ -1,0 +1,25 @@
+error[SC0411]: `p` may be read before anything was assigned to it
+   ╭─[ a_pointer_some_path_left_unassigned_is_doubted_at_each_of_its_reads.c:5:5 ]
+   │
+ 4 │     if (c) p = q;
+   │         ┬  
+   │         ╰── when this is false
+ 5 │     use(p);
+   │     ───┬──  
+   │        ╰──── read here
+───╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else
+error[SC0411]: `p` may be read before anything was assigned to it
+   ╭─[ a_pointer_some_path_left_unassigned_is_doubted_at_each_of_its_reads.c:6:19 ]
+   │
+ 6 │     if (d) return p == q;
+   │                   ───┬──  
+   │                      ╰──── read here
+───╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else

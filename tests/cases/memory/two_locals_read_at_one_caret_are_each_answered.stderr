@@ -1,0 +1,21 @@
+error[SC0411]: `r` is read before anything was assigned to it
+   ╭─[ two_locals_read_at_one_caret_are_each_answered.c:6:12 ]
+   │
+ 6 │     if (d) use2(r, p);
+   │            ─────┬────  
+   │                 ╰────── read here
+───╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else
+error[SC0411]: `p` may be read before anything was assigned to it
+   ╭─[ two_locals_read_at_one_caret_are_each_answered.c:6:12 ]
+   │
+ 6 │     if (d) use2(r, p);
+   │            ─────┬────  
+   │                 ╰────── read here
+───╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else
