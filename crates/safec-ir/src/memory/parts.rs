@@ -649,8 +649,10 @@ pub(super) struct Held {
     /// union into it. See ADR-0028.
     ///
     /// `true` is the answer that gives up, which is why [`Held::none`] seeds
-    /// it: that value is the lattice's identity and is also what every local
-    /// holds where a function starts.
+    /// it: that value is what every local holds where a function starts.
+    /// **It is not the join's identity for this field**: [`Held::joined`]
+    /// takes it as an `||`, so a path holding nothing makes the join give up
+    /// on where a write lands, which is the safe answer.
     ///
     /// [`Held::locals`]: Held::locals
     pub(super) writes_elsewhere: bool,
@@ -1424,11 +1426,20 @@ impl Held {
     /// Also hold everything that one holds, where two paths meet.
     ///
     /// **The lattice's join, and one of two algebras this struct has.**
-    /// [`Self::accumulated`] is the other, and they differ on exactly one
-    /// field. Splitting them is ADR-0024; what made one method wrong for both
-    /// is that [`Held::none`] is the identity for three of these fields and the
-    /// zero for the fourth, so building a value up from nothing cleared a proof
-    /// every time.
+    /// [`Self::accumulated`] is the other. Splitting them is ADR-0024; what
+    /// made one method wrong for both is that [`Held::none`] is not this
+    /// join's identity, so building a value up from nothing by it cleared a
+    /// proof every time.
+    ///
+    /// **What [`Held::none`] is to this join, field by field.** The identity
+    /// of every may-fact a union joins (`names`, `named_at_read` and the
+    /// marks joined by `||` other than `writes_elsewhere`), of
+    /// `contents_at_most` and `element`, and of `believed` unless its path
+    /// left the local unwritten. The zero of the proofs an intersection
+    /// joins, `freed`, `fresh_read` and `stored_through`, of `returned_by`,
+    /// and of `writes_elsewhere`, whose `true` gives up. Neither for
+    /// `offset`, whose `Zero` joined with `NonZero` is `Unknown`
+    /// ([`Offset::joined`]).
     ///
     /// `unwritten` is whether each side left the local unwritten
     /// (`Known::init`), which no field here says: such a local names
