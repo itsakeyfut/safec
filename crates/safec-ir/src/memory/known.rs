@@ -270,8 +270,10 @@ pub(super) struct Known {
     /// already doubted is kept there. At any other loop's back edge it is the
     /// doubt, since that loop may run zero times (#783, ADR-0064). An array
     /// kept per element gains no such doubt at any join, its elements
-    /// carrying it. Written by a write of the whole local,
-    /// and unwritten again at `StorageLive`. See ADR-0057.
+    /// carrying it. Written by a write of the whole local, made "may have
+    /// been written" by a write of part of one kept whole (#826,
+    /// `built::write_effects`), and unwritten again at `StorageLive`. See
+    /// ADR-0057.
     pub(super) init: Table<Loc, Init>,
     /// What has been read through a pointer since the last sequence point.
     ///
@@ -2135,6 +2137,12 @@ impl Known {
                 }
                 // No element is certainly unwritten once one nobody can name
                 // may have been written, and each may still be.
+                ArrayWrite::Covered(count) => {
+                    let count = usize::try_from(count).unwrap_or(usize::MAX);
+                    for element in 0..count.min(self.element_init[local].len()) {
+                        self.element_init[local].set(element, Init::Written);
+                    }
+                }
                 ArrayWrite::Maybe if kept => self.element_init[local].may_write_all(),
                 ArrayWrite::Maybe => {
                     let mut init = write.init;
@@ -2635,6 +2643,10 @@ pub(super) enum ArrayWrite {
     Element(u64),
     /// It may land in any element. See [`Known::init`].
     Maybe,
+    /// It writes this many elements whole from the start, and none of the
+    /// rest: a library copy of a length this check reads into an array kept
+    /// per element (#826).
+    Covered(u64),
 }
 
 /// An [`ArrayWrite`] with what the array held before the write, put back

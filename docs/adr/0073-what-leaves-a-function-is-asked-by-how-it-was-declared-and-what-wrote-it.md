@@ -68,10 +68,14 @@ and Cons below.
    characters, and a library copy of a length it reads that is shorter than
    the local. A store at an index it cannot read, and a copy of a length it
    cannot read, still write it whole, so a loop that fills it is not doubted.
-   An array of pointers is written whole by a store, which writes a pointer
-   whole, so one kept whole is put in doubt only by a copy that ends part way
-   through a pointer, and one kept per element is written by a copy only in
-   the elements it covers whole (#826).
+   A pointer local that is no array is written in part by a copy that ends
+   part way through it, and an array of pointers kept per element is written
+   by a copy only in the elements it covers whole. An array of pointers kept
+   whole, longer than `ELEMENTS_KEPT`, is not asked: a store writes a pointer
+   whole, and a read of it is asked only at its start, so a copy ending part
+   way through `big[1]` would doubt `big[0]`, written whole, and leave `big[1]`
+   silent, measured; it stays inside the limit such an array already has
+   (#826).
 3. **A `return` of a block unwritten is doubted** where the function's
    return type points at a pointer, as `SC0411` with words of its own: the
    caller reads pointers out of it and this check reads one function at a time

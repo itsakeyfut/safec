@@ -156,6 +156,9 @@ impl Allocations<'_> {
                             1,
                             edges.iter().copied(),
                             false,
+                            self.unit
+                                .place_ty(function, place)
+                                .and_then(|ty| self.unit.size_of(ty)),
                         );
                         // **A local is written for certain only where it is
                         // the one place the store lands**, as a site is
@@ -553,6 +556,7 @@ impl Allocations<'_> {
                         derefs(dest) + 1,
                         lands.iter().copied(),
                         true,
+                        bytes,
                     ),
                     _ => Vec::new(),
                 };

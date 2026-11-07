@@ -1,0 +1,10 @@
+error[SC0411]: this copies bytes that may not have been written into memory that code outside this function reads as a pointer
+   ╭─[ a_char_buffer_written_at_its_first_element_copied_into_caller_memory_is_doubted.c:2:60 ]
+   │
+ 2 │ void f(int **out) { if (!out) return; char b[8]; b[0] = 0; memcpy(out, b, 8); }
+   │                                                            ────────┬────────  
+   │                                                                    ╰────────── copied here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write what is copied on every path before the copy

@@ -1,0 +1,42 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_local_a_short_copy_wrote_read_is_doubted.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_pointer_local_a_short_copy_wrote_read_is_doubted.c:2:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "x"
+  Local "_2" "int *" "p"
+  Local "_3" "int **"
+  Local "_4" "int *"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Block "bb0" entry
+    Operation a_pointer_local_a_short_copy_wrote_read_is_doubted.c:2:31 written
+      Destination "_3"
+      Address
+        Place "_2"
+    Operation a_pointer_local_a_short_copy_wrote_read_is_doubted.c:2:35 written
+      Destination "_4"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_pointer_local_a_short_copy_wrote_read_is_doubted.c:2:24 generated
+    Call a_pointer_local_a_short_copy_wrote_read_is_doubted.c:2:24 written "memcpy" "bb1"
+      Destination "_5"
+      Copy "_3"
+      Copy "_4"
+      Constant 4
+  Block "bb1"
+    Sequenced a_pointer_local_a_short_copy_wrote_read_is_doubted.c:2:24 generated
+    Operation a_pointer_local_a_short_copy_wrote_read_is_doubted.c:2:50 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Operation a_pointer_local_a_short_copy_wrote_read_is_doubted.c:2:43 written
+      Destination "_0"
+      Use
+        Copy "_6"
+    Sequenced a_pointer_local_a_short_copy_wrote_read_is_doubted.c:2:50 generated
+    Return

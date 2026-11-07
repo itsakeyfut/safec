@@ -1,0 +1,237 @@
+Target "x86_64-pc-windows-msvc"
+Function a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "char[8]" "b"
+  Local "_2" "char *"
+  Local "_3" "char"
+  Local "_4" "char *"
+  Local "_5" "char *"
+  Local "_6" "char"
+  Local "_7" "char *"
+  Local "_8" "char *"
+  Local "_9" "char"
+  Local "_10" "char *"
+  Local "_11" "char *"
+  Local "_12" "char"
+  Local "_13" "char *"
+  Local "_14" "char *"
+  Local "_15" "char"
+  Local "_16" "char *"
+  Local "_17" "char *"
+  Local "_18" "char"
+  Local "_19" "char *"
+  Local "_20" "char *"
+  Local "_21" "char"
+  Local "_22" "char *"
+  Local "_23" "char *"
+  Local "_24" "char"
+  Local "_25" "void *" "v"
+  Local "_26" "char *"
+  Local "_27" "int **" "q"
+  Local "_28" "int *" "p"
+  Local "_29" "int"
+  Block "bb0" entry
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:26 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:26 written
+      Destination "_2"
+        Deref
+      Use
+        Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:26 written
+      Destination "_3"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:26 generated
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:36 generated
+      Destination "_4"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:36 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_4"
+        Constant 1
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:36 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:36 written
+      Destination "_6"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:36 generated
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:46 generated
+      Destination "_7"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:46 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_7"
+        Constant 2
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:46 written
+      Destination "_8"
+        Deref
+      Use
+        Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:46 written
+      Destination "_9"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:46 generated
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:56 generated
+      Destination "_10"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:56 written
+      Destination "_11"
+      Binary "Add"
+        Copy "_10"
+        Constant 3
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:56 written
+      Destination "_11"
+        Deref
+      Use
+        Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:56 written
+      Destination "_12"
+      Use
+        Copy "_11"
+          Deref
+    Sequenced a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:56 generated
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:66 generated
+      Destination "_13"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:66 written
+      Destination "_14"
+      Binary "Add"
+        Copy "_13"
+        Constant 4
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:66 written
+      Destination "_14"
+        Deref
+      Use
+        Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:66 written
+      Destination "_15"
+      Use
+        Copy "_14"
+          Deref
+    Sequenced a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:66 generated
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:76 generated
+      Destination "_16"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:76 written
+      Destination "_17"
+      Binary "Add"
+        Copy "_16"
+        Constant 5
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:76 written
+      Destination "_17"
+        Deref
+      Use
+        Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:76 written
+      Destination "_18"
+      Use
+        Copy "_17"
+          Deref
+    Sequenced a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:76 generated
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:86 generated
+      Destination "_19"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:86 written
+      Destination "_20"
+      Binary "Add"
+        Copy "_19"
+        Constant 6
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:86 written
+      Destination "_20"
+        Deref
+      Use
+        Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:86 written
+      Destination "_21"
+      Use
+        Copy "_20"
+          Deref
+    Sequenced a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:86 generated
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:96 generated
+      Destination "_22"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:96 written
+      Destination "_23"
+      Binary "Add"
+        Copy "_22"
+        Constant 7
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:96 written
+      Destination "_23"
+        Deref
+      Use
+        Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:96 written
+      Destination "_24"
+      Use
+        Copy "_23"
+          Deref
+    Sequenced a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:96 generated
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:116 generated
+      Destination "_26"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:112 written
+      Destination "_25"
+      Use
+        Copy "_26"
+    Sequenced a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:116 generated
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:125 written
+      Destination "_27"
+      Use
+        Copy "_25"
+    Sequenced a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:129 generated
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:137 written
+      Destination "_28"
+      Use
+        Copy "_27"
+          Deref
+    Sequenced a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:141 generated
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:152 written
+      Destination "_29"
+      Binary "Eq"
+        Copy "_28"
+        Constant 0
+    Operation a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:145 written
+      Destination "_0"
+      Use
+        Copy "_29"
+    Sequenced a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:152 generated
+    Return

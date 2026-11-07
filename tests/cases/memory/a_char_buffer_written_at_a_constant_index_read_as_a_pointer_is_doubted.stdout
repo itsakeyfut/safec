@@ -1,0 +1,68 @@
+Target "x86_64-pc-windows-msvc"
+Function a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "char[8]" "b"
+  Local "_2" "char *"
+  Local "_3" "char *"
+  Local "_4" "char"
+  Local "_5" "void *" "v"
+  Local "_6" "char *"
+  Local "_7" "int **" "q"
+  Local "_8" "int *" "p"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted.c:1:26 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted.c:1:26 written
+      Destination "_3"
+      Binary "Add"
+        Copy "_2"
+        Constant 3
+    Operation a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted.c:1:26 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 0
+    Operation a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted.c:1:26 written
+      Destination "_4"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted.c:1:26 generated
+    Operation a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted.c:1:46 generated
+      Destination "_6"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted.c:1:42 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted.c:1:46 generated
+    Operation a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted.c:1:55 written
+      Destination "_7"
+      Use
+        Copy "_5"
+    Sequenced a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted.c:1:59 generated
+    Operation a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted.c:1:67 written
+      Destination "_8"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted.c:1:71 generated
+    Operation a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted.c:1:82 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_8"
+        Constant 0
+    Operation a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted.c:1:75 written
+      Destination "_0"
+      Use
+        Copy "_9"
+    Sequenced a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted.c:1:82 generated
+    Return
