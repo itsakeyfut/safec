@@ -205,8 +205,8 @@ pub enum Kind {
     /// A pointer local read where no path to the read assigned it, which C17
     /// 6.3.2.1 p2 leaves undefined whatever the read is for. Always `Unsafe`;
     /// a read some paths assigned is [`Kind::SometimesUnassigned`] or
-    /// nothing, and a local whose address is taken is never one. See
-    /// `memory::assigned`.
+    /// [`Kind::IndeterminateLocal`]'s doubt (ADR-0075), and a local whose
+    /// address is taken is never one. See `memory::assigned`.
     Unassigned,
     /// A pointer local read where some path assigned it, after a branch edge
     /// that leads to the read on every path and assigns it on none, the
@@ -240,14 +240,15 @@ pub enum Kind {
         /// Whether it may reach a local nothing wrote.
         reaches_local: bool,
     },
-    /// A pointer local whose address is taken, read by name before anything
-    /// wrote it, on every path: its value is indeterminate (C17 6.2.4 p6,
-    /// 6.7.9 p10), and Annex J.2 lists using it as undefined, the reading
-    /// ADR-0057 takes. `Unsafe` at the read, and `Unknown` where the local
-    /// was written on one path into a join and not the other (#668). `local`
-    /// is the local read. A local whose address is never taken is `Unassigned`'s,
-    /// which `memory::assigned` builds, and the two never meet (#640). See
-    /// `Known::init` and ADR-0057.
+    /// A pointer local read by name before anything wrote it, on every path:
+    /// its value is indeterminate (C17 6.2.4 p6, 6.7.9 p10), and Annex J.2
+    /// lists using it as undefined, the reading ADR-0057 takes. `Unsafe` at
+    /// the read, and `Unknown` where the local was written on one path into a
+    /// join and not the other (#668). `local` is the local read. A local
+    /// whose address is never taken is `Unassigned`'s and
+    /// `SometimesUnassigned`'s, which `memory::assigned` builds first, and is
+    /// this only as the `Unknown` doubt, where neither was said at the caret
+    /// (ADR-0075). See `Known::init` and ADR-0057.
     IndeterminateLocal,
     /// A function this check gave up on part of the way, past `MAX_WORK`, so
     /// nothing about its memory is proved. Always `Unknown`, at the

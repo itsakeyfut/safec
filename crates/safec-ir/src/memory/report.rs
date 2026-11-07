@@ -2098,14 +2098,18 @@ fn may_say(
     }
 }
 
-/// Report every read by name of a local that holds a pointer, whose address
-/// is taken somewhere in the function, before anything wrote it on any path:
-/// an indeterminate value used (C17 6.2.4 p6, 6.7.9 p10, Annex J.2), once per
-/// local per caret. `int *q; int **pq = &q; return q == 0;` (#640).
+/// Report every read by name of a local that holds a pointer before anything
+/// wrote it on any path: an indeterminate value used (C17 6.2.4 p6, 6.7.9
+/// p10, Annex J.2), once per local per caret. `int *q; int **pq = &q; return
+/// q == 0;` (#640).
 ///
-/// `taken` is `assigned::address_taken`, so a local is asked here exactly
-/// where `memory::assigned` does not ask it: that analysis follows no write
-/// through an address and this one does ([`Known::init`]). See ADR-0057.
+/// `taken` is `assigned::address_taken`. A local whose address is taken is
+/// asked here alone, since `memory::assigned` follows no write through an
+/// address and this one does ([`Known::init`]). One whose address is never
+/// taken is `memory::assigned`'s first, and is asked here only where it may
+/// be unwritten and nothing was said of it at the caret: one rule for a
+/// read some path left unassigned, whatever happens to the local's address.
+/// See ADR-0057 and ADR-0075.
 ///
 /// `doubt_only` as [`loaded_indeterminate`] takes it.
 #[allow(clippy::too_many_arguments)]
@@ -2127,7 +2131,17 @@ pub(super) fn unwritten_read(
         // integer read as itself is not followed (ADR-0073 rule 2).
         let init = known.init[local];
         let partly = init == Init::Maybe;
-        if !taken.get(LocalIdx::of(local))
+        // **A local whose address is never taken is asked here only for the
+        // doubt**, and only where `memory::assigned`, which runs first and
+        // proves or doubts it by name, said nothing at this caret: one rule
+        // for a read some path left unassigned, whatever happens to the
+        // local's address. See ADR-0075.
+        let by_name = !taken.get(LocalIdx::of(local));
+        if (by_name
+            && (!partly
+                || findings
+                    .iter()
+                    .any(|said| said.at == at && said.local == Some(local))))
             || init == Init::Written
             || !analysis.holds_a_pointer(function.local(local))
         {
