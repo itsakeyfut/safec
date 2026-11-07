@@ -4,7 +4,7 @@
 
 use crate::ir::{BinOp, Function, LocalId, Operand, Place, TranslationUnit, Ty};
 
-use super::allocations::innermost_element;
+use super::allocations::{innermost_element, stored_pointer};
 use super::index::{Idx, LocalIdx, Site, Table};
 use super::known::{ArrayWrite, Known, WrittenBy};
 use super::parts::{Held, Init, Inits, Offset, Reached};
@@ -430,8 +430,7 @@ pub(super) fn write_effects(
                 .nth(each.index())
                 .map(|id| function.local(id));
             let size = ty.and_then(|ty| unit.size_of(ty));
-            let holds_pointers =
-                ty.is_some_and(|ty| unit.ty(innermost_element(unit, ty)).is_pointer());
+            let holds_pointers = ty.is_some_and(|ty| stored_pointer(unit, ty).is_some());
             let placed = if array {
                 element.is_some()
             } else {

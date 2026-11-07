@@ -94,7 +94,8 @@ pub(super) fn innermost_element(unit: &TranslationUnit, ty: TyId) -> TyId {
 /// `int *[1]` and `int *[2][3]`, nothing for `int` or `int [4]`.
 ///
 /// **The one answer to whether memory holds pointers**:
-/// `Allocations::first_level_holds_a_pointer`, and in `report.rs`
+/// `Allocations::first_level_holds_a_pointer`, `built::write_effects` for
+/// a local kept whole, and in `report.rs`
 /// `report_returned_unwritten`, `copied_unwritten`, `part_of_a_pointer`,
 /// and `contents_leaving` for what the receiver reads and for each slot it
 /// reads. Five of them once stopped at an array, so a copy of unwritten
