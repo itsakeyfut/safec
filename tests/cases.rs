@@ -494,6 +494,9 @@ cases! {
         // ask only a block certainly unwritten; this and the next go silent.
         a_block_left_unwritten_on_one_arm_where_its_allocation_succeeded_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_written_only_by_a_loop_that_may_not_run_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Through a conditional, which no local names, in the words that
+        // name none. Mutation: change those words; this fails.
+        a_block_left_unwritten_on_one_arm_returned_through_a_conditional_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The cost: the pointer is shown not null only after the join that
         // left the block possibly unwritten, so a block every path wrote is
         // doubted.
