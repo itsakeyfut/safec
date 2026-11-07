@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-11-07
 decision-makers: itsakeyfut
 ---
@@ -77,9 +77,29 @@ for it, each a read of a pointer nothing wrote:
 
 ### Confirmation
 
-Filled by #803's pull request: the build failure that calling `written_local`
-with a bare `LocalIdx` is, and the cases and mutations of each rule. Of rule
-4's five marks only `from_caller` is held by a case; leaving out any of the
+Each in `tests/cases/memory/`, with its mutation in its note in
+`tests/cases.rs`:
+
+1. `Known::written_local` handed a bare `LocalIdx` is `error[E0308]`, and a
+   `WrittenLocal` built outside `memory::store` does not compile: the field is
+   private there. `written_alone` taking any one-local landing, `[local, ..]`,
+   fails `a_copy_that_may_land_in_either_of_two_locals_may_have_missed_each`
+   and `a_store_through_a_pointer_to_either_of_two_locals_may_have_missed_each`;
+   ignoring a block beside the one local fails
+   `a_store_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local`;
+   asking a write two dereferences down of the pointer it starts from fails
+   `a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local`
+   and `a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local`.
+2. `WrittenBy::StoreOrCopy` writing a local for certain fails
+   `a_copy_that_may_land_in_either_of_two_locals_may_have_missed_each` and
+   `a_local_array_copied_into_through_a_dereference_of_a_pointer_read_out_of_memory_is_doubted`.
+3. `WrittenBy::Call` made a may-write fails forty-four cases of the call belief
+   (#782).
+4. Leaving `from_caller` out of `Beyond::believed_to_reach_only_its_edges` fails
+   `a_store_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local_it_names`;
+   counting `loaded` fails
+   `a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names`.
+   Of rule 4's five marks only `from_caller` is held by a case; leaving out any of the
 other four fails nothing, since where each is set the belief for a call this
 check cannot read has already written the local. They are kept by the
 author's decision, a mark kept being at worst a doubt too many. Rule 5 has no
