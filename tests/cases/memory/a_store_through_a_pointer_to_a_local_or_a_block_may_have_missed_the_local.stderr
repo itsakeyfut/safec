@@ -1,0 +1,11 @@
+error[SC0411]: `p` may be read before anything was assigned to it
+   ╭─[ a_store_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:7:10 ]
+   │
+ 7 │     int *r = p;
+   │          ──┬──  
+   │            ╰──── read here
+───╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else

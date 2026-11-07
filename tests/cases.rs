@@ -1482,11 +1482,38 @@ cases! {
         // silent.
         a_pointer_read_out_of_a_local_array_a_copy_through_a_dereference_of_a_placed_pointer_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same through a pointer read out of the caller's memory, which
-        // may be the array. **Held by two routes, measured**: the address
-        // edges `t` carries out of that memory, and the level the walk
-        // passes through being a load. Dropping either alone leaves this
-        // silent; it marks the program the fix must not report.
-        a_local_array_copied_into_through_a_dereference_of_a_pointer_read_out_of_memory_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // may be the array and may not: the copy may have written it, so a
+        // read of it is a doubt (#803). See ADR-0074. Mutation: a store or a
+        // copy that may land in a local writes it for certain, as a call is
+        // believed to; this goes silent.
+        a_local_array_copied_into_through_a_dereference_of_a_pointer_read_out_of_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local is written for certain only by a landing that names it
+        // alone (#803). See ADR-0074. A copy that may land in either of two
+        // locals may have missed each. Mutation: a copy that may land in a
+        // local writes it for certain, as a call is believed to; this goes
+        // silent. (A store that may has the `before` list in `replaced_by`
+        // as well, so the same mutation leaves the next case reported.)
+        a_copy_that_may_land_in_either_of_two_locals_may_have_missed_each: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store through a pointer read out of the caller's memory, which
+        // names one local and may land elsewhere. Mutation: leave
+        // `from_caller` out of `Beyond::believed_to_reach_only_its_edges`; this goes
+        // silent. The other four marks there have no case of their own.
+        a_store_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local_it_names: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read out of an allocation this function recorded all of, the one
+        // local it names is written, as a block's one container is (#726).
+        // Mutation: count a pointer read out of memory as one that may hold
+        // more; this is doubted.
+        a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer naming a local or a block may have missed the local.
+        // Mutation: ask nothing of a block beside the one local; this goes
+        // silent.
+        a_store_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same two, through two dereferences: the pointer the store
+        // goes through last is asked, not the one it starts from. Mutation:
+        // ask the base pointer's marks alone, and nothing of a block, below
+        // one dereference; both go silent.
+        a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An `int` stored through a pointer that may be the array cannot be
         // a write of its pointer elements (C17 6.5 p7). Mutation:
         // `replaced_by` drops the type from its write answer; this goes

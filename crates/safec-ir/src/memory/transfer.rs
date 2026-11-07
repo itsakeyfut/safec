@@ -18,7 +18,7 @@ use super::built::{built_from, named, replaced_by};
 use super::fit::{Fit, fits, slots_from, slots_leaving};
 use super::index::{Idx, Loc, LocalIdx, Site, Table};
 use super::init::Wrote;
-use super::known::{ArrayWrite, ELEMENTS_KEPT, Known};
+use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
     AS_TYPED, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, Offset, PendingRead,
     Reached, Read, Realloced, SiteState, bounded,
@@ -2055,8 +2055,8 @@ impl Analysis for Allocations<'_> {
 
                 // An assignment to a local writes it, whatever it writes. See
                 // `Known::init`.
-                if operation.place.projection.is_empty() {
-                    value.written_local(LocalIdx::of(operation.place.local));
+                if let Some(at) = Strong::assigned(&operation.place) {
+                    value.written_local(at.into());
                 }
 
                 // **This check follows a write through exactly one `Deref` and
@@ -3531,7 +3531,7 @@ impl Analysis for Allocations<'_> {
                     value.exposed_in_part[*local] = true;
                 }
                 let pending = value.array_writes_before(partial);
-                value.replaced(|_| true, |local| may_write[local]);
+                value.replaced(|_| true, |local| may_write[local], WrittenBy::Call);
                 value.array_writes_after(pending);
                 // **And as what each local it reaches was handed**, which is
                 // the most its body can be asked to have written there: a
@@ -3769,7 +3769,7 @@ impl Analysis for Allocations<'_> {
             // store transfer clears for. It is here for a frontend that
             // does not.
             if derefs(place) > 0 {
-                value.written_all();
+                value.may_write_all_sites();
             }
             // And an escaped local it may land in, as an unplaced store
             // does. See `Known::init`.
@@ -3778,7 +3778,7 @@ impl Analysis for Allocations<'_> {
         };
         // The call's result writes the local it lands in. See
         // `Known::init`.
-        value.written_local(LocalIdx::of(place.local));
+        value.written_local(at.into());
 
         match kind {
             Callee::Ends => {

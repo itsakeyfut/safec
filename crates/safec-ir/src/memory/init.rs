@@ -14,9 +14,9 @@ use crate::source::Span;
 use super::allocations::Allocations;
 use super::built::replaced_by;
 use super::index::{Idx, LocalIdx, Site, Table};
-use super::known::Known;
+use super::known::{Known, WrittenBy};
 use super::parts::{Extent, Init, Offset};
-use super::store::{Certain, Landing, StoreKind, Strong};
+use super::store::{Certain, Landing, StoreKind, Strong, written_alone};
 use super::transfer::CopiedPointers;
 
 /// What [`Allocations::initialised_by`] is told of one write.
@@ -168,11 +168,10 @@ impl Allocations<'_> {
                         // what nothing wrote in silence. A local it may land
                         // in beside another place may still be unwritten,
                         // and each element of it. Found by review.
-                        if let ([_], true) = (edges.as_slice(), sites.is_empty()) {
+                        // See ADR-0074.
+                        if let Some(at) = written_alone(value, pointer, 1, &edges) {
                             let pending = value.array_writes_before(writes);
-                            for local in edges {
-                                value.written_local(local);
-                            }
+                            value.written_local(at);
                             value.array_writes_after(pending);
                         } else {
                             for local in edges {
@@ -573,15 +572,31 @@ impl Allocations<'_> {
                 // 8)` doubted `*s` where `s = v;` did not (#769).
                 // It wrote that local, which is what `replaced` would have said
                 // of it.
-                if self
-                    .copy_replaces_one_local(function, value, dest, bytes)
-                    .is_some()
-                {
-                    for local in written.iter().flatten() {
-                        value.written_local(*local);
-                    }
+                if let Some(at) = self.copy_replaces_one_local(function, value, dest, bytes) {
+                    value.written_local(at.into());
                 } else {
-                    value.replaced(|_| true, |local| may_write[local]);
+                    // **A may-write of every local it may land in**, and a
+                    // certain one only where it lands in one local alone, as a
+                    // store's is: borrowing the belief for a call this check
+                    // cannot read wrote a local the copy may have missed,
+                    // `memcpy(g, &px, 8)` with `g` either `&m` or `&n` (#803).
+                    // See ADR-0074.
+                    // Asked before `replaced`, which marks every escaped local
+                    // the copy may write as one code this check cannot read
+                    // may have written, so that a pointer the copy goes
+                    // through, `p` in `memcpy(*pp, ..)`, would no longer
+                    // follow what it names. Found while implementing.
+                    let alone = match (dest, &written) {
+                        (Some(Operand::Copy(dest)), Some(lands)) => {
+                            written_alone(value, dest.local, derefs(dest) + 1, lands)
+                                .filter(|_| lands_in_no_block)
+                        }
+                        _ => None,
+                    };
+                    value.replaced(|_| true, |local| may_write[local], WrittenBy::StoreOrCopy);
+                    if let Some(at) = alone {
+                        value.written_local(at);
+                    }
                 }
                 value.array_writes_after(pending);
                 // **What it carries into a local it writes**, as into a block

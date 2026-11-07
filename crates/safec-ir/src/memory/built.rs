@@ -6,8 +6,9 @@ use crate::ir::{BinOp, Function, LocalId, Operand, Place, TranslationUnit, Ty};
 
 use super::allocations::innermost_element;
 use super::index::{Idx, LocalIdx, Site, Table};
-use super::known::{ArrayWrite, Known};
+use super::known::{ArrayWrite, Known, WrittenBy};
 use super::parts::{Held, Init, Inits, Offset, Reached};
+use super::store::written_alone;
 use crate::reads::derefs;
 
 /// What the operands of a binary operation build.
@@ -290,18 +291,22 @@ pub(super) fn replaced_by(
     // have missed each local it may land in**, which may still be unwritten,
     // as a site the landing names beside another may (#721): with `g`
     // either `&m` or `&n`, or either `m + 1` or an allocation, `*g = &x;`
-    // let a read of `m` or `m[1]` nothing wrote go silent, since
-    // `Known::replaced` takes what it may write as written. That is a call
-    // this check cannot read's belief (ADR-0057), and it is kept where the
-    // store may land in one local alone, which a pointer read out of memory
-    // is believed to reach as #726 believes a block's. Found by review.
+    // let a read of `m` or `m[1]` nothing wrote go silent. Found by review.
+    // **It writes a local for certain only where it lands there alone**,
+    // through a pointer that follows what it names (`store::written_alone`),
+    // and is otherwise a may-write, `WrittenBy::StoreOrCopy`: it is no call, and
+    // borrowing a call's belief that it writes what it reaches left a
+    // pointer read out of a caller's memory, naming one local and landing
+    // elsewhere, taken as certain (#803). A pointer read out of memory this
+    // function recorded is believed to reach its one local, as #726 believes
+    // a block's. See ADR-0074.
     let landing: Vec<LocalIdx> = lands
         .indices()
         .filter(|&local| lands[local] && may_hold[local])
         .collect();
-    let one_place =
-        landing.len() == 1 && !(derefs(place) == 1 && value.points_to[place.local].holds_a_site());
-    let before: Vec<(LocalIdx, Init, Inits)> = if one_place {
+    let alone = written_alone(value, place.local, derefs(place), &landing);
+    let proved_alone = alone.is_some();
+    let before: Vec<(LocalIdx, Init, Inits)> = if proved_alone {
         Vec::new()
     } else {
         landing
@@ -313,7 +318,11 @@ pub(super) fn replaced_by(
     value.replaced(
         |local| may_hold[local],
         |local| may_hold[local] && lands[local],
+        WrittenBy::StoreOrCopy,
     );
+    if let Some(at) = alone {
+        value.written_local(at);
+    }
     value.array_writes_after(pending);
     for (local, mut init, mut elements) in before {
         init.may_write();

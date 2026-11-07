@@ -10,7 +10,7 @@
 //! its [`StoreKind`] with no wildcard, so a kind added later is
 //! `error[E0004]` at each of them (#688).
 
-use crate::ir::{Element, Operand, Place, Projection, Rvalue, Terminator};
+use crate::ir::{Element, LocalId, Operand, Place, Projection, Rvalue, Terminator};
 use crate::library::Callee;
 use crate::source::Span;
 
@@ -261,6 +261,76 @@ impl Strong {
     pub(super) fn local(self) -> LocalIdx {
         self.0
     }
+}
+
+/// A write of exactly one local, on every path that reaches it, and of all of
+/// it as far as the door can tell: a library copy of a length this check
+/// cannot read is taken as whole, as ADR-0073 rule 2 takes it, and a write of
+/// part is answered apart by `built::write_effects` (found by review). The
+/// token is the one fact that lets the unwritten belief say a local
+/// was written for certain, [`Known::written_local`], as [`Certain`] is for a
+/// block. Only this module makes one, since its field is private here: from a
+/// [`Strong`], the local an assignment or a call's result replaces, or by
+/// [`written_alone`]. A door that has not proved its one local has
+/// `Init::may_write`, and handing [`Known::written_local`] a bare `LocalIdx`
+/// is `error[E0308]`. A store or a copy that may have missed a local once
+/// borrowed the belief for a call this check cannot read and wrote it for
+/// certain (#803). See ADR-0074.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct WrittenLocal(LocalIdx);
+
+impl WrittenLocal {
+    /// The local written.
+    pub(super) fn local(self) -> LocalIdx {
+        self.0
+    }
+}
+
+impl From<Strong> for WrittenLocal {
+    fn from(at: Strong) -> Self {
+        WrittenLocal(at.local())
+    }
+}
+
+/// The one local a write through `pointer`, `depth` dereferences down,
+/// lands in, where it lands there alone: exactly one local target, and every
+/// pointer the write goes through last naming no allocation beside it and
+/// holding nothing this check did not follow,
+/// [`Beyond::believed_to_reach_only_its_edges`](super::parts::Beyond::believed_to_reach_only_its_edges).
+/// **Asked here of what it finds, not handed premises**: given the base
+/// pointer's marks for a write two dereferences down, a store landing
+/// through a pointer read out of a caller's memory, or one that may be a
+/// block, was written for certain where the same as a copy was doubted.
+/// Found by review. The rule a placed store, a store this check cannot
+/// place and a library copy each ask, so that the three cannot answer it
+/// apart. See ADR-0074.
+pub(super) fn written_alone(
+    value: &Known,
+    pointer: LocalId,
+    depth: usize,
+    targets: &[LocalIdx],
+) -> Option<WrittenLocal> {
+    let [local] = targets else {
+        return None;
+    };
+    let follows =
+        |held: &Held| held.beyond().believed_to_reach_only_its_edges() && !held.holds_a_site();
+    let alone = match depth {
+        0 => false,
+        1 => follows(&value.points_to[pointer]),
+        _ => {
+            let (sites, locals) = value.levels_below(pointer, depth - 2);
+            value.points_to[pointer]
+                .beyond()
+                .believed_to_reach_only_its_edges()
+                && sites.is_empty()
+                && !locals.is_empty()
+                && locals
+                    .iter()
+                    .all(|&through| follows(&value.points_to[through]))
+        }
+    };
+    alone.then_some(WrittenLocal(*local))
 }
 
 impl Landing {
