@@ -2314,7 +2314,8 @@ fn a_unary_operator_carries_what_its_operand_holds() {
 /// value a store puts down is built by the same rule as an assignment's.
 ///
 /// Mutation: give the store's `Rvalue::Unary` arm in `Allocations::carried`
-/// `Held::none`, as it was; `m` reaches no site and this fails on the kind.
+/// `Held::none`, as it was; `m` reaches no site, the free is doubted as
+/// `Lost(NoSiteKnown)`, and this fails on that.
 #[test]
 fn a_unary_operator_stored_through_a_pointer_carries_what_its_operand_holds() {
     let (sources, names) = sources();
@@ -2344,6 +2345,12 @@ fn a_unary_operator_stored_through_a_pointer_carries_what_its_operand_holds() {
 
     assert_eq!(found[0].kind, Kind::DoubleFree, "{found:?}");
     assert_eq!(found[0].at, names.at[3]);
+    // `m`'s address is taken, so the free is a doubt either way; what
+    // the store decides is whether `m` reaches the site at all.
+    assert_ne!(
+        found[0].unproven,
+        Some(Unproven::Lost(LostReason::NoSiteKnown))
+    );
 }
 
 /// The address of a dereference names no local a write through it lands in.
