@@ -116,6 +116,12 @@ cases! {
         // Mutation: ask a local whose address is never taken only where it
         // is `Maybe`, not on a first turn's doubt; it goes too.
         a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Compared on an arm of a loop shown to run, before the body assigns
+        // it: only the first turn reaches the read unassigned, and only as a
+        // doubt. It built silent where with the address taken it was
+        // `SC0411`, found by review. Mutation: ask a local whose address is
+        // never taken only where it is `Maybe`; this goes silent.
+        a_pointer_compared_on_an_arm_of_a_loop_shown_to_run_before_the_body_assigns_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The read is under `saved`, so `c`'s false edge does not lead to it
         // on every path and no edge names the doubt.
         // Doubted, as it is for a local whose address is taken: no path's
