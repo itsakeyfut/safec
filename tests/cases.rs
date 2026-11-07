@@ -100,6 +100,22 @@ cases! {
         // condition is followed (ADR-0075). Mutation: `unwritten_read` asks
         // only a local whose address is taken; this goes silent.
         a_pointer_assigned_on_one_arm_and_read_under_another_test_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Each read is its own caret: the first is `memory::assigned`'s edge
+        // doubt, the second only the memory check's. Mutation: skip the doubt
+        // where `memory::assigned` said anything of the local, at any caret;
+        // the second goes silent.
+        a_pointer_some_path_left_unassigned_is_doubted_at_each_of_its_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `r` is proved unassigned and `p` doubted at one caret, and each is
+        // answered. Mutation: skip the doubt where anything was said at the
+        // caret, of any local; `p`'s goes.
+        two_locals_read_at_one_caret_are_each_answered: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Freed on a later turn before the body assigns it: the free is a
+        // doubt, and so is the read of nothing assigned on the first turn,
+        // as for a local whose address is taken. Mutation: let any finding
+        // at the caret skip the doubt, the free's included; the read's goes.
+        // Mutation: ask a local whose address is never taken only where it
+        // is `Maybe`, not on a first turn's doubt; it goes too.
+        a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The read is under `saved`, so `c`'s false edge does not lead to it
         // on every path and no edge names the doubt.
         // Doubted, as it is for a local whose address is taken: no path's

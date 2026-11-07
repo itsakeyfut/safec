@@ -1,0 +1,95 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:1:27 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:2:6 "find" declared
+  Local "_0" "int *" return
+  Local "_1" "int" parameter "k"
+Function a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" "p"
+  Local "_2" "int" "i"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Local "_7" "int"
+  Local "_8" "int"
+  Block "bb0" entry
+    StorageLive a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:10 generated "_2"
+    Operation a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:14 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:18 generated
+    Goto "bb1"
+  Block "bb1"
+    Operation a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:21 written
+      Destination "_3"
+      Binary "Lt"
+        Copy "_2"
+        Constant 4
+    Branch a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:21 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:21 generated
+    Operation a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:39 written
+      Destination "_4"
+      Binary "Gt"
+        Copy "_2"
+        Constant 0
+    Branch a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:39 written "bb4" "bb5"
+      Copy "_4"
+  Block "bb3"
+    Sequenced a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:21 generated
+    StorageDead a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:68 generated "_2"
+    Operation a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:6:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:6:12 generated
+    Return
+  Block "bb4"
+    Sequenced a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:39 generated
+    ArgumentsEvaluated a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:46 generated
+    Call a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:46 written "free" "bb7"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:39 generated
+    Goto "bb6"
+  Block "bb6"
+    ArgumentsEvaluated a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:59 generated
+    Call a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:59 written "find" "bb8"
+      Destination "_5"
+      Copy "_2"
+  Block "bb7"
+    Sequenced a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:46 generated
+    Goto "bb6"
+  Block "bb8"
+    Operation a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:55 written
+      Destination "_1"
+      Use
+        Copy "_5"
+    Operation a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:55 written
+      Destination "_6"
+      Use
+        Copy "_1"
+    Sequenced a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:55 generated
+    Operation a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:28 written
+      Destination "_7"
+      Use
+        Copy "_2"
+    Operation a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:28 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_2"
+        Constant 1
+    Operation a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:28 written
+      Destination "_2"
+      Use
+        Copy "_8"
+    Sequenced a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:28 generated
+    Goto "bb1"

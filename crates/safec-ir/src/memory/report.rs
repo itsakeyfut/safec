@@ -2135,13 +2135,21 @@ pub(super) fn unwritten_read(
         // doubt**, and only where `memory::assigned`, which runs first and
         // proves or doubts it by name, said nothing at this caret: one rule
         // for a read some path left unassigned, whatever happens to the
-        // local's address. See ADR-0075.
+        // local's address. **Only `memory::assigned`'s findings count**: one
+        // this check made of the same read, a free of it on a loop's later
+        // turn, says nothing about whether it was assigned. See ADR-0075.
+        let by_assigned = |said: &Finding| {
+            matches!(
+                said.kind,
+                Kind::Unassigned | Kind::SometimesUnassigned { .. }
+            )
+        };
         let by_name = !taken.get(LocalIdx::of(local));
         if (by_name
-            && (!partly
+            && (!(partly || doubt_only)
                 || findings
                     .iter()
-                    .any(|said| said.at == at && said.local == Some(local))))
+                    .any(|said| said.at == at && said.local == Some(local) && by_assigned(said))))
             || init == Init::Written
             || !analysis.holds_a_pointer(function.local(local))
         {
