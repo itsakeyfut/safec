@@ -1,85 +1,109 @@
 Target "x86_64-pc-windows-msvc"
-Function a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:1:5 "f"
+Function a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:2:5 "f"
   Local "_0" "int" return
   Local "_1" "int" parameter "x"
   Local "_2" "int *[1]" "m"
-  Local "_3" "int **[1]" "box"
-  Local "_4" "int ***"
-  Local "_5" "int **"
+  Local "_3" "int ***" "h"
+  Local "_4" "void *"
+  Local "_5" "int"
   Local "_6" "int **"
-  Local "_7" "int **" "t"
-  Local "_8" "int ***"
+  Local "_7" "int **"
+  Local "_8" "int **" "t"
   Local "_9" "int *"
   Local "_10" "int *"
   Local "_11" "int *" "q"
   Local "_12" "int **"
+  Local "_13" "int"
   Block "bb0" entry
-    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:4:5 generated
+    ArgumentsEvaluated a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:4:16 generated
+    Call a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:4:16 written "malloc" "bb1"
       Destination "_4"
-      Address
-        Place "_3"
-          Index
-            Constant 0
-    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:4:14 generated
+      Constant 8
+  Block "bb1"
+    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:4:12 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:4:16 generated
+    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:5:9 written
       Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:5:9 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:5:9 generated
+    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:5:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:5:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:6:10 generated
+      Destination "_6"
       Address
         Place "_2"
           Index
             Constant 0
-    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:4:5 written
-      Destination "_4"
+    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:6:5 written
+      Destination "_3"
         Deref
       Use
-        Copy "_5"
-    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:4:5 written
-      Destination "_6"
-      Use
-        Copy "_4"
-          Deref
-    Sequenced a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:4:5 generated
-    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:5:15 generated
-      Destination "_8"
-      Address
-        Place "_3"
-          Index
-            Constant 0
-    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:5:11 written
+        Copy "_6"
+    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:6:5 written
       Destination "_7"
       Use
-        Copy "_8"
+        Copy "_3"
           Deref
-    Sequenced a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:5:15 generated
-    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:6:10 written
+    Sequenced a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:6:5 generated
+    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:7:11 written
+      Destination "_8"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:7:15 generated
+    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:8:10 written
       Destination "_9"
       Address
         Place "_1"
-    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:6:5 written
-      Destination "_7"
+    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:8:5 written
+      Destination "_8"
         Deref
       Use
         Copy "_9"
-    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:6:5 written
+    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:8:5 written
       Destination "_10"
       Use
-        Copy "_7"
+        Copy "_8"
           Deref
-    Sequenced a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:6:5 generated
-    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:7:14 generated
+    Sequenced a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:8:5 generated
+    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:9:14 generated
       Destination "_12"
       Address
         Place "_2"
           Index
             Constant 0
-    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:7:10 written
+    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:9:10 written
       Destination "_11"
       Use
         Copy "_12"
           Deref
-    Sequenced a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:7:14 generated
-    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:8:5 written
+    Sequenced a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:9:14 generated
+    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:10:12 written
+      Destination "_13"
+      Binary "Eq"
+        Copy "_11"
+        Constant 0
+    Operation a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:10:5 written
       Destination "_0"
       Use
-        Copy "_11"
-          Deref
-    Sequenced a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:8:12 generated
+        Copy "_13"
+    Sequenced a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names.c:10:12 generated
     Return

@@ -1,9 +1,11 @@
+void *malloc(int n);
 int f(int x) {
     int *m[1];
-    int **box[1];
-    box[0] = m;
-    int **t = box[0];
+    int ***h = malloc(8);
+    if (!h) return 0;
+    *h = m;
+    int **t = *h;
     *t = &x;
     int *q = m[0];
-    return *q;
+    return q == 0;
 }

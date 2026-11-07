@@ -1489,15 +1489,17 @@ cases! {
         a_local_array_copied_into_through_a_dereference_of_a_pointer_read_out_of_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local is written for certain only by a landing that names it
         // alone (#803). See ADR-0074. A copy that may land in either of two
-        // locals may have missed each. Mutation: a store or a copy that may
-        // land in a local writes it for certain; this and the next go silent.
+        // locals may have missed each. Mutation: a copy that may land in a
+        // local writes it for certain, as a call is believed to; this goes
+        // silent. (A store that may has the `before` list in `replaced_by`
+        // as well, so the same mutation leaves the next case reported.)
         a_copy_that_may_land_in_either_of_two_locals_may_have_missed_each: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store through a pointer read out of the caller's memory, which
         // names one local and may land elsewhere. Mutation: ask the pointer
         // nothing of what it may hold beyond its edges; this goes silent.
         a_store_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local_it_names: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Read out of memory this function recorded all of, the one local
-        // it names is written, as a block's one container is (#726).
+        // Read out of an allocation this function recorded all of, the one
+        // local it names is written, as a block's one container is (#726).
         // Mutation: count a pointer read out of memory as one that may hold
         // more; this is doubted.
         a_store_through_a_pointer_read_out_of_recorded_memory_writes_the_local_it_names: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
