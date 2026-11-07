@@ -323,12 +323,20 @@ pub(super) fn replaced_by(
     }
 }
 
-/// What a write through `local`, `dereferences` deep, is to each array among
+/// What a write through `local`, `dereferences` deep, is to each local among
 /// `lands` that it does not write whole: one element, where every pointer it
-/// goes through that names the array names the same known element, and an
+/// goes through that names the array names the same known element; an
 /// element that may be any of them, where the edge to the array exists only
-/// by #639's rule or the pointer was read out of memory. An array missing
-/// from the answer is written whole, as every array was before #667.
+/// by #639's rule or the pointer was read out of memory; the elements a copy
+/// covers whole; and a write of part of a local kept whole, which leaves it
+/// possibly unwritten (#826). A local missing from the answer is written
+/// whole, as every array was before #667.
+///
+/// **`width` is the bytes written from where the write lands**, a store's
+/// type or a library copy's constant length, and `None` where it is not
+/// known: a call this check cannot read, or a copy of a length it cannot
+/// read, which writes whole. Eight arguments, each one a door's own fact;
+/// bundled, they would be a type with one caller.
 ///
 /// **Whole where `main` kept the edge, in part where only the array rule
 /// did**, by the user's decision on #667: every other line measured lost a
@@ -418,9 +426,12 @@ pub(super) fn write_effects(
             } else {
                 !naming.is_empty() && naming.iter().all(|held| !held.inner_address)
             };
-            // Neither an array kept per element, which holds pointers, nor one a
-            // pointer reaches by #639's rule, which the arm below doubts, can
-            // reach this. Found by review.
+            // `placed` is where the write lands being known: an element of an
+            // array, or the start of a local that is no array, which is what
+            // an edge names. Two locals need no test of their own here: an
+            // array kept per element holds pointers, so `in_part` is false for
+            // it, and an array a pointer reaches by #639's rule is doubted by
+            // the `array_edge` arm of the match below either way.
             if placed {
                 if let (Some(width), Some(size)) = (width, size) {
                     // Narrower than the local, a copy of nothing included: a

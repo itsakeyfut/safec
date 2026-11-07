@@ -270,9 +270,9 @@ pub(super) struct Known {
     /// already doubted is kept there. At any other loop's back edge it is the
     /// doubt, since that loop may run zero times (#783, ADR-0064). An array
     /// kept per element gains no such doubt at any join, its elements
-    /// carrying it. Written by a write of the whole local, made "may have
-    /// been written" by a write of part of one kept whole (#826,
-    /// `built::write_effects`), and unwritten again at `StorageLive`. See
+    /// carrying it. Written by a write of the whole local; a write of part
+    /// of a local kept whole leaves it `Init::Maybe` instead (#826,
+    /// `built::write_effects`). Unwritten again at `StorageLive`. See
     /// ADR-0057.
     pub(super) init: Table<Loc, Init>,
     /// What has been read through a pointer since the last sequence point.
@@ -2135,14 +2135,16 @@ impl Known {
                         }
                     }
                 }
-                // No element is certainly unwritten once one nobody can name
-                // may have been written, and each may still be.
+                // The elements a copy covers whole from the start are
+                // written, and the rest keep what they held.
                 ArrayWrite::Covered(count) => {
                     let count = usize::try_from(count).unwrap_or(usize::MAX);
                     for element in 0..count.min(self.element_init[local].len()) {
                         self.element_init[local].set(element, Init::Written);
                     }
                 }
+                // No element is certainly unwritten once one nobody can name
+                // may have been written, and each may still be.
                 ArrayWrite::Maybe if kept => self.element_init[local].may_write_all(),
                 ArrayWrite::Maybe => {
                     let mut init = write.init;
@@ -2645,7 +2647,9 @@ pub(super) enum ArrayWrite {
     Maybe,
     /// It writes this many elements whole from the start, and none of the
     /// rest: a library copy of a length this check reads into an array kept
-    /// per element (#826).
+    /// per element, the length divided by a pointer's width and rounded
+    /// down, since an element covered in part is not written (#826). `0`
+    /// writes nothing.
     Covered(u64),
 }
 

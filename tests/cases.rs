@@ -517,8 +517,9 @@ cases! {
         a_block_left_unwritten_inside_a_test_of_its_pointer_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A write of part of a local kept whole leaves it possibly unwritten
         // (#826). See ADR-0073 rule 2. Mutation: a write of part writes the
-        // local whole, as before; this, the next, the copy below and the
-        // pointer local's go silent.
+        // local whole, as before; this, `..._read_as_a_pointer_is_doubted`
+        // after it, `a_char_buffer_a_short_copy_wrote_...` and
+        // `a_pointer_local_a_short_copy_wrote_...` go silent.
         a_char_buffer_written_at_its_first_element_copied_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_char_buffer_written_at_its_first_element_read_as_a_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_int_buffer_written_at_its_first_element_read_as_a_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -548,8 +549,9 @@ cases! {
         a_pointer_local_half_written_by_a_store_read_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An array kept per element is written by a copy only in the
         // elements it covers whole. Mutation: a copy at its start writes it
-        // whole; the first and the third go silent. Count the elements it
-        // covers in part as covered; the first goes silent.
+        // whole; `an_array_of_one_pointer_...` and `..._read_at_the_second_
+        // is_reported` go silent. Mutation: count an element covered in part
+        // as covered; `an_array_of_one_pointer_...` goes silent.
         an_array_of_one_pointer_a_short_copy_wrote_read_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_array_of_two_pointers_a_copy_of_one_wrote_read_at_the_first_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_array_of_two_pointers_a_copy_of_one_wrote_read_at_the_second_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
