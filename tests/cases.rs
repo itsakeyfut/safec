@@ -505,6 +505,11 @@ cases! {
         // than the return place; the second goes silent.
         a_block_left_unwritten_returned_from_a_scope_that_declares_a_local_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_left_unwritten_returned_from_the_scope_of_its_own_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // One block of two possibly unwritten, first or second, is enough.
+        // Mutation: doubt only where every block is possibly unwritten, or
+        // ask the first block alone; one of these goes silent.
+        a_pointer_that_may_name_a_block_left_unwritten_first_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_that_may_name_a_block_left_unwritten_second_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The cost: the pointer is shown not null only after the join that
         // left the block possibly unwritten, so a block every path wrote is
         // doubted.
