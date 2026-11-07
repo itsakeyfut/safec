@@ -3494,6 +3494,7 @@ impl Analysis for Allocations<'_> {
                             derefs(place) + 1,
                             lands,
                             true,
+                            None,
                         ) {
                             if !partial.iter().any(|(each, _)| *each == local) {
                                 partial.push((local, write));

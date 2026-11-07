@@ -284,6 +284,7 @@ pub(super) fn replaced_by(
             .indices()
             .filter(|&local| lands[local] && may_hold[local]),
         false,
+        written_ty.and_then(|ty| unit.size_of(ty)),
     );
     // **A store this check reads that may land in more than one place may
     // have missed each local it may land in**, which may still be unwritten,
@@ -322,12 +323,20 @@ pub(super) fn replaced_by(
     }
 }
 
-/// What a write through `local`, `dereferences` deep, is to each array among
+/// What a write through `local`, `dereferences` deep, is to each local among
 /// `lands` that it does not write whole: one element, where every pointer it
-/// goes through that names the array names the same known element, and an
+/// goes through that names the array names the same known element; an
 /// element that may be any of them, where the edge to the array exists only
-/// by #639's rule or the pointer was read out of memory. An array missing
-/// from the answer is written whole, as every array was before #667.
+/// by #639's rule or the pointer was read out of memory; the elements a copy
+/// covers whole; and a write of part of a local kept whole, which leaves it
+/// possibly unwritten (#826). A local missing from the answer is written
+/// whole, as every array was before #667.
+///
+/// **`width` is the bytes written from where the write lands**, a store's
+/// type or a library copy's constant length, and `None` where it is not
+/// known: a call this check cannot read, or a copy of a length it cannot
+/// read, which writes whole. Eight arguments, each one a door's own fact;
+/// bundled, they would be a type with one caller.
 ///
 /// **Whole where `main` kept the edge, in part where only the array rule
 /// did**, by the user's decision on #667: every other line measured lost a
@@ -337,6 +346,7 @@ pub(super) fn replaced_by(
 /// than the start is in part too. One answer for the placed store, a store
 /// this check cannot place, a library copy and a call. See
 /// `Known::element_init` and ADR-0057.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn write_effects(
     unit: &TranslationUnit,
     function: &Function,
@@ -345,6 +355,7 @@ pub(super) fn write_effects(
     dereferences: usize,
     lands: impl IntoIterator<Item = LocalIdx>,
     call: bool,
+    width: Option<u64>,
 ) -> Vec<(LocalIdx, ArrayWrite)> {
     let lands: Vec<LocalIdx> = lands.into_iter().collect();
     let (mut through, from_memory): (Vec<LocalIdx>, bool) = match dereferences {
@@ -362,9 +373,15 @@ pub(super) fn write_effects(
     if call {
         through.extend(lands.iter().copied());
     }
+    let one_landing = lands.len() == 1;
+    let target = unit.target();
+    let pointer_width = u64::from(target.pointer_bits() / target.char().bits());
     lands
         .into_iter()
-        .filter(|&each| is_array(unit, function, each))
+        // **And a local that is no array, for a write of a width this check
+        // reads**, which may write part of it: `memcpy(&p, &x, 4)`, or a
+        // store through an `int *` made from `&p` (#826). Found by review.
+        .filter(|&each| is_array(unit, function, each) || width.is_some())
         .filter_map(|each| {
             let naming: Vec<&super::parts::Held> = through
                 .iter()
@@ -385,8 +402,64 @@ pub(super) fn write_effects(
                 _ => None,
             };
             let kept = value.element_init[each].len() > 0;
+            // **A write of part of a local kept whole leaves it possibly
+            // unwritten** (#826): where it lands is known, an element of an
+            // array or the start of a local that is no array, and it is
+            // narrower than the local. Where it lands is not known, `b[i] =
+            // 0;` in a loop that fills it, it is written whole as before. A
+            // pointer local that is no array is written in part by a copy
+            // that ends part way through it. **Not an array of pointers kept
+            // whole**: a store writes a pointer whole, and a read of such an
+            // array is asked only at its start, so a copy ending part way
+            // through `big[1]` would doubt `big[0]`, written whole, and leave
+            // `big[1]` silent, measured. See ADR-0073 rule 2.
+            let array = is_array(unit, function, each);
+            let ty = function
+                .locals()
+                .nth(each.index())
+                .map(|id| function.local(id));
+            let size = ty.and_then(|ty| unit.size_of(ty));
+            let holds_pointers =
+                ty.is_some_and(|ty| matches!(unit.ty(innermost_element(unit, ty)), Ty::Pointer(_)));
+            let placed = if array {
+                element.is_some()
+            } else {
+                !naming.is_empty() && naming.iter().all(|held| !held.inner_address)
+            };
+            // `placed` is where the write lands being known: an element of an
+            // array, or the start of a local that is no array, which is what
+            // an edge names. Two locals need no test of their own here: an
+            // array kept per element holds pointers, so `in_part` is false for
+            // it, and an array a pointer reaches by #639's rule is doubted by
+            // the `array_edge` arm of the match below either way.
+            if placed {
+                if let (Some(width), Some(size)) = (width, size) {
+                    // Narrower than the local, a copy of nothing included: a
+                    // test of where it ends in a pointer let `memcpy(&p, &x,
+                    // 0)` write `p` whole. Found by review.
+                    let in_part = !(holds_pointers && array) && width < size;
+                    if in_part {
+                        return Some((each, ArrayWrite::Maybe));
+                    }
+                }
+            }
             match element {
-                Some(0) if call && !array_edge => None,
+                // **A copy into an array kept per element writes the
+                // elements it covers whole**, from its start (#826): `int
+                // *m[2]; memcpy(m, &x, 12);` writes `m[0]` and leaves `m[1]`.
+                //
+                // **Only where it lands in this one array**: a copy that may
+                // land in either of two writes neither for certain, as a
+                // store that may land in two does not (`before` in
+                // `replaced_by`), so each may have been missed. Found by
+                // review.
+                Some(0) if call && !array_edge => match width.map(|width| width / pointer_width) {
+                    Some(_) if kept && !one_landing => Some(ArrayWrite::Maybe),
+                    Some(covered) if kept && covered < value.element_init[each].len() as u64 => {
+                        Some(ArrayWrite::Covered(covered))
+                    }
+                    _ => None,
+                },
                 Some(_) if call => Some(ArrayWrite::Maybe),
                 // Not where a pointer it goes through was read out of memory,
                 // whose element nobody recorded: `**q` with `q` either `&e`

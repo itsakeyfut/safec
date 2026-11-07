@@ -218,9 +218,17 @@ the same way until something writes it (C17 6.2.4 p6, 6.7.9 p10), and the same
 line of Annex J.2 lists using it, whatever its type: a `char` buffer nothing
 wrote, read as a pointer or copied into memory that leaves, is asked as a
 pointer local is (#822), while an integer read by name is not followed. Such a
-buffer is kept whole, so a write of any part of it, `b[0] = 0;` or a `memcpy`
-of four bytes into it, counts as writing all of it, and a read of the rest as
-a pointer afterwards says nothing (#826). A
+buffer is kept whole, so a write of part of it, `b[0] = 0;` or a `memcpy` of
+four bytes into it, leaves it possibly unwritten, and a read of it as a
+pointer afterwards is `SC0411` as a doubt (#826); so is a write of fewer bytes
+than a pointer holds, none included, into an `int *` local, by a `memcpy` or
+through an `int *` made from its address. A `memcpy` that may land in either
+of two arrays of pointers writes neither for certain. A store at an index this
+check cannot read, `b[i] = 0;`, and a copy of a length it cannot read, write
+the whole buffer, so a loop that fills it is not doubted. The cost is a buffer
+written one element at a time at every index and then read as a pointer, which
+is doubted. An array of pointers longer than 64 is not asked for a copy ending
+part way through one of them, since a read of it is asked only at its start. A
 pointer read out of one, through a pointer or by name, is `SC0411` at the
 read: `int *m[1]; int *q = m[0];` and `int *q;
 int **pq = &q; return q == 0;` (#640). Any write that may land in it ends it:

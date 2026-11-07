@@ -1,0 +1,151 @@
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:36 ]
+   │
+ 1 │ int f(void) { char b[8]; b[0] = 0; b[1] = 0; b[2] = 0; b[3] = 0; b[4] = 0; b[5] = 0; b[6] = 0; b[7] = 0; void *v = b; int **q = v; int *p = *q; return p == 0; }
+   │                                    ────┬───  
+   │                                        ╰───── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:46 ]
+   │
+ 1 │ int f(void) { char b[8]; b[0] = 0; b[1] = 0; b[2] = 0; b[3] = 0; b[4] = 0; b[5] = 0; b[6] = 0; b[7] = 0; void *v = b; int **q = v; int *p = *q; return p == 0; }
+   │                                              ────┬───  
+   │                                                  ╰───── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:56 ]
+   │
+ 1 │ int f(void) { char b[8]; b[0] = 0; b[1] = 0; b[2] = 0; b[3] = 0; b[4] = 0; b[5] = 0; b[6] = 0; b[7] = 0; void *v = b; int **q = v; int *p = *q; return p == 0; }
+   │                                                        ────┬───  
+   │                                                            ╰───── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:66 ]
+   │
+ 1 │ int f(void) { char b[8]; b[0] = 0; b[1] = 0; b[2] = 0; b[3] = 0; b[4] = 0; b[5] = 0; b[6] = 0; b[7] = 0; void *v = b; int **q = v; int *p = *q; return p == 0; }
+   │                                                                  ────┬───  
+   │                                                                      ╰───── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:76 ]
+   │
+ 1 │ int f(void) { char b[8]; b[0] = 0; b[1] = 0; b[2] = 0; b[3] = 0; b[4] = 0; b[5] = 0; b[6] = 0; b[7] = 0; void *v = b; int **q = v; int *p = *q; return p == 0; }
+   │                                                                            ────┬───  
+   │                                                                                ╰───── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:86 ]
+   │
+ 1 │ int f(void) { char b[8]; b[0] = 0; b[1] = 0; b[2] = 0; b[3] = 0; b[4] = 0; b[5] = 0; b[6] = 0; b[7] = 0; void *v = b; int **q = v; int *p = *q; return p == 0; }
+   │                                                                                      ────┬───  
+   │                                                                                          ╰───── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:96 ]
+   │
+ 1 │ int f(void) { char b[8]; b[0] = 0; b[1] = 0; b[2] = 0; b[3] = 0; b[4] = 0; b[5] = 0; b[6] = 0; b[7] = 0; void *v = b; int **q = v; int *p = *q; return p == 0; }
+   │                                                                                                ────┬───  
+   │                                                                                                    ╰───── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0411]: `*q` may be read before anything was assigned to it
+   ╭─[ a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:137 ]
+   │
+ 1 │ int f(void) { char b[8]; b[0] = 0; b[1] = 0; b[2] = 0; b[3] = 0; b[4] = 0; b[5] = 0; b[6] = 0; b[7] = 0; void *v = b; int **q = v; int *p = *q; return p == 0; }
+   │                                                                                                                                         ───┬──  
+   │                                                                                                                                            ╰──── read here
+───╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path before it is read
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:36 ]
+   │
+ 1 │ int f(void) { char b[8]; b[0] = 0; b[1] = 0; b[2] = 0; b[3] = 0; b[4] = 0; b[5] = 0; b[6] = 0; b[7] = 0; void *v = b; int **q = v; int *p = *q; return p == 0; }
+   │                                    ────┬───  
+   │                                        ╰───── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:46 ]
+   │
+ 1 │ int f(void) { char b[8]; b[0] = 0; b[1] = 0; b[2] = 0; b[3] = 0; b[4] = 0; b[5] = 0; b[6] = 0; b[7] = 0; void *v = b; int **q = v; int *p = *q; return p == 0; }
+   │                                              ────┬───  
+   │                                                  ╰───── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:56 ]
+   │
+ 1 │ int f(void) { char b[8]; b[0] = 0; b[1] = 0; b[2] = 0; b[3] = 0; b[4] = 0; b[5] = 0; b[6] = 0; b[7] = 0; void *v = b; int **q = v; int *p = *q; return p == 0; }
+   │                                                        ────┬───  
+   │                                                            ╰───── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:66 ]
+   │
+ 1 │ int f(void) { char b[8]; b[0] = 0; b[1] = 0; b[2] = 0; b[3] = 0; b[4] = 0; b[5] = 0; b[6] = 0; b[7] = 0; void *v = b; int **q = v; int *p = *q; return p == 0; }
+   │                                                                  ────┬───  
+   │                                                                      ╰───── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:76 ]
+   │
+ 1 │ int f(void) { char b[8]; b[0] = 0; b[1] = 0; b[2] = 0; b[3] = 0; b[4] = 0; b[5] = 0; b[6] = 0; b[7] = 0; void *v = b; int **q = v; int *p = *q; return p == 0; }
+   │                                                                            ────┬───  
+   │                                                                                ╰───── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:86 ]
+   │
+ 1 │ int f(void) { char b[8]; b[0] = 0; b[1] = 0; b[2] = 0; b[3] = 0; b[4] = 0; b[5] = 0; b[6] = 0; b[7] = 0; void *v = b; int **q = v; int *p = *q; return p == 0; }
+   │                                                                                      ────┬───  
+   │                                                                                          ╰───── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted.c:1:96 ]
+   │
+ 1 │ int f(void) { char b[8]; b[0] = 0; b[1] = 0; b[2] = 0; b[3] = 0; b[4] = 0; b[5] = 0; b[6] = 0; b[7] = 0; void *v = b; int **q = v; int *p = *q; return p == 0; }
+   │                                                                                                ────┬───  
+   │                                                                                                    ╰───── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-11-06
 decision-makers: itsakeyfut
 ---
@@ -63,15 +63,19 @@ and Cons below.
 2. **Every local but a parameter starts out unwritten**, and is asked where it
    is read as a pointer, by a load or by a copy into memory that leaves; a read
    of an integer by name is asked nothing, as before (#822). **A write of part
-   of a local kept whole leaves it possibly unwritten** rather than written:
-   a store at an index this check reads into an array of integers or
-   characters, and a library copy of a length it reads that is shorter than
-   the local. A store at an index it cannot read, and a copy of a length it
-   cannot read, still write it whole, so a loop that fills it is not doubted.
-   An array of pointers is written whole by a store, which writes a pointer
-   whole, so one kept whole is put in doubt only by a copy that ends part way
-   through a pointer, and one kept per element is written by a copy only in
-   the elements it covers whole (#826).
+   of a local kept whole leaves it possibly unwritten** rather than written: a
+   store at an index this check reads into an array of integers or characters,
+   and a library copy of a length it reads that is shorter than the local. A
+   store at an index it cannot read, and a copy of a length it cannot read,
+   still write it whole, so a loop that fills it is not doubted. A pointer
+   local that is no array is written in part by a copy or a store narrower than
+   it, a copy of nothing included, and an array of pointers kept per element is
+   written by a copy only in the elements it covers whole, and only where the
+   copy lands in that one array. An array of pointers kept whole, longer than
+   `ELEMENTS_KEPT`, is not asked: a store writes a pointer whole, and a read of
+   it is asked only at its start, so a copy ending part way through `big[1]`
+   would doubt `big[0]`, written whole, and leave `big[1]` silent, measured; it
+   stays inside the limit such an array already has (#826).
 3. **A `return` of a block unwritten is doubted** where the function's
    return type points at a pointer, as `SC0411` with words of its own: the
    caller reads pointers out of it and this check reads one function at a time
@@ -106,10 +110,11 @@ and Cons below.
 
 ### Confirmation
 
-Each of #821, #822, #823, #818, #830 and #828 added its rule's cases and the
-mutation that fails each here. Proposed until #826 has added its own, the last
-of the rules as amended on #824, so that it is accepted once rather than
-superseded.
+Each of #821, #822, #823, #818, #830, #828 and #826 added its rule's cases and
+the mutation that fails each here. Accepted with #826, the last of the rules as
+amended on #824. The routes rules 3 and 4 do not reach are written into them
+as limits, #834 and #832; whichever changes what a rule decides does so in a
+record that supersedes it.
 
 1. `library::misdeclares_library` answering `false` fails
    `a_library_name_declared_with_its_parameters_swapped_is_refused`, the
@@ -138,6 +143,29 @@ superseded.
    `a_char_buffer_written_whole_and_read_as_a_pointer_is_not_reported`; and
    `report::unwritten_read` dropping its `holds_a_pointer` filter fails
    `an_integer_local_whose_address_is_taken_read_before_anything_wrote_it_is_not_followed`.
+   In `built::write_effects`, a write of part answered as a write of the whole
+   fails `a_char_buffer_written_at_its_first_element_read_as_a_pointer_is_doubted`,
+   its copied-out, short-copy and every-index counterparts and
+   `a_pointer_local_a_short_copy_wrote_read_is_doubted`; comparing the width
+   with `<=` fails
+   `a_char_buffer_a_copy_of_its_whole_length_wrote_read_as_a_pointer_is_not_doubted`;
+   a write whose place is not known taken as placed fails
+   `a_char_buffer_filled_by_a_loop_read_as_a_pointer_is_not_doubted`; asking a
+   local that is no array only for a copy fails
+   `a_pointer_local_half_written_by_a_store_read_is_doubted`, and asking a
+   pointer local where a copy ends in a pointer fails
+   `a_pointer_local_a_copy_of_nothing_wrote_read_is_doubted`. A copy at an
+   array's start written whole fails
+   `an_array_of_one_pointer_a_short_copy_wrote_read_is_reported` and
+   `an_array_of_two_pointers_a_copy_of_one_wrote_read_at_the_second_is_reported`;
+   `ArrayWrite::Covered` writing its first element alone fails
+   `an_array_of_three_pointers_a_copy_of_two_wrote_read_at_the_second_is_not_reported`;
+   a copy that may land in two arrays covering both fails
+   `an_array_a_copy_may_have_missed_for_another_read_is_doubted`; and asking an
+   array of pointers kept whole for any write of part, or for a copy ending part
+   way through a pointer, fails
+   `an_array_of_many_pointers_written_at_one_element_and_read_there_is_not_doubted`
+   or `an_array_of_many_pointers_a_copy_ended_part_way_through_one_wrote_is_not_asked`.
 3. `report::report_returned_unwritten` never doubting fails
    `a_block_nothing_wrote_returned_as_a_table_of_pointers_is_doubted` and
    `a_block_a_copy_wrote_half_a_pointer_into_is_doubted_where_it_is_returned`;

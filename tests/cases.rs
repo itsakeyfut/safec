@@ -515,6 +515,61 @@ cases! {
         // caller's read undefined where `c` is zero (#834). Held so that
         // closing it is seen.
         a_block_left_unwritten_inside_a_test_of_its_pointer_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write of part of a local kept whole leaves it possibly unwritten
+        // (#826). See ADR-0073 rule 2. Mutation: a write of part writes the
+        // local whole, as before; this, `..._read_as_a_pointer_is_doubted`
+        // after it, `a_char_buffer_a_short_copy_wrote_...` and
+        // `a_pointer_local_a_short_copy_wrote_...` go silent.
+        a_char_buffer_written_at_its_first_element_copied_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_char_buffer_written_at_its_first_element_read_as_a_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_int_buffer_written_at_its_first_element_read_as_a_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // At a constant index past the first, doubted by #639's rule for a
+        // pointer moved off an array's start as well, so no mutation of this
+        // change alone silences it.
+        a_char_buffer_written_at_a_constant_index_read_as_a_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_char_buffer_a_short_copy_wrote_read_as_a_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy of the buffer's whole length writes it whole. Mutation:
+        // compare the width with `<=`; this is doubted.
+        a_char_buffer_a_copy_of_its_whole_length_wrote_read_as_a_pointer_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store at an index this check cannot read writes it whole, so a
+        // loop that fills it is not doubted. Mutation: a write whose place
+        // is not known is one of part; this is doubted.
+        a_char_buffer_filled_by_a_loop_read_as_a_pointer_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The cost: written at every index one at a time, which a local kept
+        // whole cannot tell from a write of one.
+        a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer local that is no array, by a copy of half of it.
+        // Mutation: ask only an array; this goes silent.
+        a_pointer_local_a_short_copy_wrote_read_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And by a copy of nothing, narrower than it as well. Mutation: ask
+        // where the copy ends in a pointer; this goes silent.
+        a_pointer_local_a_copy_of_nothing_wrote_read_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And by a store of half of it. Mutation: ask a local that is no
+        // array only for a copy; this goes silent.
+        a_pointer_local_half_written_by_a_store_read_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An array kept per element is written by a copy only in the
+        // elements it covers whole. Mutation: a copy at its start writes it
+        // whole; `an_array_of_one_pointer_...` and `..._read_at_the_second_
+        // is_reported` go silent. Mutation: count an element covered in part
+        // as covered; `an_array_of_one_pointer_...` goes silent.
+        an_array_of_one_pointer_a_short_copy_wrote_read_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_array_of_two_pointers_a_copy_of_one_wrote_read_at_the_first_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_array_of_two_pointers_a_copy_of_one_wrote_read_at_the_second_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Two of three covered, the second read. Mutation: write the first
+        // alone; this is reported.
+        an_array_of_three_pointers_a_copy_of_two_wrote_read_at_the_second_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy that may land in either of two arrays writes neither for
+        // certain, as a store that may land in two does not. Mutation:
+        // write the elements it covers in each; this goes silent.
+        an_array_a_copy_may_have_missed_for_another_read_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An array of pointers kept whole: a store writes one whole, and a
+        // copy ending part way through one is not asked, since a read of
+        // such an array is asked only at its start, `big[0]` here, which the
+        // copy wrote whole. Mutation: put it in doubt for any write of part;
+        // the first is doubted. For a copy ending part way through a
+        // pointer; the second is.
+        an_array_of_many_pointers_written_at_one_element_and_read_there_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_array_of_many_pointers_a_copy_ended_part_way_through_one_wrote_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The cost: the pointer is shown not null only after the join that
         // left the block possibly unwritten, so a block every path wrote is
         // doubted.

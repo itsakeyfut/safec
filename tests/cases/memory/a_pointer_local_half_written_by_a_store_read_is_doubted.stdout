@@ -1,0 +1,52 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_local_half_written_by_a_store_read_is_doubted.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" "p"
+  Local "_2" "void *" "v"
+  Local "_3" "int **"
+  Local "_4" "int *" "ip"
+  Local "_5" "int"
+  Local "_6" "int *" "r"
+  Local "_7" "int"
+  Block "bb0" entry
+    Operation a_pointer_local_half_written_by_a_store_read_is_doubted.c:1:33 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_pointer_local_half_written_by_a_store_read_is_doubted.c:1:29 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_local_half_written_by_a_store_read_is_doubted.c:1:33 generated
+    Operation a_pointer_local_half_written_by_a_store_read_is_doubted.c:1:42 written
+      Destination "_4"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_local_half_written_by_a_store_read_is_doubted.c:1:47 generated
+    Operation a_pointer_local_half_written_by_a_store_read_is_doubted.c:1:50 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 0
+    Operation a_pointer_local_half_written_by_a_store_read_is_doubted.c:1:50 written
+      Destination "_5"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_pointer_local_half_written_by_a_store_read_is_doubted.c:1:50 generated
+    Operation a_pointer_local_half_written_by_a_store_read_is_doubted.c:1:64 written
+      Destination "_6"
+      Use
+        Copy "_1"
+    Sequenced a_pointer_local_half_written_by_a_store_read_is_doubted.c:1:68 generated
+    Operation a_pointer_local_half_written_by_a_store_read_is_doubted.c:1:78 written
+      Destination "_7"
+      Binary "Eq"
+        Copy "_6"
+        Constant 0
+    Operation a_pointer_local_half_written_by_a_store_read_is_doubted.c:1:71 written
+      Destination "_0"
+      Use
+        Copy "_7"
+    Sequenced a_pointer_local_half_written_by_a_store_read_is_doubted.c:1:78 generated
+    Return
