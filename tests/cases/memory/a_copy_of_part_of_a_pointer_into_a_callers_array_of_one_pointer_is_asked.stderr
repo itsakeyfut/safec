@@ -1,0 +1,20 @@
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+   ╭─[ a_copy_of_part_of_a_pointer_into_a_callers_array_of_one_pointer_is_asked.c:4:5 ]
+   │
+ 4 │     memcpy(*out, &v, 4);
+   │     ─────────┬─────────  
+   │              ╰─────────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0403]: this may dereference `out` while it is null
+   ╭─[ a_copy_of_part_of_a_pointer_into_a_callers_array_of_one_pointer_is_asked.c:4:5 ]
+   │
+ 4 │     memcpy(*out, &v, 4);
+   │     ─────────┬─────────  
+   │              ╰─────────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

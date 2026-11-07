@@ -1,0 +1,32 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_of_part_of_a_pointer_into_a_callers_array_of_one_pointer_is_asked.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_of_part_of_a_pointer_into_a_callers_array_of_one_pointer_is_asked.c:2:6 "h"
+  Local "_0" "void" return
+  Local "_1" "int *(**)[1]" parameter "out"
+  Local "_2" "int" "v"
+  Local "_3" "int *"
+  Local "_4" "void *"
+  Block "bb0" entry
+    Operation a_copy_of_part_of_a_pointer_into_a_callers_array_of_one_pointer_is_asked.c:3:9 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_copy_of_part_of_a_pointer_into_a_callers_array_of_one_pointer_is_asked.c:3:13 generated
+    Operation a_copy_of_part_of_a_pointer_into_a_callers_array_of_one_pointer_is_asked.c:4:18 written
+      Destination "_3"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_copy_of_part_of_a_pointer_into_a_callers_array_of_one_pointer_is_asked.c:4:5 generated
+    Call a_copy_of_part_of_a_pointer_into_a_callers_array_of_one_pointer_is_asked.c:4:5 written "memcpy" "bb1"
+      Destination "_4"
+      Copy "_1"
+        Deref
+      Copy "_3"
+      Constant 4
+  Block "bb1"
+    Sequenced a_copy_of_part_of_a_pointer_into_a_callers_array_of_one_pointer_is_asked.c:4:5 generated
+    Return

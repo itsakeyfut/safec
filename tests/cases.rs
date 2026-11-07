@@ -1514,6 +1514,17 @@ cases! {
         // one dereference; both go silent.
         a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Memory that holds an array of pointers holds pointers: a copy of
+        // bytes nothing wrote into a caller's `int *[1]` is reported as one
+        // into an `int *` is (#843). Mutation: `stored_pointer` strips no
+        // array; this goes silent, beside the three cases that read through
+        // an array at the call and the `return`. Mutation: `copied_unwritten`
+        // asks without `stored_pointer`; this alone goes silent.
+        a_copy_of_unwritten_bytes_into_a_callers_array_of_one_pointer_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy of part of a pointer into the same memory is asked as one
+        // into an `int *` is. Mutation: `part_of_a_pointer` asks without
+        // `stored_pointer`; this goes silent.
+        a_copy_of_part_of_a_pointer_into_a_callers_array_of_one_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An `int` stored through a pointer that may be the array cannot be
         // a write of its pointer elements (C17 6.5 p7). Mutation:
         // `replaced_by` drops the type from its write answer; this goes
@@ -5022,6 +5033,19 @@ cases! {
         memory_a_call_returned_as_void_read_through_an_int_alias_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         memory_a_call_returned_as_void_handed_on_as_an_int_alias_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         memory_two_levels_below_a_void_parameter_read_through_an_int_alias_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `..._handed_on_as_an_int_alias_is_asked`, received as a pointer to
+        // an array of one `int *`: memory holding an array of pointers
+        // holds pointers (#843).
+        // Mutation: `contents_leaving` asks `pointee_width` of what the
+        // receiver reads without `stored_pointer`; this goes silent.
+        a_void_pointer_to_pointer_parameter_handed_on_as_an_array_of_one_int_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Each slot a pointer to an array of one `int *` lets leave is read
+        // as holding `int *`s: a local, then a block, holding a `char`'s
+        // address (#843). Mutation: `contents_leaving` asks a local slot's
+        // reader without `stored_pointer`; the first goes silent. The same
+        // for a site's slot; the second does.
+        a_local_holding_a_char_s_address_handed_as_an_array_of_one_int_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_holding_a_char_s_address_handed_as_an_array_of_one_int_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local a callee was handed is believed written no wider than it
         // was handed as, and as nothing through a `void *`. Mutation: ignore
         // `handed_at_most` where a call writes an escaped local; both go
