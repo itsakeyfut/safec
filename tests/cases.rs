@@ -80,8 +80,10 @@ cases! {
         // leads past the body. Mutation: drop (b) or (c) in
         // `memory::assigned`. It is refused.
         a_pointer_assigned_inside_a_logical_and_is_read_in_its_body_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The loop test's exit edge carries the later turns, which assigned `p`.
-        // Mutation: drop (a). It is refused.
+        // The loop test's exit edge carries the later turns, which assigned `p`,
+        // and the loop is shown to run, so its first turn is not asked.
+        // Mutation: ask a loop shown to run as of its first turn in
+        // `memory::assigned` (drop the `shown_to_run` skip); it is refused.
         a_pointer_assigned_in_a_loop_that_runs_once_is_read_after_it_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read under `i > 0`, after the turn that assigned it. Doubted by the
         // memory check's first turn, as it is for a local whose address is
