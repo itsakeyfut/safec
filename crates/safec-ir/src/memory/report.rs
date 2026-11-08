@@ -1655,9 +1655,12 @@ fn report_returned_unwritten(
         .any(|site| known.init[site].is_unwritten());
     // **Possibly, where the pointer is not null at the `return`**: then no
     // path that reaches it is one where the allocation failed, and a block
-    // possibly unwritten was left so where it succeeded (#828). A wrong
-    // answer from the nullability check is a doubt too many, never one too
-    // few. See `NullAtTerminators::established_non_null`.
+    // possibly unwritten was left so where it succeeded (#828). On the
+    // every-turn walk a wrong answer from the nullability check is a doubt
+    // too many, never one too few. **Not on a first turn**: the fact holds
+    // over every turn, so a pointer null only on a later turn keeps a
+    // possibly unwritten block returned on the first one silent, #856. See
+    // `NullAtTerminators::established_non_null`.
     //
     // **Asked of the value returned**, the return place, rather than of the
     // local it was copied out of, whose lifetime may end with the scope the
