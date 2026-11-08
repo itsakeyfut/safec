@@ -1632,6 +1632,10 @@ cases! {
         // drop the carried half of the store's `keep`; both go silent.
         a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // One level below: the stored block points at another nothing wrote,
+        // which the exposure's closure reaches, found by review. Mutation:
+        // keep only the carried blocks, not their closure; this goes silent.
+        a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy of part of a pointer into the same memory is asked as one
         // into an `int *` is. Mutation: `part_of_a_pointer` asks without
         // `stored_pointer`; this goes silent.

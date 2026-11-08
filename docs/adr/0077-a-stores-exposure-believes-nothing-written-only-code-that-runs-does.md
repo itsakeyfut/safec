@@ -42,8 +42,11 @@ read of `*b` after the store.
 
 ## Decision Outcome
 
-1. **The blocks a store carries keep, across the store's exposure, what was
-   known of their writes before it.** The exposure still marks them exposed
+1. **The blocks a store carries, and every block reachable from them, keep,
+   across the store's exposure, what was known of their writes before it.**
+   The closure, since the exposure's belief reaches it: keeping the carried
+   blocks alone left a block one level below the stored one believed written,
+   found by review. The exposure still marks them exposed
    (ADR-0044); only the belief that they were written is withheld.
 2. **A call this check cannot read believes them written as before**, since
    `Known::expose` believes every exposed block written at each such call.
@@ -56,7 +59,9 @@ Each in `tests/cases/memory/`, with its mutation in its note in
 * `a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns`
   and `a_block_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten`
   go silent when the store's exposure believes the blocks it carries written
-  again.
+  again, and
+  `a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten`
+  goes silent when only the carried blocks are kept, not their closure.
 * The three corpus cases that gain a second doubt are
   `a_pointer_stored_and_read_back_two_levels_down_a_parameter_as_one_place_is_doubted`,
   `an_allocation_stored_through_a_load_and_freed_is_doubted_when_read_back_one_level_further`
