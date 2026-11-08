@@ -1571,18 +1571,36 @@ pub(super) fn asked_unwritten_in_terminator(
     }
 }
 
-/// Push `finding` unless one of its kind already stands at its caret: the
-/// every-turn walk and a loop's first turn may both reach one `return` or one
-/// copy, and one defect is reported once (#838). Mutation: push always;
-/// `a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next` and
-/// `a_block_an_inner_loop_makes_unwritten_again_is_doubted_where_read_after_both`
+/// Push `finding` unless one answering its question already stands at its
+/// caret: the every-turn walk and a loop's first turn may both reach one
+/// `return` or one copy, and one defect is reported once (#838). Mutation:
+/// push always; `a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next`
+/// and `a_block_an_inner_loop_makes_unwritten_again_is_doubted_where_read_after_both`
 /// report a caret twice.
+///
+/// **A returned block certainly unwritten and one possibly so answer one
+/// question**, and the certain answer is the one kept: the first turn's arm
+/// says possibly where the every-turn walk said certainly, and both stood at
+/// one `return`, found by review. Mutation: compare kinds alone;
+/// `a_return_reached_by_both_walks_is_reported_once` reports its first
+/// `return` twice.
 fn push_once(findings: &mut Vec<Finding>, finding: Finding) {
-    if !findings
-        .iter()
-        .any(|said| said.at == finding.at && said.kind == finding.kind)
-    {
-        findings.push(finding);
+    let returned =
+        |kind: &Kind| matches!(kind, Kind::ReturnedUnwritten | Kind::ReturnedMaybeUnwritten);
+    let same = |said: &Finding| {
+        said.at == finding.at
+            && (said.kind == finding.kind || (returned(&said.kind) && returned(&finding.kind)))
+    };
+    match findings.iter().position(same) {
+        None => findings.push(finding),
+        // The certain answer takes the place of the possible one.
+        Some(index)
+            if finding.kind == Kind::ReturnedUnwritten
+                && findings[index].kind == Kind::ReturnedMaybeUnwritten =>
+        {
+            findings[index] = finding;
+        }
+        Some(_) => {}
     }
 }
 

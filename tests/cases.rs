@@ -1575,6 +1575,12 @@ cases! {
         // no `asked_unwritten_in_element`; the second does.
         a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_return_on_an_arm_of_a_loop_shown_to_run_before_its_block_is_written_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `return` both walks reach: the every-turn walk finds the block
+        // certainly unwritten, the first turn's arm possibly, and the caret
+        // carries the certain answer once, found by review. Mutation:
+        // `push_once` compares kinds alone; the first `return` is reported
+        // twice, with two words.
+        a_return_reached_by_both_walks_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy of part of a pointer into the same memory is asked as one
         // into an `int *` is. Mutation: `part_of_a_pointer` asks without
         // `stored_pointer`; this goes silent.

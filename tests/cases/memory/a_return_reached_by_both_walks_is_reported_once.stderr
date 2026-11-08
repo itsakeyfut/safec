@@ -1,0 +1,20 @@
+error[SC0411]: `b` points at memory nothing wrote, and the caller may read pointers out of it
+   ╭─[ a_return_reached_by_both_walks_is_reported_once.c:5:42 ]
+   │
+ 5 │     for (int i = 0; i < 2; i++) { if (c) return b; }
+   │                                          ────┬────  
+   │                                              ╰────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before returning it, or allocate it with `calloc`
+error[SC0411]: `b` points at memory nothing wrote, and the caller may read pointers out of it
+   ╭─[ a_return_reached_by_both_walks_is_reported_once.c:6:5 ]
+   │
+ 6 │     return b;
+   │     ────┬────  
+   │         ╰────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before returning it, or allocate it with `calloc`
