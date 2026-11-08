@@ -1,3 +1,13 @@
+error[SC0411]: this copies bytes that may not have been written into memory that code outside this function reads as a pointer
+   ╭─[ a_copy_ending_part_way_through_an_unwritten_element_into_caller_memory_is_doubted.c:6:5 ]
+   │
+ 6 │     memcpy(out, a, 12);
+   │     ─────────┬────────  
+   │              ╰────────── copied here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write what is copied on every path before the copy
 error[SC0412]: this may reach outside the object `out` points at
    ╭─[ a_copy_ending_part_way_through_an_unwritten_element_into_caller_memory_is_doubted.c:6:5 ]
    │
@@ -18,13 +28,3 @@ error[SC0413]: this lets a pointer leave that may not point at an object as wide
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
-error[SC0411]: this copies bytes that may not have been written into memory that code outside this function reads as a pointer
-   ╭─[ a_copy_ending_part_way_through_an_unwritten_element_into_caller_memory_is_doubted.c:6:5 ]
-   │
- 6 │     memcpy(out, a, 12);
-   │     ─────────┬────────  
-   │              ╰────────── copied here
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: write what is copied on every path before the copy

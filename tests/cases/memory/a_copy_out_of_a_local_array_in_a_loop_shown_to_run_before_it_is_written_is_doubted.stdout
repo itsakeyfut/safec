@@ -1,0 +1,100 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "out"
+  Local "_2" "int *[1]" "m"
+  Local "_3" "int"
+  Local "_4" "int" "i"
+  Local "_5" "int"
+  Local "_6" "int **"
+  Local "_7" "void *"
+  Local "_8" "int **"
+  Local "_9" "int *"
+  Local "_10" "int"
+  Local "_11" "int"
+  Block "bb0" entry
+    Operation a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:4:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:4:9 written "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:4:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:4:9 generated
+    Goto "bb3"
+  Block "bb3"
+    StorageLive a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:10 generated "_4"
+    Operation a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:14 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:18 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:21 written
+      Destination "_5"
+      Binary "Lt"
+        Copy "_4"
+        Constant 2
+    Branch a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:21 written "bb5" "bb6"
+      Copy "_5"
+  Block "bb5"
+    Sequenced a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:21 generated
+    Operation a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:47 generated
+      Destination "_6"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:35 generated
+    Call a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:35 written "memcpy" "bb7"
+      Destination "_7"
+      Copy "_1"
+      Copy "_6"
+      Constant 8
+  Block "bb6"
+    Sequenced a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:21 generated
+    StorageDead a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:64 generated "_4"
+    Return
+  Block "bb7"
+    Sequenced a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:35 generated
+    Operation a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:54 generated
+      Destination "_8"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:54 written
+      Destination "_8"
+        Deref
+      Use
+        Constant 0
+    Operation a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:54 written
+      Destination "_9"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:54 generated
+    Operation a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:28 written
+      Destination "_10"
+      Use
+        Copy "_4"
+    Operation a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:28 written
+      Destination "_11"
+      Binary "Add"
+        Copy "_4"
+        Constant 1
+    Operation a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:28 written
+      Destination "_4"
+      Use
+        Copy "_11"
+    Sequenced a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:28 generated
+    Goto "bb4"

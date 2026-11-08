@@ -1,0 +1,10 @@
+error[SC0411]: this copies bytes that may not have been written into memory that code outside this function reads as a pointer
+   ╭─[ a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:35 ]
+   │
+ 5 │     for (int i = 0; i < 2; i++) { memcpy(out, m, 8); m[0] = 0; }
+   │                                   ────────┬────────  
+   │                                           ╰────────── copied here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write what is copied on every path before the copy

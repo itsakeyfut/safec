@@ -82,19 +82,16 @@ use crate::ir::{
     Between, BlockId, Element, FuncId, Function, LocalId, Place, Terminator, TranslationUnit,
 };
 use crate::nullability::{self};
-use crate::reads::{
-    dereferenced_in_element, dereferenced_in_terminator, read_out_of_memory_after,
-    read_out_of_memory_in_terminator_after,
-};
+use crate::reads::{dereferenced_in_element, dereferenced_in_terminator};
 use crate::source::{SourceMap, Span};
 
 use allocations::Allocations;
 use built::named;
 use index::Table;
 use report::{
-    after_a_call, copied_away, departed_at_call, departed_in_element,
-    freed_after_its_read_was_reported, handed, handed_stored_out, loaded_indeterminate,
-    may_not_fit, reached_by_library, reported, returned, stored_away, unwritten_read, used,
+    UnwrittenAsk, after_a_call, asked_unwritten_in_element, asked_unwritten_in_terminator,
+    copied_away, departed_at_call, departed_in_element, freed_after_its_read_was_reported, handed,
+    handed_stored_out, may_not_fit, reached_by_library, reported, returned, stored_away, used,
     used_before,
 };
 
@@ -812,28 +809,28 @@ fn findings_within(
 
             let block = function.block(id);
             let mut stored = None;
+            // **Whether what a value names may be unwritten, every door at
+            // once**, as the first-turn walk below asks it. See
+            // `report::UnwrittenDoor`.
+            let ask = UnwrittenAsk {
+                sources,
+                analysis: &analysis,
+                function,
+                taken: &taken,
+                null: &null,
+                block: id,
+                doubt_only: false,
+            };
             for element in &block.elements {
                 // Before `used`, so that the proof stands at the caret and a
                 // doubt about the same place there does not replace it.
-                loaded_indeterminate(
-                    sources,
+                asked_unwritten_in_element(
+                    &ask,
                     &mut findings,
                     &mut said,
-                    &analysis,
-                    function,
-                    read_out_of_memory_after(&mut stored, element),
+                    &mut stored,
+                    element,
                     &known,
-                    false,
-                );
-                unwritten_read(
-                    sources,
-                    &mut findings,
-                    &mut said,
-                    &analysis,
-                    assigned::element_reads(element),
-                    &taken,
-                    &known,
-                    false,
                 );
                 // Before the transfer, which is what the element does: the
                 // question is what was true where it runs.
@@ -887,8 +884,6 @@ fn findings_within(
                     function,
                     element,
                     &known,
-                    &null,
-                    id,
                 );
                 // Just before what is pending is cleared, so that a free in
                 // the same expression has reported first, with its label.
@@ -929,25 +924,13 @@ fn findings_within(
                 analysis.element(function, element, &mut known);
             }
 
-            loaded_indeterminate(
-                sources,
+            asked_unwritten_in_terminator(
+                &ask,
                 &mut findings,
                 &mut said,
-                &analysis,
-                function,
-                read_out_of_memory_in_terminator_after(&stored, &block.terminator),
+                &stored,
+                &block.terminator,
                 &known,
-                false,
-            );
-            unwritten_read(
-                sources,
-                &mut findings,
-                &mut said,
-                &analysis,
-                assigned::terminator_reads(&block.terminator),
-                &taken,
-                &known,
-                false,
             );
             // Before the terminator's own transfer, which is what turns a live
             // allocation into a freed one: the question is what was true when
@@ -1141,48 +1124,37 @@ fn findings_within(
                     .all(|&latch| dominators.dominates(id, latch));
                 let block = function.block(id);
                 let mut stored = None;
+                // **Every door the every-turn walk asks**, through the same
+                // two functions: a copy out and a `return` asked there alone
+                // built silent in a loop shown to run (#838). See
+                // `report::UnwrittenDoor`.
+                let ask = UnwrittenAsk {
+                    sources,
+                    analysis: &analysis,
+                    function,
+                    taken: &taken,
+                    null: &null,
+                    block: id,
+                    doubt_only,
+                };
                 for element in &block.elements {
-                    loaded_indeterminate(
-                        sources,
+                    asked_unwritten_in_element(
+                        &ask,
                         &mut findings,
                         &mut said,
-                        &analysis,
-                        function,
-                        read_out_of_memory_after(&mut stored, element),
+                        &mut stored,
+                        element,
                         &turn,
-                        doubt_only,
-                    );
-                    unwritten_read(
-                        sources,
-                        &mut findings,
-                        &mut said,
-                        &analysis,
-                        assigned::element_reads(element),
-                        &taken,
-                        &turn,
-                        doubt_only,
                     );
                     analysis.element(function, element, &mut turn);
                 }
-                loaded_indeterminate(
-                    sources,
+                asked_unwritten_in_terminator(
+                    &ask,
                     &mut findings,
                     &mut said,
-                    &analysis,
-                    function,
-                    read_out_of_memory_in_terminator_after(&stored, &block.terminator),
+                    &stored,
+                    &block.terminator,
                     &turn,
-                    doubt_only,
-                );
-                unwritten_read(
-                    sources,
-                    &mut findings,
-                    &mut said,
-                    &analysis,
-                    assigned::terminator_reads(&block.terminator),
-                    &taken,
-                    &turn,
-                    doubt_only,
                 );
             }
         }
