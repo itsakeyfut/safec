@@ -1587,9 +1587,10 @@ pub(super) fn asked_unwritten_in_terminator(
 /// unwritten where the function returns, at the store (ADR-0076).
 ///
 /// **Certainly, not possibly**: [`Known::left_at`] and [`Known::init`] join
-/// apart, so `Maybe` here mixes in the path where the allocation failed, and
-/// doubting it refused `if (!b) return; *b = x; *out = b;`. A block that may
-/// be unwritten when it leaves is #855's.
+/// apart, so a store after a null test's join, `if (b) *b = x; *out = b;`,
+/// is `Maybe` here from the path where the allocation failed and the
+/// stored pointer is null, and doubting it refused that program. A block
+/// that may be unwritten when it leaves is #855's.
 fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>, known: &Known) {
     for site in known.state.indices() {
         let Some(at) = known.left_at[site] else {

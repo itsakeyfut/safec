@@ -1595,10 +1595,11 @@ cases! {
         // `report_left_unwritten` at every element as well, so a block is
         // asked as soon as it has left; this is reported.
         a_block_stored_out_before_it_is_filled_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Written before it is stored out, beside the path where its
-        // allocation failed and returned: `Maybe` at the exit, which is not
-        // asked. Mutation: `report_left_unwritten` asks `may_be_unwritten`;
-        // this is reported.
+        // Written where its allocation succeeded and stored out after the
+        // null test's join, so the stored pointer is null on the other path:
+        // `Maybe` at the exit, which is not asked. Mutation:
+        // `report_left_unwritten` asks `may_be_unwritten`; this is reported,
+        // and so are the two `bounds` cases of a callee filling `*p`.
         a_block_written_before_it_is_stored_out_is_not_reported_beside_its_failed_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `char` buffer handed out unwritten for its caller to fill: no
         // pointer is read out of it. Mutation: mark every store that leaves,

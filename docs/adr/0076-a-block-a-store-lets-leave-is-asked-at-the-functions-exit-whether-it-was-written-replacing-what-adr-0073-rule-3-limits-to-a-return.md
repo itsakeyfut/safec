@@ -46,10 +46,11 @@ void stored(int *** _Nonnull out) { int **b = malloc(8); *out = b; }
    the report's one question of what leaves (#851), so the first-turn walk asks
    it too.
 3. **Certainly, not possibly.** The mark and `Known::init` join apart, so a
-   block left on one path and unwritten on another, the allocation that failed
-   among them, is `Maybe` at the exit; doubting that refused
-   `if (!b) return; *b = x; *out = b;`. A block that left on some path while
-   unwritten on that path alone is not reported: a stated limit, #855.
+   store after a null test's join, `if (b) *b = x; *out = b;`, is `Maybe` at
+   the exit from the path where the allocation failed and the stored pointer
+   is null; doubting that refused it, and two corpus cases of a callee
+   filling `*p` the same way. A block that left on some path while unwritten
+   on that path alone is not reported: a stated limit, #855.
 
 ### Confirmation
 
