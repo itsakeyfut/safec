@@ -553,15 +553,25 @@ pub(super) fn findings(
             if then == otherwise {
                 return None;
             }
-            // (a), or the same of a loop's first turn at the edge that
-            // leaves it.
+            // **(a) is `every_edge`, and written once**: the local unassigned
+            // where the branch is, so either edge may witness; or, at a loop's
+            // head, unassigned there as of the first turn, so only the edge
+            // that leaves the loop may. An early return beside it answered
+            // nothing this filter did not, and no test could hold either copy
+            // alone (#848). Mutation: `every_edge` always `true`; about a
+            // thousand cases fail.
+            //
+            // **The first-turn edge alone is held by no case**: widened to
+            // either edge of the head, nothing moves, measured. The edge into
+            // the body reaches a read after the loop only around the back
+            // edge, which `reaches_certainly` refuses, and a read it reaches
+            // certainly inside the body is one the first-turn proof already
+            // reported at that caret. It is kept to name the edge the doubt is
+            // about.
             let first_turn = first_turn_at_end[id.index()]
                 .as_ref()
                 .filter(|(value, _)| !value[local.index()])
                 .map(|&(_, leaves)| leaves);
-            if at_end[id.index()].as_ref()?[local.index()] && first_turn.is_none() {
-                return None;
-            }
             let every_edge = !at_end[id.index()].as_ref()?[local.index()];
             [(*then, true), (*otherwise, false)]
                 .into_iter()
