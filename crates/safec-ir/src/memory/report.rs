@@ -1573,7 +1573,10 @@ pub(super) fn asked_unwritten_in_terminator(
 
 /// Push `finding` unless one of its kind already stands at its caret: the
 /// every-turn walk and a loop's first turn may both reach one `return` or one
-/// copy, and one defect is reported once (#838).
+/// copy, and one defect is reported once (#838). Mutation: push always;
+/// `a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next` and
+/// `a_block_an_inner_loop_makes_unwritten_again_is_doubted_where_read_after_both`
+/// report a caret twice.
 fn push_once(findings: &mut Vec<Finding>, finding: Finding) {
     if !findings
         .iter()
@@ -1647,6 +1650,9 @@ fn report_returned_unwritten(
             .any(|site| known.init[site].may_be_unwritten());
     // **On a first turn's arm, certainly unwritten is a doubt**: that turn
     // may not take the arm, and a later one finds the block written (#838).
+    // Mutation: ignore `doubt_only`; the return in
+    // `a_return_on_an_arm_of_a_loop_shown_to_run_before_its_block_is_written_is_doubted`
+    // is said to name memory nothing wrote.
     let kind = if certainly && !doubt_only {
         Kind::ReturnedUnwritten
     } else if certainly || possibly {
