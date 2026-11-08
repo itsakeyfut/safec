@@ -430,8 +430,9 @@ pub(super) struct Known {
     /// **Asked at the function's exit, not at the store**: the caller reads
     /// the block after the function returns, and `*out = b; *b = x;` fills it
     /// before then (#852). A may-fact, so a union where paths meet, keeping
-    /// the earlier store's span so the report has one caret; cleared where
-    /// the site is made again, as [`Self::stored_out`] is.
+    /// the earlier store's span so the report has one caret. **Kept where
+    /// the site is made again**, since the caller may hold the allocation it
+    /// named before; see `Self::reborn`.
     pub(super) left_at: Table<Site, Option<Span>>,
     /// Per local, each type a call this check cannot read reached it as on
     /// the walk a departure takes, where that type is untyped somewhere
@@ -1792,8 +1793,14 @@ impl Known {
             // About the allocation the site named, whose address may have
             // been stored out; the new one's has not been.
             stored_out,
-            // About the allocation the site named, as `stored_out` is.
-            left_at,
+            // **Kept, unlike `stored_out`**: the caller may still hold the
+            // allocation the site named before, and whether that was written
+            // is what the exit asks. Cleared, a block one turn of a loop let
+            // leave unwritten went silent when the next turn allocated again,
+            // found by review; kept, a block stored out and filled every turn
+            // is doubted at an early return, a doubt the reader sees. See
+            // `Known::left_at`.
+            left_at: _,
             // Not a local's, which a site being reborn is not about, and
             // kept for the site, as `names` is: a call may still hold the old
             // allocation's address, and the slots of the new one are not told
@@ -1804,7 +1811,6 @@ impl Known {
         // allocation**, field by field. See `Cell::kept_when_reborn`.
         contents[site].kept_when_reborn();
         stored_out[site] = false;
-        left_at[site] = None;
 
         // **A local that loses an allocation that is gone may hold one**, so
         // a store of it marks where it lands, as a load out of a marked

@@ -40,7 +40,10 @@ void stored(int *** _Nonnull out) { int **b = malloc(8); *out = b; }
    left holding pointers**, where the caller reads pointers out of it (the
    stored-into type, through `stored_pointer`), with the store's span:
    `Known::left_at`, a may-fact joined by union, keeping the earlier store's
-   span, and cleared where the site is made again, as `Known::stored_out` is.
+   span, and kept where the site is made again, since the caller may hold the
+   allocation it named before: cleared, a block one turn of a loop let leave
+   unwritten went silent; kept, a block stored out and filled every turn is
+   doubted at an early return inside the loop, a doubt the reader sees.
 2. **At each `return`, a block that left and is certainly unwritten is
    reported** at the store that let it leave, `SC0411`, `Unknown`. Asked by
    the report's one question of what leaves (#851), so the first-turn walk asks
@@ -52,7 +55,10 @@ void stored(int *** _Nonnull out) { int **b = malloc(8); *out = b; }
    filling `*p` the same way. A block possibly unwritten at the exit is not
    reported, whatever made it so, a write on one arm after the store among
    them, `*out = b; if (c) *b = x;`: a stated limit, #855. Nor is a block
-   freed since it left, which `SC0414` reports.
+   freed since it left, which `SC0414` reports. Nor a block stored through a
+   pointer read out of memory, `t = *out; *t = b;`: such a store is one this
+   check cannot place, so ADR-0074 rule 2 makes it a may-write of every
+   block, the stored one among them, #858.
 
 ### Confirmation
 
@@ -64,6 +70,12 @@ Each in `tests/cases/memory/`, with its mutation in its note in
 * `a_block_stored_out_before_it_is_filled_is_not_reported` is reported when a
   block is also asked at every element, as soon as it has left (rule 2's
   timing).
+* `a_block_stored_out_on_one_arm_unwritten_is_reported_where_the_function_returns`
+  goes silent when the mark is joined as a must-fact (rule 1's union).
+* `a_block_one_turn_stores_out_and_a_later_turn_leaves_unwritten_is_reported`
+  goes silent when the mark is cleared where the site is made again, and
+  `a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_doubted`
+  then loses its doubt (rule 1's rebirth).
 * `a_block_written_before_it_is_stored_out_is_not_reported_beside_its_failed_allocation`
   is reported when `Maybe` is asked at the exit (rule 3).
 * `a_char_buffer_stored_out_unwritten_is_not_reported` is reported when every

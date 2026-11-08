@@ -1610,11 +1610,17 @@ cases! {
         // join keeps, found by review. Mutation: join `Known::left_at` as a
         // must-fact, `None` unless both sides marked; this goes silent.
         a_block_stored_out_on_one_arm_unwritten_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Made again each turn, stored out and filled: last turn's mark is not
-        // this turn's block, found by review. Mutation: leave `left_at` as it
-        // was where the site is made again (`Known::reborn`); this is
-        // reported.
-        a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Made again each turn, stored out and filled: at the early return
+        // inside the loop the caller may hold an earlier turn's block, which
+        // was filled, and the mark kept where the site is made again cannot
+        // tell the two apart, the cost the next case pays for. Mutation:
+        // clear `left_at` where the site is made again (`Known::reborn`);
+        // this loses its doubt and the next case goes silent.
+        a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // One turn stores the block out and a later turn allocates again
+        // and writes the new one: the caller holds the first, never written,
+        // found by review.
+        a_block_one_turn_stores_out_and_a_later_turn_leaves_unwritten_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stored out unwritten and then freed: the caller is left a freed
         // pointer, which is the report, not that the memory was never
         // written, found by review. Mutation: ask a freed block too; this

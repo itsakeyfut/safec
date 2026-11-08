@@ -1,0 +1,14 @@
+error[SC0411]: this lets a pointer leave to memory nothing wrote by the time the function returns, and the caller may read pointers out of it
+   ╭─[ a_block_one_turn_stores_out_and_a_later_turn_leaves_unwritten_is_reported.c:6:21 ]
+   │
+ 4 │         int **b = malloc(8);
+   │                   ────┬────  
+   │                       ╰────── allocated here
+   │ 
+ 6 │         if (i == 0) *out = b; else *b = x;
+   │                     ────┬───  
+   │                         ╰───── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before the function returns, or allocate it with `calloc`
