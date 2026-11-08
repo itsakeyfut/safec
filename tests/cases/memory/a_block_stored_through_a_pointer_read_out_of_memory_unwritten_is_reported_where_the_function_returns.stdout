@@ -1,0 +1,68 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int ****" parameter _Nonnull "out"
+  Local "_2" "int **" "b"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int ***" "t"
+  Local "_6" "int"
+  Local "_7" "int **"
+  Block "bb0" entry
+    ArgumentsEvaluated a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:3:15 generated
+    Call a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:3:15 written "malloc" "bb1"
+      Destination "_3"
+      Constant 8
+  Block "bb1"
+    Operation a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:3:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:3:15 generated
+    Operation a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:4:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:4:9 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:4:9 generated
+    Return
+  Block "bb3"
+    Sequenced a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:4:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:5:12 written
+      Destination "_5"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:5:16 generated
+    Operation a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:6:9 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_5"
+    Branch a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:6:9 written "bb5" "bb6"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:6:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:6:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:7:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_2"
+    Operation a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:7:5 written
+      Destination "_7"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns.c:7:5 generated
+    Return

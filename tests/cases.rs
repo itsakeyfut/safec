@@ -1626,6 +1626,12 @@ cases! {
         // written, found by review. Mutation: ask a freed block too; this
         // gains the unwritten doubt.
         a_block_stored_out_and_freed_unwritten_is_reported_freed_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Stored through a pointer read out of memory, a store this check
+        // cannot place, which exposes the block: exposure believes nothing
+        // written at a store, which runs no code (#858, ADR-0077). Mutation:
+        // drop the carried half of the store's `keep`; both go silent.
+        a_block_stored_through_a_pointer_read_out_of_memory_unwritten_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy of part of a pointer into the same memory is asked as one
         // into an `int *` is. Mutation: `part_of_a_pointer` asks without
         // `stored_pointer`; this goes silent.

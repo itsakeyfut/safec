@@ -22,6 +22,17 @@ error[SC0414]: this frees `m`, a pointer that was stored where code outside this
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: set what was stored there to null once it is freed, or do not store it where it outlives the free
+error[SC0411]: this may read a pointer out of memory before anything was assigned to it
+   ╭─[ a_pointer_stored_and_read_back_two_levels_down_a_parameter_as_one_place_is_doubted.c:9:10 ]
+   │
+ 9 │     int *q = **ppp;
+   │          ────┬────  
+   │              ╰────── read here
+───╯
+  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path before it is read
 error[SC0402]: this uses a value that may have been freed
    ╭─[ a_pointer_stored_and_read_back_two_levels_down_a_parameter_as_one_place_is_doubted.c:9:10 ]
    │
