@@ -1586,6 +1586,46 @@ cases! {
         // `push_once` compares kinds alone; the first `return` is reported
         // twice, with two words.
         a_return_reached_by_both_walks_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block a store lets leave is asked at the function's exit whether
+        // it was written, as a returned one is (#852, ADR-0076). Mutation:
+        // `report_left_unwritten` asks no site; this goes silent.
+        a_block_a_store_lets_leave_unwritten_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Stored out first and filled after: the caller reads it once the
+        // function returns, by which time it was written. Mutation: ask
+        // `report_left_unwritten` at every element as well, so a block is
+        // asked as soon as it has left; this is reported.
+        a_block_stored_out_before_it_is_filled_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written where its allocation succeeded and stored out after the
+        // null test's join, so the stored pointer is null on the other path:
+        // `Maybe` at the exit, which is not asked. Mutation:
+        // `report_left_unwritten` asks `may_be_unwritten`; this is reported,
+        // and so are the two `bounds` cases of a callee filling `*p`.
+        a_block_written_before_it_is_stored_out_is_not_reported_beside_its_failed_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `char` buffer handed out unwritten for its caller to fill: no
+        // pointer is read out of it. Mutation: mark every store that leaves,
+        // not only where the stored-into type holds pointers; this is
+        // reported.
+        a_char_buffer_stored_out_unwritten_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Stored out on one arm only: the block left on a path, which the
+        // join keeps, found by review. Mutation: join `Known::left_at` as a
+        // must-fact, `None` unless both sides marked; this goes silent.
+        a_block_stored_out_on_one_arm_unwritten_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Made again each turn, stored out and filled: at the early return
+        // inside the loop the caller may hold an earlier turn's block, which
+        // was filled, and the mark kept where the site is made again cannot
+        // tell the two apart, the cost the next case pays for. Mutation:
+        // clear `left_at` where the site is made again (`Known::reborn`);
+        // this loses its doubt and the next case goes silent.
+        a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // One turn stores the block out and a later turn allocates again
+        // and writes the new one: the caller holds the first, never written,
+        // found by review.
+        a_block_one_turn_stores_out_and_a_later_turn_leaves_unwritten_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Stored out unwritten and then freed: the caller is left a freed
+        // pointer, which is the report, not that the memory was never
+        // written, found by review. Mutation: ask a freed block too; this
+        // gains the unwritten doubt.
+        a_block_stored_out_and_freed_unwritten_is_reported_freed_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy of part of a pointer into the same memory is asked as one
         // into an `int *` is. Mutation: `part_of_a_pointer` asks without
         // `stored_pointer`; this goes silent.

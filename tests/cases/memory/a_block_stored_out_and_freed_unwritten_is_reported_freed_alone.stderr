@@ -1,0 +1,14 @@
+error[SC0414]: this frees `b`, a pointer that was stored where code outside this function may read it
+   ╭─[ a_block_stored_out_and_freed_unwritten_is_reported_freed_alone.c:7:5 ]
+   │
+ 4 │     int **b = malloc(8);
+   │               ────┬────  
+   │                   ╰────── allocated here
+   │ 
+ 7 │     free(b);
+   │     ───┬───  
+   │        ╰───── freed here, perhaps still stored where it may be read
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set what was stored there to null once it is freed, or do not store it where it outlives the free

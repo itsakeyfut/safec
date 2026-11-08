@@ -206,10 +206,23 @@ return 0; return b;`, which is doubted. Where the pointer is not shown not
 null at the `return`, a test of it that encloses the write, `if (b) { if (c)
 *b = p; } return b;`, or `return c ? b : 0;`, the block possibly unwritten
 is silent, for now (#834). A pointer that may name either of two blocks is
-asked of each. Only a `return`: a block handed to a call is how a callee is
-given memory to fill, and a block handed back through a parameter, `*out =
-b;`, is not asked either, for now. And a function that allocates a table of
+asked of each. A block handed to a call is not asked, since that is how a
+callee is given memory to fill. And a function that allocates a table of
 pointers and hands it back unfilled for its caller to fill is doubted.
+
+A block handed back through a parameter, `*out = b;`, where the stored-into
+type holds pointers, is asked at the function's exit rather than at the
+store, since the caller reads it after the function returns: certainly
+unwritten there, it is `SC0411` as a doubt at the store, "this lets a pointer
+leave to memory nothing wrote by the time the function returns, and the
+caller may read pointers out of it" (#852, ADR-0076). `*out = b; *b = x;`
+says nothing. A block possibly unwritten at the exit says nothing, for now,
+whatever made it so: the path where its allocation failed, stored after a
+null test's join, or a write on one arm after the store (#855). So does one
+stored through a pointer read out of memory, `t = *out; *t = b;`, which this
+check reads as a store that may have written the block itself (#858). A
+block stored out and filled on every turn of a loop is doubted at an early
+`return` inside the loop, since the caller may hold an earlier turn's.
 [ADR-0073](adr/0073-what-leaves-a-function-is-asked-by-how-it-was-declared-and-what-wrote-it.md)
 rule 3 is the decision.
 

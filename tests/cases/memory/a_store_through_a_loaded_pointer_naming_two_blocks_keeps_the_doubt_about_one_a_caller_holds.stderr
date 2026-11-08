@@ -1,3 +1,17 @@
+error[SC0411]: this lets a pointer leave to memory nothing wrote by the time the function returns, and the caller may read pointers out of it
+   ╭─[ a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:7:5 ]
+   │
+ 3 │     int **m1 = malloc(8); if (!m1) return 0;
+   │                ────┬────  
+   │                    ╰────── allocated here
+   │ 
+ 7 │     *o = m1;
+   │     ───┬───  
+   │        ╰───── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before the function returns, or allocate it with `calloc`
 error[SC0411]: `*m1` may be read before anything was assigned to it
     ╭─[ a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:12:10 ]
     │

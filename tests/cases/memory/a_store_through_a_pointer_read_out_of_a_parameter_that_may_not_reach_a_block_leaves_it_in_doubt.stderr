@@ -1,3 +1,17 @@
+error[SC0411]: this lets a pointer leave to memory nothing wrote by the time the function returns, and the caller may read pointers out of it
+    ╭─[ a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:10:5 ]
+    │
+  6 │     int **m = malloc(8);
+    │               ────┬────  
+    │                   ╰────── allocated here
+    │ 
+ 10 │     *s = m;
+    │     ───┬──  
+    │        ╰──── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before the function returns, or allocate it with `calloc`
 error[SC0411]: `*m` may be read before anything was assigned to it
     ╭─[ a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:16:10 ]
     │

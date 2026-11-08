@@ -1,3 +1,13 @@
+error[SC0411]: this lets a pointer leave to memory nothing wrote by the time the function returns, and the caller may read pointers out of it
+   ╭─[ a_store_this_check_cannot_place_may_write_a_block_a_kept_local_points_at.c:7:5 ]
+   │
+ 7 │     p = m;
+   │     ──┬──  
+   │       ╰──── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before the function returns, or allocate it with `calloc`
 error[SC0402]: this uses `ppw`, which may have been freed
    ╭─[ a_store_this_check_cannot_place_may_write_a_block_a_kept_local_points_at.c:8:12 ]
    │

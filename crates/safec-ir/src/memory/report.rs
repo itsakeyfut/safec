@@ -248,6 +248,9 @@ fn verdict(
         Kind::ReturnedUnwritten => true,
         // Never asked, as the one above.
         Kind::ReturnedMaybeUnwritten => true,
+        // Never asked: it is said where a block leaves by a store, about no
+        // free.
+        Kind::StoredUnwritten => true,
     };
 
     match earliest {
@@ -1422,15 +1425,19 @@ pub(super) enum UnwrittenDoor {
     /// A `return` of a block nothing wrote, [`report_returned_unwritten`]. See
     /// ADR-0073 rule 3.
     Return,
+    /// A block a store let leave, still unwritten where the function returns,
+    /// [`report_left_unwritten`]. See ADR-0076.
+    LeftAtExit,
 }
 
 impl UnwrittenDoor {
     /// Every door, in the order a caret's findings are pushed.
-    const EVERY: [UnwrittenDoor; 4] = [
+    const EVERY: [UnwrittenDoor; 5] = [
         UnwrittenDoor::Load,
         UnwrittenDoor::ByName,
         UnwrittenDoor::CopyOut,
         UnwrittenDoor::Return,
+        UnwrittenDoor::LeftAtExit,
     ];
 }
 
@@ -1481,8 +1488,8 @@ pub(super) fn asked_unwritten_in_element(
                 known,
                 ask.doubt_only,
             ),
-            // A copy is a call, which ends a block.
-            UnwrittenDoor::CopyOut => {}
+            // A copy is a call, and leaving is a `return`, which end a block.
+            UnwrittenDoor::CopyOut | UnwrittenDoor::LeftAtExit => {}
             // **Whether the block it returns was written**: `int **b =
             // malloc(8); return b;` hands the caller pointers nobody wrote,
             // where reading `*b` here is `SC0411` (#823).
@@ -1567,7 +1574,52 @@ pub(super) fn asked_unwritten_in_terminator(
             }
             // A `return` is an assignment to the return place, an element.
             UnwrittenDoor::Return => {}
+            UnwrittenDoor::LeftAtExit => {
+                if matches!(terminator, Terminator::Return) {
+                    report_left_unwritten(ask, findings, known);
+                }
+            }
         }
+    }
+}
+
+/// Report every block a store let leave holding pointers that is certainly
+/// unwritten where the function returns, at the store (ADR-0076).
+///
+/// **Certainly, not possibly**: [`Known::left_at`] and [`Known::init`] join
+/// apart, so a store after a null test's join, `if (b) *b = x; *out = b;`,
+/// is `Maybe` here from the path where the allocation failed and the
+/// stored pointer is null, and doubting it refused that program. A block
+/// possibly unwritten here is not asked, whatever made it so, a write on
+/// one arm among them: #855.
+///
+/// **Not a block freed since**: what reaches the caller is a freed pointer,
+/// which `SC0414` reports, and calling its memory unwritten beside that was
+/// wrong words, found by review. Mutation: ask a freed block too;
+/// `a_block_stored_out_and_freed_unwritten_is_reported_freed_alone` gains the
+/// unwritten doubt.
+fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>, known: &Known) {
+    for site in known.state.indices() {
+        let Some(at) = known.left_at[site] else {
+            continue;
+        };
+        if !known.init[site].is_unwritten() || matches!(known.state[site], SiteState::Freed { .. })
+        {
+            continue;
+        }
+        push_once(
+            findings,
+            Finding {
+                function: ask.analysis.function,
+                kind: Kind::StoredUnwritten,
+                conclusion: Conclusion::Unknown,
+                at,
+                local: None,
+                freed: None,
+                made: made_where_all_agree(&[site], known),
+                unproven: None,
+            },
+        );
     }
 }
 
