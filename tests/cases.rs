@@ -1606,6 +1606,20 @@ cases! {
         // not only where the stored-into type holds pointers; this is
         // reported.
         a_char_buffer_stored_out_unwritten_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Stored out on one arm only: the block left on a path, which the
+        // join keeps, found by review. Mutation: join `Known::left_at` as a
+        // must-fact, `None` unless both sides marked; this goes silent.
+        a_block_stored_out_on_one_arm_unwritten_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Made again each turn, stored out and filled: last turn's mark is not
+        // this turn's block, found by review. Mutation: leave `left_at` as it
+        // was where the site is made again (`Known::reborn`); this is
+        // reported.
+        a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Stored out unwritten and then freed: the caller is left a freed
+        // pointer, which is the report, not that the memory was never
+        // written, found by review. Mutation: ask a freed block too; this
+        // gains the unwritten doubt.
+        a_block_stored_out_and_freed_unwritten_is_reported_freed_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy of part of a pointer into the same memory is asked as one
         // into an `int *` is. Mutation: `part_of_a_pointer` asks without
         // `stored_pointer`; this goes silent.

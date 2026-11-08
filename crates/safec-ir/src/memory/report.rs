@@ -1590,13 +1590,21 @@ pub(super) fn asked_unwritten_in_terminator(
 /// apart, so a store after a null test's join, `if (b) *b = x; *out = b;`,
 /// is `Maybe` here from the path where the allocation failed and the
 /// stored pointer is null, and doubting it refused that program. A block
-/// that may be unwritten when it leaves is #855's.
+/// possibly unwritten here is not asked, whatever made it so, a write on
+/// one arm among them: #855.
+///
+/// **Not a block freed since**: what reaches the caller is a freed pointer,
+/// which `SC0414` reports, and calling its memory unwritten beside that was
+/// wrong words, found by review. Mutation: ask a freed block too;
+/// `a_block_stored_out_and_freed_unwritten_is_reported_freed_alone` gains the
+/// unwritten doubt.
 fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>, known: &Known) {
     for site in known.state.indices() {
         let Some(at) = known.left_at[site] else {
             continue;
         };
-        if !known.init[site].is_unwritten() {
+        if !known.init[site].is_unwritten() || matches!(known.state[site], SiteState::Freed { .. })
+        {
             continue;
         }
         push_once(

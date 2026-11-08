@@ -217,7 +217,8 @@ unwritten there, it is `SC0411` as a doubt at the store, "this lets a pointer
 leave to memory nothing wrote by the time the function returns, and the
 caller may read pointers out of it" (#852, ADR-0076). `*out = b; *b = x;`
 says nothing. A block possibly unwritten at the exit says nothing, for now,
-since the path where its allocation failed joins there (#855).
+whatever made it so: the path where its allocation failed, stored after a
+null test's join, or a write on one arm after the store (#855).
 [ADR-0073](adr/0073-what-leaves-a-function-is-asked-by-how-it-was-declared-and-what-wrote-it.md)
 rule 3 is the decision.
 

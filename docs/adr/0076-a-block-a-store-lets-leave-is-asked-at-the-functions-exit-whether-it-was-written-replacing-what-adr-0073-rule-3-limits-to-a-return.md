@@ -49,8 +49,10 @@ void stored(int *** _Nonnull out) { int **b = malloc(8); *out = b; }
    store after a null test's join, `if (b) *b = x; *out = b;`, is `Maybe` at
    the exit from the path where the allocation failed and the stored pointer
    is null; doubting that refused it, and two corpus cases of a callee
-   filling `*p` the same way. A block that left on some path while unwritten
-   on that path alone is not reported: a stated limit, #855.
+   filling `*p` the same way. A block possibly unwritten at the exit is not
+   reported, whatever made it so, a write on one arm after the store among
+   them, `*out = b; if (c) *b = x;`: a stated limit, #855. Nor is a block
+   freed since it left, which `SC0414` reports.
 
 ### Confirmation
 

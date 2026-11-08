@@ -1,0 +1,119 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:2:6 "l"
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter _Nonnull "out"
+  Local "_2" "int" parameter "n"
+  Local "_3" "int *" parameter "x"
+  Local "_4" "int" "i"
+  Local "_5" "int"
+  Local "_6" "int **" "b"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int"
+  Local "_10" "int **"
+  Local "_11" "int *"
+  Local "_12" "int"
+  Local "_13" "int"
+  Block "bb0" entry
+    StorageLive a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:3:10 generated "_4"
+    Operation a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:3:14 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:3:18 generated
+    Goto "bb1"
+  Block "bb1"
+    Operation a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:3:21 written
+      Destination "_5"
+      Binary "Lt"
+        Copy "_4"
+        Copy "_2"
+    Branch a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:3:21 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:3:21 generated
+    StorageLive a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:4:9 generated "_6"
+    ArgumentsEvaluated a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:4:19 generated
+    Call a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:4:19 written "malloc" "bb4"
+      Destination "_7"
+      Constant 8
+  Block "bb3"
+    Sequenced a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:3:21 generated
+    StorageDead a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:10:5 generated "_4"
+    Return
+  Block "bb4"
+    Operation a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:4:15 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:4:19 generated
+    Operation a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:5:13 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_6"
+    Branch a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:5:13 written "bb5" "bb6"
+      Copy "_8"
+  Block "bb5"
+    Sequenced a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:5:13 generated
+    StorageDead a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:5:17 generated "_6"
+    StorageDead a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:5:17 generated "_4"
+    Return
+  Block "bb6"
+    Sequenced a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:5:13 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:6:13 written
+      Destination "_9"
+      Binary "Ne"
+        Copy "_4"
+        Constant 3
+    Branch a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:6:13 written "bb8" "bb9"
+      Copy "_9"
+  Block "bb8"
+    Sequenced a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:6:13 generated
+    Operation a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:7:13 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:7:13 written
+      Destination "_10"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:7:13 generated
+    Operation a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:8:13 written
+      Destination "_6"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:8:13 written
+      Destination "_11"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:8:13 generated
+    Goto "bb10"
+  Block "bb9"
+    Sequenced a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:6:13 generated
+    Goto "bb10"
+  Block "bb10"
+    StorageDead a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:10:5 generated "_6"
+    Operation a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:3:28 written
+      Destination "_12"
+      Use
+        Copy "_4"
+    Operation a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:3:28 written
+      Destination "_13"
+      Binary "Add"
+        Copy "_4"
+        Constant 1
+    Operation a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:3:28 written
+      Destination "_4"
+      Use
+        Copy "_13"
+    Sequenced a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_not_reported.c:3:28 generated
+    Goto "bb1"
