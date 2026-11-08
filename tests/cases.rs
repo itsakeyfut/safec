@@ -1575,6 +1575,11 @@ cases! {
         // no `asked_unwritten_in_element`; the second does.
         a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_return_on_an_arm_of_a_loop_shown_to_run_before_its_block_is_written_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The copy on an arm of such a loop, where the first turn asks it as a
+        // doubt: the case above dominates the latch and is asked without
+        // `doubt_only`, found by review. Mutation: skip `CopyOut` when
+        // `doubt_only`; this goes silent.
+        a_copy_out_on_an_arm_of_a_loop_shown_to_run_before_it_is_written_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `return` both walks reach: the every-turn walk finds the block
         // certainly unwritten, the first turn's arm possibly, and the caret
         // carries the certain answer once, found by review. Mutation:
