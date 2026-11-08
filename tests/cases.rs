@@ -1568,6 +1568,24 @@ cases! {
         // an array at the call and the `return`. Mutation: `copied_unwritten`
         // asks without `stored_pointer`; this alone goes silent.
         a_copy_of_unwritten_bytes_into_a_callers_array_of_one_pointer_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // In a loop shown to run, only the first turn reaches these before
+        // the body's write, and a copy out and a `return` were asked by the
+        // every-turn walk alone (#838). Mutation: the first-turn walk calls
+        // no `asked_unwritten_in_terminator`; the first goes silent. It calls
+        // no `asked_unwritten_in_element`; the second does.
+        a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_return_on_an_arm_of_a_loop_shown_to_run_before_its_block_is_written_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The copy on an arm of such a loop, where the first turn asks it as a
+        // doubt: the case above dominates the latch and is asked without
+        // `doubt_only`, found by review. Mutation: skip `CopyOut` when
+        // `doubt_only`; this goes silent.
+        a_copy_out_on_an_arm_of_a_loop_shown_to_run_before_it_is_written_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `return` both walks reach: the every-turn walk finds the block
+        // certainly unwritten, the first turn's arm possibly, and the caret
+        // carries the certain answer once, found by review. Mutation:
+        // `push_once` compares kinds alone; the first `return` is reported
+        // twice, with two words.
+        a_return_reached_by_both_walks_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy of part of a pointer into the same memory is asked as one
         // into an `int *` is. Mutation: `part_of_a_pointer` asks without
         // `stored_pointer`; this goes silent.

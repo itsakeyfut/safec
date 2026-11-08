@@ -12,10 +12,11 @@ use crate::ir::{
 };
 use crate::library::{Callee, Reach};
 use crate::nullability::NullAtTerminators;
-use crate::reads::derefs;
+use crate::reads::{derefs, read_out_of_memory_after, read_out_of_memory_in_terminator_after};
 use crate::source::{SourceMap, Span, inside};
 
 use super::allocations::{Allocations, handed_places, innermost_element, stored_pointer};
+use super::assigned;
 use super::bits::Bits;
 use super::built::named;
 use super::fit::{
@@ -1399,6 +1400,210 @@ fn part_of_what_operands_point_at(
         .find_map(|operand| points_at_a_pointer(analysis, function, operand, known))
 }
 
+/// One place the report asks whether memory a value names may be unwritten.
+///
+/// **One question, asked by both report walks through one list of doors**:
+/// the every-turn walk and a loop's first turn each call
+/// [`asked_unwritten_in_element`] and [`asked_unwritten_in_terminator`] and
+/// nothing else for it, so a door is asked by both or by neither. Two doors
+/// were once added to the every-turn walk alone, and a copy out or a `return`
+/// in a loop shown to run built silent where the same body outside the loop
+/// was `SC0411` (#838). A door added here is `error[E0004]` in both
+/// dispatchers until it says what it asks.
+#[derive(Clone, Copy)]
+pub(super) enum UnwrittenDoor {
+    /// A read of a pointer out of memory nothing wrote, [`loaded_indeterminate`].
+    Load,
+    /// A read by name of a pointer local nothing wrote, [`unwritten_read`].
+    ByName,
+    /// A library copy of bytes nothing wrote into memory that leaves,
+    /// [`copied_unwritten`]. See ADR-0071 rule 5.
+    CopyOut,
+    /// A `return` of a block nothing wrote, [`report_returned_unwritten`]. See
+    /// ADR-0073 rule 3.
+    Return,
+}
+
+impl UnwrittenDoor {
+    /// Every door, in the order a caret's findings are pushed.
+    const EVERY: [UnwrittenDoor; 4] = [
+        UnwrittenDoor::Load,
+        UnwrittenDoor::ByName,
+        UnwrittenDoor::CopyOut,
+        UnwrittenDoor::Return,
+    ];
+}
+
+/// What every door of [`UnwrittenDoor`] is asked with, at one point of one
+/// walk.
+pub(super) struct UnwrittenAsk<'a, 'u> {
+    pub(super) sources: &'a SourceMap,
+    pub(super) analysis: &'a Allocations<'u>,
+    pub(super) function: &'a Function,
+    /// `assigned::address_taken`, which [`unwritten_read`] reads.
+    pub(super) taken: &'a Bits<LocalIdx>,
+    pub(super) null: &'a NullAtTerminators,
+    pub(super) block: BlockId,
+    /// A loop's first turn at a point that turn may not reach, which says no
+    /// more than a doubt (#670).
+    pub(super) doubt_only: bool,
+}
+
+/// Every door of [`UnwrittenDoor`] asked of one element. `stored` is the
+/// walk's record of what the block last stored, which a load reads past.
+pub(super) fn asked_unwritten_in_element(
+    ask: &UnwrittenAsk<'_, '_>,
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    stored: &mut Option<Place>,
+    element: &Element,
+    known: &Known,
+) {
+    for door in UnwrittenDoor::EVERY {
+        match door {
+            UnwrittenDoor::Load => loaded_indeterminate(
+                ask.sources,
+                findings,
+                said,
+                ask.analysis,
+                ask.function,
+                read_out_of_memory_after(stored, element),
+                known,
+                ask.doubt_only,
+            ),
+            UnwrittenDoor::ByName => unwritten_read(
+                ask.sources,
+                findings,
+                said,
+                ask.analysis,
+                assigned::element_reads(element),
+                ask.taken,
+                known,
+                ask.doubt_only,
+            ),
+            // A copy is a call, which ends a block.
+            UnwrittenDoor::CopyOut => {}
+            // **Whether the block it returns was written**: `int **b =
+            // malloc(8); return b;` hands the caller pointers nobody wrote,
+            // where reading `*b` here is `SC0411` (#823).
+            UnwrittenDoor::Return => {
+                if let Element::Assign(operation) = element {
+                    if operation.place == Place::local(ask.function.return_place()) {
+                        report_returned_unwritten(ask, findings, operation, known);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Every door of [`UnwrittenDoor`] asked of one terminator. `stored` is what
+/// [`asked_unwritten_in_element`] left at the block's end.
+pub(super) fn asked_unwritten_in_terminator(
+    ask: &UnwrittenAsk<'_, '_>,
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    stored: &Option<Place>,
+    terminator: &Terminator,
+    known: &Known,
+) {
+    for door in UnwrittenDoor::EVERY {
+        match door {
+            UnwrittenDoor::Load => loaded_indeterminate(
+                ask.sources,
+                findings,
+                said,
+                ask.analysis,
+                ask.function,
+                read_out_of_memory_in_terminator_after(stored, terminator),
+                known,
+                ask.doubt_only,
+            ),
+            UnwrittenDoor::ByName => unwritten_read(
+                ask.sources,
+                findings,
+                said,
+                ask.analysis,
+                assigned::terminator_reads(terminator),
+                ask.taken,
+                known,
+                ask.doubt_only,
+            ),
+            UnwrittenDoor::CopyOut => {
+                let Terminator::Call {
+                    callee,
+                    arguments,
+                    origin,
+                    ..
+                } = terminator
+                else {
+                    continue;
+                };
+                if !matches!(ask.analysis.callee(*callee), Callee::Copies) {
+                    continue;
+                }
+                let into_ty = match arguments.first() {
+                    Some(Operand::Copy(place)) => ask.analysis.unit.place_ty(ask.function, place),
+                    Some(Operand::Constant(_)) | None => None,
+                };
+                // **Whether what it copies was written**: `int *a[1];
+                // memcpy(out, a, 8);` leaves the caller a pointer nobody
+                // wrote, where `*out = a[0];` is `SC0411` at the read (#764).
+                if copied_unwritten(ask.analysis, ask.function, terminator, into_ty, known) {
+                    push_once(
+                        findings,
+                        Finding {
+                            function: ask.analysis.function,
+                            kind: Kind::CopiedUnwritten,
+                            conclusion: Conclusion::Unknown,
+                            at: origin.span(),
+                            local: None,
+                            freed: None,
+                            made: None,
+                            unproven: None,
+                        },
+                    );
+                }
+            }
+            // A `return` is an assignment to the return place, an element.
+            UnwrittenDoor::Return => {}
+        }
+    }
+}
+
+/// Push `finding` unless one answering its question already stands at its
+/// caret: the every-turn walk and a loop's first turn may both reach one
+/// `return` or one copy, and one defect is reported once (#838). Mutation:
+/// push always; `a_char_buffer_written_in_one_turn_is_unwritten_again_in_the_next`
+/// and `a_block_an_inner_loop_makes_unwritten_again_is_doubted_where_read_after_both`
+/// report a caret twice.
+///
+/// **A returned block certainly unwritten and one possibly so answer one
+/// question**, and the certain answer is the one kept: the first turn's arm
+/// says possibly where the every-turn walk said certainly, and both stood at
+/// one `return`, found by review. Mutation: compare kinds alone;
+/// `a_return_reached_by_both_walks_is_reported_once` reports its first
+/// `return` twice.
+fn push_once(findings: &mut Vec<Finding>, finding: Finding) {
+    let returned =
+        |kind: &Kind| matches!(kind, Kind::ReturnedUnwritten | Kind::ReturnedMaybeUnwritten);
+    let same = |said: &Finding| {
+        said.at == finding.at
+            && (said.kind == finding.kind || (returned(&said.kind) && returned(&finding.kind)))
+    };
+    match findings.iter().position(same) {
+        None => findings.push(finding),
+        // The certain answer takes the place of the possible one.
+        Some(index)
+            if finding.kind == Kind::ReturnedUnwritten
+                && findings[index].kind == Kind::ReturnedMaybeUnwritten =>
+        {
+            findings[index] = finding;
+        }
+        Some(_) => {}
+    }
+}
+
 /// Report a `return` of a pointer that may name a block **certainly**
 /// unwritten, or **possibly** unwritten where the pointer is established not
 /// null at the `return`, where the return type points at memory holding
@@ -1409,14 +1614,19 @@ fn part_of_what_operands_point_at(
 /// block handed to a call is how a callee is given memory to fill. See
 /// ADR-0073 rule 3, which says what both cost.
 fn report_returned_unwritten(
+    ask: &UnwrittenAsk<'_, '_>,
     findings: &mut Vec<Finding>,
-    analysis: &Allocations<'_>,
-    function: &Function,
     operation: &Operation,
     known: &Known,
-    null: &NullAtTerminators,
-    block: BlockId,
 ) {
+    let UnwrittenAsk {
+        analysis,
+        function,
+        null,
+        block,
+        doubt_only,
+        ..
+    } = *ask;
     let Rvalue::Use(Operand::Copy(place)) = &operation.value else {
         return;
     };
@@ -1445,9 +1655,12 @@ fn report_returned_unwritten(
         .any(|site| known.init[site].is_unwritten());
     // **Possibly, where the pointer is not null at the `return`**: then no
     // path that reaches it is one where the allocation failed, and a block
-    // possibly unwritten was left so where it succeeded (#828). A wrong
-    // answer from the nullability check is a doubt too many, never one too
-    // few. See `NullAtTerminators::established_non_null`.
+    // possibly unwritten was left so where it succeeded (#828). On the
+    // every-turn walk a wrong answer from the nullability check is a doubt
+    // too many, never one too few. **Not on a first turn**: the fact holds
+    // over every turn, so a pointer null only on a later turn keeps a
+    // possibly unwritten block returned on the first one silent, #856. See
+    // `NullAtTerminators::established_non_null`.
     //
     // **Asked of the value returned**, the return place, rather than of the
     // local it was copied out of, whose lifetime may end with the scope the
@@ -1456,23 +1669,31 @@ fn report_returned_unwritten(
         && known
             .sites_of(place.local)
             .any(|site| known.init[site].may_be_unwritten());
-    let kind = if certainly {
+    // **On a first turn's arm, certainly unwritten is a doubt**: that turn
+    // may not take the arm, and a later one finds the block written (#838).
+    // Mutation: ignore `doubt_only`; the return in
+    // `a_return_on_an_arm_of_a_loop_shown_to_run_before_its_block_is_written_is_doubted`
+    // is said to name memory nothing wrote.
+    let kind = if certainly && !doubt_only {
         Kind::ReturnedUnwritten
-    } else if possibly {
+    } else if certainly || possibly {
         Kind::ReturnedMaybeUnwritten
     } else {
         return;
     };
-    findings.push(Finding {
-        function: analysis.function,
-        kind,
-        conclusion: Conclusion::Unknown,
-        at: operation.origin.span(),
-        local: Some(place.local),
-        freed: None,
-        made: None,
-        unproven: None,
-    });
+    push_once(
+        findings,
+        Finding {
+            function: analysis.function,
+            kind,
+            conclusion: Conclusion::Unknown,
+            at: operation.origin.span(),
+            local: Some(place.local),
+            freed: None,
+            made: None,
+            unproven: None,
+        },
+    );
 }
 
 /// Whether a library copy may copy bytes nothing wrote into memory that
@@ -1679,8 +1900,6 @@ pub(super) fn departed_in_element(
     function: &Function,
     element: &Element,
     known: &Known,
-    null: &NullAtTerminators,
-    block: BlockId,
 ) {
     let Element::Assign(operation) = element else {
         return;
@@ -1688,12 +1907,9 @@ pub(super) fn departed_in_element(
     let Some(store) = analysis.store_in(element, known) else {
         return;
     };
+    // Whether the block it returns was written is asked by
+    // [`asked_unwritten_in_element`], which both report walks call (#838).
     let how = if store.into == Place::local(function.return_place()) {
-        // **Whether the block it returns was written**: `int **b =
-        // malloc(8); return b;` hands the caller pointers nobody wrote, where
-        // reading `*b` in this function is `SC0411` by `loaded_indeterminate`
-        // (#823). See ADR-0073 rule 3.
-        report_returned_unwritten(findings, analysis, function, operation, known, null, block);
         Departure::Return
     } else {
         match store.kind {
@@ -1901,22 +2117,9 @@ pub(super) fn departed_at_call(
                     false,
                 );
             }
-            // **And whether what it copies was written**: `int *a[1];
-            // memcpy(out, a, 8);` leaves the caller a pointer nobody wrote,
-            // where `*out = a[0];` is `SC0411` at the read (#764). See
-            // ADR-0071 rule 5.
-            if copied_unwritten(analysis, function, terminator, into_ty, known) {
-                findings.push(Finding {
-                    function: analysis.function,
-                    kind: Kind::CopiedUnwritten,
-                    conclusion: Conclusion::Unknown,
-                    at,
-                    local: None,
-                    freed: None,
-                    made: None,
-                    unproven: None,
-                });
-            }
+            // Whether what it copies was written is asked by
+            // [`asked_unwritten_in_terminator`], which both report walks
+            // call (#838).
             return;
         }
         // `free`, an allocator, `realloc` and a call that does not return
