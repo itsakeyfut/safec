@@ -1586,6 +1586,25 @@ cases! {
         // `push_once` compares kinds alone; the first `return` is reported
         // twice, with two words.
         a_return_reached_by_both_walks_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block a store lets leave is asked at the function's exit whether
+        // it was written, as a returned one is (#852, ADR-0076). Mutation:
+        // `report_left_unwritten` asks no site; this goes silent.
+        a_block_a_store_lets_leave_unwritten_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Stored out first and filled after: the caller reads it once the
+        // function returns, by which time it was written. Mutation: ask
+        // `report_left_unwritten` at every element as well, so a block is
+        // asked as soon as it has left; this is reported.
+        a_block_stored_out_before_it_is_filled_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written before it is stored out, beside the path where its
+        // allocation failed and returned: `Maybe` at the exit, which is not
+        // asked. Mutation: `report_left_unwritten` asks `may_be_unwritten`;
+        // this is reported.
+        a_block_written_before_it_is_stored_out_is_not_reported_beside_its_failed_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `char` buffer handed out unwritten for its caller to fill: no
+        // pointer is read out of it. Mutation: mark every store that leaves,
+        // not only where the stored-into type holds pointers; this is
+        // reported.
+        a_char_buffer_stored_out_unwritten_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy of part of a pointer into the same memory is asked as one
         // into an `int *` is. Mutation: `part_of_a_pointer` asks without
         // `stored_pointer`; this goes silent.

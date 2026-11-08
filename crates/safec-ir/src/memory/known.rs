@@ -423,6 +423,16 @@ pub(super) struct Known {
     /// this check does not follow what one place in such memory holds (#656).
     /// See ADR-0041.
     pub(super) stored_out: Table<Site, bool>,
+    /// Per site, the store that let it leave holding pointers, where one
+    /// may have: a store into memory that leaves, of a pointer to it, whose
+    /// stored-into type is read as holding pointers (ADR-0076).
+    ///
+    /// **Asked at the function's exit, not at the store**: the caller reads
+    /// the block after the function returns, and `*out = b; *b = x;` fills it
+    /// before then (#852). A may-fact, so a union where paths meet, keeping
+    /// the earlier store's span so the report has one caret; cleared where
+    /// the site is made again, as [`Self::stored_out`] is.
+    pub(super) left_at: Table<Site, Option<Span>>,
     /// Per local, each type a call this check cannot read reached it as on
     /// the walk a departure takes, where that type is untyped somewhere
     /// below: `void`, `char` or `int` bytes, a pointer whose chain ends in
@@ -1782,6 +1792,8 @@ impl Known {
             // About the allocation the site named, whose address may have
             // been stored out; the new one's has not been.
             stored_out,
+            // About the allocation the site named, as `stored_out` is.
+            left_at,
             // Not a local's, which a site being reborn is not about, and
             // kept for the site, as `names` is: a call may still hold the old
             // allocation's address, and the slots of the new one are not told
@@ -1792,6 +1804,7 @@ impl Known {
         // allocation**, field by field. See `Cell::kept_when_reborn`.
         contents[site].kept_when_reborn();
         stored_out[site] = false;
+        left_at[site] = None;
 
         // **A local that loses an allocation that is gone may hold one**, so
         // a store of it marks where it lands, as a load out of a marked

@@ -980,6 +980,19 @@ pub(super) fn memory_finding(
             "returned here",
             "write every pointer in it before returning it, or allocate it with `calloc`",
         ),
+        // **A block nothing wrote, let go by a store** into memory the caller
+        // reads, and still unwritten where the function returns (#852). At
+        // the store, the line the reader changes; "by the time the function
+        // returns", since the block was asked there. Only ever `Unknown`, as
+        // the one above; `Unsafe` takes the same words.
+        (Kind::StoredUnwritten, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            UNASSIGNED,
+            "this lets a pointer leave to memory nothing wrote by the time the function \
+             returns, and the caller may read pointers out of it"
+                .to_owned(),
+            "stored here",
+            "write every pointer in it before the function returns, or allocate it with `calloc`",
+        ),
         // **A block that may not have been written, handed back** where the
         // pointer is not null, so not the path where the allocation failed
         // (#828). "May not have been written", since some path wrote it.

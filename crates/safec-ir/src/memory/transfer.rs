@@ -21,7 +21,7 @@ use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
     AS_TYPED, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, Offset, PendingRead,
-    Reached, Read, Realloced, SiteState, bounded,
+    Reached, Read, Realloced, SiteState, bounded, earlier,
 };
 use super::store::{Landing, StoreKind, Strong};
 use crate::library::{Callee, Leaves, Library, Makes};
@@ -1369,6 +1369,7 @@ impl Allocations<'_> {
             exposed_in_part,
             stored_in_part,
             stored_out,
+            left_at,
             handed_untyped,
         } = into;
         // Which locals this side left unwritten, before `unwritten` is
@@ -1392,6 +1393,14 @@ impl Allocations<'_> {
         // `Known::stored_out`.
         for (here, there) in stored_out.iter_mut().zip(&from.stored_out) {
             *here = *here || *there;
+        }
+        // A may-fact too, keeping the earlier store where both paths let the
+        // block leave. See `Known::left_at`.
+        for (here, there) in left_at.iter_mut().zip(&from.left_at) {
+            *here = match (*here, *there) {
+                (Some(here), Some(there)) => Some(earlier(self.sources, here, there)),
+                (here, there) => here.or(there),
+            };
         }
         // Per element, joined as `Init::joined` says. See
         // `Known::element_init`.
@@ -1828,6 +1837,7 @@ impl Analysis for Allocations<'_> {
             // No call has been handed anything yet.
             // Nothing has been stored anywhere yet.
             stored_out: Table::filled(false, self.locals),
+            left_at: Table::filled(None, self.locals),
             // No call has been handed anything yet.
             handed_untyped: Table::filled(Vec::new(), Loc::count(self.locals)),
         };
@@ -2048,6 +2058,24 @@ impl Analysis for Allocations<'_> {
                         .carried(function, &operation.value, value)
                         .sites()
                         .collect();
+                    // **And the blocks it names left holding pointers**, where
+                    // the stored-into type is read as holding them, for the
+                    // function's exit to ask whether they were written. Not
+                    // what they hold below, which `stored_out` follows. See
+                    // `Known::left_at` and ADR-0076.
+                    let holds_pointers = self
+                        .unit
+                        .place_ty(function, &operation.place)
+                        .is_some_and(|ty| self.first_level_holds_a_pointer(ty));
+                    if holds_pointers {
+                        let at = operation.origin.span();
+                        for &site in &out {
+                            value.left_at[site] = Some(match value.left_at[site] {
+                                Some(before) => earlier(self.sources, before, at),
+                                None => at,
+                            });
+                        }
+                    }
                     if let Rvalue::Use(written) = &operation.value {
                         out.extend(self.read_out(function, written, value));
                     }

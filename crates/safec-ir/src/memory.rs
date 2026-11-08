@@ -331,6 +331,15 @@ pub enum Kind {
     /// written on some path. **Always `Unknown`**, as that is. `local` is the
     /// local returned. See ADR-0073 rule 3 (#828).
     ReturnedMaybeUnwritten,
+    /// `void f(int ***out) { int **b = malloc(8); if (!b) return; *out = b; }`
+    ///
+    /// A block a store into memory that leaves let go, certainly unwritten
+    /// where the function returns: the caller reads pointers out of it, as it
+    /// does out of one returned. At the store, the caret the reader acts on;
+    /// asked at the exit, since `*out = b; *b = x;` writes it before anyone
+    /// outside can read it. **Always `Unknown`**, as
+    /// [`Kind::ReturnedUnwritten`] is. `made` is the allocation. See ADR-0076.
+    StoredUnwritten,
 }
 
 /// Where a pointer leaves the function it was followed in.

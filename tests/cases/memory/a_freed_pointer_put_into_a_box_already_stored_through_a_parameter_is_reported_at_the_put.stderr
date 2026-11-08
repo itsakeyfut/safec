@@ -1,3 +1,17 @@
+error[SC0411]: this lets a pointer leave to memory nothing wrote by the time the function returns, and the caller may read pointers out of it
+   ╭─[ a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:9:5 ]
+   │
+ 5 │     int **b = malloc(8);
+   │               ────┬────  
+   │                   ╰────── allocated here
+   │ 
+ 9 │     *ppp = b;
+   │     ────┬───  
+   │         ╰───── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before the function returns, or allocate it with `calloc`
 error[SC0414]: this stores `x` where code outside this function may read it, and it points to an allocation that was freed
     ╭─[ a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:15:5 ]
     │
