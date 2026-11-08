@@ -567,12 +567,27 @@ impl Allocations<'_> {
                 // `m1` that `initialised_by` had just kept (#754), where the
                 // copy's door puts its marks back after its own exposure.
                 // Found by review.
+                //
+                // **And the blocks it carries, and every block reachable from
+                // them, keep what was known of their writes**: the exposure
+                // believes every exposed block written
+                // by code this check cannot read (`Known::expose`), and a store
+                // runs no code. Believed here, `t = *out; *t = b;` called `b`
+                // written and nothing asked it again (#858). A call this check
+                // cannot read believes it written later, as it does any exposed
+                // block. The closure, not the carried blocks alone: a block one
+                // level below the stored one was believed written by the same
+                // store, found by review. See ADR-0077.
                 let before = value.init.clone();
+                let stored: Vec<Site> = value.closure(carried.clone()).into_iter().collect();
                 let keep = |value: &mut Known| {
                     for &site in containers.iter() {
                         if before[site] == Init::Maybe {
                             value.init[site] = Init::Maybe;
                         }
+                    }
+                    for &site in &stored {
+                        value.init[site] = before[site];
                     }
                 };
                 if unplaced {
