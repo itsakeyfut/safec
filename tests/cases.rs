@@ -1730,6 +1730,11 @@ cases! {
         // The flag copied twice. Mutation: follow one copy only; this is
         // doubted.
         a_flag_copied_twice_before_the_branch_still_refines: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A flag holding `b == 0`, branched on as `!bad`: the arm that writes
+        // `*b` is refined not null and the other dereferences a null. Found by
+        // review. Mutation: forget the inversion where a copy is followed;
+        // the null dereference goes silent.
+        a_null_test_kept_in_a_flag_as_equal_to_null_is_turned_over_on_each_arm: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A heap block of two pointers written at one, returned or stored out:
         // the other reaches the caller unwritten (#873, ADR-0081). Mutation: a
         // store at a known element writes the whole block; both go silent. So
