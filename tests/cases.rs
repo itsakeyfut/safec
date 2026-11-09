@@ -1728,6 +1728,11 @@ cases! {
         // they do where an allocation's result points at no element.
         a_heap_block_written_at_one_element_and_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_heap_block_written_at_one_element_and_stored_out_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same block from `calloc`, whose bytes are zero: every element is
+        // written where it was made, so one more write leaves nothing
+        // unwritten. Mutation: take `calloc`'s block as unwritten, as
+        // `malloc`'s; this is doubted.
+        a_heap_block_from_calloc_written_at_one_element_and_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written at both. Mutation: a constant move leaves the element where it
         // was; `b[1]` writes `b[0]` again and this is reported.
         a_heap_block_written_at_every_element_and_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
