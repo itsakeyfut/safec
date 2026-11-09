@@ -29,7 +29,9 @@
 //! and one copy is fixed without the other, or every test moves. They moved.
 
 use safec_ir::cfg::Cfg;
-use safec_ir::dataflow::{Analysis, solve, solve_first_turn_within};
+use safec_ir::dataflow::{
+    Analysis, solve, solve_first_turn_of_nest_within, solve_first_turn_within,
+};
 use safec_ir::ir::{
     BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin, Place,
     Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
@@ -524,6 +526,64 @@ fn as_of_a_loops_first_turn_its_head_holds_what_arrived_from_before_it() {
     assert_eq!(every_turn.value(header), Some(&vec![false, false]));
     assert_eq!(first_turn.value(header), Some(&vec![false, true]));
     assert_eq!(first_turn.value(body), Some(&vec![false, true]));
+}
+
+/// As of the first turn of both loops of a nest, the inner head holds what
+/// arrived from before the outer loop: the storage the outer loop's latch ends
+/// is not ended yet. As of the inner loop's first turn alone, the outer loop's
+/// later turns reach it, and it does not (#863).
+///
+/// Mutation: in `solved`, cut only the first head `first_turn_of` names. The
+/// inner head is answered unwritten with both passed, and this fails.
+#[test]
+fn as_of_the_first_turn_of_a_nest_its_inner_head_holds_what_arrived_from_before_it() {
+    let (_sources, at) = spans();
+    let (_unit, mut function, int) = a_function(at);
+    let origin = Origin::Written(at);
+    let a = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let outer = function.reserve_block();
+    let inner = function.reserve_block();
+    let body = function.reserve_block();
+    let latch = function.reserve_block();
+    let exit = function.reserve_block();
+    let branch = |then, otherwise| Block {
+        elements: vec![],
+        terminator: Terminator::Branch {
+            condition: Operand::Constant(1),
+            then,
+            otherwise,
+            origin,
+        },
+    };
+
+    function.fill_block(entry, goto(outer, vec![write(a, origin)]));
+    function.fill_block(outer, branch(inner, exit));
+    function.fill_block(inner, branch(body, latch));
+    function.fill_block(body, goto(inner, vec![]));
+    function.fill_block(
+        latch,
+        goto(outer, vec![Element::StorageDead { origin, local: a }]),
+    );
+    function.fill_block(
+        exit,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Return,
+        },
+    );
+
+    let cfg = Cfg::of(&function);
+    let analysis = Written(function.locals().len());
+    let inner_alone = solve_first_turn_within(&analysis, &function, &cfg, inner, usize::MAX)
+        .expect("no walk count is past `usize::MAX`");
+    let nest =
+        solve_first_turn_of_nest_within(&analysis, &function, &cfg, &[inner, outer], usize::MAX)
+            .expect("no walk count is past `usize::MAX`");
+
+    assert_eq!(inner_alone.value(inner), Some(&vec![false, false]));
+    assert_eq!(nest.value(inner), Some(&vec![false, true]));
 }
 
 /// A local written on one arm of a branch and not the other is not written

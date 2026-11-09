@@ -486,7 +486,7 @@ pub fn solve_within<A: Analysis>(
     cfg: &Cfg,
     max_walks: usize,
 ) -> Option<Solution<A::Value>> {
-    solved(analysis, function, cfg, max_walks, None)
+    solved(analysis, function, cfg, max_walks, &[])
 }
 
 /// [`solve_within`] as of the first turn of the loop whose head is `head`:
@@ -505,18 +505,38 @@ pub fn solve_first_turn_within<A: Analysis>(
     head: BlockId,
     max_walks: usize,
 ) -> Option<Solution<A::Value>> {
-    solved(analysis, function, cfg, max_walks, Some(head))
+    solved(analysis, function, cfg, max_walks, &[head])
 }
 
-/// The one walk behind [`solve_within`] and [`solve_first_turn_within`], so
-/// the two cannot settle a loop differently except at the one edge the second
-/// leaves out.
+/// [`solve_within`] as of a turn that is the first of every loop whose head is
+/// in `heads` at once: no back edge into any of them is joined, and every
+/// other loop is followed as usual.
+///
+/// **For a loop nested in others**, with its head and theirs: what holds on
+/// its first turn as [`solve_first_turn_within`] answers it holds over every
+/// turn of the loops around it, so a value one of them changes on a later turn
+/// reaches the inner loop's first one too. A reader that only adds a doubt
+/// where a fact holds asks this, the nullability check's first turn among
+/// them (#863).
+pub fn solve_first_turn_of_nest_within<A: Analysis>(
+    analysis: &A,
+    function: &Function,
+    cfg: &Cfg,
+    heads: &[BlockId],
+    max_walks: usize,
+) -> Option<Solution<A::Value>> {
+    solved(analysis, function, cfg, max_walks, heads)
+}
+
+/// The one walk behind [`solve_within`], [`solve_first_turn_within`] and
+/// [`solve_first_turn_of_nest_within`], so they cannot settle a loop
+/// differently except at the edges into the heads `first_turn_of` names.
 fn solved<A: Analysis>(
     analysis: &A,
     function: &Function,
     cfg: &Cfg,
     max_walks: usize,
-    first_turn_of: Option<BlockId>,
+    first_turn_of: &[BlockId],
 ) -> Option<Solution<A::Value>> {
     let mut walks = 0usize;
     let mut values: Vec<Option<A::Value>> = (0..function.blocks().len()).map(|_| None).collect();
@@ -680,7 +700,7 @@ fn solved<A: Analysis>(
                         if cfg.drained_at(block) >= cfg.drained_at(successor) {
                             // Left out as of a first turn: the head keeps
                             // what arrived from before the loop.
-                            if first_turn_of != Some(successor) {
+                            if !first_turn_of.contains(&successor) {
                                 // Beside what the edges from before the loop
                                 // sent, which is at least one by now for any
                                 // head but the entry, since such a head was
