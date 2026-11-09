@@ -1298,8 +1298,8 @@ mod tests {
 
     /// The lists a local's levels take count toward the bound: ten locals,
     /// one of them three `*`s deep, are
-    /// `10 * (10 + 7 + LINEAR + NAMED_AT_READ + ELEMENTS + CELL + 3 *
-    /// PER_LEVEL)` a block, so three blocks are 50,430, past a bound the same function with no
+    /// `10 * (10 + 7 + LINEAR + NAMED_AT_READ + ELEMENTS + BLOCK_ELEMENTS +
+    /// CELL + 3 * PER_LEVEL)` a block, so three blocks are 54,270, past a bound the same function with no
     /// pointer in it is read under.
     ///
     /// Mutation: leave out [`PER_LEVEL`]. This is read.
