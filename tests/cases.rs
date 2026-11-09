@@ -1583,6 +1583,11 @@ cases! {
         // it unwritten returns a null and stays silent on the first turn.
         a_block_returned_on_a_first_turn_and_nulled_on_a_later_one_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_written_under_its_null_test_and_returned_in_a_loop_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same for a store out: `*out = b` on the first turn stores a
+        // pointer not null, which the every-turn answer may say is null
+        // (#856). Mutation: as above; this goes silent about it. The
+        // `SC0403` at `*b` is a later turn's, after `b = 0`.
+        a_block_stored_out_on_a_first_turn_and_nulled_on_a_later_one_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The copy on an arm of such a loop, where the first turn asks it as a
         // doubt: the case above dominates the latch and is asked without
         // `doubt_only`, found by review. Mutation: skip `CopyOut` when
