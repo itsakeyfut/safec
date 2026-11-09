@@ -1524,34 +1524,35 @@ impl Allocations<'_> {
         // **One loop over every place, each kind by its own rule** (#779).
         // Both rules read `state` as it was before this join: `state` is
         // joined below, and must not be before this loop.
-        // **A block's elements joined as its `init` is**, each by
-        // `Init::joined`, where both sides still read them and keep as many;
-        // the side that names it where the other does not, as below; and
-        // none otherwise, so that the block's `init` answers. Asked before
-        // `init` is joined, against what each side's `init` was. See
-        // `Known::block_elements`.
-        let elements: Vec<Option<super::parts::Inits>> = init
+        // **A block's elements joined one by one, each by `Init::joined`**,
+        // where either side still reads them: a side that does not counts
+        // every element as its `init` says, so a block one turn wrote at one
+        // element and the next wrote whole is written whole at the back edge
+        // of a loop shown to run, as each of its elements is, where its
+        // `init` alone joins as `Maybe`. Found by review: `*p = x; p = p + 1;`
+        // in such a loop was doubted. The block's `init` is then what its
+        // elements say, below. The side that names it where the other does
+        // not keeps its own, where its `init` survives the join. Asked before
+        // `init` is joined. See `Known::block_elements`.
+        let elements: Vec<Option<(Inits, bool)>> = init
             .sites()
             .map(|site| {
-                let here = block_elements[site]
-                    .as_deref()
-                    .filter(|block| block.stamp == init[site])
-                    .map(|block| &block.elements);
-                let there = from.block_elements[site]
-                    .as_deref()
-                    .filter(|block| block.stamp == from.init[site])
-                    .map(|block| &block.elements);
+                let here = current_elements(block_elements, init, site);
+                let there = current_elements(&from.block_elements, &from.init, site);
                 match (&state[site], &from.state[site]) {
-                    (_, SiteState::Unheld) => here.cloned(),
-                    (SiteState::Unheld, _) => there.cloned(),
-                    _ => match (here, there) {
-                        (Some(here), Some(there)) if here.len() == there.len() => {
-                            let mut joined = here.clone();
-                            joined.join(there, back);
-                            Some(joined)
+                    (_, SiteState::Unheld) => here.map(|here| (here, false)),
+                    (SiteState::Unheld, _) => there.map(|there| (there, false)),
+                    _ => {
+                        let len = here.as_ref().or(there.as_ref())?.len();
+                        let here = here.unwrap_or_else(|| spread(init[site], len));
+                        let there = there.unwrap_or_else(|| spread(from.init[site], len));
+                        if here.len() != there.len() {
+                            return None;
                         }
-                        _ => None,
-                    },
+                        let mut joined = here;
+                        joined.join(&there, back);
+                        Some((joined, true))
+                    }
                 }
             })
             .collect();
@@ -1589,12 +1590,25 @@ impl Allocations<'_> {
             };
         }
         for (site, elements) in init.sites().zip(elements) {
-            block_elements[site] = elements.map(|elements| {
-                Box::new(super::parts::SiteElements {
-                    stamp: init[site],
-                    elements,
-                })
-            });
+            block_elements[site] = match elements {
+                // Joined from both sides: the block is what its elements say.
+                Some((elements, true)) => {
+                    init[site] = elements.summary();
+                    Some(Box::new(super::parts::SiteElements {
+                        stamp: init[site],
+                        elements,
+                    }))
+                }
+                // Kept from the side that names it, where the join left its
+                // `init` as that side had it.
+                Some((elements, false)) if elements.summary() == init[site] => {
+                    Some(Box::new(super::parts::SiteElements {
+                        stamp: init[site],
+                        elements,
+                    }))
+                }
+                Some((_, false)) | None => None,
+            };
         }
         // Bounds, so the lower of two at every level. See
         // `Known::handed_contents_at_most`.
@@ -1766,6 +1780,32 @@ impl Allocations<'_> {
 /// with a doubt the other side still held kept, as the two flags this
 /// replaced joined. **That doubt decides no case**, measured; it is kept so
 /// that #733 changes no answer. See `Allocations::joined` and ADR-0048.
+/// `site`'s elements in `blocks`, where they are still read: kept, and made
+/// from what `init` is now. See `Known::block_elements`.
+fn current_elements(
+    blocks: &Table<Site, Option<Box<super::parts::SiteElements>>>,
+    init: &Table<Loc, Init>,
+    site: Site,
+) -> Option<Inits> {
+    blocks[site]
+        .as_deref()
+        .filter(|block| block.stamp == init[site])
+        .map(|block| block.elements.clone())
+}
+
+/// `len` elements, each what a block kept whole as `init` is.
+fn spread(init: Init, len: usize) -> Inits {
+    match init {
+        Init::Unwritten => Inits::unwritten(len),
+        Init::Written => Inits::written(len),
+        Init::Maybe => {
+            let mut elements = Inits::written(len);
+            elements.doubt_all();
+            elements
+        }
+    }
+}
+
 fn named_beside_unheld(named: Init, unheld: Init) -> Init {
     match unheld {
         Init::Maybe if named == Init::Written => Init::Maybe,
@@ -1939,12 +1979,20 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
+        // **A site's elements, `Known::block_elements`, climb as its `init`
+        // does**, two steps an element at most, and at most `ELEMENTS_KEPT`
+        // elements a site, and the table goes from kept to dropped once:
+        // `2 * ELEMENTS_KEPT + 1` a site. Where a pointer points among them,
+        // `Held::site_element`, goes from known to not once a local, which
+        // the per-local slack above covers (#873).
+        let elements = usize::try_from(2 * ELEMENTS_KEPT + 1).unwrap_or(usize::MAX);
         locals * locals * 4
             + locals * (locals + 26)
             + positions * (2 * locals + 3)
             + locals
             + locals * (positions + locals + 2)
             + 3 * locals * self.deepest_pointer * (locals + 2)
+            + locals * elements
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -2092,13 +2140,36 @@ impl Analysis for Allocations<'_> {
             match place {
                 Loc::Heap(site) => {
                     if !matches!(before.state[site], SiteState::Unheld) {
-                        // Its elements go only where this changed it, so that a
-                        // block a loop leaves alone keeps them. See
+                        // **Element by element where the block keeps them**,
+                        // as a local array's are below: a block written at one
+                        // element before the loop, `Maybe` whole, and made
+                        // again by its body, kept that element written where
+                        // the whole block did not change. Found by review, a
+                        // read `main` reported went silent. See
                         // `Known::block_elements`.
-                        if into.init[place] != again {
-                            into.block_elements[site] = None;
-                        }
-                        into.init[place] = again;
+                        let kept = current_elements(&into.block_elements, &into.init, site);
+                        into.init[place] = match kept {
+                            Some(mut elements) => {
+                                let len = elements.len();
+                                let before_elements =
+                                    current_elements(&before.block_elements, &before.init, site)
+                                        .filter(|elements| elements.len() == len)
+                                        .unwrap_or_else(|| spread(before.init[place], len));
+                                let back_elements =
+                                    current_elements(&from.block_elements, &from.init, site)
+                                        .filter(|elements| elements.len() == len)
+                                        .unwrap_or_else(|| spread(from.init[place], len));
+                                elements.unwritten_again(&before_elements, &back_elements);
+                                let summary = elements.summary();
+                                into.block_elements[site] =
+                                    Some(Box::new(super::parts::SiteElements {
+                                        stamp: summary,
+                                        elements,
+                                    }));
+                                summary
+                            }
+                            None => again,
+                        };
                     }
                 }
                 Loc::Local(_) => into.init[place] = again,

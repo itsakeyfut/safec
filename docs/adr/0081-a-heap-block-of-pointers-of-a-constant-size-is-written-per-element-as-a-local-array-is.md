@@ -42,6 +42,9 @@ check's `Offset` says only `Zero` or `NonZero`.
 4. **The elements are read only while the block's `init` is what they made
    it.** Every other path that changes a block's `init` changes it whole,
    and drops them; a block whose elements went is answered by its `init`.
+   Where paths meet, and at a loop's back edge, they are joined and made
+   unwritten again element by element, a side that kept none counting each
+   element as its `init`, and the block's `init` is what they say then.
 5. `per_block` counts a site's record at its largest, `BLOCK_ELEMENTS`.
 
 ### Confirmation
@@ -61,11 +64,15 @@ Each in `tests/cases/memory/`, with its mutation in its note in
   element.
 * `a_heap_block_written_at_every_element_and_returned_is_not_doubted` is
   reported when a constant move leaves the element where it was.
-* The drops beside every other change of a block's `init` are held by no
-  case, measured: the one path built to reach them, a copy over a written
-  element, carries its doubt in what it copies.
-  `a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read`
-  holds that shape.
+* `a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read`
+  goes silent when neither the copy path's doubt nor the belief at an
+  exposure drops the elements; no other drop alone is held by a case.
+* `a_heap_block_filled_by_a_pointer_walked_through_it_in_a_loop_is_not_doubted`
+  is doubted when a block's elements are joined only where both sides keep
+  them, and
+  `a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after`
+  goes silent when a back edge keeps a block's elements where its `init` did
+  not change.
 
 ### Consequences
 
@@ -74,7 +81,9 @@ Each in `tests/cases/memory/`, with its mutation in its note in
 * Bad, because a read through a pointer read out of memory knows no element,
   so a block written in part is doubted there at an element that was
   written: `a_load_moved_by_arithmetic_and_read_after_a_free_is_unproven`
-  gains such a doubt. Before, the block was believed written whole, which
+  gains such a doubt as a warning, and
+  `a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven` as an
+  error. Before, the block was believed written whole, which
   also left a read of its unwritten element silent.
 * Bad, because a store whose element is not known writes the whole block, the
   limit a local array has too.

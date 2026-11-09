@@ -476,9 +476,9 @@ pub(super) struct Known {
     /// ([`SiteElements::stamp`]): every other path that changes a block's
     /// `init` changes it whole and is the answer then; each such path also
     /// drops them, for a change that leaves `init` as it was, which the stamp
-    /// alone would miss. No case tells the drops from the stamp, measured:
-    /// a copy, the one path built to reach that, carries its doubt in what
-    /// it copies. A write through a
+    /// alone would miss: a doubt of a block `Maybe` already leaves it
+    /// `Maybe`. The copy path's doubt and the belief at an exposure are held
+    /// together by a case; no other drop alone is, measured. A write through a
     /// pointer whose element is not known writes the whole block, as one
     /// into a local array does (`built::write_effects`), so `b[i] = x;`
     /// written once is a stated limit. Boxed, so a block kept whole costs a

@@ -1735,6 +1735,18 @@ cases! {
         // as a local array's is. Mutation: such a store into a block kept per
         // element writes nothing; this is reported.
         a_heap_block_filled_in_a_loop_and_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Filled by a pointer walked through it, whose first turn writes one
+        // element and whose later turns write the whole: the back edge of a
+        // loop shown to run joins each element, found by review. Mutation:
+        // join a block's elements only where both sides keep them; this is
+        // doubted.
+        a_heap_block_filled_by_a_pointer_walked_through_it_in_a_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written at one element before an inner loop that makes it again:
+        // unwritten again at the back edge element by element, found by
+        // review, where `main` reported it and a whole-block test was silent.
+        // Mutation: keep a block's elements where its `init` did not change
+        // at the back edge; this goes silent.
+        a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `b[1]` read where only `b[0]` was written: certain. Mutation: a store at
         // a known element writes the whole block; this goes silent.
         a_heap_block_read_at_an_element_nothing_wrote_beside_one_written_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1743,9 +1755,11 @@ cases! {
         a_heap_block_read_at_the_element_written_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `n[0]` written, then copied over from a block nothing wrote: the shape
         // the elements are dropped for where a block's `init` changes. No
-        // mutation of the drops alone makes this silent, measured: the copy
-        // carries its doubt in what it copies, so this holds the shape, not
-        // them.
+        // drop alone makes this silent, measured, but the copy path's doubt
+        // and the belief at an exposure together do: without both, the
+        // doubt leaves `init` `Maybe` as it was and the stale `n[0]` is read
+        // as written. Mutation: drop neither; this goes silent, and so does
+        // `a_copy_shorter_than_its_destination_out_of_a_block_nothing_wrote_leaves_the_rest_in_doubt`.
         a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stored out on one arm only: the block left on a path, which the
         // join keeps, found by review. Mutation: join `Known::left_at` as a
@@ -4296,7 +4310,7 @@ cases! {
         // go silent.
         // Mutation: count `Reached::Partial` as a doubt; the fourth reports.
         a_load_moved_by_a_subscript_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
-        // The two above and below gain a doubt where `**t3` is read (#873):
+        // This one and the one below gain a doubt where `**t3` is read (#873):
         // `t3` and `t2` are written at their first element alone, and a
         // pointer read out of memory knows no element, so the block's own
         // answer is asked, possibly unwritten. The cost ADR-0081 states.
