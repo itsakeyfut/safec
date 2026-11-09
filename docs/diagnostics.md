@@ -222,7 +222,9 @@ lets a pointer leave to memory that may not have been written by the time
 the function returns, and the caller may read pointers out of it", for
 `if (!b) return; *out = b; if (c) *b = x;` (#855, ADR-0078). A store after a
 null test's join, `if (b) *b = x; *out = b;`, says nothing, since the path
-where the allocation failed stores a null. A block
+where the allocation failed stores a null. So, for now, do a write under a
+test that does not settle the pointer, `if (b && c) *b = x; *out = b;`, and a
+store whose local is reassigned later in its block, `*out = b; b = 0;` (#861). A block
 stored through a pointer read out of memory, `t = *out; *t = b;`, is asked as
 one stored through `out` is: the store exposes the block, and exposure
 believes nothing written until code this check cannot read runs (#858,

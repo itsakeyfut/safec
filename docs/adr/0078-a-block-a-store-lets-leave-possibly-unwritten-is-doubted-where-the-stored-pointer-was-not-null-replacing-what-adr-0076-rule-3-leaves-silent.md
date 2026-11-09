@@ -35,7 +35,11 @@ a null and leaves the block unwritten. A `return` meets the same trap and asks
    it. `Known::left_at` keeps the store's span alone, and the store is found
    by that span: its block and the local it stored, by name.
 2. A store of anything but a local by name, or a span that names no store,
-   asks nothing possible.
+   asks nothing possible. Two more shapes are silent, stated limits found by
+   review (#861): a write under a test that does not settle the pointer,
+   `if (b && c) *b = x; *out = b;`, as a `return` is silent for it (#834);
+   and the local reassigned after the store in its block, `*out = b; b = 0;`,
+   since the test is read at the block's end, not at the store.
 3. Where two stores marked one block, the earlier store is asked, as its
    span is.
 
