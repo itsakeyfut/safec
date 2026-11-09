@@ -194,19 +194,19 @@ at the `return`: "this returns memory nothing wrote, and the caller may read
 pointers out of it" (#823). `int **b = malloc(8); if (!b) return 0; return
 b;` is the program, and so is the same after a copy of half a pointer into
 it. A block written on the path where its allocation succeeded, `if (m) *m =
-p; return m;`, says nothing, though the path where it failed wrote nothing.
-Where the pointer is not null at the `return`, so that no path reaching it
-is one where the allocation failed, a block possibly unwritten is doubted
-too, in words of its own: "this returns memory that may not have been
+p; return m;`, says nothing, though the path where it failed wrote nothing:
+on the edge where an allocation's result is tested null its block does not
+exist, so it adds no doubt, where nothing else can name the block the site
+made (ADR-0080). A block possibly unwritten is doubted wherever it is
+returned, in words of its own: "this returns memory that may not have been
 written, and the caller may read pointers out of it", for `if (!b) return 0;
-if (c) *b = p; return b;` (#828). The cost is a block written on a path this
-check cannot show is taken, a loop's first turn under `if (i == 0)`, or
-before the test that shows the pointer not null, `if (b) *b = p; if (!b)
-return 0; return b;`, which is doubted. Where the pointer is not shown not
-null at the `return`, a test of it that encloses the write, `if (b) { if (c)
-*b = p; } return b;`, or `return c ? b : 0;`, the block possibly unwritten
-is silent, for now (#834). A pointer that may name either of two blocks is
-asked of each. A block handed to a call is not asked, since that is how a
+if (c) *b = p; return b;` (#828), for `if (b) { if (c) *b = p; } return b;`
+(#834), and for a block a loop left unwritten on a turn it returned on (#856,
+#863, #865). The cost is a block written on a path this check cannot show is
+taken, a loop's first turn under `if (i == 0)`; a pointer a loop shown to run
+nulls before it is returned (#874); and a null test kept in a flag, `int ok =
+b != 0; if (ok) *b = p;` (#875), each doubted. A pointer that may name either
+of two blocks is asked of each. A block handed to a call is not asked, since that is how a
 callee is given memory to fill. And a function that allocates a table of
 pointers and hands it back unfilled for its caller to fill is doubted.
 
@@ -216,17 +216,16 @@ store, since the caller reads it after the function returns: certainly
 unwritten there, it is `SC0411` as a doubt at the store, "this lets a pointer
 leave to memory nothing wrote by the time the function returns, and the
 caller may read pointers out of it" (#852, ADR-0076). `*out = b; *b = x;`
-says nothing. Where the pointer stored was not null at the store, or at the
-end of its block, a block possibly unwritten at the exit is doubted too, in
+says nothing. A block possibly unwritten at the exit is doubted too, in
 words of its own: "this lets a pointer leave to memory that may not have
 been written by the time the function returns, and the caller may read
-pointers out of it", for `if (!b) return; *out = b; if (c) *b = x;` (#855,
-ADR-0078), and for `*out = b; b = 0;` with the block written on one path
-after (#861, ADR-0079). A store after a null test's join,
-`if (b) *b = x; *out = b;`, says nothing, since the path where the
-allocation failed stores a null. A write under a test that does not settle
-the pointer, `if (b && c) *b = x; *out = b;`, says nothing either, for now,
-and neither does the `return` form (#834). A block
+pointers out of it", for `if (!b) return; *out = b; if (c) *b = x;` (#855),
+for `*out = b; b = 0;` with the block written on one path after (#861), for
+`if (b && c) *b = x; *out = b;`, a chained `*out = *out2 = b;` and a block
+stored twice (#868), and in a loop left through its head (#867). A store
+after a null test's join, `if (b) *b = x; *out = b;`, says nothing, since its
+null edge leaves the path where the allocation failed no block (ADR-0080). A
+block
 stored through a pointer read out of memory, `t = *out; *t = b;`, is asked as
 one stored through `out` is: the store exposes the block, and exposure
 believes nothing written until code this check cannot read runs (#858,
@@ -234,7 +233,8 @@ ADR-0077). A
 block stored out and filled on every turn of a loop is doubted at an early
 `return` inside the loop, since the caller may hold an earlier turn's.
 [ADR-0073](adr/0073-what-leaves-a-function-is-asked-by-how-it-was-declared-and-what-wrote-it.md)
-rule 3 is the decision.
+rule 3 is the decision, with its not-null condition replaced by
+[ADR-0080](adr/0080-a-block-possibly-unwritten-where-it-leaves-is-always-asked-and-an-allocation-tested-null-writes-its-own-block-vacuously.md).
 
 A local whose address is taken, a local array among them, is indeterminate in
 the same way until something writes it (C17 6.2.4 p6, 6.7.9 p10), and the same

@@ -38,9 +38,7 @@
 
 use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
-use crate::dataflow::{
-    Analysis, Solution, solve, solve_first_turn_of_nest_within, solve_first_turn_within,
-};
+use crate::dataflow::{Analysis, Solution, solve};
 use crate::ir::{
     BinOp, BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place,
     Projection, Promise, Rvalue, Terminator, TranslationUnit, UnOp,
@@ -1745,64 +1743,7 @@ pub(crate) fn null_at_terminators(
     at_terminators(&analysis, function, cfg, &solution)
 }
 
-/// [`null_at_terminators`] as of the first turn of the loop whose head is
-/// `head`, within `max_walks`, with the walks it took; `None` past them. Where
-/// `around` names the heads of loops enclosing it, not null also wherever it
-/// is so as of the first turn of all of them at once.
-///
-/// **For a reader that asks on that turn**: the memory check's first-turn walk
-/// asks whether a pointer returned is not null, and the every-turn answer holds
-/// over every turn, so a pointer null only on a later turn answered no on the
-/// first one too and kept a block possibly unwritten there silent (#856).
-/// A pointer an outer loop nulls on a later turn did the same, which the
-/// nest's first turn answers (#863).
-///
-/// **Either answer, not the nest's alone**: fewer paths do not leave a pointer
-/// not null wherever more did, since a branch refines a pointer not yet known
-/// and leaves one known null as it is, so the nest's answer can lose a not
-/// null the loop's own has. Found by review. Only not null is merged: its
-/// reader adds a doubt where it holds, and nothing on that walk reads null.
-pub(crate) fn null_at_terminators_first_turn(
-    sources: &SourceMap,
-    unit: &TranslationUnit,
-    function: &Function,
-    cfg: &Cfg,
-    head: BlockId,
-    around: &[BlockId],
-    max_walks: usize,
-) -> Option<(NullAtTerminators, usize)> {
-    let analysis = Nullability {
-        sources,
-        cfg,
-        unit,
-        function,
-        locals: function.locals().len(),
-        escaped: escaped_in(function),
-    };
-    let own = solve_first_turn_within(&analysis, function, cfg, head, max_walks)?;
-    let mut walks = own.walks();
-    let mut rows = at_terminators(&analysis, function, cfg, &own);
-    if !around.is_empty() {
-        let heads: Vec<BlockId> = std::iter::once(head)
-            .chain(around.iter().copied())
-            .collect();
-        let nest =
-            solve_first_turn_of_nest_within(&analysis, function, cfg, &heads, max_walks - walks)?;
-        walks += nest.walks();
-        rows.add_non_null(&at_terminators(&analysis, function, cfg, &nest));
-    }
-    Some((rows, walks))
-}
-
-/// About how many bytes one block's value takes in a function of this many
-/// locals: a [`Nulls`] and one [`Nullness`] a local. The memory check charges
-/// a first turn's solve here against its own bound at this cost (#856).
-pub(crate) fn per_block(locals: usize) -> usize {
-    size_of::<Nulls>().saturating_add(locals.saturating_mul(size_of::<Nullness>()))
-}
-
-/// The rows [`null_at_terminators`] answers with, from `solution`, so that
-/// every turn and a first turn are read by one replay.
+/// The rows [`null_at_terminators`] answers with, from `solution`.
 fn at_terminators(
     analysis: &Nullability<'_>,
     function: &Function,
@@ -1810,8 +1751,6 @@ fn at_terminators(
     solution: &Solution<<Nullability<'_> as Analysis>::Value>,
 ) -> NullAtTerminators {
     let mut null = vec![vec![false; function.locals().len()]; function.blocks().len()];
-    let mut non_null = null.clone();
-    let mut stores: Vec<Vec<(usize, bool)>> = vec![Vec::new(); function.blocks().len()];
 
     for &id in cfg.order() {
         // What a `None` says is that no execution reaches this block, and the
@@ -1825,15 +1764,7 @@ fn at_terminators(
         };
 
         let block = function.block(id);
-        for (index, element) in block.elements.iter().enumerate() {
-            // **Whether a local stored through a pointer was not null where it
-            // was stored**, before the store's own transfer, for the reader
-            // that adds a doubt where it holds (ADR-0079).
-            if let Some(stored) = stored_local(element) {
-                let held = analysis.is_pointer(function, stored)
-                    && analysis.known(&known.of, stored) == Nullness::NonNull;
-                stores[id.index()].push((index, held));
-            }
+        for element in &block.elements {
             analysis.element(function, element, &mut known);
         }
 
@@ -1886,23 +1817,6 @@ fn at_terminators(
             block.elements.last(),
             Some(Element::ArgumentsEvaluated { .. })
         );
-        // **And at the end of a full expression**, for not null alone: every
-        // side effect of it is complete there (C17 6.8 p4), which is where a
-        // `return` ends its block, before the lifetimes that end with the
-        // scope it leaves: `{ int k; ... return b; }` ends `Sequenced`, then
-        // `StorageDead`. Found by review. The free exemption asks at a call
-        // and reads only `null`, which keeps its condition (#828). Its only
-        // reader asks at a `return`, which always ends a full expression, so
-        // no case tells this condition from none; it is here so that a
-        // reader asking elsewhere is not handed an answer from mid-expression.
-        let at_full_expression_end = matches!(
-            block.elements.iter().rev().find(|element| !matches!(
-                element,
-                Element::StorageDead { .. } | Element::StorageLive { .. }
-            )),
-            Some(Element::Sequenced { .. })
-        );
-
         // Before the terminator's own transfer, which is the position
         // [`findings`] reports from and the position the free is reached at.
         //
@@ -1927,37 +1841,10 @@ fn at_terminators(
             null[id.index()][local.index()] = ordered
                 && analysis.is_pointer(function, local)
                 && analysis.known(&known.of, local) == Nullness::Null;
-            // **And not null, at the end of a full expression rather than at a call**, for a reader
-            // that adds a doubt where it holds and so is wrong only loudly:
-            // the memory check doubts a block possibly unwritten where it is
-            // returned only where the pointer is not null there (#828). See
-            // ADR-0073 rule 3.
-            non_null[id.index()][local.index()] = at_full_expression_end
-                && analysis.is_pointer(function, local)
-                && analysis.known(&known.of, local) == Nullness::NonNull;
         }
     }
 
-    NullAtTerminators {
-        null,
-        non_null,
-        stores,
-    }
-}
-
-/// The local an element stores through a pointer, by name: `*out = b`, an
-/// assignment through a projection whose value is a local with none.
-fn stored_local(element: &Element) -> Option<LocalId> {
-    let Element::Assign(operation) = element else {
-        return None;
-    };
-    if operation.place.projection.is_empty() {
-        return None;
-    }
-    match &operation.value {
-        Rvalue::Use(Operand::Copy(stored)) if stored.projection.is_empty() => Some(stored.local),
-        _ => None,
-    }
+    NullAtTerminators { null }
 }
 
 /// What [`null_at_terminators`] answered, keyed by the two things it is about.
@@ -1980,23 +1867,6 @@ pub(crate) struct NullAtTerminators {
     /// One row per block, one `bool` per local, both in the order the function
     /// hands its ids out.
     null: Vec<Vec<bool>>,
-    /// The same, for established not null.
-    ///
-    /// **Its reader is the other way round from `null`'s.** A free exempted
-    /// where `null` says null is a report taken away, so a wrong `true` there
-    /// is a silence; a `return` doubted where this says not null is a report
-    /// added, so a wrong `true` here is a doubt too many, and a wrong `false`
-    /// is the silence there was before it (#828).
-    non_null: Vec<Vec<bool>>,
-    /// Per block, each element that stores a local through a pointer, by its
-    /// index, with whether that local was established not null before it.
-    ///
-    /// **An answer inside a block, for not null only.** ADR-0027 keeps this
-    /// check's answers at terminators, because the free exemption reads null
-    /// and a wrong one there is a silence. Its reader adds a doubt where this
-    /// holds, so a wrong `true` is a doubt too many, and nothing that exempts
-    /// reads it. See ADR-0079.
-    stores: Vec<Vec<(usize, bool)>>,
 }
 
 impl NullAtTerminators {
@@ -2011,45 +1881,6 @@ impl NullAtTerminators {
     pub(crate) fn established_null(&self, block: BlockId, local: LocalId) -> bool {
         self.null[block.index()][local.index()]
     }
-
-    /// Whether this check established that `local` is not null where
-    /// `block`'s terminator runs.
-    ///
-    /// # Panics
-    ///
-    /// As [`Self::established_null`] does.
-    pub(crate) fn established_non_null(&self, block: BlockId, local: LocalId) -> bool {
-        self.non_null[block.index()][local.index()]
-    }
-
-    /// Whether the local the `element`th element of `block` stores through a
-    /// pointer was established not null before that store. An element that
-    /// stores no local by name answers `false`.
-    ///
-    /// # Panics
-    ///
-    /// As [`Self::established_null`] does, for `block`.
-    pub(crate) fn stored_non_null(&self, block: BlockId, element: usize) -> bool {
-        self.stores[block.index()]
-            .iter()
-            .any(|&(at, held)| at == element && held)
-    }
-
-    /// Not null also wherever `other` says so, for two answers about one
-    /// function, at a store as at a terminator. See
-    /// [`null_at_terminators_first_turn`].
-    fn add_non_null(&mut self, other: &Self) {
-        for (row, theirs) in self.non_null.iter_mut().zip(&other.non_null) {
-            for (here, there) in row.iter_mut().zip(theirs) {
-                *here |= *there;
-            }
-        }
-        for (row, theirs) in self.stores.iter_mut().zip(&other.stores) {
-            for (here, there) in row.iter_mut().zip(theirs) {
-                here.1 |= there.1;
-            }
-        }
-    }
 }
 
 /// How much a conclusion outranks another where both stand at one caret.
@@ -2062,228 +1893,5 @@ fn severity(conclusion: Conclusion) -> u8 {
         Conclusion::Unsafe => 2,
         Conclusion::Unknown => 1,
         Conclusion::Safe => 0,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::ir::{Block, FuncId, Operation, Origin, Ty};
-    use crate::target::Target;
-
-    /// A nest of two loops: `b` is null before it, tested in the inner body
-    /// with `*p = b; return` on its taken arm, and made not null at the end of
-    /// the outer body.
-    struct Nest {
-        sources: SourceMap,
-        unit: TranslationUnit,
-        func: FuncId,
-        b: LocalId,
-        outer: BlockId,
-        inner: BlockId,
-        returns: BlockId,
-    }
-
-    fn nest() -> Nest {
-        let mut sources = SourceMap::new();
-        let file = sources.add_virtual("t.c", "f");
-        let at = Span::new(file, 0, 1);
-        let origin = Origin::Written(at);
-        let mut unit = TranslationUnit::new(
-            Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
-        );
-        let int = unit.push_type(Ty::Int);
-        let pointer = unit.push_type(Ty::Pointer(int));
-        let mut function = Function::new(at, int, []);
-        let b = function.push_local(pointer);
-        let x = function.push_local(int);
-        let pointer_to_pointer = unit.push_type(Ty::Pointer(pointer));
-        let p = function.push_local(pointer_to_pointer);
-
-        let entry = function.reserve_block();
-        let outer = function.reserve_block();
-        let inner = function.reserve_block();
-        let test = function.reserve_block();
-        let returns = function.reserve_block();
-        let latch = function.reserve_block();
-        let exit = function.reserve_block();
-        let assign = |value| {
-            Element::Assign(Operation {
-                place: Place::local(b),
-                value,
-                origin,
-            })
-        };
-        let branch = |condition, then, otherwise| Block {
-            elements: vec![],
-            terminator: Terminator::Branch {
-                condition,
-                then,
-                otherwise,
-                origin,
-            },
-        };
-        function.fill_block(
-            entry,
-            Block {
-                elements: vec![assign(Rvalue::Use(Operand::Constant(0)))],
-                terminator: Terminator::Goto(outer),
-            },
-        );
-        function.fill_block(outer, branch(Operand::Constant(1), inner, exit));
-        function.fill_block(inner, branch(Operand::Constant(1), test, latch));
-        function.fill_block(test, branch(Operand::Copy(Place::local(b)), returns, inner));
-        function.fill_block(
-            returns,
-            Block {
-                elements: vec![
-                    Element::Assign(Operation {
-                        place: Place {
-                            local: p,
-                            projection: vec![crate::ir::Projection::Deref],
-                        },
-                        value: Rvalue::Use(Operand::Copy(Place::local(b))),
-                        origin,
-                    }),
-                    Element::Sequenced { origin },
-                ],
-                terminator: Terminator::Return,
-            },
-        );
-        function.fill_block(
-            latch,
-            Block {
-                elements: vec![assign(Rvalue::Address(Place::local(x)))],
-                terminator: Terminator::Goto(outer),
-            },
-        );
-        function.fill_block(
-            exit,
-            Block {
-                elements: vec![],
-                terminator: Terminator::Return,
-            },
-        );
-        let func = unit.push_function(function);
-        Nest {
-            sources,
-            unit,
-            func,
-            b,
-            outer,
-            inner,
-            returns,
-        }
-    }
-
-    /// The walks of the inner loop's own first turn and of the nest's.
-    fn walks_of(nest: &Nest) -> (usize, usize) {
-        let function = nest.unit.function(nest.func);
-        let cfg = Cfg::of(function);
-        let analysis = Nullability {
-            sources: &nest.sources,
-            cfg: &cfg,
-            unit: &nest.unit,
-            function,
-            locals: function.locals().len(),
-            escaped: escaped_in(function),
-        };
-        let own = solve_first_turn_within(&analysis, function, &cfg, nest.inner, usize::MAX)
-            .expect("unbounded")
-            .walks();
-        let both = solve_first_turn_of_nest_within(
-            &analysis,
-            function,
-            &cfg,
-            &[nest.inner, nest.outer],
-            usize::MAX,
-        )
-        .expect("unbounded")
-        .walks();
-        (own, both)
-    }
-
-    /// As of an inner loop's first turn, with the loop around it named, a
-    /// pointer is not null wherever the inner loop's own first turn says so,
-    /// though the nest's first turn alone says it is null there: on the first
-    /// turn of both `if (b)` meets a null it leaves alone, and on the inner
-    /// loop's alone it meets a pointer not known and refines it (#863).
-    ///
-    /// The same at the store `*p = b` before it (#861).
-    ///
-    /// Mutation: in `null_at_terminators_first_turn`, take the nest's answer
-    /// in place of merging it. The `return` is answered not null by neither,
-    /// and this fails. Mutation: in `add_non_null`, take the other's store
-    /// answers in place of merging them, `here.1 = there.1`. The store is,
-    /// and this fails.
-    #[test]
-    fn a_first_turn_in_a_nest_keeps_what_the_loops_own_first_turn_says_is_not_null() {
-        let nest = nest();
-        let function = nest.unit.function(nest.func);
-        let cfg = Cfg::of(function);
-        let analysis = Nullability {
-            sources: &nest.sources,
-            cfg: &cfg,
-            unit: &nest.unit,
-            function,
-            locals: function.locals().len(),
-            escaped: escaped_in(function),
-        };
-        let alone = solve_first_turn_of_nest_within(
-            &analysis,
-            function,
-            &cfg,
-            &[nest.inner, nest.outer],
-            usize::MAX,
-        )
-        .expect("unbounded");
-        let alone = at_terminators(&analysis, function, &cfg, &alone);
-        assert!(
-            !alone.established_non_null(nest.returns, nest.b),
-            "the nest's first turn alone says `b` is not null at the `return`"
-        );
-        assert!(
-            !alone.stored_non_null(nest.returns, 0),
-            "the nest's first turn alone says `b` is not null at the store"
-        );
-
-        let (null, _) = null_at_terminators_first_turn(
-            &nest.sources,
-            &nest.unit,
-            function,
-            &cfg,
-            nest.inner,
-            &[nest.outer],
-            usize::MAX,
-        )
-        .expect("unbounded");
-        assert!(null.established_non_null(nest.returns, nest.b));
-        assert!(null.stored_non_null(nest.returns, 0));
-    }
-
-    /// Both solves count against one bound: the walks answered are the two
-    /// together, and one short of them is no answer (#863).
-    ///
-    /// Mutation: solve the nest unbounded, and leave its walks uncounted. The
-    /// walks answered are the first solve's alone, and this fails.
-    #[test]
-    fn a_first_turn_in_a_nest_takes_both_solves_walks_against_one_bound() {
-        let nest = nest();
-        let (own, both) = walks_of(&nest);
-        let function = nest.unit.function(nest.func);
-        let cfg = Cfg::of(function);
-        let within = |max_walks| {
-            null_at_terminators_first_turn(
-                &nest.sources,
-                &nest.unit,
-                function,
-                &cfg,
-                nest.inner,
-                &[nest.outer],
-                max_walks,
-            )
-        };
-        assert_eq!(within(own + both).map(|(_, walks)| walks), Some(own + both));
-        assert!(within(own + both - 1).is_none());
     }
 }

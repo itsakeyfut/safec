@@ -1,0 +1,20 @@
+error[SC0411]: `b` points at memory that may not have been written, and the caller may read pointers out of it
+   ╭─[ a_block_written_under_a_null_test_kept_in_a_flag_is_doubted.c:6:5 ]
+   │
+ 6 │     return b;
+   │     ────┬────  
+   │         ╰────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it on every path before returning it, or allocate it with `calloc`
+error[SC0403]: this may dereference `b` while it is null
+   ╭─[ a_block_written_under_a_null_test_kept_in_a_flag_is_doubted.c:5:13 ]
+   │
+ 5 │     if (ok) *b = x;
+   │             ───┬──  
+   │                ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

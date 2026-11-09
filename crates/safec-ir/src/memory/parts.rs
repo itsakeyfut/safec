@@ -767,8 +767,11 @@ pub(super) struct Held {
     /// level in; and its cost, a read after any such call doubted, is the same
     /// one level in. See ADR-0040.
     from_caller: bool,
-    /// The site a `realloc` returned, where this local holds exactly that
-    /// value: the call's destination and plain copies of it.
+    /// The site a `realloc` or an allocation of indeterminate contents
+    /// returned, where this local holds exactly that value: the call's
+    /// destination and plain copies of it. Read at a branch on it, by
+    /// `branch_on_reallocs_result` and `branch_on_an_allocations_result`
+    /// (ADR-0080).
     ///
     /// **Points-to cannot say a pointer may be null for another reason**, so
     /// a branch reading only that `q` holds the returned site read `r = q; if

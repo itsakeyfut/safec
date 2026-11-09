@@ -1,0 +1,192 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:2:7 "f"
+  Local "_0" "int **" return
+  Local "_1" "int *" parameter "x"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "d"
+  Local "_4" "int **" "b"
+  Local "_5" "int" "j"
+  Local "_6" "int"
+  Local "_7" "int" "i"
+  Local "_8" "int"
+  Local "_9" "int **"
+  Local "_10" "int"
+  Local "_11" "int"
+  Local "_12" "void *"
+  Local "_13" "int **"
+  Local "_14" "int"
+  Local "_15" "int *"
+  Local "_16" "int"
+  Local "_17" "int"
+  Block "bb0" entry
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:3:11 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:3:15 generated
+    StorageLive a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:4:10 generated "_5"
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:4:14 written
+      Destination "_5"
+      Use
+        Constant 0
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:4:18 generated
+    Goto "bb1"
+  Block "bb1"
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:4:21 written
+      Destination "_6"
+      Binary "Lt"
+        Copy "_5"
+        Constant 2
+    Branch a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:4:21 written "bb2" "bb3"
+      Copy "_6"
+  Block "bb2"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:4:21 generated
+    Branch a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:5:13 written "bb4" "bb5"
+      Copy "_4"
+  Block "bb3"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:4:21 generated
+    StorageDead a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:12:5 generated "_5"
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:13:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:13:12 generated
+    Return
+  Block "bb4"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:5:13 generated
+    StorageLive a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:18 generated "_7"
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:22 written
+      Destination "_7"
+      Use
+        Constant 0
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:26 generated
+    Goto "bb7"
+  Block "bb5"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:5:13 generated
+    ArgumentsEvaluated a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:8:17 generated
+    Call a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:8:17 written "malloc" "bb13"
+      Destination "_12"
+      Constant 8
+  Block "bb6"
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:4:28 written
+      Destination "_16"
+      Use
+        Copy "_5"
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:4:28 written
+      Destination "_17"
+      Binary "Add"
+        Copy "_5"
+        Constant 1
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:4:28 written
+      Destination "_5"
+      Use
+        Copy "_17"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:4:28 generated
+    Goto "bb1"
+  Block "bb7"
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:29 written
+      Destination "_8"
+      Binary "Lt"
+        Copy "_7"
+        Constant 2
+    Branch a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:29 written "bb8" "bb9"
+      Copy "_8"
+  Block "bb8"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:29 generated
+    Branch a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:47 written "bb10" "bb11"
+      Copy "_2"
+  Block "bb9"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:29 generated
+    StorageDead a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:67 generated "_7"
+    Goto "bb6"
+  Block "bb10"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:47 generated
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:50 written
+      Destination "_0"
+      Use
+        Copy "_4"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:57 generated
+    StorageDead a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:50 generated "_7"
+    StorageDead a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:50 generated "_5"
+    Return
+  Block "bb11"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:47 generated
+    Goto "bb12"
+  Block "bb12"
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:60 written
+      Destination "_4"
+      Use
+        Constant 0
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:60 written
+      Destination "_9"
+      Use
+        Copy "_4"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:60 generated
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:36 written
+      Destination "_10"
+      Use
+        Copy "_7"
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:36 written
+      Destination "_11"
+      Binary "Add"
+        Copy "_7"
+        Constant 1
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:36 written
+      Destination "_7"
+      Use
+        Copy "_11"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:36 generated
+    Goto "bb7"
+  Block "bb13"
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:8:13 written
+      Destination "_4"
+      Use
+        Copy "_12"
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:8:13 written
+      Destination "_13"
+      Use
+        Copy "_4"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:8:13 generated
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:9:17 written
+      Destination "_14"
+      Unary "Not"
+        Copy "_4"
+    Branch a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:9:17 written "bb14" "bb15"
+      Copy "_14"
+  Block "bb14"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:9:17 generated
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:9:21 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:9:28 generated
+    StorageDead a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:9:21 generated "_5"
+    Return
+  Block "bb15"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:9:17 generated
+    Goto "bb16"
+  Block "bb16"
+    Branch a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:10:17 written "bb17" "bb18"
+      Copy "_3"
+  Block "bb17"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:10:17 generated
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:10:20 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_1"
+    Operation a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:10:20 written
+      Destination "_15"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:10:20 generated
+    Goto "bb19"
+  Block "bb18"
+    Sequenced a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:10:17 generated
+    Goto "bb19"
+  Block "bb19"
+    Goto "bb6"

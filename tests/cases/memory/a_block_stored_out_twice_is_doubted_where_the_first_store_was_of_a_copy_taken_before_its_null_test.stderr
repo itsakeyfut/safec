@@ -1,0 +1,14 @@
+error[SC0411]: this lets a pointer leave to memory that may not have been written by the time the function returns, and the caller may read pointers out of it
+   ╭─[ a_block_stored_out_twice_is_doubted_where_the_first_store_was_of_a_copy_taken_before_its_null_test.c:8:5 ]
+   │
+ 3 │     int **b = malloc(8);
+   │               ────┬────  
+   │                   ╰────── allocated here
+   │ 
+ 8 │     *o2 = t;
+   │     ───┬───  
+   │        ╰───── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it on every path before the function returns, or allocate it with `calloc`

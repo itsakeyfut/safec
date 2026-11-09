@@ -1449,10 +1449,6 @@ pub(super) struct UnwrittenAsk<'a, 'u> {
     pub(super) function: &'a Function,
     /// `assigned::address_taken`, which [`unwritten_read`] reads.
     pub(super) taken: &'a Bits<LocalIdx>,
-    pub(super) null: &'a NullAtTerminators,
-    /// Every reachable block, `Cfg::order`, which finds a store by its span.
-    pub(super) order: &'a [BlockId],
-    pub(super) block: BlockId,
     /// A loop's first turn at a point that turn may not reach, which says no
     /// more than a doubt (#670).
     pub(super) doubt_only: bool,
@@ -1588,14 +1584,10 @@ pub(super) fn asked_unwritten_in_terminator(
 /// Report every block a store let leave holding pointers that is certainly
 /// unwritten where the function returns, at the store (ADR-0076).
 ///
-/// **Possibly, where the stored pointer was not null at the store**:
-/// [`Known::left_at`] and [`Known::init`] join apart, so a store after a null
-/// test's join, `if (b) *b = x; *out = b;`, is `Maybe` here from the path
-/// where the allocation failed and the stored pointer is null, and doubting
-/// every `Maybe` refused that program. So a block possibly unwritten is asked
-/// as a `return` is (#828): where the local stored was established not null,
-/// `*out = b; if (c) *b = x;` after `if (!b) return;` among them (#855), at
-/// the store itself or at its block's end (#861). See ADR-0078 and ADR-0079.
+/// **And possibly, wherever it is**: the path where an allocation failed
+/// leaves no block, and the null edge of a test of that allocation's result
+/// says so (`branch_on_an_allocations_result`), so `if (b) *b = x; *out = b;`
+/// is written on every path where the block exists. See ADR-0080.
 ///
 /// **Not a block freed since**: what reaches the caller is a freed pointer,
 /// which `SC0414` reports, and calling its memory unwritten beside that was
@@ -1612,7 +1604,7 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
         }
         let kind = if known.init[site].is_unwritten() {
             Kind::StoredUnwritten
-        } else if known.init[site].may_be_unwritten() && stored_not_null(ask, at) {
+        } else if known.init[site].may_be_unwritten() {
             Kind::StoredMaybeUnwritten
         } else {
             continue;
@@ -1631,41 +1623,6 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
             },
         );
     }
-}
-
-/// Whether the store at `at` stored a local established not null, at the
-/// store itself or at the end of its block, as [`report_returned_unwritten`]
-/// asks of a `return` (#828). The store is found by its span, since the mark
-/// carries the span alone: the assignment through a projection. A store of
-/// anything but a local by name, or one not found, answers no, which asks
-/// nothing possible of it.
-///
-/// **At the store**: `*out = b; b = 0;` is null at the end and was not where
-/// it was stored, and a block ending in a call is never answered not null at
-/// its end (#861). **And at the block's end, beside it**: in
-/// `if (b && c) *b = x; *out = b; b = other;` the local is not known at the
-/// store and not null at the end, and asking the store alone withdrew a doubt
-/// `main` gave. Found by review. Either adds a doubt where it holds, so
-/// asking both silences nothing either asked. See ADR-0079.
-fn stored_not_null(ask: &UnwrittenAsk<'_, '_>, at: Span) -> bool {
-    for &id in ask.order {
-        for (index, element) in ask.function.block(id).elements.iter().enumerate() {
-            let Element::Assign(operation) = element else {
-                continue;
-            };
-            if operation.origin.span() != at || operation.place.projection.is_empty() {
-                continue;
-            }
-            if ask.null.stored_non_null(id, index) {
-                return true;
-            }
-            let Rvalue::Use(Operand::Copy(stored)) = &operation.value else {
-                return false;
-            };
-            return stored.projection.is_empty() && ask.null.established_non_null(id, stored.local);
-        }
-    }
-    false
 }
 
 /// Push `finding` unless one answering its question already stands at its
@@ -1704,15 +1661,14 @@ fn push_once(findings: &mut Vec<Finding>, finding: Finding) {
     }
 }
 
-/// Report a `return` of a pointer that may name a block **certainly**
-/// unwritten, or **possibly** unwritten where the pointer is established not
-/// null at the `return`, where the return type points at memory holding
+/// Report a `return` of a pointer that may name a block **certainly** or
+/// **possibly** unwritten, where the return type points at memory holding
 /// pointers: the return-side counterpart of `loaded_indeterminate`, which
-/// reports a read of such a block inside this function. Possibly only where
-/// not null, since `if (m) *m = x; return m;` joins a path with no block at
-/// all, which reaches the `return` with `m` null; only a `return`, since a
-/// block handed to a call is how a callee is given memory to fill. See
-/// ADR-0073 rule 3, which says what both cost.
+/// reports a read of such a block inside this function. Only a `return`,
+/// since a block handed to a call is how a callee is given memory to fill
+/// (ADR-0073 rule 3). Possibly wherever it is: `if (m) *m = x; return m;`
+/// joins a path with no block at all, and that path's block is written
+/// vacuously on the null edge, so it adds no doubt. See ADR-0080.
 fn report_returned_unwritten(
     ask: &UnwrittenAsk<'_, '_>,
     findings: &mut Vec<Finding>,
@@ -1722,8 +1678,6 @@ fn report_returned_unwritten(
     let UnwrittenAsk {
         analysis,
         function,
-        null,
-        block,
         doubt_only,
         ..
     } = *ask;
@@ -1753,21 +1707,12 @@ fn report_returned_unwritten(
     let certainly = known
         .sites_of(place.local)
         .any(|site| known.init[site].is_unwritten());
-    // **Possibly, where the pointer is not null at the `return`**: then no
-    // path that reaches it is one where the allocation failed, and a block
-    // possibly unwritten was left so where it succeeded (#828). On the
-    // every-turn walk a wrong answer from the nullability check is a doubt
-    // too many, never one too few. On a first turn the fact is that turn's,
-    // so a pointer null only on a later turn is not null there (#856). See
-    // `NullAtTerminators::established_non_null`.
-    //
-    // **Asked of the value returned**, the return place, rather than of the
-    // local it was copied out of, whose lifetime may end with the scope the
-    // `return` leaves and take what was known of it along. Found by review.
-    let possibly = null.established_non_null(block, function.return_place())
-        && known
-            .sites_of(place.local)
-            .any(|site| known.init[site].may_be_unwritten());
+    // **Possibly, wherever it is**: the path where an allocation failed adds
+    // no doubt, because its null edge writes the block it did not make. See
+    // ADR-0080.
+    let possibly = known
+        .sites_of(place.local)
+        .any(|site| known.init[site].may_be_unwritten());
     // **On a first turn's arm, certainly unwritten is a doubt**: that turn
     // may not take the arm, and a later one finds the block written (#838).
     // Mutation: ignore `doubt_only`; the return in

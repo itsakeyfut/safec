@@ -993,9 +993,9 @@ pub(super) fn memory_finding(
             "stored here",
             "write every pointer in it before the function returns, or allocate it with `calloc`",
         ),
-        // **The same, written on some path to the `return` and not another**,
-        // where the pointer stored was not null at the store (#855). "May not
-        // have been written", as the returned twin says.
+        // **The same, written on some path to the `return` and not another**
+        // where the block exists (#855, ADR-0080). "May not have been
+        // written", as the returned twin says.
         (Kind::StoredMaybeUnwritten, Conclusion::Unknown | Conclusion::Unsafe, _) => (
             UNASSIGNED,
             "this lets a pointer leave to memory that may not have been written by the time \
@@ -1005,9 +1005,9 @@ pub(super) fn memory_finding(
             "write every pointer in it on every path before the function returns, or allocate \
              it with `calloc`",
         ),
-        // **A block that may not have been written, handed back** where the
-        // pointer is not null, so not the path where the allocation failed
-        // (#828). "May not have been written", since some path wrote it.
+        // **A block that may not have been written, handed back**, on a path
+        // where it exists, not the one where its allocation failed (#828,
+        // ADR-0080). "May not have been written", since some path wrote it.
         // Only ever `Unknown`, as the one above; `Unsafe` takes the same words.
         (Kind::ReturnedMaybeUnwritten, Conclusion::Unknown | Conclusion::Unsafe, _) => (
             UNASSIGNED,

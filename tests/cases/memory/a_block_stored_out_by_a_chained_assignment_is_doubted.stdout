@@ -1,0 +1,110 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_stored_out_by_a_chained_assignment_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_stored_out_by_a_chained_assignment_is_doubted.c:2:6 "g"
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "out"
+  Local "_2" "int ***" parameter "out2"
+  Local "_3" "int *" parameter "x"
+  Local "_4" "int" parameter "c"
+  Local "_5" "int **" "b"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "int"
+  Local "_10" "int **"
+  Local "_11" "int **"
+  Local "_12" "int *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_block_stored_out_by_a_chained_assignment_is_doubted.c:3:15 generated
+    Call a_block_stored_out_by_a_chained_assignment_is_doubted.c:3:15 written "malloc" "bb1"
+      Destination "_6"
+      Constant 8
+  Block "bb1"
+    Operation a_block_stored_out_by_a_chained_assignment_is_doubted.c:3:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_block_stored_out_by_a_chained_assignment_is_doubted.c:3:15 generated
+    Operation a_block_stored_out_by_a_chained_assignment_is_doubted.c:4:9 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_5"
+    Branch a_block_stored_out_by_a_chained_assignment_is_doubted.c:4:9 written "bb2" "bb3"
+      Copy "_7"
+  Block "bb2"
+    Sequenced a_block_stored_out_by_a_chained_assignment_is_doubted.c:4:9 generated
+    Return
+  Block "bb3"
+    Sequenced a_block_stored_out_by_a_chained_assignment_is_doubted.c:4:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_block_stored_out_by_a_chained_assignment_is_doubted.c:5:9 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_1"
+    Branch a_block_stored_out_by_a_chained_assignment_is_doubted.c:5:9 written "bb5" "bb6"
+      Copy "_8"
+  Block "bb5"
+    Sequenced a_block_stored_out_by_a_chained_assignment_is_doubted.c:5:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_block_stored_out_by_a_chained_assignment_is_doubted.c:5:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_block_stored_out_by_a_chained_assignment_is_doubted.c:6:9 written
+      Destination "_9"
+      Unary "Not"
+        Copy "_2"
+    Branch a_block_stored_out_by_a_chained_assignment_is_doubted.c:6:9 written "bb8" "bb9"
+      Copy "_9"
+  Block "bb8"
+    Sequenced a_block_stored_out_by_a_chained_assignment_is_doubted.c:6:9 generated
+    Return
+  Block "bb9"
+    Sequenced a_block_stored_out_by_a_chained_assignment_is_doubted.c:6:9 generated
+    Goto "bb10"
+  Block "bb10"
+    Operation a_block_stored_out_by_a_chained_assignment_is_doubted.c:7:12 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_block_stored_out_by_a_chained_assignment_is_doubted.c:7:12 written
+      Destination "_10"
+      Use
+        Copy "_2"
+          Deref
+    Operation a_block_stored_out_by_a_chained_assignment_is_doubted.c:7:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_10"
+    Operation a_block_stored_out_by_a_chained_assignment_is_doubted.c:7:5 written
+      Destination "_11"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_block_stored_out_by_a_chained_assignment_is_doubted.c:7:5 generated
+    Branch a_block_stored_out_by_a_chained_assignment_is_doubted.c:8:9 written "bb11" "bb12"
+      Copy "_4"
+  Block "bb11"
+    Sequenced a_block_stored_out_by_a_chained_assignment_is_doubted.c:8:9 generated
+    Operation a_block_stored_out_by_a_chained_assignment_is_doubted.c:8:12 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_block_stored_out_by_a_chained_assignment_is_doubted.c:8:12 written
+      Destination "_12"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_block_stored_out_by_a_chained_assignment_is_doubted.c:8:12 generated
+    Goto "bb13"
+  Block "bb12"
+    Sequenced a_block_stored_out_by_a_chained_assignment_is_doubted.c:8:9 generated
+    Goto "bb13"
+  Block "bb13"
+    Return

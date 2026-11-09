@@ -1294,6 +1294,82 @@ impl Allocations<'_> {
         })
     }
 
+    /// **On the edge where an allocation's result is tested null, that
+    /// allocation's block does not exist**, so whether it was written asks
+    /// nothing there: it is written, vacuously. Without it, `if (b) *b = x;
+    /// return b;` joins a path where the call failed, its site `Unwritten`,
+    /// with the path where the block was written, and a block possibly
+    /// unwritten where it leaves could not be doubted without refusing that
+    /// program (#872).
+    ///
+    /// **Only where nothing else can name the site.** A site names every
+    /// block its call made, and a block an earlier turn made may still be
+    /// held in memory or by another local; writing the site then believed
+    /// that block written, and programs `main` reported went silent, found
+    /// by #870's adversary. So the rule asks [`Known::held_sites`], which
+    /// over-counts by design (ADR-0048), of the value with the tested local,
+    /// its copies, and the branch's own condition set aside: a comparison
+    /// keeps what its operand reaches (#847), and is the test rather than a
+    /// holder. A `realloc`'s site is [`Self::branch_on_reallocs_result`]'s.
+    ///
+    /// **And the tested local holds no block on that edge**, so a store of it
+    /// there, `if (!b) *out = b;`, lets nothing leave. See ADR-0080.
+    fn branch_on_an_allocations_result(
+        &self,
+        function: &Function,
+        block: BlockId,
+        terminator: &Terminator,
+        index: usize,
+        value: &mut Known,
+    ) {
+        let Terminator::Branch {
+            condition: Operand::Copy(condition),
+            ..
+        } = terminator
+        else {
+            return;
+        };
+        let Some((local, on_then)) = crate::nullability::tested_against_null(
+            self.unit, function, &self.cfg, block, condition,
+        ) else {
+            return;
+        };
+        let returned = {
+            let held = &value.points_to[local];
+            let mut sites = held.sites();
+            let (Some(returned), None) = (sites.next(), sites.next()) else {
+                return;
+            };
+            if held.beyond().lost()
+                || held.returned_by != Some(returned)
+                || value.realloced[returned].is_some()
+            {
+                return;
+            }
+            returned
+        };
+        // `Terminator::successors` pushes `then` and then `otherwise`, so
+        // index 1 is the other arm, as the nullability check reads it.
+        if (index == 0) != (on_then == crate::nullability::Nullness::Null) {
+            return;
+        }
+        let mut rest = value.clone();
+        for other in function.locals() {
+            let held = &value.points_to[LocalIdx::of(other)];
+            let mut sites = held.sites();
+            if let (Some(only), None) = (sites.next(), sites.next()) {
+                if only == returned && held.returned_by == Some(returned) {
+                    rest.clear(other);
+                }
+            }
+        }
+        rest.clear(condition.local);
+        if !rest.held_sites()[returned] {
+            value.init[returned] = Init::Written;
+        }
+        value.clear(local);
+    }
+
     /// **A branch on what a `realloc` returned says what became of what it was
     /// handed.** On the arm where the pointer is null the call failed and the
     /// old allocations are live again; on the other it succeeded and they were
@@ -1531,11 +1607,31 @@ impl Allocations<'_> {
             .indices()
             .zip(points_to.iter_mut().zip(&from.points_to))
         {
+            // **A side where the local holds no block, and nothing holds the
+            // site, keeps the other side's `returned_by`**: no block of that
+            // site exists there, so `p = 0; if (c) p = malloc(8); if (p) *p =
+            // x;` still tests the allocation's result. Not a `realloc`'s,
+            // whose rule this would widen, found while building it: two cases
+            // lost a double free. See ADR-0080.
+            let no_block = |held: &Held, state: &SiteState, site: Site| {
+                held.sites().next().is_none()
+                    && matches!(state, SiteState::Unheld)
+                    && realloced[site].is_none()
+                    && from.realloced[site].is_none()
+            };
+            let kept = match (here.returned_by, there.returned_by) {
+                (Some(site), None) if no_block(there, &from.state[site], site) => Some(site),
+                (None, Some(site)) if no_block(here, &state[site], site) => Some(site),
+                _ => None,
+            };
             here.joined(
                 there,
                 self.sources,
                 (unwritten_here[local], from.init[local].is_unwritten()),
             );
+            if kept.is_some() {
+                here.returned_by = kept;
+            }
         }
 
         // **A site nothing on one side can still name takes the other side's
@@ -1643,6 +1739,7 @@ impl Analysis for Allocations<'_> {
         value: &mut Self::Value,
     ) {
         self.branch_on_reallocs_result(function, block, terminator, index, value);
+        self.branch_on_an_allocations_result(function, block, terminator, index, value);
         let mut successors = Vec::new();
         terminator.successors(&mut successors);
         let Some(successor) = successors.get(index) else {
@@ -3968,6 +4065,12 @@ impl Analysis for Allocations<'_> {
             },
             Some(Leaves::ZeroBits) | None => false,
         };
+        // **And the result names the call that made it**, so that a branch on
+        // it can say the block does not exist on its null edge. See
+        // `branch_on_an_allocations_result` and ADR-0080.
+        if fresh {
+            value.points_to[result].returned_by = Some(site);
+        }
         if fresh {
             value.init[site] = Init::Unwritten;
         } else if let (Some(Leaves::TheOld), Some(Operand::Copy(handed))) = (

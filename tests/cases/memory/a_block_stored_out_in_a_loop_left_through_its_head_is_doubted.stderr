@@ -1,0 +1,14 @@
+error[SC0411]: this lets a pointer leave to memory that may not have been written by the time the function returns, and the caller may read pointers out of it
+   ╭─[ a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:6:35 ]
+   │
+ 3 │     int **b = malloc(8);
+   │               ────┬────  
+   │                   ╰────── allocated here
+   │ 
+ 6 │     for (int i = 0; i < n; i++) { *out = b; b = 0; if (c) *t = x; }
+   │                                   ────┬───  
+   │                                       ╰───── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it on every path before the function returns, or allocate it with `calloc`
