@@ -2072,8 +2072,8 @@ mod tests {
     use crate::target::Target;
 
     /// A nest of two loops: `b` is null before it, tested in the inner body
-    /// with a `return` on its taken arm, and made not null at the end of the
-    /// outer body.
+    /// with `*p = b; return` on its taken arm, and made not null at the end of
+    /// the outer body.
     struct Nest {
         sources: SourceMap,
         unit: TranslationUnit,
@@ -2097,6 +2097,8 @@ mod tests {
         let mut function = Function::new(at, int, []);
         let b = function.push_local(pointer);
         let x = function.push_local(int);
+        let pointer_to_pointer = unit.push_type(Ty::Pointer(pointer));
+        let p = function.push_local(pointer_to_pointer);
 
         let entry = function.reserve_block();
         let outer = function.reserve_block();
@@ -2134,7 +2136,17 @@ mod tests {
         function.fill_block(
             returns,
             Block {
-                elements: vec![Element::Sequenced { origin }],
+                elements: vec![
+                    Element::Assign(Operation {
+                        place: Place {
+                            local: p,
+                            projection: vec![crate::ir::Projection::Deref],
+                        },
+                        value: Rvalue::Use(Operand::Copy(Place::local(b))),
+                        origin,
+                    }),
+                    Element::Sequenced { origin },
+                ],
                 terminator: Terminator::Return,
             },
         );
@@ -2197,8 +2209,12 @@ mod tests {
     /// turn of both `if (b)` meets a null it leaves alone, and on the inner
     /// loop's alone it meets a pointer not known and refines it (#863).
     ///
+    /// The same at the store `*p = b` before it (#861).
+    ///
     /// Mutation: in `null_at_terminators_first_turn`, take the nest's answer
     /// in place of merging it. The `return` is answered not null by neither,
+    /// and this fails. Mutation: in `add_non_null`, take the other's store
+    /// answers in place of merging them, `here.1 = there.1`. The store is,
     /// and this fails.
     #[test]
     fn a_first_turn_in_a_nest_keeps_what_the_loops_own_first_turn_says_is_not_null() {
@@ -2221,10 +2237,14 @@ mod tests {
             usize::MAX,
         )
         .expect("unbounded");
+        let alone = at_terminators(&analysis, function, &cfg, &alone);
         assert!(
-            !at_terminators(&analysis, function, &cfg, &alone)
-                .established_non_null(nest.returns, nest.b),
+            !alone.established_non_null(nest.returns, nest.b),
             "the nest's first turn alone says `b` is not null at the `return`"
+        );
+        assert!(
+            !alone.stored_non_null(nest.returns, 0),
+            "the nest's first turn alone says `b` is not null at the store"
         );
 
         let (null, _) = null_at_terminators_first_turn(
@@ -2238,6 +2258,7 @@ mod tests {
         )
         .expect("unbounded");
         assert!(null.established_non_null(nest.returns, nest.b));
+        assert!(null.stored_non_null(nest.returns, 0));
     }
 
     /// Both solves count against one bound: the walks answered are the two

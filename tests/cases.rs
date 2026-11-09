@@ -1660,6 +1660,14 @@ cases! {
         // asked it. Found by review. Mutation: ask the store alone; this goes
         // silent.
         a_block_stored_out_and_its_local_reassigned_not_null_after_keeps_its_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer known null at the store leaves nothing. Mutation: a store
+        // of a pointer known either way answered not null, `!= Unknown`; this
+        // is reported. And two stores in one block, the first not null and
+        // the second not known: each is asked about its own. Mutation:
+        // `stored_non_null` ignores the element, or answers for any at or
+        // before it; the second is reported.
+        a_pointer_stored_out_where_it_is_known_null_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_beside_another_in_its_block_is_asked_about_its_own_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stored out on one arm only: the block left on a path, which the
         // join keeps, found by review. Mutation: join `Known::left_at` as a
         // must-fact, `None` unless both sides marked; this goes silent.
