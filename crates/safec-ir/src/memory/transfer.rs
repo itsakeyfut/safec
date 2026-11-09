@@ -1310,7 +1310,12 @@ impl Allocations<'_> {
     /// over-counts by design (ADR-0048), of the value with the tested local,
     /// its copies, and the branch's own condition set aside: a comparison
     /// keeps what its operand reaches (#847), and is the test rather than a
-    /// holder. A `realloc`'s site is [`Self::branch_on_reallocs_result`]'s.
+    /// holder. A `realloc`'s site with a fact is
+    /// [`Self::branch_on_reallocs_result`]'s.
+    ///
+    /// **A copy set aside is a copy of this call's result**, never an earlier
+    /// call's: [`Known::reborn`] makes every other local that named the site
+    /// lost when the call writes it again, and a lost local holds no site.
     ///
     /// **And the tested local holds no block on that edge**, so a store of it
     /// there, `if (!b) *out = b;`, lets nothing leave. See ADR-0080.
@@ -1610,14 +1615,19 @@ impl Allocations<'_> {
             // **A side where the local holds no block, and nothing holds the
             // site, keeps the other side's `returned_by`**: no block of that
             // site exists there, so `p = 0; if (c) p = malloc(8); if (p) *p =
-            // x;` still tests the allocation's result. Not a `realloc`'s,
-            // whose rule this would widen, found while building it: two cases
-            // lost a double free. See ADR-0080.
+            // x;` still tests the allocation's result. Not where a `realloc`
+            // fact survives the join above, which happens where both sides
+            // hold it: `n = realloc(p, 8); if (c) n = 0;` nulls the result by
+            // hand on one arm, and keeping `returned_by` there read that arm
+            // as a failed call and lost a double free, found while building
+            // it. Where only one side holds the fact, the join dropped it, and
+            // `branch_on_reallocs_result` has nothing to act on; asking that
+            // side's fact as well answered by the order of the arms, found by
+            // review. See ADR-0080.
             let no_block = |held: &Held, state: &SiteState, site: Site| {
                 held.sites().next().is_none()
                     && matches!(state, SiteState::Unheld)
                     && realloced[site].is_none()
-                    && from.realloced[site].is_none()
             };
             let kept = match (here.returned_by, there.returned_by) {
                 (Some(site), None) if no_block(there, &from.state[site], site) => Some(site),

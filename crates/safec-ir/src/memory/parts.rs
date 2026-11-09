@@ -777,8 +777,9 @@ pub(super) struct Held {
     /// a branch reading only that `q` holds the returned site read `r = q; if
     /// (c) r = 0; if (r == 0) free(p);` as a failed call on the arm where `r`
     /// was nulled by hand, and built a double free. Any other assignment
-    /// clears this, arithmetic included, and a join keeps it only where both
-    /// arms agree. Found by review. See ADR-0039.
+    /// clears this, arithmetic included, and a join keeps it where both arms
+    /// agree, or where one arm holds no block of the site and no `realloc`
+    /// fact survives the join (ADR-0080). Found by review. See ADR-0039.
     pub(super) returned_by: Option<Site>,
     /// Whether this was read, on every path, out of an allocation
     /// [`Known::init`](super::known::Known::init) marks, so is

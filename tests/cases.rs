@@ -531,13 +531,12 @@ cases! {
         // returned whether or not it was written; this is doubted.
         a_block_written_before_it_is_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written on the path where its allocation succeeded, nothing: the
-        // block is possibly unwritten only through the path where there is
-        // none, and the pointer is not shown not null at the `return`.
-        // Mutation: answer not null everywhere; this is doubted.
+        // null edge leaves the path where it failed no block (ADR-0080).
+        // Mutation: the null edge neither writes nor clears; this is doubted.
         a_block_written_on_the_path_its_allocation_succeeded_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Left unwritten on one arm where the allocation succeeded, and the
-        // pointer not null at the `return`: possibly unwritten is doubted
-        // there, in words of its own (#828). See ADR-0073 rule 3. Mutation:
+        // Left unwritten on one arm where the allocation succeeded: possibly
+        // unwritten is doubted there, in words of its own (#828). See
+        // ADR-0073 rule 3 and ADR-0080. Mutation:
         // ask only a block certainly unwritten; this and the next go silent.
         a_block_left_unwritten_on_one_arm_where_its_allocation_succeeded_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_written_only_by_a_loop_that_may_not_run_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1654,7 +1653,9 @@ cases! {
         // edge neither writes nor clears; this is reported.
         a_block_written_under_its_null_test_stored_out_and_its_local_nulled_after_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer known null stored out: the tested local holds no block on
-        // its null edge. Mutation: keep its sites there; this is reported.
+        // its null edge. Mutation: keep its sites there; this is reported. It
+        // is reported too where the join keeps no `returned_by` for an arm
+        // that made no block.
         a_pointer_stored_out_where_it_is_known_null_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Two stores in one block, the second of a block possibly unwritten.
         // Mutation: never ask the exit possibly unwritten; this goes silent.
@@ -1678,6 +1679,22 @@ cases! {
         an_allocation_made_on_one_arm_written_under_its_null_test_and_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_made_on_one_arm_written_under_its_null_test_and_stored_out_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_chosen_by_a_conditional_written_under_its_null_test_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The other arm order: the allocation made first and nulled by hand
+        // on one arm. Mutation: keep `returned_by` only where the arm without
+        // it is the second; this is reported.
+        an_allocation_nulled_by_hand_on_one_arm_written_under_its_null_test_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Made by `realloc` on one arm alone, in either order of the arms: the
+        // join dropped the fact, so the call's result is tested as any
+        // allocation's. Mutation: refuse the join rule also where the other
+        // side had a `realloc` fact, as it once did; the first is reported,
+        // the second not, so the answer turned on the order of the arms.
+        an_allocation_reallocated_on_one_arm_written_under_its_null_test_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_allocation_reallocated_on_the_other_arm_written_under_its_null_test_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An earlier turn's block a local kept, where this turn's allocation
+        // fails: that local is not a copy of this call's result and is not
+        // set aside. Mutation: set aside every local holding the site; the
+        // certain `SC0411` goes, leaving only `SC0406`.
+        a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Tested against zero rather than by name. Mutation: the null edge
         // neither writes nor clears; this is reported.
         a_block_written_under_a_comparison_with_zero_and_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
