@@ -2012,21 +2012,23 @@ fn severity(conclusion: Conclusion) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::{Block, Operation, Origin, Ty};
+    use crate::ir::{Block, FuncId, Operation, Origin, Ty};
     use crate::target::Target;
 
-    /// As of an inner loop's first turn, with the loop around it named, a
-    /// pointer is not null wherever the inner loop's own first turn says so,
-    /// though the nest's first turn alone says it is null there: `b` is null
-    /// before the nest and made not null at the end of the outer body, so on
-    /// the first turn of both `if (b)` meets a null it leaves alone, and on the
-    /// inner loop's alone it meets a pointer not known and refines it (#863).
-    ///
-    /// Mutation: in `null_at_terminators_first_turn`, take the nest's answer
-    /// in place of merging it. The `return` is answered not null by neither,
-    /// and this fails.
-    #[test]
-    fn a_first_turn_in_a_nest_keeps_what_the_loops_own_first_turn_says_is_not_null() {
+    /// A nest of two loops: `b` is null before it, tested in the inner body
+    /// with a `return` on its taken arm, and made not null at the end of the
+    /// outer body.
+    struct Nest {
+        sources: SourceMap,
+        unit: TranslationUnit,
+        func: FuncId,
+        b: LocalId,
+        outer: BlockId,
+        inner: BlockId,
+        returns: BlockId,
+    }
+
+    fn nest() -> Nest {
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", "f");
         let at = Span::new(file, 0, 1);
@@ -2095,35 +2097,116 @@ mod tests {
             },
         );
         let func = unit.push_function(function);
-        let function = unit.function(func);
-        let cfg = Cfg::of(function);
+        Nest {
+            sources,
+            unit,
+            func,
+            b,
+            outer,
+            inner,
+            returns,
+        }
+    }
 
-        let nest = Nullability {
-            sources: &sources,
+    /// The walks of the inner loop's own first turn and of the nest's.
+    fn walks_of(nest: &Nest) -> (usize, usize) {
+        let function = nest.unit.function(nest.func);
+        let cfg = Cfg::of(function);
+        let analysis = Nullability {
+            sources: &nest.sources,
             cfg: &cfg,
-            unit: &unit,
+            unit: &nest.unit,
             function,
             locals: function.locals().len(),
             escaped: escaped_in(function),
         };
-        let alone =
-            solve_first_turn_of_nest_within(&nest, function, &cfg, &[inner, outer], usize::MAX)
-                .expect("unbounded");
+        let own = solve_first_turn_within(&analysis, function, &cfg, nest.inner, usize::MAX)
+            .expect("unbounded")
+            .walks();
+        let both = solve_first_turn_of_nest_within(
+            &analysis,
+            function,
+            &cfg,
+            &[nest.inner, nest.outer],
+            usize::MAX,
+        )
+        .expect("unbounded")
+        .walks();
+        (own, both)
+    }
+
+    /// As of an inner loop's first turn, with the loop around it named, a
+    /// pointer is not null wherever the inner loop's own first turn says so,
+    /// though the nest's first turn alone says it is null there: on the first
+    /// turn of both `if (b)` meets a null it leaves alone, and on the inner
+    /// loop's alone it meets a pointer not known and refines it (#863).
+    ///
+    /// Mutation: in `null_at_terminators_first_turn`, take the nest's answer
+    /// in place of merging it. The `return` is answered not null by neither,
+    /// and this fails.
+    #[test]
+    fn a_first_turn_in_a_nest_keeps_what_the_loops_own_first_turn_says_is_not_null() {
+        let nest = nest();
+        let function = nest.unit.function(nest.func);
+        let cfg = Cfg::of(function);
+        let analysis = Nullability {
+            sources: &nest.sources,
+            cfg: &cfg,
+            unit: &nest.unit,
+            function,
+            locals: function.locals().len(),
+            escaped: escaped_in(function),
+        };
+        let alone = solve_first_turn_of_nest_within(
+            &analysis,
+            function,
+            &cfg,
+            &[nest.inner, nest.outer],
+            usize::MAX,
+        )
+        .expect("unbounded");
         assert!(
-            !at_terminators(&nest, function, &cfg, &alone).established_non_null(returns, b),
+            !at_terminators(&analysis, function, &cfg, &alone)
+                .established_non_null(nest.returns, nest.b),
             "the nest's first turn alone says `b` is not null at the `return`"
         );
 
         let (null, _) = null_at_terminators_first_turn(
-            &sources,
-            &unit,
+            &nest.sources,
+            &nest.unit,
             function,
             &cfg,
-            inner,
-            &[outer],
+            nest.inner,
+            &[nest.outer],
             usize::MAX,
         )
         .expect("unbounded");
-        assert!(null.established_non_null(returns, b));
+        assert!(null.established_non_null(nest.returns, nest.b));
+    }
+
+    /// Both solves count against one bound: the walks answered are the two
+    /// together, and one short of them is no answer (#863).
+    ///
+    /// Mutation: solve the nest unbounded, and leave its walks uncounted. The
+    /// walks answered are the first solve's alone, and this fails.
+    #[test]
+    fn a_first_turn_in_a_nest_takes_both_solves_walks_against_one_bound() {
+        let nest = nest();
+        let (own, both) = walks_of(&nest);
+        let function = nest.unit.function(nest.func);
+        let cfg = Cfg::of(function);
+        let within = |max_walks| {
+            null_at_terminators_first_turn(
+                &nest.sources,
+                &nest.unit,
+                function,
+                &cfg,
+                nest.inner,
+                &[nest.outer],
+                max_walks,
+            )
+        };
+        assert_eq!(within(own + both).map(|(_, walks)| walks), Some(own + both));
+        assert!(within(own + both - 1).is_none());
     }
 }
