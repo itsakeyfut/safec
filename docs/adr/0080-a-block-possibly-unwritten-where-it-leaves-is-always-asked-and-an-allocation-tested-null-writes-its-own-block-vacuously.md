@@ -1,6 +1,6 @@
 ---
 status: "accepted"
-date: 2026-11-10
+date: 2026-11-09
 decision-makers: itsakeyfut
 ---
 
@@ -43,15 +43,20 @@ written, and programs `main` reported went silent.
    result's `returned_by`, as a `realloc` does. On the edge where a local
    holding exactly that one site with that `returned_by` is tested null, the
    site is set `Written` if `Known::held_sites`, which over-counts by design
-   (ADR-0048), finds no holder once that local, every local holding the same
-   site with the same `returned_by`, and the branch's own condition are set
-   aside (`branch_on_an_allocations_result`). The tested local then holds no
+   (ADR-0048), finds no holder once that local, every local holding exactly
+   that one site with the same `returned_by`, and the branch's own condition
+   are set aside (`branch_on_an_allocations_result`). Those locals are copies
+   of this call's result, never of an earlier call's: `Known::reborn` makes
+   every other local naming the site lost when the call writes it again. The tested local then holds no
    block, so `if (!b) *out = b;` lets nothing leave.
 3. **A join keeps `returned_by`** where the other side's local holds no block
    and nothing there holds the site, so a conditional allocation,
    `p = 0; if (c) p = malloc(8);`, still tests the call's result.
-4. **A `realloc`'s site keeps ADR-0039's rule**, and the join rule does not
-   reach it.
+4. **A `realloc`'s site keeps ADR-0039's rule** wherever its fact survives the
+   join, which is where both sides hold it, and the join rule does not keep
+   `returned_by` there: `n = realloc(p, 8); if (c) n = 0;` would read the arm
+   nulled by hand as a failed call. Where one side alone holds the fact, the
+   join drops it and the result is tested as any allocation's.
 
 What ADR-0073 rule 3 says about which `return` is asked, and that a block
 handed to a call is not, stands; only its not-null condition is replaced.
@@ -89,7 +94,11 @@ Each in `tests/cases/memory/`, with its mutation in its note in
 * `a_pointer_stored_out_where_it_is_known_null_is_not_doubted` is reported
   when the tested local keeps its sites on its null edge.
 * `a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved`
-  loses its `SC0401` when the join rule reaches a `realloc`'s site.
+  loses its `SC0401` when the join rule keeps `returned_by` where a `realloc`
+  fact survives the join, and
+  `an_allocation_reallocated_on_one_arm_written_under_its_null_test_is_not_doubted`
+  is reported when the rule is refused also where the other side had one,
+  which answered by the order of the arms.
 
 ### Consequences
 
