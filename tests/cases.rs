@@ -1761,6 +1761,35 @@ cases! {
         // as written. Mutation: drop neither; this goes silent, and so does
         // `a_copy_shorter_than_its_destination_out_of_a_block_nothing_wrote_leaves_the_rest_in_doubt`.
         a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read through a pointer that names the block's first element on one
+        // path and its second on the other: the element is not known where
+        // they meet, so the block's own answer is asked. Found by review.
+        // Mutation: keep the left side's element where two values join; this
+        // goes silent.
+        a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Sixteen bytes are four pointers where a pointer takes four, so two
+        // writes leave two elements unwritten. Found by review. Mutation:
+        // count a pointer as eight bytes on every target; this goes silent.
+        a_heap_block_of_sixteen_bytes_written_at_two_elements_where_a_pointer_takes_four_is_doubted: ["--emit", "safety-ir", "--target", "i686-unknown-linux-gnu"],
+        // Each branch writes a different element, so the one read is written
+        // on one path alone, a doubt and not a certainty. Found by review.
+        // Mutation: take one side's elements where two paths meet; this says
+        // the read is certainly of nothing written.
+        a_heap_block_written_at_one_element_on_one_branch_and_another_on_the_other_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store through a pointer that names this block or another may
+        // have written the element read, so the read is a doubt. Found by
+        // review. Mutation: keep the elements where such a store may write
+        // the block; this says the read is certainly of nothing written.
+        a_heap_block_written_through_a_pointer_that_may_name_another_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Twenty bytes are not a whole number of pointers, so the block is
+        // kept whole, as before, and a write at its first element writes it.
+        // Found by review. Mutation: keep any size per element; this is
+        // doubted.
+        a_heap_block_whose_size_is_not_a_whole_number_of_pointers_is_kept_whole: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Sixty-five pointers are past the most kept per element, so the
+        // block is kept whole. Found by review. Mutation: keep one more
+        // element than that; this is doubted.
+        a_heap_block_of_more_than_sixty_four_pointers_is_kept_whole: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stored out on one arm only: the block left on a path, which the
         // join keeps, found by review. Mutation: join `Known::left_at` as a
         // must-fact, `None` unless both sides marked; this goes silent.
