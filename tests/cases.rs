@@ -1795,6 +1795,23 @@ cases! {
         // block is kept whole. Found by review. Mutation: keep one more
         // element than that; this is doubted.
         a_heap_block_of_more_than_sixty_four_pointers_is_kept_whole: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read out of memory and returned is asked of the blocks a
+        // load that deep may name, as one copied into a local first is
+        // (#876). Mutation: ask only a local returned by name; the three
+        // that point at memory nothing wrote go silent. Mutation: name the
+        // local it was read through; the message names `box` and `bb`.
+        a_pointer_read_out_of_memory_and_returned_points_at_memory_nothing_wrote: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: doubt every value read through a projection, as one with
+        // no dereference is; this is doubted.
+        a_pointer_read_out_of_memory_and_returned_where_its_block_was_written_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: ask one level fewer than the value dereferences; this goes
+        // silent, and so do the first of these and the local array's below.
+        a_pointer_read_two_levels_out_of_memory_and_returned_points_at_memory_nothing_wrote: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothing_wrote: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written on one arm alone, so possibly unwritten. Found by review.
+        // Mutation: ask whether it may be unwritten only of a local returned
+        // by name; this goes silent.
+        a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stored out on one arm only: the block left on a path, which the
         // join keeps, found by review. Mutation: join `Known::left_at` as a
         // must-fact, `None` unless both sides marked; this goes silent.

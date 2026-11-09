@@ -1,0 +1,111 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:7 "f"
+  Local "_0" "int **" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" parameter _Nonnull "x"
+  Local "_3" "int ***" "box"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int **" "b"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int *"
+  Local "_10" "int **"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:49 generated
+    Call a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:49 written "malloc" "bb1"
+      Destination "_4"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:43 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:49 generated
+    Operation a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:64 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:64 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:64 generated
+    Operation a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:70 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:77 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:64 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:90 generated
+    Call a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:90 written "malloc" "bb5"
+      Destination "_7"
+      Constant 8
+  Block "bb5"
+    Operation a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:86 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:90 generated
+    Operation a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:105 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_6"
+    Branch a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:105 written "bb6" "bb7"
+      Copy "_8"
+  Block "bb6"
+    Sequenced a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:105 generated
+    Operation a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:109 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:116 generated
+    Return
+  Block "bb7"
+    Sequenced a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:105 generated
+    Goto "bb8"
+  Block "bb8"
+    Branch a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:123 written "bb9" "bb10"
+      Copy "_1"
+  Block "bb9"
+    Sequenced a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:123 generated
+    Operation a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:126 written
+      Destination "_6"
+        Deref
+      Use
+        Copy "_2"
+    Operation a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:126 written
+      Destination "_9"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:126 generated
+    Goto "bb11"
+  Block "bb10"
+    Sequenced a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:123 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:134 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:134 written
+      Destination "_10"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:134 generated
+    Operation a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:144 written
+      Destination "_0"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:151 generated
+    Return
