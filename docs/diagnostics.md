@@ -210,6 +210,15 @@ of two blocks is asked of each. A block handed to a call is not asked, since tha
 callee is given memory to fill. And a function that allocates a table of
 pointers and hands it back unfilled for its caller to fill is doubted.
 
+A heap block of a constant size of two to 64 pointers is written per element,
+as a local array is: `b = malloc(16); b[0] = x; return b;` is doubted, since
+`b[1]` reaches the caller unwritten, and a read of `b[1]` there is `SC0411`
+(#873, ADR-0081). A store at an element this check cannot name, `b[i] = x;`,
+writes the whole block, so a block filled in a loop is not doubted and one
+written once that way is not either; and a read through a pointer read out of
+memory, whose element is not known, is asked of the whole block, so a block
+written in part is doubted there at an element that was written.
+
 A block handed back through a parameter, `*out = b;`, where the stored-into
 type holds pointers, is asked at the function's exit rather than at the
 store, since the caller reads it after the function returns: certainly

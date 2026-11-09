@@ -477,6 +477,32 @@ impl Inits {
             self.set(element, joined);
         }
     }
+
+    /// One `Init` for them all: `Written` where every element is, `Unwritten`
+    /// where every element is, and `Maybe` otherwise.
+    pub(super) fn summary(&self) -> Init {
+        if self.doubted.ones().next().is_none() {
+            Init::Written
+        } else if self.all_unwritten() {
+            Init::Unwritten
+        } else {
+            Init::Maybe
+        }
+    }
+}
+
+/// A heap block's [`Init`] per element, and the block's own `Init` it was
+/// last made from (#873).
+///
+/// **Read only while the block's `Init` is still `stamp`.** Every other path
+/// that changes a block's `Init`, a write this check cannot place, a copy, a
+/// doubt, a loop's back edge, changes the block whole and leaves these
+/// behind; the block's own answer is then the one asked, and nothing these
+/// say can take it back. See `Known::block_elements` and ADR-0081.
+#[derive(Clone, PartialEq, Eq)]
+pub(super) struct SiteElements {
+    pub(super) stamp: Init,
+    pub(super) elements: Inits,
 }
 
 /// Where an allocation came from, where two paths agree about it.
@@ -887,6 +913,18 @@ pub(super) struct Held {
     /// keeps it where both paths agree. See `Known::element_init` and
     /// ADR-0057.
     pub(super) element: Option<u64>,
+    /// Which element of its one block, the site it holds, this points at,
+    /// counted in pointers, where that is a constant: `Some(0)` for what an
+    /// allocation returned, and a constant move of it. `None` where it is
+    /// not, and meaningless where it holds no site.
+    ///
+    /// **What lets one element of a heap block be written and another stay
+    /// unwritten** (#873), as [`Self::element`] does for a local array:
+    /// `b[0] = x;` with `b` from `malloc(16)` wrote the whole block before.
+    /// Apart from `element`, which is about the edges to locals, so that a
+    /// pointer that may name either keeps both. See `Known::block_elements`
+    /// and ADR-0081.
+    pub(super) site_element: Option<u64>,
     /// Whether an edge in [`Self::locals`] survives only by the rule of
     /// [`Self::moved_by_arithmetic`], a constant move off the local's start
     /// that an earlier rule dropped the edge for: an array's (#639), or any
@@ -1245,6 +1283,7 @@ impl Held {
                 arrived_holds_pointer: false,
                 inner_address: false,
                 element: None,
+                site_element: None,
                 array_edge: false,
                 stored_through: false,
             },
@@ -1274,6 +1313,7 @@ impl Held {
             arrived_holds_pointer,
             inner_address,
             element,
+            site_element,
             array_edge,
             stored_through,
         } = marks;
@@ -1297,6 +1337,7 @@ impl Held {
             arrived_holds_pointer,
             inner_address,
             element,
+            site_element,
             array_edge,
             stored_through,
         }
@@ -1398,6 +1439,7 @@ impl Held {
             arrived_holds_pointer,
             inner_address,
             element,
+            site_element,
             array_edge,
             stored_through,
         } = self;
@@ -1408,6 +1450,7 @@ impl Held {
         *arrived_holds_pointer = false;
         *inner_address = false;
         *element = None;
+        *site_element = None;
         *array_edge = false;
         *stored_through = false;
         *from_caller = false;
@@ -1480,6 +1523,7 @@ impl Held {
             arrived_holds_pointer,
             inner_address,
             element,
+            site_element,
             array_edge,
             stored_through,
         } = self;
@@ -1518,6 +1562,7 @@ impl Held {
         // all of it. See ADR-0028.
         *writes_elsewhere = *writes_elsewhere || other.writes_elsewhere;
         let here_has_edge = names.ones().any(|place| place.local().is_some());
+        let here_has_site = names.ones().any(|place| place.local().is_none());
         names.union_with(&other.names);
         *lost = *lost || other.lost;
         // **An intersection, where every other field here is a union.** The
@@ -1536,6 +1581,13 @@ impl Held {
             *element,
             other.may_be_a_locals_address(),
             other.element,
+        );
+        // The same of the one block it may hold. See `Held::site_element`.
+        *site_element = joined_element(
+            here_has_site,
+            *site_element,
+            other.holds_a_site(),
+            other.site_element,
         );
         *array_edge = *array_edge || other.array_edge;
         *stored_through = *stored_through && other.stored_through;
@@ -1576,6 +1628,7 @@ impl Held {
             arrived_holds_pointer,
             inner_address,
             element,
+            site_element,
             array_edge,
             stored_through,
         } = self;
@@ -1630,6 +1683,7 @@ impl Held {
         // out of operands, through [`Held::moved_by_arithmetic`]. See
         // ADR-0019.
         let here_has_edge = names.ones().any(|place| place.local().is_some());
+        let here_has_site = names.ones().any(|place| place.local().is_none());
         names.union_with(&other.names);
         *lost = *lost || other.lost;
         // As the join keeps it, before the union. See `Held::element`.
@@ -1638,6 +1692,13 @@ impl Held {
             *element,
             other.may_be_a_locals_address(),
             other.element,
+        );
+        // The same of the one block it may hold. See `Held::site_element`.
+        *site_element = joined_element(
+            here_has_site,
+            *site_element,
+            other.holds_a_site(),
+            other.site_element,
         );
         *array_edge = *array_edge || other.array_edge;
         // A pointer built from others points at an element none of them was
@@ -1708,6 +1769,10 @@ impl Held {
         // is the constant counted in the array's innermost elements. See
         // `Held::element`.
         self.element = match (self.element, by) {
+            (Some(element), Some(by)) => u64::try_from(i128::from(element) + by).ok(),
+            _ => None,
+        };
+        self.site_element = match (self.site_element, by) {
             (Some(element), Some(by)) => u64::try_from(i128::from(element) + by).ok(),
             _ => None,
         };
@@ -1999,6 +2064,7 @@ impl Cell {
             fresh_read: _,
             inner_address: _,
             element: _,
+            site_element: _,
             array_edge: _,
             stored_through: _,
         } = held;
@@ -2065,6 +2131,7 @@ impl Cell {
             fresh_read: _,
             inner_address: _,
             element: _,
+            site_element: _,
             array_edge: _,
             stored_through: _,
         } = &self.held;
@@ -2144,6 +2211,7 @@ impl Cell {
             fresh_read: _,
             inner_address: _,
             element: _,
+            site_element: _,
             array_edge: _,
             stored_through: _,
         } = from;
@@ -2198,6 +2266,7 @@ impl Cell {
             fresh_read: _,
             inner_address: _,
             element: _,
+            site_element: _,
             array_edge: _,
             stored_through: _,
             // Not recorded in memory: a load takes it from the type it is
@@ -2238,6 +2307,7 @@ pub(super) struct Marks {
     pub(super) arrived_holds_pointer: bool,
     pub(super) inner_address: bool,
     pub(super) element: Option<u64>,
+    pub(super) site_element: Option<u64>,
     pub(super) array_edge: bool,
     pub(super) stored_through: bool,
 }

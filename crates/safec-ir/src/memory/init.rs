@@ -127,6 +127,7 @@ impl Allocations<'_> {
                     if one_step && !held.beyond().unrecorded_address() {
                         let edges: Vec<LocalIdx> = held.locals().collect();
                         let sites: Vec<Site> = held.sites().collect();
+                        let site_element = held.site_element;
                         // **A store that may land in several allocations may
                         // have missed any one**, so one that may still be
                         // fresh stays so, as a may-fact: `*p = x;` with `p`
@@ -138,10 +139,23 @@ impl Allocations<'_> {
                         // (#739).
                         // One site and no edge is the landing's one place.
                         match landing.certain() {
-                            Some(at) => value.certainly_written(at),
+                            // **At its element, where that is known**, so a
+                            // block kept per element is written there alone
+                            // (#873). Anywhere else the block is written
+                            // whole, `b[i] = x;` among them, as a local array
+                            // is. See ADR-0081.
+                            Some(at) => {
+                                let at_element = site_element.is_some_and(|element| {
+                                    value.certainly_written_at(&at, element)
+                                });
+                                if !at_element {
+                                    value.certainly_written(at);
+                                }
+                            }
                             None => {
                                 for &site in &sites {
                                     value.init[site].may_write();
+                                    value.block_elements[site] = None;
                                 }
                             }
                         }
@@ -225,6 +239,7 @@ impl Allocations<'_> {
                         // the store (#778).
                         for site in may_land {
                             value.init[site].may_write();
+                            value.block_elements[site] = None;
                         }
                         let certain = landing.certain();
                         let uncertain = certain.is_none();
@@ -455,6 +470,7 @@ impl Allocations<'_> {
                         let was = before[site];
                         if !may_land.contains(&site) || unwritten {
                             value.init[site] = was;
+                            value.block_elements[site] = None;
                         } else {
                             // **Only the landing's one place is written**, as a
                             // store's is (#778): a block code this check cannot
@@ -467,9 +483,11 @@ impl Allocations<'_> {
                             if Some(site) != certain {
                                 value.init[site] = was;
                                 value.init[site].may_write();
+                                value.block_elements[site] = None;
                             }
                             if doubted && was.may_be_unwritten() {
                                 value.init[site].doubt();
+                                value.block_elements[site] = None;
                             }
                             // **Certain only where it covers the whole block**,
                             // its size a constant and the length at least that:
@@ -487,9 +505,11 @@ impl Allocations<'_> {
                                 && matches!(length, CopiedPointers::Whole)
                             {
                                 value.init[site] = Init::Unwritten;
+                                value.block_elements[site] = None;
                                 carried = true;
                             } else if source_maybe {
                                 value.init[site].doubt();
+                                value.block_elements[site] = None;
                                 carried = true;
                             }
                         }
@@ -700,7 +720,11 @@ impl Allocations<'_> {
             && self.may_be_pointer(function, source)
             && (through.sites().next().is_some() || through.may_be_a_locals_address())
             && !(through.beyond().unrecorded_address() || through.inner_address)
-            && through.sites().all(|site| value.init[site].is_unwritten())
+            && through.sites().all(|site| {
+                value
+                    .site_init_at(site, through.site_element)
+                    .is_unwritten()
+            })
             && through
                 .locals()
                 .all(|local| value.certainly_unwritten(local, through.element))
@@ -760,7 +784,11 @@ impl Allocations<'_> {
         // p = b;` with `b` written reads `a` on one path, which is undefined
         // there whatever the value is read for (#724). `reads_fresh` answers
         // first, and asks every block.
-        let site_maybe = |site: Site| value.init[site].may_be_unwritten();
+        let site_maybe = |site: Site| {
+            value
+                .site_init_at(site, through.site_element)
+                .may_be_unwritten()
+        };
         source.projection.as_slice() == [Projection::Deref]
             && self.may_be_pointer(function, source)
             && (through.may_be_a_locals_address() || through.sites().next().is_some())

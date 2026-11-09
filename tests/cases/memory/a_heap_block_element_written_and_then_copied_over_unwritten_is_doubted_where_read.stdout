@@ -1,0 +1,109 @@
+Target "x86_64-pc-windows-msvc"
+Function a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:2:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:6 "f"
+  Local "_0" "int *" return
+  Local "_1" "int *" parameter _Nonnull "x"
+  Local "_2" "int **" "m"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int **" "n"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int *"
+  Local "_9" "void *"
+  Local "_10" "int *" "r"
+  Block "bb0" entry
+    ArgumentsEvaluated a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:38 generated
+    Call a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:38 written "malloc" "bb1"
+      Destination "_3"
+      Constant 8
+  Block "bb1"
+    Operation a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:34 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:38 generated
+    Operation a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:53 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:53 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:53 generated
+    Operation a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:57 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:64 generated
+    Return
+  Block "bb3"
+    Sequenced a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:53 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:77 generated
+    Call a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:77 written "malloc" "bb5"
+      Destination "_6"
+      Constant 16
+  Block "bb5"
+    Operation a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:73 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:77 generated
+    Operation a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:93 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_5"
+    Branch a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:93 written "bb6" "bb7"
+      Copy "_7"
+  Block "bb6"
+    Sequenced a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:93 generated
+    Operation a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:97 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:104 generated
+    Return
+  Block "bb7"
+    Sequenced a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:93 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:107 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_1"
+    Operation a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:107 written
+      Destination "_8"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:107 generated
+    ArgumentsEvaluated a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:117 generated
+    Call a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:117 written "memcpy" "bb9"
+      Destination "_9"
+      Copy "_5"
+      Copy "_2"
+      Constant 8
+  Block "bb9"
+    Sequenced a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:117 generated
+    Operation a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:139 written
+      Destination "_10"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:143 generated
+    Operation a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:149 written
+      Destination "_0"
+      Use
+        Copy "_10"
+    Sequenced a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:156 generated
+    Return
