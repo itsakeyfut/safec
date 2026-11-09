@@ -1,0 +1,24 @@
+error[SC0411]: this lets a pointer leave to memory that may not have been written by the time the function returns, and the caller may read pointers out of it
+   ╭─[ a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:39 ]
+   │
+ 3 │     int **b = malloc(8);
+   │               ────┬────  
+   │                   ╰────── allocated here
+   │ 
+ 6 │         for (int i = 0; i < 2; i++) { *out = b; if (d) *b = x; if (c) return; b = 0; }
+   │                                       ────┬───  
+   │                                           ╰───── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it on every path before the function returns, or allocate it with `calloc`
+error[SC0403]: this may dereference `b` while it is null
+   ╭─[ a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:56 ]
+   │
+ 6 │         for (int i = 0; i < 2; i++) { *out = b; if (d) *b = x; if (c) return; b = 0; }
+   │                                                        ───┬──  
+   │                                                           ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

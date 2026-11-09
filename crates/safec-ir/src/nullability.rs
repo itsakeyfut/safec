@@ -38,7 +38,7 @@
 
 use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
-use crate::dataflow::{Analysis, Solution, solve, solve_first_turn_within};
+use crate::dataflow::{Analysis, Solution, solve, solve_first_turn_of_nest_within};
 use crate::ir::{
     BinOp, BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place,
     Projection, Promise, Rvalue, Terminator, TranslationUnit, UnOp,
@@ -1743,21 +1743,24 @@ pub(crate) fn null_at_terminators(
     at_terminators(&analysis, function, cfg, &solution)
 }
 
-/// [`null_at_terminators`] as of the first turn of the loop whose head is
-/// `head`, within `max_walks`, with the walks it took; `None` past them.
+/// [`null_at_terminators`] as of a turn that is the first of every loop whose
+/// head is in `heads`, within `max_walks`, with the walks it took; `None` past
+/// them.
 ///
 /// **For a reader that asks on that turn**: the memory check's first-turn walk
 /// asks whether a pointer returned is not null, and the every-turn answer holds
 /// over every turn, so a pointer null only on a later turn answered no on the
 /// first one too and kept a block possibly unwritten there silent (#856).
-/// Every other loop is followed as usual, as
-/// [`solve_first_turn_within`] says.
+/// The memory check passes a loop's head and every enclosing one, since a
+/// pointer an outer loop nulls on a later turn did the same (#863). Every
+/// other loop is followed as usual, as [`solve_first_turn_of_nest_within`]
+/// says.
 pub(crate) fn null_at_terminators_first_turn(
     sources: &SourceMap,
     unit: &TranslationUnit,
     function: &Function,
     cfg: &Cfg,
-    head: BlockId,
+    heads: &[BlockId],
     max_walks: usize,
 ) -> Option<(NullAtTerminators, usize)> {
     let analysis = Nullability {
@@ -1768,7 +1771,7 @@ pub(crate) fn null_at_terminators_first_turn(
         locals: function.locals().len(),
         escaped: escaped_in(function),
     };
-    let solution = solve_first_turn_within(&analysis, function, cfg, head, max_walks)?;
+    let solution = solve_first_turn_of_nest_within(&analysis, function, cfg, heads, max_walks)?;
     let walks = solution.walks();
     Some((at_terminators(&analysis, function, cfg, &solution), walks))
 }

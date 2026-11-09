@@ -1588,6 +1588,15 @@ cases! {
         // (#856). Mutation: as above; this goes silent about it. The
         // `SC0403` at `*b` is a later turn's, after `b = 0`.
         a_block_stored_out_on_a_first_turn_and_nulled_on_a_later_one_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // In a nest nulling `b` at both levels, only the first turn of both
+        // loops at once returns or stores it not null, and the inner loop's
+        // first turn alone follows the outer one's later turns (#863).
+        // Mutation: solve the nullability first turn with the loop's own head
+        // alone; the first two go silent. The third writes `*b` under its own
+        // null test before the nest, and stays silent.
+        a_block_returned_in_a_nest_that_nulls_it_at_both_levels_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The copy on an arm of such a loop, where the first turn asks it as a
         // doubt: the case above dominates the latch and is asked without
         // `doubt_only`, found by review. Mutation: skip `CopyOut` when

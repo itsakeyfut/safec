@@ -1078,7 +1078,20 @@ fn findings_within(
         // printed. Found by review. Past it, the bound's doubt.
         let dominators = cfg.dominators();
         let mut left = max_walks;
-        for each in cfg.loops() {
+        let loops = cfg.loops();
+        for each in &loops {
+            // **The heads of every loop around it too, itself among them**, for
+            // the nullability check alone: a pointer an outer loop nulls on a
+            // later turn reached the inner loop's first one, which no turn
+            // runs before the first of the outer, and a nest nulling it at
+            // both levels kept a block returned unwritten silent (#863). Its
+            // readers here only add a doubt where it says not null. The
+            // memory check's own first turn stays per loop, by ADR-0057.
+            let heads: Vec<BlockId> = loops
+                .iter()
+                .filter(|around| around.contains(each.head()))
+                .map(|around| around.head())
+                .collect();
             // **And the nullability check's answer as of the same first
             // turn**, within what is left of the same bound, since the
             // every-turn one holds over every turn and a pointer null only on
@@ -1096,12 +1109,7 @@ fn findings_within(
                     let theirs = nullability::per_block(locals);
                     let rest = (left - solution.walks()).saturating_mul(ours) / theirs;
                     let (null, walks) = nullability::null_at_terminators_first_turn(
-                        sources,
-                        unit,
-                        function,
-                        &cfg,
-                        each.head(),
-                        rest,
+                        sources, unit, function, &cfg, &heads, rest,
                     )?;
                     Some((solution, null, walks.saturating_mul(theirs).div_ceil(ours)))
                 });
@@ -1495,7 +1503,7 @@ mod tests {
                 &unit,
                 function,
                 &cfg,
-                head,
+                &[head],
                 usize::MAX,
             )
             .expect("unbounded");
