@@ -1,0 +1,144 @@
+Target "x86_64-pc-windows-msvc"
+Function a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:2:6 "g"
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "o1"
+  Local "_2" "int ***" parameter "o2"
+  Local "_3" "int *" parameter "x"
+  Local "_4" "int" parameter "c"
+  Local "_5" "int **" "a"
+  Local "_6" "void *"
+  Local "_7" "int **" "b"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int"
+  Local "_12" "int *"
+  Local "_13" "int **"
+  Local "_14" "int **"
+  Local "_15" "int *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:3:15 generated
+    Call a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:3:15 written "malloc" "bb1"
+      Destination "_6"
+      Constant 8
+  Block "bb1"
+    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:3:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:3:15 generated
+    ArgumentsEvaluated a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:4:15 generated
+    Call a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:4:15 written "malloc" "bb2"
+      Destination "_8"
+      Constant 8
+  Block "bb2"
+    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:4:11 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:4:15 generated
+    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:5:9 written
+      Destination "_9"
+      Unary "Not"
+        Copy "_1"
+    Branch a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:5:9 written "bb3" "bb4"
+      Copy "_9"
+  Block "bb3"
+    Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:5:9 generated
+    Return
+  Block "bb4"
+    Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:5:9 generated
+    Goto "bb5"
+  Block "bb5"
+    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:6:9 written
+      Destination "_10"
+      Unary "Not"
+        Copy "_2"
+    Branch a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:6:9 written "bb6" "bb7"
+      Copy "_10"
+  Block "bb6"
+    Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:6:9 generated
+    Return
+  Block "bb7"
+    Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:6:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:7:9 written
+      Destination "_11"
+      Unary "Not"
+        Copy "_5"
+    Branch a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:7:9 written "bb9" "bb10"
+      Copy "_11"
+  Block "bb9"
+    Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:7:9 generated
+    Return
+  Block "bb10"
+    Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:7:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:8:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:8:5 written
+      Destination "_12"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:8:5 generated
+    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:9:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:9:5 written
+      Destination "_13"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:9:5 generated
+    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:9:14 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:9:14 written
+      Destination "_14"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:9:14 generated
+    Branch a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:10:9 written "bb12" "bb13"
+      Copy "_4"
+  Block "bb12"
+    Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:10:9 generated
+    Branch a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:10:18 written "bb15" "bb16"
+      Copy "_7"
+  Block "bb13"
+    Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:10:9 generated
+    Goto "bb14"
+  Block "bb14"
+    Return
+  Block "bb15"
+    Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:10:18 generated
+    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:10:21 written
+      Destination "_7"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:10:21 written
+      Destination "_15"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:10:21 generated
+    Goto "bb17"
+  Block "bb16"
+    Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:10:18 generated
+    Goto "bb17"
+  Block "bb17"
+    Goto "bb14"

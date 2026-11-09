@@ -749,7 +749,9 @@ cases! {
         // silent. And a store through a local that may hold what the caller
         // stored, `p = *param; t = &p; **t = y;`. Mutation: ask no local
         // above the landing in `through_unrecorded`; the third loses its
-        // doubt about `*m` (#778).
+        // doubt about `*m` (#778). The first is also doubted where the
+        // function returns, since `m` is not null at `*s = m;`, whose block
+        // ends in the `memcpy` (#861, ADR-0079).
         a_copy_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1646,6 +1648,26 @@ cases! {
         // unwritten at the exit, doubted (#855, ADR-0078). Mutation: never ask
         // `Maybe` at the exit; this goes silent.
         a_block_stored_out_and_written_on_one_arm_is_doubted_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The local stored, nulled after the store in its block: not null at
+        // the store, null at the block's end (#861, ADR-0079). Mutation: ask
+        // the store at its block's end; the first goes silent, and so does
+        // the doubt at `*s = m;` above. The second writes `*b` under its own
+        // null test. Mutation: every store answered not null; it is reported.
+        a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_written_under_its_null_test_stored_out_and_its_local_nulled_after_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Not known at the store and not null at its block's end, after
+        // `b = other;`: asked at the block's end beside the store, as `main`
+        // asked it. Found by review. Mutation: ask the store alone; this goes
+        // silent.
+        a_block_stored_out_and_its_local_reassigned_not_null_after_keeps_its_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer known null at the store leaves nothing. Mutation: a store
+        // of a pointer known either way answered not null, `!= Unknown`; this
+        // is reported. And two stores in one block, the first not null and
+        // the second not known: each is asked about its own. Mutation:
+        // `stored_non_null` ignores the element, or answers for any at or
+        // before it; the second is reported.
+        a_pointer_stored_out_where_it_is_known_null_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_beside_another_in_its_block_is_asked_about_its_own_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stored out on one arm only: the block left on a path, which the
         // join keeps, found by review. Mutation: join `Known::left_at` as a
         // must-fact, `None` unless both sides marked; this goes silent.
