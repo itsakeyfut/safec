@@ -600,9 +600,13 @@ pub(crate) fn tested_against_null(
             // lowers the declaration as a copy of the comparison's temporary,
             // and the null test kept in the flag refined nothing, which doubted
             // a block written under it (#875). `changed` still refuses the
-            // comparison where the pointer was written since. A copy of a
-            // pointer is not followed here: `copied_from` carries a branch on a
-            // pointer back to its sources.
+            // comparison where the pointer was written since, and `inverted`
+            // is carried across the copy, which changes no value of 0 or 1.
+            // Only a whole `int` local is followed, the shape the declaration
+            // lowers to: a branch on an `int` reaches no copy of a pointer or
+            // of a place in this frontend, so nothing guards the two
+            // conditions, and a chain that left them out would still end in
+            // a comparison with zero or in no answer.
             if let Rvalue::Use(Operand::Copy(from)) = &operation.value {
                 if from.projection.is_empty() && !pointer_typed(unit, function, from.local) {
                     asked = from.local;

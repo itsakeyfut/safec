@@ -204,8 +204,9 @@ if (c) *b = p; return b;` (#828), for `if (b) { if (c) *b = p; } return b;`
 (#834), and for a block a loop left unwritten on a turn it returned on (#856,
 #863, #865). The cost is a block written on a path this check cannot show is
 taken, a loop's first turn under `if (i == 0)`; a pointer a loop shown to run
-nulls before it is returned (#874); and a null test kept in a flag, `int ok =
-b != 0; if (ok) *b = p;` (#875), each doubted. A pointer that may name either
+nulls before it is returned (#874), doubted. A null test kept in a flag,
+`int ok = b != 0; if (ok) *b = p;`, is read as the test it holds where nothing
+between the two writes the pointer (#875). A pointer that may name either
 of two blocks is asked of each. A block handed to a call is not asked, since that is how a
 callee is given memory to fill. And a function that allocates a table of
 pointers and hands it back unfilled for its caller to fill is doubted.
