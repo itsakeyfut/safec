@@ -1597,15 +1597,20 @@ cases! {
         a_block_stored_out_before_it_is_filled_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written where its allocation succeeded and stored out after the
         // null test's join, so the stored pointer is null on the other path:
-        // `Maybe` at the exit, which is not asked. Mutation:
-        // `report_left_unwritten` asks `may_be_unwritten`; this is reported,
-        // and so are the two `bounds` cases of a callee filling `*p`.
+        // `Maybe` at the exit, asked only where the pointer stored was not
+        // null at the store, which it may be here (ADR-0078). Mutation: ask
+        // `Maybe` without `stored_not_null`; this is reported, and so are the
+        // two `bounds` cases of a callee filling `*p`.
         a_block_written_before_it_is_stored_out_is_not_reported_beside_its_failed_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `char` buffer handed out unwritten for its caller to fill: no
         // pointer is read out of it. Mutation: mark every store that leaves,
         // not only where the stored-into type holds pointers; this is
         // reported.
         a_char_buffer_stored_out_unwritten_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Stored out not null and written on one arm after: possibly
+        // unwritten at the exit, doubted (#855, ADR-0078). Mutation: never ask
+        // `Maybe` at the exit; this goes silent.
+        a_block_stored_out_and_written_on_one_arm_is_doubted_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stored out on one arm only: the block left on a path, which the
         // join keeps, found by review. Mutation: join `Known::left_at` as a
         // must-fact, `None` unless both sides marked; this goes silent.

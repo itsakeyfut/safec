@@ -340,6 +340,16 @@ pub enum Kind {
     /// outside can read it. **Always `Unknown`**, as
     /// [`Kind::ReturnedUnwritten`] is. `made` is the allocation. See ADR-0076.
     StoredUnwritten,
+    /// `void g(int ***out, int c, int *x) { int **b = malloc(8); if (!b)
+    /// return; *out = b; if (c) *b = x; }`
+    ///
+    /// The same, where the block may be unwritten where the function returns,
+    /// and the pointer stored was established not null at the store, so the
+    /// path that left it unwritten is not one where the allocation failed.
+    /// Apart from [`Kind::StoredUnwritten`] because "nothing wrote" is false
+    /// of it, as [`Kind::ReturnedMaybeUnwritten`] is apart from its twin.
+    /// **Always `Unknown`**. See ADR-0078 (#855).
+    StoredMaybeUnwritten,
 }
 
 /// Where a pointer leaves the function it was followed in.
@@ -827,6 +837,7 @@ fn findings_within(
                 function,
                 taken: &taken,
                 null: &null,
+                order: cfg.order(),
                 block: id,
                 doubt_only: false,
             };
@@ -1143,6 +1154,7 @@ fn findings_within(
                     function,
                     taken: &taken,
                     null: &null,
+                    order: cfg.order(),
                     block: id,
                     doubt_only,
                 };
