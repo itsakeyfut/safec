@@ -1,0 +1,20 @@
+error[SC0411]: `d` points at memory nothing wrote, and the caller may read pointers out of it
+   ╭─[ a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn_allocates_nothing.c:7:17 ]
+   │
+ 7 │         if (!p) return d;
+   │                 ────┬────  
+   │                     ╰────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before returning it, or allocate it with `calloc`
+error[SC0406]: this returns `d`, which this check stopped following
+   ╭─[ a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn_allocates_nothing.c:7:17 ]
+   │
+ 7 │         if (!p) return d;
+   │                 ────┬────  
+   │                     ╰────── this check cannot say what this points at
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds

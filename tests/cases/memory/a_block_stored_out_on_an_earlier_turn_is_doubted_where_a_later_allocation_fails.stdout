@@ -1,0 +1,68 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter _Nonnull "out"
+  Local "_2" "int **"
+  Local "_3" "int **" "b"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int **"
+  Block "bb0" entry
+    Operation a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:3:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 0
+    Operation a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:3:5 written
+      Destination "_2"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:3:5 generated
+    Goto "bb1"
+  Block "bb1"
+    Goto "bb2"
+  Block "bb2"
+    StorageLive a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:5:9 generated "_3"
+    ArgumentsEvaluated a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:5:19 generated
+    Call a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:5:19 written "malloc" "bb4"
+      Destination "_4"
+      Constant 8
+  Block "bb3"
+    Return
+  Block "bb4"
+    Operation a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:5:15 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:5:19 generated
+    Operation a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:6:13 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:6:13 written "bb5" "bb6"
+      Copy "_5"
+  Block "bb5"
+    Sequenced a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:6:13 generated
+    StorageDead a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:6:17 generated "_3"
+    Return
+  Block "bb6"
+    Sequenced a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:6:13 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:7:9 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:7:9 written
+      Destination "_6"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:7:9 generated
+    StorageDead a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails.c:8:5 generated "_3"
+    Goto "bb1"

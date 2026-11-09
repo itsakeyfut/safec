@@ -1,9 +1,9 @@
 error[SC0411]: `b` points at memory that may not have been written, and the caller may read pointers out of it
-   ╭─[ a_block_written_before_the_test_that_shows_its_pointer_not_null_is_doubted.c:6:5 ]
+   ╭─[ a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted.c:6:50 ]
    │
- 6 │     return b;
-   │     ────┬────  
-   │         ╰────── returned here
+ 6 │             for (int i = 0; i < 2; i++) { if (c) return b; b = 0; }
+   │                                                  ────┬────  
+   │                                                      ╰────── returned here
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

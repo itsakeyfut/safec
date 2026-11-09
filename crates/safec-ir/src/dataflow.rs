@@ -508,29 +508,9 @@ pub fn solve_first_turn_within<A: Analysis>(
     solved(analysis, function, cfg, max_walks, &[head])
 }
 
-/// [`solve_within`] as of a turn that is the first of every loop whose head is
-/// in `heads` at once: no back edge into any of them is joined, and every
-/// other loop is followed as usual.
-///
-/// **For a loop nested in others**, with its head and theirs: what holds on
-/// its first turn as [`solve_first_turn_within`] answers it holds over every
-/// turn of the loops around it, so a value one of them changes on a later turn
-/// reaches the inner loop's first one too. A reader that only adds a doubt
-/// where a fact holds asks this, the nullability check's first turn among
-/// them (#863).
-pub fn solve_first_turn_of_nest_within<A: Analysis>(
-    analysis: &A,
-    function: &Function,
-    cfg: &Cfg,
-    heads: &[BlockId],
-    max_walks: usize,
-) -> Option<Solution<A::Value>> {
-    solved(analysis, function, cfg, max_walks, heads)
-}
-
-/// The one walk behind [`solve_within`], [`solve_first_turn_within`] and
-/// [`solve_first_turn_of_nest_within`], so they cannot settle a loop
-/// differently except at the edges into the heads `first_turn_of` names.
+/// The one walk behind [`solve_within`] and [`solve_first_turn_within`], so
+/// the two cannot settle a loop differently except at the edge into the head
+/// `first_turn_of` names.
 fn solved<A: Analysis>(
     analysis: &A,
     function: &Function,

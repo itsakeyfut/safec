@@ -76,7 +76,7 @@ mod store;
 mod transfer;
 
 use crate::analysis::Conclusion;
-use crate::cfg::{Cfg, Dominators, Loop};
+use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve_first_turn_within, solve_within};
 use crate::ir::{
     Between, BlockId, Element, FuncId, Function, LocalId, Place, Terminator, TranslationUnit,
@@ -324,12 +324,11 @@ pub enum Kind {
     /// `int **f(int c, int *p) { int **b = malloc(8); if (!b) return 0; if (c)
     /// *b = p; return b; }`
     ///
-    /// A `return` of a pointer to a block that may be unwritten, where the
-    /// pointer is established not null at the `return`, so the path that left
-    /// it unwritten is one where the allocation succeeded. Apart from
-    /// [`Kind::ReturnedUnwritten`] because "nothing wrote" is false of a block
-    /// written on some path. **Always `Unknown`**, as that is. `local` is the
-    /// local returned. See ADR-0073 rule 3 (#828).
+    /// A `return` of a pointer to a block that may be unwritten on some path
+    /// where it exists: the path where its allocation failed leaves no block
+    /// (ADR-0080). Apart from [`Kind::ReturnedUnwritten`] because "nothing
+    /// wrote" is false of a block written on some path. **Always `Unknown`**,
+    /// as that is. `local` is the local returned. See ADR-0073 rule 3 (#828).
     ReturnedMaybeUnwritten,
     /// `void f(int ***out) { int **b = malloc(8); if (!b) return; *out = b; }`
     ///
@@ -343,12 +342,11 @@ pub enum Kind {
     /// `void g(int ***out, int c, int *x) { int **b = malloc(8); if (!b)
     /// return; *out = b; if (c) *b = x; }`
     ///
-    /// The same, where the block may be unwritten where the function returns,
-    /// and the pointer stored was established not null at the store, so the
-    /// path that left it unwritten is not one where the allocation failed.
-    /// Apart from [`Kind::StoredUnwritten`] because "nothing wrote" is false
-    /// of it, as [`Kind::ReturnedMaybeUnwritten`] is apart from its twin.
-    /// **Always `Unknown`**. See ADR-0078 (#855).
+    /// The same, where the block may be unwritten where the function returns
+    /// on some path where it exists (ADR-0080). Apart from
+    /// [`Kind::StoredUnwritten`] because "nothing wrote" is false of it, as
+    /// [`Kind::ReturnedMaybeUnwritten`] is apart from its twin. **Always
+    /// `Unknown`**. See #855.
     StoredMaybeUnwritten,
 }
 
@@ -436,53 +434,6 @@ const CELL: usize = 216;
 
 /// The tenths of a byte a pair the cell adds. See [`CELL`].
 const CELL_PAIRS: usize = 4;
-
-/// The heads of the loops around `each`, not its own: a loop whose head
-/// dominates `each`'s, and whose exits do not reach `each`'s head without
-/// passing its own again (#863).
-///
-/// **Not [`Loop::contains`]**, which holds the blocks that reach a back edge:
-/// an inner loop left only by a `return` reaches none of the outer loop's, so
-/// it is not in the outer body, though the outer loop's later turns reach it.
-/// Found by review. **Not dominance alone** either: a loop in sequence before
-/// `each` dominates it too, and taking its first turn for every turn doubted a
-/// pointer that loop nulls on every turn it runs.
-fn enclosing(
-    function: &Function,
-    loops: &[Loop],
-    dominators: &Dominators,
-    each: &Loop,
-) -> Vec<BlockId> {
-    let mut heads = Vec::new();
-    let mut work = Vec::new();
-    for around in loops {
-        let head = around.head();
-        if head == each.head() || !dominators.dominates(head, each.head()) {
-            continue;
-        }
-        // From where the loop is left, without passing its head.
-        work.clear();
-        function.block(head).terminator.successors(&mut work);
-        work.retain(|&to| !around.contains(to));
-        let mut seen = vec![false; function.blocks().len()];
-        let mut left_reaches = false;
-        while let Some(block) = work.pop() {
-            if block == head || seen[block.index()] {
-                continue;
-            }
-            seen[block.index()] = true;
-            if block == each.head() {
-                left_reaches = true;
-                break;
-            }
-            function.block(block).terminator.successors(&mut work);
-        }
-        if !left_reaches {
-            heads.push(head);
-        }
-    }
-    heads
-}
 
 /// About how many bytes one block's value takes in a function of this many
 /// locals, whose deepest pointer type is `depth` `*`s deep.
@@ -883,9 +834,6 @@ fn findings_within(
                 analysis: &analysis,
                 function,
                 taken: &taken,
-                null: &null,
-                order: cfg.order(),
-                block: id,
                 doubt_only: false,
             };
             for element in &block.elements {
@@ -1125,42 +1073,10 @@ fn findings_within(
         // printed. Found by review. Past it, the bound's doubt.
         let dominators = cfg.dominators();
         let mut left = max_walks;
-        let loops = cfg.loops();
-        for each in &loops {
-            // **And the loops around it**, for the nullability check alone: a
-            // pointer an outer loop nulls on a later turn reached the inner
-            // loop's first one, and a nest nulling it at both levels kept a
-            // block returned unwritten silent (#863). The memory check's own
-            // first turn stays per loop, by ADR-0057.
-            let around = enclosing(function, &loops, &dominators, each);
-            // **And the nullability check's answer as of the same first
-            // turn**, within what is left of the same bound, since the
-            // every-turn one holds over every turn and a pointer null only on
-            // a later turn answered that it may be null on this one (#856).
-            //
-            // **Its walks at what its own value costs**, `nullability::per_block`
-            // to this check's `per_block`, in this check's walks rounded up:
-            // charged as this check's own, thirty loops in sequence passed the
-            // bound that `main` read within, in no more time, and under
-            // `--allow-unknown` a proved defect went from exit 1 to 0. Found by
-            // review.
-            let first_turn = solve_first_turn_within(&analysis, function, &cfg, each.head(), left)
-                .and_then(|solution| {
-                    let ours = per_block(locals, depth);
-                    let theirs = nullability::per_block(locals);
-                    let rest = (left - solution.walks()).saturating_mul(ours) / theirs;
-                    let (null, walks) = nullability::null_at_terminators_first_turn(
-                        sources,
-                        unit,
-                        function,
-                        &cfg,
-                        each.head(),
-                        &around,
-                        rest,
-                    )?;
-                    Some((solution, null, walks.saturating_mul(theirs).div_ceil(ours)))
-                });
-            let Some((solution, null, null_walks)) = first_turn else {
+        for each in cfg.loops() {
+            let Some(solution) =
+                solve_first_turn_within(&analysis, function, &cfg, each.head(), left)
+            else {
                 findings.push(Finding {
                     function: func,
                     kind: Kind::TooLong { walks: max_walks },
@@ -1173,7 +1089,7 @@ fn findings_within(
                 });
                 break;
             };
-            left -= solution.walks() + null_walks;
+            left -= solution.walks();
             // **And every block that leaves the loop from inside its body**,
             // one a block of the body other than the head dominates: what runs
             // there on the first turn is what arrived from before the loop
@@ -1232,9 +1148,6 @@ fn findings_within(
                     analysis: &analysis,
                     function,
                     taken: &taken,
-                    null: &null,
-                    order: cfg.order(),
-                    block: id,
                     doubt_only,
                 };
                 for element in &block.elements {
@@ -1487,125 +1400,6 @@ mod tests {
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(findings[0].kind, Kind::TooLong { walks });
         assert_eq!(findings[0].conclusion, Conclusion::Unknown);
-    }
-
-    /// Two loops in sequence, and the work the first turns take: what the
-    /// every-turn solve took, and the walks the bound is charged for both
-    /// first turns, each loop's memory solve and its nullability solve at
-    /// what that check's value costs (#856).
-    fn two_loops_and_their_first_turns() -> (SourceMap, TranslationUnit, usize, usize, usize) {
-        let mut sources = SourceMap::new();
-        let file = sources.add_virtual("t.c", "f");
-        let mut unit = TranslationUnit::new(
-            Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
-        );
-        let int = unit.push_type(Ty::Int);
-        let mut function = Function::new(Span::new(file, 0, 1), int, []);
-        let at = Span::new(file, 0, 1);
-        let entry = function.reserve_block();
-        let first = function.reserve_block();
-        let first_body = function.reserve_block();
-        let second = function.reserve_block();
-        let second_body = function.reserve_block();
-        let exit = function.reserve_block();
-        let go = |to| Block {
-            elements: vec![],
-            terminator: Terminator::Goto(to),
-        };
-        let branch = |then, otherwise| Block {
-            elements: vec![],
-            terminator: Terminator::Branch {
-                condition: Operand::Constant(1),
-                then,
-                otherwise,
-                origin: Origin::Written(at),
-            },
-        };
-        function.fill_block(entry, go(first));
-        function.fill_block(first, branch(first_body, second));
-        function.fill_block(first_body, go(first));
-        function.fill_block(second, branch(second_body, exit));
-        function.fill_block(second_body, go(second));
-        function.fill_block(
-            exit,
-            Block {
-                elements: vec![],
-                terminator: Terminator::Return,
-            },
-        );
-        let locals = function.locals().len();
-        let func = unit.push_function(function);
-        let function = unit.function(func);
-        let cfg = Cfg::of(function);
-        let analysis = analysis(&sources, &unit, func);
-        let every = crate::dataflow::solve(&analysis, function, &cfg).walks();
-        let ours = per_block(locals, 0);
-        let theirs = nullability::per_block(locals);
-        let charged = |head| {
-            let memory = solve_first_turn_within(&analysis, function, &cfg, head, usize::MAX)
-                .expect("unbounded")
-                .walks();
-            let (_, null) = nullability::null_at_terminators_first_turn(
-                &sources,
-                &unit,
-                function,
-                &cfg,
-                head,
-                &[],
-                usize::MAX,
-            )
-            .expect("unbounded");
-            // Charged at the memory check's own cost, this is `null` itself,
-            // which the second test below is there to tell apart.
-            assert!((null * theirs).div_ceil(ours) < null, "{null}");
-            memory + (null * theirs).div_ceil(ours)
-        };
-        let both = charged(first) + charged(second);
-        drop(analysis);
-        (sources, unit, locals, every, both)
-    }
-
-    /// One walk short of what both loops' first turns are charged, a function
-    /// is the bound's one `Unknown` finding, though each loop's solves fit
-    /// what the bound starts with: the second loop's nullability solve is
-    /// past what the first left (#856).
-    ///
-    /// Mutation: leave the nullability walks uncounted, `left -=
-    /// solution.walks()`. Nothing is found, and this fails. Mutation: solve
-    /// the nullability first turn unbounded. The same.
-    #[test]
-    fn a_second_loops_nullability_solve_past_what_the_first_left_is_one_unknown_finding() {
-        let (sources, unit, locals, every, both) = two_loops_and_their_first_turns();
-        let walks = both - 1;
-        assert!(every <= walks, "{every} {walks}");
-        let findings = findings_within(
-            &sources,
-            &unit,
-            MAX_BYTES,
-            u64::try_from(walks * per_block(locals, 0)).expect("small"),
-        );
-        assert_eq!(findings.len(), 1, "{findings:?}");
-        assert_eq!(findings[0].kind, Kind::TooLong { walks });
-        assert_eq!(findings[0].conclusion, Conclusion::Unknown);
-    }
-
-    /// At what both loops' first turns are charged, the function is read: a
-    /// nullability walk costs what that check's value takes, not one of this
-    /// check's walks (#856).
-    ///
-    /// Mutation: charge the nullability walks as this check's own. This is
-    /// the bound's `Unknown` finding, and fails.
-    #[test]
-    fn two_loops_first_turns_at_what_they_are_charged_are_read() {
-        let (sources, unit, locals, every, both) = two_loops_and_their_first_turns();
-        assert!(every <= both, "{every} {both}");
-        let findings = findings_within(
-            &sources,
-            &unit,
-            MAX_BYTES,
-            u64::try_from(both * per_block(locals, 0)).expect("small"),
-        );
-        assert!(findings.is_empty(), "{findings:?}");
     }
 
     /// At the work bound, three walks for three, the function is read.

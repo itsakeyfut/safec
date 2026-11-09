@@ -1,0 +1,10 @@
+error[SC0411]: `old` points at memory nothing wrote, and the caller may read pointers out of it
+    ╭─[ a_block_kept_in_memory_from_an_earlier_turn_is_doubted_where_returned_after_a_later_allocation_fails.c:13:13 ]
+    │
+ 13 │             return old;
+    │             ─────┬─────  
+    │                  ╰─────── returned here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before returning it, or allocate it with `calloc`

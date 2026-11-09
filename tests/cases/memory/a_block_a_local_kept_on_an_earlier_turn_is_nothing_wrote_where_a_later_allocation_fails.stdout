@@ -1,0 +1,114 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:2:7 "f"
+  Local "_0" "int **" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int" parameter "n"
+  Local "_3" "int **" "q"
+  Local "_4" "int" "i"
+  Local "_5" "int"
+  Local "_6" "int **" "p"
+  Local "_7" "void *"
+  Local "_8" "int **"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int"
+  Block "bb0" entry
+    Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:3:11 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:3:15 generated
+    StorageLive a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:4:10 generated "_4"
+    Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:4:14 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:4:18 generated
+    Goto "bb1"
+  Block "bb1"
+    Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:4:21 written
+      Destination "_5"
+      Binary "Lt"
+        Copy "_4"
+        Copy "_2"
+    Branch a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:4:21 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:4:21 generated
+    StorageLive a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:5:9 generated "_6"
+    ArgumentsEvaluated a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:5:19 generated
+    Call a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:5:19 written "malloc" "bb4"
+      Destination "_7"
+      Constant 8
+  Block "bb3"
+    Sequenced a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:4:21 generated
+    StorageDead a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:8:5 generated "_4"
+    Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:9:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:9:12 generated
+    Return
+  Block "bb4"
+    Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:5:15 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:5:19 generated
+    Branch a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:6:13 written "bb5" "bb6"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:6:13 generated
+    Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:6:16 written
+      Destination "_3"
+      Use
+        Copy "_6"
+    Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:6:16 written
+      Destination "_8"
+      Use
+        Copy "_3"
+    Sequenced a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:6:16 generated
+    Goto "bb7"
+  Block "bb6"
+    Sequenced a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:6:13 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:7:13 written
+      Destination "_9"
+      Unary "Not"
+        Copy "_6"
+    Branch a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:7:13 written "bb8" "bb9"
+      Copy "_9"
+  Block "bb8"
+    Sequenced a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:7:13 generated
+    Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:7:17 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Sequenced a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:7:24 generated
+    StorageDead a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:7:17 generated "_6"
+    StorageDead a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:7:17 generated "_4"
+    Return
+  Block "bb9"
+    Sequenced a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:7:13 generated
+    Goto "bb10"
+  Block "bb10"
+    StorageDead a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:8:5 generated "_6"
+    Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:4:28 written
+      Destination "_10"
+      Use
+        Copy "_4"
+    Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:4:28 written
+      Destination "_11"
+      Binary "Add"
+        Copy "_4"
+        Constant 1
+    Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:4:28 written
+      Destination "_4"
+      Use
+        Copy "_11"
+    Sequenced a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:4:28 generated
+    Goto "bb1"

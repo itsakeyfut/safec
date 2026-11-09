@@ -1,0 +1,20 @@
+error[SC0411]: `q` points at memory nothing wrote, and the caller may read pointers out of it
+   ╭─[ a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:7:17 ]
+   │
+ 7 │         if (!p) return q;
+   │                 ────┬────  
+   │                     ╰────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before returning it, or allocate it with `calloc`
+error[SC0406]: this returns `q`, which this check stopped following
+   ╭─[ a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:7:17 ]
+   │
+ 7 │         if (!p) return q;
+   │                 ────┬────  
+   │                     ╰────── this check cannot say what this points at
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds

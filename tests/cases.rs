@@ -531,13 +531,12 @@ cases! {
         // returned whether or not it was written; this is doubted.
         a_block_written_before_it_is_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written on the path where its allocation succeeded, nothing: the
-        // block is possibly unwritten only through the path where there is
-        // none, and the pointer is not shown not null at the `return`.
-        // Mutation: answer not null everywhere; this is doubted.
+        // null edge leaves the path where it failed no block (ADR-0080).
+        // Mutation: the null edge neither writes nor clears; this is doubted.
         a_block_written_on_the_path_its_allocation_succeeded_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Left unwritten on one arm where the allocation succeeded, and the
-        // pointer not null at the `return`: possibly unwritten is doubted
-        // there, in words of its own (#828). See ADR-0073 rule 3. Mutation:
+        // Left unwritten on one arm where the allocation succeeded: possibly
+        // unwritten is doubted there, in words of its own (#828). See
+        // ADR-0073 rule 3 and ADR-0080. Mutation:
         // ask only a block certainly unwritten; this and the next go silent.
         a_block_left_unwritten_on_one_arm_where_its_allocation_succeeded_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_written_only_by_a_loop_that_may_not_run_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -557,11 +556,11 @@ cases! {
         // ask the first block alone; one of these goes silent.
         a_pointer_that_may_name_a_block_left_unwritten_first_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_that_may_name_a_block_left_unwritten_second_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The limit: the pointer is not shown not null at the `return`, so
-        // the block possibly unwritten is silent, though C leaves the
-        // caller's read undefined where `c` is zero (#834). Held so that
-        // closing it is seen.
-        a_block_left_unwritten_inside_a_test_of_its_pointer_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write under a test of its pointer that also asks `c`: the block
+        // reaches the caller unwritten where `c` is zero, possibly unwritten at
+        // the `return`, doubted (#834, ADR-0080). Mutation: never ask a `return`
+        // possibly unwritten; this goes silent.
+        a_block_left_unwritten_inside_a_test_of_its_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A write of part of a local kept whole leaves it possibly unwritten
         // (#826). See ADR-0073 rule 2. Mutation: a write of part writes the
         // local whole, as before; this, `..._read_as_a_pointer_is_doubted`
@@ -617,10 +616,12 @@ cases! {
         // pointer; the second is.
         an_array_of_many_pointers_written_at_one_element_and_read_there_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_array_of_many_pointers_a_copy_ended_part_way_through_one_wrote_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The cost: the pointer is shown not null only after the join that
-        // left the block possibly unwritten, so a block every path wrote is
-        // doubted.
-        a_block_written_before_the_test_that_shows_its_pointer_not_null_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written wherever its allocation succeeded and tested after the join:
+        // the later test's null edge leaves the failed path no block, so it adds
+        // no doubt. Formerly `a_block_written_before_the_test_that_shows_its_pointer_not_null_is_doubted`,
+        // the cost ADR-0073 rule 3 named, which ADR-0080 replaced. Mutation: the
+        // null edge neither writes nor clears; this is reported.
+        a_block_written_before_the_test_that_shows_its_pointer_not_null_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Returned as a table of integers, nothing: the caller reads no
         // pointer out of it. Mutation: doubt whatever the return type; this
         // is doubted.
@@ -750,15 +751,16 @@ cases! {
         // stored, `p = *param; t = &p; **t = y;`. Mutation: ask no local
         // above the landing in `through_unrecorded`; the third loses its
         // doubt about `*m` (#778). The first is also doubted where the
-        // function returns, since `m` is not null at `*s = m;`, whose block
-        // ends in the `memcpy` (#861, ADR-0079).
+        // function returns, since `m` is stored out possibly unwritten
+        // (ADR-0080).
         a_copy_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_store_through_a_local_that_may_hold_a_callers_pointer_leaves_the_block_it_names_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The cost the rule still has: a write guarded by a null test of the
-        // allocation's own pointer, with a return where it is null, is
-        // doubted, since the null arm leaves the site as it was. #723.
-        a_pointer_read_after_a_null_test_that_guarded_its_write_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write guarded by a null test of the allocation's own pointer, with a
+        // return where it is null: the null arm leaves no block, so the read
+        // after is not doubted (#723, ADR-0080). Mutation: the null edge neither
+        // writes nor clears; this is doubted.
+        a_pointer_read_after_a_null_test_that_guarded_its_write_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written through a pointer read out of memory, which this check
         // does not place. Mutation: have such a store clear no site. It is
         // reported.
@@ -1577,40 +1579,35 @@ cases! {
         // no `asked_unwritten_in_element`; the second does.
         a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_return_on_an_arm_of_a_loop_shown_to_run_before_its_block_is_written_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // On a loop's first turn `b` is not null where it is returned, and a
-        // later turn nulls it, so the every-turn nullability answer may be
-        // null there and kept this silent (#856). Mutation: the first-turn
-        // walk hands the every-turn `null`; the first goes silent. The
-        // second writes `*b` under its own null test, so the path that left
-        // it unwritten returns a null and stays silent on the first turn.
+        // Not null where it is returned on a loop's first turn and nulled on a
+        // later one: possibly unwritten, doubted wherever it leaves (#856,
+        // ADR-0080). Mutation: never ask a `return` possibly unwritten; the first
+        // goes silent. The second writes `*b` under its own null test. Mutation:
+        // the null edge neither writes nor clears; it is reported.
         a_block_returned_on_a_first_turn_and_nulled_on_a_later_one_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_written_under_its_null_test_and_returned_in_a_loop_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same for a store out: `*out = b` on the first turn stores a
-        // pointer not null, which the every-turn answer may say is null
-        // (#856). Mutation: as above; this goes silent about it. The
-        // `SC0403` at `*b` is a later turn's, after `b = 0`.
+        // The same for a store out. Mutation: never ask the exit possibly
+        // unwritten; this goes silent about it. The `SC0403` at `*b` is a later
+        // turn's, after `b = 0`.
         a_block_stored_out_on_a_first_turn_and_nulled_on_a_later_one_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // In a nest nulling `b` at every level, only the first turn of every
-        // loop at once returns or stores it not null, and the inner loop's
-        // first turn alone follows the outer ones' later turns (#863).
-        // Mutation: `enclosing` answers nothing; the first three go silent.
-        // It answers one enclosing loop alone; the third does.
+        // In a nest nulling `b` at every level, returned or stored out on the
+        // first turn of every loop (#863, ADR-0080). Mutation: never ask a
+        // `return` possibly unwritten; the first and third go silent. Never ask
+        // the exit; the second does.
         a_block_returned_in_a_nest_that_nulls_it_at_both_levels_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_returned_in_a_nest_three_deep_that_nulls_it_at_every_level_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // An inner loop left only by a `return` is in no outer loop's body,
-        // and the outer loop's later turns reach it. Mutation: `enclosing`
-        // asks `Loop::contains`; this goes silent.
+        // An inner loop left only by a `return`, whose outer loop's later turns
+        // null `b`. Mutation: never ask a `return` possibly unwritten; this goes
+        // silent.
         a_block_returned_in_an_inner_loop_left_only_by_return_and_nulled_on_a_later_outer_turn_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A loop before the one that returns `b` nulls it on every turn it
-        // runs, and one inside it may. Mutation: `enclosing` takes every loop
-        // whose head dominates; the first is doubted. It takes every loop;
-        // both are.
-        a_block_nulled_by_a_loop_before_the_one_that_returns_it_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_block_nulled_by_a_loop_inside_the_one_that_returns_it_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `*b` written under its own null test before the same nest: the path
-        // that left it unwritten returns a null. Mutation: the `return` door
-        // doubts whatever the nullability check says; this is reported.
+        // **Two false positives, accepted** (ADR-0080): a loop shown to run
+        // before the one that returns `b`, or inside it, nulls `b`, and points-to
+        // carries the site out through the loop's zero-turn path. #874.
+        a_block_nulled_by_a_loop_before_the_one_that_returns_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_nulled_by_a_loop_inside_the_one_that_returns_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*b` written under its own null test before the same nest. Mutation:
+        // the null edge neither writes nor clears; this is reported.
         a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The copy on an arm of such a loop, where the first turn asks it as a
         // doubt: the case above dominates the latch and is asked without
@@ -1632,12 +1629,11 @@ cases! {
         // `report_left_unwritten` at every element as well, so a block is
         // asked as soon as it has left; this is reported.
         a_block_stored_out_before_it_is_filled_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Written where its allocation succeeded and stored out after the
-        // null test's join, so the stored pointer is null on the other path:
-        // `Maybe` at the exit, asked only where the pointer stored was not
-        // null at the store, which it may be here (ADR-0078). Mutation: ask
-        // `Maybe` without `stored_not_null`; this is reported, and so are the
-        // two `bounds` cases of a callee filling `*p`.
+        // Written where its allocation succeeded and stored out after the null
+        // test's join: the null edge leaves the failed path no block, so the exit
+        // finds it written (ADR-0080). Mutation: the null edge neither writes nor
+        // clears; this is reported, and so are the two `bounds` cases of a callee
+        // filling `*p`.
         a_block_written_before_it_is_stored_out_is_not_reported_beside_its_failed_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `char` buffer handed out unwritten for its caller to fill: no
         // pointer is read out of it. Mutation: mark every store that leaves,
@@ -1645,29 +1641,87 @@ cases! {
         // reported.
         a_char_buffer_stored_out_unwritten_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stored out not null and written on one arm after: possibly
-        // unwritten at the exit, doubted (#855, ADR-0078). Mutation: never ask
+        // unwritten at the exit, doubted (#855, ADR-0080). Mutation: never ask
         // `Maybe` at the exit; this goes silent.
         a_block_stored_out_and_written_on_one_arm_is_doubted_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The local stored, nulled after the store in its block: not null at
-        // the store, null at the block's end (#861, ADR-0079). Mutation: ask
-        // the store at its block's end; the first goes silent, and so does
-        // the doubt at `*s = m;` above. The second writes `*b` under its own
-        // null test. Mutation: every store answered not null; it is reported.
+        // Stored out, and its local nulled or replaced after the store: possibly
+        // unwritten at the exit, doubted (#861, ADR-0080). Mutation: never ask the
+        // exit possibly unwritten; the first and second go silent.
         a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_block_written_under_its_null_test_stored_out_and_its_local_nulled_after_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Not known at the store and not null at its block's end, after
-        // `b = other;`: asked at the block's end beside the store, as `main`
-        // asked it. Found by review. Mutation: ask the store alone; this goes
-        // silent.
         a_block_stored_out_and_its_local_reassigned_not_null_after_keeps_its_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A pointer known null at the store leaves nothing. Mutation: a store
-        // of a pointer known either way answered not null, `!= Unknown`; this
-        // is reported. And two stores in one block, the first not null and
-        // the second not known: each is asked about its own. Mutation:
-        // `stored_non_null` ignores the element, or answers for any at or
-        // before it; the second is reported.
+        // Written under its own null test before the store. Mutation: the null
+        // edge neither writes nor clears; this is reported.
+        a_block_written_under_its_null_test_stored_out_and_its_local_nulled_after_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer known null stored out: the tested local holds no block on
+        // its null edge. Mutation: keep its sites there; this is reported. It
+        // is reported too where the join keeps no `returned_by` for an arm
+        // that made no block.
         a_pointer_stored_out_where_it_is_known_null_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Two stores in one block, the second of a block possibly unwritten.
+        // Mutation: never ask the exit possibly unwritten; this goes silent.
         a_store_beside_another_in_its_block_is_asked_about_its_own_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block an earlier turn made, still named by memory or by `*out`, where
+        // a later turn's allocation fails: the null edge writes no site
+        // something else may name (ADR-0080, found by #870's adversary).
+        // Mutation: write the site whatever else holds it; all three go silent.
+        a_block_kept_in_memory_from_an_earlier_turn_is_doubted_where_read_after_a_later_allocation_fails: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_kept_in_memory_from_an_earlier_turn_is_doubted_where_returned_after_a_later_allocation_fails: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through a local an earlier turn filled, where a later turn
+        // allocates nothing: the join keeps no `returned_by` where something on
+        // the other side holds the site. Mutation: keep it whatever holds the
+        // site; this goes silent.
+        a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn_allocates_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An allocation made on one arm, or chosen by a conditional, written
+        // under its null test: the join keeps `returned_by` where the other side
+        // holds no block of the site. Mutation: keep it nowhere; all three are
+        // reported.
+        an_allocation_made_on_one_arm_written_under_its_null_test_and_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_allocation_made_on_one_arm_written_under_its_null_test_and_stored_out_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_allocation_chosen_by_a_conditional_written_under_its_null_test_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The other arm order: the allocation made first and nulled by hand
+        // on one arm. Mutation: keep `returned_by` only where the arm without
+        // it is the second; this is reported.
+        an_allocation_nulled_by_hand_on_one_arm_written_under_its_null_test_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Made by `realloc` on one arm alone, in either order of the arms: the
+        // join dropped the fact, so the call's result is tested as any
+        // allocation's. Mutation: refuse the join rule also where the other
+        // side had a `realloc` fact, as it once did; the first is reported,
+        // the second not, so the answer turned on the order of the arms.
+        an_allocation_reallocated_on_one_arm_written_under_its_null_test_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_allocation_reallocated_on_the_other_arm_written_under_its_null_test_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An earlier turn's block a local kept, where this turn's allocation
+        // fails: that local is not a copy of this call's result and is not
+        // set aside. Mutation: set aside every local holding the site; the
+        // certain `SC0411` goes, leaving only `SC0406`.
+        a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Tested against zero rather than by name. Mutation: the null edge
+        // neither writes nor clears; this is reported.
+        a_block_written_under_a_comparison_with_zero_and_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Tested through a copy, so the returned local still names the site on
+        // the null edge: the vacuous write is what answers. Mutation: drop it;
+        // both are reported. And against zero, whose comparison keeps what its
+        // operand reaches. Mutation: count the branch's condition as a holder;
+        // the second is reported.
+        a_block_written_through_a_copy_tested_for_null_and_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_written_through_a_copy_compared_with_zero_and_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `if (c && b) *b = x;`, the #834 shape spelled with `&&`. Mutation:
+        // never ask a `return` possibly unwritten; this goes silent.
+        a_block_written_under_a_test_that_also_asks_another_condition_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // #865's program: null on the outer loop's first turn, returned not
+        // null on a later one. Mutation: never ask a `return` possibly
+        // unwritten; this goes silent.
+        a_block_made_while_a_pointer_was_null_and_returned_on_a_later_turn_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // #867's and #868's programs: a loop left through its head, a chained
+        // assignment, and a block stored twice. Mutation: never ask the exit
+        // possibly unwritten; all three go silent.
+        a_block_stored_out_in_a_loop_left_through_its_head_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_stored_out_by_a_chained_assignment_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_stored_out_twice_is_doubted_where_the_first_store_was_of_a_copy_taken_before_its_null_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A false positive, accepted** (ADR-0080): the null test kept in a
+        // flag reaches the branch through `ok`, which the null edge does not
+        // follow back to `b`. #875.
+        a_block_written_under_a_null_test_kept_in_a_flag_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stored out on one arm only: the block left on a path, which the
         // join keeps, found by review. Mutation: join `Known::left_at` as a
         // must-fact, `None` unless both sides marked; this goes silent.
