@@ -250,7 +250,7 @@ fn verdict(
         Kind::ReturnedMaybeUnwritten => true,
         // Never asked: it is said where a block leaves by a store, about no
         // free.
-        Kind::StoredUnwritten => true,
+        Kind::StoredUnwritten | Kind::StoredMaybeUnwritten => true,
     };
 
     match earliest {
@@ -1450,6 +1450,8 @@ pub(super) struct UnwrittenAsk<'a, 'u> {
     /// `assigned::address_taken`, which [`unwritten_read`] reads.
     pub(super) taken: &'a Bits<LocalIdx>,
     pub(super) null: &'a NullAtTerminators,
+    /// Every reachable block, `Cfg::order`, which finds a store by its span.
+    pub(super) order: &'a [BlockId],
     pub(super) block: BlockId,
     /// A loop's first turn at a point that turn may not reach, which says no
     /// more than a doubt (#670).
@@ -1586,12 +1588,14 @@ pub(super) fn asked_unwritten_in_terminator(
 /// Report every block a store let leave holding pointers that is certainly
 /// unwritten where the function returns, at the store (ADR-0076).
 ///
-/// **Certainly, not possibly**: [`Known::left_at`] and [`Known::init`] join
-/// apart, so a store after a null test's join, `if (b) *b = x; *out = b;`,
-/// is `Maybe` here from the path where the allocation failed and the
-/// stored pointer is null, and doubting it refused that program. A block
-/// possibly unwritten here is not asked, whatever made it so, a write on
-/// one arm among them: #855.
+/// **Possibly, where the stored pointer was not null at the store**:
+/// [`Known::left_at`] and [`Known::init`] join apart, so a store after a null
+/// test's join, `if (b) *b = x; *out = b;`, is `Maybe` here from the path
+/// where the allocation failed and the stored pointer is null, and doubting
+/// every `Maybe` refused that program. So a block possibly unwritten is asked
+/// as a `return` is (#828): where the local stored was established not null
+/// at the store's block, `*out = b; if (c) *b = x;` after `if (!b) return;`
+/// among them (#855). See ADR-0078.
 ///
 /// **Not a block freed since**: what reaches the caller is a freed pointer,
 /// which `SC0414` reports, and calling its memory unwritten beside that was
@@ -1603,15 +1607,21 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
         let Some(at) = known.left_at[site] else {
             continue;
         };
-        if !known.init[site].is_unwritten() || matches!(known.state[site], SiteState::Freed { .. })
-        {
+        if matches!(known.state[site], SiteState::Freed { .. }) {
             continue;
         }
+        let kind = if known.init[site].is_unwritten() {
+            Kind::StoredUnwritten
+        } else if known.init[site].may_be_unwritten() && stored_not_null(ask, at) {
+            Kind::StoredMaybeUnwritten
+        } else {
+            continue;
+        };
         push_once(
             findings,
             Finding {
                 function: ask.analysis.function,
-                kind: Kind::StoredUnwritten,
+                kind,
                 conclusion: Conclusion::Unknown,
                 at,
                 local: None,
@@ -1621,6 +1631,30 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
             },
         );
     }
+}
+
+/// Whether the store at `at` stored a local established not null at the end
+/// of its block, as [`report_returned_unwritten`] asks of a `return` (#828).
+/// The store is found by its span, since the mark carries the span alone: the
+/// assignment through a projection whose value is that local, by name. A
+/// store of anything else, or one not found, answers no, which asks
+/// nothing possible of it.
+fn stored_not_null(ask: &UnwrittenAsk<'_, '_>, at: Span) -> bool {
+    for &id in ask.order {
+        for element in &ask.function.block(id).elements {
+            let Element::Assign(operation) = element else {
+                continue;
+            };
+            if operation.origin.span() != at || operation.place.projection.is_empty() {
+                continue;
+            }
+            let Rvalue::Use(Operand::Copy(stored)) = &operation.value else {
+                return false;
+            };
+            return stored.projection.is_empty() && ask.null.established_non_null(id, stored.local);
+        }
+    }
+    false
 }
 
 /// Push `finding` unless one answering its question already stands at its
@@ -1637,19 +1671,22 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
 /// `a_return_reached_by_both_walks_is_reported_once` reports its first
 /// `return` twice.
 fn push_once(findings: &mut Vec<Finding>, finding: Finding) {
-    let returned =
-        |kind: &Kind| matches!(kind, Kind::ReturnedUnwritten | Kind::ReturnedMaybeUnwritten);
+    // Each pair, certain then possible, answers one question.
+    let pair = |kind: &Kind| match kind {
+        Kind::ReturnedUnwritten | Kind::ReturnedMaybeUnwritten => Some(0),
+        Kind::StoredUnwritten | Kind::StoredMaybeUnwritten => Some(1),
+        _ => None,
+    };
+    let certain = |kind: &Kind| matches!(kind, Kind::ReturnedUnwritten | Kind::StoredUnwritten);
     let same = |said: &Finding| {
         said.at == finding.at
-            && (said.kind == finding.kind || (returned(&said.kind) && returned(&finding.kind)))
+            && (said.kind == finding.kind
+                || (pair(&said.kind).is_some() && pair(&said.kind) == pair(&finding.kind)))
     };
     match findings.iter().position(same) {
         None => findings.push(finding),
         // The certain answer takes the place of the possible one.
-        Some(index)
-            if finding.kind == Kind::ReturnedUnwritten
-                && findings[index].kind == Kind::ReturnedMaybeUnwritten =>
-        {
+        Some(index) if certain(&finding.kind) && !certain(&findings[index].kind) => {
             findings[index] = finding;
         }
         Some(_) => {}
