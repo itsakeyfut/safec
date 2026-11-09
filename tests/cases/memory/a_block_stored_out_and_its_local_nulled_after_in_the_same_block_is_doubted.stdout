@@ -1,0 +1,108 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:2:6 "g"
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "out"
+  Local "_2" "int *" parameter "x"
+  Local "_3" "int" parameter "c"
+  Local "_4" "int **" "b"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "int **" "t"
+  Local "_10" "int **"
+  Local "_11" "int **"
+  Local "_12" "int *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:3:15 generated
+    Call a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:3:15 written "malloc" "bb1"
+      Destination "_5"
+      Constant 8
+  Block "bb1"
+    Operation a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:3:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:3:15 generated
+    Operation a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:4:9 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_4"
+    Operation a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:4:9 written
+      Destination "_7"
+      Binary "Ne"
+        Copy "_6"
+        Constant 0
+    Branch a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:4:9 written "bb4" "bb3"
+      Copy "_7"
+  Block "bb2"
+    Branch a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:4:9 written "bb4" "bb5"
+      Copy "_7"
+  Block "bb3"
+    Sequenced a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:4:9 generated
+    Operation a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:4:15 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_1"
+    Operation a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:4:15 written
+      Destination "_7"
+      Binary "Ne"
+        Copy "_8"
+        Constant 0
+    Goto "bb2"
+  Block "bb4"
+    Sequenced a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:4:9 generated
+    Return
+  Block "bb5"
+    Sequenced a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:4:9 generated
+    Goto "bb6"
+  Block "bb6"
+    Operation a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:5:11 written
+      Destination "_9"
+      Use
+        Copy "_4"
+    Sequenced a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:5:15 generated
+    Operation a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:6:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:6:5 written
+      Destination "_10"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:6:5 generated
+    Operation a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:6:15 written
+      Destination "_4"
+      Use
+        Constant 0
+    Operation a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:6:15 written
+      Destination "_11"
+      Use
+        Copy "_4"
+    Sequenced a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:6:15 generated
+    Branch a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:7:9 written "bb7" "bb8"
+      Copy "_3"
+  Block "bb7"
+    Sequenced a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:7:9 generated
+    Operation a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:7:12 written
+      Destination "_9"
+        Deref
+      Use
+        Copy "_2"
+    Operation a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:7:12 written
+      Destination "_12"
+      Use
+        Copy "_9"
+          Deref
+    Sequenced a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:7:12 generated
+    Goto "bb9"
+  Block "bb8"
+    Sequenced a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted.c:7:9 generated
+    Goto "bb9"
+  Block "bb9"
+    Return

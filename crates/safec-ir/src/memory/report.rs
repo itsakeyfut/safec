@@ -1633,25 +1633,25 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
     }
 }
 
-/// Whether the store at `at` stored a local established not null at the end
-/// of its block, as [`report_returned_unwritten`] asks of a `return` (#828).
+/// Whether the store at `at` stored a local established not null at the
+/// store itself, as [`report_returned_unwritten`] asks of a `return` (#828).
 /// The store is found by its span, since the mark carries the span alone: the
-/// assignment through a projection whose value is that local, by name. A
-/// store of anything else, or one not found, answers no, which asks
-/// nothing possible of it.
+/// assignment through a projection. A store of anything but a local by name,
+/// or one not found, answers no, which asks nothing possible of it.
+///
+/// **At the store, not at its block's end**: `*out = b; b = 0;` is null at the
+/// end and was not where it was stored, and a block ending in a call is never
+/// answered not null at its end (#861). See ADR-0079.
 fn stored_not_null(ask: &UnwrittenAsk<'_, '_>, at: Span) -> bool {
     for &id in ask.order {
-        for element in &ask.function.block(id).elements {
+        for (index, element) in ask.function.block(id).elements.iter().enumerate() {
             let Element::Assign(operation) = element else {
                 continue;
             };
             if operation.origin.span() != at || operation.place.projection.is_empty() {
                 continue;
             }
-            let Rvalue::Use(Operand::Copy(stored)) = &operation.value else {
-                return false;
-            };
-            return stored.projection.is_empty() && ask.null.established_non_null(id, stored.local);
+            return ask.null.stored_non_null(id, index);
         }
     }
     false
