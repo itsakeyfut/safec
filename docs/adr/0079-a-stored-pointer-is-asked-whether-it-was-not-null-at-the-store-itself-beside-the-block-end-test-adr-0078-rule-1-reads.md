@@ -4,7 +4,7 @@ date: 2026-11-09
 decision-makers: itsakeyfut
 ---
 
-# A stored pointer is asked whether it was not null at the store itself, replacing the block-end test ADR-0078 rule 1 reads
+# A stored pointer is asked whether it was not null at the store itself, beside the block-end test ADR-0078 rule 1 reads
 
 ## Context and Problem Statement
 
@@ -34,8 +34,12 @@ null at the end, since the answer at a call reads only "null" (ADR-0027).
    it records, for each store through a projection whose value is a local by
    name, whether that local was established not null before the store
    (`NullAtTerminators::stored_non_null(block, element)`). ADR-0078 rule 1
-   reads that answer for the store found by its span, in place of the
-   block-end one.
+   reads that answer for the store found by its span, beside the block-end
+   one: either holding asks the block. Read in place of it, the store's
+   answer withdrew a doubt `main` gave where the local is not known at the
+   store and not null at the end, `if (b && c) *b = x; *out = b; b = other;`,
+   found by review. Each adds a doubt where it holds, so asking both silences
+   nothing either asked.
 2. **An answer inside a block, for not null only.** ADR-0027 keeps the
    nullability check's answers at terminators, because the free exemption
    reads "null" and a wrong one is a silence. This answer adds a doubt where
@@ -58,16 +62,19 @@ Each in `tests/cases/memory/`, with its mutation in its note in
   not null.
 * `a_copy_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt`
   gains the doubt at `*s = m;`, whose block ends in `memcpy`.
+* `a_block_stored_out_and_its_local_reassigned_not_null_after_keeps_its_doubt`,
+  `if (b && c) *b = x; *out = b; b = other;`, goes silent when the store is
+  asked at the store alone.
 
 ### Consequences
 
 * Good, because `g` is `SC0411`, and so is a store whose block ends in a call.
-* Neutral, because the block-end row ADR-0078 read is still kept, for the
-  `return`.
+* Neutral, because the block-end row ADR-0078 read is still read, for the
+  `return` and beside the store's own answer.
 
 ## More Information
 
 * [ADR-0078](./0078-a-block-a-store-lets-leave-possibly-unwritten-is-doubted-where-the-stored-pointer-was-not-null-replacing-what-adr-0076-rule-3-leaves-silent.md),
-  whose rule 1 test this replaces and whose rule 2 limits this narrows.
+  whose rule 1 test this adds to and whose rule 2 limits this narrows.
 * [ADR-0027](./0027-an-unsafe-conclusion-is-about-an-execution-this-function-has.md),
   whose conditions this answer keeps by being read only where it adds a doubt.

@@ -1655,6 +1655,11 @@ cases! {
         // null test. Mutation: every store answered not null; it is reported.
         a_block_stored_out_and_its_local_nulled_after_in_the_same_block_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_written_under_its_null_test_stored_out_and_its_local_nulled_after_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Not known at the store and not null at its block's end, after
+        // `b = other;`: asked at the block's end beside the store, as `main`
+        // asked it. Found by review. Mutation: ask the store alone; this goes
+        // silent.
+        a_block_stored_out_and_its_local_reassigned_not_null_after_keeps_its_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stored out on one arm only: the block left on a path, which the
         // join keeps, found by review. Mutation: join `Known::left_at` as a
         // must-fact, `None` unless both sides marked; this goes silent.

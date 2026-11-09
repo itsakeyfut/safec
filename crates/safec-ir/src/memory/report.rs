@@ -1593,9 +1593,9 @@ pub(super) fn asked_unwritten_in_terminator(
 /// test's join, `if (b) *b = x; *out = b;`, is `Maybe` here from the path
 /// where the allocation failed and the stored pointer is null, and doubting
 /// every `Maybe` refused that program. So a block possibly unwritten is asked
-/// as a `return` is (#828): where the local stored was established not null
-/// at the store's block, `*out = b; if (c) *b = x;` after `if (!b) return;`
-/// among them (#855). See ADR-0078.
+/// as a `return` is (#828): where the local stored was established not null,
+/// `*out = b; if (c) *b = x;` after `if (!b) return;` among them (#855), at
+/// the store itself or at its block's end (#861). See ADR-0078 and ADR-0079.
 ///
 /// **Not a block freed since**: what reaches the caller is a freed pointer,
 /// which `SC0414` reports, and calling its memory unwritten beside that was
@@ -1633,15 +1633,20 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
     }
 }
 
-/// Whether the store at `at` stored a local established not null at the
-/// store itself, as [`report_returned_unwritten`] asks of a `return` (#828).
-/// The store is found by its span, since the mark carries the span alone: the
-/// assignment through a projection. A store of anything but a local by name,
-/// or one not found, answers no, which asks nothing possible of it.
+/// Whether the store at `at` stored a local established not null, at the
+/// store itself or at the end of its block, as [`report_returned_unwritten`]
+/// asks of a `return` (#828). The store is found by its span, since the mark
+/// carries the span alone: the assignment through a projection. A store of
+/// anything but a local by name, or one not found, answers no, which asks
+/// nothing possible of it.
 ///
-/// **At the store, not at its block's end**: `*out = b; b = 0;` is null at the
-/// end and was not where it was stored, and a block ending in a call is never
-/// answered not null at its end (#861). See ADR-0079.
+/// **At the store**: `*out = b; b = 0;` is null at the end and was not where
+/// it was stored, and a block ending in a call is never answered not null at
+/// its end (#861). **And at the block's end, beside it**: in
+/// `if (b && c) *b = x; *out = b; b = other;` the local is not known at the
+/// store and not null at the end, and asking the store alone withdrew a doubt
+/// `main` gave. Found by review. Either adds a doubt where it holds, so
+/// asking both silences nothing either asked. See ADR-0079.
 fn stored_not_null(ask: &UnwrittenAsk<'_, '_>, at: Span) -> bool {
     for &id in ask.order {
         for (index, element) in ask.function.block(id).elements.iter().enumerate() {
@@ -1651,7 +1656,13 @@ fn stored_not_null(ask: &UnwrittenAsk<'_, '_>, at: Span) -> bool {
             if operation.origin.span() != at || operation.place.projection.is_empty() {
                 continue;
             }
-            return ask.null.stored_non_null(id, index);
+            if ask.null.stored_non_null(id, index) {
+                return true;
+            }
+            let Rvalue::Use(Operand::Copy(stored)) = &operation.value else {
+                return false;
+            };
+            return stored.projection.is_empty() && ask.null.established_non_null(id, stored.local);
         }
     }
     false
