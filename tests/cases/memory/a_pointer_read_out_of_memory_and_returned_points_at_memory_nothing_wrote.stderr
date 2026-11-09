@@ -1,0 +1,10 @@
+error[SC0411]: this returns memory nothing wrote, and the caller may read pointers out of it
+   ╭─[ a_pointer_read_out_of_memory_and_returned_points_at_memory_nothing_wrote.c:2:92 ]
+   │
+ 2 │ int **f(void) { int ***box = malloc(8); if (!box) return 0; int **b = malloc(8); *box = b; return *box; }
+   │                                                                                            ──────┬─────  
+   │                                                                                                  ╰─────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before returning it, or allocate it with `calloc`

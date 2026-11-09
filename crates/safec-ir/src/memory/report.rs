@@ -1669,6 +1669,14 @@ fn push_once(findings: &mut Vec<Finding>, finding: Finding) {
 /// (ADR-0073 rule 3). Possibly wherever it is: `if (m) *m = x; return m;`
 /// joins a path with no block at all, and that path's block is written
 /// vacuously on the null edge, so it adds no doubt. See ADR-0080.
+///
+/// **A value read through dereferences is asked of what a load that deep may
+/// name**, `Known::levels_below`, the one walk every reader of a load takes
+/// (ADR-0045), so `return *box;` answers as `t = *box; return t;` does.
+/// Asked of a local by name alone, `return *box;`, `return box[0];` and
+/// `return **bb;` were silent where their spelling through `t` was reported
+/// (#876). Such a value is named by no local, so the finding names none: the
+/// local it was read through is not what points at the memory.
 fn report_returned_unwritten(
     ask: &UnwrittenAsk<'_, '_>,
     findings: &mut Vec<Finding>,
@@ -1684,9 +1692,26 @@ fn report_returned_unwritten(
     let Rvalue::Use(Operand::Copy(place)) = &operation.value else {
         return;
     };
-    if !place.projection.is_empty() {
-        return;
-    }
+    // **What the returned value may name**, or `None` where it is read
+    // through a projection with no dereference, memory this check does not
+    // follow: that is doubted, as a copy's source is
+    // (`source_may_be_unwritten`), since what is not proven is `Unknown`. No
+    // C reaches it until structs do, so nothing guards that arm.
+    let sites: Option<Vec<Site>> = if place.projection.is_empty() {
+        Some(known.sites_of(place.local).collect())
+    } else {
+        match derefs(place) {
+            0 => None,
+            depth => Some(
+                known
+                    .levels_below(place.local, depth)
+                    .0
+                    .into_iter()
+                    .collect(),
+            ),
+        }
+    };
+    let named = place.projection.is_empty().then_some(place.local);
     // **Whether the caller reads pointers out of it**, by `pointee_width`,
     // which answers only for a pointer, `void *` as `0`; through an array to
     // its element, as `int *(*)[2]` holds pointers too. Found by review.
@@ -1704,15 +1729,18 @@ fn report_returned_unwritten(
     // make the other one written, and `r = c ? a : b;` with only `a` written
     // was silent. The path where an allocation failed names no block, so it
     // adds nothing here. Found by review.
-    let certainly = known
-        .sites_of(place.local)
-        .any(|site| known.init[site].is_unwritten());
+    let certainly = sites
+        .iter()
+        .flatten()
+        .any(|&site| known.init[site].is_unwritten());
     // **Possibly, wherever it is**: the path where an allocation failed adds
     // no doubt, because its null edge writes the block it did not make. See
     // ADR-0080.
-    let possibly = known
-        .sites_of(place.local)
-        .any(|site| known.init[site].may_be_unwritten());
+    let possibly = sites.as_ref().is_none_or(|sites| {
+        sites
+            .iter()
+            .any(|&site| known.init[site].may_be_unwritten())
+    });
     // **On a first turn's arm, certainly unwritten is a doubt**: that turn
     // may not take the arm, and a later one finds the block written (#838).
     // Mutation: ignore `doubt_only`; the return in
@@ -1732,7 +1760,7 @@ fn report_returned_unwritten(
             kind,
             conclusion: Conclusion::Unknown,
             at: operation.origin.span(),
-            local: Some(place.local),
+            local: named,
             freed: None,
             made: None,
             unproven: None,
