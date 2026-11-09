@@ -13,10 +13,12 @@ Function a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_repor
   Local "_7" "int"
   Local "_8" "int" "i"
   Local "_9" "int"
-  Local "_10" "int"
+  Local "_10" "int **"
   Local "_11" "int"
   Local "_12" "int"
-  Local "_13" "int"
+  Local "_13" "int **"
+  Local "_14" "int"
+  Local "_15" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:3:15 generated
     Call a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:3:15 written "malloc" "bb1"
@@ -74,12 +76,12 @@ Function a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_repor
     Goto "bb8"
   Block "bb7"
     Sequenced a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:5:21 generated
-    StorageDead a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:7:5 generated "_6"
-    Operation a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:8:5 written
+    StorageDead a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:8:5 generated "_6"
+    Operation a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:9:5 written
       Destination "_0"
       Use
         Constant 0
-    Sequenced a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:8:12 generated
+    Sequenced a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:9:12 generated
     Return
   Block "bb8"
     Operation a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:6:25 written
@@ -95,20 +97,29 @@ Function a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_repor
       Copy "_2"
   Block "bb10"
     Sequenced a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:6:25 generated
-    StorageDead a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:6:56 generated "_8"
+    StorageDead a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:6:63 generated "_8"
+    Operation a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:7:9 written
+      Destination "_3"
+      Use
+        Constant 0
+    Operation a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:7:9 written
+      Destination "_13"
+      Use
+        Copy "_3"
+    Sequenced a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:7:9 generated
     Operation a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:5:28 written
-      Destination "_12"
+      Destination "_14"
       Use
         Copy "_6"
     Operation a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:5:28 written
-      Destination "_13"
+      Destination "_15"
       Binary "Add"
         Copy "_6"
         Constant 1
     Operation a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:5:28 written
       Destination "_6"
       Use
-        Copy "_13"
+        Copy "_15"
     Sequenced a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:5:28 generated
     Goto "bb5"
   Block "bb11"
@@ -125,18 +136,27 @@ Function a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_repor
     Sequenced a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:6:43 generated
     Goto "bb13"
   Block "bb13"
-    Operation a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:6:32 written
+    Operation a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:6:56 written
+      Destination "_3"
+      Use
+        Constant 0
+    Operation a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:6:56 written
       Destination "_10"
+      Use
+        Copy "_3"
+    Sequenced a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:6:56 generated
+    Operation a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:6:32 written
+      Destination "_11"
       Use
         Copy "_8"
     Operation a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:6:32 written
-      Destination "_11"
+      Destination "_12"
       Binary "Add"
         Copy "_8"
         Constant 1
     Operation a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:6:32 written
       Destination "_8"
       Use
-        Copy "_11"
+        Copy "_12"
     Sequenced a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported.c:6:32 generated
     Goto "bb8"

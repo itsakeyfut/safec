@@ -76,7 +76,7 @@ mod store;
 mod transfer;
 
 use crate::analysis::Conclusion;
-use crate::cfg::Cfg;
+use crate::cfg::{Cfg, Dominators, Loop};
 use crate::dataflow::{Analysis, solve_first_turn_within, solve_within};
 use crate::ir::{
     Between, BlockId, Element, FuncId, Function, LocalId, Place, Terminator, TranslationUnit,
@@ -436,6 +436,53 @@ const CELL: usize = 216;
 
 /// The tenths of a byte a pair the cell adds. See [`CELL`].
 const CELL_PAIRS: usize = 4;
+
+/// The heads of the loops around `each`, not its own: a loop whose head
+/// dominates `each`'s, and whose exits do not reach `each`'s head without
+/// passing its own again (#863).
+///
+/// **Not [`Loop::contains`]**, which holds the blocks that reach a back edge:
+/// an inner loop left only by a `return` reaches none of the outer loop's, so
+/// it is not in the outer body, though the outer loop's later turns reach it.
+/// Found by review. **Not dominance alone** either: a loop in sequence before
+/// `each` dominates it too, and taking its first turn for every turn doubted a
+/// pointer that loop nulls on every turn it runs.
+fn enclosing(
+    function: &Function,
+    loops: &[Loop],
+    dominators: &Dominators,
+    each: &Loop,
+) -> Vec<BlockId> {
+    let mut heads = Vec::new();
+    let mut work = Vec::new();
+    for around in loops {
+        let head = around.head();
+        if head == each.head() || !dominators.dominates(head, each.head()) {
+            continue;
+        }
+        // From where the loop is left, without passing its head.
+        work.clear();
+        function.block(head).terminator.successors(&mut work);
+        work.retain(|&to| !around.contains(to));
+        let mut seen = vec![false; function.blocks().len()];
+        let mut left_reaches = false;
+        while let Some(block) = work.pop() {
+            if block == head || seen[block.index()] {
+                continue;
+            }
+            seen[block.index()] = true;
+            if block == each.head() {
+                left_reaches = true;
+                break;
+            }
+            function.block(block).terminator.successors(&mut work);
+        }
+        if !left_reaches {
+            heads.push(head);
+        }
+    }
+    heads
+}
 
 /// About how many bytes one block's value takes in a function of this many
 /// locals, whose deepest pointer type is `depth` `*`s deep.
@@ -1080,18 +1127,12 @@ fn findings_within(
         let mut left = max_walks;
         let loops = cfg.loops();
         for each in &loops {
-            // **The heads of every loop around it too, itself among them**, for
-            // the nullability check alone: a pointer an outer loop nulls on a
-            // later turn reached the inner loop's first one, which no turn
-            // runs before the first of the outer, and a nest nulling it at
-            // both levels kept a block returned unwritten silent (#863). Its
-            // readers here only add a doubt where it says not null. The
-            // memory check's own first turn stays per loop, by ADR-0057.
-            let heads: Vec<BlockId> = loops
-                .iter()
-                .filter(|around| around.contains(each.head()))
-                .map(|around| around.head())
-                .collect();
+            // **And the loops around it**, for the nullability check alone: a
+            // pointer an outer loop nulls on a later turn reached the inner
+            // loop's first one, and a nest nulling it at both levels kept a
+            // block returned unwritten silent (#863). The memory check's own
+            // first turn stays per loop, by ADR-0057.
+            let around = enclosing(function, &loops, &dominators, each);
             // **And the nullability check's answer as of the same first
             // turn**, within what is left of the same bound, since the
             // every-turn one holds over every turn and a pointer null only on
@@ -1109,7 +1150,13 @@ fn findings_within(
                     let theirs = nullability::per_block(locals);
                     let rest = (left - solution.walks()).saturating_mul(ours) / theirs;
                     let (null, walks) = nullability::null_at_terminators_first_turn(
-                        sources, unit, function, &cfg, &heads, rest,
+                        sources,
+                        unit,
+                        function,
+                        &cfg,
+                        each.head(),
+                        &around,
+                        rest,
                     )?;
                     Some((solution, null, walks.saturating_mul(theirs).div_ceil(ours)))
                 });
@@ -1503,7 +1550,8 @@ mod tests {
                 &unit,
                 function,
                 &cfg,
-                &[head],
+                head,
+                &[],
                 usize::MAX,
             )
             .expect("unbounded");
