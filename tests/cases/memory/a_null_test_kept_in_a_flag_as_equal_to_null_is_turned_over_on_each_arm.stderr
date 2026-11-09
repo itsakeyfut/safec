@@ -1,0 +1,9 @@
+error[SC0403]: this dereferences `b`, which is null
+   ╭─[ a_null_test_kept_in_a_flag_as_equal_to_null_is_turned_over_on_each_arm.c:5:44 ]
+   │
+ 5 │     if (!bad) { *b = 1; return 0; } else { return *b; }
+   │                                            ─────┬────  
+   │                                                 ╰────── this is null when it is read through
+───╯
+  = note: this check belongs to safety level 1
+  = help: give this pointer a value before reading through it, or do not read through it here

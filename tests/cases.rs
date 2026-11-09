@@ -1718,10 +1718,23 @@ cases! {
         a_block_stored_out_in_a_loop_left_through_its_head_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_stored_out_by_a_chained_assignment_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_stored_out_twice_is_doubted_where_the_first_store_was_of_a_copy_taken_before_its_null_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // **A false positive, accepted** (ADR-0080): the null test kept in a
-        // flag reaches the branch through `ok`, which the null edge does not
-        // follow back to `b`. #875.
-        a_block_written_under_a_null_test_kept_in_a_flag_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The null test kept in a flag, `int ok = b != 0; if (ok)`, followed
+        // through the flag's copy back to `b` (#875): neither the memory
+        // check nor the nullability check reports it. Mutation: follow no
+        // copy of an `int`; both are reported again.
+        a_block_written_under_a_null_test_kept_in_a_flag_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `b` written again between the comparison and the branch, so the
+        // flag says nothing of the `b` the branch reads. Mutation: drop the
+        // walk's `changed` refusal; this goes silent.
+        a_block_written_under_a_null_test_kept_in_a_flag_whose_pointer_changes_before_the_branch_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The flag copied twice. Mutation: follow one copy only; this is
+        // doubted.
+        a_flag_copied_twice_before_the_branch_still_refines: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A flag holding `b == 0`, branched on as `!bad`: the arm that writes
+        // `*b` is refined not null and the other dereferences a null. Found by
+        // review. Mutation: forget the inversion where a copy is followed;
+        // the null dereference goes silent.
+        a_null_test_kept_in_a_flag_as_equal_to_null_is_turned_over_on_each_arm: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A heap block of two pointers written at one, returned or stored out:
         // the other reaches the caller unwritten (#873, ADR-0081). Mutation: a
         // store at a known element writes the whole block; both go silent. So
