@@ -38,7 +38,9 @@
 
 use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
-use crate::dataflow::{Analysis, Solution, solve, solve_first_turn_within};
+use crate::dataflow::{
+    Analysis, Solution, solve, solve_first_turn_of_nest_within, solve_first_turn_within,
+};
 use crate::ir::{
     BinOp, BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place,
     Projection, Promise, Rvalue, Terminator, TranslationUnit, UnOp,
@@ -1744,20 +1746,29 @@ pub(crate) fn null_at_terminators(
 }
 
 /// [`null_at_terminators`] as of the first turn of the loop whose head is
-/// `head`, within `max_walks`, with the walks it took; `None` past them.
+/// `head`, within `max_walks`, with the walks it took; `None` past them. Where
+/// `around` names the heads of loops enclosing it, not null also wherever it
+/// is so as of the first turn of all of them at once.
 ///
 /// **For a reader that asks on that turn**: the memory check's first-turn walk
 /// asks whether a pointer returned is not null, and the every-turn answer holds
 /// over every turn, so a pointer null only on a later turn answered no on the
 /// first one too and kept a block possibly unwritten there silent (#856).
-/// Every other loop is followed as usual, as
-/// [`solve_first_turn_within`] says.
+/// A pointer an outer loop nulls on a later turn did the same, which the
+/// nest's first turn answers (#863).
+///
+/// **Either answer, not the nest's alone**: fewer paths do not leave a pointer
+/// not null wherever more did, since a branch refines a pointer not yet known
+/// and leaves one known null as it is, so the nest's answer can lose a not
+/// null the loop's own has. Found by review. Only not null is merged: its
+/// reader adds a doubt where it holds, and nothing on that walk reads null.
 pub(crate) fn null_at_terminators_first_turn(
     sources: &SourceMap,
     unit: &TranslationUnit,
     function: &Function,
     cfg: &Cfg,
     head: BlockId,
+    around: &[BlockId],
     max_walks: usize,
 ) -> Option<(NullAtTerminators, usize)> {
     let analysis = Nullability {
@@ -1768,9 +1779,19 @@ pub(crate) fn null_at_terminators_first_turn(
         locals: function.locals().len(),
         escaped: escaped_in(function),
     };
-    let solution = solve_first_turn_within(&analysis, function, cfg, head, max_walks)?;
-    let walks = solution.walks();
-    Some((at_terminators(&analysis, function, cfg, &solution), walks))
+    let own = solve_first_turn_within(&analysis, function, cfg, head, max_walks)?;
+    let mut walks = own.walks();
+    let mut rows = at_terminators(&analysis, function, cfg, &own);
+    if !around.is_empty() {
+        let heads: Vec<BlockId> = std::iter::once(head)
+            .chain(around.iter().copied())
+            .collect();
+        let nest =
+            solve_first_turn_of_nest_within(&analysis, function, cfg, &heads, max_walks - walks)?;
+        walks += nest.walks();
+        rows.add_non_null(&at_terminators(&analysis, function, cfg, &nest));
+    }
+    Some((rows, walks))
 }
 
 /// About how many bytes one block's value takes in a function of this many
@@ -1963,6 +1984,16 @@ impl NullAtTerminators {
     pub(crate) fn established_non_null(&self, block: BlockId, local: LocalId) -> bool {
         self.non_null[block.index()][local.index()]
     }
+
+    /// Not null also wherever `other` says so, for two answers about one
+    /// function. See [`null_at_terminators_first_turn`].
+    fn add_non_null(&mut self, other: &Self) {
+        for (row, theirs) in self.non_null.iter_mut().zip(&other.non_null) {
+            for (here, there) in row.iter_mut().zip(theirs) {
+                *here |= *there;
+            }
+        }
+    }
 }
 
 /// How much a conclusion outranks another where both stand at one caret.
@@ -1975,5 +2006,207 @@ fn severity(conclusion: Conclusion) -> u8 {
         Conclusion::Unsafe => 2,
         Conclusion::Unknown => 1,
         Conclusion::Safe => 0,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ir::{Block, FuncId, Operation, Origin, Ty};
+    use crate::target::Target;
+
+    /// A nest of two loops: `b` is null before it, tested in the inner body
+    /// with a `return` on its taken arm, and made not null at the end of the
+    /// outer body.
+    struct Nest {
+        sources: SourceMap,
+        unit: TranslationUnit,
+        func: FuncId,
+        b: LocalId,
+        outer: BlockId,
+        inner: BlockId,
+        returns: BlockId,
+    }
+
+    fn nest() -> Nest {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "f");
+        let at = Span::new(file, 0, 1);
+        let origin = Origin::Written(at);
+        let mut unit = TranslationUnit::new(
+            Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+        );
+        let int = unit.push_type(Ty::Int);
+        let pointer = unit.push_type(Ty::Pointer(int));
+        let mut function = Function::new(at, int, []);
+        let b = function.push_local(pointer);
+        let x = function.push_local(int);
+
+        let entry = function.reserve_block();
+        let outer = function.reserve_block();
+        let inner = function.reserve_block();
+        let test = function.reserve_block();
+        let returns = function.reserve_block();
+        let latch = function.reserve_block();
+        let exit = function.reserve_block();
+        let assign = |value| {
+            Element::Assign(Operation {
+                place: Place::local(b),
+                value,
+                origin,
+            })
+        };
+        let branch = |condition, then, otherwise| Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition,
+                then,
+                otherwise,
+                origin,
+            },
+        };
+        function.fill_block(
+            entry,
+            Block {
+                elements: vec![assign(Rvalue::Use(Operand::Constant(0)))],
+                terminator: Terminator::Goto(outer),
+            },
+        );
+        function.fill_block(outer, branch(Operand::Constant(1), inner, exit));
+        function.fill_block(inner, branch(Operand::Constant(1), test, latch));
+        function.fill_block(test, branch(Operand::Copy(Place::local(b)), returns, inner));
+        function.fill_block(
+            returns,
+            Block {
+                elements: vec![Element::Sequenced { origin }],
+                terminator: Terminator::Return,
+            },
+        );
+        function.fill_block(
+            latch,
+            Block {
+                elements: vec![assign(Rvalue::Address(Place::local(x)))],
+                terminator: Terminator::Goto(outer),
+            },
+        );
+        function.fill_block(
+            exit,
+            Block {
+                elements: vec![],
+                terminator: Terminator::Return,
+            },
+        );
+        let func = unit.push_function(function);
+        Nest {
+            sources,
+            unit,
+            func,
+            b,
+            outer,
+            inner,
+            returns,
+        }
+    }
+
+    /// The walks of the inner loop's own first turn and of the nest's.
+    fn walks_of(nest: &Nest) -> (usize, usize) {
+        let function = nest.unit.function(nest.func);
+        let cfg = Cfg::of(function);
+        let analysis = Nullability {
+            sources: &nest.sources,
+            cfg: &cfg,
+            unit: &nest.unit,
+            function,
+            locals: function.locals().len(),
+            escaped: escaped_in(function),
+        };
+        let own = solve_first_turn_within(&analysis, function, &cfg, nest.inner, usize::MAX)
+            .expect("unbounded")
+            .walks();
+        let both = solve_first_turn_of_nest_within(
+            &analysis,
+            function,
+            &cfg,
+            &[nest.inner, nest.outer],
+            usize::MAX,
+        )
+        .expect("unbounded")
+        .walks();
+        (own, both)
+    }
+
+    /// As of an inner loop's first turn, with the loop around it named, a
+    /// pointer is not null wherever the inner loop's own first turn says so,
+    /// though the nest's first turn alone says it is null there: on the first
+    /// turn of both `if (b)` meets a null it leaves alone, and on the inner
+    /// loop's alone it meets a pointer not known and refines it (#863).
+    ///
+    /// Mutation: in `null_at_terminators_first_turn`, take the nest's answer
+    /// in place of merging it. The `return` is answered not null by neither,
+    /// and this fails.
+    #[test]
+    fn a_first_turn_in_a_nest_keeps_what_the_loops_own_first_turn_says_is_not_null() {
+        let nest = nest();
+        let function = nest.unit.function(nest.func);
+        let cfg = Cfg::of(function);
+        let analysis = Nullability {
+            sources: &nest.sources,
+            cfg: &cfg,
+            unit: &nest.unit,
+            function,
+            locals: function.locals().len(),
+            escaped: escaped_in(function),
+        };
+        let alone = solve_first_turn_of_nest_within(
+            &analysis,
+            function,
+            &cfg,
+            &[nest.inner, nest.outer],
+            usize::MAX,
+        )
+        .expect("unbounded");
+        assert!(
+            !at_terminators(&analysis, function, &cfg, &alone)
+                .established_non_null(nest.returns, nest.b),
+            "the nest's first turn alone says `b` is not null at the `return`"
+        );
+
+        let (null, _) = null_at_terminators_first_turn(
+            &nest.sources,
+            &nest.unit,
+            function,
+            &cfg,
+            nest.inner,
+            &[nest.outer],
+            usize::MAX,
+        )
+        .expect("unbounded");
+        assert!(null.established_non_null(nest.returns, nest.b));
+    }
+
+    /// Both solves count against one bound: the walks answered are the two
+    /// together, and one short of them is no answer (#863).
+    ///
+    /// Mutation: solve the nest unbounded, and leave its walks uncounted. The
+    /// walks answered are the first solve's alone, and this fails.
+    #[test]
+    fn a_first_turn_in_a_nest_takes_both_solves_walks_against_one_bound() {
+        let nest = nest();
+        let (own, both) = walks_of(&nest);
+        let function = nest.unit.function(nest.func);
+        let cfg = Cfg::of(function);
+        let within = |max_walks| {
+            null_at_terminators_first_turn(
+                &nest.sources,
+                &nest.unit,
+                function,
+                &cfg,
+                nest.inner,
+                &[nest.outer],
+                max_walks,
+            )
+        };
+        assert_eq!(within(own + both).map(|(_, walks)| walks), Some(own + both));
+        assert!(within(own + both - 1).is_none());
     }
 }

@@ -1,0 +1,202 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:2:6 "g"
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "out"
+  Local "_2" "int *" parameter "x"
+  Local "_3" "int" parameter "c"
+  Local "_4" "int" parameter "d"
+  Local "_5" "int **" "b"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "int"
+  Local "_10" "int" "j"
+  Local "_11" "int"
+  Local "_12" "int" "i"
+  Local "_13" "int"
+  Local "_14" "int **"
+  Local "_15" "int *"
+  Local "_16" "int **"
+  Local "_17" "int"
+  Local "_18" "int"
+  Local "_19" "int **"
+  Local "_20" "int"
+  Local "_21" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:3:15 generated
+    Call a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:3:15 written "malloc" "bb1"
+      Destination "_6"
+      Constant 8
+  Block "bb1"
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:3:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:3:15 generated
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:4:9 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_5"
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:4:9 written
+      Destination "_8"
+      Binary "Ne"
+        Copy "_7"
+        Constant 0
+    Branch a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:4:9 written "bb4" "bb3"
+      Copy "_8"
+  Block "bb2"
+    Branch a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:4:9 written "bb4" "bb5"
+      Copy "_8"
+  Block "bb3"
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:4:9 generated
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:4:15 written
+      Destination "_9"
+      Unary "Not"
+        Copy "_1"
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:4:15 written
+      Destination "_8"
+      Binary "Ne"
+        Copy "_9"
+        Constant 0
+    Goto "bb2"
+  Block "bb4"
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:4:9 generated
+    Return
+  Block "bb5"
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:4:9 generated
+    Goto "bb6"
+  Block "bb6"
+    StorageLive a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:5:10 generated "_10"
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:5:14 written
+      Destination "_10"
+      Use
+        Constant 0
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:5:18 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:5:21 written
+      Destination "_11"
+      Binary "Lt"
+        Copy "_10"
+        Constant 2
+    Branch a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:5:21 written "bb8" "bb9"
+      Copy "_11"
+  Block "bb8"
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:5:21 generated
+    StorageLive a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:14 generated "_12"
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:18 written
+      Destination "_12"
+      Use
+        Constant 0
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:22 generated
+    Goto "bb10"
+  Block "bb9"
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:5:21 generated
+    StorageDead a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:8:5 generated "_10"
+    Return
+  Block "bb10"
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:25 written
+      Destination "_13"
+      Binary "Lt"
+        Copy "_12"
+        Constant 2
+    Branch a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:25 written "bb11" "bb12"
+      Copy "_13"
+  Block "bb11"
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:25 generated
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:39 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:39 written
+      Destination "_14"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:39 generated
+    Branch a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:53 written "bb13" "bb14"
+      Copy "_4"
+  Block "bb12"
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:25 generated
+    StorageDead a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:86 generated "_12"
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:7:9 written
+      Destination "_5"
+      Use
+        Constant 0
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:7:9 written
+      Destination "_19"
+      Use
+        Copy "_5"
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:7:9 generated
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:5:28 written
+      Destination "_20"
+      Use
+        Copy "_10"
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:5:28 written
+      Destination "_21"
+      Binary "Add"
+        Copy "_10"
+        Constant 1
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:5:28 written
+      Destination "_10"
+      Use
+        Copy "_21"
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:5:28 generated
+    Goto "bb7"
+  Block "bb13"
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:53 generated
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:56 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_2"
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:56 written
+      Destination "_15"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:56 generated
+    Goto "bb15"
+  Block "bb14"
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:53 generated
+    Goto "bb15"
+  Block "bb15"
+    Branch a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:68 written "bb16" "bb17"
+      Copy "_3"
+  Block "bb16"
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:68 generated
+    StorageDead a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:71 generated "_12"
+    StorageDead a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:71 generated "_10"
+    Return
+  Block "bb17"
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:68 generated
+    Goto "bb18"
+  Block "bb18"
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:79 written
+      Destination "_5"
+      Use
+        Constant 0
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:79 written
+      Destination "_16"
+      Use
+        Copy "_5"
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:79 generated
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:32 written
+      Destination "_17"
+      Use
+        Copy "_12"
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:32 written
+      Destination "_18"
+      Binary "Add"
+        Copy "_12"
+        Constant 1
+    Operation a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:32 written
+      Destination "_12"
+      Use
+        Copy "_18"
+    Sequenced a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted.c:6:32 generated
+    Goto "bb10"

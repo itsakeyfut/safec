@@ -1588,6 +1588,28 @@ cases! {
         // (#856). Mutation: as above; this goes silent about it. The
         // `SC0403` at `*b` is a later turn's, after `b = 0`.
         a_block_stored_out_on_a_first_turn_and_nulled_on_a_later_one_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // In a nest nulling `b` at every level, only the first turn of every
+        // loop at once returns or stores it not null, and the inner loop's
+        // first turn alone follows the outer ones' later turns (#863).
+        // Mutation: `enclosing` answers nothing; the first three go silent.
+        // It answers one enclosing loop alone; the third does.
+        a_block_returned_in_a_nest_that_nulls_it_at_both_levels_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_stored_out_in_a_nest_that_nulls_it_at_both_levels_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_returned_in_a_nest_three_deep_that_nulls_it_at_every_level_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An inner loop left only by a `return` is in no outer loop's body,
+        // and the outer loop's later turns reach it. Mutation: `enclosing`
+        // asks `Loop::contains`; this goes silent.
+        a_block_returned_in_an_inner_loop_left_only_by_return_and_nulled_on_a_later_outer_turn_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A loop before the one that returns `b` nulls it on every turn it
+        // runs, and one inside it may. Mutation: `enclosing` takes every loop
+        // whose head dominates; the first is doubted. It takes every loop;
+        // both are.
+        a_block_nulled_by_a_loop_before_the_one_that_returns_it_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_nulled_by_a_loop_inside_the_one_that_returns_it_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*b` written under its own null test before the same nest: the path
+        // that left it unwritten returns a null. Mutation: the `return` door
+        // doubts whatever the nullability check says; this is reported.
+        a_block_written_under_its_null_test_and_returned_in_a_nest_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The copy on an arm of such a loop, where the first turn asks it as a
         // doubt: the case above dominates the latch and is asked without
         // `doubt_only`, found by review. Mutation: skip `CopyOut` when
