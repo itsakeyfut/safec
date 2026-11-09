@@ -1079,9 +1079,24 @@ fn findings_within(
         let dominators = cfg.dominators();
         let mut left = max_walks;
         for each in cfg.loops() {
-            let Some(solution) =
-                solve_first_turn_within(&analysis, function, &cfg, each.head(), left)
-            else {
+            // **And the nullability check's answer as of the same first
+            // turn**, within what is left of the same bound, since the
+            // every-turn one holds over every turn and a pointer null only on
+            // a later turn answered that it may be null on this one (#856).
+            let first_turn = solve_first_turn_within(&analysis, function, &cfg, each.head(), left)
+                .and_then(|solution| {
+                    let rest = left - solution.walks();
+                    let (null, walks) = nullability::null_at_terminators_first_turn(
+                        sources,
+                        unit,
+                        function,
+                        &cfg,
+                        each.head(),
+                        rest,
+                    )?;
+                    Some((solution, null, walks))
+                });
+            let Some((solution, null, null_walks)) = first_turn else {
                 findings.push(Finding {
                     function: func,
                     kind: Kind::TooLong { walks: max_walks },
@@ -1094,7 +1109,7 @@ fn findings_within(
                 });
                 break;
             };
-            left -= solution.walks();
+            left -= solution.walks() + null_walks;
             // **And every block that leaves the loop from inside its body**,
             // one a block of the body other than the head dominates: what runs
             // there on the first turn is what arrived from before the loop
@@ -1399,6 +1414,94 @@ mod tests {
             &Cfg::of(unit.function(func)),
         )
         .walks();
+        let findings = findings_within(
+            &sources,
+            &unit,
+            MAX_BYTES,
+            u64::try_from(walks * per_block(locals, 0)).expect("small"),
+        );
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].kind, Kind::TooLong { walks });
+        assert_eq!(findings[0].conclusion, Conclusion::Unknown);
+    }
+
+    /// Within the work bound, with a first turn's memory solve inside one
+    /// more bound and its nullability solve past what is left of it, a
+    /// function is the same `Unknown` finding: the first-turn walk asks the
+    /// nullability check as of that turn too, and the two count against one
+    /// bound (#856).
+    ///
+    /// Mutation: solve the nullability first turn unbounded, and leave its
+    /// walks uncounted. Nothing is found, and this alone fails.
+    #[test]
+    fn a_first_turns_nullability_solve_past_what_is_left_of_the_bound_is_one_unknown_finding() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "f");
+        let mut unit = TranslationUnit::new(
+            Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+        );
+        let int = unit.push_type(Ty::Int);
+        let mut function = Function::new(Span::new(file, 0, 1), int, []);
+        let at = Span::new(file, 0, 1);
+        let entry = function.reserve_block();
+        let head = function.reserve_block();
+        let body = function.reserve_block();
+        let exit = function.reserve_block();
+        function.fill_block(
+            entry,
+            Block {
+                elements: vec![],
+                terminator: Terminator::Goto(head),
+            },
+        );
+        function.fill_block(
+            head,
+            Block {
+                elements: vec![],
+                terminator: Terminator::Branch {
+                    condition: Operand::Constant(1),
+                    then: body,
+                    otherwise: exit,
+                    origin: Origin::Written(at),
+                },
+            },
+        );
+        function.fill_block(
+            body,
+            Block {
+                elements: vec![],
+                terminator: Terminator::Goto(head),
+            },
+        );
+        function.fill_block(
+            exit,
+            Block {
+                elements: vec![],
+                terminator: Terminator::Return,
+            },
+        );
+        let locals = function.locals().len();
+        let func = unit.push_function(function);
+        let function = unit.function(func);
+        let cfg = Cfg::of(function);
+        let analysis = analysis(&sources, &unit, func);
+        let every = crate::dataflow::solve(&analysis, function, &cfg).walks();
+        let first = solve_first_turn_within(&analysis, function, &cfg, head, usize::MAX)
+            .expect("unbounded")
+            .walks();
+        let (_, null) = nullability::null_at_terminators_first_turn(
+            &sources,
+            &unit,
+            function,
+            &cfg,
+            head,
+            usize::MAX,
+        )
+        .expect("unbounded");
+        // One walk short of both first-turn solves, and enough for the
+        // every-turn one, so that only the nullability solve is past it.
+        let walks = first + null - 1;
+        assert!(every <= walks && first <= walks, "{every} {first} {null}");
         let findings = findings_within(
             &sources,
             &unit,

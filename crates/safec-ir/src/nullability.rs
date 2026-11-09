@@ -38,7 +38,7 @@
 
 use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
-use crate::dataflow::{Analysis, solve};
+use crate::dataflow::{Analysis, Solution, solve, solve_first_turn_within};
 use crate::ir::{
     BinOp, BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place,
     Projection, Promise, Rvalue, Terminator, TranslationUnit, UnOp,
@@ -1740,7 +1740,47 @@ pub(crate) fn null_at_terminators(
         escaped: escaped_in(function),
     };
     let solution = solve(&analysis, function, cfg);
+    at_terminators(&analysis, function, cfg, &solution)
+}
 
+/// [`null_at_terminators`] as of the first turn of the loop whose head is
+/// `head`, within `max_walks`, with the walks it took; `None` past them.
+///
+/// **For a reader that asks on that turn**: the memory check's first-turn walk
+/// asks whether a pointer returned is not null, and the every-turn answer holds
+/// over every turn, so a pointer null only on a later turn answered no on the
+/// first one too and kept a block possibly unwritten there silent (#856).
+/// Every other loop is followed as usual, as
+/// [`solve_first_turn_within`] says.
+pub(crate) fn null_at_terminators_first_turn(
+    sources: &SourceMap,
+    unit: &TranslationUnit,
+    function: &Function,
+    cfg: &Cfg,
+    head: BlockId,
+    max_walks: usize,
+) -> Option<(NullAtTerminators, usize)> {
+    let analysis = Nullability {
+        sources,
+        cfg,
+        unit,
+        function,
+        locals: function.locals().len(),
+        escaped: escaped_in(function),
+    };
+    let solution = solve_first_turn_within(&analysis, function, cfg, head, max_walks)?;
+    let walks = solution.walks();
+    Some((at_terminators(&analysis, function, cfg, &solution), walks))
+}
+
+/// The rows [`null_at_terminators`] answers with, from `solution`, so that
+/// every turn and a first turn are read by one replay.
+fn at_terminators(
+    analysis: &Nullability<'_>,
+    function: &Function,
+    cfg: &Cfg,
+    solution: &Solution<<Nullability<'_> as Analysis>::Value>,
+) -> NullAtTerminators {
     let mut null = vec![vec![false; function.locals().len()]; function.blocks().len()];
     let mut non_null = null.clone();
 
