@@ -1773,6 +1773,13 @@ pub(crate) fn null_at_terminators_first_turn(
     Some((at_terminators(&analysis, function, cfg, &solution), walks))
 }
 
+/// About how many bytes one block's value takes in a function of this many
+/// locals: a [`Nulls`] and one [`Nullness`] a local. The memory check charges
+/// a first turn's solve here against its own bound at this cost (#856).
+pub(crate) fn per_block(locals: usize) -> usize {
+    size_of::<Nulls>().saturating_add(locals.saturating_mul(size_of::<Nullness>()))
+}
+
 /// The rows [`null_at_terminators`] answers with, from `solution`, so that
 /// every turn and a first turn are read by one replay.
 fn at_terminators(
