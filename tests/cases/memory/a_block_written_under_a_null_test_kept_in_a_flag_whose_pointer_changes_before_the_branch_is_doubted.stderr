@@ -1,7 +1,7 @@
 error[SC0411]: `b` points at memory that may not have been written, and the caller may read pointers out of it
-   ╭─[ a_block_written_under_a_null_test_kept_in_a_flag_is_doubted.c:6:5 ]
+   ╭─[ a_block_written_under_a_null_test_kept_in_a_flag_whose_pointer_changes_before_the_branch_is_doubted.c:7:5 ]
    │
- 6 │     return b;
+ 7 │     return b;
    │     ────┬────  
    │         ╰────── returned here
 ───╯
@@ -9,9 +9,9 @@ error[SC0411]: `b` points at memory that may not have been written, and the call
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: write every pointer in it on every path before returning it, or allocate it with `calloc`
 error[SC0403]: this may dereference `b` while it is null
-   ╭─[ a_block_written_under_a_null_test_kept_in_a_flag_is_doubted.c:5:13 ]
+   ╭─[ a_block_written_under_a_null_test_kept_in_a_flag_whose_pointer_changes_before_the_branch_is_doubted.c:6:13 ]
    │
- 5 │     if (ok) *b = x;
+ 6 │     if (ok) *b = x;
    │             ───┬──  
    │                ╰──── this check cannot say this is not null
 ───╯

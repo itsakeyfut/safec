@@ -594,10 +594,21 @@ pub(crate) fn tested_against_null(
             // **An `int` compared with zero is followed to its own last write**,
             // earlier in the walk, with `changed` still recording everything
             // between it and the branch, and where that write is in a block the
-            // walk does not reach the walk ends without an answer. **Not a named
-            // `int`**, measured: `int c = p != 0; if (c)` lowers the declaration
-            // as a copy of a temporary, and a copy is a value this walk does not
-            // follow, so it refines nothing, as before.
+            // walk does not reach the walk ends without an answer.
+            //
+            // **And so is a copy of an `int`**: `int ok = p != 0; if (ok)`
+            // lowers the declaration as a copy of the comparison's temporary,
+            // and the null test kept in the flag refined nothing, which doubted
+            // a block written under it (#875). `changed` still refuses the
+            // comparison where the pointer was written since. A copy of a
+            // pointer is not followed here: `copied_from` carries a branch on a
+            // pointer back to its sources.
+            if let Rvalue::Use(Operand::Copy(from)) = &operation.value {
+                if from.projection.is_empty() && !pointer_typed(unit, function, from.local) {
+                    asked = from.local;
+                    continue;
+                }
+            }
             if let Some((through, equal)) = through_zero(unit, function, &operation.value) {
                 asked = through;
                 inverted ^= equal;
