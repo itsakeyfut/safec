@@ -1,0 +1,10 @@
+error[SC0411]: `b` points at memory that may not have been written, and the caller may read pointers out of it
+   ╭─[ a_block_returned_on_a_first_turn_and_nulled_on_a_later_one_is_doubted.c:6:42 ]
+   │
+ 6 │     for (int i = 0; i < 2; i++) { if (c) return b; b = 0; }
+   │                                          ────┬────  
+   │                                              ╰────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it on every path before returning it, or allocate it with `calloc`
