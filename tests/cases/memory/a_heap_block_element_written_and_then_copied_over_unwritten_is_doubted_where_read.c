@@ -1,0 +1,3 @@
+void *malloc(int n);
+void *memcpy(void *d, void *s, int n);
+int *f(int * _Nonnull x) { int **m = malloc(8); if (!m) return 0; int **n = malloc(16); if (!n) return 0; n[0] = x; memcpy(n, m, 8); int *r = n[0]; return r; }

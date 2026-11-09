@@ -13,7 +13,7 @@ use crate::source::{SourceMap, Span};
 use super::index::{Loc, LocalIdx, Site, Table};
 use super::parts::{
     AS_TYPED, Cell, Extent, Held, Init, Inits, Levels, Offset, PendingRead, Reached, Read, ReadKey,
-    Realloced, SiteState, read_key,
+    Realloced, SiteElements, SiteState, read_key,
 };
 use super::store::{Certain, Strong, WrittenLocal};
 use super::{LostReason, named};
@@ -467,6 +467,23 @@ pub(super) struct Known {
     /// (`Self::reborn`), as `names` is, since the old allocation's address
     /// may still be held and the slots of the two are not told apart.
     pub(super) handed_untyped: Table<Loc, Vec<Option<TyId>>>,
+    /// Per site, its block's [`Init`] per element, where the block is of a
+    /// constant size of two to [`ELEMENTS_KEPT`] pointers: `b[0] = x;` with
+    /// `b` from `malloc(16)` writes the first and leaves the second (#873).
+    /// `None` for every other block, which is kept whole by [`Self::init`].
+    ///
+    /// **Read only while the block's `init` is what it was made from**
+    /// ([`SiteElements::stamp`]): every other path that changes a block's
+    /// `init` changes it whole and is the answer then; each such path also
+    /// drops them, for a change that leaves `init` as it was, which the stamp
+    /// alone would miss. No case tells the drops from the stamp, measured:
+    /// a copy, the one path built to reach that, carries its doubt in what
+    /// it copies. A write through a
+    /// pointer whose element is not known writes the whole block, as one
+    /// into a local array does (`built::write_effects`), so `b[i] = x;`
+    /// written once is a stated limit. Boxed, so a block kept whole costs a
+    /// pointer. See ADR-0081.
+    pub(super) block_elements: Table<Site, Option<Box<SiteElements>>>,
 }
 
 impl Known {
@@ -1806,7 +1823,11 @@ impl Known {
             // allocation's address, and the slots of the new one are not told
             // apart from the old one's. Found by review.
             handed_untyped: _,
+            // About the allocation the site named; the caller makes the new
+            // one's, since only it knows the size.
+            block_elements,
         } = self;
+        block_elements[site] = None;
         // **What the site's own cell keeps when it names a new
         // allocation**, field by field. See `Cell::kept_when_reborn`.
         contents[site].kept_when_reborn();
@@ -1983,6 +2004,7 @@ impl Known {
     /// [`Self::certainly_written`], by the author's decision (#778).
     fn believed_written_by_unknown_code(&mut self, site: Site) {
         self.init[site] = Init::Written;
+        self.block_elements[site] = None;
     }
 
     /// Whether `local` holds a pointer read out of fresh memory that nothing
@@ -2043,11 +2065,71 @@ impl Known {
             }
     }
 
+    /// What `site`'s block holds at `element`, where that is known and the
+    /// block is kept per element, and the block's own [`Self::init`]
+    /// otherwise. See [`Self::block_elements`].
+    pub(super) fn site_init_at(&self, site: Site, element: Option<u64>) -> Init {
+        let init = self.init[site];
+        let (Some(block), Some(element)) = (
+            self.block_elements[site].as_deref(),
+            element.and_then(|element| usize::try_from(element).ok()),
+        ) else {
+            return init;
+        };
+        if block.stamp != init || element >= block.elements.len() {
+            return init;
+        }
+        block.elements.get(element)
+    }
+
+    /// A write landed at `element` of this one allocation's block, kept per
+    /// element: that element is written, and the block's `init` is what its
+    /// elements say. `false`, and nothing written, where the block is not
+    /// kept per element or the element is past it; the caller writes the
+    /// block whole then. See [`Self::block_elements`].
+    pub(super) fn certainly_written_at(&mut self, at: &Certain, element: u64) -> bool {
+        let site = at.site();
+        let init = self.init[site];
+        let Some(block) = self.block_elements[site].as_deref_mut() else {
+            return false;
+        };
+        let Ok(element) = usize::try_from(element) else {
+            return false;
+        };
+        let len = block.elements.len();
+        if element >= len {
+            return false;
+        }
+        if init == Init::Written {
+            return true;
+        }
+        // **Made again from the block's own `init` where something else
+        // changed it since**, every element as the block is: what the
+        // elements said before is about a block that has been written or
+        // doubted whole since.
+        if block.stamp != init {
+            block.elements = match init {
+                Init::Unwritten => Inits::unwritten(len),
+                Init::Maybe | Init::Written => {
+                    let mut elements = Inits::written(len);
+                    elements.doubt_all();
+                    elements
+                }
+            };
+        }
+        block.elements.set(element, Init::Written);
+        let summary = block.elements.summary();
+        block.stamp = summary;
+        self.init[site] = summary;
+        true
+    }
+
     /// A write landed in this one allocation, so its contents are not
     /// indeterminate on this path. Only a landing that proves one place can
     /// ask, which is what [`Certain`] is. See [`Self::init`].
     pub(super) fn certainly_written(&mut self, at: Certain) {
         self.init[at.site()] = Init::Written;
+        self.block_elements[at.site()] = None;
     }
 
     /// Something may have written any allocation: a write this check cannot
@@ -2056,6 +2138,7 @@ impl Known {
     pub(super) fn may_write_all_sites(&mut self) {
         for site in self.init.sites() {
             self.init[site].may_write();
+            self.block_elements[site] = None;
         }
     }
 

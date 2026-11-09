@@ -584,10 +584,12 @@ impl Allocations<'_> {
                     for &site in containers.iter() {
                         if before[site] == Init::Maybe {
                             value.init[site] = Init::Maybe;
+                            value.block_elements[site] = None;
                         }
                     }
                     for &site in &stored {
                         value.init[site] = before[site];
+                        value.block_elements[site] = None;
                     }
                 };
                 if unplaced {
@@ -828,6 +830,7 @@ impl Allocations<'_> {
                     .is_some_and(|ty| self.first_level_holds_a_pointer(ty)),
                 inner_address: false,
                 element: None,
+                site_element: None,
                 array_edge: false,
                 stored_through: false,
             },
@@ -1371,6 +1374,7 @@ impl Allocations<'_> {
         rest.clear(condition.local);
         if !rest.held_sites()[returned] {
             value.init[returned] = Init::Written;
+            value.block_elements[returned] = None;
         }
         value.clear(local);
     }
@@ -1467,6 +1471,7 @@ impl Allocations<'_> {
             stored_out,
             left_at,
             handed_untyped,
+            block_elements,
         } = into;
         // Which locals this side left unwritten, before `unwritten` is
         // intersected below: such a local is no null, and the values' join
@@ -1519,6 +1524,37 @@ impl Allocations<'_> {
         // **One loop over every place, each kind by its own rule** (#779).
         // Both rules read `state` as it was before this join: `state` is
         // joined below, and must not be before this loop.
+        // **A block's elements joined as its `init` is**, each by
+        // `Init::joined`, where both sides still read them and keep as many;
+        // the side that names it where the other does not, as below; and
+        // none otherwise, so that the block's `init` answers. Asked before
+        // `init` is joined, against what each side's `init` was. See
+        // `Known::block_elements`.
+        let elements: Vec<Option<super::parts::Inits>> = init
+            .sites()
+            .map(|site| {
+                let here = block_elements[site]
+                    .as_deref()
+                    .filter(|block| block.stamp == init[site])
+                    .map(|block| &block.elements);
+                let there = from.block_elements[site]
+                    .as_deref()
+                    .filter(|block| block.stamp == from.init[site])
+                    .map(|block| &block.elements);
+                match (&state[site], &from.state[site]) {
+                    (_, SiteState::Unheld) => here.cloned(),
+                    (SiteState::Unheld, _) => there.cloned(),
+                    _ => match (here, there) {
+                        (Some(here), Some(there)) if here.len() == there.len() => {
+                            let mut joined = here.clone();
+                            joined.join(there, back);
+                            Some(joined)
+                        }
+                        _ => None,
+                    },
+                }
+            })
+            .collect();
         for place in init.indices() {
             let (here, there) = (init[place], from.init[place]);
             init[place] = match place {
@@ -1551,6 +1587,14 @@ impl Allocations<'_> {
                     _ => here.joined(there, back),
                 },
             };
+        }
+        for (site, elements) in init.sites().zip(elements) {
+            block_elements[site] = elements.map(|elements| {
+                Box::new(super::parts::SiteElements {
+                    stamp: init[site],
+                    elements,
+                })
+            });
         }
         // Bounds, so the lower of two at every level. See
         // `Known::handed_contents_at_most`.
@@ -1962,6 +2006,8 @@ impl Analysis for Allocations<'_> {
             left_at: Table::filled(None, self.locals),
             // No call has been handed anything yet.
             handed_untyped: Table::filled(Vec::new(), Loc::count(self.locals)),
+            // No block has been made yet.
+            block_elements: Table::filled(None, self.locals),
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -2046,6 +2092,12 @@ impl Analysis for Allocations<'_> {
             match place {
                 Loc::Heap(site) => {
                     if !matches!(before.state[site], SiteState::Unheld) {
+                        // Its elements go only where this changed it, so that a
+                        // block a loop leaves alone keeps them. See
+                        // `Known::block_elements`.
+                        if into.init[place] != again {
+                            into.block_elements[site] = None;
+                        }
                         into.init[place] = again;
                     }
                 }
@@ -3335,6 +3387,7 @@ impl Analysis for Allocations<'_> {
                                     arrived_holds_pointer: false,
                                     inner_address: false,
                                     element: None,
+                                    site_element: None,
                                     array_edge: false,
                                     stored_through: false,
                                 },
@@ -4080,6 +4133,23 @@ impl Analysis for Allocations<'_> {
         // `branch_on_an_allocations_result` and ADR-0080.
         if fresh {
             value.points_to[result].returned_by = Some(site);
+            // **Per element where it is two to `ELEMENTS_KEPT` pointers of a
+            // constant size**, and the result at the first: `b[0] = x;`
+            // writes one and leaves the rest (#873). See
+            // `Known::block_elements` and ADR-0081.
+            let target = self.unit.target();
+            let pointer = u64::from(target.pointer_bits() / target.char().bits());
+            if let Some(Extent::Exactly(bytes)) = value.extent[site] {
+                let count = bytes / pointer;
+                if bytes % pointer == 0 && (2..=ELEMENTS_KEPT).contains(&count) {
+                    let len = usize::try_from(count).unwrap_or(0);
+                    value.block_elements[site] = Some(Box::new(super::parts::SiteElements {
+                        stamp: Init::Unwritten,
+                        elements: Inits::unwritten(len),
+                    }));
+                    value.points_to[result].site_element = Some(0);
+                }
+            }
         }
         if fresh {
             value.init[site] = Init::Unwritten;
@@ -4092,6 +4162,7 @@ impl Analysis for Allocations<'_> {
             // bytes as well (#724). See `Known::init`.
             if handed.projection.is_empty() && value.may_name_fresh(handed.local) {
                 value.init[site].doubt();
+                value.block_elements[site] = None;
             }
         }
         // **`realloc`'s new object holds what the old one held**, C17 7.22.3.5

@@ -1722,6 +1722,31 @@ cases! {
         // flag reaches the branch through `ok`, which the null edge does not
         // follow back to `b`. #875.
         a_block_written_under_a_null_test_kept_in_a_flag_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A heap block of two pointers written at one, returned or stored out:
+        // the other reaches the caller unwritten (#873, ADR-0081). Mutation: a
+        // store at a known element writes the whole block; both go silent. So
+        // they do where an allocation's result points at no element.
+        a_heap_block_written_at_one_element_and_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_heap_block_written_at_one_element_and_stored_out_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written at both. Mutation: a constant move leaves the element where it
+        // was; `b[1]` writes `b[0]` again and this is reported.
+        a_heap_block_written_at_every_element_and_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Filled in a loop by an index not known, which writes the whole block,
+        // as a local array's is. Mutation: such a store into a block kept per
+        // element writes nothing; this is reported.
+        a_heap_block_filled_in_a_loop_and_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `b[1]` read where only `b[0]` was written: certain. Mutation: a store at
+        // a known element writes the whole block; this goes silent.
+        a_heap_block_read_at_an_element_nothing_wrote_beside_one_written_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `b[0]` read through a copy taken before it was written. Mutation: a
+        // read asks the block's own `init`; this is doubted.
+        a_heap_block_read_at_the_element_written_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `n[0]` written, then copied over from a block nothing wrote: the shape
+        // the elements are dropped for where a block's `init` changes. No
+        // mutation of the drops alone makes this silent, measured: the copy
+        // carries its doubt in what it copies, so this holds the shape, not
+        // them.
+        a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stored out on one arm only: the block left on a path, which the
         // join keeps, found by review. Mutation: join `Known::left_at` as a
         // must-fact, `None` unless both sides marked; this goes silent.
@@ -4271,6 +4296,10 @@ cases! {
         // go silent.
         // Mutation: count `Reached::Partial` as a doubt; the fourth reports.
         a_load_moved_by_a_subscript_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // The two above and below gain a doubt where `**t3` is read (#873):
+        // `t3` and `t2` are written at their first element alone, and a
+        // pointer read out of memory knows no element, so the block's own
+        // answer is asked, possibly unwritten. The cost ADR-0081 states.
         a_load_moved_by_arithmetic_and_read_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_live_load_moved_by_a_subscript_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
