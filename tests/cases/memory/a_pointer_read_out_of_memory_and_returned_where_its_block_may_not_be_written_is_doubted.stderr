@@ -1,0 +1,10 @@
+error[SC0411]: this returns memory that may not have been written, and the caller may read pointers out of it
+   ╭─[ a_pointer_read_out_of_memory_and_returned_where_its_block_may_not_be_written_is_doubted.c:2:144 ]
+   │
+ 2 │ int **f(int c, int * _Nonnull x) { int ***box = malloc(8); if (!box) return 0; int **b = malloc(8); if (!b) return 0; if (c) *b = x; *box = b; return *box; }
+   │                                                                                                                                                ──────┬─────  
+   │                                                                                                                                                      ╰─────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it on every path before returning it, or allocate it with `calloc`

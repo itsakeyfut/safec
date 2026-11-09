@@ -1676,7 +1676,11 @@ fn push_once(findings: &mut Vec<Finding>, finding: Finding) {
 /// Asked of a local by name alone, `return *box;`, `return box[0];` and
 /// `return **bb;` were silent where their spelling through `t` was reported
 /// (#876). Such a value is named by no local, so the finding names none: the
-/// local it was read through is not what points at the memory.
+/// local it was read through is not what points at the memory. It inherits
+/// what a load names: memory keeps what an earlier store put there beside
+/// what a later one did, so `*box = b; *box = d; return *box;` with `b` unwritten
+/// says nothing wrote it, as `t = *box; return t;` does, a report the reader
+/// sees.
 fn report_returned_unwritten(
     ask: &UnwrittenAsk<'_, '_>,
     findings: &mut Vec<Finding>,
