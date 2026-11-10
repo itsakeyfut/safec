@@ -1601,10 +1601,21 @@ cases! {
         // null `b`. Mutation: never ask a `return` possibly unwritten; this goes
         // silent.
         a_block_returned_in_an_inner_loop_left_only_by_return_and_nulled_on_a_later_outer_turn_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // **Two false positives, accepted** (ADR-0080): a loop shown to run
-        // before the one that returns `b`, or inside it, nulls `b`, and points-to
-        // carries the site out through the loop's zero-turn path. #874.
-        a_block_nulled_by_a_loop_before_the_one_that_returns_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A loop shown to run nulls `b` before the one that returns it: what
+        // leaves it is what its back edges brought, with no site, never the
+        // path in (#874). Mutation: answer `false` to
+        // `Analysis::leaves_after_a_turn` for every head; this is doubted.
+        // See ADR-0083.
+        a_block_nulled_by_a_loop_shown_to_run_before_the_one_that_returns_it_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same where the loop may run zero times, `j < n`: the path in is
+        // a path out. Mutation: answer `true` for every head; this goes
+        // silent. See ADR-0083.
+        a_block_nulled_by_a_loop_that_may_not_run_before_the_one_that_returns_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A false positive, a stated limit**: `b` is nulled by a loop that
+        // may run zero times, `i < c`, and returned under `if (d)`, while it
+        // was written under the same `d`. Seeing the two tests agree takes a
+        // correlation of `d` this check does not keep; the zero-turn path is
+        // not what doubts it (#874).
         a_block_nulled_by_a_loop_inside_the_one_that_returns_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `*b` written under its own null test before the same nest. Mutation:
         // the null edge neither writes nor clears; this is reported.
@@ -1786,7 +1797,9 @@ cases! {
         // unwritten again at the back edge element by element, found by
         // review, where `main` reported it and a whole-block test was silent.
         // Mutation: keep a block's elements where its `init` did not change
-        // at the back edge; this goes silent.
+        // at the back edge; this goes silent. Certain since the inner loop,
+        // shown to run, is left only after a turn that made the block again
+        // (ADR-0083).
         a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `b[1]` read where only `b[0]` was written: certain. Mutation: a store at
         // a known element writes the whole block; this goes silent.

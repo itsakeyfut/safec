@@ -221,6 +221,21 @@ pub trait Analysis {
         self.join_back(head, into, from);
     }
 
+    /// Whether the loop `head` heads is left only through `head`'s test after
+    /// a whole turn, so that what leaves it is what its back edges brought
+    /// and never what arrived from before it.
+    ///
+    /// **The default is `false`, the join every head has**, which is right
+    /// for any loop that may run zero times. The memory check answers `true`
+    /// for a loop shown to run (`memory::runs::shown_to_run`), whose
+    /// zero-turn path no execution takes: joined in at the head's exit, it
+    /// carried a site a body that nulls the pointer every turn had dropped
+    /// (#874). A wrong `true` is a silence about that path. See ADR-0083.
+    fn leaves_after_a_turn(&self, head: BlockId) -> bool {
+        let _ = head;
+        false
+    }
+
     /// What one element of a block does to what is known.
     ///
     /// The function is handed over rather than held, so that an analysis asking
@@ -575,6 +590,20 @@ fn solved<A: Analysis>(
             .any(|&from| cfg.drained_at(from) >= cfg.drained_at(block));
     }
 
+    // **The loops whose exit sends what their back edges brought**, each
+    // with its body, so that an edge out of its head is told from one into
+    // it. Not a head a first-turn walk names, whose back edges that walk
+    // leaves out. See `Analysis::leaves_after_a_turn`.
+    let left_after_a_turn: Vec<crate::cfg::Loop> = cfg
+        .loops()
+        .into_iter()
+        .filter(|each| {
+            heads[each.head().index()]
+                && !first_turn_of.contains(&each.head())
+                && analysis.leaves_after_a_turn(each.head())
+        })
+        .collect();
+
     while let Some(at) = worklist.pop_first() {
         let block = cfg.drain()[at];
         // A block can be taken off the list before anything has reached it:
@@ -615,6 +644,33 @@ fn solved<A: Analysis>(
         }
         analysis.terminator(function, &function.block(block).terminator, &mut value);
 
+        // **What leaves a loop left only after a whole turn**: its head's
+        // elements and terminator over what its back edges last sent, joined
+        // as paths meet, and nothing until one has. See
+        // `Analysis::leaves_after_a_turn`.
+        let leaving = left_after_a_turn
+            .iter()
+            .find(|each| each.head() == block)
+            .map(|each| {
+                let turned = sent_into(
+                    analysis,
+                    function,
+                    cfg,
+                    &sent,
+                    block,
+                    &mut targets,
+                    |from| cfg.drained_at(from) >= cfg.drained_at(block),
+                )
+                .map(|mut turned| {
+                    for element in &function.block(block).elements {
+                        analysis.element(function, element, &mut turned);
+                    }
+                    analysis.terminator(function, &function.block(block).terminator, &mut turned);
+                    turned
+                });
+                (each, turned)
+            });
+
         // What the block sends, before any edge has been told anything
         // different. It is bound again here to stop the loop below writing to
         // it, which now guards two mistakes rather than one: refining this
@@ -641,7 +697,14 @@ fn solved<A: Analysis>(
             // `successor`: both are in scope here, and the one whose elements
             // an analysis reads to resolve the condition is the one being
             // left.
-            let mut sent_value = value.clone();
+            let mut sent_value = match &leaving {
+                Some((each, turned)) if !each.contains(successor) => match turned {
+                    Some(turned) => turned.clone(),
+                    // No back edge has sent yet: the exit waits for one.
+                    None => continue,
+                },
+                _ => value.clone(),
+            };
             analysis.edge(
                 function,
                 block,
@@ -651,6 +714,16 @@ fn solved<A: Analysis>(
             );
             let along = &mut sent[block.index()];
             along.resize(successors.len(), None);
+            // **A back edge into a head left only after a whole turn walks
+            // that head again when what it sends moves**, since the head's
+            // exit is worked out from it, though the head's own value, which
+            // also holds the path in, may not move. See
+            // `Analysis::leaves_after_a_turn`.
+            let turn_moved = cfg.drained_at(block) >= cfg.drained_at(successor)
+                && left_after_a_turn
+                    .iter()
+                    .any(|each| each.head() == successor)
+                && along[index].as_ref() != Some(&sent_value);
             along[index] = Some(sent_value);
             let just_sent = along[index].as_ref().expect("stored on the line above");
 
@@ -752,7 +825,7 @@ fn solved<A: Analysis>(
 
             // Already on the list is already going to be walked again, which
             // a set answers by holding it once.
-            if changed {
+            if changed || turn_moved {
                 worklist.insert(cfg.drained_at(successor));
             }
         }
