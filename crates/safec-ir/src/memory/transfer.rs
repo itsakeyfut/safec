@@ -429,6 +429,41 @@ impl Allocations<'_> {
         stored_pointer(self.unit, stored).is_some()
     }
 
+    /// Mark what a store that leaves the function carries.
+    ///
+    /// - **`carried`**, the blocks the written value names, are left holding
+    ///   pointers where `holds_pointers` says so, for the function's exit to
+    ///   ask whether they were written: not what they hold below, which
+    ///   `stored_out` follows. See `Known::left_at` and ADR-0076.
+    /// - **`carried` and `read_out`**, what a pointer read out of memory may
+    ///   be, are stored out, and so is **everything those allocations hold,
+    ///   at every level**, as `freed_behind` asks what leaves: a box stored
+    ///   out holds what was stored in it before, and `*b = x; *pp = b;
+    ///   free(x);` left the caller a freed pointer one level down in silence.
+    ///   Found by review of #650. See `Known::stored_out`.
+    fn mark_leaving(
+        &self,
+        value: &mut Known,
+        carried: Vec<Site>,
+        read_out: Vec<Site>,
+        holds_pointers: bool,
+        at: Span,
+    ) {
+        if holds_pointers {
+            for &site in &carried {
+                value.left_at[site] = Some(match value.left_at[site] {
+                    Some(before) => earlier(self.sources, before, at),
+                    None => at,
+                });
+            }
+        }
+        let mut out = carried;
+        out.extend(read_out);
+        for site in value.closure(out) {
+            value.stored_out[site] = true;
+        }
+    }
+
     /// What a pointer read as `place` believes the memory it points at
     /// holds, by level: the type it is read as, no more than what the
     /// memory it is read out of was believed one level further down
@@ -2316,39 +2351,26 @@ impl Analysis for Allocations<'_> {
                     kind && store.leaves && self.may_be_pointer(function, &store.into)
                 });
                 if marks {
-                    let mut out: Vec<Site> = self
+                    let carried: Vec<Site> = self
                         .carried(function, &operation.value, value)
                         .sites()
                         .collect();
-                    // **And the blocks it names left holding pointers**, where
-                    // the stored-into type is read as holding them, for the
-                    // function's exit to ask whether they were written. Not
-                    // what they hold below, which `stored_out` follows. See
-                    // `Known::left_at` and ADR-0076.
+                    // Where the stored-into type is read as holding pointers.
                     let holds_pointers = self
                         .unit
                         .place_ty(function, &operation.place)
                         .is_some_and(|ty| self.first_level_holds_a_pointer(ty));
-                    if holds_pointers {
-                        let at = operation.origin.span();
-                        for &site in &out {
-                            value.left_at[site] = Some(match value.left_at[site] {
-                                Some(before) => earlier(self.sources, before, at),
-                                None => at,
-                            });
-                        }
-                    }
-                    if let Rvalue::Use(written) = &operation.value {
-                        out.extend(self.read_out(function, written, value));
-                    }
-                    // **And everything those allocations hold, at every
-                    // level**, as `freed_behind` asks what leaves: a box stored
-                    // out holds what was stored in it before, and `*b = x;
-                    // *pp = b; free(x);` left the caller a freed pointer one
-                    // level down in silence. Found by review of #650.
-                    for site in value.closure(out) {
-                        value.stored_out[site] = true;
-                    }
+                    let read_out = match &operation.value {
+                        Rvalue::Use(written) => self.read_out(function, written, value),
+                        _ => Vec::new(),
+                    };
+                    self.mark_leaving(
+                        value,
+                        carried,
+                        read_out,
+                        holds_pointers,
+                        operation.origin.span(),
+                    );
                 }
 
                 // An assignment to a local writes it, whatever it writes. See
