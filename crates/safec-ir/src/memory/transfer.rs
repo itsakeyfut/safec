@@ -2127,6 +2127,13 @@ impl Analysis for Allocations<'_> {
         self.joined(into, from, self.runs_once[head.index()]);
     }
 
+    /// A loop shown to run is left only through its head after a whole turn
+    /// (ADR-0069 rule 6), so what leaves it is what its back edges brought.
+    /// See ADR-0083.
+    fn leaves_after_a_turn(&self, head: BlockId) -> bool {
+        self.runs_once[head.index()]
+    }
+
     /// A back edge folded in, then every place written on the paths into the
     /// loop this turn and unwritten along the back edge made `Maybe`, as
     /// [`Init::unwritten_again`] says. **Not a site the paths into the loop

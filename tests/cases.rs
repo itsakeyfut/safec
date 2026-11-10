@@ -1601,10 +1601,34 @@ cases! {
         // null `b`. Mutation: never ask a `return` possibly unwritten; this goes
         // silent.
         a_block_returned_in_an_inner_loop_left_only_by_return_and_nulled_on_a_later_outer_turn_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // **Two false positives, accepted** (ADR-0080): a loop shown to run
-        // before the one that returns `b`, or inside it, nulls `b`, and points-to
-        // carries the site out through the loop's zero-turn path. #874.
-        a_block_nulled_by_a_loop_before_the_one_that_returns_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A loop shown to run nulls `b` before the one that returns it: what
+        // leaves it is what its back edges brought, with no site, never the
+        // path in (#874). Mutation: answer `false` to
+        // `Analysis::leaves_after_a_turn` for every head; this is doubted.
+        // See ADR-0083.
+        a_block_nulled_by_a_loop_shown_to_run_before_the_one_that_returns_it_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same where the loop may run zero times, `j < n`: the path in is
+        // a path out. Mutation: answer `true` for every head; this goes
+        // silent. See ADR-0083.
+        a_block_nulled_by_a_loop_that_may_not_run_before_the_one_that_returns_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A freed pointer carried round a loop shown to run, `c = b; b = a;`:
+        // the second turn's back edge brings `c` the freed block, which the
+        // head already held from the path in, so the head's value does not
+        // move and only the walk a moved back edge asks for sends the exit
+        // the second turn. Found by review. Mutation: walk the head only when
+        // its own value moves; the use after free goes silent. See ADR-0083.
+        a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through a swap, `t = a; a = b; b = t;`, where the block
+        // nothing wrote is returned after an even number of turns. Found by
+        // review. Mutation: as above; this goes silent.
+        a_block_swapped_round_a_loop_shown_to_run_and_returned_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A false positive, a stated limit**: `b` is nulled by a loop that
+        // may run zero times, `i < c`, so the path that skips it is a path
+        // out, and on it `b` is the block, written only under the `d` the
+        // return is also under. Both are needed, measured: the loop shown to
+        // run, or the write made whatever `d` is, silences it. Seeing the two
+        // tests agree takes a correlation of `d` this check does not keep
+        // (#874).
         a_block_nulled_by_a_loop_inside_the_one_that_returns_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `*b` written under its own null test before the same nest. Mutation:
         // the null edge neither writes nor clears; this is reported.
@@ -1786,7 +1810,10 @@ cases! {
         // unwritten again at the back edge element by element, found by
         // review, where `main` reported it and a whole-block test was silent.
         // Mutation: keep a block's elements where its `init` did not change
-        // at the back edge; this goes silent.
+        // at the back edge; this went silent. **No longer**, measured: the
+        // inner loop, shown to run, is left only after a turn that made the
+        // block again (ADR-0083), so the read is certain whatever the back
+        // edge keeps, and nothing found since guards that rule.
         a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `b[1]` read where only `b[0]` was written: certain. Mutation: a store at
         // a known element writes the whole block; this goes silent.
