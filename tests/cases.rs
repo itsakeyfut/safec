@@ -1687,6 +1687,10 @@ cases! {
         // answers that it holds no pointer; each goes silent.
         a_block_copied_out_through_a_char_pointer_source_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_copied_out_through_an_int_pointer_source_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The source reads `b` as an `int *`, the destination as a pointer to
+        // pointers, and either side asks, found by review. Mutation: ask the
+        // source's type alone; this goes silent.
+        a_block_copied_out_through_a_source_typed_as_holding_ints_is_doubted_by_its_destination: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stored out not null and written on one arm after: possibly
         // unwritten at the exit, doubted (#855, ADR-0080). Mutation: never ask
         // `Maybe` at the exit; this goes silent.

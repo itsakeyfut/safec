@@ -468,17 +468,25 @@ impl Allocations<'_> {
         }
     }
 
-    /// Whether the blocks a library copy carries out are read as holding
-    /// pointers, by the type of its source `source_ty`: what is copied is a
-    /// value one level below it, and the blocks are what that value points
-    /// at, asked as a store asks the type it stores into
-    /// ([`Self::first_level_holds_a_pointer`]). `int **b; memcpy(out, &b,
-    /// 8)` copies an `int **`, whose blocks hold pointers; `int *x;
-    /// memcpy(pp, &x, 8)` copies an `int *`, whose block holds `int`s.
+    /// Whether the type `side_ty` of one side of a library copy, its source
+    /// or its destination, reads the blocks the copy carries out as holding
+    /// pointers: what is copied is a value one level below it, and the
+    /// blocks are what that value points at, asked as a store asks the type
+    /// it stores into ([`Self::first_level_holds_a_pointer`]). `int **b;
+    /// memcpy(out, &b, 8)` copies an `int **`, whose blocks hold pointers;
+    /// `int *x; memcpy(pp, &x, 8)` copies an `int *`, whose block holds
+    /// `int`s.
     ///
-    /// **A source whose type says nothing is read as holding them**: one
+    /// **The copy is asked where either side says so.** Each type is a
+    /// claim nothing checks once a `void *` stands between: with `out` an
+    /// `int ***`, `void *v = &b; int **w = v; memcpy(out, w, 8);` copies
+    /// `b` through a source that reads it as an `int *`, while the
+    /// destination says what the caller reads, as a store's does. Found by
+    /// review.
+    ///
+    /// **A side whose type says nothing reads them as holding them**: one
     /// that copies a value not typed as a pointer, a `void *`, `char *` or
-    /// `int *` source. `memcpy` copies bytes, and the usual source is a
+    /// `int *` side. `memcpy` copies bytes, and the usual source is a
     /// `void *`, so leaving those unasked would leave the common spelling of
     /// #890 silent. Nor does an `int *` source prove it copies an `int`:
     /// `void *v = &b; int *i = v; memcpy(out, i, 8);` copies `b` through it,
@@ -488,14 +496,14 @@ impl Allocations<'_> {
     /// reader sees, at a block of `int`s copied out through a `void *`
     /// source.
     ///
-    /// An untyped source, and one not typed as a pointer at all, are read
-    /// the same way. No program this frontend reads reaches either, and
+    /// An untyped side, and one not typed as a pointer at all, are read the
+    /// same way. No program this frontend reads reaches either, and
     /// nothing guards them.
-    fn copy_holds_pointers(&self, source_ty: Option<TyId>) -> bool {
-        let Some(source_ty) = source_ty else {
+    fn copy_holds_pointers(&self, side_ty: Option<TyId>) -> bool {
+        let Some(side_ty) = side_ty else {
             return true;
         };
-        let copied = match self.unit.ty(innermost_element(self.unit, source_ty)) {
+        let copied = match self.unit.ty(innermost_element(self.unit, side_ty)) {
             Ty::Pointer(copied) => innermost_element(self.unit, copied),
             Ty::Int | Ty::Char | Ty::Void => return true,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
@@ -3495,8 +3503,12 @@ impl Analysis for Allocations<'_> {
                                 }
                             });
                             if marks {
-                                let holds_pointers =
-                                    self.copy_holds_pointers(self.unit.place_ty(function, source));
+                                // Either side, since a pointer laundered
+                                // through a `void *` makes either one's type
+                                // a claim nothing checks.
+                                let holds_pointers = self
+                                    .copy_holds_pointers(self.unit.place_ty(function, source))
+                                    || self.copy_holds_pointers(self.unit.place_ty(function, dest));
                                 self.mark_leaving(
                                     value,
                                     copied.iter().copied().collect(),
