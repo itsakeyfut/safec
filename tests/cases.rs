@@ -3605,6 +3605,31 @@ cases! {
         // proved, and `*q` under `== 0` is doubted.
         a_pointer_assigned_in_a_condition_is_null_on_the_arm_not_taken: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer moved by `+` or `-` where it may be null, or is: C17
+        // 6.5.6 p8 defines the move only into an array object (#884).
+        // Mutation: ask no move; all three go silent. See ADR-0084.
+        a_pointer_moved_before_its_null_test_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_parameter_moved_by_arithmetic_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_null_pointer_moved_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `_Nonnull` settles it, as for a dereference. Mutation: ask without
+        // reading the row; this is doubted.
+        a_nonnull_parameter_moved_by_arithmetic_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An integer added is no pointer moved. Mutation: ask every operand,
+        // not only a pointer; this is doubted.
+        an_integer_added_is_not_asked_whether_it_is_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What a move made is not null, so a move off it is not doubted.
+        // Found by review. Mutation: leave what a move made `Unknown`; this is
+        // doubted.
+        a_pointer_moved_off_a_moved_pointer_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer moved is not null after the move, as one dereferenced is.
+        // Found by review. Mutation: do not refine the moved pointer; this is
+        // doubted twice.
+        a_parameter_moved_twice_is_doubted_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // By `-`, and with the pointer on the right of `+`. Found by review.
+        // Mutation: ask `+` alone; the first goes silent. Mutation: ask the
+        // left operand alone; the second goes silent.
+        a_parameter_moved_back_by_subtraction_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_parameter_added_to_an_integer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A comma puts a sequence point between the assignment and the copy
         // the branch reads, and the walk steps over it. Mutation: have

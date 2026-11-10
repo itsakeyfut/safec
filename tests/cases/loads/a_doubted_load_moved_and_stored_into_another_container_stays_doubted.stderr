@@ -39,3 +39,13 @@ warning[SC0412]: this may reach outside the object `q` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+warning[SC0403]: this may move `x` while it is null
+    ╭─[ a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:29:22 ]
+    │
+ 29 │             int *y = x + i;
+    │                      ──┬──  
+    │                        ╰──── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: test this pointer against null before moving it

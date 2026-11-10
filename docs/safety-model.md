@@ -210,9 +210,9 @@ The limits, each a doubt the reader sees unless it says otherwise:
 * **A silence:** a `longjmp` back to a `setjmp` runs a call again on an edge
   the graph does not have, so a block the first run left unwritten may be
   believed written where the second run's allocation fails (ADR-0082).
-* **Not asked here:** a local's address that leaves the function (#883), and
-  arithmetic on a pointer that may be null (#884). Where either is the only
-  defect, nothing reports it.
+* **Not asked here:** a local's address that leaves the function (#883).
+  Where it is the only defect, nothing reports it. Arithmetic on a pointer
+  that may be null is doubted as a dereference of one is (ADR-0084).
 
 
 ## Incremental Safety Levels

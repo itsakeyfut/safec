@@ -1,0 +1,10 @@
+error[SC0403]: this may move `p` while it is null
+   ╭─[ a_parameter_moved_twice_is_doubted_once.c:1:26 ]
+   │
+ 1 │ int g(int *p) { int *q = p + 1; int *r = p + 2; return q != r; }
+   │                          ──┬──  
+   │                            ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it

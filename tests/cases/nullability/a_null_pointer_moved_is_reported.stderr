@@ -1,0 +1,9 @@
+error[SC0403]: this moves `p`, which is null
+   ╭─[ a_null_pointer_moved_is_reported.c:2:36 ]
+   │
+ 2 │ int f(void) { int *p = 0; int *q = p + 1; return q != 0; }
+   │                                    ──┬──  
+   │                                      ╰──── this is null where it is moved
+───╯
+  = note: this check belongs to safety level 1
+  = help: give this pointer a value before moving it, or do not move it here

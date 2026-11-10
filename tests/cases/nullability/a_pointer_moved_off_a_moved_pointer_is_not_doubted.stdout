@@ -1,0 +1,48 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_moved_off_a_moved_pointer_is_not_doubted.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int[4]" "a"
+  Local "_2" "int *" "q"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Local "_5" "int *" "r"
+  Local "_6" "int *"
+  Local "_7" "int"
+  Block "bb0" entry
+    Operation a_pointer_moved_off_a_moved_pointer_is_not_doubted.c:1:34 generated
+      Destination "_3"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_pointer_moved_off_a_moved_pointer_is_not_doubted.c:1:34 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_3"
+        Constant 1
+    Operation a_pointer_moved_off_a_moved_pointer_is_not_doubted.c:1:30 written
+      Destination "_2"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_moved_off_a_moved_pointer_is_not_doubted.c:1:34 generated
+    Operation a_pointer_moved_off_a_moved_pointer_is_not_doubted.c:1:50 written
+      Destination "_6"
+      Binary "Add"
+        Copy "_2"
+        Constant 1
+    Operation a_pointer_moved_off_a_moved_pointer_is_not_doubted.c:1:46 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_pointer_moved_off_a_moved_pointer_is_not_doubted.c:1:50 generated
+    Operation a_pointer_moved_off_a_moved_pointer_is_not_doubted.c:1:64 written
+      Destination "_7"
+      Binary "Ne"
+        Copy "_5"
+        Constant 0
+    Operation a_pointer_moved_off_a_moved_pointer_is_not_doubted.c:1:57 written
+      Destination "_0"
+      Use
+        Copy "_7"
+    Sequenced a_pointer_moved_off_a_moved_pointer_is_not_doubted.c:1:64 generated
+    Return

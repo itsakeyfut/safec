@@ -1,0 +1,33 @@
+Target "x86_64-pc-windows-msvc"
+Function a_parameter_moved_by_arithmetic_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_parameter_moved_by_arithmetic_is_doubted.c:2:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "a"
+  Local "_2" "int" parameter "n"
+  Local "_3" "int *" "e"
+  Local "_4" "int *"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_parameter_moved_by_arithmetic_is_doubted.c:2:33 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_1"
+        Copy "_2"
+    Operation a_parameter_moved_by_arithmetic_is_doubted.c:2:29 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_parameter_moved_by_arithmetic_is_doubted.c:2:33 generated
+    Operation a_parameter_moved_by_arithmetic_is_doubted.c:2:47 written
+      Destination "_5"
+      Binary "Ne"
+        Copy "_3"
+        Copy "_1"
+    Operation a_parameter_moved_by_arithmetic_is_doubted.c:2:40 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_parameter_moved_by_arithmetic_is_doubted.c:2:47 generated
+    Return

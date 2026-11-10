@@ -48,3 +48,13 @@ warning[SC0412]: this may reach outside the object `r` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+warning[SC0403]: this may move `u` while it is null
+    ╭─[ a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free.c:13:17 ]
+    │
+ 13 │     int *r = id(u + 1);
+    │                 ──┬──  
+    │                   ╰──── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: test this pointer against null before moving it

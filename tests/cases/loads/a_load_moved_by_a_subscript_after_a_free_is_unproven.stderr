@@ -38,13 +38,3 @@ warning[SC0403]: this may dereference a null pointer
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: test this pointer against null before reading through it
-warning[SC0403]: this may dereference a null pointer
-    ╭─[ a_load_moved_by_a_subscript_after_a_free_is_unproven.c:27:14 ]
-    │
- 27 │     int *q = t3[i][i];
-    │              ────┬───  
-    │                  ╰───── this check cannot say this is not null
-────╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven; it is an error without `--allow-unknown`
-  = help: test this pointer against null before reading through it

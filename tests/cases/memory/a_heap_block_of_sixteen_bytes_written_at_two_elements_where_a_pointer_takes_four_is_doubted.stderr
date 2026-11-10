@@ -18,13 +18,3 @@ error[SC0411]: `b` points at memory that may not have been written, and the call
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: write every pointer in it on every path before returning it, or allocate it with `calloc`
-error[SC0403]: this may dereference a null pointer
-   ╭─[ a_heap_block_of_sixteen_bytes_written_at_two_elements_where_a_pointer_takes_four_is_doubted.c:2:79 ]
-   │
- 2 │ int **f(int * _Nonnull x) { int **b = malloc(16); if (!b) return 0; b[0] = x; b[1] = x; return b; }
-   │                                                                               ────┬───  
-   │                                                                                   ╰───── this check cannot say this is not null
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: test this pointer against null before reading through it
