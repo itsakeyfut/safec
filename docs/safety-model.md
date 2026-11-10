@@ -159,6 +159,55 @@ asked there is
 never a proof, since C leaves the departure itself defined. See
 [ADR-0070](adr/0070-an-access-is-proved-inside-its-object-only-where-every-object-it-may-reach-was-read-wide-enough.md) and [ADR-0068](adr/0068-a-pointer-is-asked-where-it-leaves-by-a-call-a-return-or-a-store-what-the-other-side-will-believe-of-it.md).
 
+**And whether the memory a pointer leaves pointing at was written**, where the
+caller will read pointers out of it. A block returned, or stored where code
+outside the function reads it and still unwritten where the function returns,
+is `SC0411`: "nothing wrote" where it is unwritten on every path where it
+exists, and "may not have been written" where it is on some. A pointer read
+out of memory and returned is asked of what that read may name. A block handed
+to a call is not asked, since that is how a callee is given memory to fill
+([ADR-0073](adr/0073-what-leaves-a-function-is-asked-by-how-it-was-declared-and-what-wrote-it.md),
+[ADR-0076](adr/0076-a-block-a-store-lets-leave-is-asked-at-the-functions-exit-whether-it-was-written-replacing-what-adr-0073-rule-3-limits-to-a-return.md),
+[ADR-0080](adr/0080-a-block-possibly-unwritten-where-it-leaves-is-always-asked-and-an-allocation-tested-null-writes-its-own-block-vacuously.md)).
+What the answer rests on:
+
+* A block's written state is kept per allocation site, and per element for a
+  local array of pointers and for a heap block of two to 64 pointers of a
+  constant size
+  ([ADR-0069](adr/0069-a-pointer-read-out-of-memory-nothing-wrote-is-reported-where-it-is-read-and-a-loop-may-run-zero-times-unless-it-is-shown-to-run.md),
+  [ADR-0081](adr/0081-a-heap-block-of-pointers-of-a-constant-size-is-written-per-element-as-a-local-array-is.md)).
+* On the edge where an allocation's result is tested null its block does not
+  exist, so that path adds no doubt. That holds whatever names the site where
+  the call is on no loop, and in a loop only where nothing else names a block
+  an earlier turn made
+  ([ADR-0080](adr/0080-a-block-possibly-unwritten-where-it-leaves-is-always-asked-and-an-allocation-tested-null-writes-its-own-block-vacuously.md),
+  [ADR-0082](adr/0082-a-site-made-at-most-once-an-activation-is-written-vacuously-where-its-result-is-tested-null-whatever-holds-it.md)).
+* A loop may run zero times unless its test of constants shows it runs, and
+  one shown to run is left only with what its turns made
+  ([ADR-0069](adr/0069-a-pointer-read-out-of-memory-nothing-wrote-is-reported-where-it-is-read-and-a-loop-may-run-zero-times-unless-it-is-shown-to-run.md),
+  [ADR-0083](adr/0083-a-loop-shown-to-run-is-left-only-with-what-its-back-edges-brought.md)).
+
+The limits, each a doubt the reader sees unless it says otherwise:
+
+* One record per site cannot tell a block an earlier turn made from a later
+  one, so a block stored out before its null test in a loop, `out[i] = b; if
+  (!b) return;`, is doubted though every turn writes it (ADR-0082).
+* Two tests of one condition are not correlated: a block written under `if
+  (d)` and returned under the same `d`, past a loop that may run zero times,
+  is doubted (#874).
+* A read through a pointer read out of memory names no element, and asks the
+  whole block (ADR-0081).
+* **A silence:** a store at an index this check cannot read writes the whole
+  of a block kept per element, so a block written once at such an index is
+  believed written, and only the store is doubted, as one that may reach
+  outside the block (ADR-0081).
+* **A silence:** a `longjmp` back to a `setjmp` runs a call again on an edge
+  the graph does not have, so a block the first run left unwritten may be
+  believed written where the second run's allocation fails (ADR-0082).
+* **Not asked here:** a local's address that leaves the function (#883), and
+  arithmetic on a pointer that may be null (#884). Where either is the only
+  defect, nothing reports it.
+
 
 ## Incremental Safety Levels
 
