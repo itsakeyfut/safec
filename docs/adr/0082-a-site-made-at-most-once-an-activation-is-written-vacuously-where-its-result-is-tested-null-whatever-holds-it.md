@@ -67,8 +67,14 @@ Each in `tests/cases/memory/`, with its mutation in its note in
   function, and nothing new is kept in the state that a join or a door could
   forget.
 * Bad, because a call on a cycle `Cfg::loops` misses would be a silence. It
-  finds a back edge by the order blocks drain in, which covers any cycle; every
-  one C reaches today comes from `while` and `for`, `goto` being refused.
+  finds a back edge by the order blocks drain in, which covers any cycle the
+  graph has; every one C reaches today comes from `while` and `for`, `goto`
+  being refused. **`longjmp` is a cycle the graph does not have** (ADR-0010):
+  a jump back to a `setjmp` before the call runs it again. Found by review: a
+  block the first run stored out unwritten loses the `SC0411` `main` gave at
+  the second run's store, while the function keeps its other reports, a
+  `SC0402` and a `SC0407` among them. A `setjmp` the graph modelled would
+  have to count as a cycle here.
 * Bad, because #882 found two programs that `main` reported and this makes
   silent: `p = b; if (c) p = slot; *out = p;` with `slot` a local, and
   `p = b + 0;` where `b` may be null. `main`'s report on each was a false
