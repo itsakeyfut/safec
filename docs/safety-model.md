@@ -166,8 +166,11 @@ is `SC0411`: "nothing wrote" where it is unwritten on every path where it
 exists, and "may not have been written" where it is on some. So is a block it
 holds, as far down as the type reads pointers, whatever order the box was
 filled and let leave in
-([ADR-0085](adr/0085-a-block-below-one-that-leaves-is-asked-as-far-down-as-the-type-reads-pointers-replacing-what-adr-0076-rule-1-limits-to-the-blocks-a-value-names.md)). A pointer read
-out of memory and returned is asked of what that read may name. A block handed
+([ADR-0085](adr/0085-a-block-below-one-that-leaves-is-asked-as-far-down-as-the-type-reads-pointers-replacing-what-adr-0076-rule-1-limits-to-the-blocks-a-value-names.md)).
+A `void *` level is asked where the block was held as pointers by a typed
+local, and a buffer never held so is not
+([ADR-0086](adr/0086-a-block-records-the-type-it-was-held-as-and-a-void-pointer-level-is-asked-where-that-record-says-pointers.md)).
+A pointer read out of memory and returned is asked of what that read may name. A block handed
 to a call is not asked, since that is how a callee is given memory to fill
 ([ADR-0073](adr/0073-what-leaves-a-function-is-asked-by-how-it-was-declared-and-what-wrote-it.md),
 [ADR-0076](adr/0076-a-block-a-store-lets-leave-is-asked-at-the-functions-exit-whether-it-was-written-replacing-what-adr-0073-rule-3-limits-to-a-return.md),
