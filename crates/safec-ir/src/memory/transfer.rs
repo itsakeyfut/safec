@@ -1372,7 +1372,14 @@ impl Allocations<'_> {
             }
         }
         rest.clear(condition.local);
-        if !rest.held_sites()[returned] {
+        // **A site made at most once an activation needs no holder test**:
+        // its one block is the one that did not come to exist, so every
+        // copy of the result, a store before the test included, holds null
+        // here. `*out = b; if (!b) return;` counted `out`'s memory as a
+        // holder and said the block nothing wrote there (#877). A site made
+        // in a loop keeps the test, since an earlier turn's block may be
+        // what another holder names. See ADR-0082.
+        if self.made_once[returned.local()] || !rest.held_sites()[returned] {
             value.init[returned] = Init::Written;
             value.block_elements[returned] = None;
         }

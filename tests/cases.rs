@@ -1664,6 +1664,8 @@ cases! {
         // a later turn's allocation fails: the null edge writes no site
         // something else may name (ADR-0080, found by #870's adversary).
         // Mutation: write the site whatever else holds it; all three go silent.
+        // So they do, measured, where every site counts as made once an
+        // activation (ADR-0082).
         a_block_kept_in_memory_from_an_earlier_turn_is_doubted_where_read_after_a_later_allocation_fails: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_kept_in_memory_from_an_earlier_turn_is_doubted_where_returned_after_a_later_allocation_fails: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_stored_out_on_an_earlier_turn_is_doubted_where_a_later_allocation_fails: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1693,7 +1695,8 @@ cases! {
         // An earlier turn's block a local kept, where this turn's allocation
         // fails: that local is not a copy of this call's result and is not
         // set aside. Mutation: set aside every local holding the site; the
-        // certain `SC0411` goes, leaving only `SC0406`.
+        // certain `SC0411` goes, leaving only `SC0406`. So it does where every
+        // site counts as made once an activation (ADR-0082).
         a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Tested against zero rather than by name. Mutation: the null edge
         // neither writes nor clears; this is reported.
@@ -1727,6 +1730,16 @@ cases! {
         // flag says nothing of the `b` the branch reads. Mutation: drop the
         // walk's `changed` refusal; this goes silent.
         a_block_written_under_a_null_test_kept_in_a_flag_whose_pointer_changes_before_the_branch_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Stored out before its null test, by a call on no cycle (#877): the
+        // block that failed is the only one the site makes, so the null edge
+        // writes it whatever holds it. Mutation: count no site as made once
+        // an activation; both are "nothing wrote" again. See ADR-0082.
+        a_block_stored_out_before_its_null_test_and_written_on_one_path_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_stored_out_before_its_null_test_and_written_on_every_path_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same in a loop, a stated limit: an earlier turn's block is held
+        // by the same memory, and the site's one record of what was written
+        // cannot say it was. Doubted; the holder test stands. See ADR-0082.
+        a_block_stored_out_before_its_null_test_in_a_loop_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The flag copied twice. Mutation: follow one copy only; this is
         // doubted.
         a_flag_copied_twice_before_the_branch_still_refines: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1834,7 +1847,8 @@ cases! {
         // was filled, and the mark kept where the site is made again cannot
         // tell the two apart, the cost the next case pays for. Mutation:
         // clear `left_at` where the site is made again (`Known::reborn`);
-        // this loses its doubt and the next case goes silent.
+        // this loses its doubt and the next case goes silent. Both go silent
+        // too where every site counts as made once an activation (ADR-0082).
         a_block_made_again_each_turn_and_filled_after_it_is_stored_out_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // One turn stores the block out and a later turn allocates again
         // and writes the new one: the caller holds the first, never written,
