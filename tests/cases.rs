@@ -1738,7 +1738,9 @@ cases! {
         a_block_stored_out_before_its_null_test_and_written_on_every_path_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same in a loop, a stated limit: an earlier turn's block is held
         // by the same memory, and the site's one record of what was written
-        // cannot say it was. Doubted; the holder test stands. See ADR-0082.
+        // cannot say it was. Doubted; the holder test stands. Mutation: count
+        // every site as made once an activation; its `SC0411` goes. See
+        // ADR-0082.
         a_block_stored_out_before_its_null_test_in_a_loop_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The flag copied twice. Mutation: follow one copy only; this is
         // doubted.
