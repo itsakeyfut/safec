@@ -8,3 +8,12 @@ error[SC0412]: this may reach outside the object `q` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0403]: this moves `p`, which is null
+   ╭─[ a_pointer_moved_off_null_and_tested_is_not_proved_inside.c:3:14 ]
+   │
+ 3 │     int *q = p + 1;
+   │              ──┬──  
+   │                ╰──── this is null where it is moved
+───╯
+  = note: this check belongs to safety level 1
+  = help: give this pointer a value before moving it, or do not move it here

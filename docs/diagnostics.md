@@ -61,7 +61,8 @@ the question about, in the order it names them, so they were reserved before
 anything could emit from them. The first of the four now does, nine times:
 `SC0401` is a value freed where it may already have been freed, `SC0402` is
 a value used where it may already have been freed, `SC0403` is a value read
-or written through a pointer that may be null, `SC0404` is a value freed
+or written through a pointer that may be null, or such a pointer moved by `+`
+or `-`, `SC0404` is a value freed
 through a pointer that may not be the start of its allocation, `SC0405` is
 a pointer that may be null passed to a parameter declared `_Nonnull`,
 `SC0406` is a pointer to an allocation that may have been freed, handed back by
@@ -86,6 +87,12 @@ call it is not null on that path, as after a dereference. A null pointer
 constant handed over, `memcpy(0, s, 8)`, is certain.
 [ADR-0072](adr/0072-an-argument-a-library-function-reads-or-writes-through-is-asked-and-refined-as-a-dereference.md)
 is the decision.
+
+A pointer moved by `+` or `-`, `a + n`, is asked as a dereference of it is,
+since C17 6.5.6 p8 defines the move only for a pointer into an array object,
+in words of its own: "this may move `a` while it is null". An integer added is
+not asked, and a parameter declared `_Nonnull` is not doubted
+([ADR-0084](adr/0084-a-pointer-value-is-asked-beyond-a-dereference.md)).
 
 **`SC0405` asks `SC0403`'s question somewhere else, and is a class of its own
 for the reason the two above are.** A parameter declared `_Nonnull` is believed

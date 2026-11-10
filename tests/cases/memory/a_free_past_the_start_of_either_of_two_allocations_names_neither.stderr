@@ -7,3 +7,13 @@ error[SC0404]: this frees a pointer that is not the start of an allocation
 ────╯
   = note: this check belongs to safety level 1
   = help: free the pointer the allocation was made with, and keep the offset in a variable of its own
+error[SC0403]: this may move `p` while it is null
+    ╭─[ a_free_past_the_start_of_either_of_two_allocations_names_neither.c:12:10 ]
+    │
+ 12 │     free(p + 1);
+    │          ──┬──  
+    │            ╰──── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it

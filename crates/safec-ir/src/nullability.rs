@@ -196,6 +196,11 @@ pub enum Asked {
         /// that (#333).
         through_memory: bool,
     },
+    /// Whether a pointer moved by `+` or `-` is null: C17 6.5.6 p8 defines
+    /// the move only for a pointer into an array object, which a null one is
+    /// not. Asked as a dereference is, since what settles it is the same test.
+    /// See ADR-0084.
+    Arithmetic,
     /// Whether an argument passed to a `_Nonnull` parameter is null.
     Argument {
         /// What the parameter promised, which is what this argument is
@@ -234,6 +239,9 @@ impl Asked {
             (Self::Dereference { through_memory: _ }, Self::Dereference { through_memory: _ }) => {
                 true
             }
+            // A move is its own question: it and a dereference of what it
+            // made stand at carets of their own, measured. See ADR-0084.
+            (Self::Arithmetic, Self::Arithmetic) => true,
             (Self::Argument { promise }, Self::Argument { promise: other }) => promise == other,
             (
                 Self::Return {
@@ -247,6 +255,7 @@ impl Asked {
             ) => self == other,
             (
                 Self::Dereference { through_memory: _ }
+                | Self::Arithmetic
                 | Self::Argument { promise: _ }
                 | Self::Return {
                     promise: _,
@@ -1252,6 +1261,7 @@ fn report(
     dereferenced: Option<(Span, Vec<&Place>)>,
     known: &[Nullness],
     function: FuncId,
+    moved: bool,
 ) {
     let Some((at, places)) = dereferenced else {
         return;
@@ -1272,8 +1282,12 @@ fn report(
                 function,
                 conclusion,
                 at,
-                asked: Asked::Dereference {
-                    through_memory: read_out_of_memory(place),
+                asked: if moved {
+                    Asked::Arithmetic
+                } else {
+                    Asked::Dereference {
+                        through_memory: read_out_of_memory(place),
+                    }
                 },
                 // **About the local where its own row concluded**, which is
                 // never less severe than the loaded pointer below it, since
@@ -1286,6 +1300,37 @@ fn report(
             findings.push((finding, About::Place((*place).clone())));
         }
     }
+}
+
+/// Where an element runs, and each pointer local it moves by `+` or `-`.
+fn moved_in_element<'e>(
+    unit: &TranslationUnit,
+    function: &Function,
+    element: &'e Element,
+) -> Option<(Span, Vec<&'e Place>)> {
+    let Element::Assign(operation) = element else {
+        return None;
+    };
+    let Rvalue::Binary {
+        op: BinOp::Add | BinOp::Sub,
+        lhs,
+        rhs,
+    } = &operation.value
+    else {
+        return None;
+    };
+    let moved = [lhs, rhs]
+        .into_iter()
+        .filter_map(|operand| match operand {
+            Operand::Copy(place)
+                if place.projection.is_empty() && pointer_typed(unit, function, place.local) =>
+            {
+                Some(place)
+            }
+            Operand::Copy(_) | Operand::Constant(_) => None,
+        })
+        .collect();
+    Some((operation.origin.span(), moved))
 }
 
 /// The local an operand is the own value of, where nothing is projected from
@@ -1437,6 +1482,7 @@ fn report_library(
         Some((at, reached.iter().collect())),
         known,
         function,
+        false,
     );
     // **About the argument's own place where it is a load**, so that
     // `memcpy(*pp, s, 4)` is one thing to say: the argument's load already
@@ -1597,6 +1643,19 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                     dereferenced_in_element(element),
                     &known.of,
                     func,
+                    false,
+                );
+                // **And a pointer moved by `+` or `-`**, which a null one may
+                // not be (#884). The operand by name, as a dereference reads
+                // it, and only a pointer: an integer added is no question
+                // here. See ADR-0084.
+                report(
+                    &analysis,
+                    &mut findings,
+                    moved_in_element(unit, function, element),
+                    &known.of,
+                    func,
+                    true,
                 );
                 if let Element::Assign(operation) = element {
                     if operation.place == Place::local(function.return_place()) {
@@ -1624,6 +1683,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 dereferenced_in_terminator(&block.terminator),
                 &known.of,
                 func,
+                false,
             );
             report_arguments(&analysis, &mut findings, &block.terminator, &known.of, func);
             report_library(&analysis, &mut findings, &block.terminator, &known.of, func);

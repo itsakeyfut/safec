@@ -19,6 +19,16 @@ error[SC0411]: `slot` may be read before anything was assigned to it
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: assign it on every path, `= 0` where it is declared if nothing else
+error[SC0403]: this may move `pp` while it is null
+   ╭─[ a_local_written_through_a_pointer_moved_off_it_and_back_is_doubted_where_read.c:7:10 ]
+   │
+ 7 │     pp = pp - 1;
+   │          ───┬──  
+   │             ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it
 error[SC0403]: this may dereference `pp` while it is null
    ╭─[ a_local_written_through_a_pointer_moved_off_it_and_back_is_doubted_where_read.c:8:5 ]
    │

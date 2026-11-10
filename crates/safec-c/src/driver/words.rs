@@ -1388,6 +1388,25 @@ pub(super) fn nullability_finding(
             "this check cannot say this is not null",
             "read each pointer this goes through into a local, and test that local against null before reading through it",
         ),
+        // **A pointer moved by `+` or `-`**, which C17 6.5.6 p8 does not
+        // define for a null one (#884). Its own words, since nothing is read
+        // through it, and the same code: the same test settles it.
+        (Asked::Arithmetic, Conclusion::Unsafe) => (
+            NULL_DEREFERENCE,
+            said(name, "this moves a null pointer", |name| {
+                format!("this moves `{name}`, which is null")
+            }),
+            "this is null where it is moved",
+            "give this pointer a value before moving it, or do not move it here",
+        ),
+        (Asked::Arithmetic, Conclusion::Unknown) => (
+            NULL_DEREFERENCE,
+            said(name, "this may move a null pointer", |name| {
+                format!("this may move `{name}` while it is null")
+            }),
+            "this check cannot say this is not null",
+            "test this pointer against null before moving it",
+        ),
         (Asked::Argument { promise }, conclusion) => {
             return passed(finding.at, conclusion, promise, name);
         }
@@ -1398,7 +1417,7 @@ pub(super) fn nullability_finding(
             },
             conclusion,
         ) => return returned(finding.at, conclusion, promise, reached_end, name),
-        (Asked::Dereference { through_memory: _ }, Conclusion::Safe) => {
+        (Asked::Dereference { through_memory: _ } | Asked::Arithmetic, Conclusion::Safe) => {
             (NULL_DEREFERENCE, "nothing".to_owned(), "nothing", "nothing")
         }
     };
