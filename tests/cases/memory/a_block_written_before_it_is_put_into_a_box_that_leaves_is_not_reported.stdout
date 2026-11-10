@@ -1,0 +1,93 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:2:6 "stored"
+  Local "_0" "void" return
+  Local "_1" "int ****" parameter _Nonnull "out"
+  Local "_2" "int *" parameter "x"
+  Local "_3" "int **" "b"
+  Local "_4" "void *"
+  Local "_5" "int *"
+  Local "_6" "int ***" "box"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int **"
+  Local "_10" "int ***"
+  Block "bb0" entry
+    ArgumentsEvaluated a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:3:15 generated
+    Call a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:3:15 written "malloc" "bb1"
+      Destination "_4"
+      Constant 8
+  Block "bb1"
+    Operation a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:3:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:3:15 generated
+    Branch a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:4:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:4:9 generated
+    Operation a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:4:12 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_2"
+    Operation a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:4:12 written
+      Destination "_5"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:4:12 generated
+    Goto "bb4"
+  Block "bb3"
+    Sequenced a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:4:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:5:18 generated
+    Call a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:5:18 written "malloc" "bb5"
+      Destination "_7"
+      Constant 8
+  Block "bb5"
+    Operation a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:5:12 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:5:18 generated
+    Operation a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:6:9 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_6"
+    Branch a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:6:9 written "bb6" "bb7"
+      Copy "_8"
+  Block "bb6"
+    Sequenced a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:6:9 generated
+    Return
+  Block "bb7"
+    Sequenced a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:6:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:7:5 written
+      Destination "_6"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:7:5 written
+      Destination "_9"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:7:5 generated
+    Operation a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:8:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:8:5 written
+      Destination "_10"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported.c:8:5 generated
+    Return

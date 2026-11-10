@@ -1798,22 +1798,48 @@ fn report_returned_unwritten(
     if !returns_pointers {
         return;
     }
+    // **And the blocks those hold**, as far down as the return type reads
+    // pointers: `*box = b; return box;` hands the caller `b`'s block, and
+    // was silent with `b` unwritten (#900). The walk a store and a copy that
+    // leave are marked by, so the three doors follow the same levels. See
+    // ADR-0085.
+    let levels = analysis
+        .unit
+        .place_ty(function, &Place::local(function.return_place()))
+        .map_or(0, |ty| analysis.levels_holding_pointers(ty));
+    let below: Vec<Site> = sites.as_ref().map_or_else(Vec::new, |own| {
+        known
+            .held_below(own.clone(), levels)
+            .into_iter()
+            .filter(|site| !own.contains(site))
+            .collect()
+    });
     // **Any block it may name**, not every: one written elsewhere does not
     // make the other one written, and `r = c ? a : b;` with only `a` written
     // was silent. The path where an allocation failed names no block, so it
     // adds nothing here. Found by review.
-    let certainly = sites
+    let certainly_own = sites
         .iter()
         .flatten()
         .any(|&site| known.init[site].is_unwritten());
     // **Possibly, wherever it is**: the path where an allocation failed adds
     // no doubt, because its null edge writes the block it did not make. See
     // ADR-0080.
-    let possibly = sites.as_ref().is_none_or(|sites| {
+    let possibly_own = sites.as_ref().is_none_or(|sites| {
         sites
             .iter()
             .any(|&site| known.init[site].may_be_unwritten())
     });
+    let certainly = certainly_own || below.iter().any(|&site| known.init[site].is_unwritten());
+    let possibly = possibly_own
+        || below
+            .iter()
+            .any(|&site| known.init[site].may_be_unwritten());
+    // **The returned local is named only where its own blocks are in
+    // doubt**: where only a block below them is, "`box` points at memory
+    // nothing wrote" is false of a `box` that was written, and the nameless
+    // words are said instead.
+    let named = named.filter(|_| possibly_own);
     // **On a first turn's arm, certainly unwritten is a doubt**: that turn
     // may not take the arm, and a later one finds the block written (#838).
     // Mutation: ignore `doubt_only`; the return in

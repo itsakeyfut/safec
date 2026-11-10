@@ -1218,6 +1218,34 @@ impl Known {
         closed
     }
 
+    /// The blocks `sites` name and the blocks they hold, `levels` levels in
+    /// all: `sites` themselves at the first, what is stored in them at the
+    /// second, and so on, each block once. `usize::MAX` follows what is held
+    /// until nothing new is. Zero levels is no block.
+    ///
+    /// **One walk for every door a block leaves by**: the store, the copy
+    /// and the `return` each ask it with the levels their type reads
+    /// pointers at, so one cannot follow a level the others stop at. See
+    /// ADR-0085.
+    pub(super) fn held_below(&self, sites: Vec<Site>, levels: usize) -> Vec<Site> {
+        let mut seen: Vec<Site> = Vec::new();
+        let mut frontier = sites;
+        for _ in 0..levels {
+            frontier.retain(|site| !seen.contains(site));
+            frontier.sort_unstable();
+            frontier.dedup();
+            if frontier.is_empty() {
+                break;
+            }
+            seen.extend(frontier.iter().copied());
+            frontier = frontier
+                .iter()
+                .flat_map(|&site| self.contents[site].sites())
+                .collect();
+        }
+        seen
+    }
+
     /// Record that a store this check cannot place may have put what it
     /// carries in any memory code it cannot read can name: every exposed
     /// allocation and every allocation reachable from one, since a pointer

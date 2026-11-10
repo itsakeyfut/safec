@@ -1664,6 +1664,25 @@ cases! {
         // not only where the stored-into type holds pointers; this is
         // reported.
         a_char_buffer_stored_out_unwritten_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block put into a box before the box leaves is handed to the caller
+        // with it, and asked as far down as the type reads pointers (#900,
+        // ADR-0085). Mutation: `mark_leaving` marks one level whatever the
+        // type; the first goes silent. Mutation: the copy arm marks one level;
+        // the third goes silent.
+        a_block_put_into_a_box_before_the_box_leaves_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the return asks the blocks it names alone; this goes silent.
+        // Mutation: name the returned local whatever level is unwritten; the
+        // words say `box`, which was written.
+        a_block_put_into_a_box_that_is_returned_is_reported_at_the_return: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_put_into_a_box_that_is_copied_out_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `box` is an `int **`, so the block below it holds `int`s. Mutation:
+        // follow what the blocks hold at every level, whatever the type; this
+        // is reported.
+        a_block_of_ints_put_into_a_box_that_leaves_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written under its own null test before it goes in the box. Mutation:
+        // report every block left at the exit, written or not; this is
+        // reported.
+        a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
         // one is, by one function both doors call (#890). Possibly, not
         // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no
