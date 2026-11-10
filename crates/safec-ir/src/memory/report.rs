@@ -610,10 +610,10 @@ fn established_null(argument: &Operand, null: &NullAtTerminators, block: BlockId
 /// of what it reaches. A pointer read out of memory nothing recorded a store
 /// into, `int *p = *pp;` with `pp` a parameter, has no site; one read out of
 /// the function's own memory holds what was stored there (ADR-0045). And a bare name is never given an element at all, so
-/// `free(p); p;` is quiet about reading an indeterminate pointer, which 6.2.4
-/// p2 makes undefined and which belongs to an axis with no check. A `return`
-/// of one and an argument of a call are the exceptions, and [`returned`] and
-/// [`handed`] ask them rather than this.
+/// `free(p); p;` reads nothing here. A freed value used by a comparison or a
+/// branch is [`used_by_value`]'s, a `return` of one and an argument of a call
+/// are [`returned`]'s and [`handed`]'s; a plain copy and a value that may
+/// have been freed are asked by none of them. See ADR-0084.
 /// `docs/diagnostics.md` says what exit 0 does not mean here, because a
 /// boundary that lives only in a comment is one no user can find.
 ///
@@ -690,6 +690,75 @@ pub(super) fn used(
                 conclusion: verdict.conclusion,
                 at,
                 local,
+                freed: verdict.freed,
+                made: verdict.made,
+                unproven: verdict.unproven,
+            },
+        );
+    }
+}
+
+/// Report every local at `at` read by value by an operator or a branch,
+/// `free(p); return p != 0;`, **where it was certainly freed**: `SC0402`,
+/// `Unsafe`. A value that may have been freed says nothing here, a silence
+/// `docs/safety-model.md` lists: asked as a doubt, it was asked again at every
+/// comparison of every pointer this check stopped following, 233 cases of
+/// the corpus, measured. A plain copy is not asked, since the copy carries
+/// the value to where it is used. See ADR-0084.
+///
+/// Through [`say`], keyed with [`used`], so a place both dereferenced and
+/// compared at one caret is said once; and not where a use after free
+/// already stands at the caret, whatever place it names.
+pub(super) fn used_by_value(
+    sources: &SourceMap,
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    at: Option<(Span, Vec<&Place>)>,
+    known: &Known,
+    function: FuncId,
+    is_pointer: &dyn Fn(LocalId) -> bool,
+) {
+    let Some((at, operated)) = at else {
+        return;
+    };
+    // **A pointer's value, not a value computed from one**: an operator's
+    // result keeps its operands' sites, so `int b = p != 0;` before the free
+    // reached the block and `b == 1` after it was said to use a freed value,
+    // found by review. An `int` holds no pointer this frontend can make one
+    // of, since a cast is refused.
+    for place in operated.into_iter().filter(|place| is_pointer(place.local)) {
+        // **One use after free at one caret said once, whichever place it
+        // names**: `if (p == 0)` compares `p` and then branches on the
+        // comparison's temporary, which carries the freed state on, and the
+        // two were said twice at one caret, found by review.
+        if findings
+            .iter()
+            .any(|said| said.kind == Kind::UseAfterFree && said.at == at)
+        {
+            continue;
+        }
+        let Some(verdict) = verdict(
+            sources,
+            Kind::UseAfterFree,
+            known.reached_by(place.local),
+            known,
+        ) else {
+            continue;
+        };
+        if verdict.conclusion != Conclusion::Unsafe {
+            continue;
+        }
+        say(
+            sources,
+            findings,
+            said,
+            place,
+            Finding {
+                function,
+                kind: Kind::UseAfterFree,
+                conclusion: verdict.conclusion,
+                at,
+                local: Some(place.local),
                 freed: verdict.freed,
                 made: verdict.made,
                 unproven: verdict.unproven,

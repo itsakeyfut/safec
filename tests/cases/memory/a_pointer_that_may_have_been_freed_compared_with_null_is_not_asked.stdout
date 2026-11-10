@@ -1,0 +1,68 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:25 generated
+    Call a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:25 written "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:21 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:25 generated
+    Operation a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:40 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:40 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:40 generated
+    Operation a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:44 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:51 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:40 generated
+    Goto "bb4"
+  Block "bb4"
+    Branch a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:58 written "bb5" "bb6"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:58 generated
+    ArgumentsEvaluated a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:61 generated
+    Call a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:61 written "free" "bb8"
+      Copy "_2"
+  Block "bb6"
+    Sequenced a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:58 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:77 written
+      Destination "_5"
+      Binary "Ne"
+        Copy "_2"
+        Constant 0
+    Operation a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:70 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:77 generated
+    Return
+  Block "bb8"
+    Sequenced a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked.c:3:61 generated
+    Goto "bb7"

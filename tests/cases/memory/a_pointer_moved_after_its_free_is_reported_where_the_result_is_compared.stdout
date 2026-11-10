@@ -1,0 +1,70 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" "p"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *" "q"
+  Local "_5" "int *"
+  Local "_6" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:24 generated
+    Call a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:24 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:20 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:24 generated
+    Operation a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:39 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:39 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:39 generated
+    Operation a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:43 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:50 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:39 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:53 generated
+    Call a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:53 written "free" "bb5"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:53 generated
+    Operation a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:71 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_1"
+        Constant 1
+    Operation a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:67 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:71 generated
+    Operation a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:85 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Operation a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:78 written
+      Destination "_0"
+      Use
+        Copy "_6"
+    Sequenced a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared.c:3:85 generated
+    Return

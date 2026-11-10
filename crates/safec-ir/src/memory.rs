@@ -82,7 +82,10 @@ use crate::ir::{
     Between, BlockId, Element, FuncId, Function, LocalId, Place, Terminator, TranslationUnit,
 };
 use crate::nullability::{self};
-use crate::reads::{dereferenced_in_element, dereferenced_in_terminator};
+use crate::reads::{
+    dereferenced_in_element, dereferenced_in_terminator, operated_on_in_element,
+    operated_on_in_terminator,
+};
 use crate::source::{SourceMap, Span};
 
 use allocations::Allocations;
@@ -92,7 +95,7 @@ use report::{
     UnwrittenAsk, after_a_call, asked_unwritten_in_element, asked_unwritten_in_terminator,
     copied_away, departed_at_call, departed_in_element, freed_after_its_read_was_reported, handed,
     handed_stored_out, may_not_fit, reached_by_library, reported, returned, stored_away, used,
-    used_before,
+    used_before, used_by_value,
 };
 
 /// Which of the five things this check answers about a finding is.
@@ -890,6 +893,16 @@ fn findings_within(
                     &known,
                     func,
                 );
+                // And a value used by an operator. See ADR-0084.
+                used_by_value(
+                    sources,
+                    &mut findings,
+                    &mut said,
+                    operated_on_in_element(element),
+                    &known,
+                    func,
+                    &|local| unit.ty(function.local(local)).is_pointer(),
+                );
                 // The same accesses, asked whether they fit. See ADR-0060.
                 may_not_fit(
                     &mut findings,
@@ -990,6 +1003,15 @@ fn findings_within(
                 dereferenced_in_terminator(&block.terminator),
                 &known,
                 func,
+            );
+            used_by_value(
+                sources,
+                &mut findings,
+                &mut said,
+                operated_on_in_terminator(&block.terminator),
+                &known,
+                func,
+                &|local| unit.ty(function.local(local)).is_pointer(),
             );
             may_not_fit(
                 &mut findings,
