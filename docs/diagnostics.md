@@ -600,10 +600,12 @@ throws its value away, and C17 6.5.3.2 p4 makes the dereference undefined all
 the same. What it does not read is a place it follows no allocation for, and
 that is the rule rather than a list. Two ways to reach one are known: a
 pointer read out of another pointer, `int *p = *pp;`, which never had a site;
-and a name with nothing dereferenced, so `free(p); p;` is quiet about reading
-an indeterminate pointer, which is undefined by 6.2.4 p2 and belongs to an axis
-this compiler has no check for yet. A `return` and an argument of a call are
-the two exceptions, and they are `SC0406` and `SC0407` rather than this code.
+and a name with nothing dereferenced. A freed pointer's value is indeterminate
+(C17 6.2.4 p2), and using it by a comparison or a branch, `free(p); return p !=
+0;`, is this code too, where the pointer was certainly freed; a `return` and an
+argument of a call are `SC0406` and `SC0407`. A plain copy, a move by `+` or
+`-`, which carries the pointer to where it is used, and a value that may have
+been freed on some path only, are not asked (ADR-0084).
 `int *r = &*p;` used to be a third and is
 not: the lowering applies C17 6.5.3.2 p3, which makes that pointer the same
 pointer, so `r` carries what `p` carried.

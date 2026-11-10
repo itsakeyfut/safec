@@ -9,7 +9,7 @@
 //! same kind of question; the nullability check's own test of a load is
 //! `nullability::read_out_of_memory`, which is a different rule.
 
-use crate::ir::{Element, Operand, Place, Projection, Rvalue, Terminator};
+use crate::ir::{BinOp, Element, Operand, Place, Projection, Rvalue, Terminator};
 use crate::source::Span;
 
 /// Where this element runs, and every place it reads or writes through a
@@ -86,6 +86,102 @@ pub(crate) fn dereferenced_in_terminator(terminator: &Terminator) -> Option<(Spa
             origin,
         } => Some((origin.span(), dereferenced_in(condition))),
         Terminator::Goto(_) | Terminator::Return | Terminator::Abnormal { to: _ } => None,
+    }
+}
+
+/// Where this element runs, and every local it reads by value as an operand
+/// of an operator whose result is no pointer: a comparison, a negation. Not
+/// a plain copy, and **not `+` or `-`**, whose result carries the pointer to
+/// where it is used, as a copy does: asked here as well, `p[i]` after a free
+/// was said twice, at the move and at the dereference of what it made, found
+/// while implementing. Not a dereference, which [`dereferenced_in_element`]
+/// answers.
+///
+/// **A value used is the question**, which C17 6.2.4 p2 and Annex J.2 make
+/// undefined for a pointer whose object's lifetime has ended, whatever it is
+/// used for. See ADR-0084.
+pub(crate) fn operated_on_in_element(element: &Element) -> Option<(Span, Vec<&Place>)> {
+    match element {
+        Element::Assign(operation) => {
+            let places = match &operation.value {
+                // Every operator written out, so a new one answers here.
+                Rvalue::Binary {
+                    op:
+                        BinOp::Lt
+                        | BinOp::Gt
+                        | BinOp::Le
+                        | BinOp::Ge
+                        | BinOp::Eq
+                        | BinOp::Ne
+                        | BinOp::Mul
+                        | BinOp::Div
+                        | BinOp::Rem
+                        | BinOp::Shl
+                        | BinOp::Shr
+                        | BinOp::BitAnd
+                        | BinOp::BitXor
+                        | BinOp::BitOr,
+                    lhs,
+                    rhs,
+                } => named(lhs).into_iter().chain(named(rhs)).collect(),
+                Rvalue::Binary {
+                    op: BinOp::Add | BinOp::Sub,
+                    lhs: _,
+                    rhs: _,
+                } => Vec::new(),
+                Rvalue::Unary { op: _, operand } => named(operand).into_iter().collect(),
+                // A copy carries the value on; an address reads none.
+                Rvalue::Use(_) | Rvalue::Address(_) => Vec::new(),
+            };
+            Some((operation.origin.span(), places))
+        }
+        Element::Evaluate {
+            place: _,
+            origin: _,
+        }
+        | Element::Sequenced { origin: _ }
+        | Element::ArgumentsEvaluated { origin: _ }
+        | Element::UnsequencedAccess {
+            local: _,
+            written: _,
+            accessed: _,
+            both_write: _,
+            between: _,
+            origin: _,
+        }
+        | Element::StorageLive {
+            local: _,
+            origin: _,
+        }
+        | Element::StorageDead {
+            origin: _,
+            local: _,
+        } => None,
+    }
+}
+
+/// The same, for a terminator: a branch on a local by name, `if (p)`. A
+/// call's arguments and a `return` are asked by checks of their own.
+pub(crate) fn operated_on_in_terminator(terminator: &Terminator) -> Option<(Span, Vec<&Place>)> {
+    match terminator {
+        Terminator::Branch {
+            condition,
+            then: _,
+            otherwise: _,
+            origin,
+        } => Some((origin.span(), named(condition).into_iter().collect())),
+        Terminator::Call { .. }
+        | Terminator::Goto(_)
+        | Terminator::Return
+        | Terminator::Abnormal { to: _ } => None,
+    }
+}
+
+/// The local an operand reads by name, with nothing projected from it.
+fn named(operand: &Operand) -> Option<&Place> {
+    match operand {
+        Operand::Copy(place) if place.projection.is_empty() => Some(place),
+        Operand::Copy(_) | Operand::Constant(_) => None,
     }
 }
 

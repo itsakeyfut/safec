@@ -202,6 +202,9 @@ The limits, each a doubt the reader sees unless it says otherwise:
   of a block kept per element, so a block written once at such an index is
   believed written, and only the store is doubted, as one that may reach
   outside the block (ADR-0081).
+* **A silence:** a pointer that may have been freed on some path only, used
+  by a comparison or a branch, is not asked; one certainly freed is `SC0402`
+  ([ADR-0084](adr/0084-a-pointer-value-is-asked-beyond-a-dereference.md)).
 * **A silence:** a `longjmp` back to a `setjmp` runs a call again on an edge
   the graph does not have, so a block the first run left unwritten may be
   believed written where the second run's allocation fails (ADR-0082).

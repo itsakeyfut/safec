@@ -2011,6 +2011,23 @@ cases! {
         // naming nothing taken to land anywhere. Dropping either alone keeps
         // their `SC0414`; dropping both loses it.
         a_freed_pointer_stored_two_levels_below_a_parameter_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A freed pointer's value used by a comparison or a branch, which C17
+        // 6.2.4 p2 makes indeterminate (#892). Mutation: do not call
+        // `used_by_value`; these go silent. See ADR-0084.
+        a_freed_pointer_compared_with_null_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_freed_pointer_branched_on_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Moved first: the move carries the freed pointer, as a copy does, and
+        // its result is reported where it is compared. Mutation: ask a move as
+        // a use too; `a_subscript_of_a_freed_pointer` is said twice.
+        a_pointer_moved_after_its_free_is_reported_where_the_result_is_compared: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **A stated silence** (ADR-0084): freed on one arm only, so the value
+        // compared may have been freed; a doubt there was asked at every
+        // comparison of every pointer this check stopped following. Mutation:
+        // keep a doubt too; this is reported.
+        a_pointer_that_may_have_been_freed_compared_with_null_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A plain copy is not a use asked here: what it copies is asked where
+        // the copy is used. Mutation: ask a copy too; this is reported.
+        a_freed_pointer_copied_and_never_used_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_freed_pointer_stored_through_a_pointer_read_out_of_a_parameter_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What a parameter's memory held is a pointer this check lost, and
         // the words say so. Mutation: word the lost row as a freed one; this
