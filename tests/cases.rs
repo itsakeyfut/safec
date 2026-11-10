@@ -1611,6 +1611,13 @@ cases! {
         // a path out. Mutation: answer `true` for every head; this goes
         // silent. See ADR-0083.
         a_block_nulled_by_a_loop_that_may_not_run_before_the_one_that_returns_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A freed pointer carried round a loop shown to run, `c = b; b = a;`:
+        // the second turn's back edge brings `c` the freed block, which the
+        // head already held from the path in, so the head's value does not
+        // move and only the walk a moved back edge asks for sends the exit
+        // the second turn. Found by review. Mutation: walk the head only when
+        // its own value moves; the use after free goes silent. See ADR-0083.
+        a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // **A false positive, a stated limit**: `b` is nulled by a loop that
         // may run zero times, `i < c`, and returned under `if (d)`, while it
         // was written under the same `d`. Seeing the two tests agree takes a

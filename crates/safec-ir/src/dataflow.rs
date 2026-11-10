@@ -723,11 +723,11 @@ fn solved<A: Analysis>(
             // **A back edge into a head left only after a whole turn walks
             // that head again when what it sends moves**, since the head's
             // exit is worked out from it, though the head's own value, which
-            // also holds the path in, may not move. **Nothing guards this
-            // walk**, measured: every loop body tried, an empty one
-            // included, also moved the head's value the first time a back
-            // edge arrived. Left out where none does, the exit would send
-            // nothing and what follows the loop would be unreachable. See
+            // also holds the path in, may not move: a later turn's back edge
+            // can bring what the path in already did, and the exit then kept
+            // an earlier turn's value. Found by review,
+            // `a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it`,
+            // where a use after free on the second turn went silent. See
             // `Analysis::leaves_after_a_turn`.
             let turn_moved = cfg.drained_at(block) >= cfg.drained_at(successor)
                 && left_after_a_turn
