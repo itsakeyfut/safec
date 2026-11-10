@@ -1618,6 +1618,10 @@ cases! {
         // the second turn. Found by review. Mutation: walk the head only when
         // its own value moves; the use after free goes silent. See ADR-0083.
         a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through a swap, `t = a; a = b; b = t;`, where the block
+        // nothing wrote is returned after an even number of turns. Found by
+        // review. Mutation: as above; this goes silent.
+        a_block_swapped_round_a_loop_shown_to_run_and_returned_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // **A false positive, a stated limit**: `b` is nulled by a loop that
         // may run zero times, `i < c`, and returned under `if (d)`, while it
         // was written under the same `d`. Seeing the two tests agree takes a
