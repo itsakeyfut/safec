@@ -593,7 +593,9 @@ fn solved<A: Analysis>(
     // **The loops whose exit sends what their back edges brought**, each
     // with its body, so that an edge out of its head is told from one into
     // it. Not a head a first-turn walk names, whose back edges that walk
-    // leaves out. See `Analysis::leaves_after_a_turn`.
+    // leaves out. **Nothing guards that exclusion**, measured: such a walk
+    // asks no block its head's exit reaches, so leaving it in moves no case.
+    // See `Analysis::leaves_after_a_turn`.
     let left_after_a_turn: Vec<crate::cfg::Loop> = cfg
         .loops()
         .into_iter()
@@ -701,6 +703,10 @@ fn solved<A: Analysis>(
                 Some((each, turned)) if !each.contains(successor) => match turned {
                     Some(turned) => turned.clone(),
                     // No back edge has sent yet: the exit waits for one.
+                    // **Nothing guards the wait**, measured: what an exit
+                    // sends early is replaced once a back edge sends, as any
+                    // edge's last send is, unless the exit is itself a head,
+                    // and no program tried reached one.
                     None => continue,
                 },
                 _ => value.clone(),
@@ -717,7 +723,11 @@ fn solved<A: Analysis>(
             // **A back edge into a head left only after a whole turn walks
             // that head again when what it sends moves**, since the head's
             // exit is worked out from it, though the head's own value, which
-            // also holds the path in, may not move. See
+            // also holds the path in, may not move. **Nothing guards this
+            // walk**, measured: every loop body tried, an empty one
+            // included, also moved the head's value the first time a back
+            // edge arrived. Left out where none does, the exit would send
+            // nothing and what follows the loop would be unreachable. See
             // `Analysis::leaves_after_a_turn`.
             let turn_moved = cfg.drained_at(block) >= cfg.drained_at(successor)
                 && left_after_a_turn
