@@ -66,9 +66,19 @@ Each in `tests/cases/memory/`, with its mutation in its note in
   moves from "may be read" to "is read before anything was assigned": the
   inner loop, shown to run, is left only after a turn that made the block
   again, which nothing wrote.
+* Bad, because that case no longer holds what ADR-0081's Confirmation names
+  it for: with the per-element back edge of `join_back_beside` disabled
+  outright it still reports, found by review, and no respelling tried, a
+  loop that may run zero times or a read inside either loop among them,
+  tells the rule apart. #886 is to find a guard or show the rule redundant.
 * Bad, because `a_block_nulled_by_a_loop_inside_the_one_that_returns_it_is_doubted`
-  stays a false positive: its loop may run zero times, and what doubts it is
-  `if (d)` tested twice, a correlation this check does not keep.
+  stays a false positive: its loop may run zero times, so the path that
+  skips it is a path out, and on that path the block was written only under
+  the `d` the return is also under. Seeing the two agree is a correlation
+  this check does not keep.
+* Good, because the first of the two loops ADR-0080 names as its cost, a
+  loop shown to run that nulls the pointer, is no longer one; the second
+  stays, for the reason above.
 
 ## More Information
 
