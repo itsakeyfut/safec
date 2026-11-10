@@ -1681,6 +1681,12 @@ cases! {
         // asked. Mutation: a source whose type says nothing is not asked;
         // this goes silent.
         a_block_copied_out_through_a_void_pointer_source_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Nor does a `char *` source, and an `int *` one proves no `int` is
+        // copied: `b` reaches each through a `void *`, found by review.
+        // Mutation: the arm for a copied `char`, then for a copied `int`,
+        // answers that it holds no pointer; each goes silent.
+        a_block_copied_out_through_a_char_pointer_source_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_copied_out_through_an_int_pointer_source_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stored out not null and written on one arm after: possibly
         // unwritten at the exit, doubted (#855, ADR-0080). Mutation: never ask
         // `Maybe` at the exit; this goes silent.

@@ -476,12 +476,21 @@ impl Allocations<'_> {
     /// 8)` copies an `int **`, whose blocks hold pointers; `int *x;
     /// memcpy(pp, &x, 8)` copies an `int *`, whose block holds `int`s.
     ///
-    /// **A source whose type says nothing is read as holding them**: a
-    /// `void *` or `char` source, an untyped place, or one not typed as a
-    /// pointer at all. `memcpy` copies bytes, and the usual source is a
+    /// **A source whose type says nothing is read as holding them**: one
+    /// that copies a value not typed as a pointer, a `void *`, `char *` or
+    /// `int *` source. `memcpy` copies bytes, and the usual source is a
     /// `void *`, so leaving those unasked would leave the common spelling of
-    /// #890 silent. What it costs is a doubt the reader sees, at a block of
-    /// `int`s copied out through a `void *` source.
+    /// #890 silent. Nor does an `int *` source prove it copies an `int`:
+    /// `void *v = &b; int *i = v; memcpy(out, i, 8);` copies `b` through it,
+    /// and C defines that, since `memcpy` reads bytes. Found by review.
+    /// Where the source truly holds no pointer, the copy carries no block
+    /// and asking costs nothing; what it costs elsewhere is a doubt the
+    /// reader sees, at a block of `int`s copied out through a `void *`
+    /// source.
+    ///
+    /// An untyped source, and one not typed as a pointer at all, are read
+    /// the same way. No program this frontend reads reaches either, and
+    /// nothing guards them.
     fn copy_holds_pointers(&self, source_ty: Option<TyId>) -> bool {
         let Some(source_ty) = source_ty else {
             return true;
@@ -493,9 +502,7 @@ impl Allocations<'_> {
         };
         match self.unit.ty(copied) {
             Ty::Pointer(_) => self.first_level_holds_a_pointer(copied),
-            // An `int` carries no block.
-            Ty::Int => false,
-            Ty::Char | Ty::Void => true,
+            Ty::Int | Ty::Char | Ty::Void => true,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         }
     }
