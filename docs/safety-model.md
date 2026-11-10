@@ -163,7 +163,10 @@ never a proof, since C leaves the departure itself defined. See
 caller will read pointers out of it. A block returned, or stored where code
 outside the function reads it and still unwritten where the function returns,
 is `SC0411`: "nothing wrote" where it is unwritten on every path where it
-exists, and "may not have been written" where it is on some. A pointer read
+exists, and "may not have been written" where it is on some. So is a block it
+holds, as far down as the type reads pointers, whatever order the box was
+filled and let leave in
+([ADR-0085](adr/0085-a-block-below-one-that-leaves-is-asked-as-far-down-as-the-type-reads-pointers-replacing-what-adr-0076-rule-1-limits-to-the-blocks-a-value-names.md)). A pointer read
 out of memory and returned is asked of what that read may name. A block handed
 to a call is not asked, since that is how a callee is given memory to fill
 ([ADR-0073](adr/0073-what-leaves-a-function-is-asked-by-how-it-was-declared-and-what-wrote-it.md),
