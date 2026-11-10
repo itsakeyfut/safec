@@ -466,6 +466,10 @@ impl Allocations<'_> {
         out.extend(read_out);
         for site in value.closure(out) {
             value.stored_out[site] = true;
+            value.stored_out_at[site] = Some(match value.stored_out_at[site] {
+                Some(before) => earlier(self.sources, before, at),
+                None => at,
+            });
         }
     }
 
@@ -1588,6 +1592,7 @@ impl Allocations<'_> {
             stored_out,
             left_at,
             held_levels,
+            stored_out_at,
             handed_untyped,
             block_elements,
         } = into;
@@ -1613,14 +1618,18 @@ impl Allocations<'_> {
         for (here, there) in stored_out.iter_mut().zip(&from.stored_out) {
             *here = *here || *there;
         }
-        // A may-fact too, keeping the earlier store where both paths let the
-        // block leave. See `Known::left_at`.
         // The larger, so a path that held the block as pointers asks it. See
         // `Known::held_levels`.
         for (here, there) in held_levels.iter_mut().zip(&from.held_levels) {
             *here = (*here).max(*there);
         }
-        for (here, there) in left_at.iter_mut().zip(&from.left_at) {
+        // A may-fact too, keeping the earlier store where both paths let the
+        // block leave. See `Known::left_at` and `Known::stored_out_at`.
+        for (here, there) in left_at
+            .iter_mut()
+            .zip(&from.left_at)
+            .chain(stored_out_at.iter_mut().zip(&from.stored_out_at))
+        {
             *here = match (*here, *there) {
                 (Some(here), Some(there)) => Some(earlier(self.sources, here, there)),
                 (here, there) => here.or(there),
@@ -2176,6 +2185,7 @@ impl Analysis for Allocations<'_> {
             stored_out: Table::filled(false, self.locals),
             left_at: Table::filled(None, self.locals),
             held_levels: Table::filled(0, self.locals),
+            stored_out_at: Table::filled(None, self.locals),
             // No call has been handed anything yet.
             handed_untyped: Table::filled(Vec::new(), Loc::count(self.locals)),
             // No block has been made yet.

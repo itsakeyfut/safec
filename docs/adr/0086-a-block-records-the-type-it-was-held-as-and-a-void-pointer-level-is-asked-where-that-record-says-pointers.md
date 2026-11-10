@@ -48,8 +48,13 @@ Chosen: the record, by the author.
    kept where the site is made again, as `left_at` is.
 2. **The walk below a leaving block follows each block with the larger of
    the levels its parent left it and its own record** (`Known::held_below`),
-   so the store, the copy and the `return` ask a `void *` level alike.
-3. **A `return` whose type is a pointer that reads no pointer at its first
+   so the store, the copy and the `return` ask a `void *` level alike. Each
+   block takes the most levels any path reaches it with, widest first.
+3. **A block that left at all is asked at the exit by its record then**
+   (`Known::stored_out_at`), so a block held as `int **` only after it left
+   through a `void *`, `*out = v; int **b = v;`, is asked as one held so
+   before it left.
+4. **A `return` whose type is a pointer that reads no pointer at its first
    level is asked where a block it names records pointers.** A pointer only:
    asking an `int` read out of such a block moved 26 cases on a prototype.
 
@@ -64,7 +69,7 @@ Each in `tests/cases/memory/`, with its mutation in its note in
 * Five cases go silent when the walk ignores the record, each a block below
   a `void **` box or stored through a `void **` slot (rules 1 and 2).
 * `a_block_held_as_pointers_returned_as_a_void_pointer_is_reported_at_the_return`
-  goes silent when the `return`'s ask ignores the record (rule 3).
+  goes silent when the `return`'s ask ignores the record (rule 4).
 * `a_void_pointer_buffer_never_held_typed_returned_unwritten_is_not_asked`
   is reported when the `return`'s ask takes any pointer return without the
   record, and
@@ -73,7 +78,13 @@ Each in `tests/cases/memory/`, with its mutation in its note in
 * `a_block_held_as_ints_returned_as_a_void_pointer_is_not_asked` is reported
   when any pointer-typed local records a level (rule 1's levels).
 * `a_copy_does_not_write_its_source` is reported when the `return`'s ask
-  drops the pointer condition (rule 3).
+  drops the pointer condition (rule 4).
+* `a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach` goes
+  silent when the smallest budget is taken first (rule 2's widest reach).
+* `a_block_held_as_pointers_only_after_it_left_through_a_void_pointer_slot_is_reported_where_the_function_returns`
+  goes silent when the exit asks `left_at` alone (rule 3).
+* `a_block_held_as_pointers_on_one_arm_and_stored_through_a_void_pointer_slot_is_reported`
+  goes silent when the record is joined by the smaller (rule 1's join).
 
 ### Consequences
 

@@ -449,6 +449,16 @@ pub(super) struct Known {
     /// the larger, and kept where the site is made again, as `left_at` is.
     /// See ADR-0086.
     pub(super) held_levels: Table<Site, usize>,
+    /// Per site, the earliest write that let it leave at all, whatever its
+    /// type read: every block a leaving write's closure names, as
+    /// `stored_out` is, with the span. The exit asks one whose
+    /// [`Self::held_levels`] says pointers by then, so a block held as
+    /// `int **` only after it left through a `void *` is asked as one held
+    /// so before: `*out = v; int **b = v;` was silent where `int **b = v;
+    /// *out = v;` is `SC0411`, found by review. A may-fact, joined keeping
+    /// the earlier span, and kept where the site is made again, as `left_at`
+    /// is. See ADR-0086.
+    pub(super) stored_out_at: Table<Site, Option<Span>>,
     /// Per local, each type a call this check cannot read reached it as on
     /// the walk a departure takes, where that type is untyped somewhere
     /// below: `void`, `char` or `int` bytes, a pointer whose chain ends in
@@ -1236,20 +1246,27 @@ impl Known {
     /// The blocks `sites` name and the blocks they hold, `levels` levels in
     /// all: `sites` themselves at the first, what is stored in them at the
     /// second, and so on, each block once. `usize::MAX` follows what is held
-    /// until nothing new is. Zero levels is no block.
+    /// until nothing new is.
     ///
     /// **Or as many as a block's own record says**, where that is more: each
     /// block is followed with the larger of the levels its parent left it and
     /// its [`Self::held_levels`], so a `void *` level, which reads as no
-    /// level at all, still reaches a block held as `int **`. See ADR-0086.
+    /// level at all, still reaches a block held as `int **`, and zero levels
+    /// still reaches a block whose record says pointers. See ADR-0086.
+    ///
+    /// **Each block with the most levels any path reaches it with**, widest
+    /// first: a block reached through a shallow parent before a deep one kept
+    /// the shallow budget, and what it held below went unasked, found by
+    /// review. A block's budget never rises along a path except by its own
+    /// record, so the first time it is taken off the queue is its widest.
     ///
     /// **One walk for every door a block leaves by**: the store, the copy
     /// and the `return` each ask it with the levels their type reads
     /// pointers at, so one cannot follow a level the others stop at. See
     /// ADR-0085.
     ///
-    /// **Bounded by the number of sites as well as by `levels`**: each level
-    /// that goes on adds a block not seen before, so no walk needs more, and
+    /// **Bounded by the number of sites as well as by `levels`**: each block
+    /// taken off the queue is one not seen before, so no walk takes more, and
     /// a block that holds itself, `*p = p;`, copied out through a `void *`,
     /// ends here even if the filter on what was seen is lost. Without the
     /// bound, losing it hung on that program with nothing to read.
@@ -1259,22 +1276,25 @@ impl Known {
     /// still ends.
     pub(super) fn held_below(&self, sites: Vec<Site>, levels: usize) -> Vec<Site> {
         let mut seen: Vec<Site> = Vec::new();
-        let mut frontier: Vec<(Site, usize)> =
-            sites.into_iter().map(|site| (site, levels)).collect();
-        for _ in 0..self.contents.len() {
-            let mut next: Vec<(Site, usize)> = Vec::new();
-            for (site, left) in frontier {
-                let budget = left.max(self.held_levels[site]);
-                if budget == 0 || seen.contains(&site) {
-                    continue;
-                }
-                seen.push(site);
-                next.extend(self.contents[site].sites().map(|held| (held, budget - 1)));
-            }
-            if next.is_empty() {
+        let mut queue: std::collections::BinaryHeap<(usize, Site)> = sites
+            .into_iter()
+            .map(|site| (levels.max(self.held_levels[site]), site))
+            .collect();
+        let mut taken = 0;
+        while let Some((budget, site)) = queue.pop() {
+            if taken == self.contents.len() {
                 break;
             }
-            frontier = next;
+            if budget == 0 || seen.contains(&site) {
+                continue;
+            }
+            taken += 1;
+            seen.push(site);
+            queue.extend(
+                self.contents[site]
+                    .sites()
+                    .map(|held| ((budget - 1).max(self.held_levels[held]), held)),
+            );
         }
         seen
     }
@@ -1881,6 +1901,8 @@ impl Known {
             left_at: _,
             // Kept, for the reason `left_at` is. See `Known::held_levels`.
             held_levels: _,
+            // Kept, for the reason `left_at` is. See `Known::stored_out_at`.
+            stored_out_at: _,
             // Not a local's, which a site being reborn is not about, and
             // kept for the site, as `names` is: a call may still hold the old
             // allocation's address, and the slots of the new one are not told

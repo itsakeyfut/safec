@@ -1726,6 +1726,18 @@ cases! {
         // Written before it leaves. Mutation: report every block the record
         // asks, written or not; this is reported.
         a_block_held_as_pointers_written_before_it_is_returned_as_a_void_pointer_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Held as `int **` only after it left, found by review: the exit asks
+        // it as one held so before. Mutation: the exit asks `left_at` alone,
+        // not `stored_out_at` by the record; this goes silent.
+        a_block_held_as_pointers_only_after_it_left_through_a_void_pointer_slot_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Held as pointers on one arm only, found by review. Mutation: join
+        // `held_levels` by the smaller; this goes silent.
+        a_block_held_as_pointers_on_one_arm_and_stored_through_a_void_pointer_slot_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `d` is reached first through itself, with one level, and then
+        // through `p`, with two, and `e` below it is asked by the second,
+        // found by review. Mutation: take the smallest budget off the queue
+        // first, so the first reach wins; this goes silent.
+        a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
         // one is, by one function both doors call (#890). Possibly, not
         // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no
