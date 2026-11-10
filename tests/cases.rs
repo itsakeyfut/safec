@@ -1758,6 +1758,44 @@ cases! {
         // Mutation: push the exit's ask without `push_once`; this is said
         // twice.
         a_partial_pointer_copied_into_a_block_already_held_as_pointers_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An `int **` destination, whose store departure names a width the
+        // deferred ask cannot, found by review. Mutation: push the deferred
+        // ask whatever stands at the copy; this is said twice, in two words.
+        a_partial_pointer_copied_into_a_typed_block_that_leaves_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Handed on twice. Mutation: push the call's ask without the check;
+        // this is said twice.
+        a_partial_pointer_copied_into_a_block_handed_twice_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Returned, and handed on one level down, found by review. Mutation:
+        // the `return` asks nothing of the record; the first goes silent.
+        // Mutation: the call does not walk the level below the argument; the
+        // second goes silent.
+        a_partial_pointer_copied_into_a_returned_block_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_partial_pointer_copied_into_a_block_handed_on_one_level_down_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `void **` parameter reads the pointer in `b`'s block, not what
+        // `m` holds. Mutation: walk the level below the argument with the
+        // parameter's full levels; this is reported.
+        a_partial_pointer_copied_into_a_block_below_a_box_handed_to_a_void_pointer_pointer_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Handed on as `*box`, a place of one dereference, found by review.
+        // No mutation of the level it is read at fails it: the level below
+        // and the block's own record reach it too. See the call's ask in
+        // `report.rs`.
+        a_partial_pointer_copied_into_a_block_handed_on_through_a_dereference_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The box handed to a `void ***`, whose block below holds the copy,
+        // found by review. Mutation: walk neither what the argument names nor
+        // the level below it; this goes silent.
+        a_partial_pointer_copied_into_a_block_below_a_box_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An `int *` parameter reads no pointer, though the block was held as
+        // `void **`. Mutation: ask every parameter whatever its type; this is
+        // reported.
+        a_partial_pointer_copied_into_a_block_handed_to_an_int_pointer_parameter_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Copied on one arm only. Mutation: drop `part_written` from the
+        // join; this goes silent.
+        a_partial_pointer_copied_on_one_arm_into_a_block_handed_to_a_pointer_parameter_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Handed on before the copy in a loop, so the call asks on the next
+        // turn before the copy's own store departure is said: one report.
+        // Mutation: a store departure no longer takes the place of the
+        // deferred ask; this is said twice.
+        a_partial_pointer_copied_into_a_typed_block_after_it_is_handed_on_in_a_loop_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
         // one is, by one function both doors call (#890). Possibly, not
         // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no
