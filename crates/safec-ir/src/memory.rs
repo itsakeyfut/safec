@@ -715,13 +715,33 @@ fn analysis<'a>(
         opaque_results: Table::from_vec(Vec::new()),
         // Filled below, since `shown_to_run` reads `analysis.cfg`.
         runs_once: Vec::new(),
+        made_once: Table::from_vec(Vec::new()),
     };
     analysis.runs_once = vec![false; function.blocks().len()];
     let taken = assigned::address_taken(function);
-    for each in analysis.cfg.loops() {
+    let loops = analysis.cfg.loops();
+    for each in &loops {
         analysis.runs_once[each.head().index()] =
-            runs::shown_to_run(unit, function, &analysis.cfg, &each, &taken);
+            runs::shown_to_run(unit, function, &analysis.cfg, each, &taken);
     }
+    // **A call on a cycle may run again**, and a block it made on an earlier
+    // turn may still be held. Every reachable block is asked: one no
+    // execution reaches makes nothing. `Cfg::loops` finds a back edge by the
+    // order blocks drain in, so a cycle of any shape is one of them. See
+    // ADR-0082.
+    let mut made_once = Table::filled(true, function.locals().len());
+    for &id in analysis.cfg.order() {
+        if let Terminator::Call {
+            destination: Some(into),
+            ..
+        } = &function.block(id).terminator
+        {
+            if loops.iter().any(|each| each.contains(id)) {
+                made_once[index::LocalIdx::of(into.local)] = false;
+            }
+        }
+    }
+    analysis.made_once = made_once;
     analysis.opaque_results = analysis.opaque_results_of(function);
     analysis
 }

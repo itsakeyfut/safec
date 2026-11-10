@@ -1305,8 +1305,11 @@ impl Allocations<'_> {
     /// unwritten where it leaves could not be doubted without refusing that
     /// program (#872).
     ///
-    /// **Only where nothing else can name the site.** A site names every
-    /// block its call made, and a block an earlier turn made may still be
+    /// **Only where nothing else can name the site, for a site made in a
+    /// loop.** A site whose every call is on no cycle makes one block an
+    /// activation, the one that did not come to exist, and is written
+    /// whatever names it (`Allocations::made_once`, ADR-0082). Otherwise a
+    /// site names every block its call made, and a block an earlier turn made may still be
     /// held in memory or by another local; writing the site then believed
     /// that block written, and programs `main` reported went silent, found
     /// by #870's adversary. So the rule asks [`Known::held_sites`], which
@@ -1372,7 +1375,14 @@ impl Allocations<'_> {
             }
         }
         rest.clear(condition.local);
-        if !rest.held_sites()[returned] {
+        // **A site made at most once an activation needs no holder test**:
+        // its one block is the one that did not come to exist, so every
+        // copy of the result, a store before the test included, holds null
+        // here. `*out = b; if (!b) return;` counted `out`'s memory as a
+        // holder and said the block nothing wrote there (#877). A site made
+        // in a loop keeps the test, since an earlier turn's block may be
+        // what another holder names. See ADR-0082.
+        if self.made_once[returned.local()] || !rest.held_sites()[returned] {
             value.init[returned] = Init::Written;
             value.block_elements[returned] = None;
         }

@@ -1,0 +1,33 @@
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_block_stored_out_before_its_null_test_in_a_loop_is_doubted.c:5:9 ]
+   │
+ 5 │         out[i] = b;
+   │         ─────┬────  
+   │              ╰────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0411]: this lets a pointer leave to memory nothing wrote by the time the function returns, and the caller may read pointers out of it
+   ╭─[ a_block_stored_out_before_its_null_test_in_a_loop_is_doubted.c:5:9 ]
+   │
+ 4 │         int **b = malloc(8);
+   │                   ────┬────  
+   │                       ╰────── allocated here
+ 5 │         out[i] = b;
+   │         ─────┬────  
+   │              ╰────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before the function returns, or allocate it with `calloc`
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_block_stored_out_before_its_null_test_in_a_loop_is_doubted.c:5:9 ]
+   │
+ 5 │         out[i] = b;
+   │         ─────┬────  
+   │              ╰────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

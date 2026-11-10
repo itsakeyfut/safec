@@ -75,6 +75,11 @@ pub(super) struct Allocations<'a> {
     /// least once, [`shown_to_run`](super::runs::shown_to_run): the one loop
     /// whose back edge creates no doubt. See ADR-0064.
     pub(super) runs_once: Vec<bool>,
+    /// Per local, whether every call that writes it is on no cycle of the
+    /// graph, so that the site it names makes at most one block an
+    /// activation: where that call's result is tested null, no block of the
+    /// site exists, whatever else names it. See ADR-0082.
+    pub(super) made_once: Table<LocalIdx, bool>,
 }
 
 /// The type an array's elements have, through every dimension, and `ty`
