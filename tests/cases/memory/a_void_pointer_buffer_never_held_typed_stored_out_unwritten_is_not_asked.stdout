@@ -1,0 +1,34 @@
+Target "x86_64-pc-windows-msvc"
+Function a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_asked.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_asked.c:2:6 "stored"
+  Local "_0" "void" return
+  Local "_1" "void **" parameter _Nonnull "out"
+  Local "_2" "int" parameter "n"
+  Local "_3" "void *" "p"
+  Local "_4" "void *"
+  Local "_5" "void *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_asked.c:3:15 generated
+    Call a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_asked.c:3:15 written "malloc" "bb1"
+      Destination "_4"
+      Copy "_2"
+  Block "bb1"
+    Operation a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_asked.c:3:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_asked.c:3:15 generated
+    Operation a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_asked.c:4:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_asked.c:4:5 written
+      Destination "_5"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_asked.c:4:5 generated
+    Return

@@ -61,11 +61,15 @@ reader sees.
 Each in `tests/cases/memory/`, with its mutation in its note in
 `tests/cases.rs`:
 
-* Six cases, `a_block_held_as_pointers_returned_as_a_void_pointer_is_reported_at_the_return`
-  among them, go silent when the walk ignores the record (rules 1 and 2).
+* Five cases go silent when the walk ignores the record, each a block below
+  a `void **` box or stored through a `void **` slot (rules 1 and 2).
+* `a_block_held_as_pointers_returned_as_a_void_pointer_is_reported_at_the_return`
+  goes silent when the `return`'s ask ignores the record (rule 3).
 * `a_void_pointer_buffer_never_held_typed_returned_unwritten_is_not_asked`
-  is reported when a `void *` level is read as holding pointers whatever the
-  record (rule 1's evidence).
+  is reported when the `return`'s ask takes any pointer return without the
+  record, and
+  `a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_asked`
+  when the walk follows every block one level at least (rule 1's evidence).
 * `a_block_held_as_ints_returned_as_a_void_pointer_is_not_asked` is reported
   when any pointer-typed local records a level (rule 1's levels).
 * `a_copy_does_not_write_its_source` is reported when the `return`'s ask

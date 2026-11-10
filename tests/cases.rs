@@ -1704,7 +1704,9 @@ cases! {
         // A block held as `int **` reaches the caller through a `void *`
         // level, at the top or below a box, by every door: the block records
         // the type it was held as (#902, ADR-0086). Mutation: `held_below`
-        // ignores `Known::held_levels`; all six go silent.
+        // ignores `Known::held_levels`; the five below a box or through a slot
+        // go silent. Mutation: the `return`'s ask ignores the record; the
+        // first goes silent.
         a_block_held_as_pointers_returned_as_a_void_pointer_is_reported_at_the_return: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_held_as_pointers_stored_through_a_void_pointer_slot_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_below_a_void_pointer_box_that_leaves_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1712,9 +1714,12 @@ cases! {
         a_block_below_a_returned_void_pointer_box_is_reported_at_the_return: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_below_a_void_pointer_box_copied_out_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `void *` buffer never held through a typed local is a buffer for
-        // the caller to fill. Mutation: read a `void *` level as holding
-        // pointers whatever the record; this is reported.
+        // the caller to fill, returned or stored out. Mutation: the
+        // `return`'s ask takes any pointer return without the record; the
+        // first is reported. Mutation: `held_below` follows every block one
+        // level at least, whatever the record; the second is reported.
         a_void_pointer_buffer_never_held_typed_returned_unwritten_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Held as an `int *`, which reads no pointer. Mutation: record one
         // level for any pointer-typed local; this is reported.
         a_block_held_as_ints_returned_as_a_void_pointer_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
