@@ -1391,6 +1391,8 @@ pub(super) fn nullability_finding(
         // **A pointer moved by `+` or `-`**, which C17 6.5.6 p8 does not
         // define for a null one (#884). Its own words, since nothing is read
         // through it, and the same code: the same test settles it.
+        // **The nameless words are guarded by nothing**: a move of a pointer
+        // proved null and named by no local was reached by no case tried.
         (Asked::Arithmetic, Conclusion::Unsafe) => (
             NULL_DEREFERENCE,
             said(name, "this moves a null pointer", |name| {

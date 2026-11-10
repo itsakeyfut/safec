@@ -243,7 +243,9 @@ impl Asked {
             // A move is its own question. Where it and a dereference share a
             // caret, `a[1][2] = 5;`, they are about different places and do
             // not fold anyway, and what the move made is not null, so the
-            // dereference is not doubted. See ADR-0084.
+            // dereference is not doubted. **Nothing guards this arm**: two
+            // moves of one place at one caret take `p - p`, which the
+            // frontend refuses. See ADR-0084.
             (Self::Arithmetic, Self::Arithmetic) => true,
             (Self::Argument { promise }, Self::Argument { promise: other }) => promise == other,
             (

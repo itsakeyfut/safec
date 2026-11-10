@@ -3625,6 +3625,11 @@ cases! {
         // Found by review. Mutation: do not refine the moved pointer; this is
         // doubted twice.
         a_parameter_moved_twice_is_doubted_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // By `-`, and with the pointer on the right of `+`. Found by review.
+        // Mutation: ask `+` alone; the first goes silent. Mutation: ask the
+        // left operand alone; the second goes silent.
+        a_parameter_moved_back_by_subtraction_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_parameter_added_to_an_integer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A comma puts a sequence point between the assignment and the copy
         // the branch reads, and the walk steps over it. Mutation: have
