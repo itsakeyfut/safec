@@ -1664,6 +1664,33 @@ cases! {
         // not only where the stored-into type holds pointers; this is
         // reported.
         a_char_buffer_stored_out_unwritten_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block a library copy lets leave is asked at the exit as a stored
+        // one is, by one function both doors call (#890). Possibly, not
+        // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no
+        // `left_at`; both go silent.
+        a_block_memcpy_lets_leave_unwritten_is_doubted_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_memmove_lets_leave_unwritten_is_doubted_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written under its null test before the copy. Mutation: ask every
+        // block left at the exit whatever was written; this is reported.
+        a_block_written_before_it_is_copied_out_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The copy is an `int *`, whose block holds `int`s, as a store into
+        // an `int **` is not asked. Mutation: ask every copied block whatever
+        // the source's type; this is reported.
+        a_block_of_ints_copied_out_unwritten_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `void *` source says nothing of what its blocks hold, and is
+        // asked. Mutation: a source whose type says nothing is not asked;
+        // this goes silent.
+        a_block_copied_out_through_a_void_pointer_source_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Nor does a `char *` source, and an `int *` one proves no `int` is
+        // copied: `b` reaches each through a `void *`, found by review.
+        // Mutation: the arm for a copied `char`, then for a copied `int`,
+        // answers that it holds no pointer; each goes silent.
+        a_block_copied_out_through_a_char_pointer_source_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_copied_out_through_an_int_pointer_source_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The source reads `b` as an `int *`, the destination as a pointer to
+        // pointers, and either side asks, found by review. Mutation: ask the
+        // source's type alone; this goes silent.
+        a_block_copied_out_through_a_source_typed_as_holding_ints_is_doubted_by_its_destination: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stored out not null and written on one arm after: possibly
         // unwritten at the exit, doubted (#855, ADR-0080). Mutation: never ask
         // `Maybe` at the exit; this goes silent.

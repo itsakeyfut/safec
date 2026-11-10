@@ -1,3 +1,13 @@
+error[SC0411]: this lets a pointer leave to memory that may not have been written by the time the function returns, and the caller may read pointers out of it
+   ╭─[ a_local_a_callee_wrote_as_bytes_is_asked_when_handed_on.c:8:5 ]
+   │
+ 8 │     memcpy(p, &cc, 8);
+   │     ────────┬────────  
+   │             ╰────────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it on every path before the function returns, or allocate it with `calloc`
 error[SC0413]: this lets `v` leave, which may not point at an object as wide as its type
     ╭─[ a_local_a_callee_wrote_as_bytes_is_asked_when_handed_on.c:22:5 ]
     │
