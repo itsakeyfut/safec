@@ -436,9 +436,12 @@ impl Allocations<'_> {
     /// wrote in silence where `*out = b` is `SC0411` (#890).
     ///
     /// - **`carried`**, the blocks the written value names, are left holding
-    ///   pointers where `holds_pointers` says so, for the function's exit to
-    ///   ask whether they were written: not what they hold below, which
-    ///   `stored_out` follows. See `Known::left_at` and ADR-0076.
+    ///   pointers, for the function's exit to ask whether they were written,
+    ///   and **so are the blocks they hold**, as many levels down as the type
+    ///   reads pointers (`levels`, through `Known::held_below`): `*box = b;
+    ///   *out = box;` hands the caller `b`'s block as surely as `*out = box;
+    ///   *box = b;` does, and was silent where the second is `SC0411` (#900).
+    ///   See `Known::left_at`, ADR-0076 and ADR-0085.
     /// - **`carried` and `read_out`**, what a pointer read out of memory may
     ///   be, are stored out, and so is **everything those allocations hold,
     ///   at every level**, as `freed_behind` asks what leaves: a box stored
@@ -450,16 +453,14 @@ impl Allocations<'_> {
         value: &mut Known,
         carried: Vec<Site>,
         read_out: Vec<Site>,
-        holds_pointers: bool,
+        levels: usize,
         at: Span,
     ) {
-        if holds_pointers {
-            for &site in &carried {
-                value.left_at[site] = Some(match value.left_at[site] {
-                    Some(before) => earlier(self.sources, before, at),
-                    None => at,
-                });
-            }
+        for site in value.held_below(carried.clone(), levels) {
+            value.left_at[site] = Some(match value.left_at[site] {
+                Some(before) => earlier(self.sources, before, at),
+                None => at,
+            });
         }
         let mut out = carried;
         out.extend(read_out);
@@ -468,11 +469,11 @@ impl Allocations<'_> {
         }
     }
 
-    /// Whether the type `side_ty` of one side of a library copy, its source
-    /// or its destination, reads the blocks the copy carries out as holding
-    /// pointers: what is copied is a value one level below it, and the
-    /// blocks are what that value points at, asked as a store asks the type
-    /// it stores into ([`Self::first_level_holds_a_pointer`]). `int **b;
+    /// How many levels of the blocks a library copy carries out the type
+    /// `side_ty` of one side of it, its source or its destination, reads as
+    /// holding pointers: what is copied is a value one level below it, and
+    /// the blocks are what that value points at, asked as a store asks the
+    /// type it stores into ([`Self::levels_holding_pointers`]). `int **b;
     /// memcpy(out, &b, 8)` copies an `int **`, whose blocks hold pointers;
     /// `int *x; memcpy(pp, &x, 8)` copies an `int *`, whose block holds
     /// `int`s.
@@ -484,7 +485,8 @@ impl Allocations<'_> {
     /// destination says what the caller reads, as a store's does. Found by
     /// review.
     ///
-    /// **A side whose type says nothing reads them as holding them**: one
+    /// **A side whose type says nothing reads every level as holding them**,
+    /// `usize::MAX`: one
     /// that copies a value not typed as a pointer, a `void *`, `char *` or
     /// `int *` side. `memcpy` copies bytes, and the usual source is a
     /// `void *`, so leaving those unasked would leave the common spelling of
@@ -499,20 +501,39 @@ impl Allocations<'_> {
     /// An untyped side, and one not typed as a pointer at all, are read the
     /// same way. No program this frontend reads reaches either, and
     /// nothing guards them.
-    fn copy_holds_pointers(&self, side_ty: Option<TyId>) -> bool {
+    fn copy_levels_holding_pointers(&self, side_ty: Option<TyId>) -> usize {
         let Some(side_ty) = side_ty else {
-            return true;
+            return usize::MAX;
         };
         let copied = match self.unit.ty(innermost_element(self.unit, side_ty)) {
             Ty::Pointer(copied) => innermost_element(self.unit, copied),
-            Ty::Int | Ty::Char | Ty::Void => return true,
+            Ty::Int | Ty::Char | Ty::Void => return usize::MAX,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         };
         match self.unit.ty(copied) {
-            Ty::Pointer(_) => self.first_level_holds_a_pointer(copied),
-            Ty::Int | Ty::Char | Ty::Void => true,
+            Ty::Pointer(_) => self.levels_holding_pointers(copied),
+            Ty::Int | Ty::Char | Ty::Void => usize::MAX,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         }
+    }
+
+    /// How many levels below a value of type `ty` hold pointers, counted
+    /// while [`Self::first_level_holds_a_pointer`] holds and stepping to the
+    /// pointee through arrays. `int ***` is `2`: the block it points at, and
+    /// the blocks that block holds. `int **` is `1`, and `int *` and
+    /// `void *` are `0`. These are the levels a block that leaves is asked
+    /// at. See ADR-0085.
+    pub(super) fn levels_holding_pointers(&self, ty: TyId) -> usize {
+        let mut levels = 0;
+        let mut ty = innermost_element(self.unit, ty);
+        while self.first_level_holds_a_pointer(ty) {
+            levels += 1;
+            let Ty::Pointer(below) = self.unit.ty(ty) else {
+                break;
+            };
+            ty = innermost_element(self.unit, below);
+        }
+        levels
     }
 
     /// What a pointer read as `place` believes the memory it points at
@@ -2406,22 +2427,16 @@ impl Analysis for Allocations<'_> {
                         .carried(function, &operation.value, value)
                         .sites()
                         .collect();
-                    // Where the stored-into type is read as holding pointers.
-                    let holds_pointers = self
+                    // How many levels the stored-into type reads pointers at.
+                    let levels = self
                         .unit
                         .place_ty(function, &operation.place)
-                        .is_some_and(|ty| self.first_level_holds_a_pointer(ty));
+                        .map_or(0, |ty| self.levels_holding_pointers(ty));
                     let read_out = match &operation.value {
                         Rvalue::Use(written) => self.read_out(function, written, value),
                         _ => Vec::new(),
                     };
-                    self.mark_leaving(
-                        value,
-                        carried,
-                        read_out,
-                        holds_pointers,
-                        operation.origin.span(),
-                    );
+                    self.mark_leaving(value, carried, read_out, levels, operation.origin.span());
                 }
 
                 // An assignment to a local writes it, whatever it writes. See
@@ -3503,17 +3518,21 @@ impl Analysis for Allocations<'_> {
                                 }
                             });
                             if marks {
-                                // Either side, since a pointer laundered
-                                // through a `void *` makes either one's type
-                                // a claim nothing checks.
-                                let holds_pointers = self
-                                    .copy_holds_pointers(self.unit.place_ty(function, source))
-                                    || self.copy_holds_pointers(self.unit.place_ty(function, dest));
+                                // The more of the two sides, since a pointer
+                                // laundered through a `void *` makes either
+                                // one's type a claim nothing checks.
+                                let levels = self
+                                    .copy_levels_holding_pointers(
+                                        self.unit.place_ty(function, source),
+                                    )
+                                    .max(self.copy_levels_holding_pointers(
+                                        self.unit.place_ty(function, dest),
+                                    ));
                                 self.mark_leaving(
                                     value,
                                     copied.iter().copied().collect(),
                                     Vec::new(),
-                                    holds_pointers,
+                                    levels,
                                     origin.span(),
                                 );
                             }

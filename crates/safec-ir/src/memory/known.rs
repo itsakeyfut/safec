@@ -423,9 +423,10 @@ pub(super) struct Known {
     /// this check does not follow what one place in such memory holds (#656).
     /// See ADR-0041.
     pub(super) stored_out: Table<Site, bool>,
-    /// Per site, the store that let it leave holding pointers, where one
-    /// may have: a store into memory that leaves, of a pointer to it, whose
-    /// stored-into type is read as holding pointers (ADR-0076).
+    /// Per site, the write that let it leave holding pointers, where one
+    /// may have: a store or a library copy into memory that leaves, of a
+    /// pointer to it or to a block that holds one, as far down as the
+    /// written type reads pointers (ADR-0076, ADR-0085).
     ///
     /// **Asked at the function's exit, not at the store**: the caller reads
     /// the block after the function returns, and `*out = b; *b = x;` fills it
@@ -1216,6 +1217,43 @@ impl Known {
             }
         }
         closed
+    }
+
+    /// The blocks `sites` name and the blocks they hold, `levels` levels in
+    /// all: `sites` themselves at the first, what is stored in them at the
+    /// second, and so on, each block once. `usize::MAX` follows what is held
+    /// until nothing new is. Zero levels is no block.
+    ///
+    /// **One walk for every door a block leaves by**: the store, the copy
+    /// and the `return` each ask it with the levels their type reads
+    /// pointers at, so one cannot follow a level the others stop at. See
+    /// ADR-0085.
+    ///
+    /// **Bounded by the number of sites as well as by `levels`**: each level
+    /// that goes on adds a block not seen before, so no walk needs more, and
+    /// a block that holds itself, `*p = p;`, copied out through a `void *`,
+    /// ends here even if the filter on what was seen is lost. Without the
+    /// bound, losing it hung on that program with nothing to read.
+    /// Mutation: drop the filter and keep the bound; the case
+    /// `a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once`
+    /// still ends.
+    pub(super) fn held_below(&self, sites: Vec<Site>, levels: usize) -> Vec<Site> {
+        let mut seen: Vec<Site> = Vec::new();
+        let mut frontier = sites;
+        for _ in 0..levels.min(self.contents.len()) {
+            frontier.retain(|site| !seen.contains(site));
+            frontier.sort_unstable();
+            frontier.dedup();
+            if frontier.is_empty() {
+                break;
+            }
+            seen.extend(frontier.iter().copied());
+            frontier = frontier
+                .iter()
+                .flat_map(|&site| self.contents[site].sites())
+                .collect();
+        }
+        seen
     }
 
     /// Record that a store this check cannot place may have put what it
