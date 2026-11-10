@@ -1305,8 +1305,11 @@ impl Allocations<'_> {
     /// unwritten where it leaves could not be doubted without refusing that
     /// program (#872).
     ///
-    /// **Only where nothing else can name the site.** A site names every
-    /// block its call made, and a block an earlier turn made may still be
+    /// **Only where nothing else can name the site, for a site made in a
+    /// loop.** A site whose every call is on no cycle makes one block an
+    /// activation, the one that did not come to exist, and is written
+    /// whatever names it (`Allocations::made_once`, ADR-0082). Otherwise a
+    /// site names every block its call made, and a block an earlier turn made may still be
     /// held in memory or by another local; writing the site then believed
     /// that block written, and programs `main` reported went silent, found
     /// by #870's adversary. So the rule asks [`Known::held_sites`], which

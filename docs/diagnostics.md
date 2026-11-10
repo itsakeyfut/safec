@@ -196,8 +196,11 @@ b;` is the program, and so is the same after a copy of half a pointer into
 it. A block written on the path where its allocation succeeded, `if (m) *m =
 p; return m;`, says nothing, though the path where it failed wrote nothing:
 on the edge where an allocation's result is tested null its block does not
-exist, so it adds no doubt, where nothing else can name the block the site
-made (ADR-0080). A block possibly unwritten is doubted wherever it is
+exist, so it adds no doubt: where the call is on no loop, since it makes
+one block a call of the function (ADR-0082), and in a loop, where nothing
+else can name a block the site made on an earlier turn (ADR-0080). So
+`*out = b; if (!b) return; *b = x;` says nothing, and the same with `out[i]`
+in a loop is doubted. A block possibly unwritten is doubted wherever it is
 returned, in words of its own: "this returns memory that may not have been
 written, and the caller may read pointers out of it", for `if (!b) return 0;
 if (c) *b = p; return b;` (#828), for `if (b) { if (c) *b = p; } return b;`
