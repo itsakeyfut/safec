@@ -1835,11 +1835,6 @@ fn report_returned_unwritten(
         || below
             .iter()
             .any(|&site| known.init[site].may_be_unwritten());
-    // **The returned local is named only where its own blocks are in
-    // doubt**: where only a block below them is, "`box` points at memory
-    // nothing wrote" is false of a `box` that was written, and the nameless
-    // words are said instead.
-    let named = named.filter(|_| possibly_own);
     // **On a first turn's arm, certainly unwritten is a doubt**: that turn
     // may not take the arm, and a later one finds the block written (#838).
     // Mutation: ignore `doubt_only`; the return in
@@ -1852,6 +1847,17 @@ fn report_returned_unwritten(
     } else {
         return;
     };
+    // **The returned local is named only where its own blocks bear out the
+    // words said**: where only a block below them does, "`box` points at
+    // memory nothing wrote" is false of a `box` that was written, and the
+    // nameless words are said instead. Bear out, not merely are in doubt:
+    // with `box` written on one path and `b` below it on none, the words are
+    // certain and `box` is only possibly unwritten, found by review.
+    let own_bears_out = match kind {
+        Kind::ReturnedUnwritten => certainly_own,
+        _ => possibly_own,
+    };
+    let named = named.filter(|_| own_bears_out);
     push_once(
         findings,
         Finding {

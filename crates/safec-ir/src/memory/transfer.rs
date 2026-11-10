@@ -519,9 +519,10 @@ impl Allocations<'_> {
 
     /// How many levels below a value of type `ty` hold pointers, counted
     /// while [`Self::first_level_holds_a_pointer`] holds and stepping to the
-    /// pointee through arrays: `int ***` is `2`, its block and the blocks
-    /// that holds, `int **` is `1`, and `int *` and `void *` are `0`. The
-    /// levels a block that leaves is asked at. See ADR-0085.
+    /// pointee through arrays. `int ***` is `2`: the block it points at, and
+    /// the blocks that block holds. `int **` is `1`, and `int *` and
+    /// `void *` are `0`. These are the levels a block that leaves is asked
+    /// at. See ADR-0085.
     pub(super) fn levels_holding_pointers(&self, ty: TyId) -> usize {
         let mut levels = 0;
         let mut ty = innermost_element(self.unit, ty);

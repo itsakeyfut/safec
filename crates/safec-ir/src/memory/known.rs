@@ -423,9 +423,10 @@ pub(super) struct Known {
     /// this check does not follow what one place in such memory holds (#656).
     /// See ADR-0041.
     pub(super) stored_out: Table<Site, bool>,
-    /// Per site, the store that let it leave holding pointers, where one
-    /// may have: a store into memory that leaves, of a pointer to it, whose
-    /// stored-into type is read as holding pointers (ADR-0076).
+    /// Per site, the write that let it leave holding pointers, where one
+    /// may have: a store or a library copy into memory that leaves, of a
+    /// pointer to it or to a block that holds one, as far down as the
+    /// written type reads pointers (ADR-0076, ADR-0085).
     ///
     /// **Asked at the function's exit, not at the store**: the caller reads
     /// the block after the function returns, and `*out = b; *b = x;` fills it

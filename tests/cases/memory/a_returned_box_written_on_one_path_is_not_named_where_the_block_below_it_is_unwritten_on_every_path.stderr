@@ -1,0 +1,10 @@
+error[SC0411]: this returns memory nothing wrote, and the caller may read pointers out of it
+   ╭─[ a_returned_box_written_on_one_path_is_not_named_where_the_block_below_it_is_unwritten_on_every_path.c:7:5 ]
+   │
+ 7 │     return box;
+   │     ─────┬─────  
+   │          ╰─────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before returning it, or allocate it with `calloc`

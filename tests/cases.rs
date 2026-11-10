@@ -1675,6 +1675,11 @@ cases! {
         // words say `box`, which was written.
         a_block_put_into_a_box_that_is_returned_is_reported_at_the_return: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_put_into_a_box_that_is_copied_out_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `box` may be unwritten, `b` below it certainly is: the words are
+        // certain, which `box` does not bear out, found by review. Mutation:
+        // name the local where its own blocks are possibly unwritten whatever
+        // the words; this says `box` points at memory nothing wrote.
+        a_returned_box_written_on_one_path_is_not_named_where_the_block_below_it_is_unwritten_on_every_path: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `box` is an `int **`, so the block below it holds `int`s. Mutation:
         // follow what the blocks hold at every level, whatever the type; this
         // is reported.
