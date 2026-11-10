@@ -1,0 +1,109 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:2:6 "stored"
+  Local "_0" "void" return
+  Local "_1" "int *****" parameter _Nonnull "out"
+  Local "_2" "int **" "c"
+  Local "_3" "void *"
+  Local "_4" "int ***" "b"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int **"
+  Local "_8" "int ****" "box"
+  Local "_9" "void *"
+  Local "_10" "int"
+  Local "_11" "int ***"
+  Local "_12" "int ****"
+  Block "bb0" entry
+    ArgumentsEvaluated a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:3:15 generated
+    Call a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:3:15 written "malloc" "bb1"
+      Destination "_3"
+      Constant 8
+  Block "bb1"
+    Operation a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:3:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:3:15 generated
+    ArgumentsEvaluated a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:4:16 generated
+    Call a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:4:16 written "malloc" "bb2"
+      Destination "_5"
+      Constant 8
+  Block "bb2"
+    Operation a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:4:12 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:4:16 generated
+    Operation a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:5:9 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_4"
+    Branch a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:5:9 written "bb3" "bb4"
+      Copy "_6"
+  Block "bb3"
+    Sequenced a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:5:9 generated
+    Return
+  Block "bb4"
+    Sequenced a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:5:9 generated
+    Goto "bb5"
+  Block "bb5"
+    Operation a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:6:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_2"
+    Operation a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:6:5 written
+      Destination "_7"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:6:5 generated
+    ArgumentsEvaluated a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:7:19 generated
+    Call a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:7:19 written "malloc" "bb6"
+      Destination "_9"
+      Constant 8
+  Block "bb6"
+    Operation a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:7:13 written
+      Destination "_8"
+      Use
+        Copy "_9"
+    Sequenced a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:7:19 generated
+    Operation a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:8:9 written
+      Destination "_10"
+      Unary "Not"
+        Copy "_8"
+    Branch a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:8:9 written "bb7" "bb8"
+      Copy "_10"
+  Block "bb7"
+    Sequenced a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:8:9 generated
+    Return
+  Block "bb8"
+    Sequenced a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:8:9 generated
+    Goto "bb9"
+  Block "bb9"
+    Operation a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:9:5 written
+      Destination "_8"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:9:5 written
+      Destination "_11"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:9:5 generated
+    Operation a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:10:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_8"
+    Operation a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:10:5 written
+      Destination "_12"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_block_three_levels_below_one_that_leaves_is_reported_where_the_function_returns.c:10:5 generated
+    Return
