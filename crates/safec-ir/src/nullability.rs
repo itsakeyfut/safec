@@ -229,18 +229,21 @@ impl Asked {
     ///
     /// A dereference is one question whether or not it went through memory:
     /// `*p && **q` writes both operands at one span, and the reader is told
-    /// one thing about it. An argument is a question per promise, and a return
-    /// is one per promise and per whether it is the end of the body.
+    /// one thing about it. A move is one question, apart from a dereference.
+    /// An argument is a question per promise, and a return is one per promise
+    /// and per whether it is the end of the body.
     ///
-    /// The first element of every pair written out, so that a fourth question
+    /// The first element of every pair written out, so that a fifth question
     /// is answered for here by `error[E0004]`.
     fn same_question(self, other: Self) -> bool {
         match (self, other) {
             (Self::Dereference { through_memory: _ }, Self::Dereference { through_memory: _ }) => {
                 true
             }
-            // A move is its own question: it and a dereference of what it
-            // made stand at carets of their own, measured. See ADR-0084.
+            // A move is its own question. Where it and a dereference share a
+            // caret, `a[1][2] = 5;`, they are about different places and do
+            // not fold anyway, and what the move made is not null, so the
+            // dereference is not doubted. See ADR-0084.
             (Self::Arithmetic, Self::Arithmetic) => true,
             (Self::Argument { promise }, Self::Argument { promise: other }) => promise == other,
             (
