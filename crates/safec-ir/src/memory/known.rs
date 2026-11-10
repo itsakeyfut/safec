@@ -435,6 +435,20 @@ pub(super) struct Known {
     /// the site is made again**, since the caller may hold the allocation it
     /// named before; see `Self::reborn`.
     pub(super) left_at: Table<Site, Option<Span>>,
+    /// Per site, the most levels a local it was held in reads pointers at
+    /// (`Allocations::levels_holding_pointers` of the local's declared type):
+    /// `int **b = malloc(8);` records `1` for the block, and a block only
+    /// ever held as a `void *`, `char *` or `int *` records `0`.
+    ///
+    /// **On the allocation, not on the value**, so a `void *` level the
+    /// block is reached through later still finds it: `void *r(void) { int
+    /// **b = malloc(8); return b; }` hands the caller a block it reads
+    /// pointers out of once it converts the result back, and was silent,
+    /// since a `void *` is read as holding no pointer (#902). Read by
+    /// [`Self::held_below`] and by the `return`'s ask. A may-fact, joined by
+    /// the larger, and kept where the site is made again, as `left_at` is.
+    /// See ADR-0086.
+    pub(super) held_levels: Table<Site, usize>,
     /// Per local, each type a call this check cannot read reached it as on
     /// the walk a departure takes, where that type is untyped somewhere
     /// below: `void`, `char` or `int` bytes, a pointer whose chain ends in
@@ -1224,6 +1238,11 @@ impl Known {
     /// second, and so on, each block once. `usize::MAX` follows what is held
     /// until nothing new is. Zero levels is no block.
     ///
+    /// **Or as many as a block's own record says**, where that is more: each
+    /// block is followed with the larger of the levels its parent left it and
+    /// its [`Self::held_levels`], so a `void *` level, which reads as no
+    /// level at all, still reaches a block held as `int **`. See ADR-0086.
+    ///
     /// **One walk for every door a block leaves by**: the store, the copy
     /// and the `return` each ask it with the levels their type reads
     /// pointers at, so one cannot follow a level the others stop at. See
@@ -1234,24 +1253,28 @@ impl Known {
     /// a block that holds itself, `*p = p;`, copied out through a `void *`,
     /// ends here even if the filter on what was seen is lost. Without the
     /// bound, losing it hung on that program with nothing to read.
-    /// Mutation: drop the filter and keep the bound; the case
+    /// Mutation: drop the filter on what was seen and keep the bound; the
+    /// case
     /// `a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once`
     /// still ends.
     pub(super) fn held_below(&self, sites: Vec<Site>, levels: usize) -> Vec<Site> {
         let mut seen: Vec<Site> = Vec::new();
-        let mut frontier = sites;
-        for _ in 0..levels.min(self.contents.len()) {
-            frontier.retain(|site| !seen.contains(site));
-            frontier.sort_unstable();
-            frontier.dedup();
-            if frontier.is_empty() {
+        let mut frontier: Vec<(Site, usize)> =
+            sites.into_iter().map(|site| (site, levels)).collect();
+        for _ in 0..self.contents.len() {
+            let mut next: Vec<(Site, usize)> = Vec::new();
+            for (site, left) in frontier {
+                let budget = left.max(self.held_levels[site]);
+                if budget == 0 || seen.contains(&site) {
+                    continue;
+                }
+                seen.push(site);
+                next.extend(self.contents[site].sites().map(|held| (held, budget - 1)));
+            }
+            if next.is_empty() {
                 break;
             }
-            seen.extend(frontier.iter().copied());
-            frontier = frontier
-                .iter()
-                .flat_map(|&site| self.contents[site].sites())
-                .collect();
+            frontier = next;
         }
         seen
     }
@@ -1856,6 +1879,8 @@ impl Known {
             // is doubted at an early return, a doubt the reader sees. See
             // `Known::left_at`.
             left_at: _,
+            // Kept, for the reason `left_at` is. See `Known::held_levels`.
+            held_levels: _,
             // Not a local's, which a site being reborn is not about, and
             // kept for the site, as `names` is: a call may still hold the old
             // allocation's address, and the slots of the new one are not told

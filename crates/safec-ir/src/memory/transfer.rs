@@ -1587,6 +1587,7 @@ impl Allocations<'_> {
             stored_in_part,
             stored_out,
             left_at,
+            held_levels,
             handed_untyped,
             block_elements,
         } = into;
@@ -1614,6 +1615,11 @@ impl Allocations<'_> {
         }
         // A may-fact too, keeping the earlier store where both paths let the
         // block leave. See `Known::left_at`.
+        // The larger, so a path that held the block as pointers asks it. See
+        // `Known::held_levels`.
+        for (here, there) in held_levels.iter_mut().zip(&from.held_levels) {
+            *here = (*here).max(*there);
+        }
         for (here, there) in left_at.iter_mut().zip(&from.left_at) {
             *here = match (*here, *there) {
                 (Some(here), Some(there)) => Some(earlier(self.sources, here, there)),
@@ -2169,6 +2175,7 @@ impl Analysis for Allocations<'_> {
             // Nothing has been stored anywhere yet.
             stored_out: Table::filled(false, self.locals),
             left_at: Table::filled(None, self.locals),
+            held_levels: Table::filled(0, self.locals),
             // No call has been handed anything yet.
             handed_untyped: Table::filled(Vec::new(), Loc::count(self.locals)),
             // No block has been made yet.
@@ -3018,6 +3025,16 @@ impl Analysis for Allocations<'_> {
                 // after the match for the reason above. See ADR-0073 rule 4.
                 if self.first_level_holds_a_pointer(function.local(destination)) {
                     value.points_to[destination].arrived_holds_pointer = true;
+                }
+                // **And on what it names**, so a `void *` level it reaches the
+                // caller through later still asks it (#902). See
+                // `Known::held_levels` and ADR-0086.
+                let held = self.levels_holding_pointers(function.local(destination));
+                if held > 0 {
+                    let named: Vec<Site> = value.sites_of(destination).collect();
+                    for site in named {
+                        value.held_levels[site] = value.held_levels[site].max(held);
+                    }
                 }
                 // What an escaped local is given, every call reaches through
                 // `Known::reach_of`, as an exposure does. Here and not in

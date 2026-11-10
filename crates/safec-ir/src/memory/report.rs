@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 use crate::analysis::Conclusion;
 use crate::ir::{
     BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Place, Projection, Rvalue,
-    Terminator, TyId,
+    Terminator, Ty, TyId,
 };
 use crate::library::{Callee, Reach};
 use crate::nullability::NullAtTerminators;
@@ -1795,7 +1795,21 @@ fn report_returned_unwritten(
         .and_then(|ty| stored_pointer(analysis.unit, ty))
         .and_then(|ty| pointee_width(analysis, ty))
         .is_some();
-    if !returns_pointers {
+    // **Or where what it names was held as pointers**, for a return type
+    // that says nothing there, a `void *`: `int **b = malloc(8); return b;`
+    // as a `void *` hands the caller memory it reads pointers out of once it
+    // converts the result back (#902). Only a pointer returned: an `int`
+    // read out of such a block was asked too, and 26 cases moved, measured.
+    // See `Known::held_levels` and ADR-0086.
+    let returns_a_pointer = analysis
+        .unit
+        .place_ty(function, &Place::local(function.return_place()))
+        .is_some_and(|ty| matches!(analysis.unit.ty(ty), Ty::Pointer(_)));
+    let held_as_pointers = sites
+        .iter()
+        .flatten()
+        .any(|&site| known.held_levels[site] > 0);
+    if !returns_pointers && !(returns_a_pointer && held_as_pointers) {
         return;
     }
     // **And the blocks those hold**, as far down as the return type reads

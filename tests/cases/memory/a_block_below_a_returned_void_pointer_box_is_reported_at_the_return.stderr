@@ -1,0 +1,10 @@
+error[SC0411]: this returns memory nothing wrote, and the caller may read pointers out of it
+   ╭─[ a_block_below_a_returned_void_pointer_box_is_reported_at_the_return.c:7:5 ]
+   │
+ 7 │     return box;
+   │     ─────┬─────  
+   │          ╰─────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before returning it, or allocate it with `calloc`
