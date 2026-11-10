@@ -716,11 +716,17 @@ pub(super) fn used_by_value(
     at: Option<(Span, Vec<&Place>)>,
     known: &Known,
     function: FuncId,
+    is_pointer: &dyn Fn(LocalId) -> bool,
 ) {
     let Some((at, operated)) = at else {
         return;
     };
-    for place in operated {
+    // **A pointer's value, not a value computed from one**: an operator's
+    // result keeps its operands' sites, so `int b = p != 0;` before the free
+    // reached the block and `b == 1` after it was said to use a freed value,
+    // found by review. An `int` holds no pointer this frontend can make one
+    // of, since a cast is refused.
+    for place in operated.into_iter().filter(|place| is_pointer(place.local)) {
         // **One use after free at one caret said once, whichever place it
         // names**: `if (p == 0)` compares `p` and then branches on the
         // comparison's temporary, which carries the freed state on, and the

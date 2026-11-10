@@ -901,6 +901,7 @@ fn findings_within(
                     operated_on_in_element(element),
                     &known,
                     func,
+                    &|local| unit.ty(function.local(local)).is_pointer(),
                 );
                 // The same accesses, asked whether they fit. See ADR-0060.
                 may_not_fit(
@@ -1010,6 +1011,7 @@ fn findings_within(
                 operated_on_in_terminator(&block.terminator),
                 &known,
                 func,
+                &|local| unit.ty(function.local(local)).is_pointer(),
             );
             may_not_fit(
                 &mut findings,

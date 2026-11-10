@@ -2020,6 +2020,15 @@ cases! {
         // one caret and are one use, said once. Found by review. Mutation: ask
         // each place at a caret whatever was said there; this says it twice.
         a_freed_pointer_compared_in_a_branch_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An ordering, `p < x`, is a use as an equality is. Found by review.
+        // Mutation: count the four orderings with `+` and `-`; this goes
+        // silent.
+        a_freed_pointer_ordered_against_another_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An `int` computed from the pointer while it was live is no pointer
+        // after the free, though an operator's result keeps its operands'
+        // sites. Found by review. Mutation: ask any local, not only a
+        // pointer; this is said to use a freed value.
+        a_comparison_made_before_a_free_is_not_a_use_of_the_freed_value: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Moved first: the move carries the freed pointer, as a copy does, and
         // its result is reported where it is compared. Mutation: ask a move as
         // a use too; `a_subscript_of_a_freed_pointer` is said twice.
