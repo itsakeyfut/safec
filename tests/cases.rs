@@ -1742,6 +1742,14 @@ cases! {
         // every site as made once an activation; its `SC0411` goes. See
         // ADR-0082.
         a_block_stored_out_before_its_null_test_in_a_loop_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with an unrelated loop first: every loop is asked, not
+        // the first. Found by review. Mutation: ask only the first loop the
+        // graph lists; its `SC0411` goes.
+        a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Made once beside an unrelated loop: a loop elsewhere does not make
+        // the call run twice. Found by review. Mutation: count no site made
+        // once in a function with any loop; this is reported.
+        a_block_stored_out_before_its_null_test_beside_an_unrelated_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The flag copied twice. Mutation: follow one copy only; this is
         // doubted.
         a_flag_copied_twice_before_the_branch_still_refines: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

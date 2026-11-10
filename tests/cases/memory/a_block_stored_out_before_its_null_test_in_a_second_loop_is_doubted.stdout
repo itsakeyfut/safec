@@ -1,0 +1,149 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter _Nonnull "out"
+  Local "_2" "int *" parameter _Nonnull "x"
+  Local "_3" "int" parameter "n"
+  Local "_4" "int" "j"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "int"
+  Local "_8" "int" "i"
+  Local "_9" "int"
+  Local "_10" "int **" "b"
+  Local "_11" "void *"
+  Local "_12" "int ***"
+  Local "_13" "int **"
+  Local "_14" "int"
+  Local "_15" "int *"
+  Local "_16" "int"
+  Local "_17" "int"
+  Block "bb0" entry
+    StorageLive a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:3:10 generated "_4"
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:3:14 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:3:18 generated
+    Goto "bb1"
+  Block "bb1"
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:3:21 written
+      Destination "_5"
+      Binary "Lt"
+        Copy "_4"
+        Copy "_3"
+    Branch a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:3:21 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:3:21 generated
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:3:28 written
+      Destination "_6"
+      Use
+        Copy "_4"
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:3:28 written
+      Destination "_7"
+      Binary "Add"
+        Copy "_4"
+        Constant 1
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:3:28 written
+      Destination "_4"
+      Use
+        Copy "_7"
+    Sequenced a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:3:28 generated
+    Goto "bb1"
+  Block "bb3"
+    Sequenced a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:3:21 generated
+    StorageDead a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:3:35 generated "_4"
+    StorageLive a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:4:10 generated "_8"
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:4:14 written
+      Destination "_8"
+      Use
+        Constant 0
+    Sequenced a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:4:18 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:4:21 written
+      Destination "_9"
+      Binary "Lt"
+        Copy "_8"
+        Copy "_3"
+    Branch a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:4:21 written "bb5" "bb6"
+      Copy "_9"
+  Block "bb5"
+    Sequenced a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:4:21 generated
+    StorageLive a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:5:9 generated "_10"
+    ArgumentsEvaluated a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:5:19 generated
+    Call a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:5:19 written "malloc" "bb7"
+      Destination "_11"
+      Constant 8
+  Block "bb6"
+    Sequenced a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:4:21 generated
+    StorageDead a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:9:5 generated "_8"
+    Return
+  Block "bb7"
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:5:15 written
+      Destination "_10"
+      Use
+        Copy "_11"
+    Sequenced a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:5:19 generated
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:6:9 written
+      Destination "_12"
+      Binary "Add"
+        Copy "_1"
+        Copy "_8"
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:6:9 written
+      Destination "_12"
+        Deref
+      Use
+        Copy "_10"
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:6:9 written
+      Destination "_13"
+      Use
+        Copy "_12"
+          Deref
+    Sequenced a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:6:9 generated
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:7:13 written
+      Destination "_14"
+      Unary "Not"
+        Copy "_10"
+    Branch a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:7:13 written "bb8" "bb9"
+      Copy "_14"
+  Block "bb8"
+    Sequenced a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:7:13 generated
+    StorageDead a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:7:17 generated "_10"
+    StorageDead a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:7:17 generated "_8"
+    Return
+  Block "bb9"
+    Sequenced a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:7:13 generated
+    Goto "bb10"
+  Block "bb10"
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:8:9 written
+      Destination "_10"
+        Deref
+      Use
+        Copy "_2"
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:8:9 written
+      Destination "_15"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:8:9 generated
+    StorageDead a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:9:5 generated "_10"
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:4:28 written
+      Destination "_16"
+      Use
+        Copy "_8"
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:4:28 written
+      Destination "_17"
+      Binary "Add"
+        Copy "_8"
+        Constant 1
+    Operation a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:4:28 written
+      Destination "_8"
+      Use
+        Copy "_17"
+    Sequenced a_block_stored_out_before_its_null_test_in_a_second_loop_is_doubted.c:4:28 generated
+    Goto "bb4"
