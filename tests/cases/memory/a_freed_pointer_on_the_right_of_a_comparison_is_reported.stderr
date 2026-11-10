@@ -1,0 +1,13 @@
+error[SC0402]: this uses `p` after it was freed
+   ╭─[ a_freed_pointer_on_the_right_of_a_comparison_is_reported.c:3:69 ]
+   │
+ 3 │ int f(void) { int *p = malloc(4); if (!p) return 0; free(p); return 0 != p; }
+   │                        ────┬────                    ───┬───         ───┬──  
+   │                            ╰──────────────────────────────────────────────── allocated here
+   │                                                        │               │    
+   │                                                        ╰──────────────────── freed here
+   │                                                                        │    
+   │                                                                        ╰──── used here
+───╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here

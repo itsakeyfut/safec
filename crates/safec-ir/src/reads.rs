@@ -104,7 +104,10 @@ pub(crate) fn operated_on_in_element(element: &Element) -> Option<(Span, Vec<&Pl
     match element {
         Element::Assign(operation) => {
             let places = match &operation.value {
-                // Every operator written out, so a new one answers here.
+                // Every operator written out, so a new one answers here. Only
+                // the six comparisons take a pointer in C (C17 6.5.5, 6.5.7,
+                // 6.5.10 to 6.5.12 refuse one), so the rest decide no case and
+                // nothing guards which arm they sit in.
                 Rvalue::Binary {
                     op:
                         BinOp::Lt

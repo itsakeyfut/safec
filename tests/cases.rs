@@ -2024,6 +2024,12 @@ cases! {
         // Mutation: count the four orderings with `+` and `-`; this goes
         // silent.
         a_freed_pointer_ordered_against_another_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // On the right of the comparison. Found by review. Mutation: ask the
+        // left operand alone; this goes silent.
+        a_freed_pointer_on_the_right_of_a_comparison_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Negated, `!p`. Found by review. Mutation: ask no unary operand;
+        // this goes silent.
+        a_freed_pointer_negated_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An `int` computed from the pointer while it was live is no pointer
         // after the free, though an operator's result keeps its operands'
         // sites. Found by review. Mutation: ask any local, not only a
