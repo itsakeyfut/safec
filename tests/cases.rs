@@ -1683,6 +1683,11 @@ cases! {
         // report every block left at the exit, written or not; this is
         // reported.
         a_block_written_before_it_is_put_into_a_box_that_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block that holds itself, copied out through a `void *`, which
+        // follows every level: the walk ends. Mutation: drop both the filter
+        // on what was seen and the bound by the number of sites in
+        // `Known::held_below`; this hangs.
+        a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
         // one is, by one function both doors call (#890). Possibly, not
         // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no

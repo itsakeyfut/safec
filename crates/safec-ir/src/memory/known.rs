@@ -1227,10 +1227,19 @@ impl Known {
     /// and the `return` each ask it with the levels their type reads
     /// pointers at, so one cannot follow a level the others stop at. See
     /// ADR-0085.
+    ///
+    /// **Bounded by the number of sites as well as by `levels`**: each level
+    /// that goes on adds a block not seen before, so no walk needs more, and
+    /// a block that holds itself, `*p = p;`, copied out through a `void *`,
+    /// ends here even if the filter on what was seen is lost. Without the
+    /// bound, losing it hung on that program with nothing to read.
+    /// Mutation: drop the filter and keep the bound; the case
+    /// `a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once`
+    /// still ends.
     pub(super) fn held_below(&self, sites: Vec<Site>, levels: usize) -> Vec<Site> {
         let mut seen: Vec<Site> = Vec::new();
         let mut frontier = sites;
-        for _ in 0..levels {
+        for _ in 0..levels.min(self.contents.len()) {
             frontier.retain(|site| !seen.contains(site));
             frontier.sort_unstable();
             frontier.dedup();
