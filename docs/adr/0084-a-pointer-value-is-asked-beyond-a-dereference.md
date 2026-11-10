@@ -42,8 +42,10 @@ that measured the second.
   freed doubted 233 cases of the corpus, mostly at comparisons of pointers
   this check stopped following, against 17 certain.
 * **A move by `+` or `-` of a pointer the nullability check has not shown is
-  not null is doubted, and reported where it is null**, as a dereference is
-  (#884). Measured, it moves 74 cases.
+  not null is to be doubted, and reported where it is null**, as a dereference
+  is. #884 implements it, and its cases name their mutations in their notes;
+  until it lands, `docs/safety-model.md` lists the arithmetic as not asked.
+  Measured on the prototype, it moves 74 cases.
 
 ### Confirmation
 
@@ -63,9 +65,11 @@ Each in `tests/cases/memory/`, with its mutation in its note in
   value is reported wherever it is used.
 * Bad, because a value that may have been freed on some path only, compared
   or branched on, is a silence; `docs/safety-model.md` lists it.
-* Bad, because a pointer difference, `p - q`, of a freed pointer is not
+* Bad, because a pointer difference, `p - q`, of a freed pointer would not be
   asked: its result is no pointer to carry the state on, and `-` is not asked
-  as a use.
-* Neutral, because a certain use is said at each place it is used: `if (c)
-  return *c;` says it at the branch and at the dereference.
+  as a use. The frontend refuses a pointer difference today (`SC0304`), so no
+  program reaches it yet.
+* Neutral, because a certain use is said at each caret it is used at: `if (c)
+  return *c;` says it at the branch and at the dereference, and `if (p == 0)`
+  once, though it compares `p` and branches on what the comparison made.
 * A relational comparison of null pointers (C17 6.5.8 p5) is not asked.
