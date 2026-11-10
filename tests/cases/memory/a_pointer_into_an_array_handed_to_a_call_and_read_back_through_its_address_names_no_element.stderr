@@ -49,13 +49,3 @@ error[SC0403]: this may dereference `f` while it is null
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: test this pointer against null before reading through it
-error[SC0403]: this may dereference a null pointer
-    ╭─[ a_pointer_into_an_array_handed_to_a_call_and_read_back_through_its_address_names_no_element.c:10:10 ]
-    │
- 10 │     int *r = m[1];
-    │          ────┬───  
-    │              ╰───── this check cannot say this is not null
-────╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: test this pointer against null before reading through it

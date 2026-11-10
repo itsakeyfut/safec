@@ -29,13 +29,3 @@ error[SC0411]: `*m` may be read before anything was assigned to it
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: assign it on every path before it is read
-error[SC0403]: this may dereference a null pointer
-   ╭─[ a_copy_ending_part_way_through_a_pointer_leaves_the_block_in_doubt.c:4:27 ]
-   │
- 4 │     int *a[2]; a[0] = &x; a[1] = &y;
-   │                           ────┬────  
-   │                               ╰────── this check cannot say this is not null
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: test this pointer against null before reading through it

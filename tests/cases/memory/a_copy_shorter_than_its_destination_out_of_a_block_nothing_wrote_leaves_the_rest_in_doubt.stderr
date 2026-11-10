@@ -29,23 +29,3 @@ error[SC0412]: this may reach outside the object it points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
-error[SC0403]: this may dereference a null pointer
-   ╭─[ a_copy_shorter_than_its_destination_out_of_a_block_nothing_wrote_leaves_the_rest_in_doubt.c:5:5 ]
-   │
- 5 │     n[1] = x;
-   │     ────┬───  
-   │         ╰───── this check cannot say this is not null
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: test this pointer against null before reading through it
-error[SC0403]: this may dereference a null pointer
-   ╭─[ a_copy_shorter_than_its_destination_out_of_a_block_nothing_wrote_leaves_the_rest_in_doubt.c:7:10 ]
-   │
- 7 │     int *r = n[1]; if (!r) return 0;
-   │          ────┬───  
-   │              ╰───── this check cannot say this is not null
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: test this pointer against null before reading through it

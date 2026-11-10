@@ -19,13 +19,3 @@ error[SC0412]: this may reach outside the object `p` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
-error[SC0403]: this may dereference `p` while it is null
-   ╭─[ a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c:2:121 ]
-   │
- 2 │ int *f(int * _Nonnull x, int c) { int **b = malloc(16); if (!b) return 0; b[0] = x; int **p = b; if (c) p = b + 1; int *r = p[0]; return r; }
-   │                                                                                                                         ────┬───  
-   │                                                                                                                             ╰───── this check cannot say this is not null
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: test this pointer against null before reading through it

@@ -920,10 +920,9 @@ impl Nullability<'_> {
             // safe for a reason that has nothing to do with the clause it used
             // to name.
             Rvalue::Address(_) => Nullness::NonNull,
-            // Pointer arithmetic and anything computed. `p + 1` off a non-null `p`
-            // is non-null in practice and this does not say so: the operand is an
-            // integer's worth of work away from the rule above, and a warning on
-            // correct C is the cheaper of the two ways to be wrong.
+            // Anything computed. A pointer moved by `+` or `-` is answered in
+            // `Analysis::element` before this is asked, where the move is
+            // known to be a pointer's. See ADR-0084.
             Rvalue::Unary { op: _, operand: _ }
             | Rvalue::Binary {
                 op: _,
@@ -997,7 +996,7 @@ impl Analysis for Nullability<'_> {
         }
     }
 
-    fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
+    fn element(&self, function: &Function, element: &Element, value: &mut Self::Value) {
         if value.path == Path::Ended {
             return;
         }
@@ -1015,14 +1014,26 @@ impl Analysis for Nullability<'_> {
         // the answer about the new one, leaving `pp` proved non-null when
         // nothing at all was known about what it now holds.
         met(dereferenced_in_element(element), value);
+        // **A pointer moved by `+` or `-` is not null after it either**, as
+        // one dereferenced is not: moving a null one is undefined (C17 6.5.6
+        // p8), and the move is asked where it runs. So is what the move made,
+        // a pointer into the same object. Kept `Unknown`, every move after the
+        // first was doubted again, `q = a + 1; r = q + 1;` with `a` a local
+        // array among them, found by review (#884). See ADR-0084.
+        let moved = moved_in_element(self.unit, function, element);
+        let moves = moved.as_ref().is_some_and(|(_, places)| !places.is_empty());
+        met(moved, value);
 
         // Every field written out, never `..`, which would let a field added
         // to a variant that already exists walk past an exhaustive match.
         match element {
             Element::Assign(operation) => {
                 if operation.place.projection.is_empty() {
-                    value[operation.place.local.index()] =
-                        self.nullness_of(&operation.value, value);
+                    value[operation.place.local.index()] = if moves {
+                        Nullness::NonNull
+                    } else {
+                        self.nullness_of(&operation.value, value)
+                    };
                 }
                 // A write through a projection lands somewhere this lattice
                 // cannot name, so it says nothing about what was written. What
