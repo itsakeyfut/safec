@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 use crate::analysis::Conclusion;
 use crate::ir::{
     BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Place, Projection, Rvalue,
-    Terminator, TyId,
+    Terminator, Ty, TyId,
 };
 use crate::library::{Callee, Reach};
 use crate::nullability::NullAtTerminators;
@@ -1664,10 +1664,26 @@ pub(super) fn asked_unwritten_in_terminator(
 /// `a_block_stored_out_and_freed_unwritten_is_reported_freed_alone` gains the
 /// unwritten doubt.
 fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>, known: &Known) {
-    for site in known.state.indices() {
-        let Some(at) = known.left_at[site] else {
+    // **And what left before a typed local said it held pointers**: a block
+    // that left through a `void *` and was held as `int **` after is asked
+    // now, at the write that let it leave, with what its record reaches
+    // below. See `Known::stored_out_at` and ADR-0086.
+    let mut asked: Vec<(Site, Span)> = known
+        .state
+        .indices()
+        .filter_map(|site| known.left_at[site].map(|at| (site, at)))
+        .collect();
+    for root in known.state.indices() {
+        let Some(at) = known.stored_out_at[root] else {
             continue;
         };
+        for site in known.held_below(vec![root], 0) {
+            if !asked.iter().any(|&(named, _)| named == site) {
+                asked.push((site, at));
+            }
+        }
+    }
+    for (site, at) in asked {
         if matches!(known.state[site], SiteState::Freed { .. }) {
             continue;
         }
@@ -1795,7 +1811,21 @@ fn report_returned_unwritten(
         .and_then(|ty| stored_pointer(analysis.unit, ty))
         .and_then(|ty| pointee_width(analysis, ty))
         .is_some();
-    if !returns_pointers {
+    // **Or where what it names was held as pointers**, for a return type
+    // that says nothing there, a `void *`: `int **b = malloc(8); return b;`
+    // as a `void *` hands the caller memory it reads pointers out of once it
+    // converts the result back (#902). Only a pointer returned: an `int`
+    // read out of such a block was asked too, and 26 cases moved, measured.
+    // See `Known::held_levels` and ADR-0086.
+    let returns_a_pointer = analysis
+        .unit
+        .place_ty(function, &Place::local(function.return_place()))
+        .is_some_and(|ty| matches!(analysis.unit.ty(ty), Ty::Pointer(_)));
+    let held_as_pointers = sites
+        .iter()
+        .flatten()
+        .any(|&site| known.held_levels[site] > 0);
+    if !returns_pointers && !(returns_a_pointer && held_as_pointers) {
         return;
     }
     // **And the blocks those hold**, as far down as the return type reads

@@ -1,0 +1,25 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_held_as_pointers_returned_as_a_void_pointer_is_reported_at_the_return.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_held_as_pointers_returned_as_a_void_pointer_is_reported_at_the_return.c:2:7 "returned"
+  Local "_0" "void *" return
+  Local "_1" "int **" "b"
+  Local "_2" "void *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_block_held_as_pointers_returned_as_a_void_pointer_is_reported_at_the_return.c:3:15 generated
+    Call a_block_held_as_pointers_returned_as_a_void_pointer_is_reported_at_the_return.c:3:15 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_block_held_as_pointers_returned_as_a_void_pointer_is_reported_at_the_return.c:3:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_block_held_as_pointers_returned_as_a_void_pointer_is_reported_at_the_return.c:3:15 generated
+    Operation a_block_held_as_pointers_returned_as_a_void_pointer_is_reported_at_the_return.c:4:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_block_held_as_pointers_returned_as_a_void_pointer_is_reported_at_the_return.c:4:12 generated
+    Return

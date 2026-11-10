@@ -1,0 +1,14 @@
+error[SC0411]: this lets a pointer leave to memory nothing wrote by the time the function returns, and the caller may read pointers out of it
+   ╭─[ a_block_put_into_a_void_pointer_box_after_it_leaves_is_reported_where_the_function_returns.c:7:5 ]
+   │
+ 3 │     int **b = malloc(8);
+   │               ────┬────  
+   │                   ╰────── allocated here
+   │ 
+ 7 │     *box = b;
+   │     ────┬───  
+   │         ╰───── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before the function returns, or allocate it with `calloc`

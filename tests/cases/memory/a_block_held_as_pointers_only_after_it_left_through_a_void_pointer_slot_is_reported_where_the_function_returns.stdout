@@ -1,0 +1,39 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_held_as_pointers_only_after_it_left_through_a_void_pointer_slot_is_reported_where_the_function_returns.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_held_as_pointers_only_after_it_left_through_a_void_pointer_slot_is_reported_where_the_function_returns.c:2:6 "stored"
+  Local "_0" "void" return
+  Local "_1" "void **" parameter _Nonnull "out"
+  Local "_2" "void *" "v"
+  Local "_3" "void *"
+  Local "_4" "void *"
+  Local "_5" "int **" "b"
+  Block "bb0" entry
+    ArgumentsEvaluated a_block_held_as_pointers_only_after_it_left_through_a_void_pointer_slot_is_reported_where_the_function_returns.c:3:15 generated
+    Call a_block_held_as_pointers_only_after_it_left_through_a_void_pointer_slot_is_reported_where_the_function_returns.c:3:15 written "malloc" "bb1"
+      Destination "_3"
+      Constant 8
+  Block "bb1"
+    Operation a_block_held_as_pointers_only_after_it_left_through_a_void_pointer_slot_is_reported_where_the_function_returns.c:3:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_block_held_as_pointers_only_after_it_left_through_a_void_pointer_slot_is_reported_where_the_function_returns.c:3:15 generated
+    Operation a_block_held_as_pointers_only_after_it_left_through_a_void_pointer_slot_is_reported_where_the_function_returns.c:4:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_2"
+    Operation a_block_held_as_pointers_only_after_it_left_through_a_void_pointer_slot_is_reported_where_the_function_returns.c:4:5 written
+      Destination "_4"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_block_held_as_pointers_only_after_it_left_through_a_void_pointer_slot_is_reported_where_the_function_returns.c:4:5 generated
+    Operation a_block_held_as_pointers_only_after_it_left_through_a_void_pointer_slot_is_reported_where_the_function_returns.c:5:11 written
+      Destination "_5"
+      Use
+        Copy "_2"
+    Sequenced a_block_held_as_pointers_only_after_it_left_through_a_void_pointer_slot_is_reported_where_the_function_returns.c:5:15 generated
+    Return

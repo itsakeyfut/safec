@@ -1,0 +1,10 @@
+error[SC0411]: this returns memory nothing wrote, and the caller may read pointers out of it
+    ╭─[ a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:14:5 ]
+    │
+ 14 │     return x;
+    │     ────┬────  
+    │         ╰────── returned here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before returning it, or allocate it with `calloc`

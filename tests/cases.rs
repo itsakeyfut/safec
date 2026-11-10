@@ -1701,6 +1701,43 @@ cases! {
         // on what was seen and the bound by the number of sites in
         // `Known::held_below`; this hangs.
         a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block held as `int **` reaches the caller through a `void *`
+        // level, at the top or below a box, by every door: the block records
+        // the type it was held as (#902, ADR-0086). Mutation: `held_below`
+        // ignores `Known::held_levels`; the five below a box or through a slot
+        // go silent. Mutation: the `return`'s ask ignores the record; the
+        // first goes silent.
+        a_block_held_as_pointers_returned_as_a_void_pointer_is_reported_at_the_return: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_held_as_pointers_stored_through_a_void_pointer_slot_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_below_a_void_pointer_box_that_leaves_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_put_into_a_void_pointer_box_after_it_leaves_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_below_a_returned_void_pointer_box_is_reported_at_the_return: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_below_a_void_pointer_box_copied_out_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `void *` buffer never held through a typed local is a buffer for
+        // the caller to fill, returned or stored out. Mutation: the
+        // `return`'s ask takes any pointer return without the record; the
+        // first is reported. Mutation: `held_below` follows every block one
+        // level at least, whatever the record; the second is reported.
+        a_void_pointer_buffer_never_held_typed_returned_unwritten_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Held as an `int *`, which reads no pointer. Mutation: record one
+        // level for any pointer-typed local; this is reported.
+        a_block_held_as_ints_returned_as_a_void_pointer_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Written before it leaves. Mutation: report every block the record
+        // asks, written or not; this is reported.
+        a_block_held_as_pointers_written_before_it_is_returned_as_a_void_pointer_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Held as `int **` only after it left, found by review: the exit asks
+        // it as one held so before. Mutation: the exit asks `left_at` alone,
+        // not `stored_out_at` by the record; this goes silent.
+        a_block_held_as_pointers_only_after_it_left_through_a_void_pointer_slot_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Held as pointers on one arm only, found by review. Mutation: join
+        // `held_levels` by the smaller; this goes silent.
+        a_block_held_as_pointers_on_one_arm_and_stored_through_a_void_pointer_slot_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `d` is reached first through itself, with one level, and then
+        // through `p`, with two, and `e` below it is asked by the second,
+        // found by review. Mutation: take the smallest budget off the queue
+        // first, so the first reach wins; this goes silent.
+        a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
         // one is, by one function both doors call (#890). Possibly, not
         // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no
