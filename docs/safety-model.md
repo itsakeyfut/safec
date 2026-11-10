@@ -191,10 +191,11 @@ The limits, each a doubt the reader sees unless it says otherwise:
 
 * One record per site cannot tell a block an earlier turn made from a later
   one, so a block stored out before its null test in a loop, `out[i] = b; if
-  (!b) return;`, is doubted though every turn writes it (ADR-0082).
+  (!b) return;`, is reported as nothing wrote though every turn writes it
+  (ADR-0082).
 * Two tests of one condition are not correlated: a block written under `if
-  (d)` and returned under the same `d`, past a loop that may run zero times,
-  is doubted (#874).
+  (d)` and returned under the same `d` is doubted, with a loop between them
+  or without (ADR-0083).
 * A read through a pointer read out of memory names no element, and asks the
   whole block (ADR-0081).
 * **A silence:** a store at an index this check cannot read writes the whole
