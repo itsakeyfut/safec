@@ -63,8 +63,10 @@ Each in `tests/cases/memory/`, with its mutation in its note in
 
 * Good, because the two documents now agree, and a certain use of a freed
   value is reported wherever it is used.
-* Bad, because a value that may have been freed on some path only, compared
-  or branched on, is a silence; `docs/safety-model.md` lists it.
+* Bad, because a pointer not shown to be certainly freed, compared or
+  branched on, is a silence: one freed on some path only, one read back out of
+  memory, and one held by a local whose address was taken.
+  `docs/safety-model.md` lists it.
 * Bad, because a pointer difference, `p - q`, of a freed pointer would not be
   asked: its result is no pointer to carry the state on, and `-` is not asked
   as a use. The frontend refuses a pointer difference today (`SC0304`), so no

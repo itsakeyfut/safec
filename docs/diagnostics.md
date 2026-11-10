@@ -604,8 +604,9 @@ and a name with nothing dereferenced. A freed pointer's value is indeterminate
 (C17 6.2.4 p2), and using it by a comparison or a branch, `free(p); return p !=
 0;`, is this code too, where the pointer was certainly freed; a `return` and an
 argument of a call are `SC0406` and `SC0407`. A plain copy, a move by `+` or
-`-`, which carries the pointer to where it is used, and a value that may have
-been freed on some path only, are not asked (ADR-0084).
+`-`, which carries the pointer to where it is used, and a pointer not shown to
+be certainly freed, freed on some path only or read back out of memory, are not
+asked (ADR-0084).
 `int *r = &*p;` used to be a third and is
 not: the lowering applies C17 6.5.3.2 p3, which makes that pointer the same
 pointer, so `r` carries what `p` carried.
