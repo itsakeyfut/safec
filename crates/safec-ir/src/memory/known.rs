@@ -459,6 +459,20 @@ pub(super) struct Known {
     /// the earlier span, and kept where the site is made again, as `left_at`
     /// is. See ADR-0086.
     pub(super) stored_out_at: Table<Site, Option<Span>>,
+    /// Per site, the earliest library copy that may have written part of a
+    /// pointer into it: one whose length is shorter than a pointer, or ends
+    /// part way through one (`Allocations::copied_pointers`), whatever either
+    /// side's type said then.
+    ///
+    /// **Asked where the block is later held as memory of pointers**: where
+    /// it leaves so (the exit's question, beside `left_at`) and where it is
+    /// handed to a parameter whose type holds pointers. The copy is the
+    /// defect only if pointers are read out of the block, which the copy
+    /// itself cannot know when nothing typed has reached the block yet:
+    /// `memcpy(m, &i, 4); void **q = m; *pp = q;` built silent (#832). A
+    /// may-fact, joined keeping the earlier span, and kept where the site is
+    /// made again, as `left_at` is. See ADR-0087.
+    pub(super) part_written: Table<Site, Option<Span>>,
     /// Per local, each type a call this check cannot read reached it as on
     /// the walk a departure takes, where that type is untyped somewhere
     /// below: `void`, `char` or `int` bytes, a pointer whose chain ends in
@@ -1903,6 +1917,8 @@ impl Known {
             held_levels: _,
             // Kept, for the reason `left_at` is. See `Known::stored_out_at`.
             stored_out_at: _,
+            // Kept, for the reason `left_at` is. See `Known::part_written`.
+            part_written: _,
             // Not a local's, which a site being reborn is not about, and
             // kept for the site, as `names` is: a call may still hold the old
             // allocation's address, and the slots of the new one are not told

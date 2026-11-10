@@ -1738,6 +1738,26 @@ cases! {
         // found by review. Mutation: take the smallest budget off the queue
         // first, so the first reach wins; this goes silent.
         a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy of part of a pointer into a block later held as memory of
+        // pointers, reported at the copy, whichever comes first (#832,
+        // ADR-0087). Mutation: record no `part_written`; all four go silent.
+        // Mutation: ask at the exit alone; the third, handed to a call, goes
+        // silent.
+        a_partial_pointer_copied_into_a_block_aliased_before_it_leaves_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_partial_pointer_copied_into_a_block_before_it_is_held_as_pointers_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_partial_pointer_copied_into_a_block_handed_to_a_pointer_parameter_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_partial_pointer_copied_into_a_block_stored_as_a_pointer_slot_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Never held as pointers. Mutation: ask every block with the record,
+        // whether or not it left; this is reported.
+        a_partial_pointer_copied_into_a_block_that_never_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Held as `int *`, so its slot reads no pointer. Mutation: ask a block
+        // with the record wherever it is stored, whatever the slot reads;
+        // this is reported.
+        a_partial_pointer_copied_into_a_block_of_ints_that_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Already asked at the copy by the type it was held as: said once.
+        // Mutation: push the exit's ask without `push_once`; this is said
+        // twice.
+        a_partial_pointer_copied_into_a_block_already_held_as_pointers_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
         // one is, by one function both doors call (#890). Possibly, not
         // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no

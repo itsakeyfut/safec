@@ -1593,6 +1593,7 @@ impl Allocations<'_> {
             left_at,
             held_levels,
             stored_out_at,
+            part_written,
             handed_untyped,
             block_elements,
         } = into;
@@ -1629,6 +1630,7 @@ impl Allocations<'_> {
             .iter_mut()
             .zip(&from.left_at)
             .chain(stored_out_at.iter_mut().zip(&from.stored_out_at))
+            .chain(part_written.iter_mut().zip(&from.part_written))
         {
             *here = match (*here, *there) {
                 (Some(here), Some(there)) => Some(earlier(self.sources, here, there)),
@@ -2186,6 +2188,7 @@ impl Analysis for Allocations<'_> {
             left_at: Table::filled(None, self.locals),
             held_levels: Table::filled(0, self.locals),
             stored_out_at: Table::filled(None, self.locals),
+            part_written: Table::filled(None, self.locals),
             // No call has been handed anything yet.
             handed_untyped: Table::filled(Vec::new(), Loc::count(self.locals)),
             // No block has been made yet.
@@ -3631,6 +3634,24 @@ impl Analysis for Allocations<'_> {
                                 into_depth == 0,
                                 StoreKind::Copy,
                             );
+                            // **Part of a pointer, recorded on what it lands
+                            // in**, for where the block is later held as
+                            // pointers to ask (#832). See
+                            // `Known::part_written` and ADR-0087.
+                            let in_part = match self.copied_pointers(*callee, arguments) {
+                                CopiedPointers::LastInPart | CopiedPointers::NoneWhole => true,
+                                CopiedPointers::Whole => false,
+                            };
+                            if in_part {
+                                let at = origin.span();
+                                for &site in &landing.containers {
+                                    value.part_written[site] =
+                                        Some(match value.part_written[site] {
+                                            Some(before) => earlier(self.sources, before, at),
+                                            None => at,
+                                        });
+                                }
+                            }
                             // **Into a local's address, the copy lands in the
                             // local**: `memcpy(&s, &r, n)` stores into `s`
                             // what `r` holds, every mark with it, since C17

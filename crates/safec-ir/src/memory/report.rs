@@ -1683,6 +1683,15 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
             }
         }
     }
+    // **And whether a copy wrote part of a pointer into it**, at the copy:
+    // the block leaves as memory of pointers, and the caller reads a pointer
+    // made of part of something else (#832). See `Known::part_written` and
+    // ADR-0087.
+    for &(site, _) in &asked {
+        if let Some(copy) = known.part_written[site] {
+            push_once(findings, part_of_a_pointer_left(ask.analysis, copy));
+        }
+    }
     for (site, at) in asked {
         if matches!(known.state[site], SiteState::Freed { .. }) {
             continue;
@@ -1707,6 +1716,29 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
                 unproven: None,
             },
         );
+    }
+}
+
+/// A copy at `copy` that wrote part of a pointer into a block later held as
+/// memory of pointers, in the words a copy of part of a pointer into such
+/// memory already has, at the width a `void *` is believed. See
+/// `Known::part_written` and ADR-0087.
+fn part_of_a_pointer_left(analysis: &Allocations<'_>, copy: Span) -> Finding {
+    Finding {
+        function: analysis.function,
+        kind: Kind::HandedOnNarrow {
+            how: Departure::Store,
+            width: 0,
+            narrower: false,
+            extent: None,
+            below: false,
+        },
+        conclusion: Conclusion::Unknown,
+        at: copy,
+        local: None,
+        freed: None,
+        made: None,
+        unproven: Some(Unproven::Extent),
     }
 }
 
@@ -2368,6 +2400,30 @@ pub(super) fn departed_at_call(
                 &Rvalue::Use(argument.clone()),
                 known,
             );
+        }
+        // **A block handed to a parameter that holds pointers is asked
+        // whether a copy wrote part of one into it**, at the copy: the
+        // callee reads pointers out of it (#832). See `Known::part_written`
+        // and ADR-0087.
+        let handed = match arguments.get(index) {
+            Some(Operand::Copy(place)) if analysis.first_level_holds_a_pointer(ty) => Some(place),
+            Some(Operand::Copy(_) | Operand::Constant(_)) | None => None,
+        };
+        if let Some(place) = handed {
+            let named: Vec<Site> = match derefs(place) {
+                0 if place.projection.is_empty() => known.sites_of(place.local).collect(),
+                0 => Vec::new(),
+                depth => known
+                    .levels_below(place.local, depth)
+                    .0
+                    .into_iter()
+                    .collect(),
+            };
+            for site in named {
+                if let Some(copy) = known.part_written[site] {
+                    push_once(findings, part_of_a_pointer_left(analysis, copy));
+                }
+            }
         }
         let Some(width) = pointee_width(analysis, ty) else {
             continue;
