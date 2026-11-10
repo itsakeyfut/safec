@@ -1,0 +1,10 @@
+error[SC0413]: this lets a pointer leave that may not point at the start of an object
+   ╭─[ a_partial_pointer_copied_into_a_block_handed_on_through_a_dereference_is_reported.c:9:5 ]
+   │
+ 9 │     memcpy(m, &i, 4);
+   │     ────────┬───────  
+   │             ╰───────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave as a `void *` only at the start of an object

@@ -1207,6 +1207,23 @@ fn say_leaving(
     {
         return;
     }
+    // **A store departure stands over the deferred ask of a partial copy**
+    // at the same caret, which says the same copy in words that know no
+    // type: `memcpy(q, &i, 4)` with `q` an `int **` printed both, found by
+    // review. In place, so the indices `departed` holds stay right. See
+    // `push_part_of_a_pointer`.
+    let deferred = if how == Departure::Store {
+        findings
+            .iter()
+            .position(|said| is_part_of_a_pointer_left(said, at))
+    } else {
+        None
+    };
+    if let Some(index) = deferred {
+        departed.push((at, how, local, index));
+        findings[index] = finding;
+        return;
+    }
     departed.push((at, how, local, findings.len()));
     findings.push(finding);
 }
@@ -1683,6 +1700,15 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
             }
         }
     }
+    // **And whether a copy wrote part of a pointer into it**, at the copy:
+    // the block leaves as memory of pointers, and the caller reads a pointer
+    // made of part of something else (#832). See `Known::part_written` and
+    // ADR-0087.
+    for &(site, _) in &asked {
+        if let Some(copy) = known.part_written[site] {
+            push_part_of_a_pointer(findings, ask.analysis, copy);
+        }
+    }
     for (site, at) in asked {
         if matches!(known.state[site], SiteState::Freed { .. }) {
             continue;
@@ -1707,6 +1733,60 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
                 unproven: None,
             },
         );
+    }
+}
+
+/// Report the copy at `copy`, which wrote part of a pointer into a block
+/// now held as memory of pointers, unless the copy already stands reported
+/// as a store departure, which says the same thing knowing the type: once
+/// per copy, whichever door asks first. See `Known::part_written` and
+/// ADR-0087.
+fn push_part_of_a_pointer(findings: &mut Vec<Finding>, analysis: &Allocations<'_>, copy: Span) {
+    let said = findings.iter().any(|said| {
+        said.at == copy
+            && matches!(
+                said.kind,
+                Kind::HandedOnNarrow {
+                    how: Departure::Store,
+                    ..
+                }
+            )
+    });
+    if !said {
+        findings.push(part_of_a_pointer_left(analysis, copy));
+    }
+}
+
+/// Whether `said` is the deferred ask's finding at `at`, which a store
+/// departure at the same caret takes the place of.
+fn is_part_of_a_pointer_left(said: &Finding, at: Span) -> bool {
+    said.at == at && said.local.is_none() && said.kind == part_of_a_pointer_left_kind()
+}
+
+fn part_of_a_pointer_left_kind() -> Kind {
+    Kind::HandedOnNarrow {
+        how: Departure::Store,
+        width: 0,
+        narrower: false,
+        extent: None,
+        below: false,
+    }
+}
+
+/// A copy at `copy` that wrote part of a pointer into a block later held as
+/// memory of pointers, in the words a copy of part of a pointer into such
+/// memory already has, at the width a `void *` is believed: the record
+/// carries no type. See `Known::part_written` and ADR-0087.
+fn part_of_a_pointer_left(analysis: &Allocations<'_>, copy: Span) -> Finding {
+    Finding {
+        function: analysis.function,
+        kind: part_of_a_pointer_left_kind(),
+        conclusion: Conclusion::Unknown,
+        at: copy,
+        local: None,
+        freed: None,
+        made: None,
+        unproven: Some(Unproven::Extent),
     }
 }
 
@@ -1844,6 +1924,14 @@ fn report_returned_unwritten(
             .filter(|site| !own.contains(site))
             .collect()
     });
+    // **And whether a copy wrote part of a pointer into any of them**, at the
+    // copy: the caller reads pointers out of what is returned, found by
+    // review. See `Known::part_written` and ADR-0087.
+    for &site in sites.iter().flatten().chain(&below) {
+        if let Some(copy) = known.part_written[site] {
+            push_part_of_a_pointer(findings, analysis, copy);
+        }
+    }
     // **Any block it may name**, not every: one written elsewhere does not
     // make the other one written, and `r = c ? a : b;` with only `a` written
     // was silent. The path where an allocation failed names no block, so it
@@ -2368,6 +2456,58 @@ pub(super) fn departed_at_call(
                 &Rvalue::Use(argument.clone()),
                 known,
             );
+        }
+        // **A block handed to a parameter that holds pointers is asked
+        // whether a copy wrote part of one into it**, at the copy: the
+        // callee reads pointers out of it (#832). See `Known::part_written`
+        // and ADR-0087.
+        let handed = match arguments.get(index) {
+            Some(Operand::Copy(place)) if analysis.first_level_holds_a_pointer(ty) => Some(place),
+            Some(Operand::Copy(_) | Operand::Constant(_)) | None => None,
+        };
+        if let Some(place) = handed {
+            // **What it names, and as far below as the parameter reads
+            // pointers or a block's record says**: `g(&qq)` with `g` taking a
+            // `void ***` hands on the block `qq` holds, found by review.
+            //
+            // **What the argument's value names, and as far below as the
+            // parameter reads pointers**, by the walk the exit uses: `g(b)`
+            // with `g` taking a `void ***` hands on the block below `b`, and
+            // `g(&qq)` the block `qq` holds, found by review. The blocks one
+            // level below the value are walked with one level less, since a
+            // `void **` parameter reads the pointer in `b`'s block and not
+            // what that pointer points at: asking them at full levels doubted
+            // `*b = m; g(b);` for a partial copy into `m`. A place of `d`
+            // dereferences has the value `levels_below(local, d)` names, as
+            // the `return` reads it.
+            let levels = analysis.levels_holding_pointers(ty);
+            let (value, below): (Vec<Site>, Vec<Site>) =
+                match (place.projection.is_empty(), derefs(place)) {
+                    (true, _) => (
+                        known.sites_of(place.local).collect(),
+                        known.levels_below(place.local, 1).0.into_iter().collect(),
+                    ),
+                    (false, 0) => (Vec::new(), Vec::new()),
+                    (false, depth) => (
+                        known
+                            .levels_below(place.local, depth)
+                            .0
+                            .into_iter()
+                            .collect(),
+                        known
+                            .levels_below(place.local, depth + 1)
+                            .0
+                            .into_iter()
+                            .collect(),
+                    ),
+                };
+            let mut named = known.held_below(value, levels);
+            named.extend(known.held_below(below, levels.saturating_sub(1)));
+            for site in named {
+                if let Some(copy) = known.part_written[site] {
+                    push_part_of_a_pointer(findings, analysis, copy);
+                }
+            }
         }
         let Some(width) = pointee_width(analysis, ty) else {
             continue;
