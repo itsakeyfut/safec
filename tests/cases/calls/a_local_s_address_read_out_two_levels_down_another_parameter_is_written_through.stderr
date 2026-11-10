@@ -29,23 +29,6 @@ error[SC0402]: this uses `q` after it was freed
 ────╯
   = note: this check belongs to safety level 1
   = help: move the free after this use, or do not free here
-error[SC0402]: this uses a value after it was freed
-    ╭─[ a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:15:9 ]
-    │
-  8 │     int *m = malloc(4);
-    │              ────┬────  
-    │                  ╰────── allocated here
-    │ 
- 13 │     free(m);
-    │     ───┬───  
-    │        ╰───── freed here
-    │ 
- 15 │     if (!q) return 0;
-    │         ─┬  
-    │          ╰── used here
-────╯
-  = note: this check belongs to safety level 1
-  = help: move the free after this use, or do not free here
 error[SC0402]: this uses `q` after it was freed
     ╭─[ a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:16:5 ]
     │

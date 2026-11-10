@@ -707,7 +707,8 @@ pub(super) fn used(
 /// the value to where it is used. See ADR-0084.
 ///
 /// Through [`say`], keyed with [`used`], so a place both dereferenced and
-/// compared at one caret is said once.
+/// compared at one caret is said once; and not where a use after free
+/// already stands at the caret, whatever place it names.
 pub(super) fn used_by_value(
     sources: &SourceMap,
     findings: &mut Vec<Finding>,
@@ -720,6 +721,16 @@ pub(super) fn used_by_value(
         return;
     };
     for place in operated {
+        // **One use after free at one caret said once, whichever place it
+        // names**: `if (p == 0)` compares `p` and then branches on the
+        // comparison's temporary, which carries the freed state on, and the
+        // two were said twice at one caret, found by review.
+        if findings
+            .iter()
+            .any(|said| said.kind == Kind::UseAfterFree && said.at == at)
+        {
+            continue;
+        }
         let Some(verdict) = verdict(
             sources,
             Kind::UseAfterFree,

@@ -2016,6 +2016,10 @@ cases! {
         // `used_by_value`; these go silent. See ADR-0084.
         a_freed_pointer_compared_with_null_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_freed_pointer_branched_on_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `if (p == 0)`: the comparison and the branch on its result stand at
+        // one caret and are one use, said once. Found by review. Mutation: ask
+        // each place at a caret whatever was said there; this says it twice.
+        a_freed_pointer_compared_in_a_branch_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Moved first: the move carries the freed pointer, as a copy does, and
         // its result is reported where it is compared. Mutation: ask a move as
         // a use too; `a_subscript_of_a_freed_pointer` is said twice.
