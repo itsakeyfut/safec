@@ -1,0 +1,10 @@
+error[SC0411]: this lets a pointer leave to memory that may not have been written by the time the function returns, and the caller may read pointers out of it
+   ╭─[ a_block_memcpy_lets_leave_unwritten_is_doubted_where_the_function_returns.c:5:5 ]
+   │
+ 5 │     memcpy(out, &b, 8);
+   │     ─────────┬────────  
+   │              ╰────────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it on every path before the function returns, or allocate it with `calloc`

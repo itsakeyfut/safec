@@ -429,7 +429,11 @@ impl Allocations<'_> {
         stored_pointer(self.unit, stored).is_some()
     }
 
-    /// Mark what a store that leaves the function carries.
+    /// Mark what a write that leaves the function carries: a store through
+    /// a pointer the caller can read, or a library copy into one. One body
+    /// for both, since the copy arm once marked `stored_out` and not
+    /// `left_at`, and `memcpy(out, &b, 8)` handed the caller a block nothing
+    /// wrote in silence where `*out = b` is `SC0411` (#890).
     ///
     /// - **`carried`**, the blocks the written value names, are left holding
     ///   pointers where `holds_pointers` says so, for the function's exit to
@@ -461,6 +465,38 @@ impl Allocations<'_> {
         out.extend(read_out);
         for site in value.closure(out) {
             value.stored_out[site] = true;
+        }
+    }
+
+    /// Whether the blocks a library copy carries out are read as holding
+    /// pointers, by the type of its source `source_ty`: what is copied is a
+    /// value one level below it, and the blocks are what that value points
+    /// at, asked as a store asks the type it stores into
+    /// ([`Self::first_level_holds_a_pointer`]). `int **b; memcpy(out, &b,
+    /// 8)` copies an `int **`, whose blocks hold pointers; `int *x;
+    /// memcpy(pp, &x, 8)` copies an `int *`, whose block holds `int`s.
+    ///
+    /// **A source whose type says nothing is read as holding them**: a
+    /// `void *` or `char` source, an untyped place, or one not typed as a
+    /// pointer at all. `memcpy` copies bytes, and the usual source is a
+    /// `void *`, so leaving those unasked would leave the common spelling of
+    /// #890 silent. What it costs is a doubt the reader sees, at a block of
+    /// `int`s copied out through a `void *` source.
+    fn copy_holds_pointers(&self, source_ty: Option<TyId>) -> bool {
+        let Some(source_ty) = source_ty else {
+            return true;
+        };
+        let copied = match self.unit.ty(innermost_element(self.unit, source_ty)) {
+            Ty::Pointer(copied) => innermost_element(self.unit, copied),
+            Ty::Int | Ty::Char | Ty::Void => return true,
+            Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
+        };
+        match self.unit.ty(copied) {
+            Ty::Pointer(_) => self.first_level_holds_a_pointer(copied),
+            // An `int` carries no block.
+            Ty::Int => false,
+            Ty::Char | Ty::Void => true,
+            Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         }
     }
 
@@ -3452,9 +3488,15 @@ impl Analysis for Allocations<'_> {
                                 }
                             });
                             if marks {
-                                for site in value.closure(copied.iter().copied().collect()) {
-                                    value.stored_out[site] = true;
-                                }
+                                let holds_pointers =
+                                    self.copy_holds_pointers(self.unit.place_ty(function, source));
+                                self.mark_leaving(
+                                    value,
+                                    copied.iter().copied().collect(),
+                                    Vec::new(),
+                                    holds_pointers,
+                                    origin.span(),
+                                );
                             }
                             // **What it copies is a load of the source one level
                             // further**, `memcpy(box, pp, 8)` being `*box =
