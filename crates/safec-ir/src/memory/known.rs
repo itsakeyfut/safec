@@ -587,15 +587,159 @@ impl Known {
     /// Stop following whatever this local held, because its lifetime began
     /// or ended or nothing reads it again: no write, which is
     /// [`Self::replace`]'s, and so no [`Strong`] asked for.
+    ///
+    /// **Every field named, never `..`**: this is the door a local's
+    /// lifetime ends by, and a field added to [`Known`] answers here for what
+    /// that does to it, as it does in the join and in [`Self::reborn`]. See
+    /// ADR-0091.
     pub(super) fn clear(&mut self, local: LocalId) {
-        self.points_to[local].clear();
+        let Known {
+            points_to,
+            // **A site's facts are about the allocation it names**, which
+            // outlives the local it is named by: another holder may still
+            // reach it. The same for every field keyed by a site below.
+            state: _,
+            // Distrust of what the local holds, the side that doubts
+            // (ADR-0017). Not touched here, and nothing has asked whether a
+            // lifetime ending may drop it.
+            escaped: _,
+            // Not touched here, and nothing has asked whether a lifetime
+            // ending may drop it.
+            handed_away: _,
+            // A local's is cleared where its next lifetime begins
+            // (`Self::storage_live`); a site's lives as long as its block.
+            exposed: _,
+            contents: _,
+            realloced: _,
+            // What reads the local next is its next lifetime, which
+            // `Self::storage_live` makes unwritten, or nothing.
+            init: _,
+            // About reads and calls in flight, not about a local's storage.
+            pending: _,
+            calls: _,
+            exposed_after_call: _,
+            lost_exposed: _,
+            // A local's size, the same in every lifetime.
+            extent: _,
+            // Not touched here, and nothing has asked whether a lifetime
+            // ending may drop the bound.
+            handed_at_most: _,
+            handed_contents_at_most: _,
+            // Made unwritten again, and cleared, where the next lifetime
+            // begins (`Self::storage_live`).
+            element_init: _,
+            exposed_in_part: _,
+            stored_in_part: _,
+            stored_out: _,
+            left_at: _,
+            held_levels: _,
+            stored_out_at: _,
+            part_written,
+            part_written_since_made,
+            // A local's is cleared where its next lifetime begins
+            // (`Self::storage_live`).
+            handed_untyped: _,
+            block_elements: _,
+        } = self;
+        points_to[local].clear();
         // **And what a copy wrote into its storage**: nothing outside the
         // function can hold a local's storage once its lifetime is over, so
         // the reason a block's record is kept does not reach it. Kept, a
         // buffer declared in a loop body carried last turn's partial copy
         // into this turn's. See ADR-0090.
-        self.part_written[local] = None;
-        self.part_written_since_made[local] = None;
+        part_written[local] = None;
+        part_written_since_made[local] = None;
+    }
+
+    /// A local's lifetime begins (`StorageLive`): a new object, holding
+    /// nothing and written nowhere.
+    ///
+    /// **Every field named, never `..`**, as in [`Self::clear`], which runs
+    /// first and answers for what it clears. See ADR-0091.
+    pub(super) fn storage_live(&mut self, local: LocalId) {
+        self.clear(local);
+        let Known {
+            points_to,
+            // A site's, about the block it names, as in `Self::clear`.
+            state: _,
+            // Not touched here, as in `Self::clear`.
+            escaped: _,
+            handed_away: _,
+            exposed,
+            contents: _,
+            realloced: _,
+            init,
+            // About reads and calls in flight, not about a local's storage.
+            pending: _,
+            calls: _,
+            exposed_after_call: _,
+            lost_exposed: _,
+            // A local's size, the same in every lifetime.
+            extent: _,
+            // Not touched here, as in `Self::clear`.
+            handed_at_most: _,
+            handed_contents_at_most: _,
+            element_init,
+            exposed_in_part,
+            stored_in_part,
+            stored_out: _,
+            left_at: _,
+            held_levels: _,
+            stored_out_at: _,
+            // Cleared by `Self::clear` above.
+            part_written: _,
+            part_written_since_made: _,
+            handed_untyped,
+            block_elements: _,
+        } = self;
+        // **A new object, indeterminate again** (C17 6.2.4 p6), so an
+        // array written late in one turn of a loop is unwritten at
+        // the start of the next. See `Known::init`. **Whatever its
+        // type**, as at entry (ADR-0073 rule 2): a `char` buffer
+        // written late in one turn and copied out early in the next
+        // copied what the new object never had. Found by review.
+        init[local] = Init::Unwritten;
+        // And every element of it, with nothing written in part and
+        // nothing handed over. See `Known::element_init`.
+        element_init[local].unwrite_all();
+        exposed_in_part[local] = false;
+        stored_in_part[local] = false;
+        // **And no call holds its address yet**: one kept from an
+        // earlier lifetime became indeterminate when that one ended
+        // (C17 6.2.4 p2), so a call is no longer a write of it. Kept
+        // across, `stash(m)` in one turn of a loop made `tick()` in
+        // the next a write of a new `m`, and a read nothing wrote was
+        // silent. See `Known::exposed` of a local.
+        exposed[local] = false;
+        // Nor was it handed to one untyped, for the same reason.
+        // See `Known::handed_untyped`. No case tells this from
+        // keeping the mark, measured: what the mark reaches is
+        // written only where it is exposed, and that is cleared just
+        // above.
+        handed_untyped[local].clear();
+        // **Nor does any pointer recorded as able to name it**, for
+        // the same reason: a pointer a call wrote in an earlier turn
+        // named the old object, so a write through it is no write of
+        // the new one (#661). See `Held::named_at_read`.
+        for held in points_to.iter_mut() {
+            held.named_at_read.remove(LocalIdx::of(local));
+        }
+        // **Nor does a pointer that held its address**: the address
+        // is indeterminate now, so a pointer copied in an earlier
+        // turn is no write of the new object, `*b = m;
+        // memcpy(&t, src, 8);` across turns (#664). The edge
+        // is removed and nothing more. Marking the pointer `lost` as
+        // well was tried and rejected: a write through a lost pointer
+        // lands in every local such code names, which turned a
+        // certain `SC0411` `main` gave into doubts, and it doubted
+        // `arr[0] = &x; *arr[0]` every turn. A read through such a
+        // pointer is undefined and is still silent, #665. An
+        // allocation's record of the address is left: removing it
+        // decides no case, measured, once the pointer is not marked.
+        // See ADR-0057.
+        for held in points_to.iter_mut() {
+            held.unname_local(LocalIdx::of(local));
+        }
     }
 
     /// The local `at` names holds `value` and nothing it held before: **the

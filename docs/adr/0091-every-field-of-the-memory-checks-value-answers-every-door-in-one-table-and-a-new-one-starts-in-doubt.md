@@ -51,13 +51,22 @@ named row. It has ten beliefs against 26 fields.
 Chosen: the table, the matrix rows and the rule for new fields, by the
 author.
 
-1. **One function destructures `Known` with no `..`** and says, per field,
-   what each door does with it. The doors are a copy, a `realloc`, a load,
-   the forward join, the back edge, a site made again, and a local's
-   lifetime. The function also says what the field is keyed by. A field added
-   without its row is `error[E0027]`. The transfer's doors call through it
-   where they act on a field, so the table is what runs, not a description
-   beside it.
+1. **Each door destructures `Known` with no `..`** and says, per field, what
+   it does with it. The doors are a copy, a `realloc`, a load, the forward
+   join and the back edge (one body), a site made again, the function's
+   entry, and a local's lifetime, its end and its beginning. A field added
+   without its answer at every door is `error[E0027]` at each, and
+   `error[E0063]` at the entry, which builds the value. Where a
+   door's body acts on the fields it binds, as the join, the rebirth and the
+   lifetime do, the table is what runs; where it acts through helpers, as a
+   load and a copy do, each answer names the helper. What a field is keyed
+   by is its type's to say, `Table<Loc, _>`, `Table<Site, _>` or
+   `Table<LocalIdx, _>`.
+
+   One destructure per door, and not one function every door calls, by the
+   author's decision on #918: one function over seven doors would rewrite
+   the join, the rebirth and the transfer at once, for fields that #918's
+   slot record changes again.
 2. **Every belief a field carries has a route-matrix row**, or is named in
    the matrix as an exemption with its reason. A test fails when a field of
    `Known` is in neither. A new field lands with its row in the same pull

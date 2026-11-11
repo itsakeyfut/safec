@@ -872,6 +872,60 @@ impl Allocations<'_> {
     /// when handed one. One rule in several places drifts apart.
     /// See ADR-0067.
     fn read_through(&self, function: &Function, source: &Place, value: &Known) -> Held {
+        // **The load door's answer for every field, never `..`**, so a field
+        // added to `Known` answers here for what a load does with it. A load
+        // writes no field: what it reads becomes a `Held`, which the
+        // assignment puts in its destination. See ADR-0091.
+        let Known {
+            // Read: what the pointer read through names, at every level, by
+            // `Known::load_into` and `Self::contents_read`.
+            points_to: _,
+            // Not read by a load.
+            state: _,
+            escaped: _,
+            handed_away: _,
+            // Read: what code this check cannot read may name, for
+            // `Held::named_at_read`.
+            exposed: _,
+            // Read: what memory holds where it is read, by
+            // `Known::load_into`.
+            contents: _,
+            // Not read by a load.
+            realloced: _,
+            // Read: whether what is read was written, by `Self::reads_fresh`.
+            init: _,
+            // Not read by a load: about reads and calls in flight.
+            pending: _,
+            calls: _,
+            exposed_after_call: _,
+            lost_exposed: _,
+            // Read: how wide what is read out of is, by `Self::contents_read`
+            // and `Self::read_from_fits`.
+            extent: _,
+            handed_at_most: _,
+            // Not read by a load.
+            handed_contents_at_most: _,
+            // Read, as `init` is.
+            element_init: _,
+            // Not read by a load.
+            exposed_in_part: _,
+            // Read: an array reached only by #639's rule, by
+            // `Known::load_into`.
+            stored_in_part: _,
+            // Not read by a load: about where a block has left, which the
+            // doors it leaves by and the exit ask.
+            stored_out: _,
+            left_at: _,
+            held_levels: _,
+            stored_out_at: _,
+            part_written: _,
+            part_written_since_made: _,
+            // Not read by a load: what a call may have stored is asked where
+            // the value is handed on.
+            handed_untyped: _,
+            // Read, as `init` is, for a block's elements.
+            block_elements: _,
+        } = value;
         // Every mark a load gives before it reads anything, each said, so a
         // mark added is answered here (#732); what it reads is
         // `Known::load_into`'s, and whether it is fresh is below.
@@ -3052,57 +3106,7 @@ impl Analysis for Allocations<'_> {
             }
             // Storage beginning or ending says nothing about what the local
             // held before, and what it holds now is nothing.
-            Element::StorageLive { local, origin: _ } => {
-                value.clear(*local);
-                // **A new object, indeterminate again** (C17 6.2.4 p6), so an
-                // array written late in one turn of a loop is unwritten at
-                // the start of the next. See `Known::init`. **Whatever its
-                // type**, as at entry (ADR-0073 rule 2): a `char` buffer
-                // written late in one turn and copied out early in the next
-                // copied what the new object never had. Found by review.
-                value.init[local] = Init::Unwritten;
-                // And every element of it, with nothing written in part and
-                // nothing handed over. See `Known::element_init`.
-                value.element_init[local].unwrite_all();
-                value.exposed_in_part[local] = false;
-                value.stored_in_part[local] = false;
-                // **And no call holds its address yet**: one kept from an
-                // earlier lifetime became indeterminate when that one ended
-                // (C17 6.2.4 p2), so a call is no longer a write of it. Kept
-                // across, `stash(m)` in one turn of a loop made `tick()` in
-                // the next a write of a new `m`, and a read nothing wrote was
-                // silent. See `Known::exposed` of a local.
-                value.exposed[local] = false;
-                // Nor was it handed to one untyped, for the same reason.
-                // See `Known::handed_untyped`. No case tells this from
-                // keeping the mark, measured: what the mark reaches is
-                // written only where it is exposed, and that is cleared just
-                // above.
-                value.handed_untyped[local].clear();
-                // **Nor does any pointer recorded as able to name it**, for
-                // the same reason: a pointer a call wrote in an earlier turn
-                // named the old object, so a write through it is no write of
-                // the new one (#661). See `Held::named_at_read`.
-                for held in value.points_to.iter_mut() {
-                    held.named_at_read.remove(LocalIdx::of(local));
-                }
-                // **Nor does a pointer that held its address**: the address
-                // is indeterminate now, so a pointer copied in an earlier
-                // turn is no write of the new object, `*b = m;
-                // memcpy(&t, src, 8);` across turns (#664). The edge
-                // is removed and nothing more. Marking the pointer `lost` as
-                // well was tried and rejected: a write through a lost pointer
-                // lands in every local such code names, which turned a
-                // certain `SC0411` `main` gave into doubts, and it doubted
-                // `arr[0] = &x; *arr[0]` every turn. A read through such a
-                // pointer is undefined and is still silent, #665. An
-                // allocation's record of the address is left: removing it
-                // decides no case, measured, once the pointer is not marked.
-                // See ADR-0057.
-                for held in value.points_to.iter_mut() {
-                    held.unname_local(LocalIdx::of(local));
-                }
-            }
+            Element::StorageLive { local, origin: _ } => value.storage_live(*local),
             Element::StorageDead { origin: _, local } => value.clear(*local),
         }
     }
@@ -3492,6 +3496,71 @@ impl Analysis for Allocations<'_> {
             // from now on, and a local whose address it is handed may have
             // been written through it, as ADR-0029 says of an opaque call.
             Callee::ReturnsFirst | Callee::Copies => {
+                // **The copy door's answer for every field, never `..`**, so
+                // a field added to `Known` answers here for what a library
+                // copy does with it. See ADR-0091.
+                let Known {
+                    // Through `Self::landing`, `Known::load_into` and the
+                    // walk below: what each side names, and a local the copy
+                    // lands in.
+                    points_to: _,
+                    // Not touched by a copy.
+                    state: _,
+                    // Through `Known::replaced` and `Known::reach_of`: a local
+                    // the copy may land in, and what an escaped one reaches.
+                    escaped: _,
+                    // Not touched by a copy.
+                    handed_away: _,
+                    // Through `Known::expose`: what the call is handed, as at
+                    // any call of this family.
+                    exposed: _,
+                    // Through `Known::pour` and the walk: what the
+                    // destination's blocks may contain gains what the source's
+                    // do.
+                    contents: _,
+                    // Not touched by a copy.
+                    realloced: _,
+                    // Through `Self::initialised_by` and the array writes:
+                    // what the copy writes, and whether what it carries was
+                    // written.
+                    init: _,
+                    // Through `Known::noticed`, as at any call.
+                    pending: _,
+                    calls: _,
+                    exposed_after_call: _,
+                    // Not touched by a copy.
+                    lost_exposed: _,
+                    // Read: how much the copy covers, and how wide what it
+                    // carries is believed.
+                    extent: _,
+                    handed_at_most: _,
+                    // Not touched by a copy.
+                    handed_contents_at_most: _,
+                    // As `init`, per element.
+                    element_init: _,
+                    // Not touched by a copy.
+                    exposed_in_part: _,
+                    // Through `Known::pour` and `Known::load_into`.
+                    stored_in_part: _,
+                    // Through `Self::mark_leaving`: a copy into memory that
+                    // leaves marks what it carries (ADR-0085).
+                    stored_out: _,
+                    left_at: _,
+                    stored_out_at: _,
+                    // Read, by `Known::held_below`, for how far down that
+                    // marking goes.
+                    held_levels: _,
+                    // Through `Known::note_part_written` and
+                    // `Known::carry_part_written`: part of a pointer written,
+                    // or carried (ADR-0087).
+                    part_written: _,
+                    part_written_since_made: _,
+                    // Not touched by a copy.
+                    handed_untyped: _,
+                    // As `init`, per element of a block, and through
+                    // `Self::land_contents`.
+                    block_elements: _,
+                } = &*value;
                 // **A copy of an object carries what it contains**: what each
                 // allocation the destination holds may contain gains what the
                 // source does, which `levels_below` answers for an allocation
@@ -4475,6 +4544,64 @@ impl Analysis for Allocations<'_> {
                 unreachable!("`Allocations::terminator` returns for it where `handed` is decided")
             }
             Callee::Reallocates => {
+                // **The `realloc` door's answer for every field, never
+                // `..`**, so a field added to `Known` answers here for what
+                // a `realloc` does with it: what the new block takes from the
+                // old. The new block is a site made again first, which
+                // `Known::reborn` answers for. See ADR-0091.
+                let Known {
+                    // The result names the new block, and below it the bound
+                    // it was handed as, here.
+                    points_to: _,
+                    // The old block may be freed, at the call
+                    // (`SiteState::may_be_freed`); the new one is live, by
+                    // `Known::reborn`.
+                    state: _,
+                    // Not touched by `realloc`.
+                    escaped: _,
+                    handed_away: _,
+                    // The new block's is cleared by `Known::reborn`, and
+                    // nothing is carried from the old.
+                    exposed: _,
+                    // The new block holds what the old held, by `Known::pour`
+                    // here (C17 7.22.3.5 p2).
+                    contents: _,
+                    // What this call remembers of the old block, here
+                    // (ADR-0039).
+                    realloced: _,
+                    // The new block is fresh, or doubted where the old one
+                    // may not have been written (#724), above.
+                    init: _,
+                    // Not touched by `realloc`'s own arms.
+                    pending: _,
+                    calls: _,
+                    exposed_after_call: _,
+                    lost_exposed: _,
+                    // The new block's size, where its site is made.
+                    extent: _,
+                    // A local's; not touched by `realloc`.
+                    handed_at_most: _,
+                    handed_contents_at_most: _,
+                    element_init: _,
+                    exposed_in_part: _,
+                    // Through `Known::pour`.
+                    stored_in_part: _,
+                    // Not carried from the old block: the site made again
+                    // answers for each in `Known::reborn`.
+                    stored_out: _,
+                    left_at: _,
+                    held_levels: _,
+                    stored_out_at: _,
+                    // Carried from the old block, by
+                    // `Known::carry_part_written` (ADR-0087).
+                    part_written: _,
+                    part_written_since_made: _,
+                    // Not touched by `realloc`.
+                    handed_untyped: _,
+                    // Per element where the new block's size allows, and none
+                    // where the old one may not have been written, above.
+                    block_elements: _,
+                } = &*value;
                 let old: Vec<Site> = handed
                     .iter()
                     .filter_map(|argument| match argument {
