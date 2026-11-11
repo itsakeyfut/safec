@@ -20,8 +20,8 @@ use super::index::{Idx, Loc, LocalIdx, Site, Table};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
-    AS_TYPED, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, Offset, PendingRead,
-    Reached, Read, Realloced, SiteState, Width, earlier,
+    Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, Offset, PendingRead, Reached, Read,
+    Realloced, SiteState, Width, earlier,
 };
 use super::store::{Landing, StoreKind, Strong};
 use crate::library::{Callee, Leaves, Library, Makes};
@@ -2713,31 +2713,24 @@ impl Analysis for Allocations<'_> {
                     // was doubted (#715). Where it was handed nothing, as its
                     // type, as ADR-0017 believes an output: bounding such a
                     // pointer at zero doubted 34 cases, measured. Said as
-                    // `AS_TYPED`, since no bound is now no belief (ADR-0061).
+                    // `Width::AsTyped`, since no bound is now no belief
+                    // (ADR-0061).
                     //
                     // **And any other value at the width of what it names**,
                     // so that `*box = &q; int *t = *box; *t = 1;` proves what
                     // it proved when a load believed its type (ADR-0061).
-                    let bound = if !self.may_be_pointer(function, &operation.place) {
-                        None
-                    } else if written.beyond().loaded() {
-                        Some(written.believed().unwrap_or(0))
-                    } else if written.beyond().foreign() {
-                        // And what the local was handed as, which a join
-                        // keeps where `believed` does not. A join with a null
-                        // keeps `believed` too (#719).
-                        let handed = match &operation.value {
-                            Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
-                                value.handed_at_most[place.local].at(0).bound()
-                            }
-                            Rvalue::Use(_)
-                            | Rvalue::Address(_)
-                            | Rvalue::Unary { .. }
-                            | Rvalue::Binary { .. } => None,
-                        };
-                        Some(written.believed().or(handed).unwrap_or(AS_TYPED))
-                    } else {
-                        written.recorded_width(&value.extent)
+                    // **One rule with the load of a local's own level**,
+                    // `Known::stored_width` (#804), handed the local the
+                    // value was copied out of, whose bound a join keeps
+                    // where the value's own belief it drops.
+                    let held_in = match &operation.value {
+                        Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
+                            Some(LocalIdx::of(place.local))
+                        }
+                        Rvalue::Use(_)
+                        | Rvalue::Address(_)
+                        | Rvalue::Unary { .. }
+                        | Rvalue::Binary { .. } => None,
                     };
                     // **And below it, what the stored pointer believes of
                     // its own memory, whatever it is**: a parameter or a
@@ -2759,7 +2752,7 @@ impl Analysis for Allocations<'_> {
                     // names nothing, which is a null and bounds nothing. See
                     // `Cell::held`.
                     let first = if self.may_be_pointer(function, &operation.place) {
-                        Width::of_bound(bound)
+                        value.stored_width(&written, held_in)
                     } else {
                         Width::Nothing
                     };

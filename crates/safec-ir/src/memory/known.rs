@@ -12,7 +12,7 @@ use crate::source::{SourceMap, Span};
 
 use super::index::{Loc, LocalIdx, Site, Table};
 use super::parts::{
-    AS_TYPED, Cell, Extent, Held, Init, Inits, Levels, Offset, PendingRead, Reached, Read, ReadKey,
+    Cell, Extent, Held, Init, Inits, Levels, Offset, PendingRead, Reached, Read, ReadKey,
     Realloced, SiteElements, SiteState, Width, earlier, read_key,
 };
 use super::store::{Certain, Strong, WrittenLocal};
@@ -1311,32 +1311,46 @@ impl Known {
             }
             for slot in locals {
                 let own = &self.points_to[slot];
-                // A pointer a call wrote at what it was handed as, on the
-                // value or, where a join dropped that, on the local, and as
-                // its type where it was handed nothing, as the store reads it
-                // (#715, `AS_TYPED`). A join with a null keeps the value's
-                // (#719). **Any other value at the width of what it names**,
-                // since a load reading through nothing recorded believes
-                // nothing (ADR-0061): `int *x = malloc(4); int **pp = &x;
-                // int *t = *pp;` reads `t` as `x`'s allocation is wide.
-                let first = if own.beyond().loaded() {
-                    Some(own.believed().unwrap_or(0))
-                } else if own.beyond().foreign() {
-                    Some(
-                        own.believed()
-                            .or(self.handed_at_most[slot].at(0).bound())
-                            .unwrap_or(AS_TYPED),
-                    )
-                } else {
-                    own.recorded_width(&self.extent)
-                };
-                let held = own
-                    .contents_at_most()
-                    .stored_under(Width::of_bound(first), depth_cap);
+                // The local's own value at the width a store of it records,
+                // by the one rule. See `Self::stored_width`.
+                let first = self.stored_width(own, Some(slot));
+                let held = own.contents_at_most().stored_under(first, depth_cap);
                 levels.bound_by(&held.below(depth - 1 - level));
             }
         }
         levels
+    }
+
+    /// How wide `held` is recorded as pointing where it is put in memory,
+    /// held in `held_in` where it is a local's value: **the one rule a store
+    /// and a load of a local's own level read**, so that a copy of the local
+    /// carries what a store of it would (#804).
+    ///
+    /// A load at what it believes, and nothing where it believes nothing,
+    /// since a load reading through nothing recorded believes nothing
+    /// (ADR-0061). A pointer a call this check cannot read wrote at what it
+    /// is believed, or where a join dropped that, at what its local was
+    /// handed as (#715), and as its type where it was handed nothing, as
+    /// ADR-0017 believes an output; a join with a null keeps the value's
+    /// (#719). **Any other value at the width of what it names**: `int *x =
+    /// malloc(4); int **pp = &x; int *t = *pp;` reads `t` as `x`'s
+    /// allocation is wide, and a null, naming nothing, bounds nothing.
+    pub(super) fn stored_width(&self, held: &Held, held_in: Option<LocalIdx>) -> Width {
+        if held.beyond().loaded() {
+            Width::of_bound(Some(held.believed().unwrap_or(0)))
+        } else if held.beyond().foreign() {
+            match held.widths.at(0) {
+                believed @ (Width::AtMost(_) | Width::AsTyped) => believed,
+                Width::Unbounded | Width::Nothing => {
+                    match held_in.map(|local| self.handed_at_most[local].at(0)) {
+                        Some(handed @ (Width::AtMost(_) | Width::AsTyped)) => handed,
+                        Some(Width::Unbounded | Width::Nothing) | None => Width::AsTyped,
+                    }
+                }
+            }
+        } else {
+            Width::of_bound(held.recorded_width(&self.extent))
+        }
     }
 
     /// Record that this place was read through, where the read reaches an

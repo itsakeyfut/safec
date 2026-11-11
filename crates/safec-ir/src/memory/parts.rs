@@ -837,7 +837,7 @@ pub(super) struct Held {
     /// carried onto a path that proved nothing. Dropped at a null, `if (k)
     /// get(&c); char *t = c;` stored or copied and read back as an `int *`
     /// was believed whole, since for such a value no belief was no bound
-    /// (#719). It is [`AS_TYPED`] now, said where the call writes it, since
+    /// (#719). It is [`Width::AsTyped`] now, said where the call writes it, since
     /// no bound is no belief at a load (ADR-0061).
     ///
     /// **The size of what the pointer read points to, and not of what the
@@ -980,26 +980,6 @@ pub(super) struct Held {
     pub(super) may_be_null: bool,
 }
 
-/// A width that bounds nothing below the type a pointer is read as, which
-/// `as_read.min` in `Allocations::believed_read` turns into that type.
-///
-/// **What arrives is believed as it arrives, said rather than left
-/// unsaid**: where nothing is recorded a load now believes nothing
-/// (ADR-0061), so a pointer a call this check cannot read wrote, handed
-/// nothing that bounds a width, is given this, as ADR-0017 and ADR-0060
-/// believe an output. **So is an escaped local a store or a copy this check
-/// cannot place may have written** (`Known::replaced`, ADR-0031), which is
-/// marked as one a call wrote: believed as its type there too, as before
-/// ADR-0061, and asked by what it names where it is read through itself.
-///
-/// Mutation: the walk's arm in `Known::memory_levels` answers `0` for such
-/// a value rather than this;
-/// `a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence`
-/// reports, among others. The store's arm answers without it;
-/// `a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back`
-/// reports.
-pub(super) const AS_TYPED: u64 = u64::MAX;
-
 /// How many bytes the pointers at one level are believed to point at, at
 /// most: no bound, a byte count and the type's own width told apart by
 /// variant, rather than by `None` and a sentinel. See ADR-0093 rule 1.
@@ -1014,10 +994,25 @@ pub(super) enum Width {
     Unbounded,
     /// At most this many bytes.
     AtMost(u64),
-    /// As wide as the type it is read as, no wider: what a pointer a call
-    /// this check cannot read wrote is believed where nothing narrower was
-    /// handed (ADR-0060). [`AS_TYPED`] spells it where a width is still an
-    /// `Option<u64>`.
+    /// As wide as the type it is read as, no wider, which `as_read.min` in
+    /// `Allocations::believed_read` turns into that type.
+    ///
+    /// **What arrives is believed as it arrives, said rather than left
+    /// unsaid**: where nothing is recorded a load believes nothing
+    /// (ADR-0061), so a pointer a call this check cannot read wrote, handed
+    /// nothing that bounds a width, is given this, as ADR-0017 and ADR-0060
+    /// believe an output. **So is an escaped local a store or a copy this
+    /// check cannot place may have written** (`Known::replaced`, ADR-0031),
+    /// which is marked as one a call wrote: believed as its type there too,
+    /// as before ADR-0061, and asked by what it names where it is read
+    /// through itself. See `Known::stored_width`.
+    ///
+    /// Mutation: `Known::stored_width` answers `AtMost(0)` where it answers
+    /// this, for the store and the load of a local's level at once;
+    /// `a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence`
+    /// and
+    /// `a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back`
+    /// report, among others.
     AsTyped,
     /// Nothing is believed: a pointer's own width where nothing vouched for
     /// it, and a block's level a store recorded no width at, which no other
@@ -1047,13 +1042,14 @@ impl Width {
     }
 
     /// This width as an `Option<u64>`, `None` for no bound and for no
-    /// belief, which a reader of one reads alike, and [`AS_TYPED`] for the
-    /// type's: what a reader that still takes one is given.
+    /// belief, which a reader of one reads alike, and `u64::MAX` for the
+    /// type's, which the width it is read as then bounds: what a reader that
+    /// still takes one is given.
     pub(super) fn bound(self) -> Option<u64> {
         match self {
             Width::Unbounded | Width::Nothing => None,
             Width::AtMost(bytes) => Some(bytes),
-            Width::AsTyped => Some(AS_TYPED),
+            Width::AsTyped => Some(u64::MAX),
         }
     }
 
@@ -1068,7 +1064,7 @@ impl Width {
     pub(super) fn of_bound(bound: Option<u64>) -> Width {
         match bound {
             None => Width::Unbounded,
-            Some(AS_TYPED) => Width::AsTyped,
+            Some(u64::MAX) => Width::AsTyped,
             Some(bytes) => Width::AtMost(bytes),
         }
     }
@@ -1169,7 +1165,7 @@ impl Levels {
 impl Held {
     /// How many bytes this value is believed to point at the start of,
     /// level 0 of [`Self::widths`]: `None` where nothing is believed, a null
-    /// included, and [`AS_TYPED`] for the type's width.
+    /// included, and `u64::MAX` for the type's width ([`Width::bound`]).
     pub(super) fn believed(&self) -> Option<u64> {
         self.widths.at(0).bound()
     }
