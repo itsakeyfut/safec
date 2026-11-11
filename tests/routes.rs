@@ -272,6 +272,124 @@ struct Row {
     shape: Shape,
 }
 
+/// What the matrix says of one field of the memory check's value, `Known`.
+enum Field {
+    /// The beliefs whose rows write it through every route.
+    Belief(&'static [Belief]),
+    /// Why no belief writes it, said where a reader of the matrix looks.
+    Exempt(&'static str),
+}
+
+/// Why a field has no belief yet. A field listed so is the matrix's own
+/// account of what it does not hold, rather than a silence.
+const PENDING: &str = "no belief yet: the corpus holds it until #840 adds its rows";
+
+/// Every field of `Known`, each a belief the matrix writes or an exemption
+/// with its reason. A field added to `Known` and not here fails
+/// [`every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption`], so a
+/// new fact of the memory check lands with its rows or says why not. See
+/// ADR-0091 rule 2.
+const KNOWN_FIELDS: &[(&str, Field)] = &[
+    (
+        "points_to",
+        Field::Belief(&[
+            Belief::Width,
+            Belief::Lost,
+            Belief::Stale,
+            Belief::Caller,
+            Belief::Unreplaced,
+        ]),
+    ),
+    (
+        "state",
+        Field::Belief(&[
+            Belief::Lost,
+            Belief::Reborn,
+            Belief::StoredFreed,
+            Belief::LeftBehind,
+        ]),
+    ),
+    ("escaped", Field::Exempt(PENDING)),
+    ("handed_away", Field::Exempt(PENDING)),
+    ("exposed", Field::Exempt(PENDING)),
+    (
+        "contents",
+        Field::Belief(&[Belief::Width, Belief::Lost, Belief::Stale, Belief::Caller]),
+    ),
+    ("realloced", Field::Exempt(PENDING)),
+    ("init", Field::Belief(&[Belief::Fresh])),
+    ("pending", Field::Exempt(PENDING)),
+    ("calls", Field::Exempt(PENDING)),
+    ("exposed_after_call", Field::Exempt(PENDING)),
+    ("lost_exposed", Field::Exempt(PENDING)),
+    ("extent", Field::Exempt(PENDING)),
+    ("handed_at_most", Field::Exempt(PENDING)),
+    ("handed_contents_at_most", Field::Exempt(PENDING)),
+    ("element_init", Field::Exempt(PENDING)),
+    ("exposed_in_part", Field::Exempt(PENDING)),
+    ("stored_in_part", Field::Exempt(PENDING)),
+    ("stored_out", Field::Belief(&[Belief::StoredOut])),
+    ("left_at", Field::Exempt(PENDING)),
+    ("held_levels", Field::Exempt(PENDING)),
+    ("stored_out_at", Field::Exempt(PENDING)),
+    ("part_written", Field::Exempt(PENDING)),
+    ("part_written_since_made", Field::Exempt(PENDING)),
+    ("handed_untyped", Field::Exempt(PENDING)),
+    ("block_elements", Field::Exempt(PENDING)),
+];
+
+/// The fields of `Known`, read off its declaration.
+fn known_fields() -> Vec<String> {
+    let source = include_str!("../crates/safec-ir/src/memory/known.rs");
+    let start = source
+        .find("pub(super) struct Known {")
+        .expect("`Known` is declared in known.rs");
+    let body = &source[start..];
+    let end = body
+        .find(
+            "
+}",
+        )
+        .expect("`Known`'s declaration ends");
+    body[..end]
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix("pub(super) "))
+        .filter_map(|line| line.split_once(':').map(|(name, _)| name.trim().to_owned()))
+        .collect()
+}
+
+/// Mutation: drop `held_levels`'s row from [`KNOWN_FIELDS`]; this fails and
+/// names it. A field added to `Known` fails to compile first, in the
+/// exhaustive destructures of the join, the entry and a rebirth, and then
+/// here until it has a row. A row left for a field removed fails too, so the
+/// table is never a list of what used to be there.
+#[test]
+fn every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption() {
+    let declared = known_fields();
+    let listed: Vec<&str> = KNOWN_FIELDS.iter().map(|(name, _)| *name).collect();
+    let missing: Vec<&String> = declared
+        .iter()
+        .filter(|field| !listed.contains(&field.as_str()))
+        .collect();
+    let stale: Vec<&&str> = listed
+        .iter()
+        .filter(|field| !declared.iter().any(|declared| declared == **field))
+        .collect();
+    assert!(
+        missing.is_empty() && stale.is_empty(),
+        "fields of `Known` with no row in KNOWN_FIELDS: {missing:?}; rows for no field: {stale:?}"
+    );
+    for (name, field) in KNOWN_FIELDS {
+        match field {
+            Field::Belief(beliefs) => assert!(
+                !beliefs.is_empty() && beliefs.iter().all(|belief| BELIEFS.contains(belief)),
+                "`{name}` names a belief the matrix does not ask"
+            ),
+            Field::Exempt(why) => assert!(!why.is_empty(), "`{name}` is exempt with no reason"),
+        }
+    }
+}
+
 /// Every value of each axis, in the order [`axis_place`] gives them.
 ///
 /// **Adding a value** is: its variant, its arm in [`axis_place`] and
