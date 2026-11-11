@@ -3678,8 +3678,27 @@ impl Analysis for Allocations<'_> {
                                 .chain(landing.targets.iter().map(|&local| Loc::Local(local)))
                                 .collect();
                             value.carry_part_written(self.sources, &from, &to);
+                            // **Only where part of a pointer fits**: a local
+                            // narrower than a pointer holds no pointer to be
+                            // part of, and noted, `memcpy(&k, &i, 4)` of an
+                            // `int` into an `int` moved the report off the
+                            // copy that wrote half a pointer, found by review.
+                            // A later copy of its bytes into wider memory is
+                            // a partial copy of its own. A block, or a local
+                            // whose size this check cannot read, is noted.
                             if in_part {
-                                for &at in &to {
+                                let target = self.unit.target();
+                                let pointer =
+                                    u64::from(target.pointer_bits() / target.char().bits());
+                                let fits = |at: Loc| match at {
+                                    Loc::Heap(_) => true,
+                                    Loc::Local(local) => function
+                                        .locals()
+                                        .nth(local.index())
+                                        .and_then(|local| self.unit.size_of(function.local(local)))
+                                        .is_none_or(|size| size >= pointer),
+                                };
+                                for &at in to.iter().filter(|&&at| fits(at)) {
                                     value.note_part_written(self.sources, at, origin.span());
                                 }
                             }

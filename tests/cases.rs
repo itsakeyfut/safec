@@ -1886,6 +1886,11 @@ cases! {
         // Read through a pointer at the array. Mutation: `blocks_read` reads
         // sites alone; this goes silent.
         a_pointer_read_out_of_a_local_array_a_partial_copy_wrote_through_a_pointer_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A whole `int` copied into an `int` first: the report stays on the
+        // copy that writes half a pointer, found by review. Mutation: note a
+        // short copy into a local whatever its size; the caret moves to the
+        // `int` copy.
+        a_whole_int_copied_into_an_int_before_a_partial_pointer_copy_is_reported_at_the_partial_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
         // one is, by one function both doors call (#890). Possibly, not
         // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no
