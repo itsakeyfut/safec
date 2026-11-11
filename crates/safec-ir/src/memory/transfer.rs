@@ -1594,6 +1594,7 @@ impl Allocations<'_> {
             held_levels,
             stored_out_at,
             part_written,
+            part_written_since_made,
             handed_untyped,
             block_elements,
         } = into;
@@ -1631,6 +1632,11 @@ impl Allocations<'_> {
             .zip(&from.left_at)
             .chain(stored_out_at.iter_mut().zip(&from.stored_out_at))
             .chain(part_written.iter_mut().zip(&from.part_written))
+            .chain(
+                part_written_since_made
+                    .iter_mut()
+                    .zip(&from.part_written_since_made),
+            )
         {
             *here = match (*here, *there) {
                 (Some(here), Some(there)) => Some(earlier(self.sources, here, there)),
@@ -2189,6 +2195,7 @@ impl Analysis for Allocations<'_> {
             held_levels: Table::filled(0, self.locals),
             stored_out_at: Table::filled(None, self.locals),
             part_written: Table::filled(None, self.locals),
+            part_written_since_made: Table::filled(None, self.locals),
             // No call has been handed anything yet.
             handed_untyped: Table::filled(Vec::new(), Loc::count(self.locals)),
             // No block has been made yet.
@@ -3651,16 +3658,15 @@ impl Analysis for Allocations<'_> {
                             // load one level further reads. The earlier span
                             // is kept, the partial copy the reader has to
                             // look at. See ADR-0088.
-                            let carried = value
+                            let from: Vec<Site> = value
                                 .levels_below(source.local, from_depth)
                                 .0
                                 .into_iter()
-                                .filter_map(|block| value.part_written[block])
-                                .reduce(|here, there| earlier(self.sources, here, there));
-                            let written = in_part.then(|| origin.span());
-                            for copy in carried.into_iter().chain(written) {
+                                .collect();
+                            value.carry_part_written(self.sources, &from, &landing.containers);
+                            if in_part {
                                 for &site in &landing.containers {
-                                    value.note_part_written(self.sources, site, copy);
+                                    value.note_part_written(self.sources, site, origin.span());
                                 }
                             }
                             // **Into a local's address, the copy lands in the
@@ -4456,9 +4462,7 @@ impl Analysis for Allocations<'_> {
                     // **And whether a copy wrote part of a pointer into
                     // it**, the bytes it moves: `n = realloc(m, 8); void
                     // **q = n; *pp = q;` built silent (#905). See ADR-0088.
-                    if let Some(copy) = value.part_written[old] {
-                        value.note_part_written(self.sources, site, copy);
-                    }
+                    value.carry_part_written(self.sources, &[old], &[site]);
                     let held = value.contents[old].clone();
                     value.pour(&[site], &held, &[]);
                 }

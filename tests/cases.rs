@@ -1815,6 +1815,60 @@ cases! {
         // Mutation: keep the last in the copy arm's `reduce`; the caret
         // moves to the second copy.
         a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read out of a block a partial copy wrote, by a load or by
+        // a copy into a pointer local, is asked at the partial copy (#907).
+        // Mutations: drop the load's ask; the first and third go silent.
+        // Drop the copy's ask; the second does.
+        a_pointer_read_out_of_a_block_a_partial_copy_wrote_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_partial_pointer_copied_out_of_a_block_into_a_pointer_local_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_partial_pointer_read_after_an_alias_typed_first_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read as an `int` and a `char`, no pointer. Mutation: ask every load
+        // whatever its type; this is reported.
+        an_int_read_out_of_a_block_a_partial_copy_wrote_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Copied into an `int`. Mutation: ask every copy whatever its
+        // destination's type; this is reported.
+        a_partial_pointer_copied_out_of_a_block_into_an_int_local_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read here and left by a store: one report at the copy. Mutation:
+        // push without `push_part_of_a_pointer`'s check; this is said twice.
+        a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Copied out into memory of pointers with half its bytes unwritten:
+        // said as `SC0411` at the copy out, the stronger of the two. Mutation:
+        // ask the record whether or not the copy is said unwritten; this
+        // gains an `SC0413` at the partial copy.
+        a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Copied out through a `void *` that points at a pointer local, asked
+        // by what it points at, found by review. Mutation: ask the
+        // destination's type alone; this goes silent.
+        a_partial_pointer_copied_out_of_a_block_through_a_void_pointer_to_a_pointer_local_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through a `void *` at two `int`s. Mutation: ask every copy
+        // whatever its destination; this is reported.
+        a_partial_pointer_copied_out_of_a_block_through_a_void_pointer_to_an_int_pair_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A whole pointer stored through `b` over the partial copy and read
+        // back through `b`: the read is of what was stored, and the store's
+        // own read of its value is no read in the source. Found by review.
+        // Mutation: ask a read through a pointer stored through; this is
+        // reported.
+        a_pointer_stored_whole_over_a_partial_copy_and_read_back_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read two levels down, `**b`, of the block below. Found by review.
+        // Mutation: read only what the pointer names in `blocks_read`; this
+        // loses its `SC0413`, keeping the nullability check's `SC0403`.
+        a_pointer_read_two_levels_down_out_of_a_block_a_partial_copy_wrote_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Each turn makes a block, reads a whole pointer out of it, and only
+        // then copies part of one in: the read is of this turn's block, not
+        // the last's, found by review. Mutation: a read asks the record kept
+        // where the site is made again, `Known::part_written`; this is
+        // reported. So it is when the site's own record is not cleared there.
+        a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same turn copies and then reads: asked. Mutation: note a copy
+        // in the kept record alone in `Known::note_part_written`; this and
+        // every other read case go silent.
+        a_partial_pointer_copied_and_read_in_each_turn_of_a_loop_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read after a `realloc` moved the block. Mutation: carry only the
+        // kept record in `Known::carry_part_written`; this goes silent.
+        a_pointer_read_out_of_a_block_a_realloc_moved_after_a_partial_copy_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Copied on one arm and read after the join. Mutation: leave
+        // `Known::part_written_since_made` out of the join; this goes silent.
+        a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
         // one is, by one function both doors call (#890). Possibly, not
         // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no

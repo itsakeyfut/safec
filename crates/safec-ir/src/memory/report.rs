@@ -1654,6 +1654,38 @@ pub(super) fn asked_unwritten_in_terminator(
                             unproven: None,
                         },
                     );
+                } else if into_ty.is_some_and(|ty| ask.analysis.first_level_holds_a_pointer(ty))
+                    || arguments.first().is_some_and(|dest| {
+                        points_at_a_pointer(ask.analysis, ask.function, dest, known).is_some()
+                    })
+                {
+                    // **Or a copy into memory of pointers out of a block a
+                    // copy wrote part of a pointer into**, at that copy, as
+                    // a load of the pointer would be: `memcpy(&s, m, 8);
+                    // *pp = s;` built silent (#907). The blocks the source
+                    // names at the copy's depth, as the transfer carries
+                    // them. Not where what it copies is said unwritten
+                    // above, the same defect said more strongly. By the
+                    // record of the block the site names now, as a load
+                    // asks (ADR-0089). See ADR-0088.
+                    //
+                    // **Memory of pointers by what the destination points
+                    // at, too**, as a partial copy is asked (ADR-0071 rule
+                    // 4): `void *d = &s; memcpy(d, m, 8);` with `s` a
+                    // `void *` built silent where `void **d` was asked,
+                    // found by review. The destination only: the source is
+                    // the block with the record, which says nothing of
+                    // where the pointer goes.
+                    if let Some(Operand::Copy(source)) = arguments.get(1) {
+                        let depth = derefs(source);
+                        if source.projection.is_empty() || depth > 0 {
+                            for site in known.levels_below(source.local, depth).0 {
+                                if let Some(copy) = known.part_written_since_made[site] {
+                                    push_part_of_a_pointer(findings, ask.analysis, copy);
+                                }
+                            }
+                        }
+                    }
                 }
             }
             // A `return` is an assignment to the return place, an element.
@@ -2567,6 +2599,27 @@ pub(super) fn loaded_indeterminate(
         let certain = analysis.reads_fresh(function, &place, known);
         let maybe = !certain && analysis.reads_partly(function, &place, known);
         if !certain && !maybe {
+            // **Or a pointer read out of a block a copy wrote part of a
+            // pointer into**, at the copy: `void **b = m; void *s = *b;`
+            // after `memcpy(m, &i, 4)` built silent (#907). Only where the
+            // read is not said indeterminate, which is the same defect said
+            // more strongly. By the record of the block the site names now,
+            // since that is the block read (ADR-0089). See ADR-0088.
+            //
+            // **Nor through a pointer a store has written through since it
+            // was given its value**, on every path (`Held::stored_through`):
+            // the read is of the whole pointer just stored, the lowering's
+            // own read of an assignment's value among them. Asked there,
+            // `void **b = m; *b = x;` after the partial copy was doubted
+            // with no read in the source at all, found by review.
+            let rewritten = derefs(&place) == 1 && known.points_to[place.local].stored_through;
+            if !rewritten && analysis.may_be_pointer(function, &place) {
+                for site in blocks_read(&place, known) {
+                    if let Some(copy) = known.part_written_since_made[site] {
+                        push_part_of_a_pointer(findings, analysis, copy);
+                    }
+                }
+            }
             continue;
         }
         // **Keyed by the pointer read through, not by `*l`.** A dereference
@@ -2620,6 +2673,23 @@ pub(super) fn loaded_indeterminate(
                 unproven: None,
             },
         );
+    }
+}
+
+/// The blocks a load of `place` reads a pointer out of: what the pointer
+/// read through names, and below the first dereference, what the pointer
+/// gone through last may name, as [`loaded_indeterminate`] names the slot
+/// (#768).
+fn blocks_read(place: &Place, known: &Known) -> Vec<Site> {
+    let depth = derefs(place);
+    if depth > 1 {
+        known
+            .levels_below(place.local, depth - 1)
+            .0
+            .into_iter()
+            .collect()
+    } else {
+        known.points_to[place.local].sites().collect()
     }
 }
 

@@ -1,0 +1,138 @@
+Target "x86_64-pc-windows-msvc"
+Function a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:2:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:3:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:4:6 "use" declared
+  Local "_0" "void" return
+Function a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:5:6 "out"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "pp"
+  Local "_2" "int" "i"
+  Local "_3" "void *" "x"
+  Local "_4" "int"
+  Local "_5" "void *" "m"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "void **"
+  Local "_9" "void *"
+  Local "_10" "int *"
+  Local "_11" "void *"
+  Local "_12" "void **" "b"
+  Local "_13" "void *" "s"
+  Local "_14" "int"
+  Local "_15" "void **"
+  Block "bb0" entry
+    Operation a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:6:9 written
+      Destination "_2"
+      Use
+        Constant 1
+    Sequenced a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:6:13 generated
+    Operation a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:7:11 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:7:15 generated
+    Operation a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:8:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_1"
+    Branch a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:8:9 written "bb1" "bb2"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:8:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:8:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:9:15 generated
+    Call a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:9:15 written "malloc" "bb4"
+      Destination "_6"
+      Constant 8
+  Block "bb4"
+    Operation a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:9:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:9:15 generated
+    Operation a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:10:9 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_5"
+    Branch a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:10:9 written "bb5" "bb6"
+      Copy "_7"
+  Block "bb5"
+    Sequenced a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:10:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:10:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:11:15 written
+      Destination "_8"
+      Address
+        Place "_3"
+    ArgumentsEvaluated a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:11:5 generated
+    Call a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:11:5 written "memcpy" "bb8"
+      Destination "_9"
+      Copy "_5"
+      Copy "_8"
+      Constant 8
+  Block "bb8"
+    Sequenced a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:11:5 generated
+    Operation a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:12:15 written
+      Destination "_10"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:12:5 generated
+    Call a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:12:5 written "memcpy" "bb9"
+      Destination "_11"
+      Copy "_5"
+      Copy "_10"
+      Constant 4
+  Block "bb9"
+    Sequenced a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:12:5 generated
+    Operation a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:13:12 written
+      Destination "_12"
+      Use
+        Copy "_5"
+    Sequenced a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:13:16 generated
+    Operation a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:14:11 written
+      Destination "_13"
+      Use
+        Copy "_12"
+          Deref
+    Sequenced a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:14:15 generated
+    Operation a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:15:9 written
+      Destination "_14"
+      Unary "Not"
+        Copy "_13"
+    Branch a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:15:9 written "bb10" "bb11"
+      Copy "_14"
+  Block "bb10"
+    Sequenced a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:15:9 generated
+    Return
+  Block "bb11"
+    Sequenced a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:15:9 generated
+    Goto "bb12"
+  Block "bb12"
+    Operation a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:16:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_12"
+    Operation a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:16:5 written
+      Destination "_15"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:16:5 generated
+    Return

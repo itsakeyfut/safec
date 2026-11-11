@@ -1,0 +1,91 @@
+Target "x86_64-pc-windows-msvc"
+Function a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:2:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:3:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:4:6 "out"
+  Local "_0" "void" return
+  Local "_1" "void **" parameter "o"
+  Local "_2" "int" "i"
+  Local "_3" "int"
+  Local "_4" "void *" "m"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Local "_8" "void *"
+  Local "_9" "void *"
+  Block "bb0" entry
+    Operation a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:5:9 written
+      Destination "_2"
+      Use
+        Constant 1
+    Sequenced a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:5:13 generated
+    Operation a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:6:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:6:9 written "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:6:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:6:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:7:15 generated
+    Call a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:7:15 written "malloc" "bb4"
+      Destination "_5"
+      Constant 8
+  Block "bb4"
+    Operation a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:7:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:7:15 generated
+    Operation a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:8:9 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_4"
+    Branch a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:8:9 written "bb5" "bb6"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:8:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:8:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:9:15 written
+      Destination "_7"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:9:5 generated
+    Call a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:9:5 written "memcpy" "bb8"
+      Destination "_8"
+      Copy "_4"
+      Copy "_7"
+      Constant 4
+  Block "bb8"
+    Sequenced a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:9:5 generated
+    ArgumentsEvaluated a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:10:5 generated
+    Call a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:10:5 written "memcpy" "bb9"
+      Destination "_9"
+      Copy "_1"
+      Copy "_4"
+      Constant 8
+  Block "bb9"
+    Sequenced a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:10:5 generated
+    ArgumentsEvaluated a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:11:5 generated
+    Call a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:11:5 written "free" "bb10"
+      Copy "_4"
+  Block "bb10"
+    Sequenced a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:11:5 generated
+    Return
