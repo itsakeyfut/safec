@@ -21,7 +21,7 @@ use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
     AS_TYPED, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, Offset, PendingRead,
-    Reached, Read, Realloced, SiteState, bounded, earlier,
+    Reached, Read, Realloced, SiteState, earlier,
 };
 use super::store::{Landing, StoreKind, Strong};
 use crate::library::{Callee, Leaves, Library, Makes};
@@ -753,9 +753,11 @@ impl Allocations<'_> {
         // ADR-0060.
         let Some(read_as) = read_as else {
             remember(&mut value.handed_untyped[local], None);
-            value.handed_at_most[local] = bounded(value.handed_at_most[local], Some(0));
-            value.handed_contents_at_most[local]
-                .bound_by(&Levels::from_bounds(vec![Some(0); self.deepest_pointer]));
+            value.handed_at_most[local].bound_by(&Levels::from_bounds(vec![
+                Some(0);
+                self.deepest_pointer
+                    + 1
+            ]));
             return;
         };
         // Recorded, so a later call walks below it again. See
@@ -764,8 +766,7 @@ impl Allocations<'_> {
             remember(&mut value.handed_untyped[local], Some(read_as));
         }
         let (width, levels) = self.handed_bounds(Some(read_as));
-        value.handed_at_most[local] = bounded(value.handed_at_most[local], Some(width));
-        value.handed_contents_at_most[local].bound_by(&levels);
+        value.handed_at_most[local].bound_by(&levels.stored_under(Some(width), usize::MAX));
     }
 
     /// What a call this check cannot read may store in memory it reached as
@@ -794,7 +795,7 @@ impl Allocations<'_> {
         };
         // **And below it, at every level**, as the type it was reached as says:
         // through a `void *`, nothing at any level. See
-        // `Known::handed_contents_at_most`. Through an array to its element, as
+        // `Known::handed_at_most`. Through an array to its element, as
         // the width above reads it: `fill(&a)` with `a` an `int **[2]` took `a`
         // as reached through a `void *`. Found by review.
         let levels = self
@@ -903,8 +904,6 @@ impl Allocations<'_> {
             // and `Self::read_from_fits`.
             extent: _,
             handed_at_most: _,
-            // Not read by a load.
-            handed_contents_at_most: _,
             // Read, as `init` is.
             element_init: _,
             // Not read by a load.
@@ -1623,7 +1622,6 @@ impl Allocations<'_> {
             lost_exposed,
             extent,
             handed_at_most,
-            handed_contents_at_most,
             element_init,
             exposed_in_part,
             stored_in_part,
@@ -1789,15 +1787,9 @@ impl Allocations<'_> {
             };
         }
         // Bounds, so the lower of two at every level. See
-        // `Known::handed_contents_at_most`.
-        for (here, there) in handed_contents_at_most
-            .iter_mut()
-            .zip(&from.handed_contents_at_most)
-        {
-            here.bound_by(there);
-        }
+        // `Known::handed_at_most`.
         for (here, there) in handed_at_most.iter_mut().zip(&from.handed_at_most) {
-            *here = bounded(*here, *there);
+            here.bound_by(there);
         }
         // A may-fact, so a union, as `exposed` is.
         *lost_exposed |= from.lost_exposed;
@@ -2207,8 +2199,7 @@ impl Analysis for Allocations<'_> {
                 extent
             },
             // Nothing stored and nothing handed to a call yet.
-            handed_at_most: Table::filled(None, self.locals),
-            handed_contents_at_most: Table::filled(Levels::default(), self.locals),
+            handed_at_most: Table::filled(Levels::default(), self.locals),
             // Every place written but the locals `unwritten_at_entry` names,
             // every local but a parameter: a parameter's memory is the
             // caller's, which may have written it, and an allocation is made
@@ -2745,7 +2736,7 @@ impl Analysis for Allocations<'_> {
                         // keeps `believed` too (#719).
                         let handed = match &operation.value {
                             Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
-                                value.handed_at_most[place.local]
+                                value.handed_at_most[place.local].at(0)
                             }
                             Rvalue::Use(_)
                             | Rvalue::Address(_)
@@ -3534,8 +3525,6 @@ impl Analysis for Allocations<'_> {
                     // carries is believed.
                     extent: _,
                     handed_at_most: _,
-                    // Not touched by a copy.
-                    handed_contents_at_most: _,
                     // As `init`, per element.
                     element_init: _,
                     // Not touched by a copy.
@@ -4291,8 +4280,9 @@ impl Analysis for Allocations<'_> {
                     // earlier one ([`Known::handed_at_most`], #632).
                     let believed = function.locals().nth(local.index()).and_then(|id| {
                         let width = self.pointee_size(function, &Place::local(id))?;
-                        let width =
-                            value.handed_at_most[local].map_or(width, |most| width.min(most));
+                        let width = value.handed_at_most[local]
+                            .at(0)
+                            .map_or(width, |most| width.min(most));
                         let whole = matches!(
                             fits(self, function, id, width, value, false),
                             None | Some(Fit::Inside)
@@ -4303,13 +4293,13 @@ impl Analysis for Allocations<'_> {
                     // As of this load, and before the borrow below. See
                     // `Held::named_at_read`.
                     let named_now = value.locals_named_by_unknown_code();
-                    let handed_contents = value.handed_contents_at_most[local].clone();
+                    let handed_contents = value.handed_at_most[local].below(1);
                     let held = &mut value.points_to[local];
                     held.believed = believed;
                     // **And what its memory holds, no more than it was
                     // handed as at every level below** (#636), bounding what
                     // it held, since a callee that writes nothing leaves
-                    // that. See `Known::handed_contents_at_most`.
+                    // that. See `Known::handed_at_most`.
                     held.contents_at_most.bound_by(&handed_contents);
                     for &site in &stored {
                         if !(holds_an_address && deep[site]) {
@@ -4581,7 +4571,6 @@ impl Analysis for Allocations<'_> {
                     extent: _,
                     // A local's; not touched by `realloc`.
                     handed_at_most: _,
-                    handed_contents_at_most: _,
                     element_init: _,
                     exposed_in_part: _,
                     // Through `Known::pour`.

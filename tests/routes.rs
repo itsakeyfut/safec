@@ -379,7 +379,6 @@ const KNOWN_FIELDS: &[(&str, Field)] = &[
     ("lost_exposed", Field::Exempt(PENDING)),
     ("extent", Field::Exempt(PENDING)),
     ("handed_at_most", Field::Exempt(PENDING)),
-    ("handed_contents_at_most", Field::Exempt(PENDING)),
     ("element_init", Field::Exempt(PENDING)),
     ("exposed_in_part", Field::Exempt(PENDING)),
     ("stored_in_part", Field::Exempt(PENDING)),

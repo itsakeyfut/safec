@@ -1001,7 +1001,10 @@ pub(super) fn bounded(here: Option<u64>, there: Option<u64>) -> Option<u64> {
 /// the deepest pointer type among the function's locals. The two that build
 /// one are [`Allocations::type_levels`](super::allocations::Allocations::type_levels),
 /// which stops there, and [`Self::stored_under`], which drops what would pass it;
-/// [`Self::below`] and a join make none longer than their inputs. So the
+/// [`Self::below`] and a join make none longer than their inputs. **A
+/// handed bound is one longer**, its own level 0 put before such a list
+/// (`Known::handed_at_most`), and is never stored, so it builds nothing
+/// deeper. So the
 /// lattice this sits in has a finite height by construction, and no loop of
 /// stores and loads can grow one for a fixpoint to chase. What is dropped is
 /// a level no read in this function can ask, since a place dereferenced `d`

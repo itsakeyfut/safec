@@ -111,7 +111,11 @@ pub(super) fn fits(
     // bound is kept: `if (c) put(pv, &c);` with `put` taking `void **` left
     // `v` holding nothing believed and nothing named, and a read through its
     // address believed a whole `int` (#632).
-    if held.beyond().foreign() && known.handed_at_most[local].is_some_and(|most| most < width) {
+    if held.beyond().foreign()
+        && known.handed_at_most[local]
+            .at(0)
+            .is_some_and(|most| most < width)
+    {
         return Some(Fit::Unknown);
     }
     let sites = held

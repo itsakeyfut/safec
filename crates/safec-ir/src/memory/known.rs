@@ -345,18 +345,19 @@ pub(super) struct Known {
     /// `void *` it may have stored any pointer at any type, and through bytes
     /// by `memcpy`. C allows no more through one than through an `int **`
     /// (C17 6.5 p7), so this is a limit of the asking and not of the
-    /// language. `None` where no call was handed it.
+    /// language. No bound where no call was handed it.
     ///
     /// **What a callee wrote is believed as it was handed**, not as the
     /// local is declared: `int *v` handed to `put(void **slot, char *c)`
     /// holds a `char`'s address afterwards, asked as a `void *` in `put`'s
     /// body, and was believed a whole `int` (#632). A bound, so the lower of
     /// two at a join. See ADR-0060.
-    pub(super) handed_at_most: Table<LocalIdx, Option<u64>>,
-    /// Per local, what the types a call was handed it through say of its
-    /// value's memory, below its own level: [`Self::handed_at_most`] one
-    /// level further down and every level after, as
-    /// [`Held::contents_at_most`] reads them. Every level `0` where it was
+    ///
+    /// **Level 0 is that width, and every level after it what the types a
+    /// call was handed it through say of its value's memory**, one level
+    /// further down each time, as [`Held::contents_at_most`] reads them: one
+    /// [`Levels`] for both, since the two were bounds joined alike (ADR-0093
+    /// rule 2). Every level `0` where it was
     /// handed through a `void *` or as bytes, either of which may store any
     /// pointer at any type (#675), and so is every local that call reaches
     /// below either (#677). One put there after the call, and written by a
@@ -367,9 +368,8 @@ pub(super) struct Known {
     /// left `v` an `int ***` believing whole `int`s two levels down, so
     /// `use(v)` with `use` writing `**(*p)` handed a one-byte `char`'s
     /// address on in silence. A bound, so the lower of two at every level
-    /// and at a join, and kept when the site is made again as
-    /// [`Self::handed_at_most`] is. See ADR-0060.
-    pub(super) handed_contents_at_most: Table<LocalIdx, Levels>,
+    /// and at a join. See ADR-0060.
+    pub(super) handed_at_most: Table<LocalIdx, Levels>,
     /// Per local array of at most [`ELEMENTS_KEPT`] innermost elements, one
     /// [`Init`] per element: [`Self::init`] kept per element. Empty for every other local, which
     /// [`Self::init`] answers for whole.
@@ -624,7 +624,6 @@ impl Known {
             // Not touched here, and nothing has asked whether a lifetime
             // ending may drop the bound.
             handed_at_most: _,
-            handed_contents_at_most: _,
             // Made unwritten again, and cleared, where the next lifetime
             // begins (`Self::storage_live`).
             element_init: _,
@@ -678,7 +677,6 @@ impl Known {
             extent: _,
             // Not touched here, as in `Self::clear`.
             handed_at_most: _,
-            handed_contents_at_most: _,
             element_init,
             exposed_in_part,
             stored_in_part,
@@ -1329,7 +1327,7 @@ impl Known {
                 } else if own.beyond().foreign() {
                     Some(
                         own.believed
-                            .or(self.handed_at_most[slot])
+                            .or(self.handed_at_most[slot].at(0))
                             .unwrap_or(AS_TYPED),
                     )
                 } else {
@@ -2098,8 +2096,6 @@ impl Known {
             extent: _,
             // About a local, not a site.
             handed_at_most: _,
-            // About a local, as `handed_at_most` is.
-            handed_contents_at_most: _,
             // About a local as well: the call that makes the site writes the
             // local it is named by, which the call's destination says.
             element_init: _,
