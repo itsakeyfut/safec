@@ -26,7 +26,7 @@ use super::fit::{
 use super::index::{Idx, Loc, LocalIdx, Site};
 use super::known::Known;
 use super::parts::{
-    Extent, Freeing, Init, Levels, Offset, Reached, Read, SiteState, Width, earlier, same,
+    At, Extent, Freeing, Init, Levels, Reached, Read, SiteState, Width, earlier, same,
 };
 use super::store::{StoreKind, Written};
 use super::transfer::CopiedPointers;
@@ -367,8 +367,8 @@ pub(super) fn reported(
             // `Reached::Lost` above, which `interior` answers nothing for.
             Operand::Copy(_) | Operand::Constant(_) => None,
         })
-        .reduce(Offset::joined)
-        .unwrap_or(Offset::Zero);
+        .reduce(At::joined)
+        .unwrap_or(At::Bytes(0));
 
     // One pointer handed to be freed, read as itself, is the value both
     // questions are about. Every free asks one, since `free` takes one argument
@@ -466,7 +466,7 @@ pub(super) fn reported(
 ///   workspace green, and removing both fails
 ///   `a_free_after_an_offset_that_kept_the_set_is_proved`. The other is a
 ///   constant argument, `free(0)`, which `touching` skips and so hands this
-///   nothing at all; [`reported`] then hands this `Offset::Zero`, which says
+///   nothing at all; [`reported`] then hands this `At::Bytes(0)`, which says
 ///   nothing either. See ADR-0036.
 ///
 /// **A parameter is proved on, and that is sound.** `void f(int *p) { free(p +
@@ -478,7 +478,7 @@ pub(super) fn reported(
 ///
 /// `freed` is `None` whatever the answer: what this reports is not about a free
 /// that already happened.
-fn interior(reached: &[Reached], offset: Offset, known: &Known) -> Option<Verdict> {
+fn interior(reached: &[Reached], offset: At, known: &Known) -> Option<Verdict> {
     let mut sites = Vec::new();
     for entry in reached {
         match entry {
@@ -504,9 +504,9 @@ fn interior(reached: &[Reached], offset: Offset, known: &Known) -> Option<Verdic
         .fold(made_of(first), |made, &site| same(made, made_of(site)));
 
     let (conclusion, unproven) = match offset {
-        Offset::Zero => return None,
-        Offset::NonZero => (Conclusion::Unsafe, None),
-        Offset::Unknown => (Conclusion::Unknown, Some(Unproven::Offset)),
+        At::Bytes(0) => return None,
+        At::Moved | At::Bytes(1..) => (Conclusion::Unsafe, None),
+        At::Unknown => (Conclusion::Unknown, Some(Unproven::Offset)),
     };
 
     Some(Verdict {
@@ -3100,7 +3100,7 @@ pub(super) fn copied_away(
         [only]
             if from.projection.is_empty()
                 && held.sites().next().is_none()
-                && matches!(held.offset, Offset::Zero)
+                && matches!(held.offset, At::Bytes(0))
                 && !held.beyond().unrecorded_address() =>
         {
             Place::local(

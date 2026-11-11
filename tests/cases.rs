@@ -5441,7 +5441,7 @@ cases! {
         //
         // The issue's own program: a null test on the moved pointer took away
         // the `SC0403` that had been standing in for this. Mutation: answer
-        // `Offset::NonZero` as `Zero` in `fits`; this goes silent.
+        // `At::Moved` as `Bytes(0)` in `fits`; this goes silent.
         a_write_through_a_pointer_moved_past_its_allocation_after_a_null_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Proved outside, and so an error that `--allow-unknown` leaves one.
         // Mutation: leave the allocator's argument unread in `made_extent`;

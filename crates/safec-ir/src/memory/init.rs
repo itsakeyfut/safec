@@ -15,7 +15,7 @@ use super::allocations::Allocations;
 use super::built::replaced_by;
 use super::index::{Idx, LocalIdx, Site, Table};
 use super::known::{Known, WrittenBy};
-use super::parts::{Extent, Init, Offset};
+use super::parts::{At, Extent, Init};
 use super::store::{Certain, Landing, StoreKind, Strong, written_alone};
 use super::transfer::CopiedPointers;
 
@@ -368,7 +368,7 @@ impl Allocations<'_> {
                         let alone = set.len() == 1
                             && landing.targets.is_empty()
                             && dest.projection.is_empty()
-                            && matches!(value.points_to[dest.local].offset, Offset::Zero);
+                            && matches!(value.points_to[dest.local].offset, At::Bytes(0));
                         let certain = landing.certain().as_ref().map(Certain::site);
                         Some((set, several, alone, certain))
                     }
@@ -630,7 +630,7 @@ impl Allocations<'_> {
                 // decision.
                 if let (Some(lands), Some(Operand::Copy(dest))) = (&written, dest) {
                     let at_start = dest.projection.is_empty()
-                        && matches!(value.points_to[dest.local].offset, Offset::Zero);
+                        && matches!(value.points_to[dest.local].offset, At::Bytes(0));
                     for &local in lands {
                         let size = function
                             .locals()
@@ -777,7 +777,7 @@ impl Allocations<'_> {
                 });
         }
         let through = &value.points_to[source.local];
-        let at_start = matches!(through.offset, Offset::Zero);
+        let at_start = matches!(through.offset, At::Bytes(0));
         let maybe = |local: LocalIdx| value.may_be_unwritten(local, through.element, at_start);
         // **Any block it may read that may still be fresh is enough**,
         // fresh or maybe so, beside blocks that were written: `p = a; if (c)

@@ -12,8 +12,8 @@ use crate::source::{SourceMap, Span};
 
 use super::index::{Loc, LocalIdx, Site, Table};
 use super::parts::{
-    Cell, Extent, Held, Init, Inits, Levels, Offset, PendingRead, Reached, Read, ReadKey,
-    Realloced, SiteElements, SiteState, Width, earlier, read_key,
+    At, Cell, Extent, Held, Init, Inits, Levels, PendingRead, Reached, Read, ReadKey, Realloced,
+    SiteElements, SiteState, Width, earlier, read_key,
 };
 use super::store::{Certain, Strong, WrittenLocal};
 use super::{LostReason, named};
@@ -1685,7 +1685,7 @@ impl Known {
     ) -> bool {
         let (sites, locals) = self.levels_below(local, depth);
         for site in sites {
-            held.hold(site, Offset::Unknown);
+            held.hold(site, At::Unknown);
         }
         // **And the locals whose address it may be**, as edges, so a write
         // through it lands there: `m = *t3; *m = r;` with `*t3 = &slot`. Not

@@ -1,6 +1,6 @@
 //! The lattice's parts: what a local may hold, [`Held`], and what it reached,
 //! [`Reached`]; what is known about a site, [`SiteState`], and where in it a
-//! pointer is, [`Offset`]; the facts carried until something answers them, a read
+//! pointer is, [`At`]; the facts carried until something answers them, a read
 //! awaiting the free it is unordered against and a `realloc` awaiting its branch.
 //! What a call's name says is [`crate::library`].
 //!
@@ -191,42 +191,52 @@ impl SiteState {
     }
 }
 
-/// Where in the allocations it holds a local's value points.
+/// Where in the allocations it holds a local's value points: a position
+/// inside an object, one byte offset (ADR-0092).
 ///
-/// **Three values, because this check can be certain in both directions.**
-/// C17 7.22.3.3 p2 makes a `free` of anything but the pointer an allocation
-/// function returned undefined, and `p + 1` reaches the same allocation `p`
-/// does, so which allocation a value reaches cannot say whether freeing it is
-/// defined. A constant offset can, and one this check cannot evaluate cannot.
-/// See ADR-0036.
+/// **Certain in both directions**, at the start or off it. C17 7.22.3.3 p2
+/// makes a `free` of anything but the pointer an allocation function
+/// returned undefined, and `p + 1` reaches the same allocation `p` does, so
+/// which allocation a value reaches cannot say whether freeing it is
+/// defined. A constant offset can, and one this check cannot evaluate
+/// cannot. See ADR-0036.
+///
+/// **Only `Bytes(0)` is built yet**, where `Moved` stands for every other
+/// distance: a reader that asks off the start matches `Moved` with
+/// `Bytes(1..)`, so the day a distance is counted it is read as before.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Offset {
-    /// The start of every site this local holds, and what a local holding no
-    /// site answers.
-    Zero,
-    /// A non-zero distance from the start of every site it holds.
-    NonZero,
-    /// This check cannot say which.
+pub(super) enum At {
+    /// This many bytes from the start of every site this local holds. `0`
+    /// is the start, and what a local holding no site answers.
+    Bytes(u64),
+    /// Off the start of every site it holds, by a distance not counted.
+    Moved,
+    /// This check cannot say where.
     Unknown,
 }
 
-impl Offset {
-    /// The two together, which is `Unknown` unless they agree.
+impl At {
+    /// The two together: themselves where they agree, `Moved` where both
+    /// are off the start, and `Unknown` otherwise.
     ///
-    /// **`NonZero` survives a join, and that is not slack.** Two paths that
-    /// each moved the pointer off the start both arrive off the start, whatever
-    /// the two distances were, so `if (c) q = p + 1; else q = p + 2; free(q);`
-    /// stays a proof.
+    /// **Off the start survives a join, and that is not slack.** Two paths
+    /// that each moved the pointer off the start both arrive off the start,
+    /// whatever the two distances were, so `if (c) q = p + 1; else q = p +
+    /// 2; free(q);` stays a proof.
     ///
-    /// **`Zero` is not an identity here**, although it is what a local holding
-    /// no site answers. `int *q = 0; if (c) q = p + 1; free(q);` joins a path
-    /// holding nothing with one off the start and answers `Unknown`, which is a
-    /// warning on a program that frees null on one path and an interior
-    /// pointer on the other. That is a false report the reader can see rather
-    /// than saying safe wrongly, and ADR-0036 records it as what three values
-    /// cost.
+    /// **The start is not an identity here**, although it is what a local
+    /// holding no site answers. `int *q = 0; if (c) q = p + 1; free(q);`
+    /// joins a path holding nothing with one off the start and answers
+    /// `Unknown`, which is a warning on a program that frees null on one path
+    /// and an interior pointer on the other. That is a false report the
+    /// reader can see rather than saying safe wrongly, and ADR-0036 records
+    /// it as what three values cost.
     pub(super) fn joined(self, other: Self) -> Self {
-        if self == other { self } else { Self::Unknown }
+        match (self, other) {
+            (here, there) if here == there => here,
+            (At::Moved | At::Bytes(1..), At::Moved | At::Bytes(1..)) => At::Moved,
+            _ => At::Unknown,
+        }
     }
 }
 
@@ -692,7 +702,7 @@ pub(super) struct Held {
     /// [`Held::hold`] takes it as an argument, so that a new producer of a site
     /// cannot be written without answering where in it the value points. See
     /// ADR-0036.
-    pub(super) offset: Offset,
+    pub(super) offset: At,
     /// Whether this local may hold a pointer read out of memory.
     ///
     /// Such a pointer holds what a cell's `names` records for the allocation
@@ -1204,7 +1214,7 @@ impl Held {
     /// the common case, `*box = &q; int *t = *box; *t = 1;`, proved.
     ///
     /// **`Some(0)` off its start or inside a local**, since neither has a
-    /// width to read: `Offset` carries no distance (ADR-0036), and a local's
+    /// width to read: `At` carries no distance yet (ADR-0036), and a local's
     /// size is not the size of something inside it. **And where it is
     /// lost**, since what it holds may be an object no site it names stands
     /// for: a loop's earlier `malloc(1)` joined into `x = malloc(4)` on one
@@ -1228,7 +1238,7 @@ impl Held {
     /// belief. Kept the least so that the record alone never says more than
     /// every object it stands for.
     pub(super) fn recorded_width(&self, extent: &Table<Loc, Option<Extent>>) -> Option<u64> {
-        if self.offset != Offset::Zero || self.inner_address || self.beyond().unrecorded_address() {
+        if self.offset != At::Bytes(0) || self.inner_address || self.beyond().unrecorded_address() {
             return Some(0);
         }
         // **One rule for both kinds of place**: a site nothing made and a
@@ -1384,7 +1394,7 @@ impl Held {
                 // would be a warning about an offset nobody wrote, on every path
                 // that holds nothing and, through `Held::hold`'s join, on every
                 // parameter. See ADR-0036.
-                offset: Offset::Zero,
+                offset: At::Bytes(0),
                 loaded: false,
                 foreign: false,
                 stale_read: false,
@@ -1469,11 +1479,11 @@ impl Held {
     ///
     /// **Joined rather than assigned.** A call's destination and a parameter
     /// hold on a local [`Held::none`] or [`Held::clear`] has just left at
-    /// `Zero`, where the two agree. An opaque call's result is where they part:
-    /// it holds its own site at `Zero` and then what the call may have
+    /// `Bytes(0)`, where the two agree. An opaque call's result is where they part:
+    /// it holds its own site at `Bytes(0)` and then what the call may have
     /// returned at `Unknown`, and the join makes the whole `Unknown`, which is
     /// the answer that cannot claim more than both said.
-    pub(super) fn hold(&mut self, site: Site, offset: Offset) {
+    pub(super) fn hold(&mut self, site: Site, offset: At) {
         self.names.set(Loc::Heap(site));
         self.offset = self.offset.joined(offset);
     }
@@ -1582,7 +1592,7 @@ impl Held {
         // write through it landed, along with the set that claim was about.
         *writes_elsewhere = true;
         // What `Held::none` answers, for its reason.
-        *offset = Offset::Zero;
+        *offset = At::Bytes(0);
     }
 
     /// Also hold everything that one holds, where two paths meet.
@@ -1600,8 +1610,8 @@ impl Held {
     /// left the local unwritten. The zero of the proofs an intersection
     /// joins, `freed`, `fresh_read` and `stored_through`, of `returned_by`,
     /// and of `writes_elsewhere`, whose `true` gives up. Neither for
-    /// `offset`, whose `Zero` joined with `NonZero` is `Unknown`
-    /// ([`Offset::joined`]).
+    /// `offset`, whose `Bytes(0)` joined with `Moved` is `Unknown`
+    /// ([`At::joined`]).
     ///
     /// **A local nothing was assigned is no null**, though it names nothing
     /// as one does: `memcpy(m, &t, 8)` of a `t` written on one arm only, read
@@ -1773,7 +1783,7 @@ impl Held {
         // where the target and the value written start over it, or copy
         // into its address with `memcpy`, which is unknown either way. See
         // ADR-0036.
-        *offset = Offset::Unknown;
+        *offset = At::Unknown;
 
         // **A second operand takes the proof with it.** What
         // [`Self::freed`] is worth is that freeing this local again takes the
@@ -1870,7 +1880,7 @@ impl Held {
     pub(super) fn moved_by_arithmetic(&mut self, by: Option<i128>) {
         // **Kept by the array rule alone**, where the move is known not to
         // be zero: an earlier rule dropped this edge. See `Held::array_edge`.
-        if matches!(self.offset, Offset::NonZero) && self.may_be_a_locals_address() {
+        if matches!(self.offset, At::Moved | At::Bytes(1..)) && self.may_be_a_locals_address() {
             self.array_edge = true;
         }
         // **The element moves by what was added**, where both are known: `by`
@@ -2385,7 +2395,7 @@ pub(super) struct Marks {
     pub(super) lost: bool,
     pub(super) freed: Option<Freeing>,
     pub(super) writes_elsewhere: bool,
-    pub(super) offset: Offset,
+    pub(super) offset: At,
     pub(super) loaded: bool,
     pub(super) foreign: bool,
     pub(super) stale_read: bool,
@@ -2819,7 +2829,7 @@ mod tests {
         assert_eq!(written, Init::Maybe);
     }
 
-    use super::{Extent, Freeing, Held, Init, Inits, Levels, Offset, SiteState, Width, earlier};
+    use super::{At, Extent, Freeing, Held, Init, Inits, Levels, SiteState, Width, earlier};
     use crate::memory::index::{Idx, LocalIdx, Site};
     use crate::source::inside;
     use crate::source::{FileId, SourceMap, Span};
@@ -2843,6 +2853,23 @@ mod tests {
             held.stored_under(Width::Unbounded, 3),
             Levels::new(vec![Width::Unbounded, Width::AtMost(8), Width::AtMost(0)])
         );
+    }
+
+    /// Two positions join to themselves where they agree, to `Moved` where
+    /// both are off the start by any distances, and to `Unknown` where one
+    /// is at the start and the other is not or either is unknown. No program
+    /// reaches the second yet, since only `Bytes(0)` is built (ADR-0092).
+    ///
+    /// Mutation: drop the arm that joins two positions off the start; this
+    /// fails at `Bytes(4)` beside `Bytes(8)`.
+    #[test]
+    fn two_positions_off_the_start_join_off_the_start_whatever_the_distances() {
+        assert_eq!(At::Bytes(4).joined(At::Bytes(4)), At::Bytes(4));
+        assert_eq!(At::Bytes(4).joined(At::Bytes(8)), At::Moved);
+        assert_eq!(At::Moved.joined(At::Bytes(8)), At::Moved);
+        assert_eq!(At::Bytes(0).joined(At::Moved), At::Unknown);
+        assert_eq!(At::Bytes(0).joined(At::Bytes(4)), At::Unknown);
+        assert_eq!(At::Moved.joined(At::Unknown), At::Unknown);
     }
 
     /// The lower of two bounds, where `None` is no bound: what
@@ -2958,10 +2985,10 @@ mod tests {
     #[test]
     fn clearing_a_local_leaves_it_no_site_and_no_edge() {
         let mut held = Held::none(4);
-        held.hold(Site::at(1), Offset::Zero);
+        held.hold(Site::at(1), At::Bytes(0));
         held.name_local(LocalIdx::at(3));
         held.writes_elsewhere = false;
-        held.offset = Offset::NonZero;
+        held.offset = At::Moved;
         held.lost_read = true;
         held.unreplaced_read = true;
         held.foreign = true;
@@ -2976,7 +3003,7 @@ mod tests {
         assert!(held.sites().next().is_none());
         assert!(!held.may_be_a_locals_address());
         assert!(held.writes_elsewhere);
-        assert_eq!(held.offset, Offset::Zero);
+        assert_eq!(held.offset, At::Bytes(0));
         assert!(!held.lost_read);
         assert!(!held.unreplaced_read);
         assert!(!held.foreign);

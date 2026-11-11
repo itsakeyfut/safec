@@ -7,7 +7,7 @@ use crate::ir::{BinOp, Function, LocalId, Operand, Place, TranslationUnit, Ty};
 use super::allocations::{innermost_element, stored_pointer};
 use super::index::{Idx, LocalIdx, Site, Table};
 use super::known::{ArrayWrite, Known, WrittenBy};
-use super::parts::{Held, Init, Inits, Offset, Reached};
+use super::parts::{At, Held, Init, Inits, Reached};
 use super::store::written_alone;
 use crate::reads::derefs;
 
@@ -170,7 +170,7 @@ pub(super) fn built_from(
 
 /// Where the result of a binary operation points in the sites it reaches.
 ///
-/// `Offset::NonZero` where all of these hold, and `Offset::Unknown` otherwise:
+/// `At::Moved` where all of these hold, and `At::Unknown` otherwise:
 ///
 /// * the operator is `+`, or `-` with the followed operand on the left. C17
 ///   6.5.6 p8 keeps `P + N`, `N + P` and `P - N` inside the object `P` points
@@ -192,14 +192,9 @@ pub(super) fn built_from(
 /// it arithmetic operands only, and a hand-built IR can hold one anyway. So
 /// does a unary operator, `op` `None`: none moves a pointer by a known amount. See
 /// ADR-0036.
-fn offset_of(
-    op: Option<BinOp>,
-    operands: &[&Operand],
-    followed: &[LocalIdx],
-    value: &Known,
-) -> Offset {
+fn offset_of(op: Option<BinOp>, operands: &[&Operand], followed: &[LocalIdx], value: &Known) -> At {
     let [one] = followed[..] else {
-        return Offset::Unknown;
+        return At::Unknown;
     };
 
     let moved = match (op, operands) {
@@ -208,10 +203,10 @@ fn offset_of(
         _ => false,
     };
 
-    if moved && value.points_to[one].offset == Offset::Zero {
-        Offset::NonZero
+    if moved && value.points_to[one].offset == At::Bytes(0) {
+        At::Moved
     } else {
-        Offset::Unknown
+        At::Unknown
     }
 }
 

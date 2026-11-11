@@ -12,7 +12,7 @@ use crate::source::Span;
 use super::allocations::{Allocations, innermost_element};
 use super::index::{LocalIdx, Site};
 use super::known::Known;
-use super::parts::{Extent, Offset, SiteState, same};
+use super::parts::{At, Extent, SiteState, same};
 
 /// What this check can say about whether an access fits the object its
 /// pointer reaches.
@@ -79,7 +79,7 @@ pub(super) fn fits(
 ) -> Option<Fit> {
     let held = &known.points_to[local];
     let holds_something = held.sites().next().is_some()
-        || held.offset != Offset::Zero
+        || held.offset != At::Bytes(0)
         || held.may_be_a_locals_address()
         || held.beyond().unrecorded_address();
     if !holds_something {
@@ -153,7 +153,7 @@ pub(super) fn fits(
             Fit::Unknown
         });
     }
-    if held.beyond().loaded() || held.offset != Offset::Zero {
+    if held.beyond().loaded() || held.offset != At::Bytes(0) {
         return Some(Fit::Unknown);
     }
     if held.may_be_a_locals_address() && held.inner_address {

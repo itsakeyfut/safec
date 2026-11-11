@@ -20,7 +20,7 @@ use super::index::{Idx, Loc, LocalIdx, Site, Table};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
-    Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, Offset, PendingRead, Reached, Read,
+    At, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, PendingRead, Reached, Read,
     Realloced, SiteState, Width, earlier,
 };
 use super::store::{Landing, StoreKind, Strong};
@@ -955,7 +955,7 @@ impl Allocations<'_> {
                 lost: false,
                 freed: None,
                 writes_elsewhere: true,
-                offset: Offset::Zero,
+                offset: At::Bytes(0),
                 // **A byte is a load too.** C17 6.5 p7 lets a character type
                 // read any object, so a pointer copied a byte at a time is
                 // copied, and the byte carries what was stored where it was
@@ -2060,7 +2060,7 @@ impl Analysis for Allocations<'_> {
         // site and the number below is not changed for it. That is slack being
         // spent rather than a bound being re-derived, and the paragraph below
         // is why that is acceptable here. Where a local points in its sites
-        // moves from `Zero` or `NonZero` to `Unknown` at a join and never back,
+        // moves from `Bytes(0)` or `Moved` to `Unknown` at a join and never back,
         // once per local, and the per-local term below counts that step.
         // Whether a site is exposed is one more bit per site that a join only
         // sets, so one more step each; what each site may contain is a third
@@ -2255,7 +2255,7 @@ impl Analysis for Allocations<'_> {
         // nothing. See ADR-0060.
         let function = self.unit.function(self.function);
         for &parameter in &self.parameters {
-            known.points_to[parameter].hold(Site::of(LocalIdx::of(parameter)), Offset::Zero);
+            known.points_to[parameter].hold(Site::of(LocalIdx::of(parameter)), At::Bytes(0));
             // And what its memory holds is believed as its type says, which
             // the caller asked where it stored it. See `Held::contents_at_most`.
             let contents = self
@@ -3656,7 +3656,7 @@ impl Analysis for Allocations<'_> {
                                     lost: false,
                                     freed: None,
                                     writes_elsewhere: true,
-                                    offset: Offset::Zero,
+                                    offset: At::Bytes(0),
                                     loaded: true,
                                     foreign: false,
                                     stale_read: false,
@@ -4321,7 +4321,7 @@ impl Analysis for Allocations<'_> {
                     held.bound_contents(&handed_contents);
                     for &site in &stored {
                         if !(holds_an_address && deep[site]) {
-                            held.hold(site, Offset::Unknown);
+                            held.hold(site, At::Unknown);
                         }
                     }
                     if !stored.is_empty() {
@@ -4437,7 +4437,7 @@ impl Analysis for Allocations<'_> {
         value.replace(at, Held::none(value.points_to.len()));
         // At its start: the site is whatever the call handed back, so the
         // value is that value and not an offset into it.
-        value.points_to[result].hold(site, Offset::Zero);
+        value.points_to[result].hold(site, At::Bytes(0));
         // **The span only where this check saw an allocation.** Every call's
         // destination is a site, because a call this cannot read may hand back
         // anything and a site is how that is tracked. But `allocated here` is a
@@ -4712,7 +4712,7 @@ impl Analysis for Allocations<'_> {
                     .filter(|&other| other != site && value.exposed[other])
                     .collect();
                 for other in exposed {
-                    value.points_to[result].hold(other, Offset::Unknown);
+                    value.points_to[result].hold(other, At::Unknown);
                 }
                 // **And any escaped local's address**, for the same reason
                 // and with the same reach: `id(&x)` may return `&x`, and
@@ -4818,7 +4818,7 @@ mod caller_memory {
     fn a_local_holding_what_an_opaque_call_returned_reads_callee_memory() {
         use crate::ir::{Block, Origin, Place, Terminator};
         use crate::memory::index::{LocalIdx, Site};
-        use crate::memory::parts::Offset;
+        use crate::memory::parts::At;
 
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", "f get");
@@ -4857,11 +4857,11 @@ mod caller_memory {
         let func = unit.push_function(function);
         let analysis = crate::memory::analysis(&sources, &unit, func);
         let mut value = analysis.on_entry();
-        value.points_to[holder].hold(Site::of(LocalIdx::of(result)), Offset::Zero);
+        value.points_to[holder].hold(Site::of(LocalIdx::of(result)), At::Bytes(0));
         assert!(analysis.reads_caller_memory(holder, 1, &value));
 
         let mut value = analysis.on_entry();
-        value.points_to[holder].hold(Site::of(LocalIdx::of(other)), Offset::Zero);
+        value.points_to[holder].hold(Site::of(LocalIdx::of(other)), At::Bytes(0));
         assert!(!analysis.reads_caller_memory(holder, 1, &value));
     }
 }
