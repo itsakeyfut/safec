@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (its open silence about a copy closed by ADR-0088)"
 date: 2026-11-10
 decision-makers: itsakeyfut
 ---
