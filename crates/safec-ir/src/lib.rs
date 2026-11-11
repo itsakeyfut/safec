@@ -20,8 +20,10 @@
 //! instruction that cannot say where it came from cannot be reported about.
 
 pub mod analysis;
+mod bits;
 pub mod cfg;
 pub mod dataflow;
+mod index;
 pub mod interp;
 pub mod ir;
 pub mod library;
@@ -30,5 +32,7 @@ pub mod memory;
 pub mod nullability;
 pub mod print;
 mod reads;
+mod runs;
 pub mod source;
+mod taken;
 pub mod target;

@@ -21,10 +21,30 @@ use crate::ir::{
 use super::bits::Bits;
 use super::index::LocalIdx;
 
+/// That the loop headed by [`Self::head`] runs at least once, whose
+/// zero-turn path no execution takes.
+///
+/// **Only [`shown_to_run`] builds one**: the field is private, so a hook
+/// that answered "this loop runs" for a loop nobody showed does not compile
+/// (`error[E0451]`). That answer is a silence about the loop's zero-turn
+/// path, so it was the one mutation of the solver's hook that built and
+/// misreported. See #895 and ADR-0083.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ShownToRun {
+    head: BlockId,
+}
+
+impl ShownToRun {
+    /// The head of the loop shown to run.
+    pub fn head(self) -> BlockId {
+        self.head
+    }
+}
+
 /// Whether `each` is shown to run its body at least once, with its head's
 /// test the only way past it and taken only after a whole turn.
 ///
-/// `taken` is every local whose address is taken, which `assigned::address_taken`
+/// `taken` is every local whose address is taken, which `taken::address_taken`
 /// answers: a write through an address is not followed here, so such a local
 /// is never taken to hold a constant.
 ///
@@ -41,23 +61,23 @@ use super::index::LocalIdx;
 ///   the skipped write past it. The only way out of a body today is a
 ///   `return`, the frontend reading neither `break` nor `goto` yet;
 /// - the head's test is true on the way in, by [`head_test`].
-pub(super) fn shown_to_run(
+pub(crate) fn shown_to_run(
     unit: &TranslationUnit,
     function: &Function,
     cfg: &Cfg,
     each: &Loop,
     taken: &Bits<LocalIdx>,
-) -> bool {
+) -> Option<ShownToRun> {
     let head = each.head();
     let mut outside = cfg
         .predecessors(head)
         .iter()
         .filter(|&&from| !each.contains(from));
     let (Some(&entry), None) = (outside.next(), outside.next()) else {
-        return false;
+        return None;
     };
     if each.latches().len() != 1 {
-        return false;
+        return None;
     }
     let Terminator::Branch {
         condition,
@@ -66,15 +86,16 @@ pub(super) fn shown_to_run(
         ..
     } = &function.block(head).terminator
     else {
-        return false;
+        return None;
     };
     if !each.contains(*then) || each.contains(*otherwise) {
-        return false;
+        return None;
     }
     if leaves_early_to(function, cfg, each, *otherwise) {
-        return false;
+        return None;
     }
-    head_test(unit, function, cfg, entry, head, condition, taken) == Some(true)
+    (head_test(unit, function, cfg, entry, head, condition, taken) == Some(true))
+        .then_some(ShownToRun { head })
 }
 
 /// Whether an edge leaving `each` from a block other than its head reaches
@@ -347,7 +368,7 @@ mod tests {
             .into_iter()
             .find(|each| each.head() == ids[1])
             .expect("block 1 heads a loop");
-        shown_to_run(&unit, &function, &cfg, &each, &taken)
+        shown_to_run(&unit, &function, &cfg, &each, &taken).is_some()
     }
 
     /// The control: one latch, and the only way out is the head's test.

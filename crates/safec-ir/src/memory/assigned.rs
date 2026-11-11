@@ -49,8 +49,8 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve, solve_first_turn_within};
 use crate::ir::{
-    BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Operation, Place,
-    Projection, Rvalue, Terminator, TranslationUnit,
+    BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place, Projection,
+    Rvalue, Terminator, TranslationUnit,
 };
 use crate::source::{SourceMap, Span};
 
@@ -344,39 +344,9 @@ fn reaches_certainly(
     walk(function, target, read, &mut state, &ends_here)
 }
 
-/// Every local whose own address is taken anywhere in `function`: what this
-/// analysis does not watch, since a write through that address is not
-/// followed here, and what the memory check's [`Known::init`] asks by
-/// name instead, since it does follow one. One answer for both, so that a
-/// local whose address is taken is asked by that check alone (#640); one
-/// whose address is never taken is asked here first, and by that check
-/// only for its doubt (ADR-0075).
-///
-/// [`Known::init`]: super::known::Known::init
-pub(super) fn address_taken(function: &Function) -> Bits<LocalIdx> {
-    let mut taken = Bits::new(function.locals().len());
-    for block in function.blocks() {
-        for element in &block.elements {
-            if let Element::Assign(Operation {
-                value: Rvalue::Address(place),
-                ..
-            }) = element
-            {
-                // **The whole local's address, or an element's.** `&a[0]` is
-                // the address an array converts to (#621), and its own start.
-                // `&*p` is `p`'s value and not `p`'s address.
-                if !place
-                    .projection
-                    .iter()
-                    .any(|step| matches!(step, Projection::Deref))
-                {
-                    taken.set(LocalIdx::of(place.local));
-                }
-            }
-        }
-    }
-    taken
-}
+/// Every local whose own address is taken. At crate level, so that another
+/// analysis asks the same question this one answers. See #895.
+pub(super) use crate::taken::address_taken;
 
 /// Every read of a watched pointer local that no path to it assigned, each a
 /// proof, and every read some path assigned that a branch edge certainly
@@ -513,7 +483,7 @@ pub(super) fn findings(
             (false, true) => *then,
             _ => continue,
         };
-        if runs::shown_to_run(unit, function, &cfg, each, &taken) {
+        if runs::shown_to_run(unit, function, &cfg, each, &taken).is_some() {
             continue;
         }
         let Some(start) = solution.value(head) else {

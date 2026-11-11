@@ -2258,13 +2258,13 @@ impl Analysis for Allocations<'_> {
     }
 
     fn join_back(&self, head: BlockId, into: &mut Self::Value, from: &Self::Value) {
-        self.joined(into, from, self.runs_once[head.index()]);
+        self.joined(into, from, self.runs_once[head.index()].is_some());
     }
 
     /// A loop shown to run is left only through its head after a whole turn
     /// (ADR-0069 rule 6), so what leaves it is what its back edges brought.
     /// See ADR-0083.
-    fn leaves_after_a_turn(&self, head: BlockId) -> bool {
+    fn leaves_after_a_turn(&self, head: BlockId) -> Option<crate::runs::ShownToRun> {
         self.runs_once[head.index()]
     }
 
@@ -2285,7 +2285,7 @@ impl Analysis for Allocations<'_> {
         from: &Self::Value,
         before: &Self::Value,
     ) {
-        self.joined(into, from, self.runs_once[head.index()]);
+        self.joined(into, from, self.runs_once[head.index()].is_some());
         for place in into.init.indices() {
             let again = into.init[place].unwritten_again(before.init[place], from.init[place]);
             match place {

@@ -29,7 +29,7 @@
 //! destination and a parameter are the two places one can arrive from, and both
 //! are locals, so a site is numbered as the local is and there is no second
 //! numbering to keep in step; it is a type of its own all the same, `Site`
-//! beside `LocalIdx` in `memory/index.rs`, so that one cannot be passed for
+//! in `memory/index.rs` beside the crate's `LocalIdx`, so that one cannot be passed for
 //! the other. Two calls are two locals because the lowering gives each call
 //! its own temporary. A parameter has to be a site as well: without one,
 //! `void f(int *p) { free(p); free(p); }` has nothing to mark and the second
@@ -61,9 +61,12 @@
 //! [the safety model]: https://github.com/itsakeyfut/safec/blob/main/docs/safety-model.md
 //! [`LocalId`]: crate::ir::LocalId
 
+// Analysis-neutral, at crate level, and named here so that a module of this
+// check reaches them as it always has. See #895.
+use crate::{bits, runs};
+
 mod allocations;
 mod assigned;
-mod bits;
 mod built;
 mod fit;
 mod index;
@@ -71,7 +74,6 @@ mod init;
 mod known;
 mod parts;
 mod report;
-mod runs;
 mod store;
 mod transfer;
 
@@ -720,7 +722,7 @@ fn analysis<'a>(
         runs_once: Vec::new(),
         made_once: Table::from_vec(Vec::new()),
     };
-    analysis.runs_once = vec![false; function.blocks().len()];
+    analysis.runs_once = vec![None; function.blocks().len()];
     let taken = assigned::address_taken(function);
     let loops = analysis.cfg.loops();
     for each in &loops {

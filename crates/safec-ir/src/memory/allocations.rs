@@ -73,8 +73,9 @@ pub(super) struct Allocations<'a> {
     pub(super) cfg: Cfg,
     /// Per block, whether it is the head of a loop shown to run its body at
     /// least once, [`shown_to_run`](super::runs::shown_to_run): the one loop
-    /// whose back edge creates no doubt. See ADR-0064.
-    pub(super) runs_once: Vec<bool>,
+    /// whose back edge creates no doubt, with the proof only that function
+    /// builds. See ADR-0064.
+    pub(super) runs_once: Vec<Option<crate::runs::ShownToRun>>,
     /// Per local, whether every call that writes it is on no cycle of the
     /// graph, so that the site it names makes at most one block an
     /// activation: where that call's result is tested null, no block of the

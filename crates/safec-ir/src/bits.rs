@@ -6,8 +6,8 @@ use super::index::Idx;
 
 /// A set of indices below `len`, a bit each.
 ///
-/// **What the memory check's square tables are made of**: [`Held::sites`],
-/// [`Held::locals`] and [`Held::named_at_read`], of a local's value and of a
+/// **What the memory check's square tables are made of**: `Held::sites`,
+/// `Held::locals` and `Held::named_at_read` in `memory::parts`, of a local's value and of a
 /// block's cell, each
 /// hold a bit per local for every local, and as `Vec<bool>` they spent a byte
 /// on each. Hand-written because this crate takes no dependencies
@@ -24,15 +24,12 @@ use super::index::Idx;
 /// stray bit there would keep two equal values apart for ever. Nothing here
 /// sets every bit, so it holds by construction.
 ///
-/// [`Held::sites`]: super::parts::Held::sites
-/// [`Held::locals`]: super::parts::Held::locals
-/// [`Held::named_at_read`]: super::parts::Held::named_at_read
 ///
-/// **Kept by `I`**, a [`Site`](super::index::Site) or a
-/// [`LocalIdx`](super::index::LocalIdx), so that a set of sites cannot be
+/// **Kept by `I`**, a `Site` (in `memory::index`) or a
+/// [`LocalIdx`](crate::index::LocalIdx), so that a set of sites cannot be
 /// asked about a local. See ADR-0063.
 #[derive(Clone, PartialEq, Eq)]
-pub(super) struct Bits<I> {
+pub(crate) struct Bits<I> {
     len: usize,
     words: Vec<u64>,
     index: PhantomData<fn(I)>,
@@ -40,7 +37,7 @@ pub(super) struct Bits<I> {
 
 impl<I: Idx> Bits<I> {
     /// The empty set, below `len`.
-    pub(super) fn new(len: usize) -> Self {
+    pub(crate) fn new(len: usize) -> Self {
         Bits {
             len,
             words: vec![0; len.div_ceil(64)],
@@ -49,28 +46,28 @@ impl<I: Idx> Bits<I> {
     }
 
     /// Whether `index` is in the set.
-    pub(super) fn get(&self, index: I) -> bool {
+    pub(crate) fn get(&self, index: I) -> bool {
         let index = index.index();
         self.check(index);
         self.words[index / 64] & (1 << (index % 64)) != 0
     }
 
     /// Put `index` in the set.
-    pub(super) fn set(&mut self, index: I) {
+    pub(crate) fn set(&mut self, index: I) {
         let index = index.index();
         self.check(index);
         self.words[index / 64] |= 1 << (index % 64);
     }
 
     /// Take `index` out of the set.
-    pub(super) fn remove(&mut self, index: I) {
+    pub(crate) fn remove(&mut self, index: I) {
         let index = index.index();
         self.check(index);
         self.words[index / 64] &= !(1 << (index % 64));
     }
 
     /// Put every index of `other` in the set, and say whether that added any.
-    pub(super) fn union_with(&mut self, other: &Bits<I>) -> bool {
+    pub(crate) fn union_with(&mut self, other: &Bits<I>) -> bool {
         assert_eq!(self.len, other.len, "a union of sets of two lengths");
         let mut grew = false;
         for (here, there) in self.words.iter_mut().zip(&other.words) {
@@ -81,7 +78,7 @@ impl<I: Idx> Bits<I> {
     }
 
     /// Every index in the set, in order.
-    pub(super) fn ones(&self) -> impl Iterator<Item = I> + '_ {
+    pub(crate) fn ones(&self) -> impl Iterator<Item = I> + '_ {
         self.words.iter().enumerate().flat_map(|(at, &word)| {
             let mut rest = word;
             std::iter::from_fn(move || {
@@ -96,17 +93,17 @@ impl<I: Idx> Bits<I> {
     }
 
     /// Whether the set holds anything.
-    pub(super) fn any(&self) -> bool {
+    pub(crate) fn any(&self) -> bool {
         self.words.iter().any(|&word| word != 0)
     }
 
     /// Empty the set.
-    pub(super) fn clear_all(&mut self) {
+    pub(crate) fn clear_all(&mut self) {
         self.words.fill(0);
     }
 
     /// How many indices the set is below: the `len` it was made with.
-    pub(super) fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.len
     }
 

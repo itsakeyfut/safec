@@ -59,6 +59,7 @@ use std::collections::BTreeSet;
 
 use crate::cfg::Cfg;
 use crate::ir::{BlockId, Element, Function, Terminator};
+use crate::runs::ShownToRun;
 
 /// What an analysis is: a height, a value, a join, and what the program does
 /// to it.
@@ -227,13 +228,15 @@ pub trait Analysis {
     ///
     /// **The default is `false`, the join every head has**, which is right
     /// for any loop that may run zero times. The memory check answers `true`
-    /// for a loop shown to run (`memory::runs::shown_to_run`), whose
+    /// for a loop shown to run (`runs::shown_to_run`), whose
     /// zero-turn path no execution takes: joined in at the head's exit, it
     /// carried a site a body that nulls the pointer every turn had dropped
-    /// (#874). A wrong `true` is a silence about that path. See ADR-0083.
-    fn leaves_after_a_turn(&self, head: BlockId) -> bool {
+    /// (#874). A wrong `true` is a silence about that path, so the answer is
+    /// a proof only `runs::shown_to_run` can build, and one for another head
+    /// is refused by the solver. See ADR-0083 and #895.
+    fn leaves_after_a_turn(&self, head: BlockId) -> Option<ShownToRun> {
         let _ = head;
-        false
+        None
     }
 
     /// What one element of a block does to what is known.
@@ -596,15 +599,25 @@ fn solved<A: Analysis>(
     // leaves out. **Nothing guards that exclusion**, measured: such a walk
     // asks no block its head's exit reaches, so leaving it in moves no case.
     // See `Analysis::leaves_after_a_turn`.
-    let left_after_a_turn: Vec<crate::cfg::Loop> = cfg
-        .loops()
-        .into_iter()
-        .filter(|each| {
-            heads[each.head().index()]
+    let left_after_a_turn: Vec<crate::cfg::Loop> =
+        cfg.loops()
+            .into_iter()
+            .filter(|each| {
+                heads[each.head().index()]
                 && !first_turn_of.contains(&each.head())
-                && analysis.leaves_after_a_turn(each.head())
-        })
-        .collect();
+                && analysis.leaves_after_a_turn(each.head()).is_some_and(|proof| {
+                    // A proof for another loop's head says nothing of this
+                    // one, and believing it would drop this loop's zero-turn
+                    // path in silence.
+                    assert_eq!(
+                        proof.head(),
+                        each.head(),
+                        "`leaves_after_a_turn` answered with a proof for another loop's head",
+                    );
+                    true
+                })
+            })
+            .collect();
 
     while let Some(at) = worklist.pop_first() {
         let block = cfg.drain()[at];

@@ -133,6 +133,19 @@ standard. Copy [`adr-template.md`](./adr-template.md) to start one.
 
 Records are numbered consecutively from `0001`.
 
+## Paths that moved
+
+A settled record keeps the paths it was written with. Where a module has
+moved since, this table says where it went, so a reader following an old path
+finds the new one without the record being edited.
+
+| Was | Is | Moved by |
+|---|---|---|
+| `memory::index::{Idx, LocalIdx, Table}` | `crate::index` (`Site` and `Loc` stay in `memory::index`) | #895 |
+| `memory::bits`, `memory/bits.rs` | `crate::bits`, `crates/safec-ir/src/bits.rs` | #895 |
+| `memory::runs`, `memory/runs.rs` | `crate::runs`, `crates/safec-ir/src/runs.rs` | #895 |
+| `memory::assigned::address_taken` | `crate::taken::address_taken` | #895 |
+
 ## Where each kind of writing belongs
 
 | Location | Holds | Does not hold |
