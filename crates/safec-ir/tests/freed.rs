@@ -1978,6 +1978,9 @@ fn a_pointer_scaled_by_a_constant_is_not_proved_to_be_off_the_start() {
 /// suspicion the reader could see. Taking the constant for a move would be a
 /// false proof. See ADR-0036.
 ///
+/// Named `a_pointer_plus_a_literal_zero_is_not_proved_to_be_off_the_start`
+/// until #703, the name ADR-0036's Confirmation gives it.
+///
 /// Mutation: in `memory/built.rs::offset_of`, answer `At::Moved` for a
 /// distance of zero. The free becomes an `InteriorFree` that is
 /// `Conclusion::Unsafe`, and this fails.

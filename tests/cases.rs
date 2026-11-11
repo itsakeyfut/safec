@@ -3362,7 +3362,9 @@ cases! {
         // interior free. The program is one C defines. Mutation: in
         // `offset_of`, count the distance from the start of the object
         // rather than from where the operand points; this fails with a
-        // proved `SC0404` about a free C defines.
+        // proved `SC0404` about a free C defines. Named
+        // `a_free_of_a_pointer_moved_back_to_the_start_is_not_proved` until
+        // #703, the name ADR-0036's Confirmation gives it.
         a_free_of_a_pointer_moved_back_to_the_start_is_not_an_interior_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Two allocations, one offset, and no `allocated here`: naming either
         // line would be a caret on an allocation the value may not hold. Both

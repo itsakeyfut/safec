@@ -145,6 +145,9 @@ finds the new one without the record being edited.
 | `memory::bits`, `memory/bits.rs` | `crate::bits`, `crates/safec-ir/src/bits.rs` | #895 |
 | `memory::runs`, `memory/runs.rs` | `crate::runs`, `crates/safec-ir/src/runs.rs` | #895 |
 | `memory::assigned::address_taken` | `crate::taken::address_taken` | #895 |
+| `memory::parts::Offset` | `memory::parts::At` | #703 |
+| `a_pointer_plus_a_literal_zero_is_not_proved_to_be_off_the_start` | `a_pointer_plus_a_literal_zero_is_at_its_start`, which a counted distance now proves | #703 |
+| `a_free_of_a_pointer_moved_back_to_the_start_is_not_proved` | `a_free_of_a_pointer_moved_back_to_the_start_is_not_an_interior_free`, likewise | #703 |
 
 ## Where each kind of writing belongs
 
