@@ -2471,12 +2471,23 @@ cases! {
         // by review. Mutation: `Known::names_only_fresh` answers `false`; this
         // goes silent.
         a_pointer_read_out_of_what_realloc_of_a_block_nothing_wrote_returns_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `realloc` of a pointer that may be null copies nothing on the path
+        // where it is, so what it returns may be indeterminate there (#708,
+        // ADR-0093 rule 5); the third, a written block on every path, is not
+        // doubted. Mutation: the doubt ignores `Held::may_be_null`; the first
+        // two go silent.
+        a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_what_realloc_of_a_written_block_on_every_path_returns_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And a pointer read out of memory, or one a call this check cannot
         // read may have written, names what this check cannot see, and its
-        // `realloc` is not read as fresh. Mutation: every test of
-        // `Known::names_no_more_than_its_sites` dropped together; both reads
-        // of `*pp` are `SC0411`. Each dropped alone decides nothing, since
-        // the two routes each carry two marks. Found by review.
+        // `realloc` is not read as certainly fresh. **The second is doubted**,
+        // by the author's decision on #708: `o` was `0`, and a call that may
+        // not write it may leave it so, so `realloc` may return fresh memory
+        // there. Mutation: every test of `Known::names_no_more_than_its_sites`
+        // dropped together; both reads of `*pp` are certain `SC0411`. Each
+        // dropped alone decides nothing, since the two routes each carry two
+        // marks. Found by review.
         a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_fresh: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read and the value thrown away. Mutation: as above. It builds.
         a_pointer_read_out_of_fresh_memory_and_discarded_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

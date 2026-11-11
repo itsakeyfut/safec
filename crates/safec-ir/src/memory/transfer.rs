@@ -4539,8 +4539,14 @@ impl Analysis for Allocations<'_> {
         ) {
             // **And may be indeterminate where the old block may have been**,
             // fresh or maybe so beside what else it names: it copies those
-            // bytes as well (#724). See `Known::init`.
-            if handed.projection.is_empty() && value.may_name_fresh(handed.local) {
+            // bytes as well (#724). See `Known::init`. **Or where what it was
+            // handed may be null**, on a path where it copies nothing and
+            // returns fresh memory (C17 7.22.3.5 p3): a join unions what the
+            // paths name, so the null path names nothing to tell it by, and
+            // `Held::may_be_null` says it (#708, ADR-0093 rule 5).
+            if handed.projection.is_empty()
+                && (value.may_name_fresh(handed.local) || value.points_to[handed.local].may_be_null)
+            {
                 value.init[site].doubt();
                 value.block_elements[site] = None;
             }
