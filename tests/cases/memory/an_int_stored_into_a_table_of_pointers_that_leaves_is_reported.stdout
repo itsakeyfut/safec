@@ -1,0 +1,96 @@
+Target "x86_64-pc-windows-msvc"
+Function an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:1:28 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
+Function an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:1:64 "use" declared
+  Local "_0" "void" return
+Function an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:6 "b"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "pp"
+  Local "_2" "int"
+  Local "_3" "void **" "q"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "void *" "v"
+  Local "_7" "int *" "ip"
+  Local "_8" "int"
+  Local "_9" "void **"
+  Block "bb0" entry
+    Operation an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:26 written
+      Destination "_2"
+      Unary "Not"
+        Copy "_1"
+    Branch an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:26 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:26 generated
+    Return
+  Block "bb2"
+    Sequenced an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:26 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:50 generated
+    Call an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:50 written "malloc" "bb4"
+      Destination "_4"
+      Constant 16
+  Block "bb4"
+    Operation an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:46 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:50 generated
+    Operation an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:66 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:66 written "bb5" "bb6"
+      Copy "_5"
+  Block "bb5"
+    Sequenced an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:66 generated
+    Return
+  Block "bb6"
+    Sequenced an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:66 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:84 written
+      Destination "_6"
+      Use
+        Copy "_3"
+    Sequenced an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:88 generated
+    Operation an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:96 written
+      Destination "_7"
+      Use
+        Copy "_6"
+    Sequenced an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:101 generated
+    Operation an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:104 written
+      Destination "_7"
+        Deref
+      Use
+        Constant 1
+    Operation an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:104 written
+      Destination "_8"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:104 generated
+    Operation an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:113 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Operation an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:113 written
+      Destination "_9"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:113 generated
+    ArgumentsEvaluated an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:122 generated
+    Call an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:122 written "use" "bb8"
+  Block "bb8"
+    Sequenced an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:122 generated
+    Return

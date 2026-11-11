@@ -1,0 +1,87 @@
+Target "x86_64-pc-windows-msvc"
+Function a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:1:28 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
+Function a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:1:64 "use" declared
+  Local "_0" "void" return
+Function a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:6 "d"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "pp"
+  Local "_2" "int"
+  Local "_3" "void *" "m"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "void *"
+  Local "_7" "void **" "q"
+  Local "_8" "void **"
+  Block "bb0" entry
+    Operation a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:26 written
+      Destination "_2"
+      Unary "Not"
+        Copy "_1"
+    Branch a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:26 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:26 generated
+    Return
+  Block "bb2"
+    Sequenced a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:26 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:49 generated
+    Call a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:49 written "malloc" "bb4"
+      Destination "_4"
+      Constant 16
+  Block "bb4"
+    Operation a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:45 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:49 generated
+    Operation a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:65 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:65 written "bb5" "bb6"
+      Copy "_5"
+  Block "bb5"
+    Sequenced a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:65 generated
+    Return
+  Block "bb6"
+    Sequenced a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:65 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:77 generated
+    Call a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:77 written "memset" "bb8"
+      Destination "_6"
+      Copy "_3"
+      Constant 0
+      Constant 16
+  Block "bb8"
+    Sequenced a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:77 generated
+    Operation a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:102 written
+      Destination "_7"
+      Use
+        Copy "_3"
+    Sequenced a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:106 generated
+    Operation a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:109 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:109 written
+      Destination "_8"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:109 generated
+    ArgumentsEvaluated a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:118 generated
+    Call a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:118 written "use" "bb9"
+  Block "bb9"
+    Sequenced a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported.c:2:118 generated
+    Return

@@ -1,3 +1,13 @@
+error[SC0413]: this lets a pointer leave that may not point at the start of an object
+    ╭─[ an_int_stored_in_a_table_of_pointers_handed_to_a_call_is_asked_how_wide.c:13:5 ]
+    │
+ 13 │     *ib = 7;
+    │     ───┬───  
+    │        ╰───── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave as a `void *` only at the start of an object
 error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
     ╭─[ an_int_stored_in_a_table_of_pointers_handed_to_a_call_is_asked_how_wide.c:14:5 ]
     │

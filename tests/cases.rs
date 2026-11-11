@@ -311,6 +311,20 @@ cases! {
         // nothing wrote and is. Mutation: ask a block's whole record in
         // `report::source_may_be_unwritten`; the first is `SC0411`.
         a_copy_of_the_written_slot_of_a_block_kept_per_slot_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write narrower than a pointer into memory that may hold one
+        // writes part of a pointer, however it is spelled: an `int` store, a
+        // `memset` of part of a slot and a `char` store each record it, as a
+        // library copy of that length does (#913, #917, ADR-0092 rule 5). A
+        // whole `memset`, whole pointers, and an `int` store into memory of
+        // `int`s are not reported. Mutation: `note_narrow_store` records
+        // nothing; the first and third go silent. Mutation: the `memset` arm
+        // records nothing; the second goes silent.
+        an_int_stored_into_a_table_of_pointers_that_leaves_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_memset_of_part_of_a_pointer_into_a_table_that_leaves_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_char_stored_into_a_pointer_read_back_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_table_of_whole_pointers_that_leaves_is_not_reported_as_part_of_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_int_stored_into_memory_of_ints_that_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_of_a_block_kept_per_slot_past_its_written_slot_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy carries what it copies into and out of a local, as
         // between blocks (#750). Mutation: carry no mark into a local, or

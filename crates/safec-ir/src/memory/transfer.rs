@@ -324,6 +324,65 @@ impl Allocations<'_> {
         }
     }
 
+    /// Record a store narrower than a pointer as writing part of one, in each
+    /// block or local its pointer names that is wide enough to hold a
+    /// pointer: a pointer later read out of that slot, or let leave, is made
+    /// of the bytes it wrote and others (#913). `*ip = 1;` with `ip` an
+    /// `int *` into memory of pointers, or `*c = 1;` with `c` a `char *`
+    /// (#917), was counted as writing the slot whole. See
+    /// `Known::part_written`, ADR-0087 and ADR-0092 rule 5.
+    ///
+    /// **Only where it is placed**: one dereference, at a position counted
+    /// from the start. A store at a position this check cannot count, a
+    /// `char` loop's `c[i] = 0;` among them, is no partial write here, since
+    /// it may fill every byte of the slot over the loop, and recording it
+    /// doubted `a_char_buffer_filled_by_a_loop_read_as_a_pointer_is_not_doubted`.
+    /// **Not memory narrower than a pointer**, which holds no pointer to make
+    /// of it. A store of a pointer's whole width is not narrow.
+    fn note_narrow_store(&self, function: &Function, place: &Place, at: Span, value: &mut Known) {
+        if derefs(place) != 1 {
+            return;
+        }
+        let target = self.unit.target();
+        let pointer = u64::from(target.pointer_bits() / target.char().bits());
+        let narrow = self
+            .unit
+            .place_ty(function, place)
+            .and_then(|ty| self.unit.size_of(ty))
+            .is_some_and(|width| width < pointer);
+        if narrow {
+            self.note_part_of_a_pointer(place.local, at, value);
+        }
+    }
+
+    /// Record a write through `local` at `at` as writing part of a pointer
+    /// in each block or local it names that is wide enough to hold one, where
+    /// it points at a position counted from the start. One body for a
+    /// narrow store and a partial `memset`. See [`Self::note_narrow_store`].
+    fn note_part_of_a_pointer(&self, local: LocalId, at: Span, value: &mut Known) {
+        let target = self.unit.target();
+        let pointer = u64::from(target.pointer_bits() / target.char().bits());
+        let held = &value.points_to[local];
+        if !matches!(held.offset, At::Bytes(_)) {
+            return;
+        }
+        let wide_enough =
+            |extent: Option<Extent>| extent.is_some_and(|extent| extent.lower() >= pointer);
+        let mut places: Vec<Loc> = held
+            .sites()
+            .filter(|&site| wide_enough(value.extent[site]))
+            .map(Loc::Heap)
+            .collect();
+        places.extend(
+            held.locals()
+                .filter(|&local| wide_enough(value.extent[local]))
+                .map(Loc::Local),
+        );
+        for written in places {
+            value.note_part_written(self.sources, written, at);
+        }
+    }
+
     /// How many innermost elements one object of `ty` holds: an array's
     /// length times its element's, and one pointer. `None` where the
     /// innermost element is not a pointer: an element is counted for the
@@ -2524,6 +2583,9 @@ impl Analysis for Allocations<'_> {
                         unwritten_before: &unwritten_before,
                     },
                 );
+                // And part of a pointer, where it is narrower than one. See
+                // `Self::note_narrow_store`.
+                self.note_narrow_store(function, &operation.place, operation.origin.span(), value);
 
                 // **Into the allocations the pointer holds, what the write
                 // carries is inside them**, exposed whenever they are, by
@@ -3443,6 +3505,26 @@ impl Analysis for Allocations<'_> {
             // from now on, and a local whose address it is handed may have
             // been written through it, as ADR-0029 says of an opaque call.
             Callee::ReturnsFirst | Callee::Copies => {
+                // **A `memset` of part of a pointer writes part of one**, as
+                // a copy of that length does: `memset(m, 1, 4)` into memory
+                // later held as pointers left a pointer of four set bytes
+                // and four others in silence (#913). Only `memset`, whose
+                // write starts at what it is handed; a string function's
+                // ends where its string does. See `Self::note_part_of_a_pointer`.
+                if self
+                    .library(*callee)
+                    .is_some_and(|row| row.name == "memset")
+                    && !matches!(
+                        self.copied_pointers(*callee, arguments),
+                        CopiedPointers::Whole
+                    )
+                {
+                    if let Some(Operand::Copy(dest)) = arguments.first() {
+                        if dest.projection.is_empty() {
+                            self.note_part_of_a_pointer(dest.local, origin.span(), value);
+                        }
+                    }
+                }
                 // **The copy door's answer for every field, never `..`**, so
                 // a field added to `Known` answers here for what a library
                 // copy does with it. See ADR-0091.

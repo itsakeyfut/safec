@@ -1,0 +1,10 @@
+error[SC0413]: this lets a pointer leave that may not point at the start of an object
+   ╭─[ a_memset_of_part_of_a_pointer_into_a_table_that_leaves_is_reported.c:2:77 ]
+   │
+ 2 │ void d(void ***pp) { if (!pp) return; void *m = malloc(16); if (!m) return; memset(m, 1, 4); void **q = m; *pp = q; use(); }
+   │                                                                             ───────┬───────  
+   │                                                                                    ╰───────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave as a `void *` only at the start of an object

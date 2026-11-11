@@ -1,0 +1,84 @@
+Target "x86_64-pc-windows-msvc"
+Function an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:1:28 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
+Function an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:1:64 "use" declared
+  Local "_0" "void" return
+Function an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:6 "g"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "pp"
+  Local "_2" "int"
+  Local "_3" "int *" "m"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Block "bb0" entry
+    Operation an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:24 written
+      Destination "_2"
+      Unary "Not"
+        Copy "_1"
+    Branch an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:24 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:24 generated
+    Return
+  Block "bb2"
+    Sequenced an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:24 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:46 generated
+    Call an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:46 written "malloc" "bb4"
+      Destination "_4"
+      Constant 16
+  Block "bb4"
+    Operation an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:42 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:46 generated
+    Operation an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:62 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:62 written "bb5" "bb6"
+      Copy "_5"
+  Block "bb5"
+    Sequenced an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:62 generated
+    Return
+  Block "bb6"
+    Sequenced an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:62 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:74 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:74 written
+      Destination "_6"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:74 generated
+    Operation an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:82 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Operation an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:82 written
+      Destination "_7"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:82 generated
+    ArgumentsEvaluated an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:91 generated
+    Call an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:91 written "use" "bb8"
+  Block "bb8"
+    Sequenced an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:91 generated
+    Return
