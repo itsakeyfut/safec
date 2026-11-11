@@ -1635,14 +1635,6 @@ impl Allocations<'_> {
             handed_untyped,
             block_elements,
         } = into;
-        // Which locals this side left unwritten, before `unwritten` is
-        // intersected below: such a local is no null, and the values' join
-        // asks it (#719). See `Held::joined`.
-        let unwritten_here: Table<LocalIdx, bool> = Table::from_vec(
-            init.locals()
-                .map(|local| init[local].is_unwritten())
-                .collect(),
-        );
         // May-facts, so a union, as `exposed` of a local is. See
         // `Known::handed_untyped`.
         for (here, there) in handed_untyped.iter_mut().zip(&from.handed_untyped) {
@@ -1837,10 +1829,7 @@ impl Allocations<'_> {
             }
         }
 
-        for (local, (here, there)) in points_to
-            .indices()
-            .zip(points_to.iter_mut().zip(&from.points_to))
-        {
+        for (here, there) in points_to.iter_mut().zip(&from.points_to) {
             // **A side where the local holds no block, and nothing holds the
             // site, keeps the other side's `returned_by`**: no block of that
             // site exists there, so `p = 0; if (c) p = malloc(8); if (p) *p =
@@ -1863,11 +1852,7 @@ impl Allocations<'_> {
                 (None, Some(site)) if no_block(here, &state[site], site) => Some(site),
                 _ => None,
             };
-            here.joined(
-                there,
-                self.sources,
-                (unwritten_here[local], from.init[local].is_unwritten()),
-            );
+            here.joined(there, self.sources);
             if kept.is_some() {
                 here.returned_by = kept;
             }
@@ -2982,8 +2967,12 @@ impl Analysis for Allocations<'_> {
                         value.replace(at, reached);
                     }
                     // A constant is not a pointer this check can follow.
-                    Rvalue::Use(Operand::Constant(_)) => {
-                        value.replace(at, Held::none(value.points_to.len()));
+                    // **And a `0` is a null**, which the value says (ADR-0093
+                    // rule 3): a join keeps another path's belief beside it.
+                    Rvalue::Use(Operand::Constant(constant)) => {
+                        let mut null = Held::none(value.points_to.len());
+                        null.may_be_null = *constant == 0;
+                        value.replace(at, null);
                     }
                     // The address of a place is not an allocation this check
                     // follows: nothing here frees a local's own storage, which

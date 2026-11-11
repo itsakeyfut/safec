@@ -952,6 +952,21 @@ pub(super) struct Held {
     ///
     /// [`Known::init`]: super::known::Known::init
     pub(super) stored_through: bool,
+    /// Whether this may be a null pointer, on some path: set by an
+    /// assignment of the constant `0`, a union at a join, kept by a copy of
+    /// the value, and dropped by everything else, arithmetic included, since
+    /// a null moved by arithmetic is no null (C17 6.5.6 p8 asks the operand
+    /// to point into an object). A load gives none, as memory records none.
+    ///
+    /// **Said rather than inferred** from every other mark being absent,
+    /// which a local nothing was assigned shares with a null and arithmetic
+    /// on a null kept. See ADR-0093 rule 3.
+    ///
+    /// Mutation: the constant arm never sets it;
+    /// `a_load_on_one_arm_and_a_null_on_the_other_stored_in_memory_is_bounded_at_what_the_load_believed`
+    /// fails, among eight cases, and so does the route matrix's
+    /// `width_memcpy_d0_one`.
+    pub(super) may_be_null: bool,
 }
 
 /// A width that bounds nothing below the type a pointer is read as, which
@@ -1175,22 +1190,19 @@ impl Held {
             .min()
     }
 
-    /// Whether this value names nothing at all: no allocation, no local's
-    /// address, and none of the marks that say it may hold what this check
-    /// did not follow: a null, or a local nothing was assigned, which
-    /// [`Self::joined`] tells apart from the null by `Known::init`. The test
-    /// `Known::names_no_more_than_its_sites` makes, with no site either, on
-    /// one value rather than on a local: a field added to one is a field
-    /// to answer in the other. What [`Self::joined`] asks of a path before
-    /// it drops that path's want of [`Self::believed`] (#719).
+    /// Whether this value is a null and nothing else: it may be null
+    /// ([`Self::may_be_null`]), and names no allocation, no local's address,
+    /// and none of the marks that say it may hold what this check did not
+    /// follow. What [`Self::joined`] asks of a path before it drops that
+    /// path's want of [`Self::believed`] (#719).
     ///
-    /// **And at its start**, as `report::fits` asks of a null: arithmetic on
-    /// a null holds none of the rest and is not null, and a null test does
-    /// not catch it. Without it `int *p = 0; p = p + 1; if (k) p = *pp;`
-    /// kept the load's belief across the join and proved `*p` whole where
-    /// main doubted it. Found by review.
+    /// **Not a local nothing was assigned**, nor arithmetic on a null, which
+    /// name nothing as a null does and are no null: neither sets the mark.
+    /// `int *p = 0; p = p + 1; if (k) p = *pp;` kept the load's belief
+    /// across the join and proved `*p` whole where main doubted it, found by
+    /// review, when this was inferred from the marks alone.
     fn names_nothing(&self) -> bool {
-        self.offset == Offset::Zero && !self.names.any() && self.beyond().is_nothing()
+        self.may_be_null && !self.names.any() && self.beyond().is_nothing()
     }
 
     /// What this value may hold beyond what its sites and its edges name.
@@ -1395,6 +1407,9 @@ impl Held {
             site_element,
             array_edge,
             stored_through,
+            // No mark gives it: the constant arm of the transfer sets it on
+            // the value it builds.
+            may_be_null: false,
         }
     }
 
@@ -1497,7 +1512,9 @@ impl Held {
             site_element,
             array_edge,
             stored_through,
+            may_be_null,
         } = self;
+        *may_be_null = false;
         names.clear_all();
         *fresh_read = false;
         *believed = None;
@@ -1543,17 +1560,14 @@ impl Held {
     /// `offset`, whose `Zero` joined with `NonZero` is `Unknown`
     /// ([`Offset::joined`]).
     ///
-    /// `unwritten` is whether each side left the local unwritten
-    /// (`Known::init`), which no field here says: such a local names
-    /// nothing and is no null, and `memcpy(m, &t, 8)` of a `t` written on one
-    /// arm only, read back as an `int *`, was believed whole once it was
-    /// taken for one. Found by review.
-    pub(super) fn joined(&mut self, other: &Held, sources: &SourceMap, unwritten: (bool, bool)) {
+    /// **A local nothing was assigned is no null**, though it names nothing
+    /// as one does: `memcpy(m, &t, 8)` of a `t` written on one arm only, read
+    /// back as an `int *`, was believed whole once it was taken for one.
+    /// Found by review. [`Self::may_be_null`] tells the two apart.
+    pub(super) fn joined(&mut self, other: &Held, sources: &SourceMap) {
         // Asked of each path as it arrived, before any field below is joined.
-        let (self_names_nothing, other_names_nothing) = (
-            self.names_nothing() && !unwritten.0,
-            other.names_nothing() && !unwritten.1,
-        );
+        let (self_names_nothing, other_names_nothing) =
+            (self.names_nothing(), other.names_nothing());
         // Every field named, never `..`, in this method and in its neighbour
         // alike: a field added to this struct is `error[E0027]` in both and has
         // to say what it means in each. ADR-0024 is why there are two places
@@ -1581,7 +1595,10 @@ impl Held {
             site_element,
             array_edge,
             stored_through,
+            may_be_null,
         } = self;
+        // A may-fact, so a union: null on either path is null on one.
+        *may_be_null = *may_be_null || other.may_be_null;
         *inner_address = *inner_address || other.inner_address;
         // A bound, so the lower of two, and a side with none is no bound.
         contents_at_most.bound_by(&other.contents_at_most);
@@ -1686,6 +1703,9 @@ impl Held {
             site_element,
             array_edge,
             stored_through,
+            // **Not taken from an operand**: a value built from operands is
+            // arithmetic on them, and a null moved is no null.
+            may_be_null: _,
         } = self;
         *inner_address = *inner_address || other.inner_address;
         // `*tab + 1` points into the same memory, which holds what it held.
@@ -2122,6 +2142,8 @@ impl Cell {
             site_element: _,
             array_edge: _,
             stored_through: _,
+            // Not recorded in memory, so a load gives none.
+            may_be_null: _,
         } = held;
     }
 
@@ -2189,6 +2211,8 @@ impl Cell {
             site_element: _,
             array_edge: _,
             stored_through: _,
+            // Not recorded in memory, so a load gives none.
+            may_be_null: _,
         } = &self.held;
         // Read out of an allocation that may hold one that is gone. See
         // ADR-0045.
@@ -2269,6 +2293,8 @@ impl Cell {
             site_element: _,
             array_edge: _,
             stored_through: _,
+            // Not recorded in memory, so a load gives none.
+            may_be_null: _,
         } = from;
         poured.held.stale_read = *stale_read;
         poured.held.unreplaced_read = *unreplaced_read;
@@ -2324,6 +2350,8 @@ impl Cell {
             site_element: _,
             array_edge: _,
             stored_through: _,
+            // Not recorded in memory, so a load gives none.
+            may_be_null: _,
             // Not recorded in memory: a load takes it from the type it is
             // read as. See `Held::arrived_holds_pointer`.
             arrived_holds_pointer: _,
