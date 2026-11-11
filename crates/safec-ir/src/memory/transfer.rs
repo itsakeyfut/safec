@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::dataflow::Analysis;
 use crate::ir::{
     BinOp, BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place,
-    Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
+    Projection, Rvalue, Terminator, Ty, TyId,
 };
 use crate::source::Span;
 
@@ -335,7 +335,7 @@ impl Allocations<'_> {
 
     /// Whether a place may hold a pointer, by its type.
     ///
-    /// **`None` answers yes.** [`TranslationUnit::place_ty`] has no type for a
+    /// **`None` answers yes.** [`TranslationUnit::place_ty`](crate::ir::TranslationUnit::place_ty) has no type for a
     /// `Deref` of something that is not a pointer, which the lowering does not
     /// build and a hand-built unit can, and a place whose type this cannot
     /// name is one it cannot narrow: [`replaced_by`] reads it the same way.
@@ -606,22 +606,6 @@ impl Allocations<'_> {
             .memory_levels(place.local, depth, self.deepest_pointer)
             .at(0);
         as_read.min(bound.unwrap_or(0))
-    }
-
-    /// Whether an object of type `ty` holds a pointer: a pointer, or an array
-    /// of them through every dimension. What a read by name is asked of,
-    /// `report::unwritten_read`, since an integer read as itself is not
-    /// followed; [`Known::init`] watches every local whatever its type, since
-    /// a byte buffer may be read as a pointer (ADR-0073 rule 2).
-    ///
-    /// Written out rather than as a `matches!`, so a kind of type added later
-    /// is asked whether it holds one.
-    pub(super) fn holds_a_pointer(&self, ty: TyId) -> bool {
-        match self.unit.ty(innermost_element(self.unit, ty)) {
-            Ty::Pointer(_) => true,
-            Ty::Int | Ty::Char | Ty::Void => false,
-            Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
-        }
     }
 
     /// **What a write pours into memory**, at the store and at the library
@@ -4632,23 +4616,7 @@ fn remember(kept: &mut Vec<Option<TyId>>, ty: Option<TyId>) {
     }
 }
 
-/// How many `*`s deep a type is: `0` for one that is no pointer. What
-/// [`Allocations::deepest_pointer`] is the largest of.
-///
-/// Written out rather than as a `matches!`, so a kind of type added later
-/// is asked whether it has a pointee.
-pub(super) fn pointer_depth(unit: &TranslationUnit, ty: TyId) -> usize {
-    match unit.ty(ty) {
-        Ty::Pointer(pointee) => 1 + pointer_depth(unit, pointee),
-        Ty::Int | Ty::Char | Ty::Void => 0,
-        // As deep as its element: `int ***a[2]` holds pointers three `*`s
-        // deep, which `Allocations::deepest_pointer` has to be long enough for.
-        // **Held by nothing, measured**: answering `0` changes no case,
-        // because every use of an array converts it into a temporary of the
-        // element's pointer type, which is one `*` deeper still.
-        Ty::Array { element, .. } => pointer_depth(unit, element),
-    }
-}
+pub(super) use crate::layout::pointer_depth;
 
 /// [`Allocations::reads_caller_memory`], asked of a value no program shows.
 #[cfg(test)]

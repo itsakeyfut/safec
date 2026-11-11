@@ -2780,7 +2780,7 @@ pub(super) fn unwritten_read(
                     .iter()
                     .any(|said| said.at == at && said.local == Some(local) && by_assigned(said))))
             || init == Init::Written
-            || !analysis.holds_a_pointer(function.local(local))
+            || stored_pointer(analysis.unit, function.local(local)).is_none()
         {
             continue;
         }

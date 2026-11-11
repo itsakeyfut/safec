@@ -26,6 +26,7 @@ pub mod dataflow;
 mod index;
 pub mod interp;
 pub mod ir;
+mod layout;
 pub mod library;
 mod liveness;
 pub mod memory;
