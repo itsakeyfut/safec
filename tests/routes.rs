@@ -2303,7 +2303,6 @@ const WRITES_WHAT_IT_IS_HANDED: &str = "a call this check cannot read is believe
 const DEEP_COPY_LOSES_A_LOCAL: &str = "a copy two levels down loses the address of a local it carries, where the store spelling keeps it, so what is read through it is asked nothing (#686)";
 const POSITION_LOST: &str = "a local kept whole that may be unwritten is asked only where the pointer is known to point at its start, and one read out of memory and stored two levels down is not known to (#703)";
 const RETURNED_WRITTEN: &str = "a block written before it is returned is reported as one nothing wrote once its pointer went through another block, a write two levels down or a local's address (#920)";
-const VOID_READ_BACK: &str = "a `void *` read out of memory is not believed to start an object where it is stored again, though the record says what it holds (#631)";
 // The door questions' reasons (#801).
 const DEEP_WRITE_LEAVES: &str = "a write more than one dereference below the pointer it goes through is taken as landing where this check cannot place it, and so as leaving, into memory only this function reads too, which both spellings of it answer alike (ADR-0071 rule 2, #802)";
 const ESCAPED_SOURCE: &str = "the address a copy takes of its source local escapes it (ADR-0017), so what the local holds is doubted behind a later call with nothing freed (#345)";
@@ -2420,16 +2419,6 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         "part_pointer_ret_d2_one",
         Side::Control,
         Why::Belief(VOID_RESULT),
-    ),
-    (
-        "held_pointers_restored_d1_both",
-        Side::Control,
-        Why::Cost(VOID_READ_BACK),
-    ),
-    (
-        "held_pointers_restored_d1_one",
-        Side::Control,
-        Why::Cost(VOID_READ_BACK),
     ),
     (
         "held_pointers_ret_d0_both",

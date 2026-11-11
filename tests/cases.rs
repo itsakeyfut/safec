@@ -717,6 +717,16 @@ cases! {
         a_pointer_read_out_of_memory_that_names_a_written_local_is_not_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_memory_that_names_an_unwritten_local_array_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `void *` read out of memory is believed as wide as its record
+        // says, which no type bounds (#631, ADR-0093 rule 4): the first is
+        // proved where it was unknown. Mutation: `believed_read` answers `0`
+        // for a `void *`, as before; it is `SC0412` again. The second, a
+        // record a call may have written, stays unknown, and is held only
+        // jointly: `read_from_fits` answering `true` and the belief answering
+        // wider than recorded together make it silent, and neither alone
+        // does, since what `c` is recorded as bounds it too.
+        a_void_pointer_read_out_of_memory_is_believed_as_wide_as_its_record_says: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_void_pointer_read_out_of_memory_a_call_may_have_written_is_not_believed_its_record: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store this check cannot place writes only where it may land:
         // what its landing names and what code it cannot read can reach. An
         // allocation nothing reaches stays unwritten, `SC0411`. Mutation:

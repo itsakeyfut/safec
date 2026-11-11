@@ -590,8 +590,24 @@ impl Allocations<'_> {
     /// converted to `int ***` reads what `pi` arrived believing two levels
     /// down, where asking it only at one dereference believed the type
     /// (#634). See ADR-0060.
+    ///
+    /// **A `void *` at what its record says**, which no type bounds: `void
+    /// *w = *pv;` with `*pv` holding a `char`'s address reads `w` as one
+    /// byte wide, so `char *p = w; *p = 1;` is proved where it was unknown
+    /// (#631). Only a width the record holds, `Width::AtMost`: where it
+    /// holds none, or the type's, which `void` has none of, it believes
+    /// nothing, as before. See ADR-0093 rule 4.
     pub(super) fn believed_read(&self, function: &Function, place: &Place, value: &Known) -> u64 {
-        let as_read = self.pointee_size(function, place).unwrap_or(0);
+        // `None` for a `void *`, whose pointee has no size to bound a width.
+        let typed = match self
+            .unit
+            .place_ty(function, place)
+            .map(|ty| self.unit.ty(ty))
+        {
+            Some(Ty::Pointer(pointee)) => self.unit.size_of(pointee),
+            Some(Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. }) | None => Some(0),
+        };
+        let as_read = typed.unwrap_or(0);
         let depth = derefs(place);
         // **As its type where the read is reported as indeterminate**:
         // nothing was stored in fresh memory, so nothing records a width,
@@ -605,7 +621,11 @@ impl Allocations<'_> {
         let bound = value
             .memory_levels(place.local, depth, self.deepest_pointer)
             .at(0);
-        as_read.min(bound.bound().unwrap_or(0))
+        match (typed, bound) {
+            (Some(as_read), bound) => as_read.min(bound.bound().unwrap_or(0)),
+            (None, Width::AtMost(recorded)) => recorded,
+            (None, Width::AsTyped | Width::Unbounded | Width::Nothing) => 0,
+        }
     }
 
     /// **What a write pours into memory**, at the store and at the library
