@@ -1843,6 +1843,16 @@ cases! {
         // The same through a `void *` at two `int`s. Mutation: ask every copy
         // whatever its destination; this is reported.
         a_partial_pointer_copied_out_of_a_block_through_a_void_pointer_to_an_int_pair_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A whole pointer stored through `b` over the partial copy and read
+        // back through `b`: the read is of what was stored, and the store's
+        // own read of its value is no read in the source. Found by review.
+        // Mutation: ask a read through a pointer stored through; this is
+        // reported.
+        a_pointer_stored_whole_over_a_partial_copy_and_read_back_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read two levels down, `**b`, of the block below. Found by review.
+        // Mutation: read only what the pointer names in `blocks_read`; this
+        // loses its `SC0413`, keeping the nullability check's `SC0403`.
+        a_pointer_read_two_levels_down_out_of_a_block_a_partial_copy_wrote_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
         // one is, by one function both doors call (#890). Possibly, not
         // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no

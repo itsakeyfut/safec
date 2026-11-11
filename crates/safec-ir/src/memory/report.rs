@@ -2603,7 +2603,15 @@ pub(super) fn loaded_indeterminate(
             // after `memcpy(m, &i, 4)` built silent (#907). Only where the
             // read is not said indeterminate, which is the same defect said
             // more strongly. See ADR-0088.
-            if analysis.may_be_pointer(function, &place) {
+            //
+            // **Nor through a pointer a store has written through since it
+            // was given its value**, on every path (`Held::stored_through`):
+            // the read is of the whole pointer just stored, the lowering's
+            // own read of an assignment's value among them. Asked there,
+            // `void **b = m; *b = x;` after the partial copy was doubted
+            // with no read in the source at all, found by review.
+            let rewritten = derefs(&place) == 1 && known.points_to[place.local].stored_through;
+            if !rewritten && analysis.may_be_pointer(function, &place) {
                 for site in blocks_read(&place, known) {
                     if let Some(copy) = known.part_written[site] {
                         push_part_of_a_pointer(findings, analysis, copy);
