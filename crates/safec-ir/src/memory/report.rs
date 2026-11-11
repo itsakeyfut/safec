@@ -1750,9 +1750,9 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
         if matches!(known.state[site], SiteState::Freed { .. }) {
             continue;
         }
-        let kind = if known.init[site].is_unwritten() {
+        let kind = if known.written[site].whole().is_unwritten() {
             Kind::StoredUnwritten
-        } else if known.init[site].may_be_unwritten() {
+        } else if known.written[site].whole().may_be_unwritten() {
             Kind::StoredMaybeUnwritten
         } else {
             continue;
@@ -1976,20 +1976,23 @@ fn report_returned_unwritten(
     let certainly_own = sites
         .iter()
         .flatten()
-        .any(|&site| known.init[site].is_unwritten());
+        .any(|&site| known.written[site].whole().is_unwritten());
     // **Possibly, wherever it is**: the path where an allocation failed adds
     // no doubt, because its null edge writes the block it did not make. See
     // ADR-0080.
     let possibly_own = sites.as_ref().is_none_or(|sites| {
         sites
             .iter()
-            .any(|&site| known.init[site].may_be_unwritten())
+            .any(|&site| known.written[site].whole().may_be_unwritten())
     });
-    let certainly = certainly_own || below.iter().any(|&site| known.init[site].is_unwritten());
+    let certainly = certainly_own
+        || below
+            .iter()
+            .any(|&site| known.written[site].whole().is_unwritten());
     let possibly = possibly_own
         || below
             .iter()
-            .any(|&site| known.init[site].may_be_unwritten());
+            .any(|&site| known.written[site].whole().may_be_unwritten());
     // **On a first turn's arm, certainly unwritten is a doubt**: that turn
     // may not take the arm, and a later one finds the block written (#838).
     // Mutation: ignore `doubt_only`; the return in
@@ -2091,7 +2094,7 @@ fn copied_unwritten(
 /// by element and the length is a constant, so that `a[0] = &x; memcpy(out,
 /// a, 8);` with `a` two pointers long is not doubted for `a[1]`; at any
 /// element otherwise, which doubts. Elements are counted in pointers, since
-/// only an array of pointers is kept element by element (`Known::element_init`),
+/// only an array of pointers is kept element by element (`Known::written`),
 /// and a copy ending part way through one covers it, hence the rounding up.
 /// Any other local is kept whole and asked as one.
 ///
@@ -2122,13 +2125,16 @@ fn source_may_be_unwritten(
         let (sites, locals) = known.levels_below(from.local, depth);
         return sites
             .into_iter()
-            .any(|site| known.init[site].may_be_unwritten())
+            .any(|site| known.written[site].whole().may_be_unwritten())
             || locals.into_iter().any(|local| {
                 known.certainly_unwritten(local, None) || known.may_be_unwritten(local, None, true)
             });
     }
     let held = &known.points_to[from.local];
-    if held.sites().any(|site| known.init[site].may_be_unwritten()) {
+    if held
+        .sites()
+        .any(|site| known.written[site].whole().may_be_unwritten())
+    {
         return true;
     }
     let target = analysis.unit.target();
@@ -2137,10 +2143,9 @@ fn source_may_be_unwritten(
         .constant_argument(callee, arguments, 2)
         .map(|length| length.div_ceil(pointer));
     held.locals().any(|local| {
-        let elements = &known.element_init[local];
-        if elements.len() == 0 {
-            return known.init[local].may_be_unwritten();
-        }
+        let Some(elements) = known.written[local].slots() else {
+            return known.written[local].whole().may_be_unwritten();
+        };
         match (held.element, covered) {
             (Some(start), Some(count)) => (start..start.saturating_add(count)).any(|element| {
                 usize::try_from(element)
@@ -2601,7 +2606,7 @@ pub(super) fn loaded_indeterminate(
     for place in read {
         // A proof where nothing wrote what it reads, and a doubt where an
         // array it reads at its start was written only in part. See
-        // `Known::init`.
+        // `Known::written`.
         let certain = analysis.reads_fresh(function, &place, known);
         let maybe = !certain && analysis.reads_partly(function, &place, known);
         if !certain && !maybe {
@@ -2735,7 +2740,7 @@ fn may_say(
 ///
 /// `taken` is `assigned::address_taken`. A local whose address is taken is
 /// asked here alone, since `memory::assigned` follows no write through an
-/// address and this one does ([`Known::init`]). One whose address is never
+/// address and this one does ([`Known::written`]). One whose address is never
 /// taken is `memory::assigned`'s first, and is asked here only where it may
 /// be unwritten and nothing was said of it at the caret: one rule for a
 /// read some path left unassigned, whatever happens to the local's address.
@@ -2756,10 +2761,10 @@ pub(super) fn unwritten_read(
     let function = analysis.unit.function(analysis.function);
     for (local, at) in reads {
         // **A doubt where an element may still be unwritten**, a proof
-        // where nothing wrote any of it. See `Known::init`. **Only a local
+        // where nothing wrote any of it. See `Known::written`. **Only a local
         // that holds a pointer**: every local starts unwritten, and an
         // integer read as itself is not followed (ADR-0073 rule 2).
-        let init = known.init[local];
+        let init = known.written[local].whole();
         let partly = init == Init::Maybe;
         // **A local whose address is never taken is asked here only for the
         // doubt**, and only where `memory::assigned`, which runs first and

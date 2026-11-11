@@ -21,7 +21,7 @@ use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
     At, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, PendingRead, Reached, Read,
-    Realloced, SiteState, Width, earlier,
+    Realloced, SiteState, Width, Written, earlier,
 };
 use super::store::{Landing, StoreKind, Strong};
 use crate::library::{Callee, Leaves, Library, Makes};
@@ -248,7 +248,7 @@ impl Allocations<'_> {
     /// The per-element record each local starts with: a bit set for every
     /// element of an array of at most `ELEMENTS_KEPT` pointers that is
     /// unwritten at entry, and none for any other local. See
-    /// `Known::element_init`.
+    /// `Known::written`.
     fn elements_at_entry(&self) -> Vec<Inits> {
         let function = self.unit.function(self.function);
         let unwritten = self.unwritten_at_entry();
@@ -693,18 +693,16 @@ impl Allocations<'_> {
                 // block. The closure, not the carried blocks alone: a block one
                 // level below the stored one was believed written by the same
                 // store, found by review. See ADR-0077.
-                let before = value.init.clone();
+                let before = value.written.clone();
                 let stored: Vec<Site> = value.closure(carried.clone()).into_iter().collect();
                 let keep = |value: &mut Known| {
                     for &site in containers.iter() {
-                        if before[site] == Init::Maybe {
-                            value.init[site] = Init::Maybe;
-                            value.block_elements[site] = None;
+                        if before[site].whole() == Init::Maybe {
+                            value.written[site].set(Init::Maybe);
                         }
                     }
                     for &site in &stored {
-                        value.init[site] = before[site];
-                        value.block_elements[site] = None;
+                        value.written[site] = before[site].clone();
                     }
                 };
                 if unplaced {
@@ -914,8 +912,9 @@ impl Allocations<'_> {
             contents: _,
             // Not read by a load.
             realloced: _,
-            // Read: whether what is read was written, by `Self::reads_fresh`.
-            init: _,
+            // Read: whether what is read was written, slot by slot where the
+            // place keeps slots, by `Self::reads_fresh`.
+            written: _,
             // Not read by a load: about reads and calls in flight.
             pending: _,
             calls: _,
@@ -925,8 +924,6 @@ impl Allocations<'_> {
             // and `Self::read_from_fits`.
             extent: _,
             handed_at_most: _,
-            // Read, as `init` is.
-            element_init: _,
             // Not read by a load.
             exposed_in_part: _,
             // Read: an array reached only by #639's rule, by
@@ -943,8 +940,6 @@ impl Allocations<'_> {
             // Not read by a load: what a call may have stored is asked where
             // the value is handed on.
             handed_untyped: _,
-            // Read, as `init` is, for a block's elements.
-            block_elements: _,
         } = value;
         // Every mark a load gives before it reads anything, each said, so a
         // mark added is answered here (#732); what it reads is
@@ -1557,8 +1552,7 @@ impl Allocations<'_> {
         // in a loop keeps the test, since an earlier turn's block may be
         // what another holder names. See ADR-0082.
         if self.made_once[returned.local()] || !rest.held_sites()[returned] {
-            value.init[returned] = Init::Written;
-            value.block_elements[returned] = None;
+            value.written[returned].set(Init::Written);
         }
         value.clear(local);
     }
@@ -1625,7 +1619,7 @@ impl Allocations<'_> {
     /// where `back` is set, which it is for a loop shown to run at least
     /// once, `Allocations::runs_once`: one body, so the two cannot drift
     /// apart. They differ only in what a local unwritten on one side and
-    /// written on the other becomes. See `Known::init`.
+    /// written on the other becomes. See `Known::written`.
     fn joined(&self, into: &mut Known, from: &Known, back: bool) {
         // **Every field named, never `..`.** A lattice value whose join
         // forgets a field reaches a fixpoint over a value nobody is joining,
@@ -1640,7 +1634,7 @@ impl Allocations<'_> {
             handed_away,
             exposed,
             contents,
-            init,
+            written,
             realloced,
             pending,
             calls,
@@ -1648,7 +1642,6 @@ impl Allocations<'_> {
             lost_exposed,
             extent,
             handed_at_most,
-            element_init,
             exposed_in_part,
             stored_in_part,
             stored_out,
@@ -1658,7 +1651,6 @@ impl Allocations<'_> {
             part_written,
             part_written_since_made,
             handed_untyped,
-            block_elements,
         } = into;
         // May-facts, so a union, as `exposed` of a local is. See
         // `Known::handed_untyped`.
@@ -1697,11 +1689,6 @@ impl Allocations<'_> {
                 (here, there) => here.or(there),
             };
         }
-        // Per element, joined as `Init::joined` says. See
-        // `Known::element_init`.
-        for (here, there) in element_init.iter_mut().zip(&from.element_init) {
-            here.join(there, back);
-        }
         for (here, there) in exposed_in_part.iter_mut().zip(&from.exposed_in_part) {
             *here = *here || *there;
         }
@@ -1711,97 +1698,73 @@ impl Allocations<'_> {
         // **Joined as `Init::joined` says**: unwritten only where no path
         // wrote it, and maybe unwritten where one path wrote it and the other
         // left it unwritten, which is the doubt itself, but not at the back
-        // edge of a loop shown to run. An array kept per element has its own
-        // doubt above, and its record here gains none, at either kind of
-        // join. See `Known::init`.
+        // edge of a loop shown to run. A place kept per slot is joined slot by
+        // slot, and gains no doubt beyond its slots'. See `Known::written`.
         //
         // **One loop over every place, each kind by its own rule** (#779).
         // Both rules read `state` as it was before this join: `state` is
         // joined below, and must not be before this loop.
-        // **A block's elements joined one by one, each by `Init::joined`**,
-        // where either side still reads them: a side that does not counts
-        // every element as its `init` says, so a block one turn wrote at one
-        // element and the next wrote whole is written whole at the back edge
-        // of a loop shown to run, as each of its elements is, where its
-        // `init` alone joins as `Maybe`. Found by review: `*p = x; p = p + 1;`
-        // in such a loop was doubted. The block's `init` is then what its
-        // elements say, below. The side that names it where the other does
-        // not keeps its own, where its `init` survives the join. Asked before
-        // `init` is joined. See `Known::block_elements`.
-        let elements: Vec<Option<(Inits, bool)>> = init
-            .sites()
-            .map(|site| {
-                let here = current_elements(block_elements, init, site);
-                let there = current_elements(&from.block_elements, &from.init, site);
-                match (&state[site], &from.state[site]) {
-                    (_, SiteState::Unheld) => here.map(|here| (here, false)),
-                    (SiteState::Unheld, _) => there.map(|there| (there, false)),
-                    _ => {
-                        let len = here.as_ref().or(there.as_ref())?.len();
-                        let here = here.unwrap_or_else(|| spread(init[site], len));
-                        let there = there.unwrap_or_else(|| spread(from.init[site], len));
-                        if here.len() != there.len() {
-                            return None;
-                        }
-                        let mut joined = here;
-                        joined.join(&there, back);
+        for place in written.indices() {
+            let there = &from.written[place];
+            let site = match place {
+                Loc::Local(_) => {
+                    written[place].join(there, back);
+                    continue;
+                }
+                Loc::Heap(site) => site,
+            };
+            let here = &written[place];
+            let (whole_here, whole_there) = (here.whole(), there.whole());
+            // **Joined as `Init::joined` says** where both sides name the
+            // site, fresh where every path left it fresh, since a use of
+            // what was read out of it is reported as a proof; a union here
+            // reported `if (c) *box = q; t = *box; *t = 1;`, which C
+            // defines when `c` holds. A site one side left fresh and the
+            // other did not may still be fresh, at a forward join only
+            // (#721).
+            //
+            // **Where one side does not name the site, `Unheld`**, the
+            // side that names it says, as `state`'s join takes the state
+            // of the side that holds it: a block made on one arm only, or
+            // in last turn's body, kept its mark (#724), and `if (k) *m =
+            // x; else { free(m); m = 0; }` does not doubt a read of `*m`
+            // on the arm that wrote it. One rule for both sides, so that
+            // what guards one guards the other: measured, only one
+            // orientation had a case of its own. See ADR-0048.
+            let whole = match (&state[site], &from.state[site]) {
+                (_, SiteState::Unheld) => named_beside_unheld(whole_here, whole_there),
+                (SiteState::Unheld, _) => named_beside_unheld(whole_there, whole_here),
+                _ => whole_here.joined(whole_there, back),
+            };
+            // **A block's slots joined one by one, each by `Init::joined`**,
+            // where either side keeps them: a side that does not counts every
+            // slot as its whole is, so a block one turn wrote at one slot and
+            // the next wrote whole is written whole at the back edge of a loop
+            // shown to run, as each of its slots is, where its whole alone
+            // joins as `Maybe`. Found by review: `*p = x; p = p + 1;` in such
+            // a loop was doubted. The side that names it where the other does
+            // not keeps its own, where its whole survives the join.
+            let slots = match (&state[site], &from.state[site]) {
+                (_, SiteState::Unheld) => here.slots().map(|slots| (slots.clone(), false)),
+                (SiteState::Unheld, _) => there.slots().map(|slots| (slots.clone(), false)),
+                _ => match (here.slots(), there.slots()) {
+                    (Some(a), Some(b)) if a.len() != b.len() => None,
+                    (None, None) => None,
+                    (Some(slots), _) | (None, Some(slots)) => {
+                        let len = slots.len();
+                        let mut joined = here.spread(len);
+                        joined.join(&there.spread(len), back);
                         Some((joined, true))
                     }
-                }
-            })
-            .collect();
-        for place in init.indices() {
-            let (here, there) = (init[place], from.init[place]);
-            init[place] = match place {
-                // Kept as the two flags joined, though it decides no case,
-                // measured: nothing reads a kept array's whole record for a
-                // doubt, `Known::may_be_unwritten` asking its elements.
-                Loc::Local(local) => {
-                    let kept = element_init[local].len() > 0;
-                    here.joined(there, back || kept)
-                }
-                // **Joined as `Init::joined` says** where both sides name the
-                // site, fresh where every path left it fresh, since a use of
-                // what was read out of it is reported as a proof; a union here
-                // reported `if (c) *box = q; t = *box; *t = 1;`, which C
-                // defines when `c` holds. A site one side left fresh and the
-                // other did not may still be fresh, at a forward join only
-                // (#721).
-                //
-                // **Where one side does not name the site, `Unheld`**, the
-                // side that names it says, as `state`'s join takes the state
-                // of the side that holds it: a block made on one arm only, or
-                // in last turn's body, kept its mark (#724), and `if (k) *m =
-                // x; else { free(m); m = 0; }` does not doubt a read of `*m`
-                // on the arm that wrote it. One rule for both sides, so that
-                // what guards one guards the other: measured, only one
-                // orientation had a case of its own. See ADR-0048.
-                Loc::Heap(site) => match (&state[site], &from.state[site]) {
-                    (_, SiteState::Unheld) => named_beside_unheld(here, there),
-                    (SiteState::Unheld, _) => named_beside_unheld(there, here),
-                    _ => here.joined(there, back),
                 },
             };
-        }
-        for (site, elements) in init.sites().zip(elements) {
-            block_elements[site] = match elements {
-                // Joined from both sides: the block is what its elements say.
-                Some((elements, true)) => {
-                    init[site] = elements.summary();
-                    Some(Box::new(super::parts::SiteElements {
-                        stamp: init[site],
-                        elements,
-                    }))
-                }
+            written[place] = match slots {
+                // Joined from both sides: the block is what its slots say.
+                Some((slots, true)) => Written::Slots(slots),
                 // Kept from the side that names it, where the join left its
-                // `init` as that side had it.
-                Some((elements, false)) if elements.summary() == init[site] => {
-                    Some(Box::new(super::parts::SiteElements {
-                        stamp: init[site],
-                        elements,
-                    }))
-                }
-                Some((_, false)) | None => None,
+                // whole as that side had it.
+                Some((slots, false)) if slots.summary() == whole => Written::Slots(slots),
+                Some((_, false)) | None => Written::Whole(whole),
             };
         }
         // Bounds, so the lower of two at every level. See
@@ -1961,32 +1924,6 @@ impl Allocations<'_> {
 /// with a doubt the other side still held kept, as the two flags this
 /// replaced joined. **That doubt decides no case**, measured; it is kept so
 /// that #733 changes no answer. See `Allocations::joined` and ADR-0048.
-/// `site`'s elements in `blocks`, where they are still read: kept, and made
-/// from what `init` is now. See `Known::block_elements`.
-fn current_elements(
-    blocks: &Table<Site, Option<Box<super::parts::SiteElements>>>,
-    init: &Table<Loc, Init>,
-    site: Site,
-) -> Option<Inits> {
-    blocks[site]
-        .as_deref()
-        .filter(|block| block.stamp == init[site])
-        .map(|block| block.elements.clone())
-}
-
-/// `len` elements, each what a block kept whole as `init` is.
-fn spread(init: Init, len: usize) -> Inits {
-    match init {
-        Init::Unwritten => Inits::unwritten(len),
-        Init::Written => Inits::written(len),
-        Init::Maybe => {
-            let mut elements = Inits::written(len);
-            elements.doubt_all();
-            elements
-        }
-    }
-}
-
 fn named_beside_unheld(named: Init, unheld: Init) -> Init {
     match unheld {
         Init::Maybe if named == Init::Written => Init::Maybe,
@@ -2160,7 +2097,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        // **A site's elements, `Known::block_elements`, climb as its `init`
+        // **A site's elements, `Known::written`, climb as its `init`
         // does**, two steps an element at most, and at most `ELEMENTS_KEPT`
         // elements a site, and the table goes from kept to dropped once:
         // `2 * ELEMENTS_KEPT + 1` a site. Where a pointer points among them,
@@ -2214,18 +2151,23 @@ impl Analysis for Allocations<'_> {
             // Every place written but the locals `unwritten_at_entry` names,
             // every local but a parameter: a parameter's memory is the
             // caller's, which may have written it, and an allocation is made
-            // fresh where it is made.
-            init: {
+            // fresh where it is made. **Per slot for a local array kept so**
+            // (`Self::elements_at_entry`), and whole for every other place.
+            written: {
                 let unwritten = self.unwritten_at_entry();
-                let mut init = Table::filled(Init::Written, Loc::count(self.locals));
-                for local in init.locals() {
-                    if unwritten[local.index()] {
-                        init[local] = Init::Unwritten;
-                    }
+                let mut written =
+                    Table::filled(Written::Whole(Init::Written), Loc::count(self.locals));
+                for (local, slots) in written.locals().zip(self.elements_at_entry()) {
+                    written[local] = if slots.len() > 0 {
+                        Written::Slots(slots)
+                    } else if unwritten[local.index()] {
+                        Written::Whole(Init::Unwritten)
+                    } else {
+                        Written::Whole(Init::Written)
+                    };
                 }
-                init
+                written
             },
-            element_init: Table::from_vec(self.elements_at_entry()),
             exposed_in_part: Table::filled(false, self.locals),
             stored_in_part: Table::filled(false, self.locals),
             // No call has been handed anything yet.
@@ -2238,8 +2180,6 @@ impl Analysis for Allocations<'_> {
             part_written_since_made: Table::filled(None, Loc::count(self.locals)),
             // No call has been handed anything yet.
             handed_untyped: Table::filled(Vec::new(), Loc::count(self.locals)),
-            // No block has been made yet.
-            block_elements: Table::filled(None, self.locals),
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -2327,48 +2267,20 @@ impl Analysis for Allocations<'_> {
         before: &Self::Value,
     ) {
         self.joined(into, from, self.runs_once[head.index()].is_some());
-        for place in into.init.indices() {
-            let again = into.init[place].unwritten_again(before.init[place], from.init[place]);
-            match place {
-                Loc::Heap(site) => {
-                    if !matches!(before.state[site], SiteState::Unheld) {
-                        // **Element by element where the block keeps them**,
-                        // as a local array's are below: a block written at one
-                        // element before the loop, `Maybe` whole, and made
-                        // again by its body, kept that element written where
-                        // the whole block did not change. Found by review, a
-                        // read `main` reported went silent. See
-                        // `Known::block_elements`.
-                        let kept = current_elements(&into.block_elements, &into.init, site);
-                        into.init[place] = match kept {
-                            Some(mut elements) => {
-                                let len = elements.len();
-                                let before_elements =
-                                    current_elements(&before.block_elements, &before.init, site)
-                                        .filter(|elements| elements.len() == len)
-                                        .unwrap_or_else(|| spread(before.init[place], len));
-                                let back_elements =
-                                    current_elements(&from.block_elements, &from.init, site)
-                                        .filter(|elements| elements.len() == len)
-                                        .unwrap_or_else(|| spread(from.init[place], len));
-                                elements.unwritten_again(&before_elements, &back_elements);
-                                let summary = elements.summary();
-                                into.block_elements[site] =
-                                    Some(Box::new(super::parts::SiteElements {
-                                        stamp: summary,
-                                        elements,
-                                    }));
-                                summary
-                            }
-                            None => again,
-                        };
-                    }
+        for place in into.written.indices() {
+            // **Not a site the paths into the loop did not name**, which the
+            // back edge made and nothing before it wrote.
+            if let Loc::Heap(site) = place {
+                if matches!(before.state[site], SiteState::Unheld) {
+                    continue;
                 }
-                Loc::Local(_) => into.init[place] = again,
             }
-        }
-        for (local, elements) in into.element_init.enumerated_mut() {
-            elements.unwritten_again(&before.element_init[local], &from.element_init[local]);
+            // **Slot by slot where the place keeps them**, a local array's and
+            // a block's alike: a block written at one slot before the loop,
+            // `Maybe` whole, and made again by its body, kept that slot written
+            // where the whole block did not change. Found by review, a read
+            // `main` reported went silent. See `Written::unwritten_again`.
+            into.written[place].unwritten_again(&before.written[place], &from.written[place]);
         }
     }
 
@@ -2508,7 +2420,7 @@ impl Analysis for Allocations<'_> {
                 }
 
                 // An assignment to a local writes it, whatever it writes. See
-                // `Known::init`.
+                // `Known::written`.
                 if let Some(at) = Strong::assigned(&operation.place) {
                     value.written_local(at.into());
                 }
@@ -3528,9 +3440,10 @@ impl Analysis for Allocations<'_> {
                     // Not touched by a copy.
                     realloced: _,
                     // Through `Self::initialised_by` and the array writes:
-                    // what the copy writes, and whether what it carries was
-                    // written.
-                    init: _,
+                    // what the copy writes, slot by slot where the place keeps
+                    // slots, and whether what it carries was written; and
+                    // through `Self::land_contents`.
+                    written: _,
                     // Through `Known::noticed`, as at any call.
                     pending: _,
                     calls: _,
@@ -3541,8 +3454,6 @@ impl Analysis for Allocations<'_> {
                     // carries is believed.
                     extent: _,
                     handed_at_most: _,
-                    // As `init`, per element.
-                    element_init: _,
                     // Not touched by a copy.
                     exposed_in_part: _,
                     // Through `Known::pour` and `Known::load_into`.
@@ -3562,9 +3473,6 @@ impl Analysis for Allocations<'_> {
                     part_written_since_made: _,
                     // Not touched by a copy.
                     handed_untyped: _,
-                    // As `init`, per element of a block, and through
-                    // `Self::land_contents`.
-                    block_elements: _,
                 } = &*value;
                 // **A copy of an object carries what it contains**: what each
                 // allocation the destination holds may contain gains what the
@@ -4373,7 +4281,7 @@ impl Analysis for Allocations<'_> {
         };
         let Some(at) = Strong::assigned(place) else {
             // `*box = f();` writes an allocation this does not place. See
-            // `Known::init`. **No C program reaches this**, measured: the
+            // `Known::written`. **No C program reaches this**, measured: the
             // lowering calls into a temporary and stores that, which the
             // store transfer clears for. It is here for a frontend that
             // does not.
@@ -4381,12 +4289,12 @@ impl Analysis for Allocations<'_> {
                 value.may_write_all_sites();
             }
             // And an escaped local it may land in, as an unplaced store
-            // does. See `Known::init`.
+            // does. See `Known::written`.
             replaced_by(self.unit, function, place, value);
             return;
         };
         // The call's result writes the local it lands in. See
-        // `Known::init`.
+        // `Known::written`.
         value.written_local(at.into());
 
         match kind {
@@ -4515,31 +4423,28 @@ impl Analysis for Allocations<'_> {
             value.points_to[result].returned_by = Some(site);
             // **Per element where it is two to `ELEMENTS_KEPT` pointers of a
             // constant size**, and the result at the first: `b[0] = x;`
-            // writes one and leaves the rest (#873). See
-            // `Known::block_elements` and ADR-0081.
+            // writes one and leaves the rest (#873). See `Known::written` and
+            // ADR-0081.
             let target = self.unit.target();
             let pointer = u64::from(target.pointer_bits() / target.char().bits());
             if let Some(Extent::Exactly(bytes)) = value.extent[site] {
                 let count = bytes / pointer;
                 if bytes % pointer == 0 && (2..=ELEMENTS_KEPT).contains(&count) {
                     let len = usize::try_from(count).unwrap_or(0);
-                    value.block_elements[site] = Some(Box::new(super::parts::SiteElements {
-                        stamp: Init::Unwritten,
-                        elements: Inits::unwritten(len),
-                    }));
+                    value.written[site] = Written::Slots(Inits::unwritten(len));
                     value.points_to[result].site_element = Some(0);
                 }
             }
         }
         if fresh {
-            value.init[site] = Init::Unwritten;
+            value.written[site].set(Init::Unwritten);
         } else if let (Some(Leaves::TheOld), Some(Operand::Copy(handed))) = (
             self.library(*callee).and_then(|row| row.leaves),
             arguments.first(),
         ) {
             // **And may be indeterminate where the old block may have been**,
             // fresh or maybe so beside what else it names: it copies those
-            // bytes as well (#724). See `Known::init`. **Or where what it was
+            // bytes as well (#724). See `Known::written`. **Or where what it was
             // handed may be null**, on a path where it copies nothing and
             // returns fresh memory (C17 7.22.3.5 p3): a join unions what the
             // paths name, so the null path names nothing to tell it by, and
@@ -4547,8 +4452,7 @@ impl Analysis for Allocations<'_> {
             if handed.projection.is_empty()
                 && (value.may_name_fresh(handed.local) || value.points_to[handed.local].may_be_null)
             {
-                value.init[site].doubt();
-                value.block_elements[site] = None;
+                value.written[site].doubt();
             }
         }
         // **`realloc`'s new object holds what the old one held**, C17 7.22.3.5
@@ -4586,8 +4490,10 @@ impl Analysis for Allocations<'_> {
                     // (ADR-0039).
                     realloced: _,
                     // The new block is fresh, or doubted where the old one
-                    // may not have been written (#724), above.
-                    init: _,
+                    // may not have been written (#724) or it may have been
+                    // handed a null (#708), above; kept per slot where its
+                    // size allows.
+                    written: _,
                     // Not touched by `realloc`'s own arms.
                     pending: _,
                     calls: _,
@@ -4597,7 +4503,6 @@ impl Analysis for Allocations<'_> {
                     extent: _,
                     // A local's; not touched by `realloc`.
                     handed_at_most: _,
-                    element_init: _,
                     exposed_in_part: _,
                     // Through `Known::pour`.
                     stored_in_part: _,
@@ -4613,9 +4518,6 @@ impl Analysis for Allocations<'_> {
                     part_written_since_made: _,
                     // Not touched by `realloc`.
                     handed_untyped: _,
-                    // Per element where the new block's size allows, and none
-                    // where the old one may not have been written, above.
-                    block_elements: _,
                 } = &*value;
                 let old: Vec<Site> = handed
                     .iter()

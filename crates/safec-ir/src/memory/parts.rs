@@ -392,6 +392,17 @@ impl Inits {
         }
     }
 
+    /// `len` elements, each `init`.
+    pub(super) fn spread(init: Init, len: usize) -> Self {
+        let mut inits = Self::written(len);
+        match init {
+            Init::Unwritten => inits.unwrite_all(),
+            Init::Maybe => inits.doubt_all(),
+            Init::Written => {}
+        }
+        inits
+    }
+
     /// `len` elements, each [`Init::Unwritten`].
     pub(super) fn unwritten(len: usize) -> Self {
         let mut inits = Self::written(len);
@@ -431,12 +442,6 @@ impl Inits {
                 self.doubted.remove(element);
             }
         }
-    }
-
-    /// Every element [`Init::Written`].
-    pub(super) fn write_all(&mut self) {
-        self.proved.clear_all();
-        self.doubted.clear_all();
     }
 
     /// Every element as [`Init::may_write`] leaves it.
@@ -501,18 +506,117 @@ impl Inits {
     }
 }
 
-/// A heap block's [`Init`] per element, and the block's own `Init` it was
-/// last made from (#873).
+/// Whether a place was written: whole, or one [`Init`] per pointer-sized
+/// slot where it is kept so, for a local and a block alike (ADR-0092 rule
+/// 3). A local array of 2 to `ELEMENTS_KEPT` innermost elements is kept per
+/// slot from the start, and so is a block of 2 to `ELEMENTS_KEPT` pointers
+/// where it is made (#873); every other place is kept whole.
 ///
-/// **Read only while the block's `Init` is still `stamp`.** Every other path
-/// that changes a block's `Init`, a write this check cannot place, a copy, a
-/// doubt, a loop's back edge, changes the block whole and leaves these
-/// behind; the block's own answer is then the one asked, and nothing these
-/// say can take it back. See `Known::block_elements` and ADR-0081.
+/// **The whole answer is computed from the slots**, never stored beside
+/// them, so that no writer pairs a write of the whole with one of its
+/// slots by hand, as fifteen did (#894). **A write of the whole reaches
+/// every slot**: [`Self::set`], [`Self::doubt`] and [`Self::may_write`]
+/// leave each slot as they would leave the place.
 #[derive(Clone, PartialEq, Eq)]
-pub(super) struct SiteElements {
-    pub(super) stamp: Init,
-    pub(super) elements: Inits,
+pub(super) enum Written {
+    /// The place as one.
+    Whole(Init),
+    /// One per slot.
+    Slots(Inits),
+}
+
+impl Written {
+    /// What the place is as one: the slots' [`Inits::summary`] where kept
+    /// per slot.
+    pub(super) fn whole(&self) -> Init {
+        match self {
+            Written::Whole(init) => *init,
+            Written::Slots(slots) => slots.summary(),
+        }
+    }
+
+    /// The slots, where it is kept per slot.
+    pub(super) fn slots(&self) -> Option<&Inits> {
+        match self {
+            Written::Whole(_) => None,
+            Written::Slots(slots) => Some(slots),
+        }
+    }
+
+    /// The slots, where it is kept per slot, to write.
+    pub(super) fn slots_mut(&mut self) -> Option<&mut Inits> {
+        match self {
+            Written::Whole(_) => None,
+            Written::Slots(slots) => Some(slots),
+        }
+    }
+
+    /// `slot`, where it is kept per slot and `slot` is one of them, and the
+    /// whole otherwise.
+    pub(super) fn at(&self, slot: Option<u64>) -> Init {
+        match (self, slot.and_then(|slot| usize::try_from(slot).ok())) {
+            (Written::Slots(slots), Some(slot)) if slot < slots.len() => slots.get(slot),
+            _ => self.whole(),
+        }
+    }
+
+    /// `len` slots, each what the place is as one: the slots it keeps where
+    /// it keeps `len` of them, and the whole spread over `len` otherwise.
+    pub(super) fn spread(&self, len: usize) -> Inits {
+        match self {
+            Written::Slots(slots) if slots.len() == len => slots.clone(),
+            _ => Inits::spread(self.whole(), len),
+        }
+    }
+
+    /// Make the place `init`, every slot of it.
+    pub(super) fn set(&mut self, init: Init) {
+        match self {
+            Written::Whole(whole) => *whole = init,
+            Written::Slots(slots) => *slots = Inits::spread(init, slots.len()),
+        }
+    }
+
+    /// As [`Init::doubt`] leaves it, every slot of it.
+    pub(super) fn doubt(&mut self) {
+        match self {
+            Written::Whole(whole) => whole.doubt(),
+            Written::Slots(slots) => slots.doubt_all(),
+        }
+    }
+
+    /// As [`Init::may_write`] leaves it, every slot of it.
+    pub(super) fn may_write(&mut self) {
+        match self {
+            Written::Whole(whole) => whole.may_write(),
+            Written::Slots(slots) => slots.may_write_all(),
+        }
+    }
+
+    /// Joined with `other` as [`Init::joined`] says, slot by slot where both
+    /// keep the same slots, and whole otherwise.
+    pub(super) fn join(&mut self, other: &Written, back: bool) {
+        match (&mut *self, other) {
+            (Written::Slots(here), Written::Slots(there)) if here.len() == there.len() => {
+                here.join(there, back);
+            }
+            _ => *self = Written::Whole(self.whole().joined(other.whole(), back)),
+        }
+    }
+
+    /// As [`Init::unwritten_again`] leaves it, slot by slot where it keeps
+    /// slots, each against what `before` and `back` were at it.
+    pub(super) fn unwritten_again(&mut self, before: &Written, back: &Written) {
+        match self {
+            Written::Whole(whole) => {
+                *whole = whole.unwritten_again(before.whole(), back.whole());
+            }
+            Written::Slots(slots) => {
+                let len = slots.len();
+                slots.unwritten_again(&before.spread(len), &back.spread(len));
+            }
+        }
+    }
 }
 
 /// Where an allocation came from, where two paths agree about it.
@@ -818,7 +922,7 @@ pub(super) struct Held {
     /// fact survives the join (ADR-0080). Found by review. See ADR-0039.
     pub(super) returned_by: Option<Site>,
     /// Whether this was read, on every path, out of an allocation
-    /// [`Known::init`](super::known::Known::init) marks, so is
+    /// [`Known::written`](super::known::Known::written) marks, so is
     /// indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2), and was reported
     /// where it was read. **It decides no report.** It is what drops the
     /// doubt a free or a `realloc` of the value would raise beside that
@@ -932,7 +1036,7 @@ pub(super) struct Held {
     /// **What lets one element be written and another stay unwritten**
     /// (#667). One record per array made a write to `m[0]` a write of `m[1]`,
     /// and a write through `m + 1` either all of `m` or none of it. A join
-    /// keeps it where both paths agree. See `Known::element_init` and
+    /// keeps it where both paths agree. See `Known::written` and
     /// ADR-0057.
     pub(super) element: Option<u64>,
     /// Which element of its one block, the site it holds, this points at,
@@ -944,7 +1048,7 @@ pub(super) struct Held {
     /// unwritten** (#873), as [`Self::element`] does for a local array:
     /// `b[0] = x;` with `b` from `malloc(16)` wrote the whole block before.
     /// Apart from `element`, which is about the edges to locals, so that a
-    /// pointer that may name either keeps both. See `Known::block_elements`
+    /// pointer that may name either keeps both. See `Known::written`
     /// and ADR-0081.
     pub(super) site_element: Option<u64>,
     /// Whether an edge in [`Self::locals`] survives only by the rule of
@@ -958,7 +1062,7 @@ pub(super) struct Held {
     /// always did, through an offset this check cannot read, the write is of
     /// the whole array, as it always was. That is the line between not losing
     /// a proof and not doubting every loop that fills an array. A union. See
-    /// `Known::init` and ADR-0057.
+    /// `Known::written` and ADR-0057.
     pub(super) array_edge: bool,
     /// Whether a store placed through this pointer has written what it
     /// points at since it was given its value, on every path. A read through
@@ -967,12 +1071,12 @@ pub(super) struct Held {
     /// **What keeps the lowering's own read of an assignment's value from
     /// being doubted** (#667): `*e = &x;` reads `*e` back as the value of the
     /// expression, and with `e` moved through a loop the element is not
-    /// known, so the write left the array [`Known::init`] and the
+    /// known, so the write left the array [`Known::written`] and the
     /// read back of it was a doubt about the element just written. Held by
     /// the pointer, so a new value for it clears it and a copy of it keeps
     /// it. An intersection at a join. See `Known::may_be_unwritten`.
     ///
-    /// [`Known::init`]: super::known::Known::init
+    /// [`Known::written`]: super::known::Known::written
     pub(super) stored_through: bool,
     /// Whether this may be a null pointer, on some path: set by an
     /// assignment of the constant `0`, a union at a join, kept by a copy of

@@ -226,16 +226,16 @@ pub enum Kind {
     /// 7.22.3.1 p2, 7.22.3.4 p2), and Annex J.2 lists using it as undefined.
     /// Always `Unsafe`, at the read, whatever it is read for, and not again
     /// at a later use of what it read. `local` is the pointer it is read
-    /// through. See `Known::init` and ADR-0057.
+    /// through. See `Known::written` and ADR-0057.
     ///
     /// Also out of a local that pointer may be the address of, which nothing
     /// wrote since it was made (C17 6.2.4 p6, 6.7.9 p10, and the same line of
     /// Annex J.2), so each says which storage it reached and the words cite
-    /// that storage's clause (#640). See `Known::init`. **`Unknown`
+    /// that storage's clause (#640). See `Known::written`. **`Unknown`
     /// where what it reads may be unwritten**: an element of a local array
     /// after a write that may have been of any element (#639, #667), or a
     /// local written on one path into a join and not the other (#668). See
-    /// `Known::init`.
+    /// `Known::written`.
     IndeterminateLoad {
         /// Whether it may reach an allocation nothing wrote.
         reaches_allocation: bool,
@@ -250,7 +250,7 @@ pub enum Kind {
     /// whose address is never taken is `Unassigned`'s and
     /// `SometimesUnassigned`'s, which `memory::assigned` builds first, and is
     /// this only as the `Unknown` doubt, where neither was said at the caret
-    /// (ADR-0075). See `Known::init` and ADR-0057.
+    /// (ADR-0075). See `Known::written` and ADR-0057.
     IndeterminateLocal,
     /// A function this check gave up on part of the way, past `MAX_WORK`, so
     /// nothing about its memory is proved. Always `Unknown`, at the
@@ -412,7 +412,7 @@ const NAMED_AT_READ: usize = 96;
 
 /// How many bytes the per-element record of a local array adds to each
 /// local (#667): [`Held::element`](parts::Held::element) and its two flags
-/// beside it, and the proved half of a row of `Known::element_init`, one
+/// beside it, and the proved half of a row of `Known::written`, one
 /// set of bits, with the two flags beside that. Measured as [`NAMED_AT_READ`] was, on the same four
 /// functions, release build: peak memory grew by 6.5, 6.1, 5.9 and 5.6%,
 /// from 323 to 344 MB at the smallest and 980 to 1,035 MB at the largest,
@@ -425,17 +425,17 @@ const NAMED_AT_READ: usize = 96;
 /// largest of the four is now past the bound on both.
 const ELEMENTS: usize = 184;
 
-/// How many bytes the per-element record of a heap block adds to each
-/// block's value a local, at most (#873): the pointer `Known::block_elements`
-/// keeps for every site, and for a block kept per element, the boxed record
-/// and the one word each of its two sets of bits holds, since such a block
-/// has at most `ELEMENTS_KEPT` elements; and `Held::site_element` twice, in
-/// the local's own value and in its site's cell. Found by review: the field
-/// was left out. Counted whole for every site, which is what a
-/// function whose every block is kept per element costs; one whose blocks
-/// are kept whole pays the pointer alone. Derived from the types rather
-/// than measured, since every part of it is a size the compiler fixes.
-const BLOCK_ELEMENTS: usize = 128;
+/// How many bytes the per-slot record of a heap block adds to each block's
+/// value a local, at most (#873): the [`Written`](parts::Written) record
+/// `Known::written` keeps for every site, inline whether the block is kept
+/// whole or per slot (#894), and the one word each of its two sets of bits
+/// holds for a block kept per slot, since such a block has at most
+/// `ELEMENTS_KEPT` slots; and `Held::site_element` twice, in the local's
+/// own value and in its site's cell. Found by review: the field was left
+/// out. Counted whole for every site, which is what a function whose every
+/// block is kept per slot costs. Derived from the types rather than
+/// measured, since every part of it is a size the compiler fixes.
+const BLOCK_ELEMENTS: usize = 112;
 
 /// How many bytes a block's cell adds to each local now that it is a
 /// [`Held`](parts::Held) rather than the six fields it replaced (#780):
@@ -850,7 +850,7 @@ fn findings_within(
         // With where the report standing for each is, as `said` keeps it.
         let mut departed: Vec<(Span, Departure, Option<LocalId>, usize)> = Vec::new();
         // The locals whose address is taken, which a read by name of asks
-        // `Known::init` and `memory::assigned` does not. See #640.
+        // `Known::written` and `memory::assigned` does not. See #640.
         let taken = assigned::address_taken(function);
         for &id in cfg.order() {
             // `Cfg::order` holds exactly the reachable blocks and `solve` gives
@@ -1254,7 +1254,7 @@ mod tests {
     };
     use crate::target::Target;
 
-    /// A unit holding one function of ten locals and three blocks: 49,950 by
+    /// A unit holding one function of ten locals and three blocks: 49,470 by
     /// [`per_block`].
     fn ten_by_three() -> (SourceMap, TranslationUnit) {
         ten_by_three_deep(0)
@@ -1303,7 +1303,7 @@ mod tests {
 
     /// Past the bound, a function is one `Unknown` finding at its name and
     /// is not read. Ten locals are `10 * (10 + 7 + LINEAR + NAMED_AT_READ +
-    /// ELEMENTS + BLOCK_ELEMENTS + CELL)` a block, so three blocks are 49,950.
+    /// ELEMENTS + BLOCK_ELEMENTS + CELL)` a block, so three blocks are 49,470.
     ///
     /// Mutation: drop the guard. The function is solved, and no `TooLarge`
     /// finding is made. Mutation: leave out [`NAMED_AT_READ`], [`ELEMENTS`]
@@ -1312,13 +1312,13 @@ mod tests {
     #[test]
     fn a_function_past_the_bound_is_one_unknown_finding() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, 49_949, MAX_WORK);
+        let findings = findings_within(&sources, &unit, 49_469, MAX_WORK);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(
             findings[0].kind,
             Kind::TooLarge {
-                bytes: 49_950,
-                max: 49_949
+                bytes: 49_470,
+                max: 49_469
             }
         );
         assert_eq!(findings[0].conclusion, Conclusion::Unknown);
@@ -1331,7 +1331,7 @@ mod tests {
     #[test]
     fn a_function_at_the_bound_is_read() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, 49_950, MAX_WORK);
+        let findings = findings_within(&sources, &unit, 49_470, MAX_WORK);
         assert!(
             findings
                 .iter()
@@ -1343,39 +1343,35 @@ mod tests {
     /// The lists a local's levels take count toward the bound: ten locals,
     /// one of them three `*`s deep, are
     /// `10 * (10 + 7 + LINEAR + NAMED_AT_READ + ELEMENTS + BLOCK_ELEMENTS +
-    /// CELL + 3 * PER_LEVEL)` a block, so three blocks are 54,270, past a bound the same function with no
+    /// CELL + 3 * PER_LEVEL)` a block, so three blocks are 53,790, past a bound the same function with no
     /// pointer in it is read under.
     ///
     /// Mutation: leave out [`PER_LEVEL`]. This is read.
     #[test]
     fn a_function_whose_lists_are_too_large_is_unknown_and_not_read() {
         let (sources, unit) = ten_by_three_deep(3);
-        let findings = findings_within(&sources, &unit, 54_269, MAX_WORK);
+        let findings = findings_within(&sources, &unit, 53_789, MAX_WORK);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(
             findings[0].kind,
             Kind::TooLarge {
-                bytes: 54_270,
-                max: 54_269
+                bytes: 53_790,
+                max: 53_789
             }
         );
     }
 
-    /// A site's per-element record at its largest: the pointer every site
-    /// keeps, the boxed record, the one word of each of its two sets of bits,
-    /// and the element a value carries, in a local and in a cell. See
-    /// [`BLOCK_ELEMENTS`].
+    /// A site's per-slot record at its largest: the record every site keeps,
+    /// the one word of each of its two sets of bits, and the element a value
+    /// carries, in a local and in a cell. See [`BLOCK_ELEMENTS`].
     ///
-    /// Mutation: count the pointer alone. This fails.
+    /// Mutation: count the record alone. This fails.
     #[test]
     fn a_sites_per_element_record_costs_what_its_types_take() {
         use std::mem::size_of;
         assert_eq!(
             BLOCK_ELEMENTS,
-            size_of::<Option<Box<parts::SiteElements>>>()
-                + size_of::<parts::SiteElements>()
-                + 2 * size_of::<u64>()
-                + 2 * size_of::<Option<u64>>()
+            size_of::<parts::Written>() + 2 * size_of::<u64>() + 2 * size_of::<Option<u64>>()
         );
     }
 
@@ -1388,7 +1384,7 @@ mod tests {
         assert_eq!(PER_LEVEL, 48);
         assert_eq!(NAMED_AT_READ, 96);
         assert_eq!(ELEMENTS, 184);
-        assert_eq!(BLOCK_ELEMENTS, 128);
+        assert_eq!(BLOCK_ELEMENTS, 112);
         assert_eq!(CELL, 216);
         assert_eq!(CELL_PAIRS, 4);
         assert_eq!(MAX_BYTES, 1_073_741_824);
@@ -1396,14 +1392,14 @@ mod tests {
     }
 
     /// Past the work bound, a function is one `Unknown` finding at its name.
-    /// Ten locals are 16,650 a walk, so a bound of 49,949 is two walks, and
+    /// Ten locals are 16,490 a walk, so a bound of 49,469 is two walks, and
     /// the three blocks take three.
     ///
     /// Mutation: solve without the bound. No `TooLong` finding is made.
     #[test]
     fn a_function_past_the_work_bound_is_one_unknown_finding() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, MAX_BYTES, 49_949);
+        let findings = findings_within(&sources, &unit, MAX_BYTES, 49_469);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(findings[0].kind, Kind::TooLong { walks: 2 });
         assert_eq!(findings[0].conclusion, Conclusion::Unknown);
@@ -1484,7 +1480,7 @@ mod tests {
     #[test]
     fn a_function_at_the_work_bound_is_read() {
         let (sources, unit) = ten_by_three();
-        let findings = findings_within(&sources, &unit, MAX_BYTES, 49_950);
+        let findings = findings_within(&sources, &unit, MAX_BYTES, 49_470);
         assert!(findings.is_empty(), "{findings:?}");
     }
     /// Where a local's address stored in memory can reach, as a test builds

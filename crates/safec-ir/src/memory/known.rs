@@ -12,8 +12,8 @@ use crate::source::{SourceMap, Span};
 
 use super::index::{Loc, LocalIdx, Site, Table};
 use super::parts::{
-    At, Cell, Extent, Held, Init, Inits, Levels, PendingRead, Reached, Read, ReadKey, Realloced,
-    SiteElements, SiteState, Width, earlier, read_key,
+    At, Cell, Extent, Held, Init, Levels, PendingRead, Reached, Read, ReadKey, Realloced,
+    SiteState, Width, Written, earlier, read_key,
 };
 use super::store::{Certain, Strong, WrittenLocal};
 use super::{LostReason, named};
@@ -59,7 +59,7 @@ pub(super) struct Known {
     /// them. See ADR-0039.
     ///
     /// **Per local, whether such code may hold its address**: what a call
-    /// may have written, for [`Self::init`], and nothing else reads that
+    /// may have written, for [`Self::written`], and nothing else reads that
     /// half. `lost` and `foreign` are still given to every escaped
     /// local, since a route missed there would be a free in silence
     /// (ADR-0029).
@@ -188,6 +188,10 @@ pub(super) struct Known {
     /// on a pointer holding it says whether it succeeded. See [`Realloced`]
     /// and ADR-0039.
     pub(super) realloced: Table<Site, Option<Realloced>>,
+    /// **Whether each place was written, one record per place, whole or per
+    /// slot** ([`Written`], ADR-0092 rule 3), its whole answer what is said
+    /// below of a place.
+    ///
     /// Per site, whether it is an allocation `malloc` or `aligned_alloc` made
     /// and nothing has written since: [`Init::Unwritten`] on every path, and
     /// its contents are indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2). Joined
@@ -247,11 +251,9 @@ pub(super) struct Known {
     /// A local whose address is never taken is `assigned.rs`'s, which reads
     /// it by name. See ADR-0057.
     ///
-    /// **[`Init::Maybe`], for a local with no per-element record, where it
-    /// may still be unwritten though it is not certainly.** An array kept per
-    /// element answers this in
-    /// [`Self::element_init`] instead, and this is not read for
-    /// one.
+    /// **[`Init::Maybe`], for a local kept whole, where it may still be
+    /// unwritten though it is not certainly.** An array kept per slot answers
+    /// this slot by slot.
     ///
     /// **Set by a write that may have missed it**: an array longer than
     /// [`ELEMENTS_KEPT`] written through a pointer moved off its start, which
@@ -275,7 +277,39 @@ pub(super) struct Known {
     /// of a local kept whole leaves it `Init::Maybe` instead (#826,
     /// `built::write_effects`). Unwritten again at `StorageLive`. See
     /// ADR-0057.
-    pub(super) init: Table<Loc, Init>,
+    ///
+    /// **Per slot, for a local array of at most [`ELEMENTS_KEPT`] innermost
+    /// elements**, [`Written::Slots`]; every other local is kept whole.
+    ///
+    /// **So that a write to one element leaves another unwritten** (#667):
+    /// `m[0] = &x; q = m[1];` read an `m[1]` nothing wrote, in silence, since
+    /// the write to `m[0]` cleared the one record `m` had. A write through a
+    /// pointer whose element is known writes that element alone; one whose
+    /// element is not known writes the whole array where `main` did, and where
+    /// only #639's rule tied the write to the array is a write that may have
+    /// missed each element, [`Init::may_write`], since no element is then
+    /// certainly unwritten and each may still be. Unwritten again at
+    /// `StorageLive`. See `built::write_effects` and ADR-0057.
+    ///
+    /// **[`Init::Maybe`] for an element that may be unwritten on some path,
+    /// rather than a mark on the array** (#668), so that `if (c()) m[0] = &x;
+    /// q = m[1];` stays the certain `SC0411` `main` gives, while `m[0]` read
+    /// there is doubted. Joined per element as [`Init::joined`] says, so the
+    /// back edge of a loop shown to run creates no doubt, as for
+    /// [`Self::written`]. See ADR-0057 and ADR-0064.
+    ///
+    /// **Per slot, for a block of a constant size of two to
+    /// [`ELEMENTS_KEPT`] pointers**: `b[0] = x;` with `b` from `malloc(16)`
+    /// writes the first and leaves the second (#873). Every other block is
+    /// kept whole. **A write of the whole block reaches every slot**, as
+    /// [`Written`] says, where it once dropped the slots beside a stamp of
+    /// the whole they were made from, which fifteen writers had to pair by
+    /// hand (#894). A write through a
+    /// pointer whose element is not known writes the whole block, as one
+    /// into a local array does (`built::write_effects`), so `b[i] = x;`
+    /// written once is a stated limit. Boxed, so a block kept whole costs a
+    /// pointer. See ADR-0081.
+    pub(super) written: Table<Loc, Written>,
     /// What has been read through a pointer since the last sequence point.
     ///
     /// **Ordered containers because a lattice value has to be canonical, and
@@ -370,27 +404,6 @@ pub(super) struct Known {
     /// address on in silence. A bound, so the lower of two at every level
     /// and at a join. See ADR-0060.
     pub(super) handed_at_most: Table<LocalIdx, Levels>,
-    /// Per local array of at most [`ELEMENTS_KEPT`] innermost elements, one
-    /// [`Init`] per element: [`Self::init`] kept per element. Empty for every other local, which
-    /// [`Self::init`] answers for whole.
-    ///
-    /// **So that a write to one element leaves another unwritten** (#667):
-    /// `m[0] = &x; q = m[1];` read an `m[1]` nothing wrote, in silence, since
-    /// the write to `m[0]` cleared the one record `m` had. A write through a
-    /// pointer whose element is known writes that element alone; one whose
-    /// element is not known writes the whole array where `main` did, and where
-    /// only #639's rule tied the write to the array is a write that may have
-    /// missed each element, [`Init::may_write`], since no element is then
-    /// certainly unwritten and each may still be. Unwritten again at
-    /// `StorageLive`. See `built::write_effects` and ADR-0057.
-    ///
-    /// **[`Init::Maybe`] for an element that may be unwritten on some path,
-    /// rather than a mark on the array** (#668), so that `if (c()) m[0] = &x;
-    /// q = m[1];` stays the certain `SC0411` `main` gives, while `m[0]` read
-    /// there is doubted. Joined per element as [`Init::joined`] says, so the
-    /// back edge of a loop shown to run creates no doubt, as for
-    /// [`Self::init`]. See ADR-0057 and ADR-0064.
-    pub(super) element_init: Table<LocalIdx, Inits>,
     /// Per local array, whether code this check cannot read was handed it
     /// only through a pointer moved off its start, so that a call writing it
     /// later writes it only in part (#667). A union at a join, and cleared at
@@ -520,23 +533,6 @@ pub(super) struct Known {
     /// (`Self::reborn`), as `names` is, since the old allocation's address
     /// may still be held and the slots of the two are not told apart.
     pub(super) handed_untyped: Table<Loc, Vec<Option<TyId>>>,
-    /// Per site, its block's [`Init`] per element, where the block is of a
-    /// constant size of two to [`ELEMENTS_KEPT`] pointers: `b[0] = x;` with
-    /// `b` from `malloc(16)` writes the first and leaves the second (#873).
-    /// `None` for every other block, which is kept whole by [`Self::init`].
-    ///
-    /// **Read only while the block's `init` is what it was made from**
-    /// ([`SiteElements::stamp`]): every other path that changes a block's
-    /// `init` changes it whole and is the answer then; each such path also
-    /// drops them, for a change that leaves `init` as it was, which the stamp
-    /// alone would miss: a doubt of a block `Maybe` already leaves it
-    /// `Maybe`. The copy path's doubt and the belief at an exposure are held
-    /// together by a case; no other drop alone is, measured. A write through a
-    /// pointer whose element is not known writes the whole block, as one
-    /// into a local array does (`built::write_effects`), so `b[i] = x;`
-    /// written once is a stated limit. Boxed, so a block kept whole costs a
-    /// pointer. See ADR-0081.
-    pub(super) block_elements: Table<Site, Option<Box<SiteElements>>>,
 }
 
 impl Known {
@@ -612,8 +608,9 @@ impl Known {
             contents: _,
             realloced: _,
             // What reads the local next is its next lifetime, which
-            // `Self::storage_live` makes unwritten, or nothing.
-            init: _,
+            // `Self::storage_live` makes unwritten, every slot of it, or
+            // nothing.
+            written: _,
             // About reads and calls in flight, not about a local's storage.
             pending: _,
             calls: _,
@@ -624,9 +621,7 @@ impl Known {
             // Not touched here, and nothing has asked whether a lifetime
             // ending may drop the bound.
             handed_at_most: _,
-            // Made unwritten again, and cleared, where the next lifetime
-            // begins (`Self::storage_live`).
-            element_init: _,
+            // Cleared where the next lifetime begins (`Self::storage_live`).
             exposed_in_part: _,
             stored_in_part: _,
             stored_out: _,
@@ -638,7 +633,6 @@ impl Known {
             // A local's is cleared where its next lifetime begins
             // (`Self::storage_live`).
             handed_untyped: _,
-            block_elements: _,
         } = self;
         points_to[local].clear();
         // **And what a copy wrote into its storage**: nothing outside the
@@ -667,7 +661,7 @@ impl Known {
             exposed,
             contents: _,
             realloced: _,
-            init,
+            written,
             // About reads and calls in flight, not about a local's storage.
             pending: _,
             calls: _,
@@ -677,7 +671,6 @@ impl Known {
             extent: _,
             // Not touched here, as in `Self::clear`.
             handed_at_most: _,
-            element_init,
             exposed_in_part,
             stored_in_part,
             stored_out: _,
@@ -688,18 +681,16 @@ impl Known {
             part_written: _,
             part_written_since_made: _,
             handed_untyped,
-            block_elements: _,
         } = self;
         // **A new object, indeterminate again** (C17 6.2.4 p6), so an
         // array written late in one turn of a loop is unwritten at
-        // the start of the next. See `Known::init`. **Whatever its
+        // the start of the next. See `Known::written`. **Whatever its
         // type**, as at entry (ADR-0073 rule 2): a `char` buffer
         // written late in one turn and copied out early in the next
         // copied what the new object never had. Found by review.
-        init[local] = Init::Unwritten;
-        // And every element of it, with nothing written in part and
-        // nothing handed over. See `Known::element_init`.
-        element_init[local].unwrite_all();
+        // Every slot of it, with nothing written in part and nothing handed
+        // over. See `Known::written`.
+        written[local].set(Init::Unwritten);
         exposed_in_part[local] = false;
         stored_in_part[local] = false;
         // **And no call holds its address yet**: one kept from an
@@ -1585,7 +1576,7 @@ impl Known {
         !self.points_to[local].holds_a_site() && self.names_no_more_than_its_sites(local)
     }
 
-    /// Whether every allocation `local` may name is unwritten, [`Self::init`], it names
+    /// Whether every allocation `local` may name is unwritten, [`Self::written`], it names
     /// at least one, and it names nothing else, by
     /// [`Self::names_no_more_than_its_sites`]. `realloc` handed it copies
     /// indeterminate bytes into what it returns, which is fresh then, and if
@@ -1597,17 +1588,19 @@ impl Known {
     pub(super) fn names_only_fresh(&self, local: LocalId) -> bool {
         let held = &self.points_to[local];
         held.holds_a_site()
-            && held.sites().all(|site| self.init[site].is_unwritten())
+            && held
+                .sites()
+                .all(|site| self.written[site].whole().is_unwritten())
             && self.names_no_more_than_its_sites(local)
     }
 
     /// Whether any allocation `local` may name may be unwritten,
-    /// [`Self::init`]: what `realloc` or a library copy handed it may
+    /// [`Self::written`]: what `realloc` or a library copy handed it may
     /// copy is then indeterminate in part, whatever else it names (#724).
     pub(super) fn may_name_fresh(&self, local: LocalId) -> bool {
         self.points_to[local]
             .sites()
-            .any(|site| self.init[site].may_be_unwritten())
+            .any(|site| self.written[site].whole().may_be_unwritten())
     }
 
     /// Whether what `local` may hold is the allocations it names and nothing
@@ -1861,7 +1854,7 @@ impl Known {
     }
 
     /// Every local a write this check cannot place may land in, for
-    /// [`Self::init`], where the write goes through `dereferences`
+    /// [`Self::written`], where the write goes through `dereferences`
     /// dereferences of `local`:
     ///
     /// - at none, `local` itself, `m[0] = p`;
@@ -1912,7 +1905,7 @@ impl Known {
     /// **A pointer naming no local lands in none.** One moved off a local by
     /// arithmetic keeps its edge to it, an array (#639) or a local that is
     /// not one, read as an array of one (#647), so `*(&m[1] - 1) = p` writes
-    /// `m`, in part, [`Self::init`], and `&slot + 1` and back to
+    /// `m`, in part, [`Self::written`], and `&slot + 1` and back to
     /// `slot` writes `slot`. The store door and a library copy both ask this,
     /// so the two cannot answer one pointer differently.
     pub(super) fn locals_a_write_may_land_in(
@@ -2092,9 +2085,10 @@ impl Known {
             exposed,
             contents,
             realloced,
-            // Not fresh, whatever it was: the caller says whether the new
-            // allocation is, since only it knows which function made it.
-            init,
+            // Not fresh, whatever it was, and kept whole: the caller says
+            // whether the new allocation is fresh, and makes its slots, since
+            // only it knows which function made it and its size.
+            written,
             pending,
             calls: _,
             exposed_after_call,
@@ -2106,9 +2100,7 @@ impl Known {
             extent: _,
             // About a local, not a site.
             handed_at_most: _,
-            // About a local as well: the call that makes the site writes the
-            // local it is named by, which the call's destination says.
-            element_init: _,
+            // About a local as well.
             exposed_in_part: _,
             stored_in_part: _,
             // A local's, as `escaped` is, and a site being reborn is not.
@@ -2137,11 +2129,7 @@ impl Known {
             // allocation's address, and the slots of the new one are not told
             // apart from the old one's. Found by review.
             handed_untyped: _,
-            // About the allocation the site named; the caller makes the new
-            // one's, since only it knows the size.
-            block_elements,
         } = self;
-        block_elements[site] = None;
         // **What the site's own cell keeps when it names a new
         // allocation**, field by field. See `Cell::kept_when_reborn`.
         contents[site].kept_when_reborn();
@@ -2158,7 +2146,7 @@ impl Known {
         // now belongs to a new allocation, and the branch that would have
         // settled the old fact is about another. See ADR-0039.
         realloced[site] = None;
-        init[site] = Init::Written;
+        written[site] = Written::Whole(Init::Written);
         for fact in realloced.iter_mut() {
             if fact
                 .as_ref()
@@ -2318,8 +2306,7 @@ impl Known {
     /// [`Certain`] and is named apart from
     /// [`Self::certainly_written`], by the author's decision (#778).
     fn believed_written_by_unknown_code(&mut self, site: Site) {
-        self.init[site] = Init::Written;
-        self.block_elements[site] = None;
+        self.written[site].set(Init::Written);
     }
 
     /// Whether `local` holds a pointer read out of fresh memory that nothing
@@ -2381,79 +2368,44 @@ impl Known {
     }
 
     /// What `site`'s block holds at `element`, where that is known and the
-    /// block is kept per element, and the block's own [`Self::init`]
-    /// otherwise. See [`Self::block_elements`].
+    /// block is kept per element, and the block's own [`Self::written`]
+    /// otherwise. See [`Self::written`].
     pub(super) fn site_init_at(&self, site: Site, element: Option<u64>) -> Init {
-        let init = self.init[site];
-        let (Some(block), Some(element)) = (
-            self.block_elements[site].as_deref(),
-            element.and_then(|element| usize::try_from(element).ok()),
-        ) else {
-            return init;
-        };
-        if block.stamp != init || element >= block.elements.len() {
-            return init;
-        }
-        block.elements.get(element)
+        self.written[site].at(element)
     }
 
     /// A write landed at `element` of this one allocation's block, kept per
-    /// element: that element is written, and the block's `init` is what its
-    /// elements say. `false`, and nothing written, where the block is not
+    /// slot: that slot is written, and the block as one is what its slots
+    /// say. `false`, and nothing written, where the block is not
     /// kept per element or the element is past it; the caller writes the
-    /// block whole then. See [`Self::block_elements`].
+    /// block whole then. See [`Self::written`].
     pub(super) fn certainly_written_at(&mut self, at: &Certain, element: u64) -> bool {
-        let site = at.site();
-        let init = self.init[site];
-        let Some(block) = self.block_elements[site].as_deref_mut() else {
+        let Some(slots) = self.written[at.site()].slots_mut() else {
             return false;
         };
         let Ok(element) = usize::try_from(element) else {
             return false;
         };
-        let len = block.elements.len();
-        if element >= len {
+        if element >= slots.len() {
             return false;
         }
-        if init == Init::Written {
-            return true;
-        }
-        // **Made again from the block's own `init` where something else
-        // changed it since**, every element as the block is: what the
-        // elements said before is about a block that has been written or
-        // doubted whole since.
-        if block.stamp != init {
-            block.elements = match init {
-                Init::Unwritten => Inits::unwritten(len),
-                Init::Maybe | Init::Written => {
-                    let mut elements = Inits::written(len);
-                    elements.doubt_all();
-                    elements
-                }
-            };
-        }
-        block.elements.set(element, Init::Written);
-        let summary = block.elements.summary();
-        block.stamp = summary;
-        self.init[site] = summary;
+        slots.set(element, Init::Written);
         true
     }
 
     /// A write landed in this one allocation, so its contents are not
     /// indeterminate on this path. Only a landing that proves one place can
-    /// ask, which is what [`Certain`] is. See [`Self::init`].
+    /// ask, which is what [`Certain`] is. See [`Self::written`].
     pub(super) fn certainly_written(&mut self, at: Certain) {
-        self.init[at.site()] = Init::Written;
-        self.block_elements[at.site()] = None;
+        self.written[at.site()].set(Init::Written);
     }
 
     /// Something may have written any allocation: a write this check cannot
     /// place, or a library call it reads only by name. A may-write, since
-    /// no landing says which (ADR-0074 rule 5). See [`Self::init`].
+    /// no landing says which (ADR-0074 rule 5). See [`Self::written`].
     pub(super) fn may_write_all_sites(&mut self) {
-        for site in self.init.sites() {
-            self.init[site].may_write();
-            self.block_elements[site] = None;
+        for site in self.written.sites() {
+            self.written[site].may_write();
         }
     }
 
@@ -2462,20 +2414,19 @@ impl Known {
     /// it. See `Allocations::written_past_its_end`.
     pub(super) fn unwritten_locals(&self) -> Table<LocalIdx, bool> {
         Table::from_vec(
-            self.init
+            self.written
                 .locals()
-                .map(|local| self.init[local].is_unwritten())
+                .map(|local| self.written[local].whole().is_unwritten())
                 .collect(),
         )
     }
 
     /// `at` wrote its local whole, on every path that reaches here: what only
     /// a [`WrittenLocal`] says. A write that may have missed it is
-    /// `Init::may_write` instead. See [`Self::init`] and ADR-0074.
+    /// `Init::may_write` instead. See [`Self::written`] and ADR-0074.
     pub(super) fn written_local(&mut self, at: WrittenLocal) {
         let local = at.local();
-        self.init[local] = Init::Written;
-        self.element_init[local].write_all();
+        self.written[local].set(Init::Written);
     }
 
     /// What a call this check cannot read is believed to have done to a local
@@ -2484,8 +2435,7 @@ impl Known {
     /// a site, and asked by [`Self::replaced`] for [`WrittenBy::Call`] alone. See
     /// ADR-0074 rule 3.
     fn believed_written_local_by_unknown_code(&mut self, local: LocalIdx) {
-        self.init[local] = Init::Written;
-        self.element_init[local].write_all();
+        self.written[local].set(Init::Written);
     }
 
     /// What a write that may land in `target` leaves there: a union of what
@@ -2533,66 +2483,57 @@ impl Known {
             .map(|(local, write)| PendingWrite {
                 local,
                 write,
-                init: self.init[local],
-                elements: self.element_init[local].clone(),
+                written: self.written[local].clone(),
             })
             .collect()
     }
 
     /// Put back what `pending` saved and write it as each says: one element,
     /// or an element that may be any of them. See
-    /// [`Self::element_init`].
+    /// [`Self::written`].
     pub(super) fn array_writes_after(&mut self, pending: Vec<PendingWrite>) {
         for write in pending {
-            let local = write.local;
-            let kept = write.elements.len() > 0;
-            // Written, keeping a doubt it held: the write is of one element,
-            // or of one nobody can name, and is no write of the rest. **The
-            // doubt kept decides no case**, measured: this record is read
-            // for a doubt only where the array is kept whole, and then the
-            // arm below writes it again. It is kept so that #733 changes no
-            // answer.
-            self.init[local] = match write.init {
-                Init::Maybe => Init::Maybe,
-                Init::Unwritten | Init::Written => Init::Written,
-            };
-            self.element_init[local] = write.elements;
-            match write.write {
-                ArrayWrite::Element(element) => {
+            let mut written = write.written;
+            match (&mut written, write.write) {
+                // Written, keeping a doubt it held: the write is of one
+                // element, or of one nobody can name, and is no write of the
+                // rest.
+                (Written::Whole(init), ArrayWrite::Element(_) | ArrayWrite::Covered(_)) => {
+                    *init = match *init {
+                        Init::Maybe => Init::Maybe,
+                        Init::Unwritten | Init::Written => Init::Written,
+                    };
+                }
+                (Written::Slots(slots), ArrayWrite::Element(element)) => {
                     if let Ok(element) = usize::try_from(element) {
-                        if element < self.element_init[local].len() {
-                            self.element_init[local].set(element, Init::Written);
+                        if element < slots.len() {
+                            slots.set(element, Init::Written);
                         }
                     }
                 }
                 // The elements a copy covers whole from the start are
                 // written, and the rest keep what they held.
-                ArrayWrite::Covered(count) => {
+                (Written::Slots(slots), ArrayWrite::Covered(count)) => {
                     let count = usize::try_from(count).unwrap_or(usize::MAX);
-                    for element in 0..count.min(self.element_init[local].len()) {
-                        self.element_init[local].set(element, Init::Written);
+                    for element in 0..count.min(slots.len()) {
+                        slots.set(element, Init::Written);
                     }
                 }
                 // No element is certainly unwritten once one nobody can name
                 // may have been written, and each may still be.
-                ArrayWrite::Maybe if kept => self.element_init[local].may_write_all(),
-                ArrayWrite::Maybe => {
-                    let mut init = write.init;
-                    init.may_write();
-                    self.init[local] = init;
-                }
+                (written, ArrayWrite::Maybe) => written.may_write(),
             }
+            self.written[write.local] = written;
         }
     }
 
     /// Whether `local` is certainly unwritten where a read reaches it at
     /// `element`, or anywhere in it where that is not known. See
-    /// [`Self::element_init`].
+    /// [`Self::written`].
     pub(super) fn certainly_unwritten(&self, local: LocalIdx, element: Option<u64>) -> bool {
-        let elements = &self.element_init[local];
-        if elements.len() == 0 {
-            return self.init[local].is_unwritten();
-        }
+        let Some(elements) = self.written[local].slots() else {
+            return self.written[local].whole().is_unwritten();
+        };
         match element.and_then(|element| usize::try_from(element).ok()) {
             Some(element) if element < elements.len() => elements.get(element).is_unwritten(),
             Some(_) => false,
@@ -2604,7 +2545,7 @@ impl Known {
     /// that the read is a doubt: the element read may be unwritten, or it is
     /// not known and some element may be. A longer array, kept whole, and a
     /// local that is no array ask this at their start only. See
-    /// [`Self::init`] and [`Self::element_init`].
+    /// [`Self::written`] and [`Self::written`].
     ///
     /// **An element nobody can name may be any of them**, whether or not the
     /// array was written in part: `m[c]` after `m[1] = &x;` may read `m[0]`,
@@ -2617,10 +2558,9 @@ impl Known {
         element: Option<u64>,
         at_start: bool,
     ) -> bool {
-        let elements = &self.element_init[local];
-        if elements.len() == 0 {
-            return self.init[local] == Init::Maybe && at_start;
-        }
+        let Some(elements) = self.written[local].slots() else {
+            return self.written[local].whole() == Init::Maybe && at_start;
+        };
         match element.and_then(|element| usize::try_from(element).ok()) {
             Some(element) if element < elements.len() => elements.get(element).may_be_unwritten(),
             Some(_) => false,
@@ -2994,7 +2934,7 @@ impl Known {
     /// only until a later call that may free what it was handed (#394).
     ///
     /// **Which it may have written is a second answer, `may_write`**, about
-    /// [`Self::init`] alone. A store this check cannot pin down answers
+    /// [`Self::written`] alone. A store this check cannot pin down answers
     /// it with the locals its place may land in, of the type it stores; a
     /// call answers it with what it may reach,
     /// [`Self::exposed`], which is narrower than every escaped local,
@@ -3053,8 +2993,7 @@ impl Known {
                 match writer {
                     WrittenBy::Call => self.believed_written_local_by_unknown_code(local),
                     WrittenBy::StoreOrCopy => {
-                        self.init[local].may_write();
-                        self.element_init[local].may_write_all();
+                        self.written[local].may_write();
                     }
                 }
             }
@@ -3082,7 +3021,7 @@ pub(super) enum WrittenBy {
 }
 
 /// How many innermost elements a local array may have and still be kept
-/// per element in [`Known::element_init`]. A longer one is kept whole,
+/// per element in [`Known::written`]. A longer one is kept whole,
 /// as every array was before #667, so the bits a block holds are bounded.
 pub(super) const ELEMENTS_KEPT: u64 = 64;
 
@@ -3092,7 +3031,7 @@ pub(super) const ELEMENTS_KEPT: u64 = 64;
 pub(super) enum ArrayWrite {
     /// The element it lands in is known.
     Element(u64),
-    /// It may land in any element. See [`Known::init`].
+    /// It may land in any element. See [`Known::written`].
     Maybe,
     /// It writes this many elements whole from the start, and none of the
     /// rest: a library copy of a length this check reads into an array kept
@@ -3107,6 +3046,5 @@ pub(super) enum ArrayWrite {
 pub(super) struct PendingWrite {
     local: LocalIdx,
     write: ArrayWrite,
-    init: Init,
-    elements: Inits,
+    written: Written,
 }

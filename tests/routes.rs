@@ -370,7 +370,7 @@ const KNOWN_FIELDS: &[(&str, Field)] = &[
     ),
     ("realloced", Field::Exempt(PENDING)),
     (
-        "init",
+        "written",
         Field::Belief(&[Belief::Fresh, Belief::PartLocal, Belief::Returned]),
     ),
     ("pending", Field::Exempt(PENDING)),
@@ -379,7 +379,6 @@ const KNOWN_FIELDS: &[(&str, Field)] = &[
     ("lost_exposed", Field::Exempt(PENDING)),
     ("extent", Field::Exempt(PENDING)),
     ("handed_at_most", Field::Exempt(PENDING)),
-    ("element_init", Field::Exempt(PENDING)),
     ("exposed_in_part", Field::Exempt(PENDING)),
     ("stored_in_part", Field::Exempt(PENDING)),
     ("stored_out", Field::Belief(&[Belief::StoredOut])),
@@ -394,7 +393,6 @@ const KNOWN_FIELDS: &[(&str, Field)] = &[
     ("part_written", Field::Belief(&[Belief::PartPointer])),
     ("part_written_since_made", Field::Exempt(PENDING)),
     ("handed_untyped", Field::Exempt(PENDING)),
-    ("block_elements", Field::Exempt(PENDING)),
 ];
 
 /// The fields of `Known`, read off its declaration.

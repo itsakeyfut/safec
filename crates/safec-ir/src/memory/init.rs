@@ -25,7 +25,7 @@ pub(super) enum Wrote<'a> {
     /// changes nothing here, and the arm asks that itself. `landing` is where
     /// it lands, as the store computed it before writing, the one
     /// description of a write both doors read (#778). `unwritten_before` is
-    /// `Known::init` as it was before the store, for a local it may
+    /// `Known::written` as it was before the store, for a local it may
     /// write past.
     Store {
         place: &'a Place,
@@ -68,7 +68,7 @@ impl Allocations<'_> {
         }
         value.points_to[target].lost_its_allocation();
         if unwritten_before[target] {
-            value.init[target].doubt();
+            value.written[target].doubt();
         }
     }
 
@@ -108,7 +108,7 @@ impl Allocations<'_> {
                 // any type, and what it wrote is no longer indeterminate.
                 // Placed only for one dereference through a pointer that
                 // names exactly its sites; anything else may land in any
-                // allocation. See `Known::init`.
+                // allocation. See `Known::written`.
                 //
                 // **A store of an indeterminate pointer too.** The pointer was
                 // reported where it was read, and keeping the slot fresh
@@ -123,7 +123,7 @@ impl Allocations<'_> {
                     // **And a local it may land in**, the local its edges name
                     // where the store is placed: `m[0] = p;` writes `m`. Where
                     // it is not placed, `replaced_by` below clears the
-                    // locals it may land in. See `Known::init`.
+                    // locals it may land in. See `Known::written`.
                     if one_step && !held.beyond().unrecorded_address() {
                         let edges: Vec<LocalIdx> = held.locals().collect();
                         let sites: Vec<Site> = held.sites().collect();
@@ -133,7 +133,7 @@ impl Allocations<'_> {
                         // fresh stays so, as a may-fact: `*p = x;` with `p`
                         // either of two blocks, one of them written on one
                         // arm only, cleared the doubt about it. Found by
-                        // review. See `Known::init` (#721). **A local
+                        // review. See `Known::written` (#721). **A local
                         // it names counts as one of them**: `p = c ? m : &loc;
                         // *p = x;` may have written `loc` and missed `m`
                         // (#739).
@@ -154,8 +154,7 @@ impl Allocations<'_> {
                             }
                             None => {
                                 for &site in &sites {
-                                    value.init[site].may_write();
-                                    value.block_elements[site] = None;
+                                    value.written[site].may_write();
                                 }
                             }
                         }
@@ -189,8 +188,7 @@ impl Allocations<'_> {
                             value.array_writes_after(pending);
                         } else {
                             for local in edges {
-                                value.init[local].may_write();
-                                value.element_init[local].may_write_all();
+                                value.written[local].may_write();
                             }
                         }
                         // And what it points at is written now, whichever
@@ -238,8 +236,7 @@ impl Allocations<'_> {
                         // `*m` read in silence where it was `SC0411` without
                         // the store (#778).
                         for site in may_land {
-                            value.init[site].may_write();
-                            value.block_elements[site] = None;
+                            value.written[site].may_write();
                         }
                         let certain = landing.certain();
                         let uncertain = certain.is_none();
@@ -334,7 +331,7 @@ impl Allocations<'_> {
                 // destination that is a local has written what it points at,
                 // `Held::stored_through`, so that a read back through it is of
                 // the block it wrote. See
-                // `Known::init`.
+                // `Known::written`.
                 let may_land: Option<(BTreeSet<Site>, bool, bool, Option<Site>)> = match dest {
                     Some(Operand::Copy(dest))
                         if dest
@@ -424,7 +421,7 @@ impl Allocations<'_> {
                         let (sites, locals) = value.levels_below(source.local, derefs(source));
                         let maybe = sites
                             .iter()
-                            .any(|&site| value.init[site].may_be_unwritten())
+                            .any(|&site| value.written[site].whole().may_be_unwritten())
                             || locals.iter().any(|&l| {
                                 value.certainly_unwritten(l, None)
                                     || value.may_be_unwritten(l, None, true)
@@ -439,7 +436,7 @@ impl Allocations<'_> {
                 let lands_in_no_block = may_land
                     .as_ref()
                     .is_none_or(|(blocks, _, _, _)| blocks.is_empty());
-                let before = value.init.clone();
+                let before = value.written.clone();
                 value.expose(self.sources, reach, Some(span));
                 if let Some((may_land, several, alone, certain)) = may_land {
                     // **And only as far as its length writes a pointer
@@ -467,10 +464,9 @@ impl Allocations<'_> {
                     };
                     let mut carried = false;
                     for site in before.sites() {
-                        let was = before[site];
+                        let was = &before[site];
                         if !may_land.contains(&site) || unwritten {
-                            value.init[site] = was;
-                            value.block_elements[site] = None;
+                            value.written[site] = was.clone();
                         } else {
                             // **Only the landing's one place is written**, as a
                             // store's is (#778): a block code this check cannot
@@ -481,13 +477,11 @@ impl Allocations<'_> {
                             // `SC0411`. A library copy is no code this check
                             // cannot read.
                             if Some(site) != certain {
-                                value.init[site] = was;
-                                value.init[site].may_write();
-                                value.block_elements[site] = None;
+                                value.written[site] = was.clone();
+                                value.written[site].may_write();
                             }
-                            if doubted && was.may_be_unwritten() {
-                                value.init[site].doubt();
-                                value.block_elements[site] = None;
+                            if doubted && was.whole().may_be_unwritten() {
+                                value.written[site].doubt();
                             }
                             // **Certain only where it covers the whole block**,
                             // its size a constant and the length at least that:
@@ -504,12 +498,10 @@ impl Allocations<'_> {
                                 && covers
                                 && matches!(length, CopiedPointers::Whole)
                             {
-                                value.init[site] = Init::Unwritten;
-                                value.block_elements[site] = None;
+                                value.written[site].set(Init::Unwritten);
                                 carried = true;
                             } else if source_maybe {
-                                value.init[site].doubt();
-                                value.block_elements[site] = None;
+                                value.written[site].doubt();
                                 carried = true;
                             }
                         }
@@ -549,7 +541,7 @@ impl Allocations<'_> {
                 // cleared every local array's mark, and so did `memcpy(*pa,
                 // &b, 4)` (#643), and so did a copy through a pointer read out
                 // of the caller's memory (#645). It keeps nothing, so it
-                // exposes no local. See `Known::init` and ADR-0057.
+                // exposes no local. See `Known::written` and ADR-0057.
                 let written: Option<Vec<LocalIdx>> = match dest {
                     Some(Operand::Copy(dest))
                         if dest
@@ -648,11 +640,9 @@ impl Allocations<'_> {
                             && covers
                             && matches!(length, CopiedPointers::Whole)
                         {
-                            value.init[local] = Init::Unwritten;
-                            value.element_init[local].unwrite_all();
+                            value.written[local].set(Init::Unwritten);
                         } else if source_maybe {
-                            value.init[local].doubt();
-                            value.element_init[local].doubt_all();
+                            value.written[local].doubt();
                         }
                     }
                 }
@@ -665,7 +655,7 @@ impl Allocations<'_> {
 
     /// Per local, whether it is made unwritten where the function starts:
     /// every local but the parameters, which the caller wrote. See
-    /// [`Known::init`].
+    /// [`Known::written`].
     ///
     /// **Whatever its type**: a `char` buffer nothing wrote, read as a pointer
     /// or copied out into memory that leaves, is as indeterminate as a pointer
@@ -691,7 +681,7 @@ impl Allocations<'_> {
     /// **A pointer, by its type.** A byte or an integer read out of fresh
     /// memory is not followed.
     ///
-    /// **A local reached by its address is memory too** ([`Known::init`]):
+    /// **A local reached by its address is memory too** ([`Known::written`]):
     /// `int *q = m[0];` with `m` a local array nothing wrote reads an
     /// indeterminate pointer, as `*box` does out of `malloc`'s block (#640).
     /// `writes_elsewhere` is not asked. `Address(a[0])` sets it for every
@@ -731,11 +721,11 @@ impl Allocations<'_> {
     }
 
     /// Whether a load may read an array that may still be unwritten where it
-    /// reads, [`Known::init`]: `reads_fresh`'s question, answered as
+    /// reads, [`Known::written`]: `reads_fresh`'s question, answered as
     /// a doubt. A fresh
     /// allocation beside it is not known written, and is no reason for
     /// silence. Found by review of #667. **Or an allocation that may still be
-    /// fresh**, `Known::init` unwritten or maybe so, which needs no local
+    /// fresh**, `Known::written` unwritten or maybe so, which needs no local
     /// beside it (#721), and whatever allocations beside it were written
     /// (#724). **Any place it may read that may be unwritten is enough**, a
     /// block or a local, whatever else it may read was written: the read is of
@@ -769,7 +759,7 @@ impl Allocations<'_> {
             let (sites, locals) = value.levels_below(source.local, depth - 1);
             return sites
                 .into_iter()
-                .any(|site| value.init[site].may_be_unwritten())
+                .any(|site| value.written[site].whole().may_be_unwritten())
                 || locals.into_iter().any(|local| {
                     !self.is_array(function, local)
                         && (value.certainly_unwritten(local, None)

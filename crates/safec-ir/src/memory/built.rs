@@ -7,7 +7,7 @@ use crate::ir::{BinOp, Function, LocalId, Operand, Place, TranslationUnit, Ty};
 use super::allocations::{innermost_element, stored_pointer};
 use super::index::{Idx, LocalIdx, Site, Table};
 use super::known::{ArrayWrite, Known, WrittenBy};
-use super::parts::{At, Held, Init, Inits, Reached};
+use super::parts::{At, Held, Reached, Written};
 use super::store::written_alone;
 use crate::reads::derefs;
 
@@ -240,7 +240,7 @@ fn offset_of(op: Option<BinOp>, operands: &[&Operand], followed: &[LocalIdx], va
 /// a write it cannot narrow.
 ///
 /// **What it may have written is a second, narrower answer**, about
-/// `Known::init` alone: a local of that type which
+/// `Known::written` alone: a local of that type which
 /// `Known::locals_a_write_may_land_in` says the place may land in. A local
 /// the write cannot reach keeps its mark, so a read of it nothing wrote is
 /// still `SC0411`. See ADR-0057.
@@ -280,7 +280,7 @@ pub(super) fn replaced_by(
     // **Through a pointer moved off an array, an element of it**, as the
     // placed store answers: still a write `replaced` makes of every local it
     // may land in, then partly written where it was unwritten before. See
-    // `Known::init`.
+    // `Known::written`.
     let writes = write_effects(
         unit,
         function,
@@ -312,12 +312,12 @@ pub(super) fn replaced_by(
         .collect();
     let alone = written_alone(value, place.local, derefs(place), &landing);
     let proved_alone = alone.is_some();
-    let before: Vec<(LocalIdx, Init, Inits)> = if proved_alone {
+    let before: Vec<(LocalIdx, Written)> = if proved_alone {
         Vec::new()
     } else {
         landing
             .iter()
-            .map(|&local| (local, value.init[local], value.element_init[local].clone()))
+            .map(|&local| (local, value.written[local].clone()))
             .collect()
     };
     let pending = value.array_writes_before(writes);
@@ -330,11 +330,9 @@ pub(super) fn replaced_by(
         value.written_local(at);
     }
     value.array_writes_after(pending);
-    for (local, mut init, mut elements) in before {
-        init.may_write();
-        elements.may_write_all();
-        value.init[local] = init;
-        value.element_init[local] = elements;
+    for (local, mut written) in before {
+        written.may_write();
+        value.written[local] = written;
     }
 }
 
@@ -360,7 +358,7 @@ pub(super) fn replaced_by(
 /// element it is handed, so what it is handed at a known element other
 /// than the start is in part too. One answer for the placed store, a store
 /// this check cannot place, a library copy and a call. See
-/// `Known::element_init` and ADR-0057.
+/// `Known::written` and ADR-0057.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn write_effects(
     unit: &TranslationUnit,
@@ -416,7 +414,8 @@ pub(super) fn write_effects(
                 }
                 _ => None,
             };
-            let kept = value.element_init[each].len() > 0;
+            let slots = value.written[each].slots().map_or(0, |slots| slots.len());
+            let kept = slots > 0;
             // **A write of part of a local kept whole leaves it possibly
             // unwritten** (#826): where it lands is known, an element of an
             // array or the start of a local that is no array, and it is
@@ -469,7 +468,7 @@ pub(super) fn write_effects(
                 // review.
                 Some(0) if call && !array_edge => match width.map(|width| width / pointer_width) {
                     Some(_) if kept && !one_landing => Some(ArrayWrite::Maybe),
-                    Some(covered) if kept && covered < value.element_init[each].len() as u64 => {
+                    Some(covered) if kept && covered < slots as u64 => {
                         Some(ArrayWrite::Covered(covered))
                     }
                     _ => None,
@@ -491,7 +490,7 @@ pub(super) fn write_effects(
 /// Whether the local at `index` is an array. One answer for the edge a
 /// pointer moved off it keeps and for the write through such a pointer
 /// being of an element. See `Held::moved_by_arithmetic` and
-/// `Known::init`.
+/// `Known::written`.
 pub(super) fn is_array(unit: &TranslationUnit, function: &Function, index: LocalIdx) -> bool {
     function
         .locals()
