@@ -1891,6 +1891,12 @@ cases! {
         // short copy into a local whatever its size; the caret moves to the
         // `int` copy.
         a_whole_int_copied_into_an_int_before_a_partial_pointer_copy_is_reported_at_the_partial_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A whole pointer stored through `p`, then half overwritten by a copy
+        // through another name and read back through `p`, found by review.
+        // Mutation: leave `stored_through` set where a copy writes the
+        // record; both go silent.
+        a_partial_pointer_copied_into_a_local_array_after_a_store_through_it_is_reported_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_reported_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
         // one is, by one function both doors call (#890). Possibly, not
         // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no

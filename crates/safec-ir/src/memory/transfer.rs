@@ -3677,6 +3677,12 @@ impl Analysis for Allocations<'_> {
                                 .map(|&site| Loc::Heap(site))
                                 .chain(landing.targets.iter().map(|&local| Loc::Local(local)))
                                 .collect();
+                            // Whether this copy writes a record, by carrying
+                            // one or by being partial, for the reset below.
+                            let carries = in_part
+                                || from
+                                    .iter()
+                                    .any(|&at| value.part_written_since_made[at].is_some());
                             value.carry_part_written(self.sources, &from, &to);
                             // **Only where part of a pointer fits**: a local
                             // narrower than a pointer holds no pointer to be
@@ -3700,6 +3706,30 @@ impl Analysis for Allocations<'_> {
                                 };
                                 for &at in to.iter().filter(|&&at| fits(at)) {
                                     value.note_part_written(self.sources, at, origin.span());
+                                }
+                            }
+                            // **And what was stored through a pointer there is
+                            // no longer what a read through it reads**: the
+                            // copy wrote the record's bytes over it. Left set,
+                            // `*p = x; memcpy(buf, &i, 4); s = *p;` read half a
+                            // pointer in silence, for a block as for a local,
+                            // found by review. See `Held::stored_through`.
+                            let recorded: Vec<Loc> = to
+                                .iter()
+                                .copied()
+                                .filter(|&at| value.part_written_since_made[at].is_some())
+                                .collect();
+                            if carries && !recorded.is_empty() {
+                                for held in value.points_to.iter_mut() {
+                                    let names = held
+                                        .sites()
+                                        .any(|site| recorded.contains(&Loc::Heap(site)))
+                                        || held
+                                            .locals()
+                                            .any(|local| recorded.contains(&Loc::Local(local)));
+                                    if names {
+                                        held.stored_through = false;
+                                    }
                                 }
                             }
                             // **Into a local's address, the copy lands in the
