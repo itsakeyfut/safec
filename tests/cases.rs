@@ -1810,6 +1810,11 @@ cases! {
         // copy: one report, at the first. Mutation: keep the later span in
         // `Known::note_part_written`; the caret moves to the second copy.
         a_partial_pointer_carried_into_a_block_a_later_partial_copy_writes_is_reported_at_the_first_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A source that may name either of two blocks, each with its own
+        // partial copy: one report, at the earlier, found by review.
+        // Mutation: keep the last in the copy arm's `reduce`; the caret
+        // moves to the second copy.
+        a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
         // one is, by one function both doors call (#890). Possibly, not
         // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no

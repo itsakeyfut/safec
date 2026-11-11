@@ -1,0 +1,261 @@
+Target "x86_64-pc-windows-msvc"
+Function a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:2:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:3:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:4:6 "use" declared
+  Local "_0" "void" return
+Function a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:5:6 "out"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "pp"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" "i"
+  Local "_4" "void *" "x"
+  Local "_5" "int"
+  Local "_6" "void *" "m1"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "void *" "m2"
+  Local "_10" "void *"
+  Local "_11" "int"
+  Local "_12" "void *" "m3"
+  Local "_13" "void *"
+  Local "_14" "int"
+  Local "_15" "void **"
+  Local "_16" "void *"
+  Local "_17" "void **"
+  Local "_18" "void *"
+  Local "_19" "int *"
+  Local "_20" "void *"
+  Local "_21" "int *"
+  Local "_22" "void *"
+  Local "_23" "void *" "from"
+  Local "_24" "void *"
+  Local "_25" "void *"
+  Local "_26" "void **" "q"
+  Local "_27" "void **"
+  Block "bb0" entry
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:6:9 written
+      Destination "_3"
+      Use
+        Constant 1
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:6:13 generated
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:7:11 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:7:15 generated
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:8:9 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_1"
+    Branch a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:8:9 written "bb1" "bb2"
+      Copy "_5"
+  Block "bb1"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:8:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:8:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:9:16 generated
+    Call a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:9:16 written "malloc" "bb4"
+      Destination "_7"
+      Constant 8
+  Block "bb4"
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:9:11 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:9:16 generated
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:10:9 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_6"
+    Branch a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:10:9 written "bb5" "bb6"
+      Copy "_8"
+  Block "bb5"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:10:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:10:9 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:11:16 generated
+    Call a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:11:16 written "malloc" "bb8"
+      Destination "_10"
+      Constant 8
+  Block "bb8"
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:11:11 written
+      Destination "_9"
+      Use
+        Copy "_10"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:11:16 generated
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:12:9 written
+      Destination "_11"
+      Unary "Not"
+        Copy "_9"
+    Branch a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:12:9 written "bb9" "bb10"
+      Copy "_11"
+  Block "bb9"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:12:9 generated
+    ArgumentsEvaluated a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:12:16 generated
+    Call a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:12:16 written "free" "bb12"
+      Copy "_6"
+  Block "bb10"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:12:9 generated
+    Goto "bb11"
+  Block "bb11"
+    ArgumentsEvaluated a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:13:16 generated
+    Call a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:13:16 written "malloc" "bb13"
+      Destination "_13"
+      Constant 8
+  Block "bb12"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:12:16 generated
+    Return
+  Block "bb13"
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:13:11 written
+      Destination "_12"
+      Use
+        Copy "_13"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:13:16 generated
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:14:9 written
+      Destination "_14"
+      Unary "Not"
+        Copy "_12"
+    Branch a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:14:9 written "bb14" "bb15"
+      Copy "_14"
+  Block "bb14"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:14:9 generated
+    ArgumentsEvaluated a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:14:16 generated
+    Call a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:14:16 written "free" "bb17"
+      Copy "_6"
+  Block "bb15"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:14:9 generated
+    Goto "bb16"
+  Block "bb16"
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:15:16 written
+      Destination "_15"
+      Address
+        Place "_4"
+    ArgumentsEvaluated a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:15:5 generated
+    Call a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:15:5 written "memcpy" "bb19"
+      Destination "_16"
+      Copy "_6"
+      Copy "_15"
+      Constant 8
+  Block "bb17"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:14:16 generated
+    ArgumentsEvaluated a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:14:26 generated
+    Call a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:14:26 written "free" "bb18"
+      Copy "_9"
+  Block "bb18"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:14:26 generated
+    Return
+  Block "bb19"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:15:5 generated
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:16:16 written
+      Destination "_17"
+      Address
+        Place "_4"
+    ArgumentsEvaluated a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:16:5 generated
+    Call a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:16:5 written "memcpy" "bb20"
+      Destination "_18"
+      Copy "_9"
+      Copy "_17"
+      Constant 8
+  Block "bb20"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:16:5 generated
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:17:16 written
+      Destination "_19"
+      Address
+        Place "_3"
+    ArgumentsEvaluated a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:17:5 generated
+    Call a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:17:5 written "memcpy" "bb21"
+      Destination "_20"
+      Copy "_6"
+      Copy "_19"
+      Constant 4
+  Block "bb21"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:17:5 generated
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:18:16 written
+      Destination "_21"
+      Address
+        Place "_3"
+    ArgumentsEvaluated a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:18:5 generated
+    Call a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:18:5 written "memcpy" "bb22"
+      Destination "_22"
+      Copy "_9"
+      Copy "_21"
+      Constant 4
+  Block "bb22"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:18:5 generated
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:19:11 written
+      Destination "_23"
+      Use
+        Copy "_9"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:19:18 generated
+    Branch a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:20:9 written "bb23" "bb24"
+      Copy "_2"
+  Block "bb23"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:20:9 generated
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:20:12 written
+      Destination "_23"
+      Use
+        Copy "_6"
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:20:12 written
+      Destination "_24"
+      Use
+        Copy "_23"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:20:12 generated
+    Goto "bb25"
+  Block "bb24"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:20:9 generated
+    Goto "bb25"
+  Block "bb25"
+    ArgumentsEvaluated a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:21:5 generated
+    Call a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:21:5 written "memcpy" "bb26"
+      Destination "_25"
+      Copy "_12"
+      Copy "_23"
+      Constant 8
+  Block "bb26"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:21:5 generated
+    ArgumentsEvaluated a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:22:5 generated
+    Call a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:22:5 written "free" "bb27"
+      Copy "_6"
+  Block "bb27"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:22:5 generated
+    ArgumentsEvaluated a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:23:5 generated
+    Call a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:23:5 written "free" "bb28"
+      Copy "_9"
+  Block "bb28"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:23:5 generated
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:24:12 written
+      Destination "_26"
+      Use
+        Copy "_12"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:24:16 generated
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:25:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_26"
+    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:25:5 written
+      Destination "_27"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:25:5 generated
+    ArgumentsEvaluated a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:26:5 generated
+    Call a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:26:5 written "use" "bb29"
+  Block "bb29"
+    Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:26:5 generated
+    Return
