@@ -41,7 +41,7 @@ copies of one rule that differ (#804).
 Chosen: one value per level, by the author.
 
 1. **A level's width is one value**: `Unbounded` (the identity), `AtMost(n)`,
-   `AsTyped`, and `NoWidth` (absorbing, today's `unrecorded`). `believed` is
+   `AsTyped`, and `Nothing` (absorbing, today's `unrecorded`). `believed` is
    level 0 of it, kept apart where it means "ask the recorded width
    instead".
 2. **The two handed bounds are one**, the first at level 0.

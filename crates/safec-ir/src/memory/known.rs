@@ -1300,17 +1300,14 @@ impl Known {
     /// spellings of one read cannot believe different things. See
     /// [`Levels`], ADR-0060 and ADR-0061.
     pub(super) fn memory_levels(&self, local: LocalId, depth: usize, depth_cap: usize) -> Levels {
-        let mut levels = self.points_to[local].contents_at_most.below(depth - 1);
-        // Whether a cell the read reads out of had a store record no width,
-        // which no other record may put back. See `Cell::unrecorded`.
-        let mut forget = false;
+        let mut levels = self.points_to[local].contents_at_most().below(depth - 1);
         for level in 0..depth {
             let (sites, locals) = self.levels_below(local, level);
             for site in sites {
+                // **A store that recorded no width at the level read** is
+                // `Nothing` there, which absorbs whatever any other record
+                // says (#767). See `Cell::poured`.
                 levels.bound_by(&self.contents[site].stored_levels().below(depth - 1 - level));
-                if level == depth - 1 && self.contents[site].unrecorded() {
-                    forget = true;
-                }
             }
             for slot in locals {
                 let own = &self.points_to[slot];
@@ -1323,10 +1320,10 @@ impl Known {
                 // nothing (ADR-0061): `int *x = malloc(4); int **pp = &x;
                 // int *t = *pp;` reads `t` as `x`'s allocation is wide.
                 let first = if own.beyond().loaded() {
-                    Some(own.believed.unwrap_or(0))
+                    Some(own.believed().unwrap_or(0))
                 } else if own.beyond().foreign() {
                     Some(
-                        own.believed
+                        own.believed()
                             .or(self.handed_at_most[slot].at(0).bound())
                             .unwrap_or(AS_TYPED),
                     )
@@ -1334,13 +1331,10 @@ impl Known {
                     own.recorded_width(&self.extent)
                 };
                 let held = own
-                    .contents_at_most
+                    .contents_at_most()
                     .stored_under(Width::of_bound(first), depth_cap);
                 levels.bound_by(&held.below(depth - 1 - level));
             }
-        }
-        if forget {
-            levels.forget_first();
         }
         levels
     }

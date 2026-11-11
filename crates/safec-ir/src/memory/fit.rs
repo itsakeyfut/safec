@@ -145,7 +145,7 @@ pub(super) fn fits(
     // `Allocations::read_through`, and a pointer handed on is asked at the
     // width its receiver believes, by `report::contents_leaving` (#627); a pointer
     // off its start stored as a `void *` is asked at the store.
-    if let Some(believed) = held.believed {
+    if let Some(believed) = held.believed() {
         let recorded = extents.iter().all(|extent| extent.lower() >= width);
         return Some(if believed >= width && recorded {
             Fit::Inside
@@ -584,7 +584,7 @@ mod tests {
             held.name_local(LocalIdx::of(c));
             held.writes_elsewhere = false;
             held.read_out_of_memory();
-            held.believed = Some(4);
+            held.believe(Some(4));
             assert!(matches!(
                 fits(analysis, function, p, 4, &known, false),
                 Some(Fit::Unknown)

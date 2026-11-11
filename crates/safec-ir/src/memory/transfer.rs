@@ -555,7 +555,7 @@ impl Allocations<'_> {
         value: &Known,
     ) -> Levels {
         if place.projection.is_empty() {
-            return value.points_to[place.local].contents_at_most.clone();
+            return value.points_to[place.local].contents_at_most();
         }
         let mut levels = self
             .unit
@@ -957,9 +957,8 @@ impl Allocations<'_> {
                 // store is asked. No more than the memory it is read out of is
                 // believed to hold ([`Self::believed_read`]), and only where
                 // every local it may be read out of fits, below. See ADR-0060.
-                believed: self
-                    .pointee_size(function, source)
-                    .map(|_| self.believed_read(function, source, value)),
+                //
+                // Level 0 of `widths`, below.
                 // **And it arrives as the type it is read as**, which bounds
                 // what its own memory holds, no more than the memory it was
                 // read out of believed one level down: `a = *pi;` with `pi` a
@@ -970,7 +969,13 @@ impl Allocations<'_> {
                 // Mutation: take the type alone, and
                 // `a_void_pointer_three_levels_deep_converted_whole_is_believed_below_its_first_level`
                 // goes silent.
-                contents_at_most: self.contents_read(function, source, value),
+                widths: self.contents_read(function, source, value).stored_under(
+                    Width::of_belief(
+                        self.pointee_size(function, source)
+                            .map(|_| self.believed_read(function, source, value)),
+                    ),
+                    usize::MAX,
+                ),
                 // And whether that type holds pointers in its memory, which
                 // `0` there does not say. See `Held::arrived_holds_pointer`.
                 arrived_holds_pointer: self
@@ -1017,10 +1022,10 @@ impl Allocations<'_> {
             // asks it (ADR-0060), without doubting the escape its address
             // is. `int *q = *pi; *q = 1;` with `v = p + 4` after `pi = &v`
             // is unknown at `*q` for it (#627).
-            if held.believed.is_some_and(|width| {
+            if held.believed().is_some_and(|width| {
                 !self.read_from_fits(function, source.local, depth, width, value)
             }) {
-                held.believed = None;
+                held.believe(None);
             }
             // The question the report asks at this read, so that a value
             // carrying the mark is always one reported where it was read.
@@ -2233,9 +2238,10 @@ impl Analysis for Allocations<'_> {
             known.points_to[parameter].hold(Site::of(LocalIdx::of(parameter)), Offset::Zero);
             // And what its memory holds is believed as its type says, which
             // the caller asked where it stored it. See `Held::contents_at_most`.
-            known.points_to[parameter].contents_at_most = self
+            let contents = self
                 .type_levels(function.local(parameter))
                 .unwrap_or_default();
+            known.points_to[parameter].set_contents(&contents);
             known.points_to[parameter].arrived_holds_pointer =
                 self.first_level_holds_a_pointer(function.local(parameter));
             known.extent[Site::of(LocalIdx::of(parameter))] = Some(Extent::AtLeast(
@@ -2715,7 +2721,7 @@ impl Analysis for Allocations<'_> {
                     let bound = if !self.may_be_pointer(function, &operation.place) {
                         None
                     } else if written.beyond().loaded() {
-                        Some(written.believed.unwrap_or(0))
+                        Some(written.believed().unwrap_or(0))
                     } else if written.beyond().foreign() {
                         // And what the local was handed as, which a join
                         // keeps where `believed` does not. A join with a null
@@ -2729,7 +2735,7 @@ impl Analysis for Allocations<'_> {
                             | Rvalue::Unary { .. }
                             | Rvalue::Binary { .. } => None,
                         };
-                        Some(written.believed.or(handed).unwrap_or(AS_TYPED))
+                        Some(written.believed().or(handed).unwrap_or(AS_TYPED))
                     } else {
                         written.recorded_width(&value.extent)
                     };
@@ -2746,9 +2752,20 @@ impl Analysis for Allocations<'_> {
                     // Mutation: record level 0 alone, and
                     // `a_parameter_stored_in_memory_and_read_back_is_believed_as_it_arrived_below_its_first_level`
                     // goes silent.
+                    //
+                    // **No width, for a value that is not a pointer by its
+                    // type**, `Nothing` at its own level: a pointer is given
+                    // one above whatever it names, and one with no `bound`
+                    // names nothing, which is a null and bounds nothing. See
+                    // `Cell::held`.
+                    let first = if self.may_be_pointer(function, &operation.place) {
+                        Width::of_bound(bound)
+                    } else {
+                        Width::Nothing
+                    };
                     let stored = written
-                        .contents_at_most
-                        .stored_under(Width::of_bound(bound), self.deepest_pointer);
+                        .contents_at_most()
+                        .stored_under(first, self.deepest_pointer);
                     // **What the store carries, poured into each allocation it
                     // lands in**, as `Cell::poured` builds it, which names
                     // every field. **After the landing and the exposure**:
@@ -2777,11 +2794,6 @@ impl Analysis for Allocations<'_> {
                         written.locals(),
                         &stored,
                         &written,
-                        // **No width, for a value that is not a pointer by
-                        // its type**: a pointer is given one above whatever it
-                        // names, and one with no `bound` names nothing, which
-                        // is a null. See `Cell::unrecorded`.
-                        !self.may_be_pointer(function, &operation.place),
                     );
                     self.land_contents(
                         value,
@@ -2969,10 +2981,11 @@ impl Analysis for Allocations<'_> {
                     // A constant is not a pointer this check can follow.
                     // **And a `0` is a null**, which the value says (ADR-0093
                     // rule 3): a join keeps another path's belief beside it.
-                    Rvalue::Use(Operand::Constant(constant)) => {
-                        let mut null = Held::none(value.points_to.len());
-                        null.may_be_null = *constant == 0;
-                        value.replace(at, null);
+                    Rvalue::Use(Operand::Constant(0)) => {
+                        value.replace(at, Held::null(value.points_to.len()));
+                    }
+                    Rvalue::Use(Operand::Constant(_)) => {
+                        value.replace(at, Held::none(value.points_to.len()));
                     }
                     // The address of a place is not an allocation this check
                     // follows: nothing here frees a local's own storage, which
@@ -3639,9 +3652,8 @@ impl Analysis for Allocations<'_> {
                                     from_caller: false,
                                     returned_by: None,
                                     fresh_read: false,
-                                    believed: None,
-                                    contents_at_most: Levels::default(),
-                                    // Nor any type, as `contents_at_most`.
+                                    widths: Levels::new(vec![Width::Nothing]),
+                                    // Nor any type, as `widths`.
                                     arrived_holds_pointer: false,
                                     inner_address: false,
                                     element: None,
@@ -3836,7 +3848,7 @@ impl Analysis for Allocations<'_> {
                                     })
                                     .unwrap_or(0);
                                 let width = as_read.min(recorded.bound().unwrap_or(0));
-                                each.believed = if fresh {
+                                each.believe(if fresh {
                                     Some(as_read)
                                 } else {
                                     self.read_from_fits(
@@ -3847,7 +3859,7 @@ impl Analysis for Allocations<'_> {
                                         value,
                                     )
                                     .then_some(width)
-                                };
+                                });
                                 // The one target, which is all `targets`
                                 // holds where the copy replaces it; any
                                 // other is a may-write, as a union is.
@@ -3886,19 +3898,21 @@ impl Analysis for Allocations<'_> {
                                 from_depth + 1,
                                 self.deepest_pointer,
                             ));
+                            // **A copy records the width of the bytes it
+                            // copies** (#711), so nothing it leaves is without
+                            // one, even out of a block a store recorded none
+                            // in: marking a copy out of memory nothing wrote
+                            // doubted its width beside the `SC0411` already
+                            // said there, measured on #767. See `Cell::held`.
+                            if copied_bound.at(0) == Width::Nothing {
+                                copied_bound.set_first(Width::Unbounded);
+                            }
                             let poured = Cell::poured(
                                 value.points_to.len(),
                                 copied.iter().copied(),
                                 copied_locals.iter().copied(),
                                 &copied_bound,
                                 &read,
-                                // A copy records the width of the bytes it
-                                // copies (#711), so nothing it leaves is
-                                // without one; and marking a copy out of
-                                // memory nothing wrote doubted its width
-                                // beside the `SC0411` already said there,
-                                // measured on #767.
-                                false,
                             );
                             let in_part: Vec<LocalIdx> = if read.array_edge {
                                 copied_locals.iter().copied().collect()
@@ -4286,12 +4300,12 @@ impl Analysis for Allocations<'_> {
                     let named_now = value.locals_named_by_unknown_code();
                     let handed_contents = value.handed_at_most[local].below(1);
                     let held = &mut value.points_to[local];
-                    held.believed = believed;
+                    held.believe(believed);
                     // **And what its memory holds, no more than it was
                     // handed as at every level below** (#636), bounding what
                     // it held, since a callee that writes nothing leaves
                     // that. See `Known::handed_at_most`.
-                    held.contents_at_most.bound_by(&handed_contents);
+                    held.bound_contents(&handed_contents);
                     for &site in &stored {
                         if !(holds_an_address && deep[site]) {
                             held.hold(site, Offset::Unknown);
@@ -4443,13 +4457,15 @@ impl Analysis for Allocations<'_> {
             | Callee::Ends => false,
         };
         if opaque {
-            value.points_to[result].believed = self.pointee_size(function, place);
+            let believed = self.pointee_size(function, place);
+            value.points_to[result].believe(believed);
             // And what its memory holds as its type says, as a parameter's.
-            value.points_to[result].contents_at_most = self
+            let contents = self
                 .unit
                 .place_ty(function, place)
                 .and_then(|ty| self.type_levels(ty))
                 .unwrap_or_default();
+            value.points_to[result].set_contents(&contents);
             value.points_to[result].arrived_holds_pointer = self
                 .unit
                 .place_ty(function, place)
@@ -4598,7 +4614,7 @@ impl Analysis for Allocations<'_> {
                 for argument in handed {
                     if let Operand::Copy(source) = argument {
                         if source.projection.is_empty() {
-                            let handed = value.points_to[source.local].contents_at_most.clone();
+                            let handed = value.points_to[source.local].contents_at_most();
                             value.contents[site].bound_stored(&handed);
                         }
                     }

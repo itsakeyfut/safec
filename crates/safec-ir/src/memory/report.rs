@@ -1351,7 +1351,7 @@ fn contents_leaving(
             .and_then(|ty| analysis.type_levels(ty))
             .is_some_and(|receiver| {
                 known.points_to[local]
-                    .contents_at_most
+                    .contents_at_most()
                     .narrower_than(&receiver)
             });
         let fit = match fit {
@@ -1414,13 +1414,12 @@ fn contents_leaving(
         // record may stand in for where the receiver reads a pointer out of
         // it: `*ib = 7; use(box);` with `use` taking `int **` handed on an
         // `int` read as a pointer, in silence, and so did the same on one
-        // arm beside `*box = malloc(4);` on the other (#767). See
-        // `Cell::unrecorded`.
-        let stored_narrower = (known.contents[site].unrecorded()
-            && receiver.at(0) != Width::Unbounded)
-            || known.contents[site]
-                .stored_levels()
-                .narrower_than(&receiver);
+        // arm beside `*box = malloc(4);` on the other (#767). Such a store
+        // is `Nothing` at the cell's level 0, which `Levels::narrower_than`
+        // reads as narrower than any width the receiver reads there.
+        let stored_narrower = known.contents[site]
+            .stored_levels()
+            .narrower_than(&receiver);
         let fit = match (extents.is_empty(), stored_narrower) {
             (true, false) => continue,
             (true, true) => Fit::Unknown,
@@ -2204,7 +2203,7 @@ fn points_at_a_pointer(
     // holds a pointer there tells them apart (#818). See ADR-0073 rule 4.
     let held = &known.points_to[place.local];
     let arrived = held
-        .contents_at_most
+        .contents_at_most()
         .at(0)
         .bound()
         .filter(|&width| width > 0)
