@@ -50,7 +50,13 @@ Chosen: the byte offset and the per-slot record, by the author.
      non-zero, and `Unknown` otherwise.
    - A move by a constant counts the pointee's size. A move the check cannot
      compute, or one that overflows, is `Unknown`, never `Bytes`.
-   - `At` replaces `Offset`, `Held::element` and `Held::site_element`.
+   - `At` replaces `Offset`. **`Held::element` and `Held::site_element`
+     stay fields of their own**, by the author's decision on #918: they
+     carry which element a value read out of one local names (#706),
+     where a load's position is `Unknown` by ADR-0045. Read off `At`
+     instead, twelve cases moved, and some lost an `SC0411` for an element
+     nothing wrote, a silence; joining them by `At`'s rule alone moved
+     none.
    - A null joined with a moved value stays `Unknown`, as ADR-0036 accepts.
 2. **Not a position: `inner_address` and `array_edge`.** They say an edge may
    name the wrong object, and that an edge survives only by #639's rule. They
