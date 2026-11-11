@@ -1806,6 +1806,10 @@ cases! {
         // A whole copy of a block no partial copy wrote. Mutation: record
         // every copy's own span as a partial one's; this is reported.
         a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Two partial copies reach one block, the first carried by a whole
+        // copy: one report, at the first. Mutation: keep the later span in
+        // `Known::note_part_written`; the caret moves to the second copy.
+        a_partial_pointer_carried_into_a_block_a_later_partial_copy_writes_is_reported_at_the_first_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
         // one is, by one function both doors call (#890). Possibly, not
         // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no
