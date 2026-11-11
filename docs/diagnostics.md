@@ -367,6 +367,9 @@ holds pointers, so an alias made first, a copy before the typed hold, and a
 block handed on or stored as memory of pointers without a typed local are
 asked too (#832,
 [ADR-0087](adr/0087-a-copy-of-part-of-a-pointer-is-recorded-on-the-block-and-asked-where-the-block-is-held-as-memory-of-pointers.md)).
+A whole copy of such a block, and a `realloc` of it, carries the record to
+the new block, which is asked the same way (#905,
+[ADR-0088](adr/0088-a-copy-or-realloc-carries-the-record-of-a-partial-pointer-and-a-read-of-a-pointer-out-of-the-block-asks-it.md)).
 Each is asked at the wider of its own type and the type the receiver reads it
 as, so a `void *` local's address passed as an `int **` asks the local four
 bytes wide, and memory by what its record says the pointers stored there point

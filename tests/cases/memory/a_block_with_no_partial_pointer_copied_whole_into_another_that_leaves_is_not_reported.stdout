@@ -1,0 +1,150 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:2:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:3:7 "realloc" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "p"
+  Local "_2" "int" parameter "n"
+Function a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:4:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:5:6 "use" declared
+  Local "_0" "void" return
+Function a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:6:6 "out"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "pp"
+  Local "_2" "void *" "x"
+  Local "_3" "int"
+  Local "_4" "void *" "m"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "void *" "m2"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "void **"
+  Local "_11" "void *"
+  Local "_12" "void *"
+  Local "_13" "void **" "q"
+  Local "_14" "void **"
+  Block "bb0" entry
+    Operation a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:7:11 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:7:15 generated
+    Operation a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:8:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:8:9 written "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:8:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:8:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:9:15 generated
+    Call a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:9:15 written "malloc" "bb4"
+      Destination "_5"
+      Constant 8
+  Block "bb4"
+    Operation a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:9:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:9:15 generated
+    Operation a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:10:9 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_4"
+    Branch a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:10:9 written "bb5" "bb6"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:10:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:10:9 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:11:16 generated
+    Call a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:11:16 written "malloc" "bb8"
+      Destination "_8"
+      Constant 8
+  Block "bb8"
+    Operation a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:11:11 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:11:16 generated
+    Operation a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:12:9 written
+      Destination "_9"
+      Unary "Not"
+        Copy "_7"
+    Branch a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:12:9 written "bb9" "bb10"
+      Copy "_9"
+  Block "bb9"
+    Sequenced a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:12:9 generated
+    ArgumentsEvaluated a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:12:16 generated
+    Call a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:12:16 written "free" "bb12"
+      Copy "_4"
+  Block "bb10"
+    Sequenced a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:12:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:13:15 written
+      Destination "_10"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:13:5 generated
+    Call a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:13:5 written "memcpy" "bb13"
+      Destination "_11"
+      Copy "_4"
+      Copy "_10"
+      Constant 8
+  Block "bb12"
+    Sequenced a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:12:16 generated
+    Return
+  Block "bb13"
+    Sequenced a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:13:5 generated
+    ArgumentsEvaluated a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:14:5 generated
+    Call a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:14:5 written "memcpy" "bb14"
+      Destination "_12"
+      Copy "_7"
+      Copy "_4"
+      Constant 8
+  Block "bb14"
+    Sequenced a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:14:5 generated
+    ArgumentsEvaluated a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:15:5 generated
+    Call a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:15:5 written "free" "bb15"
+      Copy "_4"
+  Block "bb15"
+    Sequenced a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:15:5 generated
+    Operation a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:16:12 written
+      Destination "_13"
+      Use
+        Copy "_7"
+    Sequenced a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:16:16 generated
+    Operation a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:17:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_13"
+    Operation a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:17:5 written
+      Destination "_14"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:17:5 generated
+    ArgumentsEvaluated a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:18:5 generated
+    Call a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:18:5 written "use" "bb16"
+  Block "bb16"
+    Sequenced a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported.c:18:5 generated
+    Return

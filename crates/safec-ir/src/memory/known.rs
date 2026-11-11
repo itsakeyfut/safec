@@ -13,7 +13,7 @@ use crate::source::{SourceMap, Span};
 use super::index::{Loc, LocalIdx, Site, Table};
 use super::parts::{
     AS_TYPED, Cell, Extent, Held, Init, Inits, Levels, Offset, PendingRead, Reached, Read, ReadKey,
-    Realloced, SiteElements, SiteState, read_key,
+    Realloced, SiteElements, SiteState, earlier, read_key,
 };
 use super::store::{Certain, Strong, WrittenLocal};
 use super::{LostReason, named};
@@ -462,7 +462,11 @@ pub(super) struct Known {
     /// Per site, the earliest library copy that may have written part of a
     /// pointer into it: one whose length is shorter than a pointer, or ends
     /// part way through one (`Allocations::copied_pointers`), whatever either
-    /// side's type said then.
+    /// side's type said then. **Or into a block it was copied or
+    /// `realloc`ed from**, whose bytes this one now holds: the record is
+    /// carried to the new block (#905, ADR-0088). **Allocations only**: a
+    /// local array has no entry, so a copy through one carries nothing on,
+    /// a silence #908 decides.
     ///
     /// **Asked where the block is later held as memory of pointers**: where
     /// it leaves so (the exit's question, beside `left_at`) and where it is
@@ -529,6 +533,17 @@ impl Known {
     /// Every site this local may point at.
     pub(super) fn sites_of(&self, local: LocalId) -> impl Iterator<Item = Site> + '_ {
         self.points_to[local].sites()
+    }
+
+    /// Note on `site` a copy at `copy` that may have written part of a
+    /// pointer into it, keeping the earlier of what was there: one body for
+    /// the copy that writes it and the copy and `realloc` that carry it, so
+    /// the three join it alike. See [`Self::part_written`] and ADR-0088.
+    pub(super) fn note_part_written(&mut self, sources: &SourceMap, site: Site, copy: Span) {
+        self.part_written[site] = Some(match self.part_written[site] {
+            Some(before) => earlier(sources, before, copy),
+            None => copy,
+        });
     }
 
     /// Stop following whatever this local held, because its lifetime began

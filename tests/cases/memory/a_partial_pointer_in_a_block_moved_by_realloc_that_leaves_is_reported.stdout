@@ -1,0 +1,157 @@
+Target "x86_64-pc-windows-msvc"
+Function a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:2:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:3:7 "realloc" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "p"
+  Local "_2" "int" parameter "n"
+Function a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:4:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:5:6 "use" declared
+  Local "_0" "void" return
+Function a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:6:6 "out"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "pp"
+  Local "_2" "int" "i"
+  Local "_3" "void *" "x"
+  Local "_4" "int"
+  Local "_5" "void *" "m"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "void **"
+  Local "_9" "void *"
+  Local "_10" "int *"
+  Local "_11" "void *"
+  Local "_12" "void *" "n"
+  Local "_13" "void *"
+  Local "_14" "int"
+  Local "_15" "void **" "q"
+  Local "_16" "void **"
+  Block "bb0" entry
+    Operation a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:7:9 written
+      Destination "_2"
+      Use
+        Constant 1
+    Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:7:13 generated
+    Operation a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:8:11 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:8:15 generated
+    Operation a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:9:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_1"
+    Branch a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:9:9 written "bb1" "bb2"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:9:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:9:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:10:15 generated
+    Call a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:10:15 written "malloc" "bb4"
+      Destination "_6"
+      Constant 8
+  Block "bb4"
+    Operation a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:10:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:10:15 generated
+    Operation a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:11:9 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_5"
+    Branch a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:11:9 written "bb5" "bb6"
+      Copy "_7"
+  Block "bb5"
+    Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:11:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:11:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:12:15 written
+      Destination "_8"
+      Address
+        Place "_3"
+    ArgumentsEvaluated a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:12:5 generated
+    Call a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:12:5 written "memcpy" "bb8"
+      Destination "_9"
+      Copy "_5"
+      Copy "_8"
+      Constant 8
+  Block "bb8"
+    Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:12:5 generated
+    Operation a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:13:15 written
+      Destination "_10"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:13:5 generated
+    Call a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:13:5 written "memcpy" "bb9"
+      Destination "_11"
+      Copy "_5"
+      Copy "_10"
+      Constant 4
+  Block "bb9"
+    Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:13:5 generated
+    ArgumentsEvaluated a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:14:15 generated
+    Call a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:14:15 written "realloc" "bb10"
+      Destination "_13"
+      Copy "_5"
+      Constant 8
+  Block "bb10"
+    Operation a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:14:11 written
+      Destination "_12"
+      Use
+        Copy "_13"
+    Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:14:15 generated
+    Operation a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:15:9 written
+      Destination "_14"
+      Unary "Not"
+        Copy "_12"
+    Branch a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:15:9 written "bb11" "bb12"
+      Copy "_14"
+  Block "bb11"
+    Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:15:9 generated
+    ArgumentsEvaluated a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:15:15 generated
+    Call a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:15:15 written "free" "bb14"
+      Copy "_5"
+  Block "bb12"
+    Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:15:9 generated
+    Goto "bb13"
+  Block "bb13"
+    Operation a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:16:12 written
+      Destination "_15"
+      Use
+        Copy "_12"
+    Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:16:16 generated
+    Operation a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:17:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_15"
+    Operation a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:17:5 written
+      Destination "_16"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:17:5 generated
+    ArgumentsEvaluated a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:18:5 generated
+    Call a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:18:5 written "use" "bb15"
+  Block "bb14"
+    Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:15:15 generated
+    Return
+  Block "bb15"
+    Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:18:5 generated
+    Return
