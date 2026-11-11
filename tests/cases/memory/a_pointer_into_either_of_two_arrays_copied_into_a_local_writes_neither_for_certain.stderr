@@ -1,13 +1,3 @@
-error[SC0413]: this lets `e` leave, which may not point at an object as wide as its type
-   ╭─[ a_pointer_into_either_of_two_arrays_copied_into_a_local_writes_neither_for_certain.c:9:5 ]
-   │
- 9 │     memcpy(&g, &e, 8);
-   │     ────────┬────────  
-   │             ╰────────── stored here
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0412]: this may reach outside the object `g` points at
     ╭─[ a_pointer_into_either_of_two_arrays_copied_into_a_local_writes_neither_for_certain.c:10:5 ]
     │

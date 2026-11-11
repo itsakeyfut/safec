@@ -1,13 +1,3 @@
-error[SC0412]: this may reach outside the object it points at
-   ╭─[ a_copy_shorter_than_its_destination_out_of_a_block_nothing_wrote_leaves_the_rest_in_doubt.c:5:5 ]
-   │
- 5 │     n[1] = x;
-   │     ────┬───  
-   │         ╰───── this check cannot say this is inside its object
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0411]: this may read a pointer out of memory before anything was assigned to it
    ╭─[ a_copy_shorter_than_its_destination_out_of_a_block_nothing_wrote_leaves_the_rest_in_doubt.c:7:10 ]
    │
@@ -19,13 +9,3 @@ error[SC0411]: this may read a pointer out of memory before anything was assigne
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: assign it on every path before it is read
-error[SC0412]: this may reach outside the object it points at
-   ╭─[ a_copy_shorter_than_its_destination_out_of_a_block_nothing_wrote_leaves_the_rest_in_doubt.c:7:10 ]
-   │
- 7 │     int *r = n[1]; if (!r) return 0;
-   │          ────┬───  
-   │              ╰───── this check cannot say this is inside its object
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

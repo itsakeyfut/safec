@@ -1,13 +1,3 @@
-error[SC0412]: this may reach outside the object it points at
-   ╭─[ a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothing_wrote.c:2:60 ]
-   │
- 2 │ int **f(void) { int **b = malloc(8); int **a[2]; a[0] = b; a[1] = b; return a[0]; }
-   │                                                            ────┬───  
-   │                                                                ╰───── this check cannot say this is inside its object
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0411]: this returns memory nothing wrote, and the caller may read pointers out of it
    ╭─[ a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothing_wrote.c:2:70 ]
    │

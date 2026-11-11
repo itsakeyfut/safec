@@ -3357,12 +3357,13 @@ cases! {
         // `memory/built.rs::offset_of`, drop the arm that reads the constant on
         // the left. This fails with the proof down to `may`.
         a_free_of_a_constant_plus_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A pointer moved off the start and back is at the start again, and
-        // this check carries no distance to know it, so the second move proves
-        // nothing. The program is one C defines. Mutation: in `offset_of`, stop
-        // requiring the followed operand to be at the start. This fails with a
+        // A pointer moved off the start and back is at the start again,
+        // which the distance counted in it says (#703), so its free is no
+        // interior free. The program is one C defines. Mutation: in
+        // `offset_of`, count the distance from the start of the object
+        // rather than from where the operand points; this fails with a
         // proved `SC0404` about a free C defines.
-        a_free_of_a_pointer_moved_back_to_the_start_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_free_of_a_pointer_moved_back_to_the_start_is_not_an_interior_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Two allocations, one offset, and no `allocated here`: naming either
         // line would be a caret on an allocation the value may not hold. Both
         // are made before the branch rather than on its arms: allocated on an
@@ -6115,9 +6116,20 @@ cases! {
         // Mutation: set `inner_address` for a constant zero index; so is
         // this.
         an_access_at_the_start_of_a_local_array_says_nothing_of_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        an_access_past_the_start_of_a_local_array_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        an_index_past_the_start_of_an_allocation_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        an_element_of_an_array_of_arrays_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An access past an object's start is shown inside where the
+        // distance in is counted, the pointee's size times a constant
+        // (#703, ADR-0092 rule 1), and one past its end is shown outside; an
+        // index this check cannot read stays unknown. Mutation: count no
+        // distance in `built::offset_of`, answering `At::Moved` as before;
+        // the first three are `SC0412` again and the two after them only
+        // doubted. Mutation: answer a distance that cannot be counted as
+        // `Bytes(0)`; the last is proved inside.
+        an_access_past_the_start_of_a_local_array_is_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_index_past_the_start_of_an_allocation_is_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_element_of_an_array_of_arrays_is_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_index_one_past_the_end_of_an_allocation_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_index_one_past_the_end_of_a_local_array_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_index_this_check_cannot_read_into_an_allocation_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer stored into a row is reported where it is stored and read
         // back, and named as freed at `*q` (#639). Mutation: the edge is
         // dropped for every local again; this loses the `SC0402`.
@@ -6132,7 +6144,7 @@ cases! {
         an_array_too_large_to_count_is_not_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `innermost_element` strips one dimension only; this panics at
         // `type_levels`.
-        a_pointer_read_out_of_an_array_of_arrays_of_pointers_behind_a_parameter_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_an_array_of_arrays_of_pointers_behind_a_parameter_is_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument

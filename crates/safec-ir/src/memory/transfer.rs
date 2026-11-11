@@ -205,6 +205,7 @@ impl Allocations<'_> {
                     |place| self.reads_a_byte(function, place),
                     |local, depth| self.reads_caller_memory(local, depth, value),
                     |local| self.is_array(function, local),
+                    self.stride(function, lhs, rhs),
                 );
                 // What the arithmetic leaves of the edge, as the direct
                 // assignment's `Rvalue::Binary` arm asks. See ADR-0019. No C
@@ -231,6 +232,7 @@ impl Allocations<'_> {
                     |place| self.reads_a_byte(function, place),
                     |local, depth| self.reads_caller_memory(local, depth, value),
                     |local| self.is_array(function, local),
+                    None,
                 );
                 reached.moved_by_arithmetic(None);
                 reached
@@ -296,6 +298,30 @@ impl Allocations<'_> {
         };
         let stride = self.innermost_elements(pointee)?;
         constant.checked_mul(i128::from(stride))?.checked_mul(sign)
+    }
+
+    /// How many bytes the one operand of `lhs op rhs` that is a pointer, or
+    /// an array, points at: what a constant added to it moves it by, each,
+    /// in bytes (C17 6.5.6 p8). `None` where neither operand is, or both
+    /// are, or what it points at has no size, `void`'s: a distance that
+    /// cannot be counted is never one (ADR-0092 rule 1). See
+    /// `built::offset_of`.
+    fn stride(&self, function: &Function, lhs: &Operand, rhs: &Operand) -> Option<u64> {
+        let sizes: Vec<Option<u64>> = [lhs, rhs]
+            .into_iter()
+            .filter_map(|operand| match operand {
+                Operand::Copy(place) => match self.unit.ty(self.unit.place_ty(function, place)?) {
+                    Ty::Pointer(pointee) => Some(self.unit.size_of(pointee)),
+                    Ty::Array { element, .. } => Some(self.unit.size_of(element)),
+                    Ty::Int | Ty::Char | Ty::Void => None,
+                },
+                Operand::Constant(_) => None,
+            })
+            .collect();
+        match sizes[..] {
+            [size] => size,
+            _ => None,
+        }
     }
 
     /// How many innermost elements one object of `ty` holds: an array's
@@ -2861,6 +2887,7 @@ impl Analysis for Allocations<'_> {
                             |place| self.reads_a_byte(function, place),
                             |local, depth| self.reads_caller_memory(local, depth, value),
                             |local| self.is_array(function, local),
+                            self.stride(function, lhs, rhs),
                         );
                         // **The sites travel, and the edge only where the offset
                         // may be zero.** C17 6.5.6 p8 keeps the result inside
@@ -2899,6 +2926,7 @@ impl Analysis for Allocations<'_> {
                             |place| self.reads_a_byte(function, place),
                             |local, depth| self.reads_caller_memory(local, depth, value),
                             |local| self.is_array(function, local),
+                            None,
                         );
                         reached.moved_by_arithmetic(None);
                         value.replace(at, reached);

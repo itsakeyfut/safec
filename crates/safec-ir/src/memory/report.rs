@@ -919,14 +919,27 @@ fn say_fit(
     fit: Option<Fit>,
 ) {
     let (at, local, named) = at;
-    let (conclusion, extent, made, unproven) = match fit {
+    let (conclusion, reach, extent, made, unproven) = match fit {
         None | Some(Fit::Inside) => return,
-        Some(Fit::Outside { extent, made }) => (Conclusion::Unsafe, extent, made, None),
-        Some(Fit::Unknown) => (Conclusion::Unknown, None, None, Some(Unproven::Extent)),
+        Some(Fit::Outside {
+            reach,
+            extent,
+            made,
+        }) => (Conclusion::Unsafe, reach, extent, made, None),
+        Some(Fit::Unknown) => (
+            Conclusion::Unknown,
+            width,
+            None,
+            None,
+            Some(Unproven::Extent),
+        ),
     };
     let finding = Finding {
         function: analysis.function,
-        kind: Kind::OutsideItsObject { width, extent },
+        kind: Kind::OutsideItsObject {
+            width: reach,
+            extent,
+        },
         conclusion,
         at,
         local: named,
@@ -1024,17 +1037,27 @@ pub(super) fn reached_by_library(
                 None => Some(Fit::Unknown),
             }
         };
-        let (conclusion, extent, made, unproven) = match fit {
+        let (conclusion, reach, extent, made, unproven) = match fit {
             None | Some(Fit::Inside) => continue,
-            Some(Fit::Outside { extent, made }) => (Conclusion::Unsafe, extent, made, None),
-            Some(Fit::Unknown) => (Conclusion::Unknown, None, None, Some(Unproven::Extent)),
+            Some(Fit::Outside {
+                reach,
+                extent,
+                made,
+            }) => (Conclusion::Unsafe, Some(reach), extent, made, None),
+            Some(Fit::Unknown) => (
+                Conclusion::Unknown,
+                width,
+                None,
+                None,
+                Some(Unproven::Extent),
+            ),
         };
         let finding = Finding {
             function: analysis.function,
             // No width where none was read: it is printed only beside a
             // proof, and a proof needs one.
             kind: Kind::OutsideItsObject {
-                width: width.unwrap_or(0),
+                width: reach.unwrap_or(0),
                 extent,
             },
             conclusion,
@@ -1088,9 +1111,10 @@ fn leaving(
 ) -> Option<(Fit, Option<LocalId>)> {
     match value {
         Rvalue::Use(Operand::Constant(_)) => None,
-        // A value leaving doubts nothing unseen, as [`fits`] says.
+        // A value leaving doubts nothing unseen, as [`fits`] says. Off its
+        // start, unknown: see [`departing_fit`].
         Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
-            fits(analysis, function, place.local, width, known, false)
+            departing_fit(analysis, function, place.local, width, known)
                 .map(|fit| (fit, Some(place.local)))
         }
         // A belief narrower than the width is unknown and not narrower,
@@ -1117,6 +1141,7 @@ fn leaving(
             let fit = match analysis.unit.size_of(function.local(place.local)) {
                 Some(size) if size >= width => Fit::Inside,
                 Some(size) => Fit::Outside {
+                    reach: width,
                     extent: Some(size),
                     made: None,
                 },
@@ -1128,6 +1153,35 @@ fn leaving(
             Some((Fit::Unknown, None))
         }
     }
+}
+
+/// [`fits`] for a pointer that leaves the function, which doubts nothing
+/// unseen, **and is unknown wherever it points off its start**, by a
+/// distance counted or not, as it was before distances were counted.
+///
+/// **A departure is asked whether the receiver may take a whole object of
+/// its type there**, and for a `void *` whether it starts one (ADR-0065);
+/// both are worded about the start, and a pointer some distance in was
+/// always a doubt. Counting the distance (#703) is for an access, which
+/// says how far it reaches: answered here by it, `return p + 5;` out of
+/// `malloc(4)` was a proof worded as `a pointer to 4 bytes` where `4 bytes
+/// are believed`, which the reader cannot reconcile, and a `void *` some
+/// way into an object was answered whether a byte fits there rather than
+/// whether it starts it.
+///
+/// Mutation: answer `off_start` `false`;
+/// `a_void_pointer_off_its_start_leaving_is_asked_whether_it_starts_an_object`
+/// fails, among many.
+fn departing_fit(
+    analysis: &Allocations<'_>,
+    function: &Function,
+    local: LocalId,
+    width: u64,
+    known: &Known,
+) -> Option<Fit> {
+    let off_start = matches!(known.points_to[local].offset, At::Moved | At::Bytes(1..));
+    fits(analysis, function, local, width, known, false)
+        .map(|fit| if off_start { Fit::Unknown } else { fit })
 }
 
 /// Push what [`leaving`] answered, once per value per caret and door.
@@ -1147,7 +1201,7 @@ fn say_leaving(
     // what was shown is carried into the words.
     let (narrower, extent, made) = match fit {
         Fit::Inside => return,
-        Fit::Outside { extent, made } => (true, extent, made),
+        Fit::Outside { extent, made, .. } => (true, extent, made),
         Fit::Unknown => (false, None, None),
     };
     let finding = Finding {
@@ -1339,8 +1393,8 @@ fn contents_leaving(
             continue;
         };
         // Reached through its address, so its escape is not doubted, as
-        // [`fits`] says.
-        let fit = fits(analysis, function, local, width, known, false);
+        // [`fits`] says. Off its start, unknown: see [`departing_fit`].
+        let fit = departing_fit(analysis, function, local, width, known);
         // **And below its own level, by what its value believes of its
         // memory**, against what the receiver reads there: `use(&x)` with
         // `x` a `void **` converted to `int **` and `use` taking `int ***`

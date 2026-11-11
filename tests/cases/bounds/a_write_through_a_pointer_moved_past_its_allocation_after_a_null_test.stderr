@@ -1,10 +1,13 @@
-error[SC0412]: this may reach outside the object `q` points at
+error[SC0412]: this reaches 24 bytes into an object of 4 bytes
     ╭─[ a_write_through_a_pointer_moved_past_its_allocation_after_a_null_test.c:12:5 ]
     │
+  4 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
  12 │     *q = 1;
     │     ───┬──  
-    │        ╰──── this check cannot say this is inside its object
+    │        ╰──── wider than the object it reaches
 ────╯
   = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+  = help: make the object at least as wide as this access, or reach less of it

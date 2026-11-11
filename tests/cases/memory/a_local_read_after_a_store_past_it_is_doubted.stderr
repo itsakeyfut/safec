@@ -1,13 +1,12 @@
-error[SC0412]: this may reach outside the object `pp` points at
+error[SC0412]: this reaches 16 bytes into an object of 8 bytes
    ╭─[ a_local_read_after_a_store_past_it_is_doubted.c:6:5 ]
    │
  6 │     *pp = &x;
    │     ────┬───  
-   │         ╰───── this check cannot say this is inside its object
+   │         ╰───── wider than the object it reaches
 ───╯
   = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+  = help: make the object at least as wide as this access, or reach less of it
 error[SC0411]: `z` may be read before anything was assigned to it
    ╭─[ a_local_read_after_a_store_past_it_is_doubted.c:7:10 ]
    │
