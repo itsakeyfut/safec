@@ -477,6 +477,16 @@ pub(super) struct Known {
     /// may-fact, joined keeping the earlier span, and kept where the site is
     /// made again, as `left_at` is. See ADR-0087.
     pub(super) part_written: Table<Site, Option<Span>>,
+    /// [`Self::part_written`] for the allocation the site names now:
+    /// cleared where the site is made again, which `part_written` is not.
+    ///
+    /// **What a read inside the function asks** (ADR-0088 rules 3 and 4):
+    /// it reads the block the site names now, not one an earlier turn made
+    /// and a caller may still hold, which is the reason `part_written` is
+    /// kept. Asked by the kept one, a loop that allocated, read a whole
+    /// pointer, and only then copied part of one into the block was doubted
+    /// at the copy every turn, found by review.
+    pub(super) part_written_since_made: Table<Site, Option<Span>>,
     /// Per local, each type a call this check cannot read reached it as on
     /// the walk a departure takes, where that type is untyped somewhere
     /// below: `void`, `char` or `int` bytes, a pointer whose chain ends in
@@ -540,10 +550,38 @@ impl Known {
     /// the copy that writes it and the copy and `realloc` that carry it, so
     /// the three join it alike. See [`Self::part_written`] and ADR-0088.
     pub(super) fn note_part_written(&mut self, sources: &SourceMap, site: Site, copy: Span) {
-        self.part_written[site] = Some(match self.part_written[site] {
-            Some(before) => earlier(sources, before, copy),
-            None => copy,
-        });
+        for table in [&mut self.part_written, &mut self.part_written_since_made] {
+            table[site] = Some(match table[site] {
+                Some(before) => earlier(sources, before, copy),
+                None => copy,
+            });
+        }
+    }
+
+    /// Carry what `from` recorded to every site in `to`, as a copy or a
+    /// `realloc` moves the bytes: each record from its own, so that what a
+    /// read here asks comes only from blocks made since (ADR-0088).
+    pub(super) fn carry_part_written(&mut self, sources: &SourceMap, from: &[Site], to: &[Site]) {
+        let earliest = |table: &Table<Site, Option<Span>>| {
+            from.iter()
+                .filter_map(|&block| table[block])
+                .reduce(|here, there| earlier(sources, here, there))
+        };
+        let kept = earliest(&self.part_written);
+        let now = earliest(&self.part_written_since_made);
+        for &site in to {
+            for (table, carried) in [
+                (&mut self.part_written, kept),
+                (&mut self.part_written_since_made, now),
+            ] {
+                if let Some(copy) = carried {
+                    table[site] = Some(match table[site] {
+                        Some(before) => earlier(sources, before, copy),
+                        None => copy,
+                    });
+                }
+            }
+        }
     }
 
     /// Stop following whatever this local held, because its lifetime began
@@ -1934,6 +1972,9 @@ impl Known {
             stored_out_at: _,
             // Kept, for the reason `left_at` is. See `Known::part_written`.
             part_written: _,
+            // About the allocation the site named: the new one has had
+            // nothing copied into it. See `Known::part_written_since_made`.
+            part_written_since_made,
             // Not a local's, which a site being reborn is not about, and
             // kept for the site, as `names` is: a call may still hold the old
             // allocation's address, and the slots of the new one are not told
@@ -1948,6 +1989,7 @@ impl Known {
         // allocation**, field by field. See `Cell::kept_when_reborn`.
         contents[site].kept_when_reborn();
         stored_out[site] = false;
+        part_written_since_made[site] = None;
 
         // **A local that loses an allocation that is gone may hold one**, so
         // a store of it marks where it lands, as a load out of a marked

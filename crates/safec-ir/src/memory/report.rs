@@ -1665,8 +1665,9 @@ pub(super) fn asked_unwritten_in_terminator(
                     // *pp = s;` built silent (#907). The blocks the source
                     // names at the copy's depth, as the transfer carries
                     // them. Not where what it copies is said unwritten
-                    // above, the same defect said more strongly. See
-                    // ADR-0088.
+                    // above, the same defect said more strongly. By the
+                    // record of the block the site names now, as a load
+                    // asks (ADR-0089). See ADR-0088.
                     //
                     // **Memory of pointers by what the destination points
                     // at, too**, as a partial copy is asked (ADR-0071 rule
@@ -1679,7 +1680,7 @@ pub(super) fn asked_unwritten_in_terminator(
                         let depth = derefs(source);
                         if source.projection.is_empty() || depth > 0 {
                             for site in known.levels_below(source.local, depth).0 {
-                                if let Some(copy) = known.part_written[site] {
+                                if let Some(copy) = known.part_written_since_made[site] {
                                     push_part_of_a_pointer(findings, ask.analysis, copy);
                                 }
                             }
@@ -2602,7 +2603,8 @@ pub(super) fn loaded_indeterminate(
             // pointer into**, at the copy: `void **b = m; void *s = *b;`
             // after `memcpy(m, &i, 4)` built silent (#907). Only where the
             // read is not said indeterminate, which is the same defect said
-            // more strongly. See ADR-0088.
+            // more strongly. By the record of the block the site names now,
+            // since that is the block read (ADR-0089). See ADR-0088.
             //
             // **Nor through a pointer a store has written through since it
             // was given its value**, on every path (`Held::stored_through`):
@@ -2613,7 +2615,7 @@ pub(super) fn loaded_indeterminate(
             let rewritten = derefs(&place) == 1 && known.points_to[place.local].stored_through;
             if !rewritten && analysis.may_be_pointer(function, &place) {
                 for site in blocks_read(&place, known) {
-                    if let Some(copy) = known.part_written[site] {
+                    if let Some(copy) = known.part_written_since_made[site] {
                         push_part_of_a_pointer(findings, analysis, copy);
                     }
                 }

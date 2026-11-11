@@ -1853,6 +1853,22 @@ cases! {
         // Mutation: read only what the pointer names in `blocks_read`; this
         // loses its `SC0413`, keeping the nullability check's `SC0403`.
         a_pointer_read_two_levels_down_out_of_a_block_a_partial_copy_wrote_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Each turn makes a block, reads a whole pointer out of it, and only
+        // then copies part of one in: the read is of this turn's block, not
+        // the last's, found by review. Mutation: a read asks the record kept
+        // where the site is made again, `Known::part_written`; this is
+        // reported. So it is when the site's own record is not cleared there.
+        a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same turn copies and then reads: asked. Mutation: note a copy
+        // in the kept record alone in `Known::note_part_written`; this and
+        // every other read case go silent.
+        a_partial_pointer_copied_and_read_in_each_turn_of_a_loop_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read after a `realloc` moved the block. Mutation: carry only the
+        // kept record in `Known::carry_part_written`; this goes silent.
+        a_pointer_read_out_of_a_block_a_realloc_moved_after_a_partial_copy_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Copied on one arm and read after the join. Mutation: leave
+        // `Known::part_written_since_made` out of the join; this goes silent.
+        a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
         // one is, by one function both doors call (#890). Possibly, not
         // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no
