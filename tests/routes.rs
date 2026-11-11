@@ -98,6 +98,21 @@ enum Belief {
     /// Mutation: `report::freed_behind` asks nothing;
     /// `left_behind_store_d1_both` fails, among thirty four.
     LeftBehind,
+    /// Put there whole, then half of it overwritten by a copy of an `int`'s
+    /// four bytes, and the slot's container handed to a call this check
+    /// cannot read: the callee reads a pointer made of part of an `int`.
+    /// Asked at the copy, `SC0413`, by ADR-0073 rule 4 where the copy's
+    /// destination says pointers and by the partial pointer record
+    /// (ADR-0087 to ADR-0090) where it does not. Its control copies nothing
+    /// over the pointer. The record's own routes, a copy into a block that
+    /// is held as pointers only later, are ADR-0092's to add.
+    ///
+    /// Mutation: `Allocations::copied_pointers` answers `Whole` for every
+    /// length; `part_pointer_store_d1_both` fails, among twenty four, every row
+    /// at depths one and two. The rows at depth zero, a copy into a local's
+    /// own address, are asked by a second door too and are not held by that
+    /// mutation alone.
+    PartPointer,
 }
 
 /// How a pointer gets where it is read back from.
@@ -332,7 +347,7 @@ const KNOWN_FIELDS: &[(&str, Field)] = &[
     ("left_at", Field::Exempt(PENDING)),
     ("held_levels", Field::Exempt(PENDING)),
     ("stored_out_at", Field::Exempt(PENDING)),
-    ("part_written", Field::Exempt(PENDING)),
+    ("part_written", Field::Belief(&[Belief::PartPointer])),
     ("part_written_since_made", Field::Exempt(PENDING)),
     ("handed_untyped", Field::Exempt(PENDING)),
     ("block_elements", Field::Exempt(PENDING)),
@@ -403,7 +418,7 @@ fn every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption() {
 /// `the_matrix_is_every_combination_of_its_axes` asks for; each row that
 /// disagrees in [`ACCEPTED`] and each less certain than its store in
 /// [`UNCERTAIN`]; and a blessing.
-const BELIEFS: [Belief; 10] = [
+const BELIEFS: [Belief; 11] = [
     Belief::Width,
     Belief::Fresh,
     Belief::Lost,
@@ -414,6 +429,7 @@ const BELIEFS: [Belief; 10] = [
     Belief::StoredOut,
     Belief::StoredFreed,
     Belief::LeftBehind,
+    Belief::PartPointer,
 ];
 const ROUTES: [Route; 26] = [
     Route::Store,
@@ -461,6 +477,7 @@ fn axis_place(row: Row) -> [usize; 4] {
         Belief::StoredOut => 7,
         Belief::StoredFreed => 8,
         Belief::LeftBehind => 9,
+        Belief::PartPointer => 10,
     };
     let route = match row.route {
         Route::Store => 0,
@@ -584,7 +601,8 @@ impl Axis for Belief {
             | Belief::Unreplaced
             | Belief::StoredOut
             | Belief::StoredFreed
-            | Belief::LeftBehind => 10,
+            | Belief::LeftBehind
+            | Belief::PartPointer => 11,
         }
     }
 }
@@ -1042,6 +1060,44 @@ routes! {
     left_behind_by_address_d1_one: LeftBehind ByAddress D1 One;
     left_behind_by_address_loaded_d1_both: LeftBehind ByAddressLoaded D1 Both;
     left_behind_by_address_loaded_d1_one: LeftBehind ByAddressLoaded D1 One;
+    part_pointer_store_d0_both: PartPointer Store D0 Both;
+    part_pointer_store_d0_one: PartPointer Store D0 One;
+    part_pointer_store_d1_both: PartPointer Store D1 Both;
+    part_pointer_store_d1_one: PartPointer Store D1 One;
+    part_pointer_store_d2_both: PartPointer Store D2 Both;
+    part_pointer_store_d2_one: PartPointer Store D2 One;
+    part_pointer_memcpy_d0_both: PartPointer Memcpy D0 Both;
+    part_pointer_memcpy_d0_one: PartPointer Memcpy D0 One;
+    part_pointer_memcpy_d1_both: PartPointer Memcpy D1 Both;
+    part_pointer_memcpy_d1_one: PartPointer Memcpy D1 One;
+    part_pointer_memcpy_d2_both: PartPointer Memcpy D2 Both;
+    part_pointer_memcpy_d2_one: PartPointer Memcpy D2 One;
+    part_pointer_realloc_d1_both: PartPointer Realloc D1 Both;
+    part_pointer_realloc_d1_one: PartPointer Realloc D1 One;
+    part_pointer_realloc_d2_both: PartPointer Realloc D2 Both;
+    part_pointer_realloc_d2_one: PartPointer Realloc D2 One;
+    part_pointer_ret_d0_both: PartPointer Ret D0 Both;
+    part_pointer_ret_d0_one: PartPointer Ret D0 One;
+    part_pointer_ret_d1_both: PartPointer Ret D1 Both;
+    part_pointer_ret_d1_one: PartPointer Ret D1 One;
+    part_pointer_ret_d2_both: PartPointer Ret D2 Both;
+    part_pointer_ret_d2_one: PartPointer Ret D2 One;
+    part_pointer_memcpy_block_d0_both: PartPointer MemcpyFromBlock D0 Both;
+    part_pointer_memcpy_block_d0_one: PartPointer MemcpyFromBlock D0 One;
+    part_pointer_memcpy_block_d1_both: PartPointer MemcpyFromBlock D1 Both;
+    part_pointer_memcpy_block_d1_one: PartPointer MemcpyFromBlock D1 One;
+    part_pointer_memcpy_block_d2_both: PartPointer MemcpyFromBlock D2 Both;
+    part_pointer_memcpy_block_d2_one: PartPointer MemcpyFromBlock D2 One;
+    part_pointer_restored_d0_both: PartPointer Restored D0 Both;
+    part_pointer_restored_d0_one: PartPointer Restored D0 One;
+    part_pointer_restored_d1_both: PartPointer Restored D1 Both;
+    part_pointer_restored_d1_one: PartPointer Restored D1 One;
+    part_pointer_restored_d2_both: PartPointer Restored D2 Both;
+    part_pointer_restored_d2_one: PartPointer Restored D2 One;
+    part_pointer_by_address_d1_both: PartPointer ByAddress D1 Both;
+    part_pointer_by_address_d1_one: PartPointer ByAddress D1 One;
+    part_pointer_by_address_loaded_d1_both: PartPointer ByAddressLoaded D1 Both;
+    part_pointer_by_address_loaded_d1_one: PartPointer ByAddressLoaded D1 One;
 }
 
 /// A combination of the axes no program is written for, and why.
@@ -1811,6 +1867,62 @@ const NOT_WRITTEN: &[Unwritten] = &[
         shape: None,
         why: "a write through a local's address is asked of the door questions, where #802 found the loaded spelling apart",
     },
+    Unwritten {
+        route: Route::Realloc,
+        depth: Some(Depth::D0),
+        belief: Some(Belief::PartPointer),
+        shape: None,
+        why: "a local is not grown by realloc",
+    },
+    Unwritten {
+        route: Route::Call,
+        depth: None,
+        belief: Some(Belief::PartPointer),
+        shape: None,
+        why: "a call writes a value of its own, not the allocation the door question frees",
+    },
+    Unwritten {
+        route: Route::MemcpyHalf,
+        depth: None,
+        belief: Some(Belief::PartPointer),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyPart,
+        depth: None,
+        belief: Some(Belief::PartPointer),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyMaybe,
+        depth: None,
+        belief: Some(Belief::PartPointer),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::CallStored,
+        depth: None,
+        belief: Some(Belief::PartPointer),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::CallDeep,
+        depth: None,
+        belief: Some(Belief::PartPointer),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::ReallocParam,
+        depth: None,
+        belief: Some(Belief::PartPointer),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
 ];
 
 /// Which side of a row disagrees with its belief's rule.
@@ -1939,6 +2051,36 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         "unreplaced_realloc_d2_one",
         Side::Control,
         Why::Cost(OLD_BLOCK),
+    ),
+    (
+        "part_pointer_ret_d0_both",
+        Side::Control,
+        Why::Belief(VOID_RESULT),
+    ),
+    (
+        "part_pointer_ret_d0_one",
+        Side::Control,
+        Why::Belief(VOID_RESULT),
+    ),
+    (
+        "part_pointer_ret_d1_both",
+        Side::Control,
+        Why::Belief(VOID_RESULT),
+    ),
+    (
+        "part_pointer_ret_d1_one",
+        Side::Control,
+        Why::Belief(VOID_RESULT),
+    ),
+    (
+        "part_pointer_ret_d2_both",
+        Side::Control,
+        Why::Belief(VOID_RESULT),
+    ),
+    (
+        "part_pointer_ret_d2_one",
+        Side::Control,
+        Why::Belief(VOID_RESULT),
     ),
     ("width_ret_d0_both", Side::Control, Why::Belief(VOID_RESULT)),
     ("width_ret_d0_one", Side::Control, Why::Belief(VOID_RESULT)),
@@ -2388,6 +2530,10 @@ fn mark(row: Row) -> (&'static str, Option<&'static str>) {
             "SC0407",
             Some("where a pointer that may have been freed is stored"),
         ),
+        // **Either wording of `SC0413`**: a copy whose destination says
+        // pointers is asked how wide (ADR-0073 rule 4), and one the record
+        // asks is asked whether it starts an object (ADR-0087).
+        Belief::PartPointer => ("SC0413", None),
     }
 }
 
@@ -3049,6 +3195,14 @@ fn door(row: Row, hazard: bool) -> Vec<String> {
             }
             lines.push(handed_over(row.depth).to_owned());
         }
+        Belief::PartPointer => {
+            lines.extend(put_x);
+            if hazard {
+                lines.push("int i_ = 1;".to_owned());
+                lines.push(format!("memcpy(&{slot}, &i_, 4);"));
+            }
+            lines.push(handed_over(row.depth).to_owned());
+        }
         Belief::Width
         | Belief::Fresh
         | Belief::Lost
@@ -3072,7 +3226,9 @@ fn program(row: Row, hazard: bool) -> String {
         Belief::Reborn => reborn(row, hazard),
         Belief::Caller => caller(row, hazard),
         Belief::Unreplaced => unreplaced(row, hazard),
-        Belief::StoredOut | Belief::StoredFreed | Belief::LeftBehind => door(row, hazard),
+        Belief::StoredOut | Belief::StoredFreed | Belief::LeftBehind | Belief::PartPointer => {
+            door(row, hazard)
+        }
     };
     let read = read_from(row);
     // **The read every belief shares**, but the one asked by address alone,
@@ -3085,7 +3241,7 @@ fn program(row: Row, hazard: bool) -> String {
         _ if kept => vec![format!("use1({read});"), "return 0;".to_owned()],
         // **Nothing read back**: a door question is asked at the write, the
         // free or the call, and `door` ends at it.
-        Belief::StoredOut | Belief::StoredFreed | Belief::LeftBehind => {
+        Belief::StoredOut | Belief::StoredFreed | Belief::LeftBehind | Belief::PartPointer => {
             vec!["return 0;".to_owned()]
         }
         Belief::Unreplaced => vec![format!("int *r = {read};"), "return use2(&r);".to_owned()],
@@ -3157,7 +3313,8 @@ fn parameters(row: Row, hazard: bool) -> &'static str {
         | Belief::Unreplaced
         | Belief::StoredOut
         | Belief::StoredFreed
-        | Belief::LeftBehind => {}
+        | Belief::LeftBehind
+        | Belief::PartPointer => {}
     }
     match (row.route, hazard) {
         (Route::ReallocParam, true) => "int k, void ***pm",
@@ -3887,6 +4044,7 @@ fn name_of(row: Row) -> String {
         Belief::StoredOut => "stored_out",
         Belief::StoredFreed => "stored_freed",
         Belief::LeftBehind => "left_behind",
+        Belief::PartPointer => "part_pointer",
     };
     let route = match row.route {
         Route::Store => "store",
@@ -4218,7 +4376,7 @@ fn compared_by_depth(belief: Belief) -> bool {
         | Belief::Reborn
         | Belief::Caller
         | Belief::Unreplaced => true,
-        Belief::StoredOut | Belief::StoredFreed | Belief::LeftBehind => false,
+        Belief::StoredOut | Belief::StoredFreed | Belief::LeftBehind | Belief::PartPointer => false,
     }
 }
 
