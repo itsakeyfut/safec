@@ -26,7 +26,7 @@ use super::fit::{
 use super::index::{Idx, Loc, LocalIdx, Site};
 use super::known::Known;
 use super::parts::{
-    At, Extent, Freeing, Init, Levels, Reached, Read, SiteState, Width, earlier, same,
+    At, Extent, Freeing, Init, Levels, PlaceInit, Reached, Read, SiteState, Width, earlier, same,
 };
 use super::store::{StoreKind, Written};
 use super::transfer::CopiedPointers;
@@ -2088,15 +2088,14 @@ fn copied_unwritten(
 }
 
 /// Whether the bytes a library copy reads through `from` may not have been
-/// written: an allocation it points at that nothing may have written, or a
-/// local it points at that may be unwritten. **At the elements the copy
-/// covers**, where `from` points at a known element of an array kept element
-/// by element and the length is a constant, so that `a[0] = &x; memcpy(out,
-/// a, 8);` with `a` two pointers long is not doubted for `a[1]`; at any
-/// element otherwise, which doubts. Elements are counted in pointers, since
-/// only an array of pointers is kept element by element (`Known::written`),
-/// and a copy ending part way through one covers it, hence the rounding up.
-/// Any other local is kept whole and asked as one.
+/// written: an allocation or a local it points at that may be unwritten.
+/// **At the slots the copy covers**, where `from` points at a known slot of
+/// a place kept per slot and the length is a constant, so that `a[0] = &x;
+/// memcpy(out, a, 8);` with `a` two pointers long is not doubted for `a[1]`;
+/// at any slot otherwise, which doubts. Slots are counted in pointers, since
+/// only memory of pointers is kept per slot (`Known::written`), and a copy
+/// ending part way through one covers it, hence the rounding up. Any other
+/// place is kept whole and asked as one.
 ///
 /// **A source that holds a pointer read out of memory is asked by what it
 /// holds**, as any source is, which is a doubt where a load through it is one
@@ -2131,31 +2130,35 @@ fn source_may_be_unwritten(
             });
     }
     let held = &known.points_to[from.local];
-    if held
-        .sites()
-        .any(|site| known.written[site].whole().may_be_unwritten())
-    {
-        return true;
-    }
     let target = analysis.unit.target();
     let pointer = u64::from(target.pointer_bits() / target.char().bits());
     let covered = analysis
         .constant_argument(callee, arguments, 2)
         .map(|length| length.div_ceil(pointer));
-    held.locals().any(|local| {
-        let Some(elements) = known.written[local].slots() else {
-            return known.written[local].whole().may_be_unwritten();
+    // **One rule for a block and a local**, each at the slots the copy
+    // covers where it keeps slots, from the slot the pointer is known to
+    // point at: a block's was asked whole, so `b[0] = x; memcpy(out, b, 8);`
+    // with `b` from `malloc(16)` was doubted for `b[1]` where the same out
+    // of a local array was not (#894).
+    let covers_unwritten = |written: &PlaceInit, start: Option<u64>| {
+        let Some(slots) = written.slots() else {
+            return written.whole().may_be_unwritten();
         };
-        match (held.element, covered) {
-            (Some(start), Some(count)) => (start..start.saturating_add(count)).any(|element| {
-                usize::try_from(element)
+        match (start, covered) {
+            (Some(start), Some(count)) => (start..start.saturating_add(count)).any(|slot| {
+                usize::try_from(slot)
                     .ok()
-                    .filter(|&element| element < elements.len())
-                    .is_some_and(|element| elements.get(element).may_be_unwritten())
+                    .filter(|&slot| slot < slots.len())
+                    .is_some_and(|slot| slots.get(slot).may_be_unwritten())
             }),
-            (Some(_) | None, _) => elements.any_may_be_unwritten(),
+            (Some(_) | None, _) => slots.any_may_be_unwritten(),
         }
-    })
+    };
+    held.sites()
+        .any(|site| covers_unwritten(&known.written[site], held.site_element))
+        || held
+            .locals()
+            .any(|local| covers_unwritten(&known.written[local], held.element))
 }
 
 /// Whether what `operand` points at holds a pointer, by what it points at

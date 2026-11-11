@@ -305,6 +305,13 @@ cases! {
         // kept per slot as it is; the second goes silent at `m[0]`.
         a_block_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A library copy out of a block kept per slot asks the slots it
+        // covers, as one out of a local array does (#894): the first copies
+        // the slot written and is not doubted, the second covers the slot
+        // nothing wrote and is. Mutation: ask a block's whole record in
+        // `report::source_may_be_unwritten`; the first is `SC0411`.
+        a_copy_of_the_written_slot_of_a_block_kept_per_slot_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_of_a_block_kept_per_slot_past_its_written_slot_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy carries what it copies into and out of a local, as
         // between blocks (#750). Mutation: carry no mark into a local, or
         // drop the certain arm for one; the first and the third go silent or

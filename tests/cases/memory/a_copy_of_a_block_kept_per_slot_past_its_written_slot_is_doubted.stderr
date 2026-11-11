@@ -1,0 +1,20 @@
+error[SC0411]: this copies bytes that may not have been written into memory that code outside this function reads as a pointer
+   ╭─[ a_copy_of_a_block_kept_per_slot_past_its_written_slot_is_doubted.c:2:97 ]
+   │
+ 2 │ void s(int ** _Nonnull out, int * _Nonnull x) { int **b = malloc(16); if (!b) return; b[0] = x; memcpy(out, b, 16); }
+   │                                                                                                 ─────────┬────────  
+   │                                                                                                          ╰────────── copied here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write what is copied on every path before the copy
+error[SC0412]: this may reach outside the object `out` points at
+   ╭─[ a_copy_of_a_block_kept_per_slot_past_its_written_slot_is_doubted.c:2:97 ]
+   │
+ 2 │ void s(int ** _Nonnull out, int * _Nonnull x) { int **b = malloc(16); if (!b) return; b[0] = x; memcpy(out, b, 16); }
+   │                                                                                                 ─────────┬────────  
+   │                                                                                                          ╰────────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
