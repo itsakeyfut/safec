@@ -121,13 +121,14 @@ enum Belief {
     /// byte alone, read back and loaded through as an `int *`: a local that
     /// holds no pointer starts unwritten, and a write of part of it leaves it
     /// possibly unwritten (ADR-0073 rule 2, #822, #826), `SC0411`. Its
-    /// control writes the whole array by a copy of a pointer first. Asked
-    /// only while the address is held in a local: through memory it is
-    /// silent, which `ACCEPTED` lists against #919.
+    /// control writes the whole array by a copy of a pointer first.
     ///
     /// Mutation: `Allocations::unwritten_at_entry` keeps only a local that
-    /// holds a pointer; `part_local_store_d0_both` fails, with its one-arm row
-    /// and `part_local_ret_d0_one`.
+    /// holds a pointer; `part_local_store_d0_both` fails, among twenty six.
+    /// Mutation: `Allocations::reads_partly` leaves out an array that a
+    /// pointer read out of memory names, as it did before #919;
+    /// `part_local_store_d1_both` fails, among twenty four, every row whose
+    /// address has passed through memory.
     PartLocal,
     /// `x` is a block nothing wrote, read back and returned by a function
     /// whose return type points at a pointer: the caller reads pointers out
@@ -2300,7 +2301,8 @@ const LOST_HANDED: &str = "a lost pointer handed through a call this check canno
 const OLD_BLOCK: &str = "the old block a store replaced in memory is still taken to be there after realloc moves it (#656)";
 const REPORTED_ELSEWHERE: &str = "the free and the call a freed pointer is handed to are each reported where they happen (SC0401, SC0407), and not again at its use; agreeing would report the use too";
 const WRITES_WHAT_IT_IS_HANDED: &str = "a call this check cannot read is believed to write what it is handed, which `docs/safety-model.md` states beside the other boundary beliefs; not believing it refused correct programs that rely on the callee writing (#782)";
-const PART_LOCAL_THROUGH_MEMORY: &str = "a local that holds no pointer is asked whether it was written only where its address is held in a local, not once it has passed through memory (#919)";
+const DEEP_COPY_LOSES_A_LOCAL: &str = "a copy two levels down loses the address of a local it carries, where the store spelling keeps it, so what is read through it is asked nothing (#686)";
+const POSITION_LOST: &str = "a local kept whole that may be unwritten is asked only where the pointer is known to point at its start, and one read out of memory and stored two levels down is not known to (#703)";
 const RETURNED_WRITTEN: &str = "a block written before it is returned is reported as one nothing wrote once its pointer went through another block, a write two levels down or a local's address (#920)";
 const VOID_READ_BACK: &str = "a `void *` read out of memory is not believed to start an object where it is stored again, though the record says what it holds (#631)";
 // The door questions' reasons (#801).
@@ -2461,134 +2463,34 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Belief(VOID_RESULT),
     ),
     (
-        "part_local_by_address_d1_both",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_by_address_d1_one",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_by_address_loaded_d1_both",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_by_address_loaded_d1_one",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_memcpy_block_d0_both",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_memcpy_block_d0_one",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_memcpy_block_d1_both",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_memcpy_block_d1_one",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
         "part_local_memcpy_block_d2_both",
         Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
+        Why::Cost(DEEP_COPY_LOSES_A_LOCAL),
     ),
     (
         "part_local_memcpy_block_d2_one",
         Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_memcpy_d0_both",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_memcpy_d0_one",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_memcpy_d1_both",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_memcpy_d1_one",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
+        Why::Cost(DEEP_COPY_LOSES_A_LOCAL),
     ),
     (
         "part_local_memcpy_d2_both",
         Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
+        Why::Cost(DEEP_COPY_LOSES_A_LOCAL),
     ),
     (
         "part_local_memcpy_d2_one",
         Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_realloc_d1_both",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_realloc_d1_one",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_realloc_d2_both",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_realloc_d2_one",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_restored_d0_both",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_restored_d0_one",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_restored_d1_both",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_restored_d1_one",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
+        Why::Cost(DEEP_COPY_LOSES_A_LOCAL),
     ),
     (
         "part_local_restored_d2_both",
         Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
+        Why::Cost(POSITION_LOST),
     ),
     (
         "part_local_restored_d2_one",
         Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
+        Why::Cost(POSITION_LOST),
     ),
     (
         "part_local_ret_d0_both",
@@ -2614,26 +2516,6 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         "part_local_ret_d2_one",
         Side::Hazard,
         Why::Belief(WRITES_WHAT_IT_IS_HANDED),
-    ),
-    (
-        "part_local_store_d1_both",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_store_d1_one",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_store_d2_both",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
-    ),
-    (
-        "part_local_store_d2_one",
-        Side::Hazard,
-        Why::Cost(PART_LOCAL_THROUGH_MEMORY),
     ),
     (
         "returned_by_address_d1_both",

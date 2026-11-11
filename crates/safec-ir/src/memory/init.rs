@@ -798,24 +798,21 @@ impl Allocations<'_> {
             // alone**: it may name what it does not show, so what it shows is
             // no proof (`reads_fresh` refuses it), and a block it names that
             // may still be fresh is a doubt. `u = *t; r = *u;` with `*t = m`
-            // read `m` nothing wrote in silence (#728). **And about a local it
-            // names that is not an array**, unwritten or maybe so: `u = *pp;
-            // r = *u;` with `*pp = &loc` read `loc` in silence (#756). Not an
-            // array, by the user's decision on #728: asking about every local
-            // moved twelve cases, most of them arrays whose element rules
-            // (#639, #667) decide what such a pointer writes and reads.
-            && if through.beyond().loaded() {
-                through.sites().any(site_maybe)
-                    || through.locals().any(|local| {
-                        !self.is_array(function, local)
-                            && (value.certainly_unwritten(local, through.element) || maybe(local))
-                    })
-            } else {
-                through.sites().any(site_maybe)
-                    || through.locals().any(|local| {
-                        value.certainly_unwritten(local, through.element) || maybe(local)
-                    })
-            }
+            // read `m` nothing wrote in silence (#728). **And about every
+            // local it names**, unwritten or maybe so: `u = *pp; r = *u;` with
+            // `*pp = &loc` read `loc` in silence (#756). **An array too**, by
+            // the user's decision on #919, reversing the one on #728 that
+            // left arrays out: that moved twelve cases then and one now, the
+            // case that held the silence, and it left a `char` array written
+            // at one byte silent once its address passed through memory,
+            // where ADR-0073 rule 2 asks it. Mutation: leave such an array
+            // out again; `a_pointer_read_out_of_memory_that_names_an_unwritten_local_array_is_doubted`
+            // goes silent, and so do the route matrix's `part_local_*` rows
+            // through memory.
+            && (through.sites().any(site_maybe)
+                || through.locals().any(|local| {
+                    value.certainly_unwritten(local, through.element) || maybe(local)
+                }))
     }
 
     /// The one local a library copy into `dest` of `bytes` replaces, where
