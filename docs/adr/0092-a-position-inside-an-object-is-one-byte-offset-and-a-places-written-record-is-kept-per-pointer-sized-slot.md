@@ -69,20 +69,32 @@ Chosen: the byte offset and the per-slot record, by the author.
      beside them, so the stamp goes.
    - The cap stays: 2 to `ELEMENTS_KEPT` slots, and one slot past it.
    - The joins stay: forward and back edge, and a site's `Unheld` side.
-   - It replaces `init`, `element_init`, `block_elements`, `part_written`
-     and `part_written_since_made`.
+   - It replaces `init`, `element_init` and `block_elements`, as
+     `Known::written`.
+   - **Not `part_written` and `part_written_since_made`**, by the author's
+     decision on #918, step 9. They stay a record per place of the earliest
+     write that may have left part of a pointer, with their two lifetimes,
+     and `Part` is not a slot's state. A slot's `Part` would need a join
+     with the other three states, a home for one-slot places, and a place
+     for the lifetime kept across a site made again, none of which was
+     decided; the writers below reach the record as it is.
 4. **The record's two lifetimes stay.** One kept across a site made again,
    for the doors a block leaves by. One reset there, for a read inside the
    function (ADR-0089).
-5. **Every writer writes slots, however it is spelled.** A store, a library
-   copy, a `memset` and a `char` store each mark the slots their bytes cover:
-   - whole where they cover all of a slot;
-   - `Part` where they cover some of it;
-   - nothing where the slot is in an object narrower than a pointer.
+5. **Every writer records part of a pointer, however it is spelled.** A
+   library copy, a store narrower than a pointer and a `memset` each record
+   it where they cover part of a slot, in a block or local wide enough to
+   hold a pointer (#913, #917):
+   - only where the write is placed, one dereference at a position counted
+     from the start: a `char` loop's `c[i] = 0;` may fill every byte of
+     the slot over the loop, and is not recorded;
+   - nothing in an object narrower than a pointer.
 
-   A `char` store into memory of pointers is therefore recorded (#917), and a
-   pointer copied a byte at a time is not doubted once all its bytes are
-   written. This replaces the `char` exemption the design of #913 had.
+   **Which bytes were written is not kept.** So a pointer written a byte at
+   a time at every position is still recorded, a false report the reader
+   sees, which a store that certainly lands replacing its slot (ADR-0094)
+   removes. A `char` store into memory of pointers is recorded, which
+   replaces the `char` exemption the design of #913 had.
 6. **One rule asks the record at every door**, a `PartialDoor` matched
    exhaustively (#914). A call asks a handed block by its held record as a
    `return` does, which replaces ADR-0087 rule 3's reading of the
