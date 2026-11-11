@@ -606,6 +606,12 @@ impl Written {
 
     /// As [`Init::unwritten_again`] leaves it, slot by slot where it keeps
     /// slots, each against what `before` and `back` were at it.
+    ///
+    /// Mutation: leave a place kept whole as it is;
+    /// `a_block_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn`
+    /// fails. Leave a place kept per slot as it is;
+    /// `a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn`
+    /// fails (#886).
     pub(super) fn unwritten_again(&mut self, before: &Written, back: &Written) {
         match self {
             Written::Whole(whole) => {

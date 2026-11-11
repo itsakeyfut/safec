@@ -296,6 +296,15 @@ cases! {
         // The same in an inner loop, read after both. Mutation: as above; this
         // goes silent. Found by review.
         a_block_an_inner_loop_makes_unwritten_again_is_doubted_where_read_after_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same in a loop shown to run, read at the top of its body: the
+        // back edge's exemption joins the block written before the loop with
+        // the one the copy left unwritten as written, and only the rule that
+        // a place made unwritten again is in doubt says otherwise on the next
+        // turn (#886). Mutation: `Written::unwritten_again` leaves a place
+        // kept whole as it is; the first goes silent at `*m`. Leave a place
+        // kept per slot as it is; the second goes silent at `m[0]`.
+        a_block_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy carries what it copies into and out of a local, as
         // between blocks (#750). Mutation: carry no mark into a local, or
         // drop the certain arm for one; the first and the third go silent or
