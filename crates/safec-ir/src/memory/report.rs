@@ -1654,6 +1654,25 @@ pub(super) fn asked_unwritten_in_terminator(
                             unproven: None,
                         },
                     );
+                } else if into_ty.is_some_and(|ty| ask.analysis.first_level_holds_a_pointer(ty)) {
+                    // **Or a copy into memory of pointers out of a block a
+                    // copy wrote part of a pointer into**, at that copy, as
+                    // a load of the pointer would be: `memcpy(&s, m, 8);
+                    // *pp = s;` built silent (#907). The blocks the source
+                    // names at the copy's depth, as the transfer carries
+                    // them. Not where what it copies is said unwritten
+                    // above, the same defect said more strongly. See
+                    // ADR-0088.
+                    if let Some(Operand::Copy(source)) = arguments.get(1) {
+                        let depth = derefs(source);
+                        if source.projection.is_empty() || depth > 0 {
+                            for site in known.levels_below(source.local, depth).0 {
+                                if let Some(copy) = known.part_written[site] {
+                                    push_part_of_a_pointer(findings, ask.analysis, copy);
+                                }
+                            }
+                        }
+                    }
                 }
             }
             // A `return` is an assignment to the return place, an element.
@@ -2567,6 +2586,18 @@ pub(super) fn loaded_indeterminate(
         let certain = analysis.reads_fresh(function, &place, known);
         let maybe = !certain && analysis.reads_partly(function, &place, known);
         if !certain && !maybe {
+            // **Or a pointer read out of a block a copy wrote part of a
+            // pointer into**, at the copy: `void **b = m; void *s = *b;`
+            // after `memcpy(m, &i, 4)` built silent (#907). Only where the
+            // read is not said indeterminate, which is the same defect said
+            // more strongly. See ADR-0088.
+            if analysis.may_be_pointer(function, &place) {
+                for site in blocks_read(&place, known) {
+                    if let Some(copy) = known.part_written[site] {
+                        push_part_of_a_pointer(findings, analysis, copy);
+                    }
+                }
+            }
             continue;
         }
         // **Keyed by the pointer read through, not by `*l`.** A dereference
@@ -2620,6 +2651,23 @@ pub(super) fn loaded_indeterminate(
                 unproven: None,
             },
         );
+    }
+}
+
+/// The blocks a load of `place` reads a pointer out of: what the pointer
+/// read through names, and below the first dereference, what the pointer
+/// gone through last may name, as [`loaded_indeterminate`] names the slot
+/// (#768).
+fn blocks_read(place: &Place, known: &Known) -> Vec<Site> {
+    let depth = derefs(place);
+    if depth > 1 {
+        known
+            .levels_below(place.local, depth - 1)
+            .0
+            .into_iter()
+            .collect()
+    } else {
+        known.points_to[place.local].sites().collect()
     }
 }
 

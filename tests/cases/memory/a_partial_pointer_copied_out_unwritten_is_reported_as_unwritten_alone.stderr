@@ -1,0 +1,10 @@
+error[SC0411]: this copies bytes that may not have been written into memory that code outside this function reads as a pointer
+    ╭─[ a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone.c:10:5 ]
+    │
+ 10 │     memcpy(o, m, 8);
+    │     ───────┬───────  
+    │            ╰───────── copied here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write what is copied on every path before the copy
