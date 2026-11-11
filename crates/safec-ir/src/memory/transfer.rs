@@ -20,8 +20,8 @@ use super::index::{Idx, Loc, LocalIdx, Site, Table};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
-    At, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, PendingRead, Reached, Read,
-    Realloced, SiteState, Width, Written, earlier,
+    At, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, PendingRead, PlaceInit, Reached,
+    Read, Realloced, SiteState, Width, earlier,
 };
 use super::store::{Landing, StoreKind, Strong};
 use crate::library::{Callee, Leaves, Library, Makes};
@@ -1760,11 +1760,11 @@ impl Allocations<'_> {
             };
             written[place] = match slots {
                 // Joined from both sides: the block is what its slots say.
-                Some((slots, true)) => Written::Slots(slots),
+                Some((slots, true)) => PlaceInit::Slots(slots),
                 // Kept from the side that names it, where the join left its
                 // whole as that side had it.
-                Some((slots, false)) if slots.summary() == whole => Written::Slots(slots),
-                Some((_, false)) | None => Written::Whole(whole),
+                Some((slots, false)) if slots.summary() == whole => PlaceInit::Slots(slots),
+                Some((_, false)) | None => PlaceInit::Whole(whole),
             };
         }
         // Bounds, so the lower of two at every level. See
@@ -2156,14 +2156,14 @@ impl Analysis for Allocations<'_> {
             written: {
                 let unwritten = self.unwritten_at_entry();
                 let mut written =
-                    Table::filled(Written::Whole(Init::Written), Loc::count(self.locals));
+                    Table::filled(PlaceInit::Whole(Init::Written), Loc::count(self.locals));
                 for (local, slots) in written.locals().zip(self.elements_at_entry()) {
                     written[local] = if slots.len() > 0 {
-                        Written::Slots(slots)
+                        PlaceInit::Slots(slots)
                     } else if unwritten[local.index()] {
-                        Written::Whole(Init::Unwritten)
+                        PlaceInit::Whole(Init::Unwritten)
                     } else {
-                        Written::Whole(Init::Written)
+                        PlaceInit::Whole(Init::Written)
                     };
                 }
                 written
@@ -2279,7 +2279,7 @@ impl Analysis for Allocations<'_> {
             // a block's alike: a block written at one slot before the loop,
             // `Maybe` whole, and made again by its body, kept that slot written
             // where the whole block did not change. Found by review, a read
-            // `main` reported went silent. See `Written::unwritten_again`.
+            // `main` reported went silent. See `PlaceInit::unwritten_again`.
             into.written[place].unwritten_again(&before.written[place], &from.written[place]);
         }
     }
@@ -4431,7 +4431,7 @@ impl Analysis for Allocations<'_> {
                 let count = bytes / pointer;
                 if bytes % pointer == 0 && (2..=ELEMENTS_KEPT).contains(&count) {
                     let len = usize::try_from(count).unwrap_or(0);
-                    value.written[site] = Written::Slots(Inits::unwritten(len));
+                    value.written[site] = PlaceInit::Slots(Inits::unwritten(len));
                     value.points_to[result].site_element = Some(0);
                 }
             }

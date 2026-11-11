@@ -426,7 +426,7 @@ const NAMED_AT_READ: usize = 96;
 const ELEMENTS: usize = 184;
 
 /// How many bytes the per-slot record of a heap block adds to each block's
-/// value a local, at most (#873): the [`Written`](parts::Written) record
+/// value a local, at most (#873): the [`PlaceInit`](parts::PlaceInit) record
 /// `Known::written` keeps for every site, inline whether the block is kept
 /// whole or per slot (#894), and the one word each of its two sets of bits
 /// holds for a block kept per slot, since such a block has at most
@@ -1371,7 +1371,7 @@ mod tests {
         use std::mem::size_of;
         assert_eq!(
             BLOCK_ELEMENTS,
-            size_of::<parts::Written>() + 2 * size_of::<u64>() + 2 * size_of::<Option<u64>>()
+            size_of::<parts::PlaceInit>() + 2 * size_of::<u64>() + 2 * size_of::<Option<u64>>()
         );
     }
 

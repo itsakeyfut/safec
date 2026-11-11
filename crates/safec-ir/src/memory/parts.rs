@@ -518,36 +518,36 @@ impl Inits {
 /// every slot**: [`Self::set`], [`Self::doubt`] and [`Self::may_write`]
 /// leave each slot as they would leave the place.
 #[derive(Clone, PartialEq, Eq)]
-pub(super) enum Written {
+pub(super) enum PlaceInit {
     /// The place as one.
     Whole(Init),
     /// One per slot.
     Slots(Inits),
 }
 
-impl Written {
+impl PlaceInit {
     /// What the place is as one: the slots' [`Inits::summary`] where kept
     /// per slot.
     pub(super) fn whole(&self) -> Init {
         match self {
-            Written::Whole(init) => *init,
-            Written::Slots(slots) => slots.summary(),
+            PlaceInit::Whole(init) => *init,
+            PlaceInit::Slots(slots) => slots.summary(),
         }
     }
 
     /// The slots, where it is kept per slot.
     pub(super) fn slots(&self) -> Option<&Inits> {
         match self {
-            Written::Whole(_) => None,
-            Written::Slots(slots) => Some(slots),
+            PlaceInit::Whole(_) => None,
+            PlaceInit::Slots(slots) => Some(slots),
         }
     }
 
     /// The slots, where it is kept per slot, to write.
     pub(super) fn slots_mut(&mut self) -> Option<&mut Inits> {
         match self {
-            Written::Whole(_) => None,
-            Written::Slots(slots) => Some(slots),
+            PlaceInit::Whole(_) => None,
+            PlaceInit::Slots(slots) => Some(slots),
         }
     }
 
@@ -555,7 +555,7 @@ impl Written {
     /// whole otherwise.
     pub(super) fn at(&self, slot: Option<u64>) -> Init {
         match (self, slot.and_then(|slot| usize::try_from(slot).ok())) {
-            (Written::Slots(slots), Some(slot)) if slot < slots.len() => slots.get(slot),
+            (PlaceInit::Slots(slots), Some(slot)) if slot < slots.len() => slots.get(slot),
             _ => self.whole(),
         }
     }
@@ -564,7 +564,7 @@ impl Written {
     /// it keeps `len` of them, and the whole spread over `len` otherwise.
     pub(super) fn spread(&self, len: usize) -> Inits {
         match self {
-            Written::Slots(slots) if slots.len() == len => slots.clone(),
+            PlaceInit::Slots(slots) if slots.len() == len => slots.clone(),
             _ => Inits::spread(self.whole(), len),
         }
     }
@@ -572,35 +572,35 @@ impl Written {
     /// Make the place `init`, every slot of it.
     pub(super) fn set(&mut self, init: Init) {
         match self {
-            Written::Whole(whole) => *whole = init,
-            Written::Slots(slots) => *slots = Inits::spread(init, slots.len()),
+            PlaceInit::Whole(whole) => *whole = init,
+            PlaceInit::Slots(slots) => *slots = Inits::spread(init, slots.len()),
         }
     }
 
     /// As [`Init::doubt`] leaves it, every slot of it.
     pub(super) fn doubt(&mut self) {
         match self {
-            Written::Whole(whole) => whole.doubt(),
-            Written::Slots(slots) => slots.doubt_all(),
+            PlaceInit::Whole(whole) => whole.doubt(),
+            PlaceInit::Slots(slots) => slots.doubt_all(),
         }
     }
 
     /// As [`Init::may_write`] leaves it, every slot of it.
     pub(super) fn may_write(&mut self) {
         match self {
-            Written::Whole(whole) => whole.may_write(),
-            Written::Slots(slots) => slots.may_write_all(),
+            PlaceInit::Whole(whole) => whole.may_write(),
+            PlaceInit::Slots(slots) => slots.may_write_all(),
         }
     }
 
     /// Joined with `other` as [`Init::joined`] says, slot by slot where both
     /// keep the same slots, and whole otherwise.
-    pub(super) fn join(&mut self, other: &Written, back: bool) {
+    pub(super) fn join(&mut self, other: &PlaceInit, back: bool) {
         match (&mut *self, other) {
-            (Written::Slots(here), Written::Slots(there)) if here.len() == there.len() => {
+            (PlaceInit::Slots(here), PlaceInit::Slots(there)) if here.len() == there.len() => {
                 here.join(there, back);
             }
-            _ => *self = Written::Whole(self.whole().joined(other.whole(), back)),
+            _ => *self = PlaceInit::Whole(self.whole().joined(other.whole(), back)),
         }
     }
 
@@ -612,12 +612,12 @@ impl Written {
     /// fails. Leave a place kept per slot as it is;
     /// `a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn`
     /// fails (#886).
-    pub(super) fn unwritten_again(&mut self, before: &Written, back: &Written) {
+    pub(super) fn unwritten_again(&mut self, before: &PlaceInit, back: &PlaceInit) {
         match self {
-            Written::Whole(whole) => {
+            PlaceInit::Whole(whole) => {
                 *whole = whole.unwritten_again(before.whole(), back.whole());
             }
-            Written::Slots(slots) => {
+            PlaceInit::Slots(slots) => {
                 let len = slots.len();
                 slots.unwritten_again(&before.spread(len), &back.spread(len));
             }

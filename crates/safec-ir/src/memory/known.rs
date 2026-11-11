@@ -12,8 +12,8 @@ use crate::source::{SourceMap, Span};
 
 use super::index::{Loc, LocalIdx, Site, Table};
 use super::parts::{
-    At, Cell, Extent, Held, Init, Levels, PendingRead, Reached, Read, ReadKey, Realloced,
-    SiteState, Width, Written, earlier, read_key,
+    At, Cell, Extent, Held, Init, Levels, PendingRead, PlaceInit, Reached, Read, ReadKey,
+    Realloced, SiteState, Width, earlier, read_key,
 };
 use super::store::{Certain, Strong, WrittenLocal};
 use super::{LostReason, named};
@@ -189,7 +189,7 @@ pub(super) struct Known {
     /// and ADR-0039.
     pub(super) realloced: Table<Site, Option<Realloced>>,
     /// **Whether each place was written, one record per place, whole or per
-    /// slot** ([`Written`], ADR-0092 rule 3), its whole answer what is said
+    /// slot** ([`PlaceInit`], ADR-0092 rule 3), its whole answer what is said
     /// below of a place.
     ///
     /// Per site, whether it is an allocation `malloc` or `aligned_alloc` made
@@ -279,7 +279,7 @@ pub(super) struct Known {
     /// ADR-0057.
     ///
     /// **Per slot, for a local array of at most [`ELEMENTS_KEPT`] innermost
-    /// elements**, [`Written::Slots`]; every other local is kept whole.
+    /// elements**, [`PlaceInit::Slots`]; every other local is kept whole.
     ///
     /// **So that a write to one element leaves another unwritten** (#667):
     /// `m[0] = &x; q = m[1];` read an `m[1]` nothing wrote, in silence, since
@@ -302,14 +302,14 @@ pub(super) struct Known {
     /// [`ELEMENTS_KEPT`] pointers**: `b[0] = x;` with `b` from `malloc(16)`
     /// writes the first and leaves the second (#873). Every other block is
     /// kept whole. **A write of the whole block reaches every slot**, as
-    /// [`Written`] says, where it once dropped the slots beside a stamp of
+    /// [`PlaceInit`] says, where it once dropped the slots beside a stamp of
     /// the whole they were made from, which fifteen writers had to pair by
     /// hand (#894). A write through a
     /// pointer whose element is not known writes the whole block, as one
     /// into a local array does (`built::write_effects`), so `b[i] = x;`
     /// written once is a stated limit. Boxed, so a block kept whole costs a
     /// pointer. See ADR-0081.
-    pub(super) written: Table<Loc, Written>,
+    pub(super) written: Table<Loc, PlaceInit>,
     /// What has been read through a pointer since the last sequence point.
     ///
     /// **Ordered containers because a lattice value has to be canonical, and
@@ -2146,7 +2146,7 @@ impl Known {
         // now belongs to a new allocation, and the branch that would have
         // settled the old fact is about another. See ADR-0039.
         realloced[site] = None;
-        written[site] = Written::Whole(Init::Written);
+        written[site] = PlaceInit::Whole(Init::Written);
         for fact in realloced.iter_mut() {
             if fact
                 .as_ref()
@@ -2498,13 +2498,13 @@ impl Known {
                 // Written, keeping a doubt it held: the write is of one
                 // element, or of one nobody can name, and is no write of the
                 // rest.
-                (Written::Whole(init), ArrayWrite::Element(_) | ArrayWrite::Covered(_)) => {
+                (PlaceInit::Whole(init), ArrayWrite::Element(_) | ArrayWrite::Covered(_)) => {
                     *init = match *init {
                         Init::Maybe => Init::Maybe,
                         Init::Unwritten | Init::Written => Init::Written,
                     };
                 }
-                (Written::Slots(slots), ArrayWrite::Element(element)) => {
+                (PlaceInit::Slots(slots), ArrayWrite::Element(element)) => {
                     if let Ok(element) = usize::try_from(element) {
                         if element < slots.len() {
                             slots.set(element, Init::Written);
@@ -2513,7 +2513,7 @@ impl Known {
                 }
                 // The elements a copy covers whole from the start are
                 // written, and the rest keep what they held.
-                (Written::Slots(slots), ArrayWrite::Covered(count)) => {
+                (PlaceInit::Slots(slots), ArrayWrite::Covered(count)) => {
                     let count = usize::try_from(count).unwrap_or(usize::MAX);
                     for element in 0..count.min(slots.len()) {
                         slots.set(element, Init::Written);
@@ -3046,5 +3046,5 @@ pub(super) enum ArrayWrite {
 pub(super) struct PendingWrite {
     local: LocalIdx,
     write: ArrayWrite,
-    written: Written,
+    written: PlaceInit,
 }

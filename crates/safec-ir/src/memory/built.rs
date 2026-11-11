@@ -7,7 +7,7 @@ use crate::ir::{BinOp, Function, LocalId, Operand, Place, TranslationUnit, Ty};
 use super::allocations::{innermost_element, stored_pointer};
 use super::index::{Idx, LocalIdx, Site, Table};
 use super::known::{ArrayWrite, Known, WrittenBy};
-use super::parts::{At, Held, Reached, Written};
+use super::parts::{At, Held, PlaceInit, Reached};
 use super::store::written_alone;
 use crate::reads::derefs;
 
@@ -312,7 +312,7 @@ pub(super) fn replaced_by(
         .collect();
     let alone = written_alone(value, place.local, derefs(place), &landing);
     let proved_alone = alone.is_some();
-    let before: Vec<(LocalIdx, Written)> = if proved_alone {
+    let before: Vec<(LocalIdx, PlaceInit)> = if proved_alone {
         Vec::new()
     } else {
         landing
