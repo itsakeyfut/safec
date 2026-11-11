@@ -1,0 +1,190 @@
+Target "x86_64-pc-windows-msvc"
+Function a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:2:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:3:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:4:6 "use" declared
+  Local "_0" "void" return
+Function a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:5:6 "out"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "pp"
+  Local "_2" "int" "i"
+  Local "_3" "void *" "x"
+  Local "_4" "char[8]" "buf"
+  Local "_5" "int"
+  Local "_6" "void *" "m"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "void *" "m2"
+  Local "_10" "void *"
+  Local "_11" "int"
+  Local "_12" "void **"
+  Local "_13" "void *"
+  Local "_14" "int *"
+  Local "_15" "void *"
+  Local "_16" "char *"
+  Local "_17" "void *"
+  Local "_18" "char *"
+  Local "_19" "void *"
+  Local "_20" "void **" "q"
+  Local "_21" "void **"
+  Block "bb0" entry
+    Operation a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:6:9 written
+      Destination "_2"
+      Use
+        Constant 1
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:6:13 generated
+    Operation a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:7:11 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:7:15 generated
+    Operation a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:9:9 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_1"
+    Branch a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:9:9 written "bb1" "bb2"
+      Copy "_5"
+  Block "bb1"
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:9:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:9:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:10:15 generated
+    Call a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:10:15 written "malloc" "bb4"
+      Destination "_7"
+      Constant 8
+  Block "bb4"
+    Operation a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:10:11 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:10:15 generated
+    Operation a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:11:9 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_6"
+    Branch a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:11:9 written "bb5" "bb6"
+      Copy "_8"
+  Block "bb5"
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:11:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:11:9 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:12:16 generated
+    Call a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:12:16 written "malloc" "bb8"
+      Destination "_10"
+      Constant 8
+  Block "bb8"
+    Operation a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:12:11 written
+      Destination "_9"
+      Use
+        Copy "_10"
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:12:16 generated
+    Operation a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:13:9 written
+      Destination "_11"
+      Unary "Not"
+        Copy "_9"
+    Branch a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:13:9 written "bb9" "bb10"
+      Copy "_11"
+  Block "bb9"
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:13:9 generated
+    ArgumentsEvaluated a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:13:16 generated
+    Call a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:13:16 written "free" "bb12"
+      Copy "_6"
+  Block "bb10"
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:13:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:14:15 written
+      Destination "_12"
+      Address
+        Place "_3"
+    ArgumentsEvaluated a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:14:5 generated
+    Call a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:14:5 written "memcpy" "bb13"
+      Destination "_13"
+      Copy "_6"
+      Copy "_12"
+      Constant 8
+  Block "bb12"
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:13:16 generated
+    Return
+  Block "bb13"
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:14:5 generated
+    Operation a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:15:15 written
+      Destination "_14"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:15:5 generated
+    Call a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:15:5 written "memcpy" "bb14"
+      Destination "_15"
+      Copy "_6"
+      Copy "_14"
+      Constant 4
+  Block "bb14"
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:15:5 generated
+    Operation a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:16:12 generated
+      Destination "_16"
+      Address
+        Place "_4"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:16:5 generated
+    Call a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:16:5 written "memcpy" "bb15"
+      Destination "_17"
+      Copy "_16"
+      Copy "_6"
+      Constant 8
+  Block "bb15"
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:16:5 generated
+    Operation a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:17:16 generated
+      Destination "_18"
+      Address
+        Place "_4"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:17:5 generated
+    Call a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:17:5 written "memcpy" "bb16"
+      Destination "_19"
+      Copy "_9"
+      Copy "_18"
+      Constant 8
+  Block "bb16"
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:17:5 generated
+    ArgumentsEvaluated a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:18:5 generated
+    Call a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:18:5 written "free" "bb17"
+      Copy "_6"
+  Block "bb17"
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:18:5 generated
+    Operation a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:19:12 written
+      Destination "_20"
+      Use
+        Copy "_9"
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:19:16 generated
+    Operation a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:20:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_20"
+    Operation a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:20:5 written
+      Destination "_21"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:20:5 generated
+    ArgumentsEvaluated a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:21:5 generated
+    Call a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:21:5 written "use" "bb18"
+  Block "bb18"
+    Sequenced a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported.c:21:5 generated
+    Return

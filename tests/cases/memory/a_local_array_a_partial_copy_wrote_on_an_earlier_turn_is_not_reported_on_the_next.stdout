@@ -1,0 +1,208 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:2:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:3:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:4:6 "use" declared
+  Local "_0" "void" return
+Function a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:5:6 "out"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "pp"
+  Local "_2" "int" parameter "n"
+  Local "_3" "int" "i"
+  Local "_4" "void *" "x"
+  Local "_5" "int"
+  Local "_6" "void *" "m2"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "void **"
+  Local "_10" "void *"
+  Local "_11" "int" "k"
+  Local "_12" "int"
+  Local "_13" "char[8]" "buf"
+  Local "_14" "char *"
+  Local "_15" "void **"
+  Local "_16" "void *"
+  Local "_17" "char *"
+  Local "_18" "void *"
+  Local "_19" "char *"
+  Local "_20" "int *"
+  Local "_21" "void *"
+  Local "_22" "int"
+  Local "_23" "int"
+  Local "_24" "void **" "q"
+  Local "_25" "void **"
+  Block "bb0" entry
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:6:9 written
+      Destination "_3"
+      Use
+        Constant 1
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:6:13 generated
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:7:11 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:7:15 generated
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:8:9 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_1"
+    Branch a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:8:9 written "bb1" "bb2"
+      Copy "_5"
+  Block "bb1"
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:8:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:8:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:9:16 generated
+    Call a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:9:16 written "malloc" "bb4"
+      Destination "_7"
+      Constant 8
+  Block "bb4"
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:9:11 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:9:16 generated
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:10:9 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_6"
+    Branch a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:10:9 written "bb5" "bb6"
+      Copy "_8"
+  Block "bb5"
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:10:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:10:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:11:16 written
+      Destination "_9"
+      Address
+        Place "_4"
+    ArgumentsEvaluated a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:11:5 generated
+    Call a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:11:5 written "memcpy" "bb8"
+      Destination "_10"
+      Copy "_6"
+      Copy "_9"
+      Constant 8
+  Block "bb8"
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:11:5 generated
+    StorageLive a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:12:10 generated "_11"
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:12:14 written
+      Destination "_11"
+      Use
+        Constant 0
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:12:18 generated
+    Goto "bb9"
+  Block "bb9"
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:12:21 written
+      Destination "_12"
+      Binary "Lt"
+        Copy "_11"
+        Copy "_2"
+    Branch a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:12:21 written "bb10" "bb11"
+      Copy "_12"
+  Block "bb10"
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:12:21 generated
+    StorageLive a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:13:9 generated "_13"
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:14:16 generated
+      Destination "_14"
+      Address
+        Place "_13"
+          Index
+            Constant 0
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:14:21 written
+      Destination "_15"
+      Address
+        Place "_4"
+    ArgumentsEvaluated a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:14:9 generated
+    Call a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:14:9 written "memcpy" "bb12"
+      Destination "_16"
+      Copy "_14"
+      Copy "_15"
+      Constant 8
+  Block "bb11"
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:12:21 generated
+    StorageDead a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:17:5 generated "_11"
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:18:12 written
+      Destination "_24"
+      Use
+        Copy "_6"
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:18:16 generated
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:19:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_24"
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:19:5 written
+      Destination "_25"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:19:5 generated
+    ArgumentsEvaluated a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:20:5 generated
+    Call a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:20:5 written "use" "bb15"
+  Block "bb12"
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:14:9 generated
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:15:20 generated
+      Destination "_17"
+      Address
+        Place "_13"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:15:9 generated
+    Call a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:15:9 written "memcpy" "bb13"
+      Destination "_18"
+      Copy "_6"
+      Copy "_17"
+      Constant 8
+  Block "bb13"
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:15:9 generated
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:16:16 generated
+      Destination "_19"
+      Address
+        Place "_13"
+          Index
+            Constant 0
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:16:21 written
+      Destination "_20"
+      Address
+        Place "_3"
+    ArgumentsEvaluated a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:16:9 generated
+    Call a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:16:9 written "memcpy" "bb14"
+      Destination "_21"
+      Copy "_19"
+      Copy "_20"
+      Constant 4
+  Block "bb14"
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:16:9 generated
+    StorageDead a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:17:5 generated "_13"
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:12:28 written
+      Destination "_22"
+      Use
+        Copy "_11"
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:12:28 written
+      Destination "_23"
+      Binary "Add"
+        Copy "_11"
+        Constant 1
+    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:12:28 written
+      Destination "_11"
+      Use
+        Copy "_23"
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:12:28 generated
+    Goto "bb9"
+  Block "bb15"
+    Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:20:5 generated
+    Return

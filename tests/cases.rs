@@ -1869,6 +1869,23 @@ cases! {
         // Copied on one arm and read after the join. Mutation: leave
         // `Known::part_written_since_made` out of the join; this goes silent.
         a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Through a local array, and a partial copy straight into one, each
+        // then copied into a block that leaves (#908). Mutations: carry into
+        // the copy's blocks alone, not `Landing::targets`; both go silent.
+        // Carry out of the source's sites alone; both go silent too.
+        a_partial_pointer_copied_through_a_local_array_into_a_block_that_leaves_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_partial_pointer_copied_into_a_local_array_and_out_into_a_block_that_leaves_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Copied out into a block that leaves as `int *`. Mutation: ask every
+        // block with the record where the function returns, not only the ones
+        // it asks whether they were written; this is reported.
+        a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Declared in a loop body: last turn's partial copy is not this
+        // turn's. Mutation: leave a local's records alone in `Known::clear`;
+        // this is reported.
+        a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read through a pointer at the array. Mutation: `blocks_read` reads
+        // sites alone; this goes silent.
+        a_pointer_read_out_of_a_local_array_a_partial_copy_wrote_through_a_pointer_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
         // one is, by one function both doors call (#890). Possibly, not
         // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no

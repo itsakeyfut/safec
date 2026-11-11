@@ -23,7 +23,7 @@ use super::fit::{
     Fit, fits, folded, only_if_certain, pointee, pointee_width, read_from_locals, slots_leaving,
     through_locals,
 };
-use super::index::{Idx, LocalIdx, Site};
+use super::index::{Idx, Loc, LocalIdx, Site};
 use super::known::Known;
 use super::parts::{
     Extent, Freeing, Init, Levels, Offset, Reached, Read, SiteState, earlier, same,
@@ -1679,8 +1679,13 @@ pub(super) fn asked_unwritten_in_terminator(
                     if let Some(Operand::Copy(source)) = arguments.get(1) {
                         let depth = derefs(source);
                         if source.projection.is_empty() || depth > 0 {
-                            for site in known.levels_below(source.local, depth).0 {
-                                if let Some(copy) = known.part_written_since_made[site] {
+                            let (sites, locals) = known.levels_below(source.local, depth);
+                            let places = sites
+                                .into_iter()
+                                .map(Loc::Heap)
+                                .chain(locals.into_iter().map(Loc::Local));
+                            for at in places {
+                                if let Some(copy) = known.part_written_since_made[at] {
                                     push_part_of_a_pointer(findings, ask.analysis, copy);
                                 }
                             }
@@ -2679,18 +2684,22 @@ pub(super) fn loaded_indeterminate(
 /// The blocks a load of `place` reads a pointer out of: what the pointer
 /// read through names, and below the first dereference, what the pointer
 /// gone through last may name, as [`loaded_indeterminate`] names the slot
-/// (#768).
-fn blocks_read(place: &Place, known: &Known) -> Vec<Site> {
+/// (#768). **Locals as well as blocks**, since a local array keeps the
+/// partial pointer record too (ADR-0090).
+fn blocks_read(place: &Place, known: &Known) -> Vec<Loc> {
     let depth = derefs(place);
-    if depth > 1 {
-        known
-            .levels_below(place.local, depth - 1)
-            .0
-            .into_iter()
-            .collect()
+    let (sites, locals): (Vec<Site>, Vec<LocalIdx>) = if depth > 1 {
+        let (sites, locals) = known.levels_below(place.local, depth - 1);
+        (sites.into_iter().collect(), locals.into_iter().collect())
     } else {
-        known.points_to[place.local].sites().collect()
-    }
+        let held = &known.points_to[place.local];
+        (held.sites().collect(), held.locals().collect())
+    };
+    sites
+        .into_iter()
+        .map(Loc::Heap)
+        .chain(locals.into_iter().map(Loc::Local))
+        .collect()
 }
 
 /// Whether a read reported indeterminate at `at` through `root` may be said:
