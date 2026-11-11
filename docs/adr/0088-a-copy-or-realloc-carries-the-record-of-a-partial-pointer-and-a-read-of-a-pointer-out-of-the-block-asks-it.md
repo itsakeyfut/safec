@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (rules 3 and 4 partly superseded by ADR-0089)"
 date: 2026-11-11
 decision-makers: itsakeyfut
 ---
