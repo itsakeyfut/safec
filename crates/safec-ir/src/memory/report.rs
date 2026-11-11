@@ -1654,7 +1654,11 @@ pub(super) fn asked_unwritten_in_terminator(
                             unproven: None,
                         },
                     );
-                } else if into_ty.is_some_and(|ty| ask.analysis.first_level_holds_a_pointer(ty)) {
+                } else if into_ty.is_some_and(|ty| ask.analysis.first_level_holds_a_pointer(ty))
+                    || arguments.first().is_some_and(|dest| {
+                        points_at_a_pointer(ask.analysis, ask.function, dest, known).is_some()
+                    })
+                {
                     // **Or a copy into memory of pointers out of a block a
                     // copy wrote part of a pointer into**, at that copy, as
                     // a load of the pointer would be: `memcpy(&s, m, 8);
@@ -1663,6 +1667,14 @@ pub(super) fn asked_unwritten_in_terminator(
                     // them. Not where what it copies is said unwritten
                     // above, the same defect said more strongly. See
                     // ADR-0088.
+                    //
+                    // **Memory of pointers by what the destination points
+                    // at, too**, as a partial copy is asked (ADR-0071 rule
+                    // 4): `void *d = &s; memcpy(d, m, 8);` with `s` a
+                    // `void *` built silent where `void **d` was asked,
+                    // found by review. The destination only: the source is
+                    // the block with the record, which says nothing of
+                    // where the pointer goes.
                     if let Some(Operand::Copy(source)) = arguments.get(1) {
                         let depth = derefs(source);
                         if source.projection.is_empty() || depth > 0 {

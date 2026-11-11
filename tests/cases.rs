@@ -1836,6 +1836,13 @@ cases! {
         // ask the record whether or not the copy is said unwritten; this
         // gains an `SC0413` at the partial copy.
         a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Copied out through a `void *` that points at a pointer local, asked
+        // by what it points at, found by review. Mutation: ask the
+        // destination's type alone; this goes silent.
+        a_partial_pointer_copied_out_of_a_block_through_a_void_pointer_to_a_pointer_local_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through a `void *` at two `int`s. Mutation: ask every copy
+        // whatever its destination; this is reported.
+        a_partial_pointer_copied_out_of_a_block_through_a_void_pointer_to_an_int_pair_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
         // one is, by one function both doors call (#890). Possibly, not
         // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no
