@@ -62,6 +62,12 @@ partial pointer, and a `realloc` that shrinks the block carries it too: the
 record has no offset. That is a doubt the reader sees, the same one ADR-0087
 accepts for a block rewritten whole.
 
+The record is kept on allocations only, so a local array has nowhere to hold
+it: a copy into one carries nothing, and nor does a partial copy made
+straight into one, which ADR-0087 left the same way. `memcpy(buf, m, 8);
+memcpy(m2, buf, 8);` with `char buf[8]` is silent. That is a silence left
+open, and #908 is where it is decided.
+
 ### Confirmation
 
 Each in `tests/cases/memory/`, with its mutation in its note in

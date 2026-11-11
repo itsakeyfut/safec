@@ -464,7 +464,9 @@ pub(super) struct Known {
     /// part way through one (`Allocations::copied_pointers`), whatever either
     /// side's type said then. **Or into a block it was copied or
     /// `realloc`ed from**, whose bytes this one now holds: the record is
-    /// carried to the new block (#905, ADR-0088).
+    /// carried to the new block (#905, ADR-0088). **Allocations only**: a
+    /// local array has no entry, so a copy through one carries nothing on,
+    /// a silence #908 decides.
     ///
     /// **Asked where the block is later held as memory of pointers**: where
     /// it leaves so (the exit's question, beside `left_at`) and where it is
