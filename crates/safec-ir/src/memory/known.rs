@@ -13,7 +13,7 @@ use crate::source::{SourceMap, Span};
 use super::index::{Loc, LocalIdx, Site, Table};
 use super::parts::{
     AS_TYPED, Cell, Extent, Held, Init, Inits, Levels, Offset, PendingRead, Reached, Read, ReadKey,
-    Realloced, SiteElements, SiteState, earlier, read_key,
+    Realloced, SiteElements, SiteState, Width, earlier, read_key,
 };
 use super::store::{Certain, Strong, WrittenLocal};
 use super::{LostReason, named};
@@ -1327,13 +1327,15 @@ impl Known {
                 } else if own.beyond().foreign() {
                     Some(
                         own.believed
-                            .or(self.handed_at_most[slot].at(0))
+                            .or(self.handed_at_most[slot].at(0).bound())
                             .unwrap_or(AS_TYPED),
                     )
                 } else {
                     own.recorded_width(&self.extent)
                 };
-                let held = own.contents_at_most.stored_under(first, depth_cap);
+                let held = own
+                    .contents_at_most
+                    .stored_under(Width::of_bound(first), depth_cap);
                 levels.bound_by(&held.below(depth - 1 - level));
             }
         }

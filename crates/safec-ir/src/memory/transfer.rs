@@ -21,7 +21,7 @@ use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
     AS_TYPED, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, Offset, PendingRead,
-    Reached, Read, Realloced, SiteState, earlier,
+    Reached, Read, Realloced, SiteState, Width, earlier,
 };
 use super::store::{Landing, StoreKind, Strong};
 use crate::library::{Callee, Leaves, Library, Makes};
@@ -410,9 +410,9 @@ impl Allocations<'_> {
                 Ty::Int | Ty::Char | Ty::Void => 0,
                 Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
             };
-            levels.push(Some(width));
+            levels.push(Width::AtMost(width));
         }
-        Some(Levels::from_bounds(levels))
+        Some(Levels::new(levels))
     }
 
     /// Whether a value of type `ty` points at memory that holds pointers,
@@ -605,7 +605,7 @@ impl Allocations<'_> {
         let bound = value
             .memory_levels(place.local, depth, self.deepest_pointer)
             .at(0);
-        as_read.min(bound.unwrap_or(0))
+        as_read.min(bound.bound().unwrap_or(0))
     }
 
     /// **What a write pours into memory**, at the store and at the library
@@ -753,10 +753,9 @@ impl Allocations<'_> {
         // ADR-0060.
         let Some(read_as) = read_as else {
             remember(&mut value.handed_untyped[local], None);
-            value.handed_at_most[local].bound_by(&Levels::from_bounds(vec![
-                Some(0);
-                self.deepest_pointer
-                    + 1
+            value.handed_at_most[local].bound_by(&Levels::new(vec![
+                Width::AtMost(0);
+                self.deepest_pointer + 1
             ]));
             return;
         };
@@ -766,7 +765,8 @@ impl Allocations<'_> {
             remember(&mut value.handed_untyped[local], Some(read_as));
         }
         let (width, levels) = self.handed_bounds(Some(read_as));
-        value.handed_at_most[local].bound_by(&levels.stored_under(Some(width), usize::MAX));
+        value.handed_at_most[local]
+            .bound_by(&levels.stored_under(Width::AtMost(width), usize::MAX));
     }
 
     /// What a call this check cannot read may store in memory it reached as
@@ -781,7 +781,7 @@ impl Allocations<'_> {
     /// below a site's own from nothing: only the width a site is handed at is
     /// held, by `a_pointer_read_out_of_memory_a_call_was_handed_is_not_reported_as_indeterminate`.
     fn handed_bounds(&self, read_as: Option<TyId>) -> (u64, Levels) {
-        let nothing = || Levels::from_bounds(vec![Some(0); self.deepest_pointer]);
+        let nothing = || Levels::new(vec![Width::AtMost(0); self.deepest_pointer]);
         let Some(read_as) = read_as else {
             return (0, nothing());
         };
@@ -818,7 +818,8 @@ impl Allocations<'_> {
             remember(&mut value.handed_untyped[site], read_as);
         }
         let (width, levels) = self.handed_bounds(read_as);
-        value.contents[site].bound_stored(&levels.stored_under(Some(width), self.deepest_pointer));
+        value.contents[site]
+            .bound_stored(&levels.stored_under(Width::AtMost(width), self.deepest_pointer));
     }
 
     /// Whether a callee handed a pointer to `ty` may store any pointer
@@ -2736,7 +2737,7 @@ impl Analysis for Allocations<'_> {
                         // keeps `believed` too (#719).
                         let handed = match &operation.value {
                             Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
-                                value.handed_at_most[place.local].at(0)
+                                value.handed_at_most[place.local].at(0).bound()
                             }
                             Rvalue::Use(_)
                             | Rvalue::Address(_)
@@ -2762,7 +2763,7 @@ impl Analysis for Allocations<'_> {
                     // goes silent.
                     let stored = written
                         .contents_at_most
-                        .stored_under(bound, self.deepest_pointer);
+                        .stored_under(Width::of_bound(bound), self.deepest_pointer);
                     // **What the store carries, poured into each allocation it
                     // lands in**, as `Cell::poured` builds it, which names
                     // every field. **After the landing and the exposure**:
@@ -3845,7 +3846,7 @@ impl Analysis for Allocations<'_> {
                                         self.pointee_size(function, &Place::local(local))
                                     })
                                     .unwrap_or(0);
-                                let width = as_read.min(recorded.unwrap_or(0));
+                                let width = as_read.min(recorded.bound().unwrap_or(0));
                                 each.believed = if fresh {
                                     Some(as_read)
                                 } else {
@@ -4282,6 +4283,7 @@ impl Analysis for Allocations<'_> {
                         let width = self.pointee_size(function, &Place::local(id))?;
                         let width = value.handed_at_most[local]
                             .at(0)
+                            .bound()
                             .map_or(width, |most| width.min(most));
                         let whole = matches!(
                             fits(self, function, id, width, value, false),

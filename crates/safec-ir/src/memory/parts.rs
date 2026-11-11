@@ -991,11 +991,62 @@ pub(super) fn bounded(here: Option<u64>, there: Option<u64>) -> Option<u64> {
     }
 }
 
+/// How many bytes the pointers at one level are believed to point at, at
+/// most: no bound, a byte count and the type's own width told apart by
+/// variant, rather than by `None` and a sentinel. See ADR-0093 rule 1.
+///
+/// **Ordered `Unbounded` above `AsTyped` above every `AtMost`**, and
+/// [`Self::meet`] takes the lower, so `Unbounded` is its identity: a side
+/// that bounds nothing does not loosen one that does.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Width {
+    /// Nothing bounds it: nothing was stored or handed there.
+    Unbounded,
+    /// At most this many bytes.
+    AtMost(u64),
+    /// As wide as the type it is read as, no wider: what a pointer a call
+    /// this check cannot read wrote is believed where nothing narrower was
+    /// handed (ADR-0060). [`AS_TYPED`] spells it where a width is still an
+    /// `Option<u64>`.
+    AsTyped,
+}
+
+impl Width {
+    /// The lower of the two. [`bounded`] is this over `Option<u64>`.
+    pub(super) fn meet(self, other: Width) -> Width {
+        match (self, other) {
+            (Width::Unbounded, other) | (other, Width::Unbounded) => other,
+            (Width::AsTyped, other) | (other, Width::AsTyped) => other,
+            (Width::AtMost(here), Width::AtMost(there)) => Width::AtMost(here.min(there)),
+        }
+    }
+
+    /// This width as an `Option<u64>`, `None` for no bound and [`AS_TYPED`]
+    /// for the type's: what a reader that still takes one is given, until
+    /// `Held::believed` is a level of its own (ADR-0093 rule 1).
+    pub(super) fn bound(self) -> Option<u64> {
+        match self {
+            Width::Unbounded => None,
+            Width::AtMost(bytes) => Some(bytes),
+            Width::AsTyped => Some(AS_TYPED),
+        }
+    }
+
+    /// The width an `Option<u64>` spells: [`Self::bound`] read back.
+    pub(super) fn of_bound(bound: Option<u64>) -> Width {
+        match bound {
+            None => Width::Unbounded,
+            Some(AS_TYPED) => Width::AsTyped,
+            Some(bytes) => Width::AtMost(bytes),
+        }
+    }
+}
+
 /// How many bytes the pointers each level below a pointer's memory hold are
 /// believed to point at, at most: index 0 for the pointers stored in that
 /// memory, index 1 for the pointers stored where those point, and so on. A
-/// level past the end, and an entry of `None`, is no bound. See
-/// [`Held::contents_at_most`] and ADR-0060.
+/// level past the end is no bound. See [`Width`], [`Held::contents_at_most`]
+/// and ADR-0060.
 ///
 /// **No list is longer than [`Allocations::deepest_pointer`](super::allocations::Allocations::deepest_pointer)**,
 /// the deepest pointer type among the function's locals. The two that build
@@ -1011,17 +1062,17 @@ pub(super) fn bounded(here: Option<u64>, there: Option<u64>) -> Option<u64> {
 /// times to a pointer goes through a local at least `d + 1` deep and asks
 /// index `d - 1`.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub(super) struct Levels(Vec<Option<u64>>);
+pub(super) struct Levels(Vec<Width>);
 
 impl Levels {
-    /// One bound per level, from the shallowest, as given.
-    pub(super) fn from_bounds(bounds: Vec<Option<u64>>) -> Self {
-        Levels(bounds)
+    /// One width per level, from the shallowest, as given.
+    pub(super) fn new(widths: Vec<Width>) -> Self {
+        Levels(widths)
     }
 
-    /// The bound at one level, `None` past the end.
-    pub(super) fn at(&self, level: usize) -> Option<u64> {
-        self.0.get(level).copied().flatten()
+    /// The width at one level, no bound past the end.
+    pub(super) fn at(&self, level: usize) -> Width {
+        self.0.get(level).copied().unwrap_or(Width::Unbounded)
     }
 
     /// No bound at level 0, whatever was recorded there: what a read out of
@@ -1029,20 +1080,19 @@ impl Levels {
     /// [`Cell::unrecorded`](Cell).
     pub(super) fn forget_first(&mut self) {
         if let Some(first) = self.0.first_mut() {
-            *first = None;
+            *first = Width::Unbounded;
         }
     }
 
-    /// The lower of the two at every level, where `None` is no bound, as
-    /// [`bounded`] says for one: a side that bounds nothing at a level does
-    /// not loosen one that does, and a shorter list bounds nothing past its
-    /// end.
+    /// The lower of the two at every level, as [`Width::meet`] says for one:
+    /// a side that bounds nothing at a level does not loosen one that does,
+    /// and a shorter list bounds nothing past its end.
     pub(super) fn bound_by(&mut self, other: &Levels) {
         if self.0.len() < other.0.len() {
-            self.0.resize(other.0.len(), None);
+            self.0.resize(other.0.len(), Width::Unbounded);
         }
         for (level, here) in self.0.iter_mut().enumerate() {
-            *here = bounded(*here, other.at(level));
+            *here = here.meet(other.at(level));
         }
     }
 
@@ -1061,13 +1111,15 @@ impl Levels {
         self.0
             .iter()
             .zip(&read.0)
-            .any(|pair| matches!(pair, (Some(held), Some(read)) if held < read))
+            .any(|(held, read)| {
+                matches!((held.bound(), read.bound()), (Some(held), Some(read)) if held < read)
+            })
     }
 
     /// What memory holding a pointer that believes `self` of its own memory
     /// holds: `first` for that pointer, which is what a store of it records
     /// at its own level, and `self` one level down, no longer than `depth`.
-    pub(super) fn stored_under(&self, first: Option<u64>, depth: usize) -> Levels {
+    pub(super) fn stored_under(&self, first: Width, depth: usize) -> Levels {
         Levels(
             std::iter::once(first)
                 .chain(self.0.iter().copied())
@@ -2080,13 +2132,13 @@ impl Cell {
     pub(super) fn stored_levels(&self) -> Levels {
         self.held
             .contents_at_most
-            .stored_under(self.held.believed, usize::MAX)
+            .stored_under(Width::of_bound(self.held.believed), usize::MAX)
     }
 
     /// Bound what is stored there by `levels`, the lower of the two at every
     /// level, as a store's own record is joined in by [`Self::absorb`].
     pub(super) fn bound_stored(&mut self, levels: &Levels) {
-        self.held.believed = bounded(self.held.believed, levels.at(0));
+        self.held.believed = bounded(self.held.believed, levels.at(0).bound());
         self.held.contents_at_most.bound_by(&levels.below(1));
     }
 
@@ -2731,7 +2783,9 @@ mod tests {
         assert_eq!(written, Init::Maybe);
     }
 
-    use super::{Extent, Freeing, Held, Init, Inits, Levels, Offset, SiteState, earlier};
+    use super::{
+        Extent, Freeing, Held, Init, Inits, Levels, Offset, SiteState, Width, bounded, earlier,
+    };
     use crate::memory::index::{Idx, LocalIdx, Site};
     use crate::source::inside;
     use crate::source::{FileId, SourceMap, Span};
@@ -2746,15 +2800,53 @@ mod tests {
     /// `take` in `Levels::stored_under`. This fails at the first assertion.
     #[test]
     fn a_store_cannot_make_a_list_longer_than_the_function_s_depth() {
-        let held = Levels::from_bounds(vec![Some(8), Some(0)]);
+        let held = Levels::new(vec![Width::AtMost(8), Width::AtMost(0)]);
         assert_eq!(
-            held.stored_under(Some(4), 2),
-            Levels::from_bounds(vec![Some(4), Some(8)])
+            held.stored_under(Width::AtMost(4), 2),
+            Levels::new(vec![Width::AtMost(4), Width::AtMost(8)])
         );
         assert_eq!(
-            held.stored_under(None, 3),
-            Levels::from_bounds(vec![None, Some(8), Some(0)])
+            held.stored_under(Width::Unbounded, 3),
+            Levels::new(vec![Width::Unbounded, Width::AtMost(8), Width::AtMost(0)])
         );
+    }
+
+    /// `Width::meet` is a meet, over every combination of a set that holds
+    /// each variant and byte counts on either side of one another: it is
+    /// commutative, associative and idempotent, `Unbounded` is its identity,
+    /// it is never above either side, and it answers what [`bounded`] does
+    /// over the `Option<u64>` each width spells. ADR-0093 rule 1.
+    ///
+    /// Mutation: let `AsTyped` win over a byte count in `meet`; this fails,
+    /// at the meet that is above one side. Mutation: answer `Unbounded` for
+    /// `(Unbounded, other)`; this fails at the identity.
+    #[test]
+    fn a_width_meets_as_a_bound_does_over_every_combination() {
+        let widths = [
+            Width::Unbounded,
+            Width::AsTyped,
+            Width::AtMost(0),
+            Width::AtMost(4),
+            Width::AtMost(8),
+        ];
+        let at_most = |width: Width| width.bound().unwrap_or(u64::MAX);
+        for a in widths {
+            assert_eq!(a.meet(a), a, "idempotent at {a:?}");
+            assert_eq!(a.meet(Width::Unbounded), a, "identity at {a:?}");
+            assert_eq!(Width::of_bound(a.bound()), a, "spelled back at {a:?}");
+            for b in widths {
+                let met = a.meet(b);
+                assert_eq!(met, b.meet(a), "commutative at {a:?}, {b:?}");
+                assert!(
+                    at_most(met) <= at_most(a) && at_most(met) <= at_most(b),
+                    "{met:?} is above {a:?} or {b:?}"
+                );
+                assert_eq!(met.bound(), bounded(a.bound(), b.bound()), "{a:?}, {b:?}");
+                for c in widths {
+                    assert_eq!(a.meet(b).meet(c), a.meet(b.meet(c)), "{a:?}, {b:?}, {c:?}");
+                }
+            }
+        }
     }
 
     /// A shorter list bounds nothing past its end, and a side with no bound
@@ -2764,11 +2856,11 @@ mod tests {
     /// assertion, which loses the `0` at index 1.
     #[test]
     fn a_shorter_list_bounds_nothing_past_its_end() {
-        let mut here = Levels::from_bounds(vec![Some(8)]);
-        here.bound_by(&Levels::from_bounds(vec![None, Some(0)]));
-        assert_eq!(here, Levels::from_bounds(vec![Some(8), Some(0)]));
-        here.bound_by(&Levels::from_bounds(vec![Some(4)]));
-        assert_eq!(here, Levels::from_bounds(vec![Some(4), Some(0)]));
+        let mut here = Levels::new(vec![Width::AtMost(8)]);
+        here.bound_by(&Levels::new(vec![Width::Unbounded, Width::AtMost(0)]));
+        assert_eq!(here, Levels::new(vec![Width::AtMost(8), Width::AtMost(0)]));
+        here.bound_by(&Levels::new(vec![Width::AtMost(4)]));
+        assert_eq!(here, Levels::new(vec![Width::AtMost(4), Width::AtMost(0)]));
     }
 
     /// Two sizes for one object meet as a bound below both, and one size

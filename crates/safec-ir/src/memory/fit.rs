@@ -114,6 +114,7 @@ pub(super) fn fits(
     if held.beyond().foreign()
         && known.handed_at_most[local]
             .at(0)
+            .bound()
             .is_some_and(|most| most < width)
     {
         return Some(Fit::Unknown);

@@ -26,7 +26,7 @@ use super::fit::{
 use super::index::{Idx, Loc, LocalIdx, Site};
 use super::known::Known;
 use super::parts::{
-    Extent, Freeing, Init, Levels, Offset, Reached, Read, SiteState, earlier, same,
+    Extent, Freeing, Init, Levels, Offset, Reached, Read, SiteState, Width, earlier, same,
 };
 use super::store::{StoreKind, Written};
 use super::transfer::CopiedPointers;
@@ -1409,14 +1409,15 @@ fn contents_leaving(
         let receiver = analysis
             .type_levels(read_as)
             .unwrap_or_default()
-            .stored_under(Some(width), analysis.deepest_pointer);
+            .stored_under(Width::AtMost(width), analysis.deepest_pointer);
         // **And where a store there recorded no width**, which no other
         // record may stand in for where the receiver reads a pointer out of
         // it: `*ib = 7; use(box);` with `use` taking `int **` handed on an
         // `int` read as a pointer, in silence, and so did the same on one
         // arm beside `*box = malloc(4);` on the other (#767). See
         // `Cell::unrecorded`.
-        let stored_narrower = (known.contents[site].unrecorded() && receiver.at(0).is_some())
+        let stored_narrower = (known.contents[site].unrecorded()
+            && receiver.at(0) != Width::Unbounded)
             || known.contents[site]
                 .stored_levels()
                 .narrower_than(&receiver);
@@ -2205,6 +2206,7 @@ fn points_at_a_pointer(
     let arrived = held
         .contents_at_most
         .at(0)
+        .bound()
         .filter(|&width| width > 0)
         .or(held.arrived_holds_pointer.then_some(0));
     let stored = known.sites_of(place.local).any(|site| {
