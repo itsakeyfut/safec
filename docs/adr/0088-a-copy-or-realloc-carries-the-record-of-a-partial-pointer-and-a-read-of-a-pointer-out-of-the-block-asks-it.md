@@ -82,7 +82,22 @@ Each in `tests/cases/memory/`, with its mutation in its note in
   is reported when every copy records its own span as a partial one's
   (rule 1's source).
 
-Rules 3 and 4 land with #907, which adds their cases here.
+* `a_pointer_read_out_of_a_block_a_partial_copy_wrote_is_reported` and
+  `a_partial_pointer_read_after_an_alias_typed_first_is_reported` go silent
+  when a load asks nothing (rule 3), and
+  `an_int_read_out_of_a_block_a_partial_copy_wrote_is_not_reported` is
+  reported when every load is asked whatever its type.
+* `a_byte_copied_out_of_a_local_is_doubted_where_read_back_as_a_pointer`
+  gains an `SC0413` beside its `SC0411` when a load already said
+  indeterminate is asked too (rule 3's exception).
+* `a_partial_pointer_copied_out_of_a_block_into_a_pointer_local_is_reported`
+  goes silent when a copy asks nothing (rule 4), and
+  `a_partial_pointer_copied_out_of_a_block_into_an_int_local_is_not_reported`
+  is reported when every copy is asked whatever its destination;
+  `a_partial_pointer_copied_out_unwritten_is_reported_as_unwritten_alone`
+  gains an `SC0413` when a copy already said unwritten is asked too.
+* `a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once`
+  says it twice when the report is pushed without ADR-0087 rule 4's check.
 
 ### Consequences
 
