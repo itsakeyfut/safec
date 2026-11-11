@@ -1,0 +1,107 @@
+---
+status: "proposed"
+date: 2026-11-11
+decision-makers: itsakeyfut
+---
+
+# Every field of the memory check's value answers every door in one table, and a new one starts in doubt
+
+## Context and Problem Statement
+
+The memory check's value, `Known`, grew from 20 to 26 fields in ten days.
+Each field has to say what happens to it at every door:
+
+- a store, a library copy and a `realloc`;
+- a load;
+- the forward join and the back edge;
+- a site made again, and a local's lifetime beginning and ending.
+
+Nothing lists those answers per field. A field that leaves one out is
+silent, and review finds the gap one pull request at a time. Over that
+period:
+
+- the longest chain of issues each found by the review of the one before
+  reached eleven links (687 to 908);
+- none of 226 such issues was found by a failing test.
+
+Eight architecture reviews in a row scored the check's change dynamics and
+soundness strategy 2.
+
+The route matrix (ADR-0062) exists to turn a missed route into a failing
+named row. It has ten beliefs against 26 fields.
+
+## Decision Drivers
+
+* A field's missing answer at a door has been a silence (row 6). It should
+  fail to compile (row 1) or fail a named test (row 2).
+* Inverting every default so that a missed route is a doubt was considered
+  and not taken now. Its cost in false reports is unmeasured, and it would
+  move most of the corpus at once.
+
+## Considered Options
+
+* One exhaustive table of every field's answer per door, plus a route-matrix
+  row per belief, plus a rule that a new field starts in doubt.
+* Invert every field's default to the value that doubts, and win precision
+  back by proofs.
+* Leave the shape alone and fix routes as they are found.
+
+## Decision Outcome
+
+Chosen: the table, the matrix rows and the rule for new fields, by the
+author.
+
+1. **One function destructures `Known` with no `..`** and says, per field,
+   what each door does with it. The doors are a copy, a `realloc`, a load,
+   the forward join, the back edge, a site made again, and a local's
+   lifetime. The function also says what the field is keyed by. A field added
+   without its row is `error[E0027]`. The transfer's doors call through it
+   where they act on a field, so the table is what runs, not a description
+   beside it.
+2. **Every belief a field carries has a route-matrix row**, or is named in
+   the matrix as an exemption with its reason. A test fails when a field of
+   `Known` is in neither. A new field lands with its row in the same pull
+   request.
+3. **A new field starts at the value that doubts.** Where it starts quiet,
+   its doc comment says why and names the matrix row that holds the quiet
+   start. A field kept from before this record keeps its start until its own
+   change asks.
+4. **A decision about what a value holds beyond its sites reads a question
+   that matches every mark** (`Beyond`), not a reader of one mark (#853). A
+   new mark is then `error[E0027]` wherever a decision is made.
+
+### Confirmation
+
+To be filled by the change for #918: the compile error for a field left out
+of the table, shown by adding a dummy field; the named test in
+`tests/routes.rs` that fails for a field neither a belief nor an exemption;
+and the cases for each belief's routes.
+
+### Consequences
+
+* Good, because a field's missing door is a compile error or a failing row
+  rather than a review finding.
+* Bad, because every field now carries a row in the table and one in the
+  matrix, and the matrix needs a hazard program and a control per belief.
+
+## Pros and Cons of the Options
+
+### Invert every default
+
+* Good, because a route nobody listed would be a doubt the reader sees.
+* Bad, because its cost in false reports is unknown. In #698, an inversion
+  of one rule failed 21 correct cases, and this would move most of the
+  corpus at once. If this record does not move the architecture review's
+  scores, that is the next step, measured first by an experiment issue.
+
+### Fix routes as they are found
+
+* Good, because nothing moves.
+* Bad, because it is what eight reviews scored 2.
+
+## More Information
+
+* [ADR-0062](./0062-each-belief-s-routes-are-generated-as-a-matrix-and-asked-against-a-control.md),
+  the route matrix this extends.
+* [ADR-0063](./0063-the-memory-check-has-one-kind-of-place-one-kind-of-cell-and-one-description-of-a-write.md),
+  whose one kind of place the table keys by.
