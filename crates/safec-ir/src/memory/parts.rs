@@ -974,9 +974,10 @@ pub(super) struct Held {
     /// which a local nothing was assigned shares with a null and arithmetic
     /// on a null kept. See ADR-0093 rule 3.
     ///
-    /// Read by nothing yet but a door that asks it, `realloc`'s (#708);
-    /// a join needs none of it, since a null's own level of
-    /// [`Self::widths`] is the identity there ([`Held::null`]).
+    /// Read by the door that asks it, `realloc`'s, whose result may be
+    /// fresh on the path where it was handed a null (#708); a join needs
+    /// none of it, since a null's own level of [`Self::widths`] is the
+    /// identity there ([`Held::null`]).
     pub(super) may_be_null: bool,
 }
 
