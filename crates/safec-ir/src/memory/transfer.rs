@@ -2194,8 +2194,8 @@ impl Analysis for Allocations<'_> {
             left_at: Table::filled(None, self.locals),
             held_levels: Table::filled(0, self.locals),
             stored_out_at: Table::filled(None, self.locals),
-            part_written: Table::filled(None, self.locals),
-            part_written_since_made: Table::filled(None, self.locals),
+            part_written: Table::filled(None, Loc::count(self.locals)),
+            part_written_since_made: Table::filled(None, Loc::count(self.locals)),
             // No call has been handed anything yet.
             handed_untyped: Table::filled(Vec::new(), Loc::count(self.locals)),
             // No block has been made yet.
@@ -3658,15 +3658,78 @@ impl Analysis for Allocations<'_> {
                             // load one level further reads. The earlier span
                             // is kept, the partial copy the reader has to
                             // look at. See ADR-0088.
-                            let from: Vec<Site> = value
-                                .levels_below(source.local, from_depth)
-                                .0
+                            //
+                            // **Out of and into a local as a block**, the
+                            // locals the source names and the ones it lands
+                            // in by an edge: through `char buf[8]` the record
+                            // was dropped, and a partial copy into one
+                            // recorded nothing (#908). See ADR-0090.
+                            let (from_sites, from_locals) =
+                                value.levels_below(source.local, from_depth);
+                            let from: Vec<Loc> = from_sites
                                 .into_iter()
+                                .map(Loc::Heap)
+                                .chain(from_locals.into_iter().map(Loc::Local))
                                 .collect();
-                            value.carry_part_written(self.sources, &from, &landing.containers);
+                            let to: Vec<Loc> = landing
+                                .containers
+                                .iter()
+                                .map(|&site| Loc::Heap(site))
+                                .chain(landing.targets.iter().map(|&local| Loc::Local(local)))
+                                .collect();
+                            // Whether this copy writes a record, by carrying
+                            // one or by being partial, for the reset below.
+                            let carries = in_part
+                                || from
+                                    .iter()
+                                    .any(|&at| value.part_written_since_made[at].is_some());
+                            value.carry_part_written(self.sources, &from, &to);
+                            // **Only where part of a pointer fits**: a local
+                            // narrower than a pointer holds no pointer to be
+                            // part of, and noted, `memcpy(&k, &i, 4)` of an
+                            // `int` into an `int` moved the report off the
+                            // copy that wrote half a pointer, found by review.
+                            // A later copy of its bytes into wider memory is
+                            // a partial copy of its own. A block, or a local
+                            // whose size this check cannot read, is noted.
                             if in_part {
-                                for &site in &landing.containers {
-                                    value.note_part_written(self.sources, site, origin.span());
+                                let target = self.unit.target();
+                                let pointer =
+                                    u64::from(target.pointer_bits() / target.char().bits());
+                                let fits = |at: Loc| match at {
+                                    Loc::Heap(_) => true,
+                                    Loc::Local(local) => function
+                                        .locals()
+                                        .nth(local.index())
+                                        .and_then(|local| self.unit.size_of(function.local(local)))
+                                        .is_none_or(|size| size >= pointer),
+                                };
+                                for &at in to.iter().filter(|&&at| fits(at)) {
+                                    value.note_part_written(self.sources, at, origin.span());
+                                }
+                            }
+                            // **And what was stored through a pointer there is
+                            // no longer what a read through it reads**: the
+                            // copy wrote the record's bytes over it. Left set,
+                            // `*p = x; memcpy(buf, &i, 4); s = *p;` read half a
+                            // pointer in silence, for a block as for a local,
+                            // found by review. See `Held::stored_through`.
+                            let recorded: Vec<Loc> = to
+                                .iter()
+                                .copied()
+                                .filter(|&at| value.part_written_since_made[at].is_some())
+                                .collect();
+                            if carries && !recorded.is_empty() {
+                                for held in value.points_to.iter_mut() {
+                                    let names = held
+                                        .sites()
+                                        .any(|site| recorded.contains(&Loc::Heap(site)))
+                                        || held
+                                            .locals()
+                                            .any(|local| recorded.contains(&Loc::Local(local)));
+                                    if names {
+                                        held.stored_through = false;
+                                    }
                                 }
                             }
                             // **Into a local's address, the copy lands in the
@@ -4462,7 +4525,7 @@ impl Analysis for Allocations<'_> {
                     // **And whether a copy wrote part of a pointer into
                     // it**, the bytes it moves: `n = realloc(m, 8); void
                     // **q = n; *pp = q;` built silent (#905). See ADR-0088.
-                    value.carry_part_written(self.sources, &[old], &[site]);
+                    value.carry_part_written(self.sources, &[Loc::Heap(old)], &[Loc::Heap(site)]);
                     let held = value.contents[old].clone();
                     value.pour(&[site], &held, &[]);
                 }

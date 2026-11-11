@@ -464,9 +464,9 @@ pub(super) struct Known {
     /// part way through one (`Allocations::copied_pointers`), whatever either
     /// side's type said then. **Or into a block it was copied or
     /// `realloc`ed from**, whose bytes this one now holds: the record is
-    /// carried to the new block (#905, ADR-0088). **Allocations only**: a
-    /// local array has no entry, so a copy through one carries nothing on,
-    /// a silence #908 decides.
+    /// carried to the new block (#905, ADR-0088). **A local's too**, by
+    /// `Loc`, so a stack buffer between two copies, or a partial copy made
+    /// straight into one, carries it on (#908, ADR-0090).
     ///
     /// **Asked where the block is later held as memory of pointers**: where
     /// it leaves so (the exit's question, beside `left_at`) and where it is
@@ -476,7 +476,7 @@ pub(super) struct Known {
     /// `memcpy(m, &i, 4); void **q = m; *pp = q;` built silent (#832). A
     /// may-fact, joined keeping the earlier span, and kept where the site is
     /// made again, as `left_at` is. See ADR-0087.
-    pub(super) part_written: Table<Site, Option<Span>>,
+    pub(super) part_written: Table<Loc, Option<Span>>,
     /// [`Self::part_written`] for the allocation the site names now:
     /// cleared where the site is made again, which `part_written` is not.
     ///
@@ -486,7 +486,7 @@ pub(super) struct Known {
     /// kept. Asked by the kept one, a loop that allocated, read a whole
     /// pointer, and only then copied part of one into the block was doubted
     /// at the copy every turn, found by review.
-    pub(super) part_written_since_made: Table<Site, Option<Span>>,
+    pub(super) part_written_since_made: Table<Loc, Option<Span>>,
     /// Per local, each type a call this check cannot read reached it as on
     /// the walk a departure takes, where that type is untyped somewhere
     /// below: `void`, `char` or `int` bytes, a pointer whose chain ends in
@@ -549,7 +549,7 @@ impl Known {
     /// pointer into it, keeping the earlier of what was there: one body for
     /// the copy that writes it and the copy and `realloc` that carry it, so
     /// the three join it alike. See [`Self::part_written`] and ADR-0088.
-    pub(super) fn note_part_written(&mut self, sources: &SourceMap, site: Site, copy: Span) {
+    pub(super) fn note_part_written(&mut self, sources: &SourceMap, site: Loc, copy: Span) {
         for table in [&mut self.part_written, &mut self.part_written_since_made] {
             table[site] = Some(match table[site] {
                 Some(before) => earlier(sources, before, copy),
@@ -561,8 +561,8 @@ impl Known {
     /// Carry what `from` recorded to every site in `to`, as a copy or a
     /// `realloc` moves the bytes: each record from its own, so that what a
     /// read here asks comes only from blocks made since (ADR-0088).
-    pub(super) fn carry_part_written(&mut self, sources: &SourceMap, from: &[Site], to: &[Site]) {
-        let earliest = |table: &Table<Site, Option<Span>>| {
+    pub(super) fn carry_part_written(&mut self, sources: &SourceMap, from: &[Loc], to: &[Loc]) {
+        let earliest = |table: &Table<Loc, Option<Span>>| {
             from.iter()
                 .filter_map(|&block| table[block])
                 .reduce(|here, there| earlier(sources, here, there))
@@ -589,6 +589,13 @@ impl Known {
     /// [`Self::replace`]'s, and so no [`Strong`] asked for.
     pub(super) fn clear(&mut self, local: LocalId) {
         self.points_to[local].clear();
+        // **And what a copy wrote into its storage**: nothing outside the
+        // function can hold a local's storage once its lifetime is over, so
+        // the reason a block's record is kept does not reach it. Kept, a
+        // buffer declared in a loop body carried last turn's partial copy
+        // into this turn's. See ADR-0090.
+        self.part_written[local] = None;
+        self.part_written_since_made[local] = None;
     }
 
     /// The local `at` names holds `value` and nothing it held before: **the

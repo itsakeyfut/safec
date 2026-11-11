@@ -1,0 +1,115 @@
+Target "x86_64-pc-windows-msvc"
+Function a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:2:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:3:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:4:6 "use" declared
+  Local "_0" "void" return
+Function a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:5:6 "out"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "pp"
+  Local "_2" "int" "i"
+  Local "_3" "char[8]" "buf"
+  Local "_4" "int"
+  Local "_5" "int *" "m"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "char *"
+  Local "_9" "int *"
+  Local "_10" "void *"
+  Local "_11" "char *"
+  Local "_12" "void *"
+  Local "_13" "int *"
+  Block "bb0" entry
+    Operation a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:6:9 written
+      Destination "_2"
+      Use
+        Constant 1
+    Sequenced a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:6:13 generated
+    Operation a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:8:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_1"
+    Branch a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:8:9 written "bb1" "bb2"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:8:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:8:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:9:14 generated
+    Call a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:9:14 written "malloc" "bb4"
+      Destination "_6"
+      Constant 8
+  Block "bb4"
+    Operation a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:9:10 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:9:14 generated
+    Operation a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:10:9 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_5"
+    Branch a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:10:9 written "bb5" "bb6"
+      Copy "_7"
+  Block "bb5"
+    Sequenced a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:10:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:10:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:11:12 generated
+      Destination "_8"
+      Address
+        Place "_3"
+          Index
+            Constant 0
+    Operation a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:11:17 written
+      Destination "_9"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:11:5 generated
+    Call a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:11:5 written "memcpy" "bb8"
+      Destination "_10"
+      Copy "_8"
+      Copy "_9"
+      Constant 4
+  Block "bb8"
+    Sequenced a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:11:5 generated
+    Operation a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:12:15 generated
+      Destination "_11"
+      Address
+        Place "_3"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:12:5 generated
+    Call a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:12:5 written "memcpy" "bb9"
+      Destination "_12"
+      Copy "_5"
+      Copy "_11"
+      Constant 8
+  Block "bb9"
+    Sequenced a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:12:5 generated
+    Operation a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:13:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:13:5 written
+      Destination "_13"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_partial_pointer_copied_into_a_local_array_that_never_reaches_pointers_is_not_reported.c:13:5 generated
+    Return
