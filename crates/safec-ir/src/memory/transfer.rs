@@ -3642,14 +3642,25 @@ impl Analysis for Allocations<'_> {
                                 CopiedPointers::LastInPart | CopiedPointers::NoneWhole => true,
                                 CopiedPointers::Whole => false,
                             };
-                            if in_part {
-                                let at = origin.span();
+                            // **And what the blocks it copies out of
+                            // recorded**, whatever its length: a whole copy
+                            // of a block a partial copy wrote holds the same
+                            // partial pointer, and `memcpy(m2, m, 8); void **q
+                            // = m2; *pp = q;` built silent (#905). The blocks
+                            // the source names at the copy's depth, which a
+                            // load one level further reads. The earlier span
+                            // is kept, the partial copy the reader has to
+                            // look at. See ADR-0088.
+                            let carried = value
+                                .levels_below(source.local, from_depth)
+                                .0
+                                .into_iter()
+                                .filter_map(|block| value.part_written[block])
+                                .reduce(|here, there| earlier(self.sources, here, there));
+                            let written = in_part.then(|| origin.span());
+                            for copy in carried.into_iter().chain(written) {
                                 for &site in &landing.containers {
-                                    value.part_written[site] =
-                                        Some(match value.part_written[site] {
-                                            Some(before) => earlier(self.sources, before, at),
-                                            None => at,
-                                        });
+                                    value.note_part_written(self.sources, site, copy);
                                 }
                             }
                             // **Into a local's address, the copy lands in the
@@ -4442,6 +4453,12 @@ impl Analysis for Allocations<'_> {
                 // finds nothing in the new allocation to mark, found by
                 // review (a cell's `lost`). See `Known::pour`.
                 for old in old {
+                    // **And whether a copy wrote part of a pointer into
+                    // it**, the bytes it moves: `n = realloc(m, 8); void
+                    // **q = n; *pp = q;` built silent (#905). See ADR-0088.
+                    if let Some(copy) = value.part_written[old] {
+                        value.note_part_written(self.sources, site, copy);
+                    }
                     let held = value.contents[old].clone();
                     value.pour(&[site], &held, &[]);
                 }

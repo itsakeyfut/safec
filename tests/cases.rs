@@ -1796,6 +1796,16 @@ cases! {
         // Mutation: a store departure no longer takes the place of the
         // deferred ask; this is said twice.
         a_partial_pointer_copied_into_a_typed_block_after_it_is_handed_on_in_a_loop_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A whole copy, or a `realloc`, carries the record to the block it
+        // lands in, which then leaves as memory of pointers (#905). Asked at
+        // the partial copy. Mutations: drop the copy arm's carry; the first
+        // and third go silent. Drop the `realloc` arm's; the second does.
+        a_partial_pointer_in_a_block_copied_whole_into_another_that_leaves_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_partial_pointer_copied_through_two_whole_copies_into_a_block_that_leaves_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A whole copy of a block no partial copy wrote. Mutation: record
+        // every copy's own span as a partial one's; this is reported.
+        a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
         // one is, by one function both doors call (#890). Possibly, not
         // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no
