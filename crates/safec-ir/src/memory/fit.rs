@@ -101,7 +101,7 @@ pub(super) fn fits(
     // through the local itself still doubts all three, which costs a false
     // report and not a silence. See ADR-0060.
     if doubt_unseen_writes
-        && (held.beyond().lost() || held.beyond().foreign() || known.escaped[local])
+        && (held.beyond().stopped_following_or_written_unseen() || known.escaped[local])
     {
         return Some(Fit::Unknown);
     }

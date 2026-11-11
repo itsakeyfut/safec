@@ -3218,8 +3218,7 @@ impl Analysis for Allocations<'_> {
                         | SiteState::Unheld => None,
                     })
                     .collect();
-                (!held.beyond().lost()
-                    && !held.beyond().foreign()
+                (!held.beyond().stopped_following_or_written_unseen()
                     && !old.is_empty()
                     && old.len() == held.sites().count())
                 .then_some(old)

@@ -2370,41 +2370,140 @@ impl Unrecorded {
 
 impl Beyond {
     /// [`Held::lost`]: this check stopped following the value.
+    ///
+    /// **This mark alone**: its readers ask whether this check let go of the value, which no other mark says. Every mark is named, `_` for one not read, so a mark added
+    /// is `error[E0027]` here and has to be answered (#853).
     pub(super) fn lost(&self) -> bool {
-        matches!(self, Beyond::Unrecorded(Unrecorded { lost: true, .. }))
+        match self {
+            Beyond::Nothing => false,
+            Beyond::Unrecorded(Unrecorded {
+                lost,
+                loaded: _,
+                foreign: _,
+                from_caller: _,
+                stale_read: _,
+                lost_read: _,
+                unreplaced_read: _,
+            }) => *lost,
+        }
     }
 
     /// [`Held::loaded`]: the value was read out of memory.
+    ///
+    /// **This mark alone**: its readers ask how wide a pointer read out of memory is believed, which the other marks do not decide. Every mark is named, `_` for one not read, so a mark added
+    /// is `error[E0027]` here and has to be answered (#853).
     pub(super) fn loaded(&self) -> bool {
-        matches!(self, Beyond::Unrecorded(Unrecorded { loaded: true, .. }))
+        match self {
+            Beyond::Nothing => false,
+            Beyond::Unrecorded(Unrecorded {
+                lost: _,
+                loaded,
+                foreign: _,
+                from_caller: _,
+                stale_read: _,
+                lost_read: _,
+                unreplaced_read: _,
+            }) => *loaded,
+        }
     }
 
     /// [`Held::foreign`]: a call this check cannot read wrote the value.
+    ///
+    /// **This mark alone**: its readers ask what a call this check cannot read handed back. Every mark is named, `_` for one not read, so a mark added
+    /// is `error[E0027]` here and has to be answered (#853).
     pub(super) fn foreign(&self) -> bool {
-        matches!(self, Beyond::Unrecorded(Unrecorded { foreign: true, .. }))
+        match self {
+            Beyond::Nothing => false,
+            Beyond::Unrecorded(Unrecorded {
+                lost: _,
+                loaded: _,
+                foreign,
+                from_caller: _,
+                stale_read: _,
+                lost_read: _,
+                unreplaced_read: _,
+            }) => *foreign,
+        }
     }
 
     /// [`Held::from_caller`]: a caller or a callee handed the value over.
+    ///
+    /// **This mark alone**: its readers ask whether the value is the caller's, which only this provenance says. Every mark is named, `_` for one not read, so a mark added
+    /// is `error[E0027]` here and has to be answered (#853).
     pub(super) fn is_from_caller(&self) -> bool {
-        matches!(
-            self,
+        match self {
+            Beyond::Nothing => false,
             Beyond::Unrecorded(Unrecorded {
-                from_caller: true,
-                ..
-            })
-        )
+                lost: _,
+                loaded: _,
+                foreign: _,
+                from_caller,
+                stale_read: _,
+                lost_read: _,
+                unreplaced_read: _,
+            }) => *from_caller,
+        }
     }
 
     /// [`Held::unreplaced_read`]: the value may be a slot a call could not
     /// replace.
+    ///
+    /// **This mark alone**: its one reader asks whether a slot may still hold what a call left there. Every mark is named, `_` for one not read, so a mark added
+    /// is `error[E0027]` here and has to be answered (#853).
     pub(super) fn unreplaced_read(&self) -> bool {
-        matches!(
-            self,
+        match self {
+            Beyond::Nothing => false,
             Beyond::Unrecorded(Unrecorded {
-                unreplaced_read: true,
-                ..
-            })
-        )
+                lost: _,
+                loaded: _,
+                foreign: _,
+                from_caller: _,
+                stale_read: _,
+                lost_read: _,
+                unreplaced_read,
+            }) => *unreplaced_read,
+        }
+    }
+
+    /// Whether this check stopped following the value, or a call it cannot read
+    /// wrote it: what it holds may be anything, wherever it came from.
+    ///
+    /// One question where its readers each composed it from two marks. Every mark is named, `_` for one not read, so a mark added is
+    /// `error[E0027]` here (#853).
+    pub(super) fn stopped_following_or_written_unseen(&self) -> bool {
+        match self {
+            Beyond::Nothing => false,
+            Beyond::Unrecorded(Unrecorded {
+                lost,
+                loaded: _,
+                foreign,
+                from_caller: _,
+                stale_read: _,
+                lost_read: _,
+                unreplaced_read: _,
+            }) => *lost || *foreign,
+        }
+    }
+
+    /// Whether the value was read out of memory or written by a call this check
+    /// cannot read: what it is believed to point at is what that read or call
+    /// recorded, not what this function stored.
+    ///
+    /// One question where its readers each composed it from two marks. Every mark is named, `_` for one not read, so a mark added is
+    /// `error[E0027]` here (#853).
+    pub(super) fn read_or_written_unseen(&self) -> bool {
+        match self {
+            Beyond::Nothing => false,
+            Beyond::Unrecorded(Unrecorded {
+                lost: _,
+                loaded,
+                foreign,
+                from_caller: _,
+                stale_read: _,
+                lost_read: _,
+                unreplaced_read: _,
+            }) => *loaded || *foreign,
+        }
     }
 
     /// Whether the value may be a lost one: lost, or read out of memory a

@@ -1099,7 +1099,7 @@ impl Known {
     /// See [`Self::reachable_now`].
     fn exposed_through(&self, local: LocalId) -> Vec<Site> {
         let from = &self.points_to[local];
-        if from.beyond().loaded() || from.beyond().foreign() {
+        if from.beyond().read_or_written_unseen() {
             self.reachable_now().into_iter().collect()
         } else {
             Vec::new()
@@ -1778,7 +1778,7 @@ impl Known {
         // apart: keep the two in step.
         if self.unnamed_below(local, dereferences) || held.beyond().lost() {
             lands.extend(self.locals_named_by_unknown_code());
-        } else if held.beyond().loaded() || held.beyond().foreign() {
+        } else if held.beyond().read_or_written_unseen() {
             lands.extend(held.named_at_read.ones());
         }
         lands.into_iter().collect()

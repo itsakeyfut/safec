@@ -792,8 +792,7 @@ impl Allocations<'_> {
         source.projection.as_slice() == [Projection::Deref]
             && self.may_be_pointer(function, source)
             && (through.may_be_a_locals_address() || through.sites().next().is_some())
-            && !(through.beyond().lost()
-                || through.beyond().foreign()
+            && !(through.beyond().stopped_following_or_written_unseen()
                 || through.inner_address || through.stored_through)
             // **A pointer read out of memory is asked about its blocks
             // alone**: it may name what it does not show, so what it shows is
