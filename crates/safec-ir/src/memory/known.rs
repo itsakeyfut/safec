@@ -554,6 +554,21 @@ impl Known {
         }
     }
 
+    /// What was stored through a pointer naming any of `places` is no longer
+    /// what a read through it reads, since a write of part of a pointer
+    /// landed over it there. See `Held::stored_through`.
+    pub(super) fn written_over(&mut self, places: &[Loc]) {
+        for held in self.points_to.iter_mut() {
+            let names = held.sites().any(|site| places.contains(&Loc::Heap(site)))
+                || held
+                    .locals()
+                    .any(|local| places.contains(&Loc::Local(local)));
+            if names {
+                held.stored_through = false;
+            }
+        }
+    }
+
     /// Carry what `from` recorded to every site in `to`, as a copy or a
     /// `realloc` moves the bytes: each record from its own, so that what a
     /// read here asks comes only from blocks made since (ADR-0088).

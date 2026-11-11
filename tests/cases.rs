@@ -325,6 +325,17 @@ cases! {
         a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_table_of_whole_pointers_that_leaves_is_not_reported_as_part_of_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_int_stored_into_memory_of_ints_that_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A byte written over a pointer stored whole leaves a read of it a
+        // pointer made of that byte and the old ones: the store's mark that
+        // a read through it reads what it stored goes, as after a partial
+        // copy. Mutation: `note_part_of_a_pointer` leaves `stored_through`
+        // set; the first goes silent. **The second is a known cost**: every
+        // byte of the slot written at a constant position still leaves the
+        // record, since it says no more than that part of a pointer may have
+        // been written; a store that certainly lands replacing its slot
+        // (ADR-0094) is what removes it.
+        a_pointer_written_whole_then_a_byte_of_it_over_is_reported_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_written_a_byte_at_a_time_at_every_position_is_still_reported_as_part_of_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_of_a_block_kept_per_slot_past_its_written_slot_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy carries what it copies into and out of a local, as
         // between blocks (#750). Mutation: carry no mark into a local, or

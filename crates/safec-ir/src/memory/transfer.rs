@@ -378,9 +378,14 @@ impl Allocations<'_> {
                 .filter(|&local| wide_enough(value.extent[local]))
                 .map(Loc::Local),
         );
-        for written in places {
+        for &written in &places {
             value.note_part_written(self.sources, written, at);
         }
+        // **And what was stored through a pointer there is no longer what a
+        // read through it reads**, as after a partial copy: `*m = x; *c = 1;
+        // q = *m;` with `c` into `m`'s block read half of `x` in silence.
+        // Found while measuring #917.
+        value.written_over(&places);
     }
 
     /// How many innermost elements one object of `ty` holds: an array's
@@ -3794,17 +3799,7 @@ impl Analysis for Allocations<'_> {
                                 .filter(|&at| value.part_written_since_made[at].is_some())
                                 .collect();
                             if carries && !recorded.is_empty() {
-                                for held in value.points_to.iter_mut() {
-                                    let names = held
-                                        .sites()
-                                        .any(|site| recorded.contains(&Loc::Heap(site)))
-                                        || held
-                                            .locals()
-                                            .any(|local| recorded.contains(&Loc::Local(local)));
-                                    if names {
-                                        held.stored_through = false;
-                                    }
-                                }
+                                value.written_over(&recorded);
                             }
                             // **Into a local's address, the copy lands in the
                             // local**: `memcpy(&s, &r, n)` stores into `s`

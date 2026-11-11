@@ -1,0 +1,10 @@
+error[SC0413]: this lets a pointer leave that may not point at the start of an object
+   ╭─[ a_pointer_written_whole_then_a_byte_of_it_over_is_reported_where_read.c:2:90 ]
+   │
+ 2 │ int r(int *x) { int **m = malloc(8); if (!m) return 0; *m = x; void *v = m; char *c = v; c[3] = 1; int *q = *m; return q != 0; }
+   │                                                                                          ────┬───  
+   │                                                                                              ╰───── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave as a `void *` only at the start of an object
