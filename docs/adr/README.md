@@ -163,6 +163,7 @@ finds the new one without the record being edited.
 | `an_allocation_filled_by_a_loop_is_not_doubted_as_unwritten` | `an_allocation_filled_by_a_loop_is_doubted_as_unwritten`, doubted until a loop proof (ADR-0094 rule 4) | #893 |
 | `a_slot_stored_again_after_what_it_held_was_freed_is_doubted` | `a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted`, a block of one slot replaced whole (ADR-0094 rule 1) | #656 |
 | `a_pointer_stored_and_read_in_one_turn_is_doubted_on_the_next` | `a_pointer_stored_and_read_in_one_turn_is_not_doubted_freed_on_the_next`, likewise | #656 |
+| `a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it` | `a_copy_over_a_freed_pointer_is_not_doubted_where_it_replaced_it`, a copy over a block of one slot replaced whole (ADR-0094 rule 1) | #927 |
 | `a_long_local_array_written_in_part_and_then_at_its_start_is_not_doubted` | `a_long_local_array_written_in_part_and_then_at_its_start_is_doubted`, doubted since a store narrower than a place kept whole may-writes it | #918's review |
 | `an_array_of_many_pointers_written_at_one_element_and_read_there_is_not_doubted` | `an_array_of_many_pointers_written_at_one_element_and_read_there_is_doubted`, doubted since a store narrower than a place kept whole may-writes it | #918's review |
 | `an_array_of_many_pointers_a_copy_ended_part_way_through_one_wrote_is_not_asked` | `an_array_of_many_pointers_a_copy_ended_part_way_through_one_wrote_is_doubted`, doubted since a store narrower than a place kept whole may-writes it | #918's review |

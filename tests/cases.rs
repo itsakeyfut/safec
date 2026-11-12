@@ -5050,10 +5050,13 @@ cases! {
         // The nullability check doubts the read through memory in place, as a
         // warning under `--allow-unknown` (#333).
         a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
-        // What ADR-0045 accepts as its cost: a copy adds to what the
-        // destination holds and replaces nothing, so a freed pointer it held
-        // before is doubted after, as on `main`.
-        a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A copy over the whole of a block of one slot made once replaces
+        // what it held, as a store does, so the freed pointer is gone from
+        // it (#927). Named `a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it`
+        // until #927, the cost ADR-0045 named. Mutation: `Pours::Copy`
+        // replaces nothing again; both are doubted.
+        a_copy_over_a_freed_pointer_is_not_doubted_where_it_replaced_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returned_without_a_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A deep store is exposed as well as recorded, since where it may land
         // is a lower bound: `*t3` may be what the caller stored. Mutation:
         // have a deep store not count as `unnamed`; the first goes silent at
@@ -5598,6 +5601,7 @@ cases! {
         // let `Allocations::replaces` skip asking `made_once`; this goes
         // silent.
         a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store at an index not known may land past the end. Mutation: let
         // `Allocations::replaces` skip asking the pointer's position; this
         // goes silent.

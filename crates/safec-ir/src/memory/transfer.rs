@@ -41,8 +41,9 @@ enum Pours {
         /// [`Allocations::replaces`] says it does.
         replaces: Option<Site>,
     },
-    /// A library copy.
-    Copy,
+    /// A library copy, and the one block it replaces whole, where
+    /// [`Allocations::replaces`] says it does.
+    Copy { replaces: Option<Site> },
 }
 
 /// How a library copy's length covers the pointers it writes, which
@@ -328,14 +329,16 @@ impl Allocations<'_> {
         }
     }
 
-    /// **The one block a store replaces whole**, where it certainly does:
-    /// `*b = 0;` after `*b = x; free(x);` leaves nothing of `x` in `b`, and
-    /// a store that only added to what the block may hold doubted the
-    /// free-then-null idiom at every door that asks it (#656, ADR-0094 rule
-    /// 1). All of these hold, each because without it the block may keep
-    /// what it held:
+    /// **The one block a write of `width` bytes at `offset` replaces
+    /// whole**, where it certainly does: `*b = 0;` after `*b = x; free(x);`
+    /// leaves nothing of `x` in `b`, and a store that only added to what the
+    /// block may hold doubted the free-then-null idiom at every door that
+    /// asks it (#656, ADR-0094 rule 1). **The store and the library copy
+    /// both ask it** (#927): `memcpy(b, &z, 8)` with `z` null is the same
+    /// write, and was still doubted. All of these hold, each because without
+    /// it the block may keep what it held:
     ///
-    /// - one dereference, landing in exactly one site and nothing else
+    /// - landing in exactly one site and nothing else
     ///   ([`Landing::certain`](super::store::Landing::certain));
     /// - at the block's start, `At::Bytes(0)`: `b[k] = 0;` may land past
     ///   the end and leave what `b` holds;
@@ -354,6 +357,21 @@ impl Allocations<'_> {
     /// there, and the old site keeps its own record.
     pub(super) fn replaces(
         &self,
+        landing: &Landing,
+        offset: At,
+        width: Option<u64>,
+        value: &Known,
+    ) -> Option<Site> {
+        let site = landing.certain()?.site();
+        let width = width?;
+        let whole = offset == At::Bytes(0) && value.extent[site] == Some(Extent::Exactly(width));
+        (whole && self.made_once[site.local()]).then_some(site)
+    }
+
+    /// What a store through `place` replaces, by [`Self::replaces`]: one
+    /// dereference, at the width of what it stores.
+    fn store_replaces(
+        &self,
         function: &Function,
         place: &Place,
         landing: &Landing,
@@ -362,14 +380,11 @@ impl Allocations<'_> {
         if place.projection.as_slice() != [Projection::Deref] {
             return None;
         }
-        let site = landing.certain()?.site();
         let width = self
             .unit
             .place_ty(function, place)
-            .and_then(|ty| self.unit.size_of(ty))?;
-        let whole = value.points_to[place.local].offset == At::Bytes(0)
-            && value.extent[site] == Some(Extent::Exactly(width));
-        (whole && self.made_once[site.local()]).then_some(site)
+            .and_then(|ty| self.unit.size_of(ty));
+        self.replaces(landing, value.points_to[place.local].offset, width, value)
     }
 
     /// Record a store narrower than a pointer as writing part of one, in each
@@ -876,9 +891,14 @@ impl Allocations<'_> {
                     }
                 }
             }
-            Pours::Copy => {
+            Pours::Copy { replaces } => {
                 if elsewhere {
                     value.landed_where_unknown_code_points(poured);
+                }
+                // What it replaces holds nothing else first, as a store's
+                // does (#927).
+                if let Some(site) = replaces.filter(|_| !elsewhere) {
+                    value.contents[site] = Cell::none(value.points_to.len());
                 }
                 value.pour(containers, poured, in_part);
             }
@@ -3017,7 +3037,12 @@ impl Analysis for Allocations<'_> {
                             pointer_stored: self.may_be_pointer(function, &operation.place),
                             carried,
                             span: operation.origin.span(),
-                            replaces: self.replaces(function, &operation.place, &landing, value),
+                            replaces: self.store_replaces(
+                                function,
+                                &operation.place,
+                                &landing,
+                                value,
+                            ),
                         },
                     );
                 }
@@ -4144,7 +4169,38 @@ impl Analysis for Allocations<'_> {
                             // Where it lands, unplaced too, with what it
                             // carries, as a store's landing is given. See
                             // `Allocations::land_contents`.
-                            self.land_contents(value, &landing, &poured, &in_part, Pours::Copy);
+                            //
+                            // **And what it replaces**, where it is one
+                            // dereference into one block, from its start, of
+                            // exactly that block's size (#927). A string copy
+                            // replaces nothing, as nothing else here takes
+                            // one to write its destination byte for byte.
+                            // That is a cost, not a guard: `strncpy` writes
+                            // all `n` bytes, padding with nulls, so its block
+                            // could be replaced too, and no case holds the
+                            // difference.
+                            let byte_for_byte = self.library(*callee).is_some_and(|row| {
+                                !row.reaches
+                                    .iter()
+                                    .any(|(_, reach)| matches!(reach, Reach::String))
+                            });
+                            let replaces = if into_depth == 0 && byte_for_byte {
+                                self.replaces(
+                                    &landing,
+                                    value.points_to[dest.local].offset,
+                                    self.constant_argument(*callee, arguments, 2),
+                                    value,
+                                )
+                            } else {
+                                None
+                            };
+                            self.land_contents(
+                                value,
+                                &landing,
+                                &poured,
+                                &in_part,
+                                Pours::Copy { replaces },
+                            );
                         }
                     }
                 }
