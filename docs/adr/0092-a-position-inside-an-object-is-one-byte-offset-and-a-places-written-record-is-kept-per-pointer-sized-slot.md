@@ -98,7 +98,11 @@ Chosen: the byte offset and the per-slot record, by the author.
 6. **One rule asks the record at every door**, a `PartialDoor` matched
    exhaustively (#914). A call asks a handed block by its held record as a
    `return` does, which replaces ADR-0087 rule 3's reading of the
-   parameter's type alone.
+   parameter's type alone. **Both only where the receiving type is a
+   `void *`**, which says nothing of what it points at: an `int *`
+   receiver reads what its type says, as a case for a call already held,
+   and a `return` of one asked the record too until the two were made
+   one rule.
 7. `Known::held_levels` is not part of it. It is the history of the types a
    block was held as, and stays a field of its own.
 
