@@ -601,7 +601,9 @@ impl PlaceInit {
 
     /// Make the place `init`, every slot of it, and say nothing of where
     /// what it holds came from: a write of the whole, an allocation and a
-    /// lifetime beginning each replace what a copy carried there.
+    /// lifetime beginning each replace what a copy carried there. **No case
+    /// holds the clearing, measured**: on every route built, a join with a
+    /// path that never carried it, or a site made again, clears it first.
     pub(super) fn set(&mut self, init: Init) {
         match &mut self.kept {
             Kept::Whole(whole) => *whole = init,

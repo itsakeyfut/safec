@@ -172,6 +172,7 @@ pub(crate) enum Callee {
     /// the length written, `Allocations::copied_pointers` among them. So a
     /// pointer it rebuilds is still used after its free in silence, the
     /// silence #691 closed for the others, by the author's decision.
+    /// `a_pointer_rebuilt_by_strncat_is_not_yet_doubted` holds it.
     /// A variant of its own rather than a name read inside the transfer, so
     /// that every reader of the callee answers for it. See ADR-0039.
     Copies,

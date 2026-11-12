@@ -1,0 +1,15 @@
+error[SC0411]: `*p` may be read before anything was assigned to it
+    ╭─[ a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:16:10 ]
+    │
+ 13 │     memcpy(c, a2, 8);
+    │     ────────┬───────  
+    │             ╰───────── the bytes were copied here from `a2`
+    │ 
+ 16 │     int *r = *p;
+    │          ───┬──  
+    │             ╰──── read here
+────╯
+  = note: C17 7.24.2.1 to 7.24.3.1 copy the source's characters into the destination, so bytes nothing wrote there are indeterminate where they land, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path before it is read

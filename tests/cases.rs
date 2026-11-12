@@ -2160,6 +2160,10 @@ cases! {
         // the block whole there, as #726 does a block kept whole; this goes
         // silent.
         a_heap_block_written_through_a_pointer_read_back_out_of_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call is believed to write what it is handed, so the may-write is
+        // a store's and not a call's. Mutation: drop `!call` from the arm in
+        // `built::write_effects`; this gains a false `SC0411`.
+        a_local_array_handed_to_a_call_at_an_element_not_known_is_believed_written_by_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written at one element before an inner loop that makes it again:
         // unwritten again at the back edge element by element, found by
         // review, where `main` reported it and a whole-block test was silent.
@@ -2561,6 +2565,16 @@ cases! {
         // its label. Let `realloc`'s record none; the second does.
         a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_of_bytes_realloc_carried_from_a_block_nothing_wrote_names_the_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Where the bytes came from is said only where every place the read
+        // may reach names the same call. Mutation: take the first place's
+        // origin; the first names one copy. Mutation: record the copy's
+        // origin on a local doubted whatever it held before; the second names
+        // a copy that did not reach `loc[1]`. Mutation: ask places already
+        // written as well; the third loses its label, since `b` still names
+        // the copy into it (#752).
+        a_read_that_may_reach_bytes_two_copies_carried_names_neither_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_array_read_where_a_copy_did_not_reach_names_no_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer loaded out of recorded memory and stored carries what
         // that memory held and nothing more, as `*m = *b;` does, so the block
         // it names is asked at the return and not every block stored
@@ -5545,6 +5559,10 @@ cases! {
         a_pointer_rebuilt_by_strcpy_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_rebuilt_by_strcat_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // The silence `Callee::Copies` names for `strncat`, held so that the
+        // day it closes, this case moves. Mutation: read `strncat` as a copy;
+        // this gains `SC0402`.
+        a_pointer_rebuilt_by_strncat_is_not_yet_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And between buffers that never held a pointer, nothing new: the
         // same four `SC0412`s as when the copies only exposed.
         a_string_copied_between_char_arrays_that_never_held_a_pointer_reports_nothing_new: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
