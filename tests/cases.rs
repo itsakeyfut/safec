@@ -2666,10 +2666,12 @@ cases! {
         a_pointer_read_out_of_what_realloc_of_a_written_block_on_every_path_returns_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A value nothing says is not null may be one: a parameter, unless it
         // is `_Nonnull` or was tested, a load and a call's result (#931).
-        // Mutation: a parameter starts `may_be_null` false; the first goes
-        // silent. A `_Nonnull` parameter does too; the second is doubted.
-        // The test's arm keeps it; the third is. A call's result, or what
-        // a copy reads, starts it false; the fourth or the fifth goes silent.
+        // Mutations, one per case in order: a parameter starts `may_be_null`
+        // false, and the first goes silent; a `_Nonnull` parameter starts it
+        // true, and the second is doubted; the arm that tested the pointer
+        // not null keeps it, and the third is doubted; a call's result starts
+        // it false, and the fourth goes silent; what a library copy reads
+        // starts it false, and the fifth goes silent.
         a_pointer_read_out_of_what_realloc_of_a_parameter_returns_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_what_realloc_of_a_nonnull_parameter_returns_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_what_realloc_of_a_parameter_tested_not_null_returns_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -4533,7 +4535,7 @@ cases! {
         // A hatch's body is the one whose unproven conclusions are not
         // reported, so what the caller cannot see it do is assumed to be the
         // worst: every allocation still live is unproven after a call to one.
-        // Mutation: drop the loop over `value.state` in `memory/transfer.rs`'s
+        // Mutation: drop the loop over `value.state` in `memory/call.rs`'s
         // `Callee::Opaque` arm; the first two fail, and the first is a use
         // after free going silent.
         what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -4630,7 +4632,7 @@ cases! {
         a_call_in_a_loop_may_return_what_it_returned_last_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And any escaped local's address, which a free of it would free
         // though it is no allocation. Mutation: give an opaque call's result
-        // no `Held::locals` edge in `Allocations::terminator`'s opaque arm;
+        // no `Held::locals` edge in `Allocations::call`'s opaque arm;
         // `a_call_handed_a_locals_address_may_return_it` exits 0. Mutation:
         // give it an edge to every local, escaped or not;
         // `a_call_returns_none_of_this_functions_locals_where_none_escaped`
@@ -6532,7 +6534,7 @@ cases! {
         // expression leaves unordered against it, as a dereference is: C may
         // run the free, the opaque call or `realloc` before `memset`. Mutation:
         // drop the loop that records `Read::Argument` in
-        // `Allocations::terminator`; all three go silent. Mutation: answer
+        // `Allocations::call`; all three go silent. Mutation: answer
         // `Kind::UseAfterFree` for `Read::Argument` in `used_before`; all three
         // become `SC0402`.
         a_pointer_handed_to_a_call_the_check_meets_first_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -6634,7 +6636,7 @@ cases! {
         // exposure, then the call, then the read. A store into an escaped
         // local, a library call that exposes what it is handed, a write into an
         // escaped target, and a read walked first. Mutation: record no call in
-        // `Allocations::terminator`; all four go silent. Mutation: no notice
+        // `Allocations::call`; all four go silent. Mutation: no notice
         // where an escaped local is assigned in `Allocations::element`; the
         // first and fourth go silent. Mutation: no notice for `targets` there;
         // the third goes silent.
@@ -6748,7 +6750,7 @@ cases! {
         // second is the only thing the carry adds after a call this check
         // cannot read, because the first already fails the build. Mutation:
         // record `Read::Argument` only for `Callee::ReturnsFirst` in
-        // `Allocations::terminator`; the `SC0407` goes and the exit code stays.
+        // `Allocations::call`; the `SC0407` goes and the exit code stays.
         an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What a call's own arguments read is behind it, C17 6.5.2.2 p10's
         // first sentence, wherever the call sits; ADR-0026's element says so
@@ -6764,7 +6766,7 @@ cases! {
         // The read is skipped at the call around it and not dropped: `strcpy`'s
         // argument still reaches the free beside `strlen`. Mutation: drop the
         // reads inside a call's span from `pending` at that call's transfer, in
-        // `Allocations::terminator`, as well as skipping them in `used_before`;
+        // `Allocations::call`, as well as skipping them in `used_before`;
         // the `SC0407` at `strcpy` goes, and nothing else fails.
         a_nested_call_is_still_carried_to_a_free_beside_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 

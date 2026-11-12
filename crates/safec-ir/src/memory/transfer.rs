@@ -3031,7 +3031,6 @@ impl Analysis for Allocations<'_> {
 
 pub(super) use crate::layout::pointer_depth;
 
-/// [`Allocations::reads_caller_memory`], asked of a value no program shows.
 /// The width a pointer read out of memory is believed to point at, where
 /// it is read as pointing at `typed` bytes and what it was read out of
 /// recorded `recorded`: no wider than either, and **a `void *`, `typed`
@@ -3052,6 +3051,7 @@ pub(super) fn believed_width(typed: Option<u64>, recorded: Width) -> u64 {
     }
 }
 
+/// [`Allocations::reads_caller_memory`], asked of a value no program shows.
 #[cfg(test)]
 mod caller_memory {
     use crate::dataflow::Analysis;

@@ -2790,7 +2790,7 @@ fn a_read_reaching_past_a_later_free_is_still_carried_to_it() {
 /// what `helper` returned.
 ///
 /// Mutation: record `Read::Argument` after the call's transfer rather than
-/// before it in `Allocations::terminator`. The entry names the new allocation,
+/// before it in `Allocations::call`. The entry names the new allocation,
 /// the free meets it, and an `SC0407` is reported at `helper` about a pointer
 /// it was never handed, so this fails.
 #[test]

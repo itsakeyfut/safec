@@ -151,6 +151,7 @@ finds the new one without the record being edited.
 | `Held::contents_at_most` | `Held::contents_at_most()`, the levels of `Held::widths` below the first | #804 |
 | `Known::handed_contents_at_most` | `Known::handed_at_most`, below its first level | #804 |
 | `Known::stored_out_at`, and `Known::stored_out` as a mark | `Known::stored_out`, one `Earliest` per site: `ever()` is what `stored_out_at` held, `now().is_some()` what the mark said | #934 |
+| `Allocations::terminator`'s transfer of a call, with `made_extent`, `handed`, `handed_site`, `past_the_old_size`, `frees_callers` and `holds_something_unnameable` | `Allocations::call` and those helpers, in `memory/call.rs`; `terminator` hands the call to it | #936 |
 | `Known::part_written_since_made` | `Known::part_written`, one `Earliest` per place: `now()` is what `part_written_since_made` held, `ever()` what `part_written` did | #934 |
 | `AS_TYPED` | `Width::AsTyped` | #804 |
 | `Cell::unrecorded` | `Width::Nothing` at a cell's level 0 | #804 |

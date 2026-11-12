@@ -1367,7 +1367,7 @@ impl Known {
     }
 
     /// One place of one element, for [`Self::met`], or one argument of one
-    /// call, for [`Allocations::terminator`](super::allocations::Allocations#method.terminator).
+    /// call, for [`Allocations::call`](super::allocations::Allocations::call).
     ///
     /// **`reached` is the caller's**, because the two differ for one place: a
     /// dereference of `*tab` reads through `tab`'s own sites, and `*tab` handed

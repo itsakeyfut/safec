@@ -1,8 +1,7 @@
 //! The transfer of a call, [`Allocations::call`]: what a call does to what
 //! it was handed and what it leaves behind, with the helpers only it uses.
-//! Moved out of `transfer.rs` verbatim (#936): on #918's branch half the
-//! fixes to that file landed in the call, and apart, a change to it is read
-//! beside nothing else.
+//! A file of its own (#936) because the call is the transfer fixed most
+//! often, so a change to it is read without the rest of `transfer.rs`.
 
 use crate::ir::{
     BlockId, FuncId, Function, LocalId, Operand, Origin, Place, Projection, Rvalue, Terminator, Ty,
@@ -45,8 +44,8 @@ impl Allocations<'_> {
         value: &mut Known,
     ) {
         // **What the call is handed is carried forwards, as a dereference is
-        // by the line above.** The callee's body reads it, and C17 6.5.2.2
-        // p10 leaves that body indeterminately sequenced with a later call in
+        // by `Analysis::terminator` before it hands the call here.** The
+        // callee's body reads it, and C17 6.5.2.2 p10 leaves that body indeterminately sequenced with a later call in
         // the same full expression, unless that call encloses this one, whose
         // arguments it orders before itself (ADR-0043, in `used_before`).
         // Before the transfer below, for `PendingRead`'s reason:

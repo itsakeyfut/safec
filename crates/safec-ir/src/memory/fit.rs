@@ -379,7 +379,7 @@ pub(super) type Slots = (Vec<(LocalId, Option<TyId>)>, Vec<(Site, TyId)>, Vec<Si
 ///
 /// **One walk for every question about what a call or a store lets leave**:
 /// `report::contents_leaving` asks each slot whether it fits, and
-/// `Allocations::terminator` takes from it the narrowest type a call was
+/// `Allocations::call` takes from it the narrowest type a call was
 /// handed each local as. Two walks would answer the two differently.
 pub(super) fn slots_leaving(
     analysis: &Allocations<'_>,

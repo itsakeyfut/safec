@@ -342,7 +342,9 @@ enum Start {
     /// At the value that doubts: what it says makes the check report rather
     /// than believe.
     Doubt,
-    /// At a value that believes, with why that is right there.
+    /// At a value that does not doubt, with why that is right there: a
+    /// belief, or a may-fact that is false because nothing has happened yet
+    /// ([`NOTHING_YET`]).
     Quiet(&'static str),
 }
 

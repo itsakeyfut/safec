@@ -89,7 +89,7 @@ pub(super) use crate::layout::{innermost_element, stored_pointer};
 /// per local.
 ///
 /// **One function for its two readers**, [`handed`](super::report::handed) at the call and
-/// `Allocations::terminator` carrying them forwards, because one rule written
+/// `Allocations::call` carrying them forwards, because one rule written
 /// in two places drifts apart inside the change that touches one of them.
 ///
 /// **Which arguments turn on the callee**, and the `match` is written out so

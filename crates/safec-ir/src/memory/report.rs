@@ -3495,7 +3495,7 @@ pub(super) fn handed_stored_out(
 /// than freeing a pointer this check lost. See ADR-0042.
 ///
 /// **And carried to a later call, as a dereference is.** This asks what was
-/// true where the call is reached; `Allocations::terminator` records the same
+/// true where the call is reached; `Allocations::call` records the same
 /// arguments as a [`PendingRead`](super::parts::PendingRead), and [`used_before`] asks them again at a
 /// free the same full expression leaves unordered against this call.
 ///
@@ -3749,7 +3749,7 @@ pub(super) fn say(
 /// `free` took the site away, so the read may have run after the free. A call
 /// this check cannot read may have freed what it was handed, or anything it
 /// can reach because it was exposed, which is the same suspicion one step
-/// weaker and is what `Allocations::terminator` writes as `SiteState::Unknown`
+/// weaker and is what `Allocations::call` writes as `SiteState::Unknown`
 /// for everything the call may have freed. Both are the question
 /// the forward walk already asks on the other side of the call, so refusing one
 /// of them here left `g(*p) + h(p)` silent while `h(p) + g(*p)` reported.
