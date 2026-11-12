@@ -1839,6 +1839,22 @@ cases! {
         // `void **`. Mutation: ask every parameter whatever its type; this is
         // reported.
         a_partial_pointer_copied_into_a_block_handed_to_an_int_pointer_parameter_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Every door asks the partial pointer record by one rule
+        // (`report::PartialDoor`, #914): a call handed a block as a `void *`
+        // asks it by what its record says it was held as, as a `return` of
+        // one does, and a copy out through a pointer a store has just written
+        // through reads that whole pointer, as a load does. Mutation: a call
+        // asks only by the parameter's type; the first goes silent. Mutation:
+        // a `return` does; the second goes silent. Mutation: a copy out asks
+        // through a pointer just stored through; the fourth is reported.
+        // Mutation: `PartialDoor::Load` reads the record kept across a site
+        // made again;
+        // `a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported`
+        // is reported.
+        a_partial_pointer_in_a_block_held_as_pointers_handed_as_void_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_partial_pointer_in_a_block_held_as_pointers_returned_as_void_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_stored_over_a_partial_one_and_copied_out_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Copied on one arm only. Mutation: drop `part_written` from the
         // join; this goes silent.
         a_partial_pointer_copied_on_one_arm_into_a_block_handed_to_a_pointer_parameter_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

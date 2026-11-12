@@ -23,7 +23,7 @@ use super::fit::{
     Fit, fits, folded, only_if_certain, pointee, pointee_width, read_from_locals, slots_leaving,
     through_locals,
 };
-use super::index::{Idx, Loc, LocalIdx, Site};
+use super::index::{Idx, Loc, LocalIdx, Site, Table};
 use super::known::Known;
 use super::parts::{
     At, Extent, Freeing, Init, Levels, PlaceInit, Reached, Read, SiteState, Width, earlier, same,
@@ -1730,19 +1730,27 @@ pub(super) fn asked_unwritten_in_terminator(
                     // found by review. The destination only: the source is
                     // the block with the record, which says nothing of
                     // where the pointer goes.
+                    //
+                    // **Not through a pointer a store has written through
+                    // since it was given its value**, as a load is not: the
+                    // copy reads the whole pointer just stored (#914).
                     if let Some(Operand::Copy(source)) = arguments.get(1) {
                         let depth = derefs(source);
-                        if source.projection.is_empty() || depth > 0 {
+                        if (source.projection.is_empty() || depth > 0)
+                            && !(depth == 0 && known.points_to[source.local].stored_through)
+                        {
                             let (sites, locals) = known.levels_below(source.local, depth);
                             let places = sites
                                 .into_iter()
                                 .map(Loc::Heap)
                                 .chain(locals.into_iter().map(Loc::Local));
-                            for at in places {
-                                if let Some(copy) = known.part_written_since_made[at] {
-                                    push_part_of_a_pointer(findings, ask.analysis, copy);
-                                }
-                            }
+                            ask_partial(
+                                PartialDoor::CopyOut,
+                                places,
+                                findings,
+                                ask.analysis,
+                                known,
+                            );
                         }
                     }
                 }
@@ -1795,11 +1803,13 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
     // the block leaves as memory of pointers, and the caller reads a pointer
     // made of part of something else (#832). See `Known::part_written` and
     // ADR-0087.
-    for &(site, _) in &asked {
-        if let Some(copy) = known.part_written[site] {
-            push_part_of_a_pointer(findings, ask.analysis, copy);
-        }
-    }
+    ask_partial(
+        PartialDoor::Exit,
+        asked.iter().map(|&(site, _)| Loc::Heap(site)),
+        findings,
+        ask.analysis,
+        known,
+    );
     for (site, at) in asked {
         if matches!(known.state[site], SiteState::Freed { .. }) {
             continue;
@@ -1824,6 +1834,67 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
                 unproven: None,
             },
         );
+    }
+}
+
+/// Whether `ty` is a pointer whose type says nothing of what it points at,
+/// a `void *`: a receiver of one is asked by what the block's own record
+/// says it was held as (ADR-0086), where a receiver of any other pointer
+/// reads what its type says. One answer for a `return` and a call's
+/// argument (#914).
+fn says_nothing_of_its_pointee(analysis: &Allocations<'_>, ty: TyId) -> bool {
+    match analysis.unit.ty(ty) {
+        Ty::Pointer(pointee) => matches!(analysis.unit.ty(pointee), Ty::Void),
+        Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => false,
+    }
+}
+
+/// The doors that ask whether a write left part of a pointer in what they
+/// reach (ADR-0087, #914): each passes the places it reaches to
+/// [`ask_partial`], which reads the record the door names here, so that
+/// which record a door reads is said in one place. A `match` with no
+/// wildcard, so a door added answers which it reads (`error[E0004]`).
+#[derive(Clone, Copy)]
+enum PartialDoor {
+    /// What left the function, asked at its exit.
+    Exit,
+    /// What a `return` hands the caller.
+    Return,
+    /// What a call is handed.
+    Call,
+    /// A pointer read out of memory.
+    Load,
+    /// A library copy out of memory.
+    CopyOut,
+}
+
+impl PartialDoor {
+    /// The record this door reads: **kept across a site made again where
+    /// what is asked leaves**, since the caller or the callee may hold the
+    /// block the site named before; **made since, where it is read here**,
+    /// since a read reads the block the site names now (ADR-0089).
+    fn record(self, known: &Known) -> &Table<Loc, Option<Span>> {
+        match self {
+            PartialDoor::Exit | PartialDoor::Return | PartialDoor::Call => &known.part_written,
+            PartialDoor::Load | PartialDoor::CopyOut => &known.part_written_since_made,
+        }
+    }
+}
+
+/// Report, at the write, each of `places` whose record `door` reads says a
+/// write left part of a pointer there.
+fn ask_partial(
+    door: PartialDoor,
+    places: impl IntoIterator<Item = Loc>,
+    findings: &mut Vec<Finding>,
+    analysis: &Allocations<'_>,
+    known: &Known,
+) {
+    let record = door.record(known);
+    for at in places {
+        if let Some(copy) = record[at] {
+            push_part_of_a_pointer(findings, analysis, copy);
+        }
     }
 }
 
@@ -1991,7 +2062,7 @@ fn report_returned_unwritten(
     let returns_a_pointer = analysis
         .unit
         .place_ty(function, &Place::local(function.return_place()))
-        .is_some_and(|ty| matches!(analysis.unit.ty(ty), Ty::Pointer(_)));
+        .is_some_and(|ty| says_nothing_of_its_pointee(analysis, ty));
     let held_as_pointers = sites
         .iter()
         .flatten()
@@ -2018,11 +2089,17 @@ fn report_returned_unwritten(
     // **And whether a copy wrote part of a pointer into any of them**, at the
     // copy: the caller reads pointers out of what is returned, found by
     // review. See `Known::part_written` and ADR-0087.
-    for &site in sites.iter().flatten().chain(&below) {
-        if let Some(copy) = known.part_written[site] {
-            push_part_of_a_pointer(findings, analysis, copy);
-        }
-    }
+    ask_partial(
+        PartialDoor::Return,
+        sites
+            .iter()
+            .flatten()
+            .chain(&below)
+            .map(|&site| Loc::Heap(site)),
+        findings,
+        analysis,
+        known,
+    );
     // **Any block it may name**, not every: one written elsewhere does not
     // make the other one written, and `r = c ? a : b;` with only `a` written
     // was silent. The path where an allocation failed names no block, so it
@@ -2560,9 +2637,24 @@ pub(super) fn departed_at_call(
         // **A block handed to a parameter that holds pointers is asked
         // whether a copy wrote part of one into it**, at the copy: the
         // callee reads pointers out of it (#832). See `Known::part_written`
-        // and ADR-0087.
+        // and ADR-0087. **Or one handed as a pointer whose own record says
+        // it was held as pointers**, as a `return` asks it (ADR-0086): `g(m)`
+        // with `g` taking a `void *` hands on what `void **h = m;` held as
+        // pointers, and was silent where `return m;` was reported (#914,
+        // ADR-0092 rule 6).
+        let held_as_pointers = |place: &Place| {
+            says_nothing_of_its_pointee(analysis, ty)
+                && place.projection.is_empty()
+                && known
+                    .sites_of(place.local)
+                    .any(|site| known.held_levels[site] > 0)
+        };
         let handed = match arguments.get(index) {
-            Some(Operand::Copy(place)) if analysis.first_level_holds_a_pointer(ty) => Some(place),
+            Some(Operand::Copy(place))
+                if analysis.first_level_holds_a_pointer(ty) || held_as_pointers(place) =>
+            {
+                Some(place)
+            }
             Some(Operand::Copy(_) | Operand::Constant(_)) | None => None,
         };
         if let Some(place) = handed {
@@ -2603,11 +2695,13 @@ pub(super) fn departed_at_call(
                 };
             let mut named = known.held_below(value, levels);
             named.extend(known.held_below(below, levels.saturating_sub(1)));
-            for site in named {
-                if let Some(copy) = known.part_written[site] {
-                    push_part_of_a_pointer(findings, analysis, copy);
-                }
-            }
+            ask_partial(
+                PartialDoor::Call,
+                named.into_iter().map(Loc::Heap),
+                findings,
+                analysis,
+                known,
+            );
         }
         let Some(width) = pointee_width(analysis, ty) else {
             continue;
@@ -2682,11 +2776,13 @@ pub(super) fn loaded_indeterminate(
             // with no read in the source at all, found by review.
             let rewritten = derefs(&place) == 1 && known.points_to[place.local].stored_through;
             if !rewritten && analysis.may_be_pointer(function, &place) {
-                for site in blocks_read(&place, known) {
-                    if let Some(copy) = known.part_written_since_made[site] {
-                        push_part_of_a_pointer(findings, analysis, copy);
-                    }
-                }
+                ask_partial(
+                    PartialDoor::Load,
+                    blocks_read(&place, known),
+                    findings,
+                    analysis,
+                    known,
+                );
             }
             continue;
         }
