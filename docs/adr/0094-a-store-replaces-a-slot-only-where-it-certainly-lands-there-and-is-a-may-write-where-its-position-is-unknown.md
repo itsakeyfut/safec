@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-11-11
 decision-makers: itsakeyfut
 ---
@@ -75,11 +75,27 @@ Chosen: replace where certain, by the author.
 
 ### Confirmation
 
-To be filled by the change for #918:
+Each measured on the #918 branch by applying the change and restoring it.
+The cases are in `tests/cases/`, with their mutations in their notes in
+`tests/cases.rs`. "Certainly one block" is held by a case rather than a
+route-matrix row, since the matrix has no axis for a block made in a loop.
 
-- a route-matrix row for "certainly one block", whose mutation (`made_once`
-  answered `true` for a site in a loop) fails it by name;
-- the cases of #656 and #893.
+* **Rule 1**, each condition of `Allocations::replaces`:
+  - never replacing fails `a_block_of_one_slot_overwritten_after_what_it_held_was_freed_is_returned_without_a_doubt`,
+    its call form, `a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted`
+    and two more;
+  - skipping `made_once` fails `a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held`
+    and two more;
+  - skipping the extent fails `a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart`;
+  - skipping the position fails `a_store_at_an_index_not_known_into_a_block_of_one_slot_does_not_replace_what_it_holds`.
+* **Rule 3.** The one-step store writing a block kept per slot whole at an
+  element not known fails `a_heap_block_filled_by_a_loop_that_stops_short_is_doubted_where_returned`
+  and three more. The same through a pointer read back out of memory fails
+  `a_heap_block_written_through_a_pointer_read_back_out_of_memory_is_doubted`.
+  The `built::write_effects` arm for a local array fails
+  `a_local_array_filled_by_a_loop_is_doubted` and three more.
+* **Rule 4** is the cost those cases hold: each loop-fill case is doubted,
+  and its note says what would make it silent.
 
 ### Consequences
 

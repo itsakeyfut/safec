@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-11-11
 decision-makers: itsakeyfut
 ---
@@ -62,9 +62,11 @@ Chosen: the byte offset and the per-slot record, by the author.
    name the wrong object, and that an edge survives only by #639's rule. They
    stay as they are until rule 3 of ADR-0094 replaces the second.
 3. **A place's written record is per pointer-sized slot, for a local and a
-   block alike, keyed by `Loc`.** Each slot is `Unwritten`, `Maybe`,
-   `Written` or `Part`. `Part` carries the earliest span of a write that
-   covered some of the slot's bytes and not all of them, and which bytes.
+   block alike, keyed by `Loc`.** Each slot is `Unwritten`, `Maybe` or
+   `Written`, and no slot is `Part`: see the last point of this rule.
+   Beside the slots the record keeps where its unwritten bytes came from,
+   the copy or `realloc` that carried them (#752), which decides no
+   conclusion, only what the report about a read says.
    - The whole-place answer is computed from the slots rather than stored
      beside them, so the stamp goes.
    - The cap stays: 2 to `ELEMENTS_KEPT` slots, and one slot past it.
@@ -108,16 +110,40 @@ Chosen: the byte offset and the per-slot record, by the author.
 
 ### Confirmation
 
-To be filled by the change for #918, one case per rule, and the route-matrix
-rows ADR-0091 asks for.
+Each measured on the #918 branch by applying the change and restoring it.
+The cases are in `tests/cases/`, with their mutations in their notes in
+`tests/cases.rs`.
+
+* **Rule 1.** `two_positions_off_the_start_join_off_the_start_whatever_the_distances`
+  in `crates/safec-ir/src/memory/parts.rs` fails, and so does
+  `a_free_offset_on_both_arms_is_still_proved`, when two positions off the
+  start join as `Unknown`. `built::offset_of` counting no distance fails 84
+  cases, `an_access_past_the_start_of_a_local_array_is_proved_inside` and
+  `a_free_of_a_pointer_moved_back_to_the_start_is_not_an_interior_free`
+  among them.
+* **Rule 3.** `PlaceInit::unwritten_again` leaving a place kept whole as it
+  is fails `a_block_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn`.
+  The record's size is `a_sites_per_element_record_costs_what_its_types_take`
+  in `crates/safec-ir/src/memory.rs`, which fails when `BLOCK_ELEMENTS`
+  counts the record alone.
+* **Rule 5.** `Allocations::note_narrow_store` recording nothing fails eight
+  cases, `an_int_stored_into_a_table_of_pointers_that_leaves_is_reported`
+  and `a_char_stored_into_a_pointer_read_back_is_reported` among them; the
+  `memset` arm recording nothing fails
+  `a_memset_of_part_of_a_pointer_into_a_table_that_leaves_is_reported`.
+* **Rule 6.** A door added to `report::PartialDoor` is `error[E0004]` at
+  `PartialDoor::record`. A call asking only by the parameter's type fails
+  `a_partial_pointer_in_a_block_held_as_pointers_handed_as_void_is_reported`.
 
 ### Consequences
 
 * Good, because #703, #894, #913, #914 and #917 become one change. A member
   of a struct is a slot range when structs land.
 * Bad, because it is the widest change in the batch, about 300 references,
-  and `Analysis::height` has to be recomputed for the slots. Too low a bound
-  is a panic that names the solver's budget (row 3), not a silence.
+  and the record grows with each block: `BLOCK_ELEMENTS` was recounted from
+  128 to 112 for the slots, and to 136 for where the bytes came from. Too
+  low a bound is a panic that names the solver's budget (row 3), not a
+  silence.
 
 ## Pros and Cons of the Options
 
@@ -133,5 +159,6 @@ rows ADR-0091 asks for.
   whose `Offset` this replaces.
 * [ADR-0081](./0081-a-heap-block-of-pointers-of-a-constant-size-is-written-per-element-as-a-local-array-is.md),
   whose per-element record this generalises.
-* ADR-0087 to ADR-0090, whose partial pointer record this folds into the
-  slots.
+* ADR-0087 to ADR-0090, whose partial pointer record stays a record per
+  place, and whose writers and doors rules 5 and 6 widen; rule 6 replaces
+  ADR-0087 rule 3.

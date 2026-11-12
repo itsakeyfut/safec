@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-11-11
 decision-makers: itsakeyfut
 ---
@@ -62,8 +62,21 @@ change misses leaves a doubt the reader sees (row 4), not a belief.
 
 ### Confirmation
 
-To be filled by the change for #918: the join-law tests of the value, and
-the cases of #708 and #631.
+Each measured on the #918 branch by applying the change and restoring it.
+The cases are in `tests/cases/`, with their mutations in their notes in
+`tests/cases.rs`.
+
+* **Rule 1.** `a_width_meets_as_a_bound_does_over_every_combination` in
+  `crates/safec-ir/src/memory/parts.rs` fails when `Nothing` meets as the
+  identity rather than absorbing, and so do 15 cases,
+  `a_pointer_stored_on_one_arm_beside_an_int_on_the_other_is_doubted_how_wide`
+  among them.
+* **Rules 3 and 5.** The `realloc` doubt ignoring `Held::may_be_null` fails
+  `a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted`
+  and two more.
+* **Rule 4.** `Allocations::believed_read` believing nothing of a `void *`'s
+  record fails `a_void_pointer_read_out_of_memory_is_believed_as_wide_as_its_record_says`
+  and the route rows `held_pointers_restored_d1_both` and `_one`.
 
 ### Consequences
 

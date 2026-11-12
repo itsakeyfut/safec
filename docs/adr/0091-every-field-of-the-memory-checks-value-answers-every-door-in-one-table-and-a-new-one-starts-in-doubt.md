@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-11-11
 decision-makers: itsakeyfut
 ---
@@ -81,10 +81,23 @@ author.
 
 ### Confirmation
 
-To be filled by the change for #918: the compile error for a field left out
-of the table, shown by adding a dummy field; the named test in
-`tests/routes.rs` that fails for a field neither a belief nor an exemption;
-and the cases for each belief's routes.
+Each measured on the #918 branch by applying the change and restoring it:
+
+* **Rule 1.** A field added to `Known` (`pub(super) zz: bool`) is
+  `error[E0027]` at seven doors and `error[E0063]` at the entry, which builds
+  the value: the load (`Allocations::read_through`), the copy and `realloc`
+  arms of the transfer, the join and back edge, `Known::reborn`,
+  `Known::clear` and `Known::storage_live`.
+* **Rule 2.** `every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption`
+  in `tests/routes.rs` fails, naming the field, when a field's row is dropped
+  from `KNOWN_FIELDS` (measured on `held_levels`'s). The beliefs added to the
+  matrix fail their rows by name: `Allocations::copied_pointers` answering
+  `Whole` for every length fails 63 rows and 72 corpus cases.
+* **Rule 3** is held by nothing but review. The registry makes a new field
+  name a belief or an exemption, and does not say whether its start doubts.
+* **Rule 4.** A mark added to `Unrecorded` is `error[E0027]` at eleven
+  matches over its marks, every question `Beyond` answers among them, and
+  `error[E0063]` where it is built (#853).
 
 ### Consequences
 
