@@ -442,9 +442,13 @@ impl Allocations<'_> {
                 // wrote and nothing it cannot name, as a block's is by
                 // `Known::names_only_fresh`; maybe, where any it names may be,
                 // at any element, since this keeps one mark per object.
+                // **Of a block kept per slot, the slots it reads** (#928): asked
+                // of the whole, `b[0] = x; memcpy(&r, b, 8);` doubted `r`
+                // where `r = b[0];` reads the slot written.
                 let (source_fresh, source_maybe) = match source {
                     Some(Operand::Copy(source)) if source.projection.is_empty() => {
                         let held = &value.points_to[source.local];
+                        let slots = self.slots_read(held, bytes);
                         let plain = !(held.beyond().unrecorded_address() || held.inner_address);
                         let locals_unwritten = plain
                             && held.sites().next().is_none()
@@ -455,8 +459,8 @@ impl Allocations<'_> {
                                 || value.may_be_unwritten(l, None, true)
                         });
                         (
-                            value.names_only_fresh(source.local) || locals_unwritten,
-                            value.may_name_fresh(source.local) || locals_maybe,
+                            value.names_only_fresh(source.local, slots) || locals_unwritten,
+                            value.may_name_fresh(source.local, slots) || locals_maybe,
                         )
                     }
                     // **A source read through dereferences is asked too**, of
@@ -854,6 +858,30 @@ impl Allocations<'_> {
             At::Bytes(at) if at % pointer == 0 => Some(at / pointer),
             At::Bytes(_) | At::Moved | At::Unknown => None,
         })
+    }
+
+    /// The slots a read of `bytes` bytes through `through` touches, a byte
+    /// of each at least: from the slot its element or its counted position
+    /// is in, as [`Self::slot_read`] finds it, to the one its last byte is
+    /// in. `None` where either is not known, or the read is empty.
+    ///
+    /// Mutation: start at slot 0, and
+    /// `a_copy_out_of_a_slot_nothing_wrote_beside_a_written_one_is_reported_where_read`
+    /// goes silent; end at the last slot it reads whole, and
+    /// `a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt`
+    /// does.
+    fn slots_read(&self, through: &Held, bytes: Option<u64>) -> Option<(u64, u64)> {
+        let target = self.unit.target();
+        let pointer = u64::from(target.pointer_bits() / target.char().bits());
+        let start = match through.site_element {
+            Some(element) => element.checked_mul(pointer)?,
+            None => match through.offset {
+                At::Bytes(at) => at,
+                At::Moved | At::Unknown => return None,
+            },
+        };
+        let end = start.checked_add(bytes.filter(|&bytes| bytes > 0)?)?;
+        Some((start / pointer, end.div_ceil(pointer)))
     }
 
     pub(super) fn reads_fresh(&self, function: &Function, source: &Place, value: &Known) -> bool {

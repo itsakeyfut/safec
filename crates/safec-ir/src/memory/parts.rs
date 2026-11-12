@@ -592,6 +592,30 @@ impl PlaceInit {
         }
     }
 
+    /// What a read of the slots `first..end` finds, where it is kept per
+    /// slot and they are all of it: `Written` where each is, `Unwritten`
+    /// where each is, and `Maybe` otherwise; the whole anywhere else. A copy
+    /// reads its source this way, as a load reads one slot by [`Self::at`]
+    /// (#928).
+    ///
+    /// Mutation: answer the whole always, and
+    /// `a_copy_out_of_a_slot_a_store_wrote_is_not_doubted_where_read` is
+    /// doubted.
+    pub(super) fn over(&self, slots: Option<(u64, u64)>) -> Init {
+        match (&self.kept, slots) {
+            (Kept::Slots(kept), Some((first, end)))
+                if first < end && usize::try_from(end).is_ok_and(|end| end <= kept.len()) =>
+            {
+                (first..end)
+                    .filter_map(|slot| usize::try_from(slot).ok())
+                    .map(|slot| kept.get(slot))
+                    .reduce(|one, other| one.joined(other, false))
+                    .unwrap_or_else(|| self.whole())
+            }
+            _ => self.whole(),
+        }
+    }
+
     /// `len` slots, each what the place is as one: the slots it keeps where
     /// it keeps `len` of them, and the whole spread over `len` otherwise.
     pub(super) fn spread(&self, len: usize) -> Inits {

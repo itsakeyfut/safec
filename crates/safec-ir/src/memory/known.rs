@@ -1599,25 +1599,30 @@ impl Known {
     /// indeterminate bytes into what it returns, which is fresh then, and if
     /// the pointer is null after all it is fresh by C17 7.22.3.5 p3 too.
     ///
+    /// **Of the slots `slots` of each, where they are known**, the slots a
+    /// library copy reads ([`PlaceInit::over`]); of the whole otherwise,
+    /// which is what `realloc` reads.
+    ///
     /// Mutation: answer `false`, and
     /// `a_pointer_read_out_of_what_realloc_of_a_block_nothing_wrote_returns_is_reported`
     /// goes silent.
-    pub(super) fn names_only_fresh(&self, local: LocalId) -> bool {
+    pub(super) fn names_only_fresh(&self, local: LocalId, slots: Option<(u64, u64)>) -> bool {
         let held = &self.points_to[local];
         held.holds_a_site()
             && held
                 .sites()
-                .all(|site| self.written[site].whole().is_unwritten())
+                .all(|site| self.written[site].over(slots).is_unwritten())
             && self.names_no_more_than_its_sites(local)
     }
 
     /// Whether any allocation `local` may name may be unwritten,
     /// [`Self::written`]: what `realloc` or a library copy handed it may
     /// copy is then indeterminate in part, whatever else it names (#724).
-    pub(super) fn may_name_fresh(&self, local: LocalId) -> bool {
+    /// Of the slots `slots`, as [`Self::names_only_fresh`] asks.
+    pub(super) fn may_name_fresh(&self, local: LocalId, slots: Option<(u64, u64)>) -> bool {
         self.points_to[local]
             .sites()
-            .any(|site| self.written[site].whole().may_be_unwritten())
+            .any(|site| self.written[site].over(slots).may_be_unwritten())
     }
 
     /// Whether what `local` may hold is the allocations it names and nothing

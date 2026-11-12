@@ -545,6 +545,9 @@ cases! {
         // Out of a block `malloc` made, as out of a local. Mutation: ask no
         // allocation; it goes silent.
         a_copy_of_a_block_nothing_wrote_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_out_of_a_slot_a_store_wrote_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_out_of_a_slot_nothing_wrote_beside_a_written_one_is_reported_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A destination that says nothing by its type, asked by what it
         // points at, as #746's ask is. Mutation: ask the destination's type
         // alone; it goes silent.

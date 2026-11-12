@@ -4775,7 +4775,7 @@ impl Analysis for Allocations<'_> {
                 Some(Operand::Copy(handed)) => {
                     handed.projection.is_empty()
                         && (value.names_nothing(handed.local)
-                            || value.names_only_fresh(handed.local))
+                            || value.names_only_fresh(handed.local, None))
                 }
                 Some(Operand::Constant(_)) | None => false,
             },
@@ -4841,13 +4841,15 @@ impl Analysis for Allocations<'_> {
             // paths name, so the null path names nothing to tell it by, and
             // `Held::may_be_null` says it (#708, ADR-0093 rule 5).
             if handed.projection.is_empty()
-                && (value.may_name_fresh(handed.local) || value.points_to[handed.local].may_be_null)
+                && (value.may_name_fresh(handed.local, None)
+                    || value.points_to[handed.local].may_be_null)
             {
                 value.written[site].doubt();
                 // Carried only where the old block may be unwritten itself:
                 // a doubt the null path alone raises is of fresh memory, which
                 // nothing was carried into.
-                if let Some(carried) = carried.filter(|_| value.may_name_fresh(handed.local)) {
+                if let Some(carried) = carried.filter(|_| value.may_name_fresh(handed.local, None))
+                {
                     value.written[site].carried_by(carried);
                 }
             }
