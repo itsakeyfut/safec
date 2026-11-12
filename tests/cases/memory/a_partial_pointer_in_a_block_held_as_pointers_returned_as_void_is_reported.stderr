@@ -1,13 +1,13 @@
-error[SC0413]: this lets a pointer leave that may not point at the start of an object
+error[SC0413]: this writes part of a pointer into memory that leaves holding pointers
    ╭─[ a_partial_pointer_in_a_block_held_as_pointers_returned_as_void_is_reported.c:2:67 ]
    │
  2 │ void *f(void) { int i = 1; void *m = malloc(8); if (!m) return 0; memcpy(m, &i, 4); void **h = m; return m; }
    │                                                                   ────────┬───────  
-   │                                                                           ╰───────── stored here
+   │                                                                           ╰───────── written here
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: let a pointer leave as a `void *` only at the start of an object
+  = help: write a pointer whole, or keep bytes written over part of one out of memory read as pointers
 error[SC0411]: `m` points at memory nothing wrote, and the caller may read pointers out of it
    ╭─[ a_partial_pointer_in_a_block_held_as_pointers_returned_as_void_is_reported.c:2:99 ]
    │

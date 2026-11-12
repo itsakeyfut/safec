@@ -421,7 +421,10 @@ may fill every byte of the slot over the loop. A call and a `return` ask a
 block by the types it was held as only where what receives it is a `void *`
 (#914,
 [ADR-0092](adr/0092-a-position-inside-an-object-is-one-byte-offset-and-a-places-written-record-is-kept-per-pointer-sized-slot.md)
-rules 5 and 6).
+rules 5 and 6). A write of part of a pointer asked this way is said in words
+of its own, since nothing need leave: `this writes part of a pointer into
+memory that leaves holding pointers`, or `that is read back whole` where a
+read inside the function asked it, labelled `written here` (#935).
 Each is asked at the wider of its own type and the type the receiver reads it
 as, so a `void *` local's address passed as an `int **` asks the local four
 bytes wide, and memory by what its record says the pointers stored there point

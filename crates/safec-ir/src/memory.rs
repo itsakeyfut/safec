@@ -378,6 +378,32 @@ pub enum Kind {
     /// [`Kind::ReturnedMaybeUnwritten`] is apart from its twin. **Always
     /// `Unknown`**. See #855.
     StoredMaybeUnwritten,
+    /// `void *v = b; char *c = v; c[1] = 0; int *r = *b;` with `b` an `int
+    /// **` block that held a pointer.
+    ///
+    /// A write of part of a pointer, by a library copy or a store narrower
+    /// than one, into memory later held as memory of pointers: a pointer
+    /// nobody wrote whole, asked at the write, the caret the reader acts on,
+    /// where `asked` says. **Always `Unknown`**, as
+    /// [`Kind::HandedOnNarrow`] is. Apart from it because nothing need
+    /// leave: reported in its words, a write read back inside the function
+    /// said a pointer left (#935). See ADR-0087 and ADR-0088.
+    PartOfAPointer {
+        /// Where the memory was asked.
+        asked: PartAsked,
+    },
+}
+
+/// Where memory a write left part of a pointer in was asked
+/// ([`Kind::PartOfAPointer`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PartAsked {
+    /// Where it leaves the function: at its exit, by a `return`, or handed
+    /// to a call.
+    Leaves,
+    /// Where a pointer is read out of it inside the function, by a load or
+    /// a library copy.
+    Read,
 }
 
 /// Where a pointer leaves the function it was followed in.

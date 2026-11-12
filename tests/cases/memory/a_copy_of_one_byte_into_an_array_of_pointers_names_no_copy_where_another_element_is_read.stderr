@@ -1,13 +1,13 @@
-warning[SC0413]: this lets a pointer leave that may not point at the start of an object
+warning[SC0413]: this writes part of a pointer that is read back whole
     ╭─[ a_copy_of_one_byte_into_an_array_of_pointers_names_no_copy_where_another_element_is_read.c:10:5 ]
     │
  10 │     b[0] = 0;
     │     ────┬───  
-    │         ╰───── stored here
+    │         ╰───── written here
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
-  = help: let a pointer leave as a `void *` only at the start of an object
+  = help: write a pointer whole, or keep bytes written over part of one out of memory read as pointers
 warning[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
     ╭─[ a_copy_of_one_byte_into_an_array_of_pointers_names_no_copy_where_another_element_is_read.c:12:5 ]
     │

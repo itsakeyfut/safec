@@ -30,7 +30,7 @@ use super::parts::{
 };
 use super::store::{StoreKind, Written};
 use super::transfer::CopiedPointers;
-use super::{Departure, Finding, Kind, LostReason, Unproven};
+use super::{Departure, Finding, Kind, LostReason, PartAsked, Unproven};
 
 /// What a set of sites says about whatever touched them.
 ///
@@ -251,6 +251,9 @@ fn verdict(
         // Never asked: it is said where a block leaves by a store, about no
         // free.
         Kind::StoredUnwritten | Kind::StoredMaybeUnwritten => true,
+        // Never asked: it is said at a write of part of a pointer, about no
+        // free.
+        Kind::PartOfAPointer { .. } => true,
     };
 
     match earliest {
@@ -1879,6 +1882,14 @@ impl PartialDoor {
             PartialDoor::Load | PartialDoor::CopyOut => &known.part_written_since_made,
         }
     }
+
+    /// Where the report says the memory was asked (#935).
+    fn asked(self) -> PartAsked {
+        match self {
+            PartialDoor::Exit | PartialDoor::Return | PartialDoor::Call => PartAsked::Leaves,
+            PartialDoor::Load | PartialDoor::CopyOut => PartAsked::Read,
+        }
+    }
 }
 
 /// Report, at the write, each of `places` whose record `door` reads says a
@@ -1893,7 +1904,7 @@ fn ask_partial(
     let record = door.record(known);
     for at in places {
         if let Some(copy) = record[at] {
-            push_part_of_a_pointer(findings, analysis, copy);
+            push_part_of_a_pointer(findings, analysis, copy, door.asked());
         }
     }
 }
@@ -1901,9 +1912,18 @@ fn ask_partial(
 /// Report the copy at `copy`, which wrote part of a pointer into a block
 /// now held as memory of pointers, unless the copy already stands reported
 /// as a store departure, which says the same thing knowing the type: once
-/// per copy, whichever door asks first. See `Known::part_written` and
-/// ADR-0087.
-fn push_part_of_a_pointer(findings: &mut Vec<Finding>, analysis: &Allocations<'_>, copy: Span) {
+/// per copy, whichever door asks first, in the words of that door. See
+/// `Known::part_written` and ADR-0087.
+///
+/// Mutation: leave `Kind::PartOfAPointer` out of what has been said, and
+/// `a_partial_pointer_copied_into_a_block_handed_twice_is_reported_once`
+/// reports its copy twice, among six cases.
+fn push_part_of_a_pointer(
+    findings: &mut Vec<Finding>,
+    analysis: &Allocations<'_>,
+    copy: Span,
+    asked: PartAsked,
+) {
     let said = findings.iter().any(|said| {
         said.at == copy
             && matches!(
@@ -1911,38 +1931,27 @@ fn push_part_of_a_pointer(findings: &mut Vec<Finding>, analysis: &Allocations<'_
                 Kind::HandedOnNarrow {
                     how: Departure::Store,
                     ..
-                }
+                } | Kind::PartOfAPointer { .. }
             )
     });
     if !said {
-        findings.push(part_of_a_pointer_left(analysis, copy));
+        findings.push(part_of_a_pointer_left(analysis, copy, asked));
     }
 }
 
 /// Whether `said` is the deferred ask's finding at `at`, which a store
 /// departure at the same caret takes the place of.
 fn is_part_of_a_pointer_left(said: &Finding, at: Span) -> bool {
-    said.at == at && said.local.is_none() && said.kind == part_of_a_pointer_left_kind()
+    said.at == at && matches!(said.kind, Kind::PartOfAPointer { .. })
 }
 
-fn part_of_a_pointer_left_kind() -> Kind {
-    Kind::HandedOnNarrow {
-        how: Departure::Store,
-        width: 0,
-        narrower: false,
-        extent: None,
-        below: false,
-    }
-}
-
-/// A copy at `copy` that wrote part of a pointer into a block later held as
-/// memory of pointers, in the words a copy of part of a pointer into such
-/// memory already has, at the width a `void *` is believed: the record
-/// carries no type. See `Known::part_written` and ADR-0087.
-fn part_of_a_pointer_left(analysis: &Allocations<'_>, copy: Span) -> Finding {
+/// A write at `copy` of part of a pointer into a block later held as memory
+/// of pointers, asked where `asked` says. See `Known::part_written` and
+/// ADR-0087.
+fn part_of_a_pointer_left(analysis: &Allocations<'_>, copy: Span, asked: PartAsked) -> Finding {
     Finding {
         function: analysis.function,
-        kind: part_of_a_pointer_left_kind(),
+        kind: Kind::PartOfAPointer { asked },
         conclusion: Conclusion::Unknown,
         at: copy,
         local: None,

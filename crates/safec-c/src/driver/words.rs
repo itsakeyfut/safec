@@ -9,7 +9,7 @@ use crate::diagnostics::{Code, Diagnostic, Label, Remedy};
 use crate::safety::SafetyLevel;
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::{Between, Promise};
-use safec_ir::memory::{self, Carrier, Departure, Kind, LostReason, Unproven};
+use safec_ir::memory::{self, Carrier, Departure, Kind, LostReason, PartAsked, Unproven};
 use safec_ir::nullability::{self, Asked};
 use safec_ir::source::{SourceMap, Span};
 
@@ -947,6 +947,25 @@ pub(super) fn memory_finding(
             ),
             "read here",
             "assign it where it is declared, `= 0` if nothing else",
+        ),
+        // **Part of a pointer written**, under the code of a pointer that
+        // leaves narrower than it is believed, since it is the same belief
+        // in a pointer nobody wrote whole, and in words of its own, since
+        // nothing need leave (#935). Only ever `Unknown`, as that is;
+        // `Unsafe` takes the same words so the match stays exhaustive.
+        (Kind::PartOfAPointer { asked }, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            HANDED_ON_NARROW,
+            match asked {
+                PartAsked::Leaves => "this writes part of a pointer into memory that leaves \
+                                      holding pointers"
+                    .to_owned(),
+                PartAsked::Read => {
+                    "this writes part of a pointer that is read back whole".to_owned()
+                }
+            },
+            "written here",
+            "write a pointer whole, or keep bytes written over part of one out of memory read \
+             as pointers",
         ),
         // **Bytes copied out before anything wrote them**, under the same
         // code as a read of them, since what is undefined is the read that
