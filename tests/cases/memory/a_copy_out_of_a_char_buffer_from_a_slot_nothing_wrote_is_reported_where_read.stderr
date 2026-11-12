@@ -1,0 +1,20 @@
+error[SC0407]: this passes a pointer to where a pointer that may have been freed is stored
+    ╭─[ a_copy_out_of_a_char_buffer_from_a_slot_nothing_wrote_is_reported_where_read.c:12:5 ]
+    │
+ 12 │     memcpy(&r, s, 8);
+    │     ────────┬───────  
+    │             ╰───────── passed here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this one
+error[SC0411]: `r` is read before anything was assigned to it
+    ╭─[ a_copy_out_of_a_char_buffer_from_a_slot_nothing_wrote_is_reported_where_read.c:13:12 ]
+    │
+ 13 │     return r == x;
+    │            ───┬──  
+    │               ╰──── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else

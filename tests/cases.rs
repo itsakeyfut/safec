@@ -548,6 +548,9 @@ cases! {
         a_copy_out_of_a_slot_a_store_wrote_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_out_of_a_slot_nothing_wrote_beside_a_written_one_is_reported_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `slots_read` takes a counted position as `0`; this goes
+        // silent.
+        a_copy_out_of_a_char_buffer_from_a_slot_nothing_wrote_is_reported_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A destination that says nothing by its type, asked by what it
         // points at, as #746's ask is. Mutation: ask the destination's type
         // alone; it goes silent.
@@ -2670,6 +2673,9 @@ cases! {
         a_pointer_read_out_of_what_realloc_of_a_parameter_returns_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_what_realloc_of_a_nonnull_parameter_returns_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_what_realloc_of_a_parameter_tested_not_null_returns_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: drop `may_be_null` on both arms of the test; this goes
+        // silent.
+        a_pointer_read_out_of_what_realloc_of_a_parameter_tested_null_returns_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_what_realloc_of_a_calls_result_returns_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_what_realloc_of_a_pointer_a_copy_read_returns_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And a pointer read out of memory, or one a call this check cannot
