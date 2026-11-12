@@ -1272,7 +1272,7 @@ fn say_leaving(
     let deferred = if how == Departure::Store {
         findings
             .iter()
-            .position(|said| is_part_of_a_pointer_left(said, at))
+            .position(|said| is_part_of_a_pointer_written(said, at))
     } else {
         None
     };
@@ -1944,20 +1944,20 @@ fn push_part_of_a_pointer(
             )
     });
     if !said {
-        findings.push(part_of_a_pointer_left(analysis, copy, asked));
+        findings.push(part_of_a_pointer_written(analysis, copy, asked));
     }
 }
 
 /// Whether `said` is the deferred ask's finding at `at`, which a store
 /// departure at the same caret takes the place of.
-fn is_part_of_a_pointer_left(said: &Finding, at: Span) -> bool {
+fn is_part_of_a_pointer_written(said: &Finding, at: Span) -> bool {
     said.at == at && matches!(said.kind, Kind::PartOfAPointer { .. })
 }
 
 /// A write at `copy` of part of a pointer into a block later held as memory
 /// of pointers, asked where `asked` says. See `Known::part_written` and
 /// ADR-0087.
-fn part_of_a_pointer_left(analysis: &Allocations<'_>, copy: Span, asked: PartAsked) -> Finding {
+fn part_of_a_pointer_written(analysis: &Allocations<'_>, copy: Span, asked: PartAsked) -> Finding {
     Finding {
         function: analysis.function,
         kind: Kind::PartOfAPointer { asked },

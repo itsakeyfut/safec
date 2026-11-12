@@ -2690,7 +2690,7 @@ cases! {
         // dropped together; both reads of `*pp` are certain `SC0411`. Each
         // dropped alone decides nothing, since the two routes each carry two
         // marks. Found by review.
-        a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_fresh: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read and the value thrown away. Mutation: as above. It builds.
         a_pointer_read_out_of_fresh_memory_and_discarded_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read as an operand of a comparison, with no temporary. Mutation:

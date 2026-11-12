@@ -1609,7 +1609,7 @@ impl Known {
     /// `loaded` and, out of a caller's, `from_caller` as well, and one a call
     /// this check cannot read may have written is `lost` and `foreign`, so
     /// each dropped alone decides no case, measured. Dropped together,
-    /// `a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_fresh`
+    /// `a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh`
     /// is `SC0411` about two correct programs.
     fn names_no_more_than_its_sites(&self, local: LocalId) -> bool {
         let held = &self.points_to[local];
