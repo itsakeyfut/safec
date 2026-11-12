@@ -1,0 +1,40 @@
+warning[SC0412]: this may reach outside the object it points at
+    ╭─[ a_string_copied_between_char_arrays_that_never_held_a_pointer_reports_nothing_new.c:11:5 ]
+    │
+ 11 │     strcpy(b, a);
+    │     ──────┬─────  
+    │           ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+warning[SC0412]: this may reach outside the object it points at
+    ╭─[ a_string_copied_between_char_arrays_that_never_held_a_pointer_reports_nothing_new.c:11:5 ]
+    │
+ 11 │     strcpy(b, a);
+    │     ──────┬─────  
+    │           ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+warning[SC0412]: this may reach outside the object it points at
+    ╭─[ a_string_copied_between_char_arrays_that_never_held_a_pointer_reports_nothing_new.c:12:5 ]
+    │
+ 12 │     strcat(b, a);
+    │     ──────┬─────  
+    │           ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+warning[SC0412]: this may reach outside the object it points at
+    ╭─[ a_string_copied_between_char_arrays_that_never_held_a_pointer_reports_nothing_new.c:12:5 ]
+    │
+ 12 │     strcat(b, a);
+    │     ──────┬─────  
+    │           ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

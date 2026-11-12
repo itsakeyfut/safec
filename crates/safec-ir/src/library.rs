@@ -146,22 +146,34 @@ pub(crate) enum Callee {
     /// the old one held (p2). See ADR-0039.
     Reallocates,
     /// A C library function that frees nothing and returns its first argument:
-    /// `memset`, `strcpy`, `strncpy`, `strcat` and `strncat`, whose clauses in
-    /// C17 7.24.2 to 7.24.6 each say so.
+    /// `memset` and `strncat`, whose clauses in C17 7.24.3.2 and 7.24.6.1
+    /// each say so.
     ///
     /// **What it is handed is exposed all the same**, because it copies bytes
     /// and a pointer is bytes, and a local whose address it is handed may be
     /// written through it. See ADR-0039.
     ReturnsFirst,
-    /// `memcpy` and `memmove`: what [`Callee::ReturnsFirst`] is, and a copy of
-    /// an object besides, so that what the destination may contain gains what
-    /// the source contains (C17 7.24.2.1 and 7.24.2.2 copy the object's bytes).
+    /// `memcpy`, `memmove`, `strcpy`, `strncpy` and `strcat`: what
+    /// [`Callee::ReturnsFirst`] is, and a copy of an object besides, so that
+    /// what the destination may contain gains what the source contains (C17
+    /// 7.24.2.1 to 7.24.3.1 copy the object's bytes).
     ///
-    /// **Not the string functions**, whose copies end at a null byte (7.24.2.3
-    /// and on), which a pointer's representation may hold, so a stored pointer
-    /// is not copied whole by them. A variant of its own rather than a name
-    /// read inside the transfer, so that every reader of the callee answers
-    /// for it. See ADR-0039.
+    /// **The string copies too**, though they stop at a null byte (7.24.2.3
+    /// p2) or pad with them (7.24.2.4 p3): stopping short of a pointer's
+    /// last byte is not copying none of it. A pointer's high bytes are zero
+    /// on a 64-bit target, so `strcpy` into zeroed memory leaves the whole
+    /// pointer there, and read as copying nothing, a pointer it rebuilt was
+    /// used after its free in silence (#691). Carrying what the source holds
+    /// can only add a doubt; `strcat` appends after a string whose length
+    /// nothing here reads, which is the start of an empty one.
+    ///
+    /// **Not `strncat`**, whose third argument bounds what it reads of the
+    /// source (7.24.3.2 p2) where every reader of this variant reads it as
+    /// the length written, `Allocations::copied_pointers` among them. So a
+    /// pointer it rebuilds is still used after its free in silence, the
+    /// silence #691 closed for the others, by the author's decision.
+    /// A variant of its own rather than a name read inside the transfer, so
+    /// that every reader of the callee answers for it. See ADR-0039.
     Copies,
     /// One of [`DOES_NOT_RETURN`](crate::ir::DOES_NOT_RETURN): `abort`,
     /// `exit`, `_Exit` and `quick_exit`, believed by name as the lowering and
@@ -332,7 +344,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     Library {
         name: "strcpy",
         parameters: &[Shape::Pointer, Shape::Pointer],
-        callee: Callee::ReturnsFirst,
+        callee: Callee::Copies,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         makes: None,
         leaves: None,
@@ -340,7 +352,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     Library {
         name: "strncpy",
         parameters: &[Shape::Pointer, Shape::Pointer, Shape::Integer],
-        callee: Callee::ReturnsFirst,
+        callee: Callee::Copies,
         reaches: &[(0, Reach::Length(2)), (1, Reach::String)],
         makes: None,
         leaves: None,
@@ -348,7 +360,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     Library {
         name: "strcat",
         parameters: &[Shape::Pointer, Shape::Pointer],
-        callee: Callee::ReturnsFirst,
+        callee: Callee::Copies,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         makes: None,
         leaves: None,

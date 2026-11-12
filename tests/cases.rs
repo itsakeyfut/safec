@@ -5521,6 +5521,16 @@ cases! {
         // sits under null tests that always hold, which a join cannot tell
         // from tests that may fail: the cost #668 recorded for a local (#721).
         a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A string copy into zeroed memory may leave a whole pointer there,
+        // so it carries what its source holds as `memcpy` does (#691).
+        // Mutation: read the function's row as `Callee::ReturnsFirst` again;
+        // its case goes silent at `*q`.
+        a_pointer_rebuilt_by_strcpy_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_rebuilt_by_strcat_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And between buffers that never held a pointer, nothing new: the
+        // same four `SC0412`s as when the copies only exposed.
+        a_string_copied_between_char_arrays_that_never_held_a_pointer_reports_nothing_new: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Reported where the byte reaches what takes it as an operand rather
