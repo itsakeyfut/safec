@@ -4235,10 +4235,6 @@ const UNCERTAIN: &[(&str, &str)] = &[
         "on one arm the slot holds what nothing wrote and on the other a null, and their join is a doubt (ADR-0057, #668)",
     ),
     (
-        "fresh_memcpy_part_d1_both",
-        "a copy that writes part of a pointer leaves the block in doubt rather than proved unwritten; a missed proof, since the part it misses is unwritten on every path",
-    ),
-    (
         "fresh_memcpy_maybe_d0_both",
         "the copy's source is written on one arm only, and the copy carries that doubt into the slot by its may-be-unwritten arm",
     ),

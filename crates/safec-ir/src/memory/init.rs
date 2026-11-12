@@ -15,7 +15,7 @@ use super::allocations::Allocations;
 use super::built::replaced_by;
 use super::index::{Idx, Loc, LocalIdx, Site, Table};
 use super::known::{Known, WrittenBy};
-use super::parts::{At, Extent, Held, Init};
+use super::parts::{At, Held, Init};
 use super::store::{Certain, Landing, StoreKind, Strong, written_alone};
 use super::transfer::CopiedPointers;
 use super::{Carried, Carrier};
@@ -138,10 +138,9 @@ impl Allocations<'_> {
                     .unit
                     .place_ty(function, place)
                     .and_then(|ty| self.unit.size_of(ty));
-                let covers_block = |value: &Known, site: Site| match value.extent[Loc::Heap(site)] {
-                    Some(Extent::Exactly(size)) => width.is_some_and(|width| width >= size),
-                    Some(Extent::AtLeast(_)) | None => false,
-                };
+                let offset = value.points_to[pointer].offset;
+                let covers_block =
+                    |value: &Known, site: Site| value.covers_whole(Loc::Heap(site), offset, width);
                 if derefs(place) > 0 {
                     let held = &value.points_to[pointer];
                     // **And a local it may land in**, the local its edges name
@@ -529,6 +528,43 @@ impl Allocations<'_> {
                         CopiedPointers::NoneWhole => (true, false),
                     };
                     let mut carried = false;
+                    let dest_at = match dest {
+                        Some(Operand::Copy(dest)) if dest.projection.is_empty() => {
+                            value.points_to[dest.local].offset
+                        }
+                        Some(Operand::Copy(_) | Operand::Constant(_)) | None => At::Unknown,
+                    };
+                    let covers_whole = |value: &Known, site: Site| {
+                        value.covers_whole(Loc::Heap(site), dest_at, bytes)
+                    };
+                    // The slots a copy from a counted position of a known
+                    // length covers whole are written, and the rest keep what
+                    // they held, as a store at a known element leaves them;
+                    // where the block is kept whole, or the position or the
+                    // length is not known, any slot may have been missed.
+                    let write_covered_slots = |value: &mut Known, site: Site| {
+                        let target = self.unit.target();
+                        let pointer = u64::from(target.pointer_bits() / target.char().bits());
+                        let covered = match (dest_at, bytes) {
+                            (At::Bytes(start), Some(bytes)) if start % pointer == 0 => {
+                                Some((start / pointer, (start + bytes) / pointer))
+                            }
+                            _ => None,
+                        };
+                        let place = &mut value.written[site];
+                        match (place.slots_mut(), covered) {
+                            (Some(slots), Some((first, end))) => {
+                                for slot in first..end {
+                                    if let Ok(slot) = usize::try_from(slot) {
+                                        if slot < slots.len() {
+                                            slots.set(slot, Init::Written);
+                                        }
+                                    }
+                                }
+                            }
+                            (Some(_) | None, _) => place.may_write(),
+                        }
+                    };
                     for site in before.sites() {
                         let was = &before[site];
                         if !may_land.contains(&site) || unwritten {
@@ -542,8 +578,20 @@ impl Allocations<'_> {
                             // 8);` through a parameter, where `**t = *y;` is
                             // `SC0411`. A library copy is no code this check
                             // cannot read.
-                            if Some(site) != certain {
-                                value.written[site] = was.clone();
+                            // **The one block it certainly lands in is
+                            // written as a store writes it** (#925): whole
+                            // where the copy covers it, the slots it covers
+                            // where it is kept per slot, and a may-write
+                            // anywhere else. Kept as the exposure believed
+                            // it, written whole, `memcpy(b, &x, 8)` into a
+                            // block of two slots left `b[1]` read in
+                            // silence where `b[0] = x;` is `SC0411`.
+                            value.written[site] = was.clone();
+                            if Some(site) == certain && covers_whole(value, site) {
+                                value.written[site].set(Init::Written);
+                            } else if Some(site) == certain {
+                                write_covered_slots(value, site);
+                            } else {
                                 value.written[site].may_write();
                             }
                             if doubted && was.whole().may_be_unwritten() {
@@ -555,10 +603,7 @@ impl Allocations<'_> {
                             // check cannot read, leaves what it did not cover
                             // as it was, and that may be written. Found by
                             // review.
-                            let covers = matches!(
-                                (value.extent[site], bytes),
-                                (Some(Extent::Exactly(size)), Some(bytes)) if bytes >= size
-                            );
+                            let covers = covers_whole(value, site);
                             if source_fresh
                                 && alone
                                 && covers
@@ -703,12 +748,11 @@ impl Allocations<'_> {
                     let at_start = dest.projection.is_empty()
                         && matches!(value.points_to[dest.local].offset, At::Bytes(0));
                     for &local in lands {
-                        let size = function
-                            .locals()
-                            .nth(local.index())
-                            .and_then(|id| self.unit.size_of(function.local(id)));
-                        let covers =
-                            matches!((size, bytes), (Some(size), Some(bytes)) if bytes >= size);
+                        let covers = value.covers_whole(
+                            Loc::Local(local),
+                            value.points_to[dest.local].offset,
+                            bytes,
+                        );
                         // One local alone, and no block beside it: `d` either
                         // `a` or a block `k` was certain about `a[0]` though
                         // the copy may have landed in `k`. Found by review.

@@ -2410,6 +2410,27 @@ impl Known {
         true
     }
 
+    /// **Whether a write of `width` bytes at `offset` covers the whole of
+    /// `at`**, so that it writes the place for certain rather than may have
+    /// missed part of it: the place's size a constant, the write at least
+    /// that wide, and not known to start past its start. A write that wide
+    /// that starts anywhere else lands past the place's end, which the
+    /// bounds rule reports. A place of no constant size is covered by no
+    /// write (#932).
+    ///
+    /// **The one answer the store and the library copy both ask** (#926):
+    /// spelled at each door, the copy kept believing a block it wrote one
+    /// slot of written whole after the store had stopped (#925).
+    pub(super) fn covers_whole(&self, at: Loc, offset: At, width: Option<u64>) -> bool {
+        match self.extent[at] {
+            Some(Extent::Exactly(size)) => {
+                !matches!(offset, At::Moved | At::Bytes(1..))
+                    && width.is_some_and(|width| width >= size)
+            }
+            Some(Extent::AtLeast(_)) | None => false,
+        }
+    }
+
     /// A write landed in this one allocation, so its contents are not
     /// indeterminate on this path. Only a landing that proves one place can
     /// ask, which is what [`Certain`] is. See [`Self::written`].

@@ -2240,6 +2240,14 @@ cases! {
         // (#932). Mutation: `covers_block` answering `true` for `AtLeast`;
         // this loses its `SC0411`.
         a_block_of_no_constant_size_written_at_its_start_is_doubted_where_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A library copy writes the one block it lands in as a store does,
+        // through `Known::covers_whole` (#925, #926). Mutation: write that
+        // block whole whatever the copy covered, as the exposure believed
+        // it; both go silent. Mutation: answer `covers_whole` by the width
+        // alone, whatever the place's size; both go silent, and so do the
+        // store's cases above.
+        a_copy_of_one_pointer_into_a_block_of_two_is_reported_where_the_other_is_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_of_one_pointer_into_a_block_kept_whole_is_doubted_where_another_is_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_long_local_array_written_at_one_element_is_doubted_where_read_at_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block `realloc` grew holds what nothing wrote past the old size.
         // Mutation: `Allocations::past_the_old_size` leaving the block as
