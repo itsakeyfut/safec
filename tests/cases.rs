@@ -2567,6 +2567,11 @@ cases! {
         // anywhere (#920). Mutation: let the store carry everything stored
         // for such a load again; this is reported.
         a_block_written_before_its_pointer_passes_through_another_block_is_returned_without_a_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `char` buffer whose address a copy puts two levels down is read
+        // as a pointer at a position nobody said, which may be its start
+        // (#686). Mutation: ask a local only at a known start again; this
+        // goes silent.
+        a_char_buffer_whose_address_a_copy_puts_two_levels_down_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `realloc` of a pointer that may be null copies nothing on the path
         // where it is, so what it returns may be indeterminate there (#708,
         // ADR-0093 rule 5); the third, a written block on every path, is not

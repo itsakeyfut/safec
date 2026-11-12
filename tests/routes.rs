@@ -2298,8 +2298,6 @@ const LOST_HANDED: &str = "a lost pointer handed through a call this check canno
 const OLD_BLOCK: &str = "the old block a store replaced in memory is still taken to be there after realloc moves it (#656)";
 const REPORTED_ELSEWHERE: &str = "the free and the call a freed pointer is handed to are each reported where they happen (SC0401, SC0407), and not again at its use; agreeing would report the use too";
 const WRITES_WHAT_IT_IS_HANDED: &str = "a call this check cannot read is believed to write what it is handed, which `docs/safety-model.md` states beside the other boundary beliefs; not believing it refused correct programs that rely on the callee writing (#782)";
-const DEEP_COPY_LOSES_A_LOCAL: &str = "a copy two levels down loses the address of a local it carries, where the store spelling keeps it, so what is read through it is asked nothing (#686)";
-const POSITION_LOST: &str = "a local kept whole that may be unwritten is asked only where the pointer is known to point at its start, and one read out of memory and stored two levels down is not known to (#703)";
 const RETURNED_MAY_NAME: &str = "a return reports a block nothing wrote as certain where a read through memory this check cannot place only may name it, as ADR-0045's walk adds what is exposed below the first level (#922)";
 const RETURNED_ONE_ARM: &str = "a pointer given a call's result on one arm and a null on the other is doubted at its return, since the join keeps no relation between what it names and on which arm a block was written (#923); its hazard is silent by the belief that a call writes what it is handed, as on both arms";
 const ELEMENT_LOST: &str = "a store through a pointer read back out of memory names no element, so it may-writes every element of an array kept per element and writes none for certain, until a pointer loaded keeps its position (ADR-0094 rule 3, #893)";
@@ -2446,36 +2444,6 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Belief(VOID_RESULT),
     ),
     (
-        "part_local_memcpy_block_d2_both",
-        Side::Hazard,
-        Why::Cost(DEEP_COPY_LOSES_A_LOCAL),
-    ),
-    (
-        "part_local_memcpy_block_d2_one",
-        Side::Hazard,
-        Why::Cost(DEEP_COPY_LOSES_A_LOCAL),
-    ),
-    (
-        "part_local_memcpy_d2_both",
-        Side::Hazard,
-        Why::Cost(DEEP_COPY_LOSES_A_LOCAL),
-    ),
-    (
-        "part_local_memcpy_d2_one",
-        Side::Hazard,
-        Why::Cost(DEEP_COPY_LOSES_A_LOCAL),
-    ),
-    (
-        "part_local_restored_d2_both",
-        Side::Hazard,
-        Why::Cost(POSITION_LOST),
-    ),
-    (
-        "part_local_restored_d2_one",
-        Side::Hazard,
-        Why::Cost(POSITION_LOST),
-    ),
-    (
         "part_local_ret_d0_both",
         Side::Hazard,
         Why::Belief(WRITES_WHAT_IT_IS_HANDED),
@@ -2486,17 +2454,7 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Belief(WRITES_WHAT_IT_IS_HANDED),
     ),
     (
-        "part_local_ret_d1_one",
-        Side::Hazard,
-        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
-    ),
-    (
         "part_local_ret_d2_both",
-        Side::Hazard,
-        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
-    ),
-    (
-        "part_local_ret_d2_one",
         Side::Hazard,
         Why::Belief(WRITES_WHAT_IT_IS_HANDED),
     ),
