@@ -337,12 +337,29 @@ enum Field {
 /// account of what it does not hold, rather than a silence.
 const PENDING: &str = "no belief yet: the corpus holds it, and its rows land with the next change to it (ADR-0091 rule 2)";
 
+/// Where a field of `Known` starts at a function's entry (ADR-0091 rule 3).
+enum Start {
+    /// At the value that doubts: what it says makes the check report rather
+    /// than believe.
+    Doubt,
+    /// At a value that believes, with why that is right there.
+    Quiet(&'static str),
+}
+
+/// Why a may-fact about what the function has done starts false: at its
+/// entry it has done nothing yet, so false is the fact, not a belief.
+const NOTHING_YET: &str =
+    "a may-fact about what the function has done, and at its entry it has done nothing";
+
 /// Every field of `Known`, each a belief the matrix writes or an exemption
-/// with its reason. A field added to `Known` and not here fails
+/// with its reason, and **where it starts**. A field added to `Known` and not
+/// here fails
 /// [`every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption`], so a
 /// new fact of the memory check lands with its rows or says why not. See
-/// ADR-0091 rule 2.
-const KNOWN_FIELDS: &[(&str, Field)] = &[
+/// ADR-0091 rule 2. A row with no start does not build, and a quiet start
+/// with no reason fails that test: until #933 the rule that a field starts
+/// in doubt was held by review alone (ADR-0091 rule 3).
+const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
     (
         "points_to",
         Field::Belief(&[
@@ -353,6 +370,9 @@ const KNOWN_FIELDS: &[(&str, Field)] = &[
             Belief::Unreplaced,
             Belief::HeldPointers,
         ]),
+        Start::Quiet(
+            "a parameter is believed one whole object of the type it points to, which the caller is asked at every call (ADR-0060), and may be null unless it is `_Nonnull` (#931)",
+        ),
     ),
     (
         "state",
@@ -362,37 +382,92 @@ const KNOWN_FIELDS: &[(&str, Field)] = &[
             Belief::StoredFreed,
             Belief::LeftBehind,
         ]),
+        Start::Quiet(
+            "a parameter's site is live: a caller that passes a freed pointer is asked so at its call",
+        ),
     ),
-    ("escaped", Field::Exempt(PENDING)),
-    ("handed_away", Field::Exempt(PENDING)),
-    ("exposed", Field::Exempt(PENDING)),
+    ("escaped", Field::Exempt(PENDING), Start::Quiet(NOTHING_YET)),
+    (
+        "handed_away",
+        Field::Exempt(PENDING),
+        Start::Quiet(NOTHING_YET),
+    ),
+    // Every site a parameter stands for that this check exposes, since the
+    // caller may have kept the pointer (ADR-0040).
+    ("exposed", Field::Exempt(PENDING), Start::Doubt),
+    // What an exposed parameter points at is marked as the caller's, so a
+    // load out of it after a call is one this check stopped following
+    // (#482).
     (
         "contents",
         Field::Belief(&[Belief::Width, Belief::Lost, Belief::Stale, Belief::Caller]),
+        Start::Doubt,
     ),
-    ("realloced", Field::Exempt(PENDING)),
+    (
+        "realloced",
+        Field::Exempt(PENDING),
+        Start::Quiet(NOTHING_YET),
+    ),
+    // Every local `unwritten_at_entry` names unwritten. A parameter's memory
+    // is the caller's, which may have written it, and is not.
     (
         "written",
         Field::Belief(&[Belief::Fresh, Belief::PartLocal, Belief::Returned]),
+        Start::Doubt,
     ),
-    ("pending", Field::Exempt(PENDING)),
-    ("calls", Field::Exempt(PENDING)),
-    ("exposed_after_call", Field::Exempt(PENDING)),
-    ("lost_exposed", Field::Exempt(PENDING)),
-    ("extent", Field::Exempt(PENDING)),
-    ("handed_at_most", Field::Exempt(PENDING)),
-    ("exposed_in_part", Field::Exempt(PENDING)),
-    ("stored_in_part", Field::Exempt(PENDING)),
-    ("stored_out", Field::Belief(&[Belief::StoredOut])),
-    ("left_at", Field::Exempt(PENDING)),
+    ("pending", Field::Exempt(PENDING), Start::Quiet(NOTHING_YET)),
+    ("calls", Field::Exempt(PENDING), Start::Quiet(NOTHING_YET)),
+    (
+        "exposed_after_call",
+        Field::Exempt(PENDING),
+        Start::Quiet(NOTHING_YET),
+    ),
+    (
+        "lost_exposed",
+        Field::Exempt(PENDING),
+        Start::Quiet(NOTHING_YET),
+    ),
+    // A parameter's block is at least what it points to, which no write is
+    // known to cover (#932); a local is the size its type is.
+    ("extent", Field::Exempt(PENDING), Start::Doubt),
+    (
+        "handed_at_most",
+        Field::Exempt(PENDING),
+        Start::Quiet(NOTHING_YET),
+    ),
+    (
+        "exposed_in_part",
+        Field::Exempt(PENDING),
+        Start::Quiet(NOTHING_YET),
+    ),
+    (
+        "stored_in_part",
+        Field::Exempt(PENDING),
+        Start::Quiet(NOTHING_YET),
+    ),
+    (
+        "stored_out",
+        Field::Belief(&[Belief::StoredOut]),
+        Start::Quiet(NOTHING_YET),
+    ),
+    ("left_at", Field::Exempt(PENDING), Start::Quiet(NOTHING_YET)),
     (
         "held_levels",
         Field::Exempt(
             "no row yet: a block held as pointers and reached later through a `void *` (ADR-0086) is asked at a `return` the matrix does not write; `HeldPointers` is held by the value's own record, and no row fails when this is never raised",
         ),
+        Start::Quiet(NOTHING_YET),
     ),
-    ("part_written", Field::Belief(&[Belief::PartPointer])),
-    ("handed_untyped", Field::Exempt(PENDING)),
+    (
+        "part_written",
+        Field::Belief(&[Belief::PartPointer]),
+        Start::Quiet(NOTHING_YET),
+    ),
+    (
+        "handed_untyped",
+        Field::Exempt(PENDING),
+        Start::Quiet(NOTHING_YET),
+    ),
 ];
 
 /// The fields of `Known`, read off its declaration.
@@ -425,10 +500,14 @@ fn known_fields() -> Vec<String> {
 /// `stored_out` under `Belief::Fresh`, or `part_written` under
 /// `Belief::Width`, passes, measured in #918's review: which field a row
 /// exercises is not something this test can read off the matrix.
+///
+/// **Nor that a start is the one the field takes**: [`Start`] is what the
+/// row says, and the entry is read by review. Mutation: give a row
+/// `Start::Quiet(" ")`; this fails.
 #[test]
 fn every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption() {
     let declared = known_fields();
-    let listed: Vec<&str> = KNOWN_FIELDS.iter().map(|(name, _)| *name).collect();
+    let listed: Vec<&str> = KNOWN_FIELDS.iter().map(|(name, _, _)| *name).collect();
     let missing: Vec<&String> = declared
         .iter()
         .filter(|field| !listed.contains(&field.as_str()))
@@ -441,13 +520,20 @@ fn every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption() {
         missing.is_empty() && stale.is_empty(),
         "fields of `Known` with no row in KNOWN_FIELDS: {missing:?}; rows for no field: {stale:?}"
     );
-    for (name, field) in KNOWN_FIELDS {
+    for (name, field, start) in KNOWN_FIELDS {
         match field {
             Field::Belief(beliefs) => assert!(
                 !beliefs.is_empty() && beliefs.iter().all(|belief| BELIEFS.contains(belief)),
                 "`{name}` names a belief the matrix does not ask"
             ),
             Field::Exempt(why) => assert!(!why.is_empty(), "`{name}` is exempt with no reason"),
+        }
+        match start {
+            Start::Doubt => {}
+            Start::Quiet(why) => assert!(
+                !why.trim().is_empty(),
+                "`{name}` starts quiet with no reason (ADR-0091 rule 3)"
+            ),
         }
     }
 }
