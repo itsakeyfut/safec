@@ -201,9 +201,11 @@ impl SiteState {
 /// defined. A constant offset can, and one this check cannot evaluate
 /// cannot. See ADR-0036.
 ///
-/// **Only `Bytes(0)` is built yet**, where `Moved` stands for every other
-/// distance: a reader that asks off the start matches `Moved` with
-/// `Bytes(1..)`, so the day a distance is counted it is read as before.
+/// **A distance is counted where `built::offset_of` can**, a constant
+/// times the size of what the pointer points at, and `Moved` stands for
+/// every distance off the start it cannot count (ADR-0092 rule 1). A reader
+/// that asks only whether a value is off the start matches `Moved` with
+/// `Bytes(1..)`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum At {
     /// This many bytes from the start of every site this local holds. `0`
@@ -1027,9 +1029,10 @@ pub(super) struct Held {
     /// stored that way and read back into `q` is not a whole `int`: believing
     /// `q`'s own type put four bytes on one. The conversion to and from
     /// `void *` needs no cast (C17 6.3.2.3 p1, 6.5.16.1 p1), so a type this
-    /// frontend parses no cast for is still reached. A proof, so an intersection at a join, as [`Self::fresh_read`]
-    /// is, and copied with the value and dropped by anything else, arithmetic
-    /// included. What the sites a load holds say about where it points is
+    /// frontend parses no cast for is still reached. Joined as a proof is,
+    /// since a level that believes nothing is [`Width::Nothing`], which
+    /// absorbs: copied with the value and dropped by anything else,
+    /// arithmetic included. What the sites a load holds say about where it points is
     /// not read for this, since they are held at an offset nobody said. See
     /// ADR-0060.
     ///
@@ -1062,9 +1065,10 @@ pub(super) struct Held {
     /// bytes (#634). A load takes what its memory believed one level down,
     /// and a store leaves this behind in the memory it lands in
     /// (a cell's `stored_levels`).
-    /// **A bound and not a proof**, so a join keeps
-    /// the lower of two and a side with none is no bound, the reverse of
-    /// [`Self::believed`]. See ADR-0060.
+    /// **A bound and not a proof**, by the same meet: a join keeps the lower
+    /// of two, and a side that recorded none is [`Width::Unbounded`], the
+    /// identity, where level 0's none is [`Width::Nothing`], which absorbs.
+    /// See ADR-0060.
     pub(super) widths: Levels,
     /// Whether the type this value arrived as says the memory it points at
     /// holds pointers, at its first level: `void **` does, though the width
@@ -1385,7 +1389,8 @@ impl Held {
     /// the common case, `*box = &q; int *t = *box; *t = 1;`, proved.
     ///
     /// **`Some(0)` off its start or inside a local**, since neither has a
-    /// width to read: `At` carries no distance yet (ADR-0036), and a local's
+    /// width to read where it is off its start, which `fits` asks with the
+    /// distance counted (ADR-0092 rule 1), and a local's
     /// size is not the size of something inside it. **And where it is
     /// lost**, since what it holds may be an object no site it names stands
     /// for: a loop's earlier `malloc(1)` joined into `x = malloc(4)` on one
@@ -3030,8 +3035,9 @@ mod tests {
 
     /// Two positions join to themselves where they agree, to `Moved` where
     /// both are off the start by any distances, and to `Unknown` where one
-    /// is at the start and the other is not or either is unknown. No program
-    /// reaches the second yet, since only `Bytes(0)` is built (ADR-0092).
+    /// is at the start and the other is not or either is unknown (ADR-0092
+    /// rule 1). A program reaches the second where two arms move a pointer
+    /// by different constants.
     ///
     /// Mutation: drop the arm that joins two positions off the start; this
     /// fails at `Bytes(4)` beside `Bytes(8)`.
@@ -3065,7 +3071,9 @@ mod tests {
     /// Mutation: let `AsTyped` win over a byte count in `meet`; this fails,
     /// at the meet that is above one side. Mutation: answer `Unbounded` for
     /// `(Unbounded, other)`; this fails at the identity. Mutation: drop the
-    /// `Nothing` arm; this fails where it is to absorb.
+    /// `Nothing` arm; this fails where it is to absorb. Mutation: have
+    /// `Width::of_belief` spell no belief as `Unbounded`, the identity,
+    /// rather than `Nothing`; this fails at the belief spelled back.
     #[test]
     fn a_width_meets_as_a_bound_does_over_every_combination() {
         let widths = [
@@ -3088,6 +3096,17 @@ mod tests {
             assert_eq!(a.meet(Width::Nothing), Width::Nothing, "absorbing at {a:?}");
             if a != Width::Nothing {
                 assert_eq!(Width::of_bound(a.bound()), a, "spelled back at {a:?}");
+                // A belief spells "none" as what absorbs, which a bound
+                // spells as the identity: the one place the two part.
+                assert_eq!(
+                    Width::of_belief(a.bound()),
+                    if a == Width::Unbounded {
+                        Width::Nothing
+                    } else {
+                        a
+                    },
+                    "a belief spelled back at {a:?}"
+                );
             }
             for b in widths {
                 let met = a.meet(b);
@@ -3182,6 +3201,36 @@ mod tests {
         assert!(!held.foreign);
         assert!(held.freed.is_none());
         assert!(!held.arrived_holds_pointer);
+    }
+
+    /// What a local is given drops every mark the old value carried: the
+    /// cleared value is a value that holds nothing, [`Held::none`], whatever
+    /// it held before. Each field below is set away from that first.
+    ///
+    /// Mutation: have `clear` leave any one of `may_be_null`, `fresh_read`,
+    /// `widths`, `inner_address`, `element`, `site_element`, `array_edge`,
+    /// `stored_through`, `returned_by`, `named_at_read`, `stale_read`,
+    /// `from_caller`, `lost` or `loaded`. This fails; no corpus case did for
+    /// the first eleven, measured in #918's review.
+    #[test]
+    fn clearing_a_local_drops_every_mark_it_had() {
+        let mut held = Held::none(4);
+        held.may_be_null = true;
+        held.fresh_read = true;
+        held.widths = Levels::new(vec![Width::AtMost(4), Width::AtMost(8)]);
+        held.inner_address = true;
+        held.element = Some(1);
+        held.site_element = Some(2);
+        held.array_edge = true;
+        held.stored_through = true;
+        held.returned_by = Some(Site::at(2));
+        held.named_at_read.set(LocalIdx::at(1));
+        held.stale_read = true;
+        held.from_caller = true;
+        held.lost = true;
+        held.loaded = true;
+        held.clear();
+        assert!(held == Held::none(4));
     }
 
     /// One edge that is all of where a write lands is one certain local, and

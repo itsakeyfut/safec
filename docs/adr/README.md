@@ -146,6 +146,12 @@ finds the new one without the record being edited.
 | `memory::runs`, `memory/runs.rs` | `crate::runs`, `crates/safec-ir/src/runs.rs` | #895 |
 | `memory::assigned::address_taken` | `crate::taken::address_taken` | #895 |
 | `memory::parts::Offset` | `memory::parts::At` | #703 |
+| `Known::init`, `Known::element_init`, `Known::block_elements` | `Known::written`, one `PlaceInit` per place, whole or per slot | #894 |
+| `Held::believed` | `Held::believed()`, level 0 of `Held::widths` | #804 |
+| `Held::contents_at_most` | `Held::contents_at_most()`, the levels of `Held::widths` below the first | #804 |
+| `Known::handed_contents_at_most` | `Known::handed_at_most`, below its first level | #804 |
+| `AS_TYPED` | `Width::AsTyped` | #804 |
+| `Cell::unrecorded` | `Width::Nothing` at a cell's level 0 | #804 |
 | `a_pointer_plus_a_literal_zero_is_not_proved_to_be_off_the_start` | `a_pointer_plus_a_literal_zero_is_at_its_start`, which a counted distance now proves | #703 |
 | `a_free_of_a_pointer_moved_back_to_the_start_is_not_proved` | `a_free_of_a_pointer_moved_back_to_the_start_is_not_an_interior_free`, likewise | #703 |
 | `a_char_buffer_filled_by_a_loop_read_as_a_pointer_is_not_doubted` | `a_char_buffer_filled_by_a_loop_read_as_a_pointer_is_doubted`, doubted until a loop proof (ADR-0094 rule 4) | #893 |
@@ -157,6 +163,11 @@ finds the new one without the record being edited.
 | `an_allocation_filled_by_a_loop_is_not_doubted_as_unwritten` | `an_allocation_filled_by_a_loop_is_doubted_as_unwritten`, doubted until a loop proof (ADR-0094 rule 4) | #893 |
 | `a_slot_stored_again_after_what_it_held_was_freed_is_doubted` | `a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted`, a block of one slot replaced whole (ADR-0094 rule 1) | #656 |
 | `a_pointer_stored_and_read_in_one_turn_is_doubted_on_the_next` | `a_pointer_stored_and_read_in_one_turn_is_not_doubted_freed_on_the_next`, likewise | #656 |
+| `a_long_local_array_written_in_part_and_then_at_its_start_is_not_doubted` | `a_long_local_array_written_in_part_and_then_at_its_start_is_doubted`, doubted since a store narrower than a place kept whole may-writes it | #918's review |
+| `an_array_of_many_pointers_written_at_one_element_and_read_there_is_not_doubted` | `an_array_of_many_pointers_written_at_one_element_and_read_there_is_doubted`, doubted since a store narrower than a place kept whole may-writes it | #918's review |
+| `an_array_of_many_pointers_a_copy_ended_part_way_through_one_wrote_is_not_asked` | `an_array_of_many_pointers_a_copy_ended_part_way_through_one_wrote_is_doubted`, doubted since a store narrower than a place kept whole may-writes it | #918's review |
+| `an_element_of_a_local_array_too_long_to_keep_per_element_is_not_reported` | `an_element_of_a_local_array_too_long_to_keep_per_element_is_doubted`, doubted since a store narrower than a place kept whole may-writes it | #918's review |
+| `a_pointer_written_a_byte_at_a_time_at_every_position_is_still_reported_as_part_of_one` | `a_pointer_written_a_byte_at_a_time_at_every_position_is_still_doubted`, doubted since a store narrower than a place kept whole may-writes it | #918's review |
 
 ## Where each kind of writing belongs
 

@@ -303,7 +303,7 @@ cases! {
         // back edge's exemption joins the block written before the loop with
         // the one the copy left unwritten as written, and only the rule that
         // a place made unwritten again is in doubt says otherwise on the next
-        // turn (#886). Mutation: `Written::unwritten_again` leaves a place
+        // turn (#886). Mutation: `PlaceInit::unwritten_again` leaves a place
         // kept whole as it is; the first goes silent at `*m`. Leave a place
         // kept per slot as it is; the second goes silent at `m[0]`.
         a_block_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -335,10 +335,13 @@ cases! {
         // set; the first goes silent. **The second is a known cost**: every
         // byte of the slot written at a constant position still leaves the
         // record, since it says no more than that part of a pointer may have
-        // been written; a store that certainly lands replacing its slot
-        // (ADR-0094) is what removes it.
+        // been written, and since #918's review each byte store, narrower
+        // than the block, is a may-write of it, so the read is doubted as
+        // one of bytes nothing may have written. Named
+        // `a_pointer_written_a_byte_at_a_time_at_every_position_is_still_reported_as_part_of_one`
+        // until then.
         a_pointer_written_whole_then_a_byte_of_it_over_is_reported_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_pointer_written_a_byte_at_a_time_at_every_position_is_still_reported_as_part_of_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_written_a_byte_at_a_time_at_every_position_is_still_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_of_a_block_kept_per_slot_past_its_written_slot_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A copy carries what it copies into and out of a local, as
         // between blocks (#750). Mutation: carry no mark into a local, or
@@ -655,14 +658,18 @@ cases! {
         // certain, as a store that may land in two does not. Mutation:
         // write the elements it covers in each; this goes silent.
         an_array_a_copy_may_have_missed_for_another_read_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // An array of pointers kept whole: a store writes one whole, and a
-        // copy ending part way through one is not asked, since a read of
-        // such an array is asked only at its start, `big[0]` here, which the
-        // copy wrote whole. Mutation: put it in doubt for any write of part;
-        // the first is doubted. For a copy ending part way through a
-        // pointer; the second is.
-        an_array_of_many_pointers_written_at_one_element_and_read_there_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        an_array_of_many_pointers_a_copy_ended_part_way_through_one_wrote_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An array of pointers kept whole: a store of one element, and a
+        // copy of part of it, may have missed the rest, and one record for
+        // the whole array cannot say which, so a read of it is doubted even
+        // where it was written (#918's review). Before, a read past its
+        // start was asked nothing, which left `big[5]` read in silence once
+        // a counted position proved it inside. Named
+        // `an_array_of_many_pointers_written_at_one_element_and_read_there_is_not_doubted`
+        // and `an_array_of_many_pointers_a_copy_ended_part_way_through_one_wrote_is_not_asked`
+        // until then, the names ADR-0073 gives. Mutation: as above; both go
+        // silent.
+        an_array_of_many_pointers_written_at_one_element_and_read_there_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_array_of_many_pointers_a_copy_ended_part_way_through_one_wrote_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written wherever its allocation succeeded and tested after the join:
         // the later test's null edge leaves the failed path no block, so it adds
         // no doubt. Formerly `a_block_written_before_the_test_that_shows_its_pointer_not_null_is_doubted`,
@@ -1140,10 +1147,11 @@ cases! {
         // dimensions. Mutation: a pointer moves by its constant alone, not
         // times the elements one pointee holds; this goes silent.
         an_element_of_a_two_dimensional_local_array_nothing_wrote_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // An array of more than 64 elements is kept whole, as before #667,
-        // so a write to `m[0]` writes it. Mutation: no cap; this gains
-        // `SC0411`.
-        an_element_of_a_local_array_too_long_to_keep_per_element_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An array of more than 64 elements is kept whole, so a write to
+        // `m[0]` may have missed the element read (#918's review). Named
+        // `an_element_of_a_local_array_too_long_to_keep_per_element_is_not_reported`
+        // until then. Mutation: as above; this goes silent.
+        an_element_of_a_local_array_too_long_to_keep_per_element_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `m + 1` stored and read back keeps no element, so the write
         // through it may be of any element: `m[0]` is an `SC0411` doubt
         // (#667). Mutation: a stored pointer marks nothing
@@ -1282,7 +1290,9 @@ cases! {
         // **And where the memory leaves for a call**, which asks the width
         // of what it may read there: `*ib = 7; use(box);` with `use` taking
         // `int **` reads an `int` as a pointer, and is `SC0413` (#767).
-        // Mutation: the departure does not ask `Cell::unrecorded`; this goes
+        // Mutation: the departure does not ask what width the cell records
+        // at its level 0, `Width::Nothing` for such a store
+        // (`stored_narrower` in `report.rs` answering `false`); this goes
         // silent. Found by review.
         an_int_stored_in_a_table_of_pointers_handed_to_a_call_is_asked_how_wide: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same on one arm, beside `malloc(4)` on the other, whose width
@@ -1550,10 +1560,13 @@ cases! {
         // a certain `SC0411`.
         a_local_array_written_through_a_pointer_that_may_name_either_of_two_elements_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An array too long to keep per element, written in part and then
-        // at its start, is written, as on `main`. Mutation: a write of a
-        // whole local leaves its partial mark; this gains an `SC0411`
-        // doubt.
-        a_long_local_array_written_in_part_and_then_at_its_start_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // at its start, is still doubted: one record for the whole array
+        // cannot say which elements a store of one wrote (#918's review).
+        // Named `a_long_local_array_written_in_part_and_then_at_its_start_is_not_doubted`
+        // until then. Mutation: a store narrower than such an array writes
+        // it whole again (`in_part` in `built::write_effects` exempting every
+        // array of pointers); this goes silent.
+        a_long_local_array_written_in_part_and_then_at_its_start_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Each turn's `m` is a new object (C17 6.2.4 p2), so `m[0]` read
         // first is a certain `SC0411`, whatever the turn before wrote.
         // Measured since #733: leaving the local's or its elements' `Init`
@@ -2208,13 +2221,40 @@ cases! {
         // the block; this says the read is certainly of nothing written.
         a_heap_block_written_through_a_pointer_that_may_name_another_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Twenty bytes are not a whole number of pointers, so the block is
-        // kept whole, as before, and a write at its first element writes it.
-        // Found by review. Mutation: keep any size per element; this is
-        // doubted.
+        // kept whole, and a write at its first element may have missed the
+        // rest, as above (#918's review). Mutation: as above; this goes
+        // silent.
         a_heap_block_whose_size_is_not_a_whole_number_of_pointers_is_kept_whole: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store narrower than a block or array kept whole may have missed
+        // the rest of it, so a read elsewhere in it is doubted, where a
+        // counted position had left it silent (#918's review). Mutation:
+        // `covers_block` in `initialised_by` answering `true`; the first two
+        // go silent. Mutation: `in_part` in `built::write_effects` exempting
+        // every array of pointers again; the third goes silent, and so it
+        // does with a read asking a local kept whole only at a counted start
+        // (`at_start` in `reads_partly` excluding `Bytes(1..)`).
+        a_heap_block_of_more_than_sixty_four_pointers_written_at_one_element_is_doubted_where_read_at_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_heap_block_whose_size_is_not_a_whole_number_of_pointers_written_at_one_element_is_doubted_where_read_at_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_long_local_array_written_at_one_element_is_doubted_where_read_at_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block `realloc` grew holds what nothing wrote past the old size.
+        // Mutation: `Allocations::past_the_old_size` leaving the block as
+        // it is; the first two go silent. Mutation: `slot_read` asking the
+        // element alone; the third is doubted, since a join keeps no element
+        // while both sides are at their start.
+        a_block_grown_by_realloc_is_reported_where_read_past_its_old_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_grown_by_realloc_is_doubted_where_it_is_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_grown_by_realloc_on_one_arm_is_not_doubted_where_read_below_its_old_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block known only at least as large as the parameter's type may
+        // have held more, so a read past that is a doubt and not a proof.
+        // Mutation: take a lower bound for the old size as its size exactly;
+        // this is certain.
+        a_parameter_s_block_grown_by_realloc_is_doubted_where_read_past_its_believed_size: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Sixty-five pointers are past the most kept per element, so the
-        // block is kept whole. Found by review. Mutation: keep one more
-        // element than that; this is doubted.
+        // block is kept whole, and a store of one pointer into it, narrower
+        // than the block, may have missed the rest: the block is doubted
+        // where it is returned (#918's review). Mutation: a store into a
+        // block kept whole writes it whole again (`covers_block` in
+        // `initialised_by` answering `true`); this goes silent.
         a_heap_block_of_more_than_sixty_four_pointers_is_kept_whole: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and returned is asked of the blocks a
         // load that deep may name, as one copied into a local first is
@@ -2566,15 +2606,23 @@ cases! {
         a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_of_bytes_realloc_carried_from_a_block_nothing_wrote_names_the_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Where the bytes came from is said only where every place the read
-        // may reach names the same call. Mutation: take the first place's
-        // origin; the first names one copy. Mutation: record the copy's
-        // origin on a local doubted whatever it held before; the second names
-        // a copy that did not reach `loc[1]`. Mutation: ask places already
-        // written as well; the third loses its label, since `b` still names
-        // the copy into it (#752).
+        // may reach names the same call, and a copy names itself only where
+        // it covers the whole place from its start, byte for byte.
+        // Mutation: take the first place's origin; the first names one copy.
+        // Mutation: name the copy on a local it doubts whatever it covered;
+        // the second, the fourth and the fifth name a copy that did not reach
+        // the element read. Mutation: ask places already written as well;
+        // the third loses its label, since `b` still names the copy into it.
+        // Mutation: read a string copy as one byte for byte; the fourth names
+        // the `strncpy` that padded `arr[1]` with zeros. The same of a block,
+        // naming the copy whatever it covered, fails five cases of copies
+        // into blocks, `a_copy_shorter_than_its_destination_out_of_a_block_nothing_wrote_leaves_the_rest_in_doubt`
+        // among them (#752, #918's review).
         a_read_that_may_reach_bytes_two_copies_carried_names_neither_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_array_read_where_a_copy_did_not_reach_names_no_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_copy_of_one_byte_into_an_array_of_pointers_names_no_copy_where_another_element_is_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A pointer loaded out of recorded memory and stored carries what
         // that memory held and nothing more, as `*m = *b;` does, so the block
         // it names is asked at the return and not every block stored
@@ -5228,18 +5276,19 @@ cases! {
         // these any more**: answering `None` in the walk's arm or the
         // store's leaves nothing recorded, which a load believes as nothing
         // (ADR-0061), so it is louder, not silent; dropping either arm's
-        // fallback to `Known::handed_at_most` moves no case. Mutation: the
-        // walk's arm believes a value handed nothing at zero rather than as
-        // `AS_TYPED`; 23 cases report.
+        // fallback to `Known::handed_at_most` moves no case. Mutation:
+        // `Known::stored_width`, the one rule the walk and a store read since
+        // #804, believes a value handed nothing at zero rather than as
+        // `Width::AsTyped`; 27 cases report.
         a_narrow_pointer_a_call_wrote_copied_and_read_back_wider_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_narrow_pointer_a_call_wrote_stored_and_read_back_wider_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What a call handed nothing may have written into an escaped local
         // on one arm, beside a local's address on the other, keeps no belief
         // at the join and is believed as its type where it is stored, as
         // ADR-0017 believes an output, and read back in silence. Mutation:
-        // the store's arm for a callee-written value answers without
-        // `AS_TYPED`; this reports, since nothing recorded is nothing
-        // believed (ADR-0061).
+        // `Known::stored_width` answers a callee-written value with nothing
+        // recorded at zero rather than as `Width::AsTyped`; this reports,
+        // since nothing recorded is nothing believed (ADR-0061).
         a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_narrow_pointer_a_call_wrote_moved_to_another_local_and_copied_is_doubted_where_read_back_wider: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_narrow_pointer_a_call_wrote_on_one_arm_copied_and_read_back_wider_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

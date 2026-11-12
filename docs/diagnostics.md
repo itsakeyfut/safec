@@ -184,8 +184,11 @@ were copied here from `m`" or "carried here from `m`", the note cites the
 copy's or `realloc`'s clause in place of `malloc`'s, and the remedy is to write
 what was copied, never `calloc`, since the memory read may have been allocated
 with it already. Said only where every place the read may reach names the same
-call. A `realloc` doubted only because what it was handed may be null names
-none, since on that path it carried nothing. The record of where the bytes came
+call, and a copy names itself only where it covered the whole place from its
+start byte for byte: a string copy, which stops at a null and may pad with
+zeros, never does, and nor does a copy of part of the place. A `realloc`
+doubted only because what it was handed may be null names none, since on that
+path it carried nothing. The record of where the bytes came
 from is the place's own, beside whether it was written, and a write of the
 whole place clears it.
 
@@ -239,10 +242,17 @@ A heap block of a constant size of two to 64 pointers is written per element,
 as a local array is: `b = malloc(16); b[0] = x; return b;` is doubted, since
 `b[1]` reaches the caller unwritten, and a read of `b[1]` there is `SC0411`
 (#873, ADR-0081). A store at an element this check cannot name, `b[i] = x;`,
-writes the whole block, so a block filled in a loop is not doubted and one
-written once that way is not either; and a read through a pointer read out of
-memory, whose element is not known, is asked of the whole block, so a block
-written in part is doubted there at an element that was written.
+may have missed every element, so a block filled in a loop is doubted until a
+proof that the loop fills it (ADR-0094); and a read through a pointer read out
+of memory, whose element is not known, is asked of the whole block, so a block
+written in part is doubted there at an element that was written. **A block of
+any other size is kept whole**, and a store narrower than it may have missed
+the rest, so `b = malloc(520); b[0] = x; r = b[5];` is doubted, and so is
+`b[0]` read back: one record for the whole block cannot say which part a
+store wrote. A block `realloc` grew holds what nothing wrote past the old
+size (C17 7.22.3.5 p2): kept per slot where its size allows, a read there is
+`SC0411`, certain where the old size was known exactly and a doubt where it
+was only believed at least as large, as a parameter's is.
 
 A block handed back through a parameter, `*out = b;`, where the stored-into
 type holds pointers, is asked at the function's exit rather than at the
@@ -302,8 +312,10 @@ memory, a call, or a move counted in bytes, the write may have been of any
 element, and a read of one it may not have written is `SC0411` as a doubt
 (#639). So is a read at an element this check cannot name, `m[c]`, where some
 element may be unwritten. A longer array is kept whole: written in part by
-such a pointer, a read of it at its start is the same doubt. A write at an
-index this check cannot read writes the whole array. A local written on one
+such a pointer, a read of it is the same doubt wherever it is not known to
+be off its start, and so is a read of it after any store narrower than it,
+which may have missed the element read. A write at an index this check cannot
+read may have missed every element. A local written on one
 path into a join and not on the other is `SC0411` as a doubt where it is read
 after the join, `if (c()) m[0] = &x; q = m[0];` (#668). So is one after a
 loop that may run zero times, `while (i < n) m[0] = &x; q = m[0];` (#783),

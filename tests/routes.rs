@@ -205,9 +205,11 @@ enum Route {
     CallStored,
     /// A call handed a local holding a pointer to pointers through
     /// `char ***`, read two levels down, which is where what it was handed at
-    /// below its own level is asked (`Known::handed_contents_at_most`).
-    /// Width only, at a local. Mutation: `handed` bounds no
-    /// `handed_contents_at_most`; `width_call_deep_d0_both` fails.
+    /// below its own level is asked (`Known::handed_at_most`, below its
+    /// first level, which was `handed_contents_at_most` until #804). Width
+    /// only, at a local. Mutation: `handed` bounds
+    /// `handed_at_most` at its first level alone; `width_call_deep_d0_both`
+    /// fails.
     CallDeep,
     /// A `void ***` parameter grown by `realloc` and read two levels down
     /// through an `int ***`, against an `int ***` one: the bound `realloc`
@@ -420,6 +422,11 @@ fn known_fields() -> Vec<String> {
 /// exhaustive destructures of the join, the entry and a rebirth, and then
 /// here until it has a row. A row left for a field removed fails too, so the
 /// table is never a list of what used to be there.
+///
+/// **It checks names, not that a belief's rows reach the field.** Listing
+/// `stored_out` under `Belief::Fresh`, or `part_written` under
+/// `Belief::Width`, passes, measured in #918's review: which field a row
+/// exercises is not something this test can read off the matrix.
 #[test]
 fn every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption() {
     let declared = known_fields();
@@ -2301,6 +2308,7 @@ const WRITES_WHAT_IT_IS_HANDED: &str = "a call this check cannot read is believe
 const RETURNED_MAY_NAME: &str = "a return reports a block nothing wrote as certain where a read through memory this check cannot place only may name it, as ADR-0045's walk adds what is exposed below the first level (#922)";
 const RETURNED_ONE_ARM: &str = "a pointer given a call's result on one arm and a null on the other is doubted at its return, since the join keeps no relation between what it names and on which arm a block was written (#923); its hazard is silent by the belief that a call writes what it is handed, as on both arms";
 const ELEMENT_LOST: &str = "a store through a pointer read back out of memory names no element, so it may-writes every element of an array kept per element and writes none for certain, until a pointer loaded keeps its position (ADR-0094 rule 3, #893)";
+const GROWN_THROUGH_MEMORY: &str = "a block `realloc` grew keeps its slots, the ones past the old size unwritten, and a read through a pointer read out of memory names no slot, so it asks the grown tail as well (ADR-0081's limit, #918's review)";
 // The door questions' reasons (#801).
 const DEEP_WRITE_LEAVES: &str = "a write more than one dereference below the pointer it goes through is taken as landing where this check cannot place it, and so as leaving, into memory only this function reads too, which both spellings of it answer alike (ADR-0071 rule 2, #802)";
 const ESCAPED_SOURCE: &str = "the address a copy takes of its source local escapes it (ADR-0017), so what the local holds is doubted behind a later call with nothing freed (#345)";
@@ -2340,6 +2348,16 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         "fresh_element_slot_d0_both",
         Side::Control,
         Why::Cost(ELEMENT_LOST),
+    ),
+    (
+        "part_local_realloc_d2_both",
+        Side::Control,
+        Why::Cost(GROWN_THROUGH_MEMORY),
+    ),
+    (
+        "part_local_realloc_d2_one",
+        Side::Control,
+        Why::Cost(GROWN_THROUGH_MEMORY),
     ),
     ("caller_ret_d0_both", Side::Control, Why::Belief(MAY_FREE)),
     ("caller_ret_d0_one", Side::Control, Why::Belief(MAY_FREE)),

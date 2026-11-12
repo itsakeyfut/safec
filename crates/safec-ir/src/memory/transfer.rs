@@ -25,7 +25,7 @@ use super::parts::{
 };
 use super::store::{Landing, StoreKind, Strong};
 use super::{Carried, Carrier};
-use crate::library::{Callee, Leaves, Library, Makes};
+use crate::library::{Callee, Leaves, Library, Makes, Reach};
 use crate::reads::{dereferenced_in_element, dereferenced_in_terminator, derefs};
 
 /// What [`Allocations::land_contents`] is told of one write beyond where it
@@ -1384,6 +1384,105 @@ impl Allocations<'_> {
         self.unit.function(callee).hatch()
     }
 
+    /// **What `realloc` leaves past the old block's size**: those bytes are
+    /// indeterminate (C17 7.22.3.5 p2), and the new block is otherwise what
+    /// the old one held. Believed written whole, `p = malloc(8); *p = x; q =
+    /// realloc(p, 16); r = q[1];` read `q[1]` in silence (#918's review).
+    ///
+    /// **How large the old block was** is the least any block it may have
+    /// been handed is known or believed to be: an allocation's constant
+    /// size, exactly; a parameter's or a call's result, at least its type
+    /// (ADR-0060); and with no block recorded, what the pointer handed is
+    /// believed to point at. Exact sizes leave every slot past the old size
+    /// unwritten; a lower bound leaves them possibly so, since the old block
+    /// may have been larger.
+    ///
+    /// **Per slot where the new size allows**, 2 to `ELEMENTS_KEPT` pointers:
+    /// the slots below the old size keep what the old block's record says,
+    /// so `*q` of a block written before it grew is not doubted, and one the
+    /// old size ends inside may be either. **Doubted whole** anywhere else a
+    /// grown block may be, a new size this check cannot read among them. Not
+    /// touched where the new block is shown no larger than the old.
+    fn past_the_old_size(
+        &self,
+        function: &Function,
+        value: &mut Known,
+        site: Site,
+        result: LocalIdx,
+        handed: &Place,
+        carried: Option<Carried>,
+    ) {
+        let target = self.unit.target();
+        let pointer = u64::from(target.pointer_bits() / target.char().bits());
+        let old: Vec<Site> = if handed.projection.is_empty() {
+            value.sites_of(handed.local).collect()
+        } else {
+            Vec::new()
+        };
+        // The least the old block was, and whether that is its size exactly.
+        let (least, exact) = if old.is_empty() {
+            let believed = value.points_to[handed.local]
+                .believed()
+                .map(|width| {
+                    if width == u64::MAX {
+                        self.pointee_size(function, handed).unwrap_or(0)
+                    } else {
+                        width
+                    }
+                })
+                .unwrap_or(0);
+            (believed, false)
+        } else {
+            old.iter().fold((u64::MAX, true), |(least, exact), &old| {
+                match value.extent[Loc::Heap(old)] {
+                    Some(Extent::Exactly(size)) => (least.min(size), exact),
+                    Some(Extent::AtLeast(size)) => (least.min(size), false),
+                    None => (0, false),
+                }
+            })
+        };
+        let new = match value.extent[Loc::Heap(site)] {
+            Some(Extent::Exactly(size)) => Some(size),
+            Some(Extent::AtLeast(_)) | None => None,
+        };
+        if new.is_some_and(|new| new <= least) {
+            return;
+        }
+        let slots = new
+            .filter(|new| new % pointer == 0)
+            .map(|new| new / pointer)
+            .filter(|count| (2..=ELEMENTS_KEPT).contains(count))
+            .and_then(|count| usize::try_from(count).ok());
+        let Some(len) = slots.filter(|_| !value.points_to[handed.local].may_be_null) else {
+            value.written[site].doubt();
+            return;
+        };
+        // What the slots below the old size hold: the one old block's
+        // record, or what the new block already says where there are
+        // several or none.
+        let before = match old.as_slice() {
+            [old] => value.written[*old].clone(),
+            _ => value.written[site].clone(),
+        };
+        let past = if exact { Init::Unwritten } else { Init::Maybe };
+        let whole_slots = usize::try_from(least / pointer).unwrap_or(usize::MAX);
+        let mut inits = Inits::spread(past, len);
+        for slot in 0..len.min(whole_slots) {
+            inits.set(slot, before.at(u64::try_from(slot).ok()));
+        }
+        if whole_slots < len && least % pointer != 0 {
+            inits.set(whole_slots, Init::Maybe);
+        }
+        value.written[site] = PlaceInit::slots_of(inits);
+        // **Where its bytes came from is this call**, below the old size
+        // and past it alike, which the note about a `realloc` says of both
+        // (C17 7.22.3.5 p2).
+        if let Some(carried) = carried {
+            value.written[site].carried_by(carried);
+        }
+        value.points_to[result].site_element = Some(0);
+    }
+
     /// Which locals a call this check cannot read writes its result into,
     /// for [`Self::opaque_results`].
     ///
@@ -2253,8 +2352,8 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        // **A site's elements, `Known::written`, climb as its `init`
-        // does**, two steps an element at most, and at most `ELEMENTS_KEPT`
+        // **A site's slots in `Known::written` climb as its whole record
+        // does**, two steps a slot at most, and at most `ELEMENTS_KEPT`
         // elements a site, and the table goes from kept to dropped once:
         // `2 * ELEMENTS_KEPT + 1` a site. Where a pointer points among them,
         // `Held::site_element`, goes from known to not once a local, which
@@ -4063,6 +4162,14 @@ impl Analysis for Allocations<'_> {
                         length: self.copied_pointers(*callee, arguments),
                         bytes: self.constant_argument(*callee, arguments, 2),
                         source: arguments.get(1),
+                        // A source read as far as a string runs is a string
+                        // copy, and the table says which of its arguments it
+                        // reads so.
+                        byte_for_byte: self.library(*callee).is_some_and(|row| {
+                            !row.reaches
+                                .iter()
+                                .any(|(_, reach)| matches!(reach, Reach::String))
+                        }),
                     },
                 );
             }
@@ -4688,6 +4795,7 @@ impl Analysis for Allocations<'_> {
                     value.written[site].carried_by(carried);
                 }
             }
+            self.past_the_old_size(function, value, site, result, handed, carried);
         }
         // **`realloc`'s new object holds what the old one held**, C17 7.22.3.5
         // p2, so what a pointer stored in the old one may hold, the new one
@@ -4725,8 +4833,9 @@ impl Analysis for Allocations<'_> {
                     realloced: _,
                     // The new block is fresh, or doubted where the old one
                     // may not have been written (#724) or it may have been
-                    // handed a null (#708), above; kept per slot where its
-                    // size allows.
+                    // handed a null (#708), above; kept per slot where it
+                    // grew to a size that allows it, its slots past the old
+                    // size unwritten (`Self::past_the_old_size`).
                     written: _,
                     // Not touched by `realloc`'s own arms.
                     pending: _,

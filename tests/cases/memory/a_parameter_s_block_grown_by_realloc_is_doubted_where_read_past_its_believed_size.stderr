@@ -1,0 +1,15 @@
+error[SC0411]: this may read a pointer out of memory before anything was assigned to it
+   ╭─[ a_parameter_s_block_grown_by_realloc_is_doubted_where_read_past_its_believed_size.c:9:10 ]
+   │
+ 7 │     int **q = realloc(p, 16);
+   │               ───────┬──────  
+   │                      ╰──────── the bytes were carried here from `p`
+   │ 
+ 9 │     int *r = q[1];
+   │          ────┬───  
+   │              ╰───── read here
+───╯
+  = note: C17 7.22.3.5 p2 gives the new object the old one's contents and leaves any bytes past the old size indeterminate, so bytes nothing wrote in the old one are indeterminate in the new, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path before it is read

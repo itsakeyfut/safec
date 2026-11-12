@@ -49,7 +49,10 @@ Chosen: the byte offset and the per-slot record, by the author.
    - `Bytes(a)` joined with `Bytes(b)`, `a != b`, is `Moved` where both are
      non-zero, and `Unknown` otherwise.
    - A move by a constant counts the pointee's size. A move the check cannot
-     compute, or one that overflows, is `Unknown`, never `Bytes`.
+     compute, or one that overflows, is `Unknown`, never `Bytes`, except a
+     nonzero constant from the start whose pointee has no size this check
+     reads, which is `Moved`: certainly off the start, by a distance not
+     counted.
    - `At` replaces `Offset`. **`Held::element` and `Held::site_element`
      stay fields of their own**, by the author's decision on #918: they
      carry which element a value read out of one local names (#706),

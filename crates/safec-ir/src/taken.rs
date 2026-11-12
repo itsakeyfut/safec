@@ -11,13 +11,11 @@ use crate::ir::{Element, Function, Operation, Projection, Rvalue};
 
 /// Every local whose own address is taken anywhere in `function`: what
 /// `memory::assigned` does not watch, since a write through that address is not
-/// followed by `memory::assigned`, and what the memory check's [`Known::init`] asks by
+/// followed by `memory::assigned`, and what the memory check's `Known::written` asks by
 /// name instead, since it does follow one. One answer for both, so that a
 /// local whose address is taken is asked by that check alone (#640); one
 /// whose address is never taken is asked there first, and by that check
 /// only for its doubt (ADR-0075).
-///
-/// [`Known::init`]: crate::memory
 pub(crate) fn address_taken(function: &Function) -> Bits<LocalIdx> {
     let mut taken = Bits::new(function.locals().len());
     for block in function.blocks() {

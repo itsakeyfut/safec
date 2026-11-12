@@ -1,11 +1,14 @@
 error[SC0411]: `*n` may be read before anything was assigned to it
    ╭─[ a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:7:10 ]
    │
+ 6 │     memcpy(n, m, 8);
+   │     ───────┬───────  
+   │            ╰───────── the bytes were copied here from `m`
  7 │     int *r = *n; if (!r) return 0;
    │          ───┬──  
    │             ╰──── read here
 ───╯
-  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: C17 7.24.2.1 to 7.24.3.1 copy the source's characters into the destination, so bytes nothing wrote there are indeterminate where they land, and Annex J.2 lists using that value as undefined
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: assign it on every path before it is read

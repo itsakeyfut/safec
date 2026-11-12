@@ -45,7 +45,7 @@ Chosen: replace where certain, by the author.
      and not a parameter's site, an opaque call's result, or a `realloc`'s
      result.
 
-   `Known::contents` is kept per slot for this.
+   `Known::contents` was to be kept per slot for this; it is not, see below.
 
    **Taken in the narrow form, by the author** (#656): `contents` stays per
    site, and a store replaces it only where the block is one slot, so the
@@ -67,7 +67,12 @@ Chosen: replace where certain, by the author.
    for the call route: without `array_edge`,
    `a_local_array_reached_by_a_call_through_a_moved_pointer_stored_in_an_allocation_is_doubted`
    goes silent. Retiring them waits on that boundary belief, not on this
-   record.
+   record. **And a place kept whole is written for certain only by a store
+   as wide as it** (#918's review): once ADR-0092 counted positions, a store
+   of one pointer into a block of 65 wrote the whole block, and `b[5]` was
+   read in silence where an unknown position had doubted it. The same holds
+   of a local array kept whole, and of a block `realloc` grew, whose slots
+   past the old size are unwritten.
 4. **Precision for a loop that fills a block comes back only through a
    proof.** It does not come back through the store believing itself whole.
    Until such a proof exists, a block filled in a loop is doubted where it is

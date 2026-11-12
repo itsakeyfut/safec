@@ -608,7 +608,10 @@ fn solved<A: Analysis>(
                 && analysis.leaves_after_a_turn(each.head()).is_some_and(|proof| {
                     // A proof for another loop's head says nothing of this
                     // one, and believing it would drop this loop's zero-turn
-                    // path in silence.
+                    // path in silence. **No test reaches this panic**: the
+                    // one analysis that answers reads its proof out of a
+                    // table indexed by the head it is asked about, and no
+                    // code outside `runs` can build one.
                     assert_eq!(
                         proof.head(),
                         each.head(),

@@ -13,9 +13,9 @@ use crate::source::Span;
 
 use super::allocations::Allocations;
 use super::built::replaced_by;
-use super::index::{Idx, LocalIdx, Site, Table};
+use super::index::{Idx, Loc, LocalIdx, Site, Table};
 use super::known::{Known, WrittenBy};
-use super::parts::{At, Extent, Init};
+use super::parts::{At, Extent, Held, Init};
 use super::store::{Certain, Landing, StoreKind, Strong, written_alone};
 use super::transfer::CopiedPointers;
 use super::{Carried, Carrier};
@@ -35,7 +35,9 @@ pub(super) enum Wrote<'a> {
     },
     /// A library copy handed `dest` first and `source` second, which
     /// exposes `reach`, and whose length covers the pointers it writes as
-    /// `length` says.
+    /// `length` says. `byte_for_byte` where it copies `bytes` of the source
+    /// as they are, `memcpy` and `memmove`, and not a string copy, which
+    /// stops at a null and may pad with zeros (C17 7.24.2.3 to 7.24.3.1).
     Copy {
         dest: Option<&'a Operand>,
         reach: Vec<Site>,
@@ -43,6 +45,7 @@ pub(super) enum Wrote<'a> {
         length: CopiedPointers,
         bytes: Option<u64>,
         source: Option<&'a Operand>,
+        byte_for_byte: bool,
     },
 }
 
@@ -119,6 +122,24 @@ impl Allocations<'_> {
                 // such a store, and
                 // `a_pointer_read_out_of_fresh_memory_stored_and_read_back_is_reported_once`
                 // gains two. See ADR-0057.
+                // **A store covers a block kept whole only where it is as
+                // wide as the block**, an allocation of a constant size: any
+                // narrower store leaves bytes of it as they were, and the
+                // block's one record cannot say which. Written whole, `b =
+                // malloc(800); b[0] = x; r = b[5];` read `b[5]` in silence
+                // once a counted position proved it inside the block (#703),
+                // where an unknown position had doubted it. A block of no
+                // constant size is written whole as before: any read past its
+                // start is doubted as one that may not fit it. See ADR-0094
+                // rule 3.
+                let width = self
+                    .unit
+                    .place_ty(function, place)
+                    .and_then(|ty| self.unit.size_of(ty));
+                let covers_block = |value: &Known, site: Site| match value.extent[Loc::Heap(site)] {
+                    Some(Extent::Exactly(size)) => width.is_some_and(|width| width >= size),
+                    Some(Extent::AtLeast(_)) | None => true,
+                };
                 if derefs(place) > 0 {
                     let held = &value.points_to[pointer];
                     // **And a local it may land in**, the local its edges name
@@ -152,8 +173,16 @@ impl Allocations<'_> {
                                 // **At an element not known, a may-write of
                                 // a block kept per slot**: it may have
                                 // missed every slot (#893, ADR-0094 rule 3).
+                                // **And of a block kept whole, by a store
+                                // narrower than it**, which may have missed
+                                // the rest (`covers_block`).
                                 let kept = value.written[at.site()].slots().is_some();
-                                if site_element.is_none() && kept {
+                                let may_have_missed = if kept {
+                                    site_element.is_none()
+                                } else {
+                                    !covers_block(value, at.site())
+                                };
+                                if may_have_missed {
                                     value.written[at.site()].may_write();
                                 } else if !at_element {
                                     value.certainly_written(at);
@@ -254,8 +283,10 @@ impl Allocations<'_> {
                         // `b[1]` read in silence (#893, ADR-0094 rule 3).
                         // #726's decision stands for a block kept whole.
                         if let Some(at) = certain {
-                            let unplaced = value.points_to[place.local].site_element.is_none()
-                                && value.written[at.site()].slots().is_some();
+                            let kept = value.written[at.site()].slots().is_some();
+                            let unplaced = (value.points_to[place.local].site_element.is_none()
+                                && kept)
+                                || (!kept && !covers_block(value, at.site()));
                             if unplaced {
                                 value.written[at.site()].may_write();
                                 uncertain = true;
@@ -289,6 +320,7 @@ impl Allocations<'_> {
                 length,
                 bytes,
                 source,
+                byte_for_byte,
             } => {
                 // **And a local it may write past the end of**, as a store
                 // through the same pointer marks it: lost, and in doubt where
@@ -535,11 +567,16 @@ impl Allocations<'_> {
                                 carried = true;
                             } else if source_maybe {
                                 value.written[site].doubt();
-                                // The copy's only where the block was
-                                // written before it: one that may already
-                                // have been unwritten may be so for its
-                                // own reason (#752).
-                                if was.whole() == Init::Written {
+                                // **Said to be the copy's only where it
+                                // covers the whole block from its start**,
+                                // so that every byte the read may reach came
+                                // from it: a string copy that stops at a
+                                // null, or a copy of one byte, reached part
+                                // of the block, and a slot it never reached
+                                // was named as carried by it (#752, #918's
+                                // review). Nor a string copy, whose bytes
+                                // past a null are zeros it wrote.
+                                if alone && covers && byte_for_byte {
                                     value.written[site].carried_by(copied);
                                 }
                                 carried = true;
@@ -683,9 +720,15 @@ impl Allocations<'_> {
                             value.written[local].set(Init::Unwritten);
                             value.written[local].carried_by(copied);
                         } else if source_maybe {
-                            let was = value.written[local].whole();
                             value.written[local].doubt();
-                            if was == Init::Written {
+                            // Said to be the copy's only where it covers the
+                            // whole local from its start, as into a block.
+                            if lands.len() == 1
+                                && lands_in_no_block
+                                && at_start
+                                && covers
+                                && byte_for_byte
+                            {
                                 value.written[local].carried_by(copied);
                             }
                         }
@@ -749,6 +792,24 @@ impl Allocations<'_> {
     /// measured: a local loses its sites where it is made lost, and no
     /// program found gives a foreign pointer a fresh site that an exposure
     /// has not already cleared.
+    /// The slot of a block a read through `through` lands in: the element
+    /// it names, or **where that is not known, the slot its counted
+    /// position is the start of**. A join of a block kept per slot with one
+    /// that is not leaves no element, while both sides are at `Bytes(0)`:
+    /// read as no element, `m = c ? realloc(m, 16) : m; r = *m;` asked
+    /// every slot of the grown block and doubted `*m` (#918's review). A
+    /// position counts bytes from the start of the object the value names
+    /// (ADR-0092 rule 1), so it is the slot where it is a whole number of
+    /// pointers; anywhere else it names none.
+    fn slot_read(&self, through: &Held) -> Option<u64> {
+        let target = self.unit.target();
+        let pointer = u64::from(target.pointer_bits() / target.char().bits());
+        through.site_element.or(match through.offset {
+            At::Bytes(at) if at % pointer == 0 => Some(at / pointer),
+            At::Bytes(_) | At::Moved | At::Unknown => None,
+        })
+    }
+
     pub(super) fn reads_fresh(&self, function: &Function, source: &Place, value: &Known) -> bool {
         let through = &value.points_to[source.local];
         source.projection.as_slice() == [Projection::Deref]
@@ -757,7 +818,7 @@ impl Allocations<'_> {
             && !(through.beyond().unrecorded_address() || through.inner_address)
             && through.sites().all(|site| {
                 value
-                    .site_init_at(site, through.site_element)
+                    .site_init_at(site, self.slot_read(through))
                     .is_unwritten()
             })
             && through
@@ -823,7 +884,7 @@ impl Allocations<'_> {
         // one. Mutation: ask at `At::Bytes(0)` alone again;
         // `a_char_buffer_whose_address_a_copy_puts_two_levels_down_is_doubted_where_read`
         // goes silent.
-        let at_start = !matches!(through.offset, At::Moved | At::Bytes(1..));
+        let at_start = !matches!(through.offset, At::Moved);
         let maybe = |local: LocalIdx| value.may_be_unwritten(local, through.element, at_start);
         // **Any block it may read that may still be fresh is enough**,
         // fresh or maybe so, beside blocks that were written: `p = a; if (c)
@@ -832,7 +893,7 @@ impl Allocations<'_> {
         // first, and asks every block.
         let site_maybe = |site: Site| {
             value
-                .site_init_at(site, through.site_element)
+                .site_init_at(site, self.slot_read(through))
                 .may_be_unwritten()
         };
         source.projection.as_slice() == [Projection::Deref]

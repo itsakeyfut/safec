@@ -1,13 +1,14 @@
-error[SC0413]: this lets a pointer leave that may not point at the start of an object
-   ╭─[ a_pointer_stored_on_one_arm_beside_an_int_on_the_other_the_other_way_round_is_doubted_how_wide.c:7:41 ]
+error[SC0411]: `*box` may be read before anything was assigned to it
+   ╭─[ a_pointer_stored_on_one_arm_beside_an_int_on_the_other_the_other_way_round_is_doubted_how_wide.c:8:10 ]
    │
- 7 │     if (c) { *box = malloc(4); } else { *ib = 7; }
-   │                                         ───┬───  
-   │                                            ╰───── stored here
+ 8 │     int *s = *box;
+   │          ────┬───  
+   │              ╰───── read here
 ───╯
+  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: let a pointer leave as a `void *` only at the start of an object
+  = help: assign it on every path before it is read
 error[SC0412]: this may reach outside the object `s` points at
     ╭─[ a_pointer_stored_on_one_arm_beside_an_int_on_the_other_the_other_way_round_is_doubted_how_wide.c:10:5 ]
     │

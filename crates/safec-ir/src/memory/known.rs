@@ -285,11 +285,10 @@ pub(super) struct Known {
     /// `m[0] = &x; q = m[1];` read an `m[1]` nothing wrote, in silence, since
     /// the write to `m[0]` cleared the one record `m` had. A write through a
     /// pointer whose element is known writes that element alone; one whose
-    /// element is not known writes the whole array where `main` did, and where
-    /// only #639's rule tied the write to the array is a write that may have
-    /// missed each element, [`Init::may_write`], since no element is then
-    /// certainly unwritten and each may still be. Unwritten again at
-    /// `StorageLive`. See `built::write_effects` and ADR-0057.
+    /// element is not known may have missed each element, [`Init::may_write`],
+    /// since no element is then certainly unwritten and each may still be
+    /// (ADR-0094 rule 3). Unwritten again at `StorageLive`. See
+    /// `built::write_effects` and ADR-0057.
     ///
     /// **[`Init::Maybe`] for an element that may be unwritten on some path,
     /// rather than a mark on the array** (#668), so that `if (c()) m[0] = &x;
@@ -304,11 +303,11 @@ pub(super) struct Known {
     /// kept whole. **A write of the whole block reaches every slot**, as
     /// [`PlaceInit`] says, where it once dropped the slots beside a stamp of
     /// the whole they were made from, which fifteen writers had to pair by
-    /// hand (#894). A write through a
-    /// pointer whose element is not known writes the whole block, as one
-    /// into a local array does (`built::write_effects`), so `b[i] = x;`
-    /// written once is a stated limit. Boxed, so a block kept whole costs a
-    /// pointer. See ADR-0081.
+    /// hand (#894). A write through a pointer whose element is not known may
+    /// have missed every slot (ADR-0094 rule 3), and a store narrower than a
+    /// block kept whole may have missed the rest of it (#918's review). Kept
+    /// inline, whole or per slot, with where its unwritten bytes came from
+    /// (#752). See ADR-0081.
     pub(super) written: Table<Loc, PlaceInit>,
     /// What has been read through a pointer since the last sequence point.
     ///
@@ -639,6 +638,9 @@ impl Known {
             // Cleared where the next lifetime begins (`Self::storage_live`).
             exposed_in_part: _,
             stored_in_part: _,
+            // These four are about a site, not a local: what left the
+            // function and what a block was held as are facts about the
+            // block, which a local's lifetime ends nothing of.
             stored_out: _,
             left_at: _,
             held_levels: _,
@@ -2559,8 +2561,10 @@ impl Known {
     /// Whether `local` may still be unwritten where a read reaches it, so
     /// that the read is a doubt: the element read may be unwritten, or it is
     /// not known and some element may be. A longer array, kept whole, and a
-    /// local that is no array ask this at their start only. See
-    /// [`Self::written`] and [`Self::written`].
+    /// local that is no array ask this only where the read is not known to
+    /// be off their start (`at_start`), since a counted position inside a
+    /// whole array may read an element nothing wrote (#918's review). See
+    /// [`Self::written`].
     ///
     /// **An element nobody can name may be any of them**, whether or not the
     /// array was written in part: `m[c]` after `m[1] = &x;` may read `m[0]`,

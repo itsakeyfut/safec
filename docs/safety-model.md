@@ -210,6 +210,11 @@ The limits, each a doubt the reader sees unless it says otherwise:
   ([ADR-0094](adr/0094-a-store-replaces-a-slot-only-where-it-certainly-lands-there-and-is-a-may-write-where-its-position-is-unknown.md),
   rules 3 and 4). This replaces ADR-0081's silence, where such a store wrote
   the whole block.
+* A block or local array kept whole, more than 64 pointers or a size that is
+  no whole number of them, is written for certain only by a store as wide as
+  it; any narrower store may have missed the rest, so a read anywhere in it
+  after one is doubted, the element the store wrote included. A block
+  `realloc` grew is doubted, or reported, where it is read past the old size.
 * A store replaces what a block holds only where the block is one pointer
   wide and made once, so a pointer freed and then overwritten in a block of
   several slots is still doubted where the block is asked (ADR-0094 rule 1).

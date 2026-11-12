@@ -33,7 +33,7 @@
 //!
 //! **Every other read some paths assigned is the memory check's doubt**, as
 //! it is for a local whose address is taken: `report::unwritten_read` asks
-//! `Known::init`, which is `Maybe` there, where nothing here was said at the
+//! `Known::written`, which is `Maybe` there, where nothing here was said at the
 //! caret. So the flag set beside the assignment, a test made twice and a
 //! read on a later turn of a loop are doubted, as programs C may define; the
 //! edge above is what this analysis adds, a place to say why. See ADR-0075.

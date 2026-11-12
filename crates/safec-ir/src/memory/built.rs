@@ -475,8 +475,13 @@ pub(super) fn write_effects(
                 if let (Some(width), Some(size)) = (width, size) {
                     // Narrower than the local, a copy of nothing included: a
                     // test of where it ends in a pointer let `memcpy(&p, &x,
-                    // 0)` write `p` whole. Found by review.
-                    let in_part = !(holds_pointers && array) && width < size;
+                    // 0)` write `p` whole. Found by review. **An array of
+                    // pointers too, unless it is kept per element**, whose
+                    // elements the arms below write: one longer than
+                    // `ELEMENTS_KEPT` is kept whole, and `a[0] = &y;` wrote
+                    // all of it, so `a[5]` was read in silence once a counted
+                    // position proved it inside (#703, #918's review).
+                    let in_part = !(holds_pointers && array && kept) && width < size;
                     if in_part {
                         return Some((each, ArrayWrite::Maybe));
                     }

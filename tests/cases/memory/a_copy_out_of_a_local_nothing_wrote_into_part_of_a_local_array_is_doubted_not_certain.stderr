@@ -1,14 +1,11 @@
 error[SC0411]: this may read a pointer out of memory before anything was assigned to it
    ╭─[ a_copy_out_of_a_local_nothing_wrote_into_part_of_a_local_array_is_doubted_not_certain.c:7:10 ]
    │
- 6 │     memcpy(a, &p, 8);
-   │     ────────┬───────  
-   │             ╰───────── the bytes were copied here
  7 │     int *r = a[1];
    │          ────┬───  
    │              ╰───── read here
 ───╯
-  = note: C17 7.24.2.1 to 7.24.3.1 copy the source's characters into the destination, so bytes nothing wrote there are indeterminate where they land, and Annex J.2 lists using that value as undefined
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: assign it on every path before it is read
