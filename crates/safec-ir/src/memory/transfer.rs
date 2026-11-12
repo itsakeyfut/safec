@@ -2687,7 +2687,35 @@ impl Analysis for Allocations<'_> {
                     // And what a pointer read out of memory may be, which the
                     // sites above do not name: `*b = *a;` stores in `b` what
                     // `a` held. See ADR-0040.
-                    if let Rvalue::Use(written) = &operation.value {
+                    //
+                    // **Not for a local a load out of recorded memory gave
+                    // its sites**, which already name what that memory held,
+                    // as `*m = *b;` carries exactly what `b`'s blocks hold:
+                    // `t = *b; *m = t;` carried everything stored anywhere
+                    // besides, `y`'s block among it a level too high, and a
+                    // block written before it was returned through `*m` was
+                    // reported as one nothing wrote (#920). Only where the
+                    // load is believed to reach its record alone, the
+                    // question a write through it asks (#726), and names a
+                    // site; a pointer lost, or read out of a caller's memory
+                    // or a slot a free or a lost value may have left
+                    // something in, still carries everything stored. **No
+                    // case holds that condition, measured**: what the load
+                    // carries of those marks is poured with it anyway
+                    // (`Cell::poured`), and a load out of caller memory
+                    // stored and read back after a call is doubted either
+                    // way. Kept, as that question keeps its own unguarded
+                    // marks, because it can only add a doubt.
+                    let recorded_load = matches!(
+                        &operation.value,
+                        Rvalue::Use(Operand::Copy(source))
+                            if source.projection.is_empty()
+                                && value.points_to[source.local]
+                                    .beyond()
+                                    .believed_to_reach_only_its_edges()
+                                && value.points_to[source.local].holds_a_site()
+                    );
+                    if let (Rvalue::Use(written), false) = (&operation.value, recorded_load) {
                         carried.extend(self.read_out(function, written, value));
                     }
                     // **A store of more than one dereference lands in what the

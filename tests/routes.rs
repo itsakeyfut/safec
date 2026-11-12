@@ -2385,16 +2385,6 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Belief(MAY_FREE),
     ),
     (
-        "unreplaced_realloc_d2_both",
-        Side::Control,
-        Why::Cost(OLD_BLOCK),
-    ),
-    (
-        "unreplaced_realloc_d2_one",
-        Side::Control,
-        Why::Cost(OLD_BLOCK),
-    ),
-    (
         "part_pointer_ret_d0_both",
         Side::Control,
         Why::Belief(VOID_RESULT),
@@ -2556,16 +2546,6 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
     ),
     (
         "returned_realloc_d2_one",
-        Side::Control,
-        Why::Cost(RETURNED_WRITTEN),
-    ),
-    (
-        "returned_restored_d1_both",
-        Side::Control,
-        Why::Cost(RETURNED_WRITTEN),
-    ),
-    (
-        "returned_restored_d1_one",
         Side::Control,
         Why::Cost(RETURNED_WRITTEN),
     ),

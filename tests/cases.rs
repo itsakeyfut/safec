@@ -2561,6 +2561,12 @@ cases! {
         // its label. Let `realloc`'s record none; the second does.
         a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_of_bytes_realloc_carried_from_a_block_nothing_wrote_names_the_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer loaded out of recorded memory and stored carries what
+        // that memory held and nothing more, as `*m = *b;` does, so the block
+        // it names is asked at the return and not every block stored
+        // anywhere (#920). Mutation: let the store carry everything stored
+        // for such a load again; this is reported.
+        a_block_written_before_its_pointer_passes_through_another_block_is_returned_without_a_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `realloc` of a pointer that may be null copies nothing on the path
         // where it is, so what it returns may be indeterminate there (#708,
         // ADR-0093 rule 5); the third, a written block on every path, is not
