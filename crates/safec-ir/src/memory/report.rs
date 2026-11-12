@@ -2808,9 +2808,22 @@ pub(super) fn loaded_indeterminate(
                 Some(local),
             )
         };
+        // **Where the bytes came from, where a copy or a `realloc` carried
+        // them**: asked of each place read that may be unwritten, and said
+        // only where every one names the same call, since a read that may
+        // reach two such places has no one source to name (#752).
+        let mut origins = blocks_read(&place, known)
+            .into_iter()
+            .filter(|&at| known.written[at].whole() != Init::Written)
+            .map(|at| known.written[at].carried());
+        let carried = origins
+            .next()
+            .flatten()
+            .filter(|first| origins.all(|other| other == Some(*first)));
         let kind = Kind::IndeterminateLoad {
             reaches_allocation,
             reaches_local,
+            carried,
         };
         let root = Place::local(local);
         let conclusion = if maybe || doubt_only {

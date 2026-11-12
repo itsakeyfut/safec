@@ -18,6 +18,7 @@ use super::known::{Known, WrittenBy};
 use super::parts::{At, Extent, Init};
 use super::store::{Certain, Landing, StoreKind, Strong, written_alone};
 use super::transfer::CopiedPointers;
+use super::{Carried, Carrier};
 
 /// What [`Allocations::initialised_by`] is told of one write.
 pub(super) enum Wrote<'a> {
@@ -452,6 +453,18 @@ impl Allocations<'_> {
                 // Whether the destination may land in no block, nor anywhere
                 // code this check cannot read can name: a local is the only
                 // place it writes, so it alone takes what the copy carries.
+                // **What it carried, for the report about a read of it**
+                // (#752): this copy, and the local it read through.
+                let copied = Carried {
+                    at: span,
+                    from: match source {
+                        Some(Operand::Copy(source)) if source.projection.is_empty() => {
+                            Some(source.local)
+                        }
+                        Some(Operand::Copy(_) | Operand::Constant(_)) | None => None,
+                    },
+                    by: Carrier::Copy,
+                };
                 let lands_in_no_block = may_land
                     .as_ref()
                     .is_none_or(|(blocks, _, _, _)| blocks.is_empty());
@@ -518,9 +531,17 @@ impl Allocations<'_> {
                                 && matches!(length, CopiedPointers::Whole)
                             {
                                 value.written[site].set(Init::Unwritten);
+                                value.written[site].carried_by(copied);
                                 carried = true;
                             } else if source_maybe {
                                 value.written[site].doubt();
+                                // The copy's only where the block was
+                                // written before it: one that may already
+                                // have been unwritten may be so for its
+                                // own reason (#752).
+                                if was.whole() == Init::Written {
+                                    value.written[site].carried_by(copied);
+                                }
                                 carried = true;
                             }
                         }
@@ -660,8 +681,13 @@ impl Allocations<'_> {
                             && matches!(length, CopiedPointers::Whole)
                         {
                             value.written[local].set(Init::Unwritten);
+                            value.written[local].carried_by(copied);
                         } else if source_maybe {
+                            let was = value.written[local].whole();
                             value.written[local].doubt();
+                            if was == Init::Written {
+                                value.written[local].carried_by(copied);
+                            }
                         }
                     }
                 }

@@ -1952,7 +1952,7 @@ mod too_long {
         let mut unit =
             TranslationUnit::new(Target::from_triple("x86_64-pc-windows-msvc").expect("known"));
         let finding = a_finding(&mut sources, &mut unit, false);
-        let diagnostic = memory_finding(&sources, &finding, None, &[]).expect("a diagnostic");
+        let diagnostic = memory_finding(&sources, &finding, None, None, &[]).expect("a diagnostic");
 
         assert_eq!(
             diagnostic.code().map(|code| code.to_string()).as_deref(),
@@ -1976,7 +1976,7 @@ mod too_long {
         let mut unit =
             TranslationUnit::new(Target::from_triple("x86_64-pc-windows-msvc").expect("known"));
         let finding = a_finding(&mut sources, &mut unit, true);
-        let diagnostic = memory_finding(&sources, &finding, None, &[]).expect("a diagnostic");
+        let diagnostic = memory_finding(&sources, &finding, None, None, &[]).expect("a diagnostic");
         let concluded = Concluded {
             function: finding.function,
             conclusion: finding.conclusion,
@@ -2028,7 +2028,7 @@ mod unassigned {
             made: None,
             unproven: None,
         };
-        let diagnostic = memory_finding(&sources, &finding, name, &[]).expect("a diagnostic");
+        let diagnostic = memory_finding(&sources, &finding, name, None, &[]).expect("a diagnostic");
         (
             diagnostic
                 .code()
@@ -2075,7 +2075,8 @@ mod unassigned {
             made: None,
             unproven: None,
         };
-        let diagnostic = memory_finding(&sources, &finding, Some("p"), &[]).expect("a diagnostic");
+        let diagnostic =
+            memory_finding(&sources, &finding, Some("p"), None, &[]).expect("a diagnostic");
         assert_eq!(
             diagnostic.code().map(|code| code.to_string()).as_deref(),
             Some("SC0411")
@@ -2173,6 +2174,7 @@ mod unassigned {
             Kind::IndeterminateLoad {
                 reaches_allocation: true,
                 reaches_local: false,
+                carried: None,
             },
             Conclusion::Unsafe,
         );

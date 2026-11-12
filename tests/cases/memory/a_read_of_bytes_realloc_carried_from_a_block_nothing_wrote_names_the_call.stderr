@@ -1,0 +1,13 @@
+error[SC0411]: `*n` is read before anything was assigned to it
+   ╭─[ a_read_of_bytes_realloc_carried_from_a_block_nothing_wrote_names_the_call.c:7:10 ]
+   │
+ 6 │     int **n = realloc(m, 16); if (!n) return 0;
+   │               ───────┬──────  
+   │                      ╰──────── the bytes were carried here from `m`
+ 7 │     int *r = *n;
+   │          ───┬──  
+   │             ╰──── read here
+───╯
+  = note: C17 7.22.3.5 p2 gives the new object the old one's contents and leaves any bytes past the old size indeterminate, so bytes nothing wrote in the old one are indeterminate in the new, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = help: write the block before handing it to `realloc`

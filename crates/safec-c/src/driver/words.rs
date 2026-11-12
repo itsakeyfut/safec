@@ -9,7 +9,7 @@ use crate::diagnostics::{Code, Diagnostic, Label, Remedy};
 use crate::safety::SafetyLevel;
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::{Between, Promise};
-use safec_ir::memory::{self, Departure, Kind, LostReason, Unproven};
+use safec_ir::memory::{self, Carrier, Departure, Kind, LostReason, Unproven};
 use safec_ir::nullability::{self, Asked};
 use safec_ir::source::{SourceMap, Span};
 
@@ -296,11 +296,13 @@ fn said(name: Option<&str>, unnamed: &str, named: impl FnOnce(&str) -> String) -
 /// the exception, named as `*name` after the pointer it is read through.
 ///
 /// `lengths` is every parameter length a definition evaluates on entry, for
-/// [`unordered`].
+/// [`unordered`]. `source` is the name of the local a copy or a `realloc`
+/// read the bytes it carried through, where the finding says one did.
 pub(super) fn memory_finding(
     sources: &SourceMap,
     finding: &memory::Finding,
     name: Option<&str>,
+    source: Option<&str>,
     lengths: &[Span],
 ) -> Option<Diagnostic> {
     let unordered = unordered(sources, finding.freed, finding.at, lengths);
@@ -895,9 +897,13 @@ pub(super) fn memory_finding(
         // Reported where it is read, so the name is the local it is read
         // through, and the slot is `*name`. See ADR-0057.
         // `calloc` is advice only where the memory may be an allocation.
+        // **And not where a copy or a `realloc` carried the bytes**: what to
+        // change is the memory they came from, and the memory read may have
+        // been allocated with `calloc` already (#752).
         (
             Kind::IndeterminateLoad {
                 reaches_allocation: allocation,
+                carried,
                 ..
             },
             Conclusion::Unsafe,
@@ -910,10 +916,11 @@ pub(super) fn memory_finding(
                 |name| format!("`*{name}` is read before anything was assigned to it"),
             ),
             "read here",
-            if allocation {
-                "assign to it before reading it, or allocate with `calloc`"
-            } else {
-                "assign to it before reading it"
+            match carried.map(|carried| carried.by) {
+                Some(Carrier::Copy) => "write what the copy reads before copying it",
+                Some(Carrier::Realloc) => "write the block before handing it to `realloc`",
+                None if allocation => "assign to it before reading it, or allocate with `calloc`",
+                None => "assign to it before reading it",
             },
         ),
         // The doubt beside it, read by name: a local written on one path
@@ -1250,14 +1257,49 @@ pub(super) fn memory_finding(
     }
     // The clause of each storage the read may reach, an allocation's and a
     // local's, so a read that may reach both cites both.
-    let (allocation, local) = match finding.kind {
+    // **Not the allocation's or the local's where a copy or a `realloc`
+    // carried the bytes**, which says where they came from instead, and the
+    // call that carried them (#752).
+    let (allocation, local, carried) = match finding.kind {
+        Kind::IndeterminateLoad {
+            reaches_allocation: _,
+            reaches_local: _,
+            carried: Some(carried),
+        } => (false, false, Some(carried)),
         Kind::IndeterminateLoad {
             reaches_allocation,
             reaches_local,
-        } => (reaches_allocation, reaches_local),
-        Kind::IndeterminateLocal => (false, true),
-        _ => (false, false),
+            carried: None,
+        } => (reaches_allocation, reaches_local, None),
+        Kind::IndeterminateLocal => (false, true, None),
+        _ => (false, false, None),
     };
+    if let Some(carried) = carried {
+        let (label, note) = match carried.by {
+            Carrier::Copy => (
+                match source {
+                    Some(source) => format!("the bytes were copied here from `{source}`"),
+                    None => "the bytes were copied here".to_owned(),
+                },
+                "C17 7.24.2.1 to 7.24.3.1 copy the source's characters into the destination, \
+                 so bytes nothing wrote there are indeterminate where they land, and Annex J.2 \
+                 lists using that value as undefined",
+            ),
+            Carrier::Realloc => (
+                match source {
+                    Some(source) => format!("the bytes were carried here from `{source}`"),
+                    None => "the bytes were carried here".to_owned(),
+                },
+                "C17 7.22.3.5 p2 gives the new object the old one's contents and leaves any \
+                 bytes past the old size indeterminate, so bytes nothing wrote in the old one \
+                 are indeterminate in the new, and Annex J.2 lists using that value as \
+                 undefined",
+            ),
+        };
+        diagnostic = diagnostic
+            .with_label(Label::secondary(carried.at, label))
+            .with_note(note);
+    }
     if allocation {
         diagnostic = diagnostic.with_note(
             "C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate \

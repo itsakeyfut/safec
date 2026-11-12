@@ -21,9 +21,10 @@ use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
     At, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, PendingRead, PlaceInit, Reached,
-    Read, Realloced, SiteState, Width, earlier,
+    Read, Realloced, SiteState, Width, earlier, joined_carried,
 };
 use super::store::{Landing, StoreKind, Strong};
+use super::{Carried, Carrier};
 use crate::library::{Callee, Leaves, Library, Makes};
 use crate::reads::{dereferenced_in_element, dereferenced_in_terminator, derefs};
 
@@ -1902,14 +1903,25 @@ impl Allocations<'_> {
                     }
                 },
             };
+            // **Where its bytes came from**, as its record is joined: the
+            // side that names it where the other does not, and otherwise
+            // what both say (`PlaceInit::join`).
+            let carried = match (&state[site], &from.state[site]) {
+                (_, SiteState::Unheld) => here.carried(),
+                (SiteState::Unheld, _) => there.carried(),
+                _ => joined_carried(here.carried(), there.carried()),
+            };
             written[place] = match slots {
                 // Joined from both sides: the block is what its slots say.
-                Some((slots, true)) => PlaceInit::Slots(slots),
+                Some((slots, true)) => PlaceInit::slots_of(slots),
                 // Kept from the side that names it, where the join left its
                 // whole as that side had it.
-                Some((slots, false)) if slots.summary() == whole => PlaceInit::Slots(slots),
-                Some((_, false)) | None => PlaceInit::Whole(whole),
+                Some((slots, false)) if slots.summary() == whole => PlaceInit::slots_of(slots),
+                Some((_, false)) | None => PlaceInit::whole_of(whole),
             };
+            if let Some(carried) = carried {
+                written[place].carried_by(carried);
+            }
         }
         // Bounds, so the lower of two at every level. See
         // `Known::handed_at_most`.
@@ -2300,14 +2312,14 @@ impl Analysis for Allocations<'_> {
             written: {
                 let unwritten = self.unwritten_at_entry();
                 let mut written =
-                    Table::filled(PlaceInit::Whole(Init::Written), Loc::count(self.locals));
+                    Table::filled(PlaceInit::whole_of(Init::Written), Loc::count(self.locals));
                 for (local, slots) in written.locals().zip(self.elements_at_entry()) {
                     written[local] = if slots.len() > 0 {
-                        PlaceInit::Slots(slots)
+                        PlaceInit::slots_of(slots)
                     } else if unwritten[local.index()] {
-                        PlaceInit::Whole(Init::Unwritten)
+                        PlaceInit::whole_of(Init::Unwritten)
                     } else {
-                        PlaceInit::Whole(Init::Written)
+                        PlaceInit::whole_of(Init::Written)
                     };
                 }
                 written
@@ -4591,13 +4603,39 @@ impl Analysis for Allocations<'_> {
                 let count = bytes / pointer;
                 if bytes % pointer == 0 && (2..=ELEMENTS_KEPT).contains(&count) {
                     let len = usize::try_from(count).unwrap_or(0);
-                    value.written[site] = PlaceInit::Slots(Inits::unwritten(len));
+                    value.written[site] = PlaceInit::slots_of(Inits::unwritten(len));
                     value.points_to[result].site_element = Some(0);
                 }
             }
         }
+        // **And says it carried them where it copied an old block's**, so
+        // that a read of them names this call and not an allocation's clause
+        // (#752). Not where it was handed nothing to copy, and so made fresh
+        // memory as `malloc` does.
+        let carried_from = |handed: &Operand, value: &Known| match handed {
+            Operand::Copy(handed)
+                if handed.projection.is_empty() && !value.names_nothing(handed.local) =>
+            {
+                Some(Carried {
+                    at: origin.span(),
+                    from: Some(handed.local),
+                    by: Carrier::Realloc,
+                })
+            }
+            Operand::Copy(_) | Operand::Constant(_) => None,
+        };
+        let carried = match (
+            self.library(*callee).and_then(|row| row.leaves),
+            arguments.first(),
+        ) {
+            (Some(Leaves::TheOld), Some(handed)) => carried_from(handed, value),
+            (Some(Leaves::TheOld | Leaves::Indeterminate | Leaves::ZeroBits) | None, _) => None,
+        };
         if fresh {
             value.written[site].set(Init::Unwritten);
+            if let Some(carried) = carried {
+                value.written[site].carried_by(carried);
+            }
         } else if let (Some(Leaves::TheOld), Some(Operand::Copy(handed))) = (
             self.library(*callee).and_then(|row| row.leaves),
             arguments.first(),
@@ -4613,6 +4651,12 @@ impl Analysis for Allocations<'_> {
                 && (value.may_name_fresh(handed.local) || value.points_to[handed.local].may_be_null)
             {
                 value.written[site].doubt();
+                // Carried only where the old block may be unwritten itself:
+                // a doubt the null path alone raises is of fresh memory, which
+                // nothing was carried into.
+                if let Some(carried) = carried.filter(|_| value.may_name_fresh(handed.local)) {
+                    value.written[site].carried_by(carried);
+                }
             }
         }
         // **`realloc`'s new object holds what the old one held**, C17 7.22.3.5

@@ -178,6 +178,17 @@ on one path, or in an earlier turn of a loop, keeps its mark where the paths
 meet. A pointer read through a member, and an integer read out of fresh
 memory, are not followed.
 
+**Where a copy or a `realloc` carried the bytes, the report says so** (#752).
+A label on the call names the local the bytes were read through, "the bytes
+were copied here from `m`" or "carried here from `m`", the note cites the
+copy's or `realloc`'s clause in place of `malloc`'s, and the remedy is to write
+what was copied, never `calloc`, since the memory read may have been allocated
+with it already. Said only where every place the read may reach names the same
+call. A `realloc` doubted only because what it was handed may be null names
+none, since on that path it carried nothing. The record of where the bytes came
+from is the place's own, beside whether it was written, and a write of the
+whole place clears it.
+
 A `memcpy` or `memmove` of bytes that may not have been written, into memory
 that leaves the function and is believed to hold a pointer, is `SC0411` as a
 doubt at the copy: "this copies bytes that may not have been written into

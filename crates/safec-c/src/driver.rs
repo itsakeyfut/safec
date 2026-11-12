@@ -665,7 +665,16 @@ fn lowered(
         let lengths = parameter_lengths(&analysed.ast);
         for finding in memory::findings(sources, &unit) {
             let name = written_name(&unit, sources, finding.function, finding.local);
-            if let Some(diagnostic) = memory_finding(sources, &finding, name, &lengths) {
+            // The local a copy or a `realloc` read the bytes it carried
+            // through, for the words about a read of them (#752).
+            let source = match finding.kind {
+                memory::Kind::IndeterminateLoad {
+                    carried: Some(carried),
+                    ..
+                } => written_name(&unit, sources, finding.function, carried.from),
+                _ => None,
+            };
+            if let Some(diagnostic) = memory_finding(sources, &finding, name, source, &lengths) {
                 let concluded = Concluded {
                     function: finding.function,
                     conclusion: finding.conclusion,

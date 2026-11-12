@@ -1,11 +1,15 @@
 warning[SC0411]: `*t3` may be read before anything was assigned to it
     ╭─[ a_container_grown_by_realloc_keeps_its_mark.c:23:18 ]
     │
+ 19 │             int **t3 = realloc(t2, 16);
+    │                        ───────┬───────  
+    │                               ╰───────── the bytes were carried here from `t2`
+    │ 
  23 │             int *q = *t3;
     │                  ───┬───  
     │                     ╰───── read here
 ────╯
-  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: C17 7.22.3.5 p2 gives the new object the old one's contents and leaves any bytes past the old size indeterminate, so bytes nothing wrote in the old one are indeterminate in the new, and Annex J.2 lists using that value as undefined
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: assign it on every path before it is read

@@ -12,7 +12,7 @@ use crate::source::{SourceMap, Span};
 
 use super::index::{Loc, LocalIdx, Site, Table};
 use super::parts::{
-    At, Cell, Extent, Held, Init, Levels, PendingRead, PlaceInit, Reached, Read, ReadKey,
+    At, Cell, Extent, Held, Init, Kept, Levels, PendingRead, PlaceInit, Reached, Read, ReadKey,
     Realloced, SiteState, Width, earlier, read_key,
 };
 use super::store::{Certain, Strong, WrittenLocal};
@@ -279,7 +279,7 @@ pub(super) struct Known {
     /// ADR-0057.
     ///
     /// **Per slot, for a local array of at most [`ELEMENTS_KEPT`] innermost
-    /// elements**, [`PlaceInit::Slots`]; every other local is kept whole.
+    /// elements**, [`Kept::Slots`]; every other local is kept whole.
     ///
     /// **So that a write to one element leaves another unwritten** (#667):
     /// `m[0] = &x; q = m[1];` read an `m[1]` nothing wrote, in silence, since
@@ -2161,7 +2161,7 @@ impl Known {
         // now belongs to a new allocation, and the branch that would have
         // settled the old fact is about another. See ADR-0039.
         realloced[site] = None;
-        written[site] = PlaceInit::Whole(Init::Written);
+        written[site] = PlaceInit::whole_of(Init::Written);
         for fact in realloced.iter_mut() {
             if fact
                 .as_ref()
@@ -2509,17 +2509,17 @@ impl Known {
     pub(super) fn array_writes_after(&mut self, pending: Vec<PendingWrite>) {
         for write in pending {
             let mut written = write.written;
-            match (&mut written, write.write) {
+            match (&mut written.kept, write.write) {
                 // Written, keeping a doubt it held: the write is of one
                 // element, or of one nobody can name, and is no write of the
                 // rest.
-                (PlaceInit::Whole(init), ArrayWrite::Element(_) | ArrayWrite::Covered(_)) => {
+                (Kept::Whole(init), ArrayWrite::Element(_) | ArrayWrite::Covered(_)) => {
                     *init = match *init {
                         Init::Maybe => Init::Maybe,
                         Init::Unwritten | Init::Written => Init::Written,
                     };
                 }
-                (PlaceInit::Slots(slots), ArrayWrite::Element(element)) => {
+                (Kept::Slots(slots), ArrayWrite::Element(element)) => {
                     if let Ok(element) = usize::try_from(element) {
                         if element < slots.len() {
                             slots.set(element, Init::Written);
@@ -2528,7 +2528,7 @@ impl Known {
                 }
                 // The elements a copy covers whole from the start are
                 // written, and the rest keep what they held.
-                (PlaceInit::Slots(slots), ArrayWrite::Covered(count)) => {
+                (Kept::Slots(slots), ArrayWrite::Covered(count)) => {
                     let count = usize::try_from(count).unwrap_or(usize::MAX);
                     for element in 0..count.min(slots.len()) {
                         slots.set(element, Init::Written);
@@ -2536,7 +2536,7 @@ impl Known {
                 }
                 // No element is certainly unwritten once one nobody can name
                 // may have been written, and each may still be.
-                (written, ArrayWrite::Maybe) => written.may_write(),
+                (_, ArrayWrite::Maybe) => written.may_write(),
             }
             self.written[write.local] = written;
         }

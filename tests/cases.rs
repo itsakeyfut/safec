@@ -2555,6 +2555,12 @@ cases! {
         // by review. Mutation: `Known::names_only_fresh` answers `false`; this
         // goes silent.
         a_pointer_read_out_of_what_realloc_of_a_block_nothing_wrote_returns_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A read of bytes a copy or `realloc` carried names the call and its
+        // source, and its remedy suggests no `calloc` (#752). Mutation: let
+        // the copy's arm in `initialised_by` record no origin; the first loses
+        // its label. Let `realloc`'s record none; the second does.
+        a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_read_of_bytes_realloc_carried_from_a_block_nothing_wrote_names_the_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `realloc` of a pointer that may be null copies nothing on the path
         // where it is, so what it returns may be indeterminate there (#708,
         // ADR-0093 rule 5); the third, a written block on every path, is not

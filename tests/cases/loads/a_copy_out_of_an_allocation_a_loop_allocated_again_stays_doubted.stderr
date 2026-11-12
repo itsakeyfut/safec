@@ -11,11 +11,14 @@ warning[SC0407]: this passes a pointer to where a pointer that may have been fre
 warning[SC0411]: `*t4` may be read before anything was assigned to it
     ╭─[ a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:24:18 ]
     │
+ 23 │             memcpy(t4, t2, 8);
+    │             ────────┬────────  
+    │                     ╰────────── the bytes were copied here from `t2`
  24 │             int *q = *t4;
     │                  ───┬───  
     │                     ╰───── read here
 ────╯
-  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: C17 7.24.2.1 to 7.24.3.1 copy the source's characters into the destination, so bytes nothing wrote there are indeterminate where they land, and Annex J.2 lists using that value as undefined
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: assign it on every path before it is read

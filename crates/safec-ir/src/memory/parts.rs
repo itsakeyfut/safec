@@ -11,9 +11,9 @@ use std::collections::BTreeSet;
 use crate::ir::Place;
 use crate::source::{SourceMap, Span};
 
-use super::LostReason;
 use super::bits::Bits;
 use super::index::{Loc, LocalIdx, Site, Table};
+use super::{Carried, LostReason};
 
 /// A free, and whether C has ordered it before what comes after it.
 ///
@@ -517,8 +517,22 @@ impl Inits {
 /// slots by hand, as fifteen did (#894). **A write of the whole reaches
 /// every slot**: [`Self::set`], [`Self::doubt`] and [`Self::may_write`]
 /// leave each slot as they would leave the place.
+///
+/// **And where its unwritten bytes came from**, [`Self::carried`]: a copy
+/// or a `realloc` that carried bytes nothing wrote into it, or nothing for
+/// bytes an allocation or a local's lifetime left so. Kept beside the
+/// record rather than in each slot, since the slots are two sets of bits.
+/// It decides no conclusion, only what the report about a read says
+/// (#752).
 #[derive(Clone, PartialEq, Eq)]
-pub(super) enum PlaceInit {
+pub(super) struct PlaceInit {
+    pub(super) kept: Kept,
+    carried: Option<Carried>,
+}
+
+/// How a [`PlaceInit`] keeps its record.
+#[derive(Clone, PartialEq, Eq)]
+pub(super) enum Kept {
     /// The place as one.
     Whole(Init),
     /// One per slot.
@@ -526,36 +540,52 @@ pub(super) enum PlaceInit {
 }
 
 impl PlaceInit {
+    /// The place kept whole, as `init`.
+    pub(super) fn whole_of(init: Init) -> Self {
+        PlaceInit {
+            kept: Kept::Whole(init),
+            carried: None,
+        }
+    }
+
+    /// The place kept per slot, as `slots`.
+    pub(super) fn slots_of(slots: Inits) -> Self {
+        PlaceInit {
+            kept: Kept::Slots(slots),
+            carried: None,
+        }
+    }
+
     /// What the place is as one: the slots' [`Inits::summary`] where kept
     /// per slot.
     pub(super) fn whole(&self) -> Init {
-        match self {
-            PlaceInit::Whole(init) => *init,
-            PlaceInit::Slots(slots) => slots.summary(),
+        match &self.kept {
+            Kept::Whole(init) => *init,
+            Kept::Slots(slots) => slots.summary(),
         }
     }
 
     /// The slots, where it is kept per slot.
     pub(super) fn slots(&self) -> Option<&Inits> {
-        match self {
-            PlaceInit::Whole(_) => None,
-            PlaceInit::Slots(slots) => Some(slots),
+        match &self.kept {
+            Kept::Whole(_) => None,
+            Kept::Slots(slots) => Some(slots),
         }
     }
 
     /// The slots, where it is kept per slot, to write.
     pub(super) fn slots_mut(&mut self) -> Option<&mut Inits> {
-        match self {
-            PlaceInit::Whole(_) => None,
-            PlaceInit::Slots(slots) => Some(slots),
+        match &mut self.kept {
+            Kept::Whole(_) => None,
+            Kept::Slots(slots) => Some(slots),
         }
     }
 
     /// `slot`, where it is kept per slot and `slot` is one of them, and the
     /// whole otherwise.
     pub(super) fn at(&self, slot: Option<u64>) -> Init {
-        match (self, slot.and_then(|slot| usize::try_from(slot).ok())) {
-            (PlaceInit::Slots(slots), Some(slot)) if slot < slots.len() => slots.get(slot),
+        match (&self.kept, slot.and_then(|slot| usize::try_from(slot).ok())) {
+            (Kept::Slots(slots), Some(slot)) if slot < slots.len() => slots.get(slot),
             _ => self.whole(),
         }
     }
@@ -563,49 +593,68 @@ impl PlaceInit {
     /// `len` slots, each what the place is as one: the slots it keeps where
     /// it keeps `len` of them, and the whole spread over `len` otherwise.
     pub(super) fn spread(&self, len: usize) -> Inits {
-        match self {
-            PlaceInit::Slots(slots) if slots.len() == len => slots.clone(),
+        match &self.kept {
+            Kept::Slots(slots) if slots.len() == len => slots.clone(),
             _ => Inits::spread(self.whole(), len),
         }
     }
 
-    /// Make the place `init`, every slot of it.
+    /// Make the place `init`, every slot of it, and say nothing of where
+    /// what it holds came from: a write of the whole, an allocation and a
+    /// lifetime beginning each replace what a copy carried there.
     pub(super) fn set(&mut self, init: Init) {
-        match self {
-            PlaceInit::Whole(whole) => *whole = init,
-            PlaceInit::Slots(slots) => *slots = Inits::spread(init, slots.len()),
+        match &mut self.kept {
+            Kept::Whole(whole) => *whole = init,
+            Kept::Slots(slots) => *slots = Inits::spread(init, slots.len()),
         }
+        self.carried = None;
+    }
+
+    /// Where the bytes nothing wrote in it came from, where a copy or a
+    /// `realloc` carried them and no write of the whole has been since.
+    pub(super) fn carried(&self) -> Option<Carried> {
+        self.carried
+    }
+
+    /// Say that `by` carried the bytes nothing wrote in it, after the write
+    /// that made it so.
+    pub(super) fn carried_by(&mut self, by: Carried) {
+        self.carried = Some(by);
     }
 
     /// As [`Init::doubt`] leaves it, every slot of it.
     pub(super) fn doubt(&mut self) {
-        match self {
-            PlaceInit::Whole(whole) => whole.doubt(),
-            PlaceInit::Slots(slots) => slots.doubt_all(),
+        match &mut self.kept {
+            Kept::Whole(whole) => whole.doubt(),
+            Kept::Slots(slots) => slots.doubt_all(),
         }
     }
 
     /// As [`Init::may_write`] leaves it, every slot of it.
     pub(super) fn may_write(&mut self) {
-        match self {
-            PlaceInit::Whole(whole) => whole.may_write(),
-            PlaceInit::Slots(slots) => slots.may_write_all(),
+        match &mut self.kept {
+            Kept::Whole(whole) => whole.may_write(),
+            Kept::Slots(slots) => slots.may_write_all(),
         }
     }
 
     /// Joined with `other` as [`Init::joined`] says, slot by slot where both
-    /// keep the same slots, and whole otherwise.
+    /// keep the same slots, and whole otherwise. **Where its bytes came
+    /// from, where both sides say the same**, and nothing otherwise
+    /// ([`joined_carried`]).
     pub(super) fn join(&mut self, other: &PlaceInit, back: bool) {
-        match (&mut *self, other) {
-            (PlaceInit::Slots(here), PlaceInit::Slots(there)) if here.len() == there.len() => {
+        self.carried = joined_carried(self.carried, other.carried);
+        match (&mut self.kept, &other.kept) {
+            (Kept::Slots(here), Kept::Slots(there)) if here.len() == there.len() => {
                 here.join(there, back);
             }
-            _ => *self = PlaceInit::Whole(self.whole().joined(other.whole(), back)),
+            _ => self.kept = Kept::Whole(self.whole().joined(other.whole(), back)),
         }
     }
 
     /// As [`Init::unwritten_again`] leaves it, slot by slot where it keeps
-    /// slots, each against what `before` and `back` were at it.
+    /// slots, each against what `before` and `back` were at it. Where its
+    /// bytes came from is the join's, already made.
     ///
     /// Mutation: leave a place kept whole as it is;
     /// `a_block_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn`
@@ -613,15 +662,25 @@ impl PlaceInit {
     /// `a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn`
     /// fails (#886).
     pub(super) fn unwritten_again(&mut self, before: &PlaceInit, back: &PlaceInit) {
-        match self {
-            PlaceInit::Whole(whole) => {
+        match &mut self.kept {
+            Kept::Whole(whole) => {
                 *whole = whole.unwritten_again(before.whole(), back.whole());
             }
-            PlaceInit::Slots(slots) => {
+            Kept::Slots(slots) => {
                 let len = slots.len();
                 slots.unwritten_again(&before.spread(len), &back.spread(len));
             }
         }
+    }
+}
+
+/// Where two paths' bytes came from: the one call where both say it, and
+/// nothing otherwise, which only loses what was known and so cannot cycle,
+/// as [`same`] joins where an allocation came from.
+pub(super) fn joined_carried(here: Option<Carried>, there: Option<Carried>) -> Option<Carried> {
+    match (here, there) {
+        (Some(here), Some(there)) if here == there => Some(here),
+        _ => None,
     }
 }
 
