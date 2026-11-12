@@ -751,15 +751,7 @@ impl Allocations<'_> {
     /// holds none, or the type's, which `void` has none of, it believes
     /// nothing, as before. See ADR-0093 rule 4.
     pub(super) fn believed_read(&self, function: &Function, place: &Place, value: &Known) -> u64 {
-        // `None` for a `void *`, whose pointee has no size to bound a width.
-        let typed = match self
-            .unit
-            .place_ty(function, place)
-            .map(|ty| self.unit.ty(ty))
-        {
-            Some(Ty::Pointer(pointee)) => self.unit.size_of(pointee),
-            Some(Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. }) | None => Some(0),
-        };
+        let typed = self.typed_width(function, place);
         let as_read = typed.unwrap_or(0);
         let depth = derefs(place);
         // **As its type where the read is reported as indeterminate**:
@@ -774,10 +766,20 @@ impl Allocations<'_> {
         let bound = value
             .memory_levels(place.local, depth, self.deepest_pointer)
             .at(0);
-        match (typed, bound) {
-            (Some(as_read), bound) => as_read.min(bound.bound().unwrap_or(0)),
-            (None, Width::AtMost(recorded)) => recorded,
-            (None, Width::AsTyped | Width::Unbounded | Width::Nothing) => 0,
+        believed_width(typed, bound)
+    }
+
+    /// How wide what `place` points at is as its type: `None` for a `void
+    /// *`, whose pointee has no size to bound a width, and `0` for a place
+    /// that is no pointer.
+    fn typed_width(&self, function: &Function, place: &Place) -> Option<u64> {
+        match self
+            .unit
+            .place_ty(function, place)
+            .map(|ty| self.unit.ty(ty))
+        {
+            Some(Ty::Pointer(pointee)) => self.unit.size_of(pointee),
+            Some(Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. }) | None => Some(0),
         }
     }
 
@@ -4089,12 +4091,16 @@ impl Analysis for Allocations<'_> {
                             for &target in &targets {
                                 let mut each = read.clone();
                                 let local = function.locals().nth(target.index());
-                                let as_read = local
-                                    .and_then(|local| {
-                                        self.pointee_size(function, &Place::local(local))
-                                    })
-                                    .unwrap_or(0);
-                                let width = as_read.min(recorded.bound().unwrap_or(0));
+                                // **By `believed_width`, as a load is**: a
+                                // `void *` at what the record says (#929).
+                                // Spelled here as a type's width alone,
+                                // `memcpy(&w, pv, 8)` proved nothing where
+                                // `w = *pv;` does.
+                                let typed = local.map_or(Some(0), |local| {
+                                    self.typed_width(function, &Place::local(local))
+                                });
+                                let as_read = typed.unwrap_or(0);
+                                let width = believed_width(typed, recorded);
                                 each.believe(if fresh {
                                     Some(as_read)
                                 } else {
@@ -5063,6 +5069,26 @@ fn remember(kept: &mut Vec<Option<TyId>>, ty: Option<TyId>) {
 pub(super) use crate::layout::pointer_depth;
 
 /// [`Allocations::reads_caller_memory`], asked of a value no program shows.
+/// The width a pointer read out of memory is believed to point at, where
+/// it is read as pointing at `typed` bytes and what it was read out of
+/// recorded `recorded`: no wider than either, and **a `void *`, `typed`
+/// `None`, at what the record says**, which no type bounds (#631, ADR-0093
+/// rule 4). Only a width the record holds, `Width::AtMost`; where it holds
+/// none, or the type's, which `void` has none of, it believes nothing. One
+/// answer for a load and for a library copy into a local (#929).
+///
+/// Mutation: answer `0` for a `void *`, and
+/// `a_void_pointer_read_out_of_memory_is_believed_as_wide_as_its_record_says`
+/// and `a_void_pointer_copied_out_of_memory_is_believed_as_wide_as_its_record_says`
+/// are `SC0412` again.
+fn believed_width(typed: Option<u64>, recorded: Width) -> u64 {
+    match (typed, recorded) {
+        (Some(as_read), recorded) => as_read.min(recorded.bound().unwrap_or(0)),
+        (None, Width::AtMost(recorded)) => recorded,
+        (None, Width::AsTyped | Width::Unbounded | Width::Nothing) => 0,
+    }
+}
+
 #[cfg(test)]
 mod caller_memory {
     use crate::dataflow::Analysis;
