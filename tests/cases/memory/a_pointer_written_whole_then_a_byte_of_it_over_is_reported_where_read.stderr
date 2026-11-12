@@ -1,4 +1,4 @@
-error[SC0413]: this writes part of a pointer that is read back whole
+error[SC0413]: this writes less than a pointer into memory that is read back as pointers
    ╭─[ a_pointer_written_whole_then_a_byte_of_it_over_is_reported_where_read.c:2:90 ]
    │
  2 │ int r(int *x) { int **m = malloc(8); if (!m) return 0; *m = x; void *v = m; char *c = v; c[3] = 1; int *q = *m; return q != 0; }

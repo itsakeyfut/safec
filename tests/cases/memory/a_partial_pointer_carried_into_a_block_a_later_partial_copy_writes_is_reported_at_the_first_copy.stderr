@@ -1,4 +1,4 @@
-error[SC0413]: this writes part of a pointer into memory that leaves holding pointers
+error[SC0413]: this writes less than a pointer into memory that leaves holding pointers
     ╭─[ a_partial_pointer_carried_into_a_block_a_later_partial_copy_writes_is_reported_at_the_first_copy.c:14:5 ]
     │
  14 │     memcpy(m, &i, 4);

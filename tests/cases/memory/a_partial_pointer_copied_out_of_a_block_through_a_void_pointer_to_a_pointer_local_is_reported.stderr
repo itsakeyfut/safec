@@ -1,4 +1,4 @@
-error[SC0413]: this writes part of a pointer that is read back whole
+error[SC0413]: this writes less than a pointer into memory that is read back as pointers
     ╭─[ a_partial_pointer_copied_out_of_a_block_through_a_void_pointer_to_a_pointer_local_is_reported.c:12:5 ]
     │
  12 │     memcpy(m, &i, 4);

@@ -1,4 +1,4 @@
-error[SC0413]: this writes part of a pointer into memory that leaves holding pointers
+error[SC0413]: this writes less than a pointer into memory that leaves holding pointers
    ╭─[ an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:104 ]
    │
  2 │ void b(void ***pp) { if (!pp) return; void **q = malloc(16); if (!q) return; void *v = q; int *ip = v; *ip = 1; *pp = q; use(); }

@@ -1,4 +1,4 @@
-error[SC0413]: this writes part of a pointer into memory that leaves holding pointers
+error[SC0413]: this writes less than a pointer into memory that leaves holding pointers
    ╭─[ a_partial_pointer_in_a_block_held_as_pointers_returned_as_void_is_reported.c:2:67 ]
    │
  2 │ void *f(void) { int i = 1; void *m = malloc(8); if (!m) return 0; memcpy(m, &i, 4); void **h = m; return m; }

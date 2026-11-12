@@ -374,7 +374,8 @@ not yet, and a pointer it rebuilds is a silence (#691).
 [ADR-0070](adr/0070-an-access-is-proved-inside-its-object-only-where-every-object-it-may-reach-was-read-wide-enough.md)
 is the decision.
 
-**`SC0413` is the same belief asked where a pointer leaves.** A pointer passed
+**`SC0413` is the same belief asked where a pointer leaves**, and, for a
+write of less than a pointer, where one is read back (below). A pointer passed
 to a call, returned, or stored is believed by whoever receives it to point at
 the start of an object as wide as the type it leaves as, so it is asked there
 whether it does: `g(p + 5)`, `return p + 5;` and `*box = p + 5;` are each
@@ -421,10 +422,13 @@ may fill every byte of the slot over the loop. A call and a `return` ask a
 block by the types it was held as only where what receives it is a `void *`
 (#914,
 [ADR-0092](adr/0092-a-position-inside-an-object-is-one-byte-offset-and-a-places-written-record-is-kept-per-pointer-sized-slot.md)
-rules 5 and 6). A write of part of a pointer asked this way is said in words
-of its own, since nothing need leave: `this writes part of a pointer into
-memory that leaves holding pointers`, or `that is read back whole` where a
-read inside the function asked it, labelled `written here` (#935).
+rules 5 and 6). A write of less than a pointer asked this way is said in
+words of its own, `this writes less than a pointer into memory that leaves
+holding pointers`, or `that is read back as pointers` where a read inside the
+function asked it, labelled `written here` (#935). It is the one `SC0413`
+where nothing need leave: what is asked is the same belief, a pointer nobody
+wrote whole, at the write that made it, and a second code would split one
+question by which door asked it first.
 Each is asked at the wider of its own type and the type the receiver reads it
 as, so a `void *` local's address passed as an `int **` asks the local four
 bytes wide, and memory by what its record says the pointers stored there point

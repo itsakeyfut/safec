@@ -956,12 +956,15 @@ pub(super) fn memory_finding(
         (Kind::PartOfAPointer { asked }, Conclusion::Unknown | Conclusion::Unsafe, _) => (
             HANDED_ON_NARROW,
             match asked {
-                PartAsked::Leaves => "this writes part of a pointer into memory that leaves \
+                // **Less than a pointer**, not part of one: what is written
+                // is often an `int` or a byte, and the defect is that the slot
+                // is then read as a pointer nobody wrote whole.
+                PartAsked::Leaves => "this writes less than a pointer into memory that leaves \
                                       holding pointers"
                     .to_owned(),
-                PartAsked::Read => {
-                    "this writes part of a pointer that is read back whole".to_owned()
-                }
+                PartAsked::Read => "this writes less than a pointer into memory that is read \
+                                    back as pointers"
+                    .to_owned(),
             },
             "written here",
             "write a pointer whole, or keep bytes written over part of one out of memory read \

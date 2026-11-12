@@ -1,4 +1,4 @@
-warning[SC0413]: this writes part of a pointer that is read back whole
+warning[SC0413]: this writes less than a pointer into memory that is read back as pointers
     ╭─[ a_copy_of_one_byte_into_an_array_of_pointers_names_no_copy_where_another_element_is_read.c:10:5 ]
     │
  10 │     b[0] = 0;
