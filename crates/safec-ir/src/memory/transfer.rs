@@ -1169,6 +1169,9 @@ impl Allocations<'_> {
                 site_element: None,
                 array_edge: false,
                 stored_through: false,
+                // Memory records no null, so what is read out of it may be
+                // one (#931).
+                may_be_null: true,
             },
         );
         // What could be named as this was read. See `Held::named_at_read`.
@@ -1823,6 +1826,38 @@ impl Allocations<'_> {
         value.clear(local);
     }
 
+    /// **On the arm where a pointer was tested not null, it is not**, so
+    /// [`Held::may_be_null`] is dropped there: `p = malloc(8); if (!p)
+    /// return 0; q = realloc(p, 16);` hands `realloc` an old block, not a
+    /// null (#931). Only the tested local; a copy of it taken before the
+    /// test still may be null.
+    fn branch_on_a_null_test(
+        &self,
+        function: &Function,
+        block: BlockId,
+        terminator: &Terminator,
+        index: usize,
+        value: &mut Known,
+    ) {
+        let Terminator::Branch {
+            condition: Operand::Copy(condition),
+            ..
+        } = terminator
+        else {
+            return;
+        };
+        let Some((local, on_then)) = crate::nullability::tested_against_null(
+            self.unit, function, &self.cfg, block, condition,
+        ) else {
+            return;
+        };
+        // `Terminator::successors` pushes `then` and then `otherwise`, so
+        // index 1 is the other arm, as the nullability check reads it.
+        if (index == 0) != (on_then == crate::nullability::Nullness::Null) {
+            value.points_to[local].may_be_null = false;
+        }
+    }
+
     /// **A branch on what a `realloc` returned says what became of what it was
     /// handed.** On the arm where the pointer is null the call failed and the
     /// old allocations are live again; on the other it succeeded and they were
@@ -2229,6 +2264,7 @@ impl Analysis for Allocations<'_> {
     ) {
         self.branch_on_reallocs_result(function, block, terminator, index, value);
         self.branch_on_an_allocations_result(function, block, terminator, index, value);
+        self.branch_on_a_null_test(function, block, terminator, index, value);
         let mut successors = Vec::new();
         terminator.successors(&mut successors);
         let Some(successor) = successors.get(index) else {
@@ -2481,6 +2517,9 @@ impl Analysis for Allocations<'_> {
             known.points_to[parameter].set_contents(&contents);
             known.points_to[parameter].arrived_holds_pointer =
                 self.first_level_holds_a_pointer(function.local(parameter));
+            // **And may be null, unless it is `_Nonnull`**: the caller may
+            // pass none (#931).
+            known.points_to[parameter].may_be_null = function.nonnull(parameter).is_none();
             known.extent[Site::of(LocalIdx::of(parameter))] = Some(Extent::AtLeast(
                 self.pointee_size(function, &Place::local(parameter))
                     .unwrap_or(0),
@@ -3919,6 +3958,8 @@ impl Analysis for Allocations<'_> {
                                     site_element: None,
                                     array_edge: false,
                                     stored_through: false,
+                                    // As a load's (#931).
+                                    may_be_null: true,
                                 },
                             );
                             let caller =
@@ -4733,6 +4774,9 @@ impl Analysis for Allocations<'_> {
             }
         };
         value.reborn(site, made);
+        // **And may be null**, an allocation's result as much as an opaque
+        // call's, unless its callee promises otherwise (#931).
+        value.points_to[result].may_be_null = self.unit.function(*callee).promised().is_none();
         value.extent[site] = Some(self.made_extent(function, *callee, kind, arguments, place));
         // **What a call this check cannot read returns is believed whole**,
         // as a parameter is, and bounded by what it may return that this

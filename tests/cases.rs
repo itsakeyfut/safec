@@ -2660,12 +2660,24 @@ cases! {
         a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_what_realloc_of_a_written_block_on_every_path_returns_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A value nothing says is not null may be one: a parameter, unless it
+        // is `_Nonnull` or was tested, a load and a call's result (#931).
+        // Mutation: a parameter starts `may_be_null` false; the first goes
+        // silent. A `_Nonnull` parameter does too; the second is doubted.
+        // The test's arm keeps it; the third is. A call's result, or what
+        // a copy reads, starts it false; the fourth or the fifth goes silent.
+        a_pointer_read_out_of_what_realloc_of_a_parameter_returns_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_what_realloc_of_a_nonnull_parameter_returns_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_what_realloc_of_a_parameter_tested_not_null_returns_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_what_realloc_of_a_calls_result_returns_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_what_realloc_of_a_pointer_a_copy_read_returns_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And a pointer read out of memory, or one a call this check cannot
         // read may have written, names what this check cannot see, and its
-        // `realloc` is not read as certainly fresh. **The second is doubted**,
-        // by the author's decision on #708: `o` was `0`, and a call that may
-        // not write it may leave it so, so `realloc` may return fresh memory
-        // there. Mutation: every test of `Known::names_no_more_than_its_sites`
+        // `realloc` is not read as certainly fresh. **Both are doubted**: the
+        // second by the author's decision on #708, `o` was `0`, and a call
+        // that may not write it may leave it so, so `realloc` may return
+        // fresh memory there; the first since #931, as what a load reads
+        // may be null. Mutation: every test of `Known::names_no_more_than_its_sites`
         // dropped together; both reads of `*pp` are certain `SC0411`. Each
         // dropped alone decides nothing, since the two routes each carry two
         // marks. Found by review.
@@ -6306,7 +6318,7 @@ cases! {
         // alone.
         a_pointer_read_out_of_a_converted_void_parameter_and_handed_straight_on_is_asked_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `realloc` carries level 0 alone of the pointer it is
-        // handed.
+        // handed. `*pi` is doubted since #931, as `m` may be null.
         a_void_parameter_three_levels_deep_grown_by_realloc_is_believed_below_its_first_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `realloc` carries level 0 alone of what the old
         // allocation held.

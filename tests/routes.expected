@@ -505,7 +505,7 @@ width_realloc_d1_both hazard=1:SC0412 control=0:- allowed=0:SC0412
 width_realloc_d1_one hazard=1:SC0412 control=0:- allowed=0:SC0412
 width_realloc_d2_both hazard=1:SC0403,SC0411,SC0412,SC0413 control=1:SC0403,SC0411 allowed=0:SC0403,SC0411,SC0412,SC0413
 width_realloc_d2_one hazard=1:SC0403,SC0411,SC0412,SC0413 control=1:SC0403,SC0411 allowed=0:SC0403,SC0411,SC0412,SC0413
-width_realloc_param_d2_both hazard=1:SC0402,SC0412 control=1:SC0402,SC0412 allowed=0:SC0402,SC0412
+width_realloc_param_d2_both hazard=1:SC0402,SC0411,SC0412 control=1:SC0402,SC0411,SC0412 allowed=0:SC0402,SC0411,SC0412
 width_restored_d0_both hazard=1:SC0412 control=0:- allowed=0:SC0412
 width_restored_d0_one hazard=1:SC0412 control=0:- allowed=0:SC0412
 width_restored_d1_both hazard=1:SC0412 control=0:- allowed=0:SC0412

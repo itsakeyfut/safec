@@ -1175,9 +1175,17 @@ pub(super) struct Held {
     pub(super) stored_through: bool,
     /// Whether this may be a null pointer, on some path: set by an
     /// assignment of the constant `0`, a union at a join, kept by a copy of
-    /// the value, and dropped by everything else, arithmetic included, since
-    /// a null moved by arithmetic is no null (C17 6.5.6 p8 asks the operand
-    /// to point into an object). A load gives none, as memory records none.
+    /// the value, and dropped by arithmetic, since a null moved by arithmetic
+    /// is no null (C17 6.5.6 p8 asks the operand to point into an object).
+    ///
+    /// **Set where nothing says the value is not null** (#931): a load and a
+    /// library copy into a local, since memory records no null; a parameter
+    /// not `_Nonnull`; and what a call returns, an allocation's included,
+    /// unless its callee promises it is not. Dropped on the arm of a branch
+    /// that tested the value not null. Given only by a constant, `realloc` of
+    /// a parameter was read as copying an old block on the path where the
+    /// caller passed none, and what it returned was believed written. A
+    /// door answers it in [`Marks`], so a door added says it.
     ///
     /// **Said rather than inferred** from every other mark being absent,
     /// which a local nothing was assigned shares with a null and arithmetic
@@ -1610,6 +1618,10 @@ impl Held {
                 site_element: None,
                 array_edge: false,
                 stored_through: false,
+                // Nothing held, nor null: a local nothing was assigned is
+                // indeterminate, and handing one to `realloc` is undefined
+                // already. The identity of a join's union, too.
+                may_be_null: false,
             },
         )
     }
@@ -1639,6 +1651,7 @@ impl Held {
             site_element,
             array_edge,
             stored_through,
+            may_be_null,
         } = marks;
         Held {
             names: Bits::new(Loc::count(sites)),
@@ -1662,9 +1675,7 @@ impl Held {
             site_element,
             array_edge,
             stored_through,
-            // No mark gives it: the constant arm of the transfer sets it on
-            // the value it builds.
-            may_be_null: false,
+            may_be_null,
         }
     }
 
@@ -2611,6 +2622,7 @@ pub(super) struct Marks {
     pub(super) site_element: Option<u64>,
     pub(super) array_edge: bool,
     pub(super) stored_through: bool,
+    pub(super) may_be_null: bool,
 }
 
 /// What a value may hold beyond what its sites and its edges name: the one
