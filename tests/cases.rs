@@ -1259,7 +1259,9 @@ cases! {
         a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // But not once `*h` is written again: the slot `**h` names now is
         // `q`'s, which nothing wrote. Mutation: a write through a projection
-        // leaves what was stored standing; this goes silent.
+        // leaves what was stored standing; this goes silent. Its `SC0413`
+        // since #656, where `*h = q;` replaces what `h` held, is the answer
+        // `*h = q; g(**h);` gives with nothing stored before it.
         a_place_two_levels_down_read_after_its_pointer_is_moved_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // **A path that stored with no width is no belief where the arms
         // meet** (#767): an `int` stored through a `void *` alias of `box` on
@@ -5446,10 +5448,13 @@ cases! {
         // on every turn; the doubt goes.
         a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
-        // What ADR-0045 accepts as its cost: a loop that stores, reads and
-        // frees within one turn is doubted on the next, since a store does not
-        // clear the mark while slots are not told apart.
-        a_pointer_stored_and_read_in_one_turn_is_doubted_on_the_next: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // What ADR-0045 accepted as its cost until #656: a loop that stores,
+        // reads and frees within one turn, into a block of one slot made
+        // before the loop, which each turn's store now replaces (ADR-0094
+        // rule 1). Named `a_pointer_stored_and_read_in_one_turn_is_doubted_on_the_next`
+        // until #656, the name ADR-0045 gives it. Mutation: a placed store
+        // only adds to what the block holds again; this is doubted.
+        a_pointer_stored_and_read_in_one_turn_is_not_doubted_freed_on_the_next: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A free of a load stays the doubt it was rather than a free of what
         // the load holds. Mutation: `touching` not answering `Lost` for a load;
         // this goes silent.
@@ -5478,10 +5483,32 @@ cases! {
         // Reported, and what ADR-0045 accepts as its cost: what a table holds
         // is not told apart by slot and a store adds to it rather than
         // replacing it, so the live slot of a table whose other slot was freed
-        // is doubted, and so is a slot stored again after what it held was
-        // freed.
+        // is doubted.
         a_live_slot_of_a_table_with_a_freed_one_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_slot_stored_again_after_what_it_held_was_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // But a block of one slot, made once, is replaced by a store that
+        // covers it (#656, ADR-0094 rule 1), so a slot stored again after
+        // what it held was freed is not doubted. Named
+        // `a_slot_stored_again_after_what_it_held_was_freed_is_doubted` until
+        // #656, the name ADR-0045 gives it. Mutation: a placed store only
+        // adds to what the block holds again; this is doubted.
+        a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // #656's program and its call form: a pointer freed and then
+        // overwritten in a block of one slot is gone from it. Its read-back
+        // form is the case above. Mutation: a placed store only adds to what
+        // the block holds again; each is doubted.
+        a_block_of_one_slot_overwritten_after_what_it_held_was_freed_is_returned_without_a_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_of_one_slot_overwritten_after_what_it_held_was_freed_is_handed_on_without_a_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Without the overwrite it still is. Mutation: replace at every store
+        // into the block, `*b = x;` among them; this goes silent.
+        a_block_of_one_slot_still_holding_what_was_freed_is_doubted_where_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A site made on a cycle stands for every turn's block. Mutation:
+        // let `Allocations::replaces` skip asking `made_once`; this goes
+        // silent.
+        a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store at an index not known may land past the end. Mutation: let
+        // `Allocations::replaces` skip asking the pointer's position; this
+        // goes silent.
+        a_store_at_an_index_not_known_into_a_block_of_one_slot_does_not_replace_what_it_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer copied a byte at a time through `char`, which C17 6.5 p7
         // defines, is the pointer: a byte read out of memory is a load and
         // carries what was stored where it was read from. See ADR-0046, whose
@@ -5948,6 +5975,9 @@ cases! {
         // A later store does not raise a stored bound, since one site holds
         // every slot of an allocation and the later store may be into
         // another. Mutation: assign the bound at a store; this goes silent.
+        // A block of two slots since #656, which a store of one does not
+        // replace (ADR-0094 rule 1). Mutation: let `Allocations::replaces`
+        // skip asking the block's extent; this goes silent.
         a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of a parameter's memory and handed straight on
         // arrives as the type it is read as. Mutation: bound nothing for such
@@ -6798,6 +6828,9 @@ cases! {
         // stops being a pointer is believed nothing (#677). Mutation: skip such
         // a local again; this report goes.
         an_address_memory_may_hold_does_not_hand_its_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `t` is a block of two slots since #656, so that `*t = 0;` does not
+        // replace what it held and the cell's `names` above are still asked
+        // (ADR-0094 rule 1).
         an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Nor is an address a store puts in memory this check does not model:
         // the slot may be written again before any code outside sees it, and

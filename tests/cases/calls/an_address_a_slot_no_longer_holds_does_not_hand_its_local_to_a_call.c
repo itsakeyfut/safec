@@ -8,7 +8,7 @@ int f(void) {
     if (a == 0) {
         return 0;
     }
-    int ***t = malloc(8);
+    int ***t = malloc(16);
     if (t == 0) {
         return 0;
     }

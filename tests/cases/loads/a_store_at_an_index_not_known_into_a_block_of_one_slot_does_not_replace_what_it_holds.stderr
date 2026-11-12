@@ -1,0 +1,20 @@
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_store_at_an_index_not_known_into_a_block_of_one_slot_does_not_replace_what_it_holds.c:12:5 ]
+    │
+ 12 │     b[k] = 0;
+    │     ────┬───  
+    │         ╰───── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0406]: this returns a pointer to where a pointer that may have been freed is stored
+    ╭─[ a_store_at_an_index_not_known_into_a_block_of_one_slot_does_not_replace_what_it_holds.c:13:5 ]
+    │
+ 13 │     return b;
+    │     ────┬────  
+    │         ╰────── returned here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this

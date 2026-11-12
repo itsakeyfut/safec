@@ -2810,16 +2810,6 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Cost(ESCAPED_SOURCE),
     ),
     (
-        "left_behind_realloc_d2_both",
-        Side::Control,
-        Why::Cost(OLD_BLOCK),
-    ),
-    (
-        "left_behind_realloc_d2_one",
-        Side::Control,
-        Why::Cost(OLD_BLOCK),
-    ),
-    (
         "left_behind_ret_d0_both",
         Side::Control,
         Why::Belief(MAY_FREE),

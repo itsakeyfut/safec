@@ -155,6 +155,8 @@ finds the new one without the record being edited.
 | `a_local_array_written_through_memory_after_an_earlier_turn_stored_a_moved_pointer_is_not_doubted` | `a_local_array_written_through_memory_after_an_earlier_turn_stored_a_moved_pointer_is_doubted`, doubted until a loop proof (ADR-0094 rule 4) | #893 |
 | `a_long_local_array_filled_by_a_loop_is_not_doubted` | `a_long_local_array_filled_by_a_loop_is_doubted`, doubted until a loop proof (ADR-0094 rule 4) | #893 |
 | `an_allocation_filled_by_a_loop_is_not_doubted_as_unwritten` | `an_allocation_filled_by_a_loop_is_doubted_as_unwritten`, doubted until a loop proof (ADR-0094 rule 4) | #893 |
+| `a_slot_stored_again_after_what_it_held_was_freed_is_doubted` | `a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted`, a block of one slot replaced whole (ADR-0094 rule 1) | #656 |
+| `a_pointer_stored_and_read_in_one_turn_is_doubted_on_the_next` | `a_pointer_stored_and_read_in_one_turn_is_not_doubted_freed_on_the_next`, likewise | #656 |
 
 ## Where each kind of writing belongs
 

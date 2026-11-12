@@ -5,7 +5,7 @@ void f(char **cc, int **ii) {
     }
     char *c = *cc;
     int *d = *ii;
-    void **m = malloc(8);
+    void **m = malloc(16);
     if (m == 0) {
         return;
     }

@@ -46,6 +46,16 @@ Chosen: replace where certain, by the author.
      result.
 
    `Known::contents` is kept per slot for this.
+
+   **Taken in the narrow form, by the author** (#656): `contents` stays per
+   site, and a store replaces it only where the block is one slot, so the
+   slot is the block. `Allocations::replaces` asks one dereference, one
+   certain site, `At::Bytes(0)`, a width equal to the block's exact extent,
+   and `made_once`. An exact extent already rules out a parameter's site and
+   an opaque call's result. A `realloc`'s result is not ruled out: it is
+   one block, what is read through the old pointer is reported there, and
+   the old site keeps its own record; excluding it held no case, measured.
+   A block of several slots keeps adding until `contents` is kept per slot.
 2. **Anywhere else a store adds to what the slot may hold**, as today.
 3. **A store at an unknown position is a may-write** of every slot it may
    reach: it makes no slot written that was not. This replaces ADR-0081

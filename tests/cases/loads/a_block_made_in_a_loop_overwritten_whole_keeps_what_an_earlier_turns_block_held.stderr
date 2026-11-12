@@ -1,0 +1,10 @@
+error[SC0402]: this uses `r`, which may have been freed
+    ╭─[ a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:27:13 ]
+    │
+ 27 │             return *r;
+    │             ─────┬────  
+    │                  ╰────── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

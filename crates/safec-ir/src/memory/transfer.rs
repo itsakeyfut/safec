@@ -36,6 +36,9 @@ enum Pours {
         pointer_stored: bool,
         carried: Vec<Site>,
         span: Span,
+        /// The one block it replaces whole, where
+        /// [`Allocations::replaces`] says it does.
+        replaces: Option<Site>,
     },
     /// A library copy.
     Copy,
@@ -322,6 +325,50 @@ impl Allocations<'_> {
             [size] => size,
             _ => None,
         }
+    }
+
+    /// **The one block a store replaces whole**, where it certainly does:
+    /// `*b = 0;` after `*b = x; free(x);` leaves nothing of `x` in `b`, and
+    /// a store that only added to what the block may hold doubted the
+    /// free-then-null idiom at every door that asks it (#656, ADR-0094 rule
+    /// 1). All of these hold, each because without it the block may keep
+    /// what it held:
+    ///
+    /// - one dereference, landing in exactly one site and nothing else
+    ///   ([`Landing::certain`](super::store::Landing::certain));
+    /// - at the block's start, `At::Bytes(0)`: `b[k] = 0;` may land past
+    ///   the end and leave what `b` holds;
+    /// - as wide as the whole block, whose extent is exactly that constant
+    ///   size: `contents` is kept per site, not per slot, so a block of two
+    ///   slots keeps the other's pointer. Only an allocator or `realloc`
+    ///   handed a constant makes an exact extent; a parameter's block and an
+    ///   opaque call's result are at least their type (`made_extent`);
+    /// - the site made on no cycle of the graph (`Allocations::made_once`,
+    ///   ADR-0082), so it stands for one block: a site made again on a
+    ///   later turn keeps what the earlier block held (ADR-0045), and
+    ///   replacing it forgot that.
+    ///
+    /// `realloc`'s result is one block too, though it may be the one it was
+    /// handed: what is read through the old pointer after it is reported
+    /// there, and the old site keeps its own record.
+    pub(super) fn replaces(
+        &self,
+        function: &Function,
+        place: &Place,
+        landing: &Landing,
+        value: &Known,
+    ) -> Option<Site> {
+        if place.projection.as_slice() != [Projection::Deref] {
+            return None;
+        }
+        let site = landing.certain()?.site();
+        let width = self
+            .unit
+            .place_ty(function, place)
+            .and_then(|ty| self.unit.size_of(ty))?;
+        let whole = value.points_to[place.local].offset == At::Bytes(0)
+            && value.extent[site] == Some(Extent::Exactly(width));
+        (whole && self.made_once[site.local()]).then_some(site)
     }
 
     /// Record a store narrower than a pointer as writing part of one, in each
@@ -761,6 +808,7 @@ impl Allocations<'_> {
                 pointer_stored,
                 carried,
                 span,
+                replaces,
             } => {
                 if elsewhere && pointer_stored {
                     value.landed_where_unknown_code_points(poured);
@@ -805,6 +853,12 @@ impl Allocations<'_> {
                     if unnamed {
                         value.expose(self.sources, carried.clone(), Some(span));
                         keep(value);
+                    }
+                    // **What it replaces holds nothing else first**, so the
+                    // pour below leaves what this store carries alone
+                    // (ADR-0094 rule 1, #656).
+                    if let Some(site) = replaces.filter(|_| !elsewhere) {
+                        value.contents[site] = Cell::none(value.points_to.len());
                     }
                     value.pour(containers, poured, in_part);
                     // Stored where code this check cannot read already
@@ -2822,6 +2876,7 @@ impl Analysis for Allocations<'_> {
                             pointer_stored: self.may_be_pointer(function, &operation.place),
                             carried,
                             span: operation.origin.span(),
+                            replaces: self.replaces(function, &operation.place, &landing, value),
                         },
                     );
                 }
