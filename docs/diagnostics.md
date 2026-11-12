@@ -281,10 +281,13 @@ pointer afterwards is `SC0411` as a doubt (#826); so is a write of fewer bytes
 than a pointer holds, none included, into an `int *` local, by a `memcpy` or
 through an `int *` made from its address. A `memcpy` that may land in either
 of two arrays of pointers writes neither for certain. A store at an index this
-check cannot read, `b[i] = 0;`, and a copy of a length it cannot read, write
-the whole buffer, so a loop that fills it is not doubted. The cost is a buffer
-written one element at a time at every index and then read as a pointer, which
-is doubted. An array of pointers longer than 64 is not asked for a copy ending
+check cannot read, `b[i] = 0;`, may have missed every element, so it writes
+none for certain, and a loop that fills an array, or a block of pointers kept
+per element, is doubted until a proof that it fills every one
+([ADR-0094](adr/0094-a-store-replaces-a-slot-only-where-it-certainly-lands-there-and-is-a-may-write-where-its-position-is-unknown.md),
+#893); a copy of a length this check cannot read writes the whole buffer. A
+buffer written one element at a time at every index and then read as a
+pointer is doubted too. An array of pointers longer than 64 is not asked for a copy ending
 part way through one of them, since a read of it is asked only at its start. A
 pointer read out of one, through a pointer or by name, is `SC0411` at the
 read: `int *m[1]; int *q = m[0];` and `int *q;
@@ -325,14 +328,21 @@ whether the object is live, so it can stand beside `SC0402` at one caret.
 Every level of a dereference that may go through a local's value asks that
 value, so `**pi` asks what `v` holds where `pi = &v`, and so does `*pi` handed
 to a call. An access is a proof where every object the pointer may reach was
-allocated with a constant size, the pointer is at its start, and the access is
-wider than each: `int *p = malloc(1); *p = 5;` is `this reaches 4 bytes into an
-object of 1`, an error under `--allow-unknown` too. Below the first level it is
+allocated with a constant size, the pointer is at a position this check
+counted from its start, and the access reaches past each: `int *p =
+malloc(1); *p = 5;` is `this reaches 4 bytes into an object of 1 byte`, an
+error under `--allow-unknown` too, and so is `p[2] = 0;` into `malloc(8)`
+with `p` an `int *`, `this reaches 12 bytes into an object of 8 bytes`. A position is counted in bytes, a constant
+times what the pointer points at
+([ADR-0092](adr/0092-a-position-inside-an-object-is-one-byte-offset-and-a-places-written-record-is-kept-per-pointer-sized-slot.md),
+#703). Below the first level it is
 a proof only where the pointer gone through is certainly one local's value. It
 is unknown wherever less is known: a
-pointer moved off its start, since no distance is carried, an allocation whose
+pointer moved by a distance this check cannot count, an allocation whose
 size is not a constant, a pointer this check lost or whose local escaped, and
-a pointer read out of memory as a `void *`. A parameter and a call's result
+a pointer read out of memory as a `void *` where nothing recorded how wide
+what it points at is; where something did, it is believed that wide
+([ADR-0093](adr/0093-a-width-and-a-null-are-one-value-per-level.md), #631). A parameter and a call's result
 are believed to point at one whole object of the type they arrive as, so `void
 f(int *p) { *p = 1; }` is silent. A pointer read out of memory is believed no
 wider than what was recorded where it was stored, which is the type it arrived
@@ -345,7 +355,10 @@ is that part of the decision. A library
 function that takes a length, `memset`, `memcpy`, `memmove`, `memcmp`, `memchr`
 and `strncpy`'s destination, is asked about the length it is handed, and one
 that reads or writes as far as a string runs, `strlen`, `strcmp`, `strcpy` and
-their kind, is always unknown there.
+their kind, is always unknown there. `strcpy`, `strncpy` and `strcat` carry
+what their source holds into their destination as `memcpy` does, since a
+copy that stops at a null byte may still copy a whole pointer; `strncat` does
+not yet, and a pointer it rebuilds is a silence (#691).
 [ADR-0070](adr/0070-an-access-is-proved-inside-its-object-only-where-every-object-it-may-reach-was-read-wide-enough.md)
 is the decision.
 
@@ -387,6 +400,16 @@ memory nothing wrote (#907,
 A local array keeps the record as a block does, so a stack buffer between two
 copies, or a partial copy made straight into one, is asked the same way (#908,
 [ADR-0090](adr/0090-a-partial-pointer-record-is-kept-for-a-local-as-for-a-block.md)).
+**Not only a copy writes part of a pointer**: a store narrower than a pointer,
+`*ip = 1;` with `ip` an `int *` into memory of pointers or a `char` store into
+one, and a `memset` of part of a slot, are recorded the same way where they
+land at a position counted from the start, and a byte written over a pointer
+stored whole is too (#913, #917). A `char` loop's `c[i] = 0;` is not, since it
+may fill every byte of the slot over the loop. A call and a `return` ask a
+block by the types it was held as only where what receives it is a `void *`
+(#914,
+[ADR-0092](adr/0092-a-position-inside-an-object-is-one-byte-offset-and-a-places-written-record-is-kept-per-pointer-sized-slot.md)
+rules 5 and 6).
 Each is asked at the wider of its own type and the type the receiver reads it
 as, so a `void *` local's address passed as an `int **` asks the local four
 bytes wide, and memory by what its record says the pointers stored there point

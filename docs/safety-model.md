@@ -204,10 +204,18 @@ The limits, each a doubt the reader sees unless it says otherwise:
   or without (ADR-0083).
 * A read through a pointer read out of memory names no element, and asks the
   whole block (ADR-0081).
-* **A silence:** a store at an index this check cannot read writes the whole
-  of a block kept per element, so a block written once at such an index is
-  believed written, and only the store is doubted, as one that may reach
-  outside the block (ADR-0081).
+* A store at an index this check cannot read may have missed every element,
+  so it writes none for certain, and a block or array a loop fills is doubted
+  where it is read until a proof that the loop fills every element
+  ([ADR-0094](adr/0094-a-store-replaces-a-slot-only-where-it-certainly-lands-there-and-is-a-may-write-where-its-position-is-unknown.md),
+  rules 3 and 4). This replaces ADR-0081's silence, where such a store wrote
+  the whole block.
+* A store replaces what a block holds only where the block is one pointer
+  wide and made once, so a pointer freed and then overwritten in a block of
+  several slots is still doubted where the block is asked (ADR-0094 rule 1).
+* **A silence:** `strncat` carries nothing of what its source holds, so a
+  pointer it rebuilds out of zeroed memory is used after its free in silence,
+  where `strcpy`, `strncpy` and `strcat` carry it (#691).
 * **A silence:** a pointer not shown to be certainly freed, used by a
   comparison or a branch, is not asked: one freed on some path only, one read
   back out of memory, and one held by a local whose address was taken. One
