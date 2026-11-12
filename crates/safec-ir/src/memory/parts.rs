@@ -726,17 +726,6 @@ pub(super) fn same(here: Option<Span>, there: Option<Span>) -> Option<Span> {
     }
 }
 
-/// The earlier of two spans, by where they are rather than by which arrived.
-///
-/// A total order over the pair, so a value carrying one can only move one way
-/// and the walk ends. The file is the first half because a span names its
-/// own file and two of them need not share one.
-///
-/// **By where the code is, across an instance.** A free in an included file
-/// whose `#include` is above a free written in the including file is the
-/// earlier one, as written out, though its file was registered later: the
-/// order reads each span's chain from its root. See
-/// [`SourceMap::position`] and ADR-0054.
 /// The earliest write that made a may-fact about a place true, kept for two
 /// lifetimes: **ever**, which outlives the place being made again since a
 /// caller may still hold the allocation it named before, and **now**, since
@@ -797,6 +786,17 @@ impl Earliest {
     }
 }
 
+/// The earlier of two spans, by where they are rather than by which arrived.
+///
+/// A total order over the pair, so a value carrying one can only move one way
+/// and the walk ends. The file is the first half because a span names its
+/// own file and two of them need not share one.
+///
+/// **By where the code is, across an instance.** A free in an included file
+/// whose `#include` is above a free written in the including file is the
+/// earlier one, as written out, though its file was registered later: the
+/// order reads each span's chain from its root. See
+/// [`SourceMap::position`] and ADR-0054.
 pub(super) fn earlier(sources: &SourceMap, here: Span, there: Span) -> Span {
     if sources.position(here) <= sources.position(there) {
         here
