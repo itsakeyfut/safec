@@ -23,7 +23,7 @@ use super::fit::{
     Fit, fits, folded, only_if_certain, pointee, pointee_width, read_from_locals, slots_leaving,
     through_locals,
 };
-use super::index::{Idx, Loc, LocalIdx, Site, Table};
+use super::index::{Idx, Loc, LocalIdx, Site};
 use super::known::Known;
 use super::parts::{
     At, Extent, Freeing, Init, Levels, PlaceInit, Reached, Read, SiteState, Width, earlier, same,
@@ -402,7 +402,7 @@ pub(super) fn reported(
     let stored_out: Vec<Site> = reached
         .iter()
         .filter_map(|reached| match reached {
-            Reached::Site(site) if known.stored_out[*site] => Some(*site),
+            Reached::Site(site) if known.stored_out[*site].now().is_some() => Some(*site),
             _ => None,
         })
         .collect();
@@ -1786,14 +1786,14 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
     // **And what left before a typed local said it held pointers**: a block
     // that left through a `void *` and was held as `int **` after is asked
     // now, at the write that let it leave, with what its record reaches
-    // below. See `Known::stored_out_at` and ADR-0086.
+    // below. See `Known::stored_out`, ever, and ADR-0086.
     let mut asked: Vec<(Site, Span)> = known
         .state
         .indices()
         .filter_map(|site| known.left_at[site].map(|at| (site, at)))
         .collect();
     for root in known.state.indices() {
-        let Some(at) = known.stored_out_at[root] else {
+        let Some(at) = known.stored_out[root].ever() else {
             continue;
         };
         for site in known.held_below(vec![root], 0) {
@@ -1872,14 +1872,24 @@ enum PartialDoor {
 }
 
 impl PartialDoor {
-    /// The record this door reads: **kept across a site made again where
-    /// what is asked leaves**, since the caller or the callee may hold the
-    /// block the site named before; **made since, where it is read here**,
-    /// since a read reads the block the site names now (ADR-0089).
-    fn record(self, known: &Known) -> &Table<Loc, Option<Span>> {
+    /// What this door reads of `at`'s record: **kept across a site made
+    /// again where what is asked leaves**, since the caller or the callee
+    /// may hold the block the site named before; **made since, where it is
+    /// read here**, since a read reads the block the site names now
+    /// (ADR-0089).
+    ///
+    /// Mutation: a read asks `ever`, and
+    /// `a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported`
+    /// is reported. **No case holds the doors where it leaves reading
+    /// `ever`, measured**, nor the exit's `Known::stored_out` doing so: a
+    /// site made again in a loop meets the turn that wrote it at the loop's
+    /// head, so `now` still holds the write wherever the block leaves.
+    fn record(self, known: &Known, at: Loc) -> Option<Span> {
         match self {
-            PartialDoor::Exit | PartialDoor::Return | PartialDoor::Call => &known.part_written,
-            PartialDoor::Load | PartialDoor::CopyOut => &known.part_written_since_made,
+            PartialDoor::Exit | PartialDoor::Return | PartialDoor::Call => {
+                known.part_written[at].ever()
+            }
+            PartialDoor::Load | PartialDoor::CopyOut => known.part_written[at].now(),
         }
     }
 
@@ -1901,9 +1911,8 @@ fn ask_partial(
     analysis: &Allocations<'_>,
     known: &Known,
 ) {
-    let record = door.record(known);
     for at in places {
-        if let Some(copy) = record[at] {
+        if let Some(copy) = door.record(known, at) {
             push_part_of_a_pointer(findings, analysis, copy, door.asked());
         }
     }
@@ -3411,7 +3420,7 @@ pub(super) fn handed_stored_out(
     }
     let stored: Vec<Site> = freed_by_opaque_call(analysis, function, *callee, arguments, known)
         .into_iter()
-        .filter(|&site| known.stored_out[site])
+        .filter(|&site| known.stored_out[site].now().is_some())
         .collect();
     if stored.is_empty() {
         return;
@@ -3428,7 +3437,7 @@ pub(super) fn handed_stored_out(
             if place.projection.is_empty()
                 && known.points_to[place.local]
                     .sites()
-                    .any(|site| known.stored_out[site]) =>
+                    .any(|site| known.stored_out[site].now().is_some()) =>
         {
             Some(place)
         }
@@ -3445,7 +3454,7 @@ pub(super) fn handed_stored_out(
                     known,
                 )
                 .into_iter()
-                .any(|site| known.stored_out[site]) =>
+                .any(|site| known.stored_out[site].now().is_some()) =>
             {
                 Some(place)
             }

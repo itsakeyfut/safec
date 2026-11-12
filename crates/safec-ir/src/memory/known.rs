@@ -12,8 +12,8 @@ use crate::source::{SourceMap, Span};
 
 use super::index::{Loc, LocalIdx, Site, Table};
 use super::parts::{
-    At, Cell, Extent, Held, Init, Kept, Levels, PendingRead, PlaceInit, Reached, Read, ReadKey,
-    Realloced, SiteState, Width, earlier, read_key,
+    At, Cell, Earliest, Extent, Held, Init, Kept, Levels, PendingRead, PlaceInit, Reached, Read,
+    ReadKey, Realloced, SiteState, Width, read_key,
 };
 use super::store::{Certain, Strong, WrittenLocal};
 use super::{LostReason, named};
@@ -433,8 +433,17 @@ pub(super) struct Known {
     /// door's. A may-fact, so a union at every join, and cleared where the site
     /// is made again (`Self::reborn`); never cleared by a later store, since
     /// this check does not follow what one place in such memory holds (#656).
-    /// See ADR-0041.
-    pub(super) stored_out: Table<Site, bool>,
+    /// See ADR-0041. That is [`Earliest::now`].
+    ///
+    /// **And [`Earliest::ever`], the earliest write that let it leave at
+    /// all**, whatever its type read, kept where the site is made again, as
+    /// `left_at` is. The exit asks one whose [`Self::held_levels`] says
+    /// pointers by then, so a block held as `int **` only after it left
+    /// through a `void *` is asked as one held so before: `*out = v; int **b
+    /// = v;` was silent where `int **b = v; *out = v;` is `SC0411`, found by
+    /// review. See ADR-0086. **One value for the two**, so that what writes
+    /// one writes both (#934).
+    pub(super) stored_out: Table<Site, Earliest>,
     /// Per site, the write that let it leave holding pointers, where one
     /// may have: a store or a library copy into memory that leaves, of a
     /// pointer to it or to a block that holds one, as far down as the
@@ -461,16 +470,6 @@ pub(super) struct Known {
     /// the larger, and kept where the site is made again, as `left_at` is.
     /// See ADR-0086.
     pub(super) held_levels: Table<Site, usize>,
-    /// Per site, the earliest write that let it leave at all, whatever its
-    /// type read: every block a leaving write's closure names, as
-    /// `stored_out` is, with the span. The exit asks one whose
-    /// [`Self::held_levels`] says pointers by then, so a block held as
-    /// `int **` only after it left through a `void *` is asked as one held
-    /// so before: `*out = v; int **b = v;` was silent where `int **b = v;
-    /// *out = v;` is `SC0411`, found by review. A may-fact, joined keeping
-    /// the earlier span, and kept where the site is made again, as `left_at`
-    /// is. See ADR-0086.
-    pub(super) stored_out_at: Table<Site, Option<Span>>,
     /// Per site, the earliest library copy that may have written part of a
     /// pointer into it: one whose length is shorter than a pointer, or ends
     /// part way through one (`Allocations::copied_pointers`), whatever either
@@ -487,18 +486,16 @@ pub(super) struct Known {
     /// itself cannot know when nothing typed has reached the block yet:
     /// `memcpy(m, &i, 4); void **q = m; *pp = q;` built silent (#832). A
     /// may-fact, joined keeping the earlier span, and kept where the site is
-    /// made again, as `left_at` is. See ADR-0087.
-    pub(super) part_written: Table<Loc, Option<Span>>,
-    /// [`Self::part_written`] for the allocation the site names now:
-    /// cleared where the site is made again, which `part_written` is not.
+    /// made again, as `left_at` is: [`Earliest::ever`]. See ADR-0087.
     ///
-    /// **What a read inside the function asks** (ADR-0088 rules 3 and 4):
-    /// it reads the block the site names now, not one an earlier turn made
-    /// and a caller may still hold, which is the reason `part_written` is
-    /// kept. Asked by the kept one, a loop that allocated, read a whole
-    /// pointer, and only then copied part of one into the block was doubted
-    /// at the copy every turn, found by review.
-    pub(super) part_written_since_made: Table<Loc, Option<Span>>,
+    /// **And [`Earliest::now`], for the allocation the site names now**,
+    /// cleared where the site is made again: what a read inside the function
+    /// asks (ADR-0088 rules 3 and 4), since it reads the block the site
+    /// names now, not one an earlier turn made and a caller may still hold.
+    /// Asked by the kept one, a loop that allocated, read a whole pointer,
+    /// and only then copied part of one into the block was doubted at the
+    /// copy every turn, found by review. One value for the two (#934).
+    pub(super) part_written: Table<Loc, Earliest>,
     /// Per local, each type a call this check cannot read reached it as on
     /// the walk a departure takes, where that type is untyped somewhere
     /// below: `void`, `char` or `int` bytes, a pointer whose chain ends in
@@ -545,12 +542,7 @@ impl Known {
     /// the copy that writes it and the copy and `realloc` that carry it, so
     /// the three join it alike. See [`Self::part_written`] and ADR-0088.
     pub(super) fn note_part_written(&mut self, sources: &SourceMap, site: Loc, copy: Span) {
-        for table in [&mut self.part_written, &mut self.part_written_since_made] {
-            table[site] = Some(match table[site] {
-                Some(before) => earlier(sources, before, copy),
-                None => copy,
-            });
-        }
+        self.part_written[site].note(sources, copy);
     }
 
     /// What was stored through a pointer naming any of `places` is no longer
@@ -572,25 +564,12 @@ impl Known {
     /// `realloc` moves the bytes: each record from its own, so that what a
     /// read here asks comes only from blocks made since (ADR-0088).
     pub(super) fn carry_part_written(&mut self, sources: &SourceMap, from: &[Loc], to: &[Loc]) {
-        let earliest = |table: &Table<Loc, Option<Span>>| {
-            from.iter()
-                .filter_map(|&block| table[block])
-                .reduce(|here, there| earlier(sources, here, there))
-        };
-        let kept = earliest(&self.part_written);
-        let now = earliest(&self.part_written_since_made);
+        let mut carried = Earliest::none();
+        for &block in from {
+            carried.join(sources, self.part_written[block]);
+        }
         for &site in to {
-            for (table, carried) in [
-                (&mut self.part_written, kept),
-                (&mut self.part_written_since_made, now),
-            ] {
-                if let Some(copy) = carried {
-                    table[site] = Some(match table[site] {
-                        Some(before) => earlier(sources, before, copy),
-                        None => copy,
-                    });
-                }
-            }
+            self.part_written[site].join(sources, carried);
         }
     }
 
@@ -644,9 +623,7 @@ impl Known {
             stored_out: _,
             left_at: _,
             held_levels: _,
-            stored_out_at: _,
             part_written,
-            part_written_since_made,
             // A local's is cleared where its next lifetime begins
             // (`Self::storage_live`).
             handed_untyped: _,
@@ -657,8 +634,7 @@ impl Known {
         // the reason a block's record is kept does not reach it. Kept, a
         // buffer declared in a loop body carried last turn's partial copy
         // into this turn's. See ADR-0090.
-        part_written[local] = None;
-        part_written_since_made[local] = None;
+        part_written[local] = Earliest::none();
     }
 
     /// A local's lifetime begins (`StorageLive`): a new object, holding
@@ -693,10 +669,8 @@ impl Known {
             stored_out: _,
             left_at: _,
             held_levels: _,
-            stored_out_at: _,
             // Cleared by `Self::clear` above.
             part_written: _,
-            part_written_since_made: _,
             handed_untyped,
         } = self;
         // **A new object, indeterminate again** (C17 6.2.4 p6), so an
@@ -2126,8 +2100,10 @@ impl Known {
             exposed_in_part: _,
             stored_in_part: _,
             // A local's, as `escaped` is, and a site being reborn is not.
-            // About the allocation the site named, whose address may have
-            // been stored out; the new one's has not been.
+            // **Since it was made, cleared**: about the allocation the site
+            // named, whose address may have been stored out, and the new
+            // one's has not been. **Ever, kept**, for the reason `left_at`
+            // is. See `Known::stored_out`.
             stored_out,
             // **Kept, unlike `stored_out`**: the caller may still hold the
             // allocation the site named before, and whether that was written
@@ -2139,13 +2115,11 @@ impl Known {
             left_at: _,
             // Kept, for the reason `left_at` is. See `Known::held_levels`.
             held_levels: _,
-            // Kept, for the reason `left_at` is. See `Known::stored_out_at`.
-            stored_out_at: _,
-            // Kept, for the reason `left_at` is. See `Known::part_written`.
-            part_written: _,
-            // About the allocation the site named: the new one has had
-            // nothing copied into it. See `Known::part_written_since_made`.
-            part_written_since_made,
+            // **Since it was made, cleared; ever, kept**, for the reason
+            // `left_at` is: the new allocation has had nothing copied into
+            // it, and the caller may hold the old one. See
+            // `Known::part_written`.
+            part_written,
             // Not a local's, which a site being reborn is not about, and
             // kept for the site, as `names` is: a call may still hold the old
             // allocation's address, and the slots of the new one are not told
@@ -2155,8 +2129,8 @@ impl Known {
         // **What the site's own cell keeps when it names a new
         // allocation**, field by field. See `Cell::kept_when_reborn`.
         contents[site].kept_when_reborn();
-        stored_out[site] = false;
-        part_written_since_made[site] = None;
+        stored_out[site].made_again();
+        part_written[site].made_again();
 
         // **A local that loses an allocation that is gone may hold one**, so
         // a store of it marks where it lands, as a load out of a marked

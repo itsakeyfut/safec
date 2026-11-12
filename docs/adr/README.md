@@ -150,6 +150,8 @@ finds the new one without the record being edited.
 | `Held::believed` | `Held::believed()`, level 0 of `Held::widths` | #804 |
 | `Held::contents_at_most` | `Held::contents_at_most()`, the levels of `Held::widths` below the first | #804 |
 | `Known::handed_contents_at_most` | `Known::handed_at_most`, below its first level | #804 |
+| `Known::stored_out_at`, and `Known::stored_out` as a mark | `Known::stored_out`, one `Earliest` per site: `ever()` is what `stored_out_at` held, `now().is_some()` what the mark said | #934 |
+| `Known::part_written_since_made` | `Known::part_written`, one `Earliest` per place: `now()` is what `part_written_since_made` held, `ever()` what `part_written` did | #934 |
 | `AS_TYPED` | `Width::AsTyped` | #804 |
 | `Cell::unrecorded` | `Width::Nothing` at a cell's level 0 | #804 |
 | `a_pointer_plus_a_literal_zero_is_not_proved_to_be_off_the_start` | `a_pointer_plus_a_literal_zero_is_at_its_start`, which a counted distance now proves | #703 |

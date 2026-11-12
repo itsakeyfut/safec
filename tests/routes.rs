@@ -391,9 +391,7 @@ const KNOWN_FIELDS: &[(&str, Field)] = &[
             "no row yet: a block held as pointers and reached later through a `void *` (ADR-0086) is asked at a `return` the matrix does not write; `HeldPointers` is held by the value's own record, and no row fails when this is never raised",
         ),
     ),
-    ("stored_out_at", Field::Exempt(PENDING)),
     ("part_written", Field::Belief(&[Belief::PartPointer])),
-    ("part_written_since_made", Field::Exempt(PENDING)),
     ("handed_untyped", Field::Exempt(PENDING)),
 ];
 

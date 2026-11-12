@@ -737,6 +737,66 @@ pub(super) fn same(here: Option<Span>, there: Option<Span>) -> Option<Span> {
 /// earlier one, as written out, though its file was registered later: the
 /// order reads each span's chain from its root. See
 /// [`SourceMap::position`] and ADR-0054.
+/// The earliest write that made a may-fact about a place true, kept for two
+/// lifetimes: **ever**, which outlives the place being made again since a
+/// caller may still hold the allocation it named before, and **now**, since
+/// it was made, which a read inside the function asks. One value, so that a
+/// write notes both and a join joins both: as two fields a pair each, every
+/// write named both tables on its own lines, and #902 and #907 each added
+/// the second of a pair (#934).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct Earliest {
+    ever: Option<Span>,
+    now: Option<Span>,
+}
+
+impl Earliest {
+    /// Nothing made it true.
+    pub(super) fn none() -> Self {
+        Earliest {
+            ever: None,
+            now: None,
+        }
+    }
+
+    /// The earliest write ever.
+    pub(super) fn ever(self) -> Option<Span> {
+        self.ever
+    }
+
+    /// The earliest write since the place was made.
+    pub(super) fn now(self) -> Option<Span> {
+        self.now
+    }
+
+    /// A write at `at` made it true, for both lifetimes.
+    pub(super) fn note(&mut self, sources: &SourceMap, at: Span) {
+        self.join(
+            sources,
+            Earliest {
+                ever: Some(at),
+                now: Some(at),
+            },
+        );
+    }
+
+    /// The earlier of each lifetime's write, where paths meet or a record is
+    /// carried to another place.
+    pub(super) fn join(&mut self, sources: &SourceMap, other: Earliest) {
+        let earliest = |here: Option<Span>, there: Option<Span>| match (here, there) {
+            (Some(here), Some(there)) => Some(earlier(sources, here, there)),
+            (here, there) => here.or(there),
+        };
+        self.ever = earliest(self.ever, other.ever);
+        self.now = earliest(self.now, other.now);
+    }
+
+    /// The place was made again: nothing has made it true since.
+    pub(super) fn made_again(&mut self) {
+        self.now = None;
+    }
+}
+
 pub(super) fn earlier(sources: &SourceMap, here: Span, there: Span) -> Span {
     if sources.position(here) <= sources.position(there) {
         here

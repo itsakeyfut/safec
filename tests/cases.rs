@@ -1811,7 +1811,7 @@ cases! {
         a_block_held_as_pointers_written_before_it_is_returned_as_a_void_pointer_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Held as `int **` only after it left, found by review: the exit asks
         // it as one held so before. Mutation: the exit asks `left_at` alone,
-        // not `stored_out_at` by the record; this goes silent.
+        // not `stored_out` by the record; this goes silent.
         a_block_held_as_pointers_only_after_it_left_through_a_void_pointer_slot_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Held as pointers on one arm only, found by review. Mutation: join
         // `held_levels` by the smaller; this goes silent.
@@ -1907,7 +1907,7 @@ cases! {
         a_block_with_no_partial_pointer_copied_whole_into_another_that_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Two partial copies reach one block, the first carried by a whole
         // copy: one report, at the first. Mutation: keep the later span in
-        // `Known::note_part_written`; the caret moves to the second copy.
+        // `Earliest::join`; the caret moves to the second copy.
         a_partial_pointer_carried_into_a_block_a_later_partial_copy_writes_is_reported_at_the_first_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A source that may name either of two blocks, each with its own
         // partial copy: one report, at the earlier, found by review.
@@ -1955,18 +1955,19 @@ cases! {
         // Each turn makes a block, reads a whole pointer out of it, and only
         // then copies part of one in: the read is of this turn's block, not
         // the last's, found by review. Mutation: a read asks the record kept
-        // where the site is made again, `Known::part_written`; this is
-        // reported. So it is when the site's own record is not cleared there.
+        // where the site is made again, `Earliest::ever`; this is reported.
+        // So it is when `Earliest::made_again` clears nothing.
         a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same turn copies and then reads: asked. Mutation: note a copy
-        // in the kept record alone in `Known::note_part_written`; this and
-        // every other read case go silent.
+        // The same turn copies and then reads: asked. Mutation:
+        // `Earliest::note` notes `ever` alone; this and every other read case
+        // go silent.
         a_partial_pointer_copied_and_read_in_each_turn_of_a_loop_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Read after a `realloc` moved the block. Mutation: carry only the
-        // kept record in `Known::carry_part_written`; this goes silent.
+        // Read after a `realloc` moved the block. Mutation: `Earliest::join`
+        // keeps its own `now`, so `Known::carry_part_written` carries `ever`
+        // alone; this goes silent.
         a_pointer_read_out_of_a_block_a_realloc_moved_after_a_partial_copy_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Copied on one arm and read after the join. Mutation: leave
-        // `Known::part_written_since_made` out of the join; this goes silent.
+        // Copied on one arm and read after the join. Mutation: the same; this
+        // goes silent.
         a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Through a local array, and a partial copy straight into one, each
         // then copied into a block that leaves (#908). Mutations: carry into

@@ -20,8 +20,8 @@ use super::index::{Idx, Loc, LocalIdx, Site, Table};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
-    At, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, PendingRead, PlaceInit, Reached,
-    Read, Realloced, SiteState, Width, earlier, joined_carried,
+    At, Cell, Earliest, Extent, Freeing, Held, Init, Inits, Levels, Marks, PendingRead, PlaceInit,
+    Reached, Read, Realloced, SiteState, Width, earlier, joined_carried,
 };
 use super::store::{Landing, StoreKind, Strong};
 use super::{Carried, Carrier};
@@ -618,11 +618,7 @@ impl Allocations<'_> {
         let mut out = carried;
         out.extend(read_out);
         for site in value.closure(out) {
-            value.stored_out[site] = true;
-            value.stored_out_at[site] = Some(match value.stored_out_at[site] {
-                Some(before) => earlier(self.sources, before, at),
-                None => at,
-            });
+            value.stored_out[site].note(self.sources, at);
         }
     }
 
@@ -1101,9 +1097,7 @@ impl Allocations<'_> {
             stored_out: _,
             left_at: _,
             held_levels: _,
-            stored_out_at: _,
             part_written: _,
-            part_written_since_made: _,
             // Not read by a load: what a call may have stored is asked where
             // the value is handed on.
             handed_untyped: _,
@@ -1948,9 +1942,7 @@ impl Allocations<'_> {
             stored_out,
             left_at,
             held_levels,
-            stored_out_at,
             part_written,
-            part_written_since_made,
             handed_untyped,
         } = into;
         // May-facts, so a union, as `exposed` of a local is. See
@@ -1962,10 +1954,13 @@ impl Allocations<'_> {
                 }
             }
         }
-        // A may-fact, so a union, at both kinds of join. See
-        // `Known::stored_out`.
+        // May-facts, so a union keeping the earlier span, at both kinds of
+        // join. See `Known::stored_out` and `Known::part_written`.
         for (here, there) in stored_out.iter_mut().zip(&from.stored_out) {
-            *here = *here || *there;
+            here.join(self.sources, *there);
+        }
+        for (here, there) in part_written.iter_mut().zip(&from.part_written) {
+            here.join(self.sources, *there);
         }
         // The larger, so a path that held the block as pointers asks it. See
         // `Known::held_levels`.
@@ -1973,18 +1968,8 @@ impl Allocations<'_> {
             *here = (*here).max(*there);
         }
         // A may-fact too, keeping the earlier store where both paths let the
-        // block leave. See `Known::left_at` and `Known::stored_out_at`.
-        for (here, there) in left_at
-            .iter_mut()
-            .zip(&from.left_at)
-            .chain(stored_out_at.iter_mut().zip(&from.stored_out_at))
-            .chain(part_written.iter_mut().zip(&from.part_written))
-            .chain(
-                part_written_since_made
-                    .iter_mut()
-                    .zip(&from.part_written_since_made),
-            )
-        {
+        // block leave. See `Known::left_at`.
+        for (here, there) in left_at.iter_mut().zip(&from.left_at) {
             *here = match (*here, *there) {
                 (Some(here), Some(there)) => Some(earlier(self.sources, here, there)),
                 (here, there) => here.or(there),
@@ -2485,12 +2470,10 @@ impl Analysis for Allocations<'_> {
             stored_in_part: Table::filled(false, self.locals),
             // No call has been handed anything yet.
             // Nothing has been stored anywhere yet.
-            stored_out: Table::filled(false, self.locals),
+            stored_out: Table::filled(Earliest::none(), self.locals),
             left_at: Table::filled(None, self.locals),
             held_levels: Table::filled(0, self.locals),
-            stored_out_at: Table::filled(None, self.locals),
-            part_written: Table::filled(None, Loc::count(self.locals)),
-            part_written_since_made: Table::filled(None, Loc::count(self.locals)),
+            part_written: Table::filled(Earliest::none(), Loc::count(self.locals)),
             // No call has been handed anything yet.
             handed_untyped: Table::filled(Vec::new(), Loc::count(self.locals)),
         };
@@ -3839,7 +3822,6 @@ impl Analysis for Allocations<'_> {
                     // leaves marks what it carries (ADR-0085).
                     stored_out: _,
                     left_at: _,
-                    stored_out_at: _,
                     // Read, by `Known::held_below`, for how far down that
                     // marking goes.
                     held_levels: _,
@@ -3847,7 +3829,6 @@ impl Analysis for Allocations<'_> {
                     // `Known::carry_part_written`: part of a pointer written,
                     // or carried (ADR-0087).
                     part_written: _,
-                    part_written_since_made: _,
                     // Not touched by a copy.
                     handed_untyped: _,
                 } = &*value;
@@ -4025,7 +4006,7 @@ impl Analysis for Allocations<'_> {
                             let carries = in_part
                                 || from
                                     .iter()
-                                    .any(|&at| value.part_written_since_made[at].is_some());
+                                    .any(|&at| value.part_written[at].now().is_some());
                             value.carry_part_written(self.sources, &from, &to);
                             // **Only where part of a pointer fits**: a local
                             // narrower than a pointer holds no pointer to be
@@ -4060,7 +4041,7 @@ impl Analysis for Allocations<'_> {
                             let recorded: Vec<Loc> = to
                                 .iter()
                                 .copied()
-                                .filter(|&at| value.part_written_since_made[at].is_some())
+                                .filter(|&at| value.part_written[at].now().is_some())
                                 .collect();
                             if carries && !recorded.is_empty() {
                                 value.written_over(&recorded);
@@ -4962,11 +4943,9 @@ impl Analysis for Allocations<'_> {
                     stored_out: _,
                     left_at: _,
                     held_levels: _,
-                    stored_out_at: _,
                     // Carried from the old block, by
                     // `Known::carry_part_written` (ADR-0087).
                     part_written: _,
-                    part_written_since_made: _,
                     // Not touched by `realloc`.
                     handed_untyped: _,
                 } = &*value;
