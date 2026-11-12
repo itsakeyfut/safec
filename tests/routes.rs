@@ -2300,7 +2300,8 @@ const REPORTED_ELSEWHERE: &str = "the free and the call a freed pointer is hande
 const WRITES_WHAT_IT_IS_HANDED: &str = "a call this check cannot read is believed to write what it is handed, which `docs/safety-model.md` states beside the other boundary beliefs; not believing it refused correct programs that rely on the callee writing (#782)";
 const DEEP_COPY_LOSES_A_LOCAL: &str = "a copy two levels down loses the address of a local it carries, where the store spelling keeps it, so what is read through it is asked nothing (#686)";
 const POSITION_LOST: &str = "a local kept whole that may be unwritten is asked only where the pointer is known to point at its start, and one read out of memory and stored two levels down is not known to (#703)";
-const RETURNED_WRITTEN: &str = "a block written before it is returned is reported as one nothing wrote once its pointer went through another block, a write two levels down or a local's address (#920)";
+const RETURNED_MAY_NAME: &str = "a return reports a block nothing wrote as certain where a read through memory this check cannot place only may name it, as ADR-0045's walk adds what is exposed below the first level (#922)";
+const RETURNED_ONE_ARM: &str = "a pointer given a call's result on one arm and a null on the other is doubted at its return, since the join keeps no relation between what it names and on which arm a block was written (#923); its hazard is silent by the belief that a call writes what it is handed, as on both arms";
 const ELEMENT_LOST: &str = "a store through a pointer read back out of memory names no element, so it may-writes every element of an array kept per element and writes none for certain, until a pointer loaded keeps its position (ADR-0094 rule 3, #893)";
 // The door questions' reasons (#801).
 const DEEP_WRITE_LEAVES: &str = "a write more than one dereference below the pointer it goes through is taken as landing where this check cannot place it, and so as leaving, into memory only this function reads too, which both spellings of it answer alike (ADR-0071 rule 2, #802)";
@@ -2502,62 +2503,62 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
     (
         "returned_by_address_d1_both",
         Side::Control,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_MAY_NAME),
     ),
     (
         "returned_by_address_d1_one",
         Side::Control,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_MAY_NAME),
     ),
     (
         "returned_by_address_loaded_d1_both",
         Side::Control,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_MAY_NAME),
     ),
     (
         "returned_by_address_loaded_d1_one",
         Side::Control,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_MAY_NAME),
     ),
     (
         "returned_memcpy_block_d2_both",
         Side::Control,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_MAY_NAME),
     ),
     (
         "returned_memcpy_block_d2_one",
         Side::Control,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_MAY_NAME),
     ),
     (
         "returned_memcpy_d2_both",
         Side::Control,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_MAY_NAME),
     ),
     (
         "returned_memcpy_d2_one",
         Side::Control,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_MAY_NAME),
     ),
     (
         "returned_realloc_d2_both",
         Side::Control,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_MAY_NAME),
     ),
     (
         "returned_realloc_d2_one",
         Side::Control,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_MAY_NAME),
     ),
     (
         "returned_restored_d2_both",
         Side::Control,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_MAY_NAME),
     ),
     (
         "returned_restored_d2_one",
         Side::Control,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_MAY_NAME),
     ),
     (
         "returned_ret_d0_both",
@@ -2567,7 +2568,7 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
     (
         "returned_ret_d0_one",
         Side::Both,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_ONE_ARM),
     ),
     (
         "returned_ret_d1_both",
@@ -2577,7 +2578,7 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
     (
         "returned_ret_d1_one",
         Side::Both,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_ONE_ARM),
     ),
     (
         "returned_ret_d2_both",
@@ -2587,17 +2588,17 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
     (
         "returned_ret_d2_one",
         Side::Both,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_ONE_ARM),
     ),
     (
         "returned_store_d2_both",
         Side::Control,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_MAY_NAME),
     ),
     (
         "returned_store_d2_one",
         Side::Control,
-        Why::Cost(RETURNED_WRITTEN),
+        Why::Cost(RETURNED_MAY_NAME),
     ),
     ("width_ret_d0_both", Side::Control, Why::Belief(VOID_RESULT)),
     ("width_ret_d0_one", Side::Control, Why::Belief(VOID_RESULT)),
