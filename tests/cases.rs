@@ -9057,9 +9057,88 @@ fn run_case(group: &str, name: &str, args: &[&str]) {
         .code()
         .unwrap_or_else(|| panic!("case `{name}`: the compiler was killed by a signal"));
 
+    // Before anything is written, so that a refused bless leaves the case as
+    // it was.
+    if blessing() {
+        let path = group_dir(group).join(format!("{name}.exit"));
+        let expected = std::fs::read(&path).unwrap_or_default();
+        if let Some(refusal) = silencing_refused(name, &expected, &expected_exit(code), SILENCED) {
+            panic!("{refusal}");
+        }
+    }
     check(group, name, "stdout", &output.stdout);
     check(group, name, "stderr", &output.stderr);
     check(group, name, "exit", &expected_exit(code));
+}
+
+/// The cases a bless may turn from failing into passing, each with the
+/// reason the silence is right.
+///
+/// **A bless writes whatever the run now does**, a silence among it: on
+/// #918's branch one commit turned six cases `main` reported into silent
+/// ones, the bless recorded the silence as expected, and review found it
+/// rather than a test (#930). So a bless that would take a case's exit from
+/// nonzero to zero, which removes its `.exit`, is refused unless the case is
+/// listed here. An entry is kept only while it names a case, and is
+/// removed once the bless it allowed is made.
+const SILENCED: &[(&str, &str)] = &[];
+
+/// Why a bless of `name` is refused, where its expected exit, `expected`,
+/// is nonzero and the run's, `actual`, is zero, and `listed` gives no
+/// reason for it. `None` where it may be written.
+///
+/// Mutation: answer `None` always, and
+/// `a_bless_into_silence_is_refused_unless_the_case_is_listed_with_a_reason`
+/// fails.
+fn silencing_refused(
+    name: &str,
+    expected: &[u8],
+    actual: &[u8],
+    listed: &[(&str, &str)],
+) -> Option<String> {
+    let silenced = !expected.is_empty() && actual.is_empty();
+    let reason = listed.iter().find(|(case, _)| *case == name);
+    (silenced && reason.is_none()).then(|| {
+        format!(
+            "case `{name}`: a bless would take its exit from {} to 0, recording a \
+             silence as expected. Read why it is silent now; if that is right, list \
+             the case in `SILENCED` with the reason, and bless again.",
+            String::from_utf8_lossy(expected).trim_end()
+        )
+    })
+}
+
+#[test]
+fn a_bless_into_silence_is_refused_unless_the_case_is_listed_with_a_reason() {
+    let refused = silencing_refused("c", b"1\n", b"", &[]);
+    assert!(
+        refused
+            .as_deref()
+            .is_some_and(|said| said.contains("from 1 to 0"))
+    );
+    assert_eq!(silencing_refused("c", b"1\n", b"", &[("c", "why")]), None);
+    // Anything else a bless writes is not this question.
+    assert_eq!(silencing_refused("c", b"1\n", b"1\n", &[]), None);
+    assert_eq!(silencing_refused("c", b"", b"", &[]), None);
+    assert_eq!(silencing_refused("c", b"", b"1\n", &[]), None);
+}
+
+/// An entry of [`SILENCED`] names a case and gives a reason: one naming
+/// nothing would allow a silence to the next case given its name.
+///
+/// Mutation: list `("no_such_case", "why")`; this fails.
+#[test]
+fn every_case_a_bless_may_silence_is_one_with_a_reason() {
+    for (case, reason) in SILENCED {
+        assert!(
+            CASES.iter().any(|(_, name)| name == case),
+            "`{case}` in `SILENCED` names no case"
+        );
+        assert!(
+            !reason.trim().is_empty(),
+            "`{case}` in `SILENCED` gives no reason"
+        );
+    }
 }
 
 /// Where one group's cases live.
