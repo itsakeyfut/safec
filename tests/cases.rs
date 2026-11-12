@@ -2235,6 +2235,11 @@ cases! {
         // (`at_start` in `reads_partly` excluding `Bytes(1..)`).
         a_heap_block_of_more_than_sixty_four_pointers_written_at_one_element_is_doubted_where_read_at_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_heap_block_whose_size_is_not_a_whole_number_of_pointers_written_at_one_element_is_doubted_where_read_at_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block of no constant size is covered by no store, where the
+        // doubt whether a read past its start fits had stood in for it
+        // (#932). Mutation: `covers_block` answering `true` for `AtLeast`;
+        // this loses its `SC0411`.
+        a_block_of_no_constant_size_written_at_its_start_is_doubted_where_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_long_local_array_written_at_one_element_is_doubted_where_read_at_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block `realloc` grew holds what nothing wrote past the old size.
         // Mutation: `Allocations::past_the_old_size` leaving the block as

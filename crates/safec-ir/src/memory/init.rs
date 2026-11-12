@@ -128,17 +128,19 @@ impl Allocations<'_> {
                 // block's one record cannot say which. Written whole, `b =
                 // malloc(800); b[0] = x; r = b[5];` read `b[5]` in silence
                 // once a counted position proved it inside the block (#703),
-                // where an unknown position had doubted it. A block of no
-                // constant size is written whole as before: any read past its
-                // start is doubted as one that may not fit it. See ADR-0094
-                // rule 3.
+                // where an unknown position had doubted it. **Nor a block of
+                // no constant size**, which no store is known to be as wide
+                // as: written whole, `b = malloc(n); *b = x; return b;` was
+                // believed written, and only the doubt whether a read past
+                // its start fits stood in for the slots nothing wrote, the
+                // shape #703 exposed (#932). See ADR-0094 rule 3.
                 let width = self
                     .unit
                     .place_ty(function, place)
                     .and_then(|ty| self.unit.size_of(ty));
                 let covers_block = |value: &Known, site: Site| match value.extent[Loc::Heap(site)] {
                     Some(Extent::Exactly(size)) => width.is_some_and(|width| width >= size),
-                    Some(Extent::AtLeast(_)) | None => true,
+                    Some(Extent::AtLeast(_)) | None => false,
                 };
                 if derefs(place) > 0 {
                     let held = &value.points_to[pointer];
