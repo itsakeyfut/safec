@@ -148,6 +148,13 @@ finds the new one without the record being edited.
 | `memory::parts::Offset` | `memory::parts::At` | #703 |
 | `a_pointer_plus_a_literal_zero_is_not_proved_to_be_off_the_start` | `a_pointer_plus_a_literal_zero_is_at_its_start`, which a counted distance now proves | #703 |
 | `a_free_of_a_pointer_moved_back_to_the_start_is_not_proved` | `a_free_of_a_pointer_moved_back_to_the_start_is_not_an_interior_free`, likewise | #703 |
+| `a_char_buffer_filled_by_a_loop_read_as_a_pointer_is_not_doubted` | `a_char_buffer_filled_by_a_loop_read_as_a_pointer_is_doubted`, doubted until a loop proof (ADR-0094 rule 4) | #893 |
+| `a_heap_block_filled_by_a_pointer_walked_through_it_in_a_loop_is_not_doubted` | `a_heap_block_filled_by_a_pointer_walked_through_it_in_a_loop_is_doubted`, doubted until a loop proof (ADR-0094 rule 4) | #893 |
+| `a_heap_block_filled_in_a_loop_and_returned_is_not_doubted` | `a_heap_block_filled_in_a_loop_and_returned_is_doubted`, doubted until a loop proof (ADR-0094 rule 4) | #893 |
+| `a_local_array_filled_by_a_loop_is_not_doubted` | `a_local_array_filled_by_a_loop_is_doubted`, doubted until a loop proof (ADR-0094 rule 4) | #893 |
+| `a_local_array_written_through_memory_after_an_earlier_turn_stored_a_moved_pointer_is_not_doubted` | `a_local_array_written_through_memory_after_an_earlier_turn_stored_a_moved_pointer_is_doubted`, doubted until a loop proof (ADR-0094 rule 4) | #893 |
+| `a_long_local_array_filled_by_a_loop_is_not_doubted` | `a_long_local_array_filled_by_a_loop_is_doubted`, doubted until a loop proof (ADR-0094 rule 4) | #893 |
+| `an_allocation_filled_by_a_loop_is_not_doubted_as_unwritten` | `an_allocation_filled_by_a_loop_is_doubted_as_unwritten`, doubted until a loop proof (ADR-0094 rule 4) | #893 |
 
 ## Where each kind of writing belongs
 

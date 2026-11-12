@@ -258,12 +258,15 @@ cases! {
         // as a local written on one arm is (#668, #721). Measured since #733,
         // on `Init::joined`: join `Unwritten` and `Written` at a forward join
         // as `Unwritten`; the first two are certain. As `Written`; they go
-        // silent. As `Maybe` at a back edge too; the loop case is doubted.
+        // silent. The loop case is doubted since #893, a store at an index
+        // this check cannot read being a may-write (ADR-0094 rule 3); named
+        // `an_allocation_filled_by_a_loop_is_not_doubted_as_unwritten` until
+        // then.
         // Let `Known::written` leave a `Maybe`; the case written again after
         // the join is doubted.
         a_pointer_read_out_of_memory_written_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_an_allocation_written_on_one_arm_only_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        an_allocation_filled_by_a_loop_is_not_doubted_as_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_allocation_filled_by_a_loop_is_doubted_as_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_an_allocation_written_again_after_the_join_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store through a pointer that may name either of two allocations
         // may have missed one, so it keeps the doubt about it. Mutation: let
@@ -618,10 +621,13 @@ cases! {
         // A copy of the buffer's whole length writes it whole. Mutation:
         // compare the width with `<=`; this is doubted.
         a_char_buffer_a_copy_of_its_whole_length_wrote_read_as_a_pointer_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A store at an index this check cannot read writes it whole, so a
-        // loop that fills it is not doubted. Mutation: a write whose place
-        // is not known is one of part; this is doubted.
-        a_char_buffer_filled_by_a_loop_read_as_a_pointer_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store at an index this check cannot read may have missed every
+        // byte, so a loop that fills it is doubted until a proof that it
+        // fills every one, the cost ADR-0094 rule 4 names (#893). Mutation:
+        // the `None if array && !call` arm of `built::write_effects` removed; this goes silent. Named
+        // `a_char_buffer_filled_by_a_loop_read_as_a_pointer_is_not_doubted`
+        // until #893, the name ADR-0073's Confirmation gives it.
+        a_char_buffer_filled_by_a_loop_read_as_a_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The cost: written at every index one at a time, which a local kept
         // whole cannot tell from a write of one.
         a_char_buffer_written_at_every_index_one_at_a_time_read_as_a_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -945,9 +951,11 @@ cases! {
         // Mutation: join `Unwritten` and `Written` at a back edge as `Maybe`,
         // `Init::joined`; this gains an `SC0411` doubt.
         a_pointer_local_assigned_by_a_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same of an array too long to keep per element. Mutation: as
-        // above; this gains an `SC0411` doubt.
-        a_long_local_array_filled_by_a_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same of an array too long to keep per element, which a store at
+        // an index this check cannot read may-writes since #893, so doubted
+        // until a loop proof (ADR-0094 rule 4). Mutation: as above; this
+        // goes silent. Named `..._is_not_doubted` until #893.
+        a_long_local_array_filled_by_a_loop_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A doubt on one side of a join and a write on the other, where
         // neither side is certainly unwritten. Mutation: a forward join keeps
         // the side joined into, `Init::joined`; this goes silent.
@@ -1293,10 +1301,13 @@ cases! {
         // through it: still in part. Mutation: `Known::exposed_in_part`
         // adds nothing at a later call; the doubt goes.
         a_local_array_handed_in_part_to_a_call_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `m[i]` in a loop is an offset this check cannot read, which
-        // writes the whole array, as on `main`. Mutation: such a write
-        // leaves the array partly written; this gains an `SC0411` doubt.
-        a_local_array_filled_by_a_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `m[i]` in a loop is an offset this check cannot read, a may-write
+        // of every element (ADR-0094 rule 3), so the array is doubted until a
+        // proof that the loop fills it, the cost rule 4 names (#893).
+        // Mutation: the `None if array && !call` arm of `built::write_effects` removed; this goes silent. Named
+        // `a_local_array_filled_by_a_loop_is_not_doubted`
+        // until #893, the name ADR-0057, ADR-0064 and ADR-0069 give it.
+        a_local_array_filled_by_a_loop_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same fill inside an outer loop that makes `m` again each
         // turn: the inner head holds what its back edge brought, and the
         // outer loop's next turn arrives at it from before the loop.
@@ -1459,11 +1470,12 @@ cases! {
         // `m[1]` is an `SC0411` doubt. Mutation: such an operand takes no
         // mark from `Known::stored_in_part`; this goes silent.
         a_local_array_written_through_a_pointer_moved_as_it_is_read_out_of_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The moved pointer stored in the first turn named that turn's `m`,
-        // so this turn's `box[0] = m` writes it whole (C17 6.2.4 p2).
-        // Mutation: `StorageLive` leaves `Known::stored_in_part` alone; this
-        // gains an `SC0411` doubt.
-        a_local_array_written_through_memory_after_an_earlier_turn_stored_a_moved_pointer_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // This turn's `box[0] = m` names `m` at its start, but `f` is read
+        // back out of `box` and names no element, so `*f = &x;` is a
+        // may-write of `m` (ADR-0094 rule 3) and `m[0]` is doubted (#893).
+        // Mutation: as above; this goes silent. Named `..._is_not_doubted`
+        // until #893.
+        a_local_array_written_through_memory_after_an_earlier_turn_stored_a_moved_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The first turn handed that turn's `m` in part; this turn's `m` is
         // a new object, handed whole. Mutation: `StorageLive` leaves
         // `Known::exposed_in_part` alone; this gains an `SC0411` doubt.
@@ -2123,16 +2135,29 @@ cases! {
         // Written at both. Mutation: a constant move leaves the element where it
         // was; `b[1]` writes `b[0]` again and this is reported.
         a_heap_block_written_at_every_element_and_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Filled in a loop by an index not known, which writes the whole block,
-        // as a local array's is. Mutation: such a store into a block kept per
-        // element writes nothing; this is reported.
-        a_heap_block_filled_in_a_loop_and_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Filled by a pointer walked through it, whose first turn writes one
-        // element and whose later turns write the whole: the back edge of a
-        // loop shown to run joins each element, found by review. Mutation:
-        // join a block's elements only where both sides keep them; this is
-        // doubted.
-        a_heap_block_filled_by_a_pointer_walked_through_it_in_a_loop_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Filled in a loop by an index not known, a may-write of every slot
+        // (ADR-0094 rule 3), so doubted until a proof that the loop fills
+        // every one, the cost rule 4 names (#893). Mutation: the may-write branch of the store in `init.rs` removed;
+        // this goes silent. Named
+        // `a_heap_block_filled_in_a_loop_and_returned_is_not_doubted` until
+        // #893, the name ADR-0081's Confirmation gives it.
+        a_heap_block_filled_in_a_loop_and_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Filled by a pointer walked through it, which loses its element on
+        // the back edge: a may-write too, and doubted for the same cost
+        // (#893). Mutation: as above; this goes silent. Named
+        // `a_heap_block_filled_by_a_pointer_walked_through_it_in_a_loop_is_not_doubted`
+        // until #893, the name ADR-0081's Confirmation gives it.
+        a_heap_block_filled_by_a_pointer_walked_through_it_in_a_loop_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // #893's program: a loop that may stop before the end of a block
+        // kept per element leaves the rest unwritten, so the block is doubted
+        // where it is returned. Mutation: the may-write branch of the
+        // one-step store in `init.rs` removed; this loses its `SC0411`.
+        a_heap_block_filled_by_a_loop_that_stops_short_is_doubted_where_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store through a pointer read back out of memory names no element,
+        // so it may-writes a block kept per element (#893). Mutation: write
+        // the block whole there, as #726 does a block kept whole; this goes
+        // silent.
+        a_heap_block_written_through_a_pointer_read_back_out_of_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written at one element before an inner loop that makes it again:
         // unwritten again at the back edge element by element, found by
         // review, where `main` reported it and a whole-block test was silent.

@@ -49,8 +49,15 @@ Chosen: replace where certain, by the author.
 2. **Anywhere else a store adds to what the slot may hold**, as today.
 3. **A store at an unknown position is a may-write** of every slot it may
    reach: it makes no slot written that was not. This replaces ADR-0081
-   rule 2, and retires `Held::array_edge` and `Known::stored_in_part`, whose
-   only job was to make some such stores may-writes.
+   rule 2. It holds for a store through a pointer this function placed and
+   for one through a pointer read back out of memory alike; #726's decision,
+   that the latter writes the one block it certainly lands in, stands for a
+   block kept whole. A call this check cannot read is still believed to write
+   what it is handed, so `Held::array_edge` and `Known::stored_in_part` stay
+   for the call route: without `array_edge`,
+   `a_local_array_reached_by_a_call_through_a_moved_pointer_stored_in_an_allocation_is_doubted`
+   goes silent. Retiring them waits on that boundary belief, not on this
+   record.
 4. **Precision for a loop that fills a block comes back only through a
    proof.** It does not come back through the store believing itself whole.
    Until such a proof exists, a block filled in a loop is doubted where it is
@@ -70,7 +77,8 @@ To be filled by the change for #918:
   element nothing named is no longer believed written.
 * Bad, because a block filled in a loop is doubted until a loop proof is
   written. The prototype on #893 measured three cases moving and no exit
-  code.
+  code; the change measured seven, each renamed from `..._is_not_doubted`
+  to `..._is_doubted`, and one route row's control, accepted as a cost.
 
 ## Pros and Cons of the Options
 

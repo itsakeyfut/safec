@@ -335,8 +335,8 @@ impl Allocations<'_> {
     /// **Only where it is placed**: one dereference, at a position counted
     /// from the start. A store at a position this check cannot count, a
     /// `char` loop's `c[i] = 0;` among them, is no partial write here, since
-    /// it may fill every byte of the slot over the loop, and recording it
-    /// doubted `a_char_buffer_filled_by_a_loop_read_as_a_pointer_is_not_doubted`.
+    /// it may fill every byte of the slot over the loop; such a store is a
+    /// may-write of the slot instead (ADR-0094 rule 3, #893).
     /// **Not memory narrower than a pointer**, which holds no pointer to make
     /// of it. A store of a pointer's whole width is not narrow.
     fn note_narrow_store(&self, function: &Function, place: &Place, at: Span, value: &mut Known) {

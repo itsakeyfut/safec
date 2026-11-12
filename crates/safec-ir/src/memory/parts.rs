@@ -2815,9 +2815,11 @@ mod tests {
     /// answer, over every pair and triple of both kinds of join. Mutation:
     /// join `Unwritten` and `Written` at a back edge as `Maybe`; this fails,
     /// since the back edge's order puts `Unwritten` below `Written`, and so
-    /// do the corpus's loops that fill a block, a scalar local and an array,
-    /// `an_allocation_filled_by_a_loop_is_not_doubted_as_unwritten` among
-    /// them. Mutation: join them as `Written` at a forward join; this fails,
+    /// do four corpus cases of a pointer freed on a later turn,
+    /// `a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned`
+    /// among them. The loops that fill a block or an array no longer fail
+    /// it: a store at an index this check cannot read is a may-write since
+    /// #893. Mutation: join them as `Written` at a forward join; this fails,
     /// and so does its own case below.
     #[test]
     fn an_init_join_is_commutative_idempotent_associative_and_monotone() {

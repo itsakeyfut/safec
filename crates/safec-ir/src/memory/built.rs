@@ -506,6 +506,14 @@ pub(super) fn write_effects(
                 // Found by review of #667.
                 Some(element) if kept && !from_memory => Some(ArrayWrite::Element(element)),
                 _ if array_edge => Some(ArrayWrite::Maybe),
+                // **A store at an element not known may have missed every
+                // element**, so it writes none for certain: `*e = x;` with
+                // `e` moved through a loop over an array left the elements
+                // the loop never reached written (#893). A call is believed
+                // to write what it is handed, at the boundary. See
+                // ADR-0094 rule 3. **Not an array of one element**, whose
+                // one slot is where any store inside it lands.
+                None if array && !call && slots != 1 => Some(ArrayWrite::Maybe),
                 _ => None,
             }
             .map(|write| (each, write))

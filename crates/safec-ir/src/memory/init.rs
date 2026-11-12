@@ -148,7 +148,13 @@ impl Allocations<'_> {
                                 let at_element = site_element.is_some_and(|element| {
                                     value.certainly_written_at(&at, element)
                                 });
-                                if !at_element {
+                                // **At an element not known, a may-write of
+                                // a block kept per slot**: it may have
+                                // missed every slot (#893, ADR-0094 rule 3).
+                                let kept = value.written[at.site()].slots().is_some();
+                                if site_element.is_none() && kept {
+                                    value.written[at.site()].may_write();
+                                } else if !at_element {
                                     value.certainly_written(at);
                                 }
                             }
@@ -239,9 +245,22 @@ impl Allocations<'_> {
                             value.written[site].may_write();
                         }
                         let certain = landing.certain();
-                        let uncertain = certain.is_none();
+                        let mut uncertain = certain.is_none();
+                        // **At an element not known, a may-write of a block
+                        // kept per slot**, as through a pointer this function
+                        // placed: `c = *box; *c = x;` names no element of
+                        // the block `c` reaches, and writing it whole left
+                        // `b[1]` read in silence (#893, ADR-0094 rule 3).
+                        // #726's decision stands for a block kept whole.
                         if let Some(at) = certain {
-                            value.certainly_written(at);
+                            let unplaced = value.points_to[place.local].site_element.is_none()
+                                && value.written[at.site()].slots().is_some();
+                            if unplaced {
+                                value.written[at.site()].may_write();
+                                uncertain = true;
+                            } else {
+                                value.certainly_written(at);
+                            }
                         }
                         // And what it points at was written, so that a read
                         // back through it is of what was stored, as the
