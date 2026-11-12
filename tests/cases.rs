@@ -15,6 +15,7 @@
 //! hook that strips it breaks a case for a reason with nothing to do with the
 //! compiler.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -9084,18 +9085,50 @@ fn run_case(group: &str, name: &str, args: &[&str]) {
     check(group, name, "exit", &expected_exit(code));
 }
 
-/// The cases a bless may silence, each with the reason the silence is
-/// right.
+/// The cases a bless may silence, in whole or in part, each with the reason
+/// the silence is right.
 ///
 /// **A bless writes whatever the run now does**, a silence among it: on
 /// #918's branch one commit turned six cases `main` reported into silent
 /// ones, the bless recorded the silence as expected, and review found it
 /// rather than a test (#930). So a bless that would take a case's exit from
-/// nonzero to zero, which removes its `.exit`, or its `stderr` from
-/// something to nothing, is refused unless the case is listed here. An
+/// nonzero to zero, which removes its `.exit`, or that would leave its
+/// `stderr` with fewer diagnostics of any one level and code, or fewer
+/// proved ones, is refused unless the case is listed here. **Not only all
+/// of it**: review blessed a case that lost the one `SC0411` it was named
+/// for and kept two others, and the guard as first written let it through.
+/// What a diagnostic says is not asked, so a change of words blesses. An
 /// entry is kept only while it names a case, and is removed once the bless
 /// it allowed is made.
 const SILENCED: &[(&str, &str)] = &[];
+
+/// The diagnostics a case's `stderr` holds, counted by what opens each,
+/// its level and code (`error[SC0411]`, or `error` for one with none), and
+/// whether it was proved: an unproven one carries a note that says it
+/// could not be, which the renderer gives every unproven conclusion and no
+/// proved one, and a proof weakened to a doubt is a silence too.
+fn diagnostics_of(stderr: &[u8]) -> BTreeMap<String, (usize, usize)> {
+    let text = String::from_utf8_lossy(stderr);
+    let mut found: Vec<(String, bool)> = Vec::new();
+    for line in text.lines() {
+        if line.starts_with("error") || line.starts_with("warning") {
+            let opens = line.split(':').next().unwrap_or(line).to_owned();
+            found.push((opens, true));
+        } else if line.contains("could not be proven") {
+            if let Some(last) = found.last_mut() {
+                last.1 = false;
+            }
+        }
+    }
+    // How many of each, and how many of those proved.
+    let mut counted = BTreeMap::new();
+    for (opens, proved) in found {
+        let entry = counted.entry(opens).or_insert((0, 0));
+        entry.0 += 1;
+        entry.1 += usize::from(proved);
+    }
+    counted
+}
 
 /// What one of a case's expected files holds: nothing where there is none,
 /// as [`check`] reads it, and **a failure where it cannot be read**, since
@@ -9110,13 +9143,16 @@ fn expected_file(group: &str, name: &str, ext: &str) -> Vec<u8> {
     }
 }
 
-/// Why a bless of `name` is refused, where its expected `ext`, `expected`,
-/// holds something and the run's, `actual`, holds nothing, and `listed`
-/// gives no reason for it. `None` where it may be written.
+/// Why a bless of `name` is refused, where the run's `ext`, `actual`, says
+/// less than the expected one, `expected`, and `listed` gives no reason for
+/// it: an exit gone to zero, or `stderr` short of a diagnostic of some level
+/// and code, or of a proved one ([`diagnostics_of`]). `None` where it may be
+/// written.
 ///
 /// Mutation: answer `None` always, and
 /// `a_bless_into_silence_is_refused_unless_the_case_is_listed_with_a_reason`
-/// fails.
+/// fails; compare `stderr` only for being empty, or count no proofs, and
+/// `a_bless_that_loses_one_diagnostic_or_a_proof_is_refused` does.
 fn silencing_refused(
     name: &str,
     ext: &str,
@@ -9124,14 +9160,34 @@ fn silencing_refused(
     actual: &[u8],
     listed: &[(&str, &str)],
 ) -> Option<String> {
-    let silenced = !expected.is_empty() && actual.is_empty();
-    let reason = listed.iter().find(|(case, _)| *case == name);
-    (silenced && reason.is_none()).then(|| {
-        format!(
-            "case `{name}`: a bless would leave its {ext} empty, recording a silence as \
-             expected where it held:\n{}\nRead why it is silent now; if that is right, \
-             list the case in `SILENCED` with the reason, and bless again.",
+    let lost: Vec<String> = if ext == "stderr" {
+        let now = diagnostics_of(actual);
+        diagnostics_of(expected)
+            .into_iter()
+            .filter_map(|(opens, (all, proved))| {
+                let (all_now, proved_now) = now.get(&opens).copied().unwrap_or((0, 0));
+                (all_now < all || proved_now < proved).then(|| {
+                    format!(
+                        "{opens}: {all} expected, {proved} of them proved; {all_now} now, {proved_now} proved"
+                    )
+                })
+            })
+            .collect()
+    } else if !expected.is_empty() && actual.is_empty() {
+        vec![format!(
+            "{} expected, 0 now",
             String::from_utf8_lossy(expected).trim_end()
+        )]
+    } else {
+        Vec::new()
+    };
+    let reason = listed.iter().find(|(case, _)| *case == name);
+    (!lost.is_empty() && reason.is_none()).then(|| {
+        format!(
+            "case `{name}`: a bless would record its {ext} saying less than expected:\n  {}\n\
+             Read why it says less now; if that is right, list the case in `SILENCED` with \
+             the reason, and bless again.",
+            lost.join("\n  ")
         )
     })
 }
@@ -9139,9 +9195,9 @@ fn silencing_refused(
 #[test]
 fn a_bless_into_silence_is_refused_unless_the_case_is_listed_with_a_reason() {
     let refused = silencing_refused("c", "exit", b"1\n", b"", &[]);
-    assert!(refused.is_some_and(|said| said.contains("its exit empty")));
-    let refused = silencing_refused("c", "stderr", b"warning[SC0402]", b"", &[]);
-    assert!(refused.is_some_and(|said| said.contains("SC0402")));
+    assert!(refused.is_some_and(|said| said.contains("1 expected, 0 now")));
+    let refused = silencing_refused("c", "stderr", b"warning[SC0402]: x\n", b"", &[]);
+    assert!(refused.is_some_and(|said| said.contains("warning[SC0402]")));
     assert_eq!(
         silencing_refused("c", "exit", b"1\n", b"", &[("c", "why")]),
         None
@@ -9150,6 +9206,25 @@ fn a_bless_into_silence_is_refused_unless_the_case_is_listed_with_a_reason() {
     assert_eq!(silencing_refused("c", "exit", b"1\n", b"1\n", &[]), None);
     assert_eq!(silencing_refused("c", "exit", b"", b"", &[]), None);
     assert_eq!(silencing_refused("c", "exit", b"", b"1\n", &[]), None);
+}
+
+#[test]
+fn a_bless_that_loses_one_diagnostic_or_a_proof_is_refused() {
+    let two = b"error[SC0411]: a\n  = note: x\nerror[SC0413]: b\n";
+    // One of two lost.
+    let refused = silencing_refused("c", "stderr", two, b"error[SC0413]: b\n", &[]);
+    assert!(refused.is_some_and(|said| said.contains("error[SC0411]: 1 expected, 1 of them proved; 0 now")));
+    // A proof weakened to a doubt, in the same words.
+    let doubted =
+        b"error[SC0411]: a\n  = note: this could not be proven, and so on\nerror[SC0413]: b\n";
+    assert!(silencing_refused("c", "stderr", two, doubted, &[]).is_some());
+    // Words changed, the count and the proof kept: not a silence.
+    let reworded = b"error[SC0411]: c\nerror[SC0413]: d\n";
+    assert_eq!(silencing_refused("c", "stderr", two, reworded, &[]), None);
+    // More said, or a doubt made a proof: not a silence either.
+    let more = b"error[SC0411]: a\nerror[SC0413]: b\nerror[SC0402]: e\n";
+    assert_eq!(silencing_refused("c", "stderr", two, more, &[]), None);
+    assert_eq!(silencing_refused("c", "stderr", doubted, two, &[]), None);
 }
 
 /// An entry of [`SILENCED`] names a case and gives a reason: one naming
