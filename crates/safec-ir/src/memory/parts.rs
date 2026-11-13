@@ -2184,17 +2184,16 @@ fn joined_element(
     }
 }
 
-/// What a block holds: the one record a site's memory keeps, a [`Held`]
-/// read as the value a pointer stored there may be (#780).
+/// What a block holds: the one record a site's memory keeps, what a pointer
+/// stored there may name and how wide it is believed (#780).
 ///
-/// **A type of its own around the `Held`, with no `Deref`**, so that what a
-/// cell is asked is what these methods answer and nothing else: a cell sets
-/// its names, its bound and four marks, and every other field of the `Held`
-/// inside it is the default [`Held::none`] gives, which a value's question,
-/// `Held::beyond` or `Held::certain_target`, would read as a fact about
-/// what is stored there. Asking one of a cell does not compile: measured,
-/// `contents[site].beyond()` and `contents[site].certain_target()` are
-/// `error[E0599]`. Found by review. See ADR-0063.
+/// **A type of its own, not a [`Held`]**, so that what a cell is asked is
+/// what these methods answer and nothing else: a value's question,
+/// `Held::beyond` or `Held::certain_target`, read of a cell would take its
+/// defaults for facts about what is stored there. Asking one of a cell does
+/// not compile: `contents[site].beyond()` and
+/// `contents[site].certain_target()` are `error[E0599]`. Found by review.
+/// See ADR-0063.
 #[derive(Clone, PartialEq, Eq)]
 pub(super) struct Cell {
     /// What a pointer stored there may be.
@@ -2342,9 +2341,15 @@ impl Cell {
     /// load given `lost` itself doubts every walk of a list built in a loop
     /// with nothing freed, whose head is lost every turn,
     /// `a_list_built_in_a_loop_with_nothing_freed_is_walked_without_a_doubt`.
-    /// Every field is named, so a field added is `error[E0027]` here until
-    /// it says what a load takes of it.
+    /// Every field of the cell is named, so a field added is `error[E0027]`
+    /// here until it says what a load takes of it.
     pub(super) fn taken_by_a_load(&self, held: &mut Held) {
+        // Its names are read below for the reasons a load takes; the places
+        // and the width are the load's own walk's.
+        let Cell {
+            names: _,
+            widths: _,
+        } = self;
         // Read out of an allocation that may hold one that is gone. See
         // ADR-0045.
         if self.may_name(Why::StaleRead) {
@@ -2389,11 +2394,34 @@ impl Cell {
             poured.names.set(Loc::Local(target));
         }
         poured.bound_stored(stored);
-        // Every field named, never `..`, as `Self::absorb` and
-        // `Self::taken_by_a_load` name them: a mark memory keeps that no
-        // door puts there is a mark no load ever sees, so a field added to
-        // `Held` is `error[E0027]` here until it says what a store leaves of
-        // it. Found by review.
+        // Every field named, never `..`: a mark memory keeps that no door
+        // puts there is a mark no load ever sees, so a field added to `Held`
+        // is `error[E0027]` here until it says what a store leaves of it.
+        // Found by review.
+        let Held {
+            // What it names and how wide, given apart by the door, which
+            // knows what the write carried; the reasons it may name what
+            // this check does not model are poured below.
+            names: _,
+            widths: _,
+            // Not recorded in memory: a load takes it from the type it is
+            // read as. See `Held::arrived_holds_pointer`.
+            arrived_holds_pointer: _,
+            // Not recorded in memory. See `Self::absorb`.
+            freed: _,
+            writes_elsewhere: _,
+            offset: _,
+            named_at_read: _,
+            returned_by: _,
+            fresh_read: _,
+            inner_address: _,
+            element: _,
+            site_element: _,
+            array_edge: _,
+            stored_through: _,
+            // Not recorded in memory, so a load gives none.
+            may_be_null: _,
+        } = from;
         for (marked, why) in [
             (from.may_name(Why::StaleRead), Why::StaleRead),
             (from.may_name(Why::UnreplacedRead), Why::UnreplacedRead),
@@ -2422,13 +2450,14 @@ impl Cell {
     /// every path read one: a block gathers every store into it, and nothing
     /// stored is no bound, as [`Width::meet`] says, so [`Held::none`] is this
     /// join's identity and a block nothing was stored in is one. `other` is
-    /// destructured with no `..`, so a field added to `Held` is
-    /// `error[E0027]` here until it says what memory keeps of it.
+    /// destructured with no `..`, so a field added to a cell is
+    /// `error[E0027]` here until it says how two blocks' records join.
     pub(super) fn absorb(&mut self, other: &Cell) {
-        self.names.union_with(&other.names);
+        let Cell { names, widths } = other;
+        self.names.union_with(names);
         // **The lower at every level**, and a store that recorded no width at
         // level 0 absorbs whatever the other recorded (#767).
-        self.widths.bound_by(&other.widths);
+        self.widths.bound_by(widths);
     }
 }
 

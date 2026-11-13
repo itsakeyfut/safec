@@ -79,10 +79,30 @@ pub(super) enum Loc {
     Unknown(Why),
 }
 
+/// One list of reasons, from which both the enum and [`Why::ALL`] are made,
+/// so that a reason added is in both: written apart, a reason added to the
+/// enum and not to the array compiled, and its place took the index of the
+/// first allocation site (found by the architecture review of 2026-11-13).
+macro_rules! reasons {
+    ($(#[$enum_doc:meta])* enum Why { $($(#[$doc:meta])* $name:ident,)* }) => {
+        $(#[$enum_doc])*
+        #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        pub(super) enum Why {
+            $($(#[$doc])* $name,)*
+        }
+
+        impl Why {
+            /// Every reason, in its place order: the order they are listed in,
+            /// which is the order of their discriminants.
+            pub(super) const ALL: &'static [Why] = &[$(Why::$name,)*];
+        }
+    };
+}
+
+reasons! {
 /// Why a value may name a place this check does not model: each is one of
 /// the marks a value carried before it was a place.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub(super) enum Why {
+enum Why {
     /// Whether this local may hold an allocation this check can no longer
     /// name.
     ///
@@ -177,18 +197,6 @@ pub(super) enum Why {
     /// See ADR-0047.
     UnreplacedRead,
 }
-
-impl Why {
-    /// Every reason, in its place order.
-    pub(super) const ALL: [Why; 7] = [
-        Why::Lost,
-        Why::Loaded,
-        Why::Foreign,
-        Why::FromCaller,
-        Why::StaleRead,
-        Why::LostRead,
-        Why::UnreplacedRead,
-    ];
 }
 
 impl Loc {
@@ -301,5 +309,32 @@ impl<T> Index<&LocalId> for Table<Loc, T> {
 impl<T> IndexMut<&LocalId> for Table<Loc, T> {
     fn index_mut(&mut self, local: &LocalId) -> &mut T {
         &mut self[Loc::Local(LocalIdx::of(local))]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Idx, Loc, LocalIdx, Site, Why};
+
+    /// Every place has an index of its own, and the round trip through it is
+    /// the identity: an unknown place for each reason, then a site and a local
+    /// per local. Mutation: give `Loc::Unknown` an index of `why as usize + 1`;
+    /// this fails, as a reason sharing the first site's index once did.
+    #[test]
+    fn every_place_has_an_index_of_its_own() {
+        let mut places: Vec<Loc> = Why::ALL.iter().map(|&why| Loc::Unknown(why)).collect();
+        for at in 0..3 {
+            places.push(Loc::Heap(Site::at(at)));
+            places.push(Loc::Local(LocalIdx::at(at)));
+        }
+        let indices: Vec<usize> = places.iter().map(|&place| place.index()).collect();
+        for (place, &index) in places.iter().zip(&indices) {
+            assert_eq!(Loc::at(index), *place);
+        }
+        let mut sorted = indices.clone();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted.len(), indices.len(), "{indices:?}");
+        assert_eq!(Loc::count(3), indices.len());
     }
 }
