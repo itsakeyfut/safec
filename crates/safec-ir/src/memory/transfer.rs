@@ -112,9 +112,21 @@ impl Allocations<'_> {
     /// a reader of it reads a pointer built from four new bytes and four
     /// old ones (#717), or from four and four nothing wrote (#745).
     pub(super) fn copied_pointers(&self, callee: FuncId, arguments: &[Operand]) -> CopiedPointers {
+        self.pointers_covered(callee, arguments, 2)
+    }
+
+    /// How the length handed as argument `length` covers the pointers a
+    /// write of that many bytes lands on, as [`Self::copied_pointers`] asks
+    /// it of a copy's third: a row that fills names its own.
+    pub(super) fn pointers_covered(
+        &self,
+        callee: FuncId,
+        arguments: &[Operand],
+        length: usize,
+    ) -> CopiedPointers {
         let target = self.unit.target();
         let pointer = u64::from(target.pointer_bits() / target.char().bits());
-        match self.constant_argument(callee, arguments, 2) {
+        match self.constant_argument(callee, arguments, length) {
             Some(length) if length < pointer => CopiedPointers::NoneWhole,
             Some(length) if length % pointer != 0 => CopiedPointers::LastInPart,
             Some(_) | None => CopiedPointers::Whole,

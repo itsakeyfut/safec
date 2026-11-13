@@ -260,8 +260,9 @@ pub(crate) struct Library {
     /// How far it reaches through each argument it reads or writes through.
     pub(crate) reaches: &'static [(usize, Reach)],
     /// Whether it writes bytes of its own where its first argument points,
-    /// starting there, for the length it is handed: `memset`, whose write is
-    /// part of a pointer where that length ends part way through one (#913).
+    /// starting there, for the length its `reaches` gives that argument
+    /// ([`Library::fill_length`]): `memset`, whose write is part of a
+    /// pointer where that length ends part way through one (#913).
     /// Not a string function, whose write ends where its string does. **A
     /// column, not a name the transfer matches**, so that a row added later
     /// answers it or does not compile: read as `name == "memset"`, a row of
@@ -272,6 +273,25 @@ pub(crate) struct Library {
     pub(crate) makes: Option<Makes>,
     /// What it leaves in what it makes: `Some` exactly where `makes` is.
     pub(crate) leaves: Option<Leaves>,
+}
+
+impl Library {
+    /// The argument a row that [`Library::fills`] is handed its length in:
+    /// the one its `reaches` gives its first argument. **Read off the row**,
+    /// so the column cannot say one length and the transfer read another:
+    /// read as the third argument, a row taking its length second filled
+    /// in silence. Found by review.
+    pub(crate) fn fill_length(&self) -> Option<usize> {
+        if !self.fills {
+            return None;
+        }
+        self.reaches
+            .iter()
+            .find_map(|&(argument, reach)| match (argument, reach) {
+                (0, Reach::Length(length)) => Some(length),
+                _ => None,
+            })
+    }
 }
 
 /// Every library function the memory check reads by name, with what each is
@@ -468,3 +488,29 @@ pub(crate) const LIBRARY: &[Library] = &[
         leaves: None,
     },
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::{LIBRARY, Shape};
+
+    /// A row that fills names, through its `reaches`, an integer argument
+    /// its length is handed in. Without one, [`super::Library::fill_length`]
+    /// answers nothing and the row's fill is never asked. Mutation: give the
+    /// `memset` row `reaches: &[]`; this fails.
+    #[test]
+    fn every_row_that_fills_says_which_integer_argument_is_its_length() {
+        for row in LIBRARY.iter().filter(|row| row.fills) {
+            let length = row.fill_length().unwrap_or_else(|| {
+                panic!(
+                    "`{}` fills, and its `reaches` names no length for its first argument",
+                    row.name
+                )
+            });
+            assert!(
+                matches!(row.parameters.get(length), Some(Shape::Integer)),
+                "`{}` fills for the length in argument {length}, which is not an integer",
+                row.name
+            );
+        }
+    }
+}

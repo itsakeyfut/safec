@@ -7,6 +7,7 @@ use crate::ir::{
     BlockId, FuncId, Function, LocalId, Operand, Origin, Place, Projection, Rvalue, Terminator, Ty,
     TyId,
 };
+use crate::library::Library;
 use crate::source::Span;
 
 use super::allocations::{Allocations, handed_places, innermost_element};
@@ -266,6 +267,40 @@ impl Allocations<'_> {
             value.callers_memory_may_be_freed();
         }
 
+        // **A fill of part of a pointer writes part of one**, as a copy of
+        // that length does: `memset(m, 1, 4)` into memory later held as
+        // pointers left a pointer of four set bytes and four others in
+        // silence (#913). Only a row that `fills`, whose write starts at what
+        // it is handed; a string function's ends where its string does.
+        //
+        // **Asked of every row, whatever it does besides, at the length its
+        // own row says**: asked inside the arm of the rows that copy, and of
+        // the third argument, a row that fills with another `Callee` or its
+        // length elsewhere, `bzero(m, 4)`, set the column and stayed
+        // silent. Found by review.
+        if let Some(length) = self.library(*callee).and_then(Library::fill_length) {
+            if !matches!(
+                self.pointers_covered(*callee, arguments, length),
+                CopiedPointers::Whole
+            ) {
+                // Wherever it lands, as a store's write does. See
+                // `Self::note_landing_in_part`.
+                if let Some(Operand::Copy(dest)) = arguments.first() {
+                    let into_depth = derefs(dest);
+                    if dest.projection.is_empty() || into_depth > 0 {
+                        let landing = self.landing(
+                            value,
+                            dest.local,
+                            into_depth + 1,
+                            into_depth == 0,
+                            StoreKind::Copy,
+                        );
+                        self.note_landing_in_part(&landing, origin.span(), value);
+                    }
+                }
+            }
+        }
+
         match kind {
             Callee::Ends => {
                 unreachable!("`Allocations::call` returns for it where `handed` is decided")
@@ -401,34 +436,6 @@ impl Allocations<'_> {
             // from now on, and a local whose address it is handed may have
             // been written through it, as ADR-0029 says of an opaque call.
             Callee::ReturnsFirst | Callee::Copies => {
-                // **A `memset` of part of a pointer writes part of one**, as
-                // a copy of that length does: `memset(m, 1, 4)` into memory
-                // later held as pointers left a pointer of four set bytes
-                // and four others in silence (#913). Only a row that `fills`, `memset`, whose
-                // write starts at what it is handed; a string function's
-                // ends where its string does. See `Self::note_part_of_a_pointer`.
-                if self.library(*callee).is_some_and(|row| row.fills)
-                    && !matches!(
-                        self.copied_pointers(*callee, arguments),
-                        CopiedPointers::Whole
-                    )
-                {
-                    // Wherever it lands, as a store's write does. See
-                    // `Self::note_landing_in_part`.
-                    if let Some(Operand::Copy(dest)) = arguments.first() {
-                        let into_depth = derefs(dest);
-                        if dest.projection.is_empty() || into_depth > 0 {
-                            let landing = self.landing(
-                                value,
-                                dest.local,
-                                into_depth + 1,
-                                into_depth == 0,
-                                StoreKind::Copy,
-                            );
-                            self.note_landing_in_part(&landing, origin.span(), value);
-                        }
-                    }
-                }
                 // **The copy door's answer for every field, never `..`**, so
                 // a field added to `Known` answers here for what a library
                 // copy does with it. See ADR-0091.
