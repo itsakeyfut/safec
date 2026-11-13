@@ -1,0 +1,115 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:1:28 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:1:66 "g" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:1:83 "use" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int" "i"
+  Local "_2" "void *" "x"
+  Local "_3" "void *" "m"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "void **"
+  Local "_7" "void *"
+  Local "_8" "int *"
+  Local "_9" "void *"
+  Local "_10" "void **" "b"
+  Local "_11" "void *"
+  Local "_12" "void *" "s"
+  Block "bb0" entry
+    Operation a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:20 written
+      Destination "_1"
+      Use
+        Constant 1
+    Sequenced a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:24 generated
+    Operation a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:33 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:37 generated
+    ArgumentsEvaluated a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:50 generated
+    Call a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:50 written "malloc" "bb1"
+      Destination "_4"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:46 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:50 generated
+    Operation a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:65 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:65 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:65 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:65 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:87 written
+      Destination "_6"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:77 generated
+    Call a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:77 written "memcpy" "bb5"
+      Destination "_7"
+      Copy "_3"
+      Copy "_6"
+      Constant 8
+  Block "bb5"
+    Sequenced a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:77 generated
+    Operation a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:105 written
+      Destination "_8"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:95 generated
+    Call a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:95 written "memcpy" "bb6"
+      Destination "_9"
+      Copy "_3"
+      Copy "_8"
+      Constant 4
+  Block "bb6"
+    Sequenced a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:95 generated
+    Operation a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:120 written
+      Destination "_10"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:124 generated
+    Operation a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:127 written
+      Destination "_10"
+        Deref
+      Use
+        Copy "_2"
+    Operation a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:127 written
+      Destination "_11"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:127 generated
+    Operation a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:141 written
+      Destination "_12"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:145 generated
+    ArgumentsEvaluated a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:149 generated
+    Call a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:149 written "use" "bb7"
+      Copy "_12"
+  Block "bb7"
+    Sequenced a_pointer_stored_over_a_partial_one_and_read_back_is_not_reported.c:2:149 generated
+    Return

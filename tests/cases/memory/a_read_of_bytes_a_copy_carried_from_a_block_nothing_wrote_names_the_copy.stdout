@@ -1,0 +1,115 @@
+Target "x86_64-pc-windows-msvc"
+Function a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:3:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:3:28 "calloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+  Local "_2" "int" parameter "m"
+Function a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:3:55 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:3:76 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int **" "m"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int **" "n"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "void *"
+  Local "_8" "int *" "r"
+  Local "_9" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:5:15 generated
+    Call a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:5:15 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:5:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:5:15 generated
+    Operation a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:5:30 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:5:30 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:5:30 generated
+    Operation a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:5:34 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:5:41 generated
+    Return
+  Block "bb3"
+    Sequenced a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:5:30 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:6:15 generated
+    Call a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:6:15 written "calloc" "bb5"
+      Destination "_5"
+      Constant 1
+      Constant 8
+  Block "bb5"
+    Operation a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:6:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:6:15 generated
+    Operation a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:6:33 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_4"
+    Branch a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:6:33 written "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:6:33 generated
+    Operation a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:6:37 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:6:44 generated
+    Return
+  Block "bb7"
+    Sequenced a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:6:33 generated
+    Goto "bb8"
+  Block "bb8"
+    ArgumentsEvaluated a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:7:5 generated
+    Call a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:7:5 written "memcpy" "bb9"
+      Destination "_7"
+      Copy "_4"
+      Copy "_1"
+      Constant 8
+  Block "bb9"
+    Sequenced a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:7:5 generated
+    ArgumentsEvaluated a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:8:5 generated
+    Call a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:8:5 written "free" "bb10"
+      Copy "_1"
+  Block "bb10"
+    Sequenced a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:8:5 generated
+    Operation a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:9:10 written
+      Destination "_8"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:9:14 generated
+    Operation a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:10:12 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_8"
+        Constant 0
+    Operation a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:10:5 written
+      Destination "_0"
+      Use
+        Copy "_9"
+    Sequenced a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:10:12 generated
+    Return

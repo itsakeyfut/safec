@@ -1,5 +1,5 @@
 ---
-status: "accepted (its open silence about a copy closed by ADR-0088)"
+status: "accepted (its open silence about a copy closed by ADR-0088; rule 3 superseded by ADR-0092)"
 date: 2026-11-10
 decision-makers: itsakeyfut
 ---

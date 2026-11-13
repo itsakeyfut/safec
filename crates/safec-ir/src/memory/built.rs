@@ -7,7 +7,7 @@ use crate::ir::{BinOp, Function, LocalId, Operand, Place, TranslationUnit, Ty};
 use super::allocations::{innermost_element, stored_pointer};
 use super::index::{Idx, LocalIdx, Site, Table};
 use super::known::{ArrayWrite, Known, WrittenBy};
-use super::parts::{Held, Init, Inits, Offset, Reached};
+use super::parts::{At, Held, PlaceInit, Reached};
 use super::store::written_alone;
 use crate::reads::derefs;
 
@@ -47,6 +47,7 @@ pub(super) fn built_from(
     reads_a_byte: impl Fn(&Place) -> bool,
     reads_caller_memory: impl Fn(LocalId, usize) -> bool,
     is_array: impl Fn(LocalIdx) -> bool,
+    stride: Option<u64>,
 ) -> Held {
     let followed: Vec<LocalId> = operands
         .iter()
@@ -123,7 +124,7 @@ pub(super) fn built_from(
         reached.freed = value.points_to[one].freed;
     }
 
-    reached.offset = offset_of(op, operands, &followed, value);
+    reached.offset = offset_of(op, operands, &followed, value, stride);
     // **And it contributes what it holds**, what a load out of the same place
     // assigned to a local is given, at an offset nobody said since the
     // distance is not carried (ADR-0036). `loaded` below keeps every reader
@@ -170,7 +171,18 @@ pub(super) fn built_from(
 
 /// Where the result of a binary operation points in the sites it reaches.
 ///
-/// `Offset::NonZero` where all of these hold, and `Offset::Unknown` otherwise:
+/// **A distance in bytes where it is counted** (ADR-0092 rule 1): the
+/// followed operand at `Bytes(at)` and moved by a constant times `stride`,
+/// the size of what it points at, is `Bytes(at + distance)`, so that `m[1]`
+/// of `malloc(8)` holding `int`s is four bytes in and shown inside (#703).
+/// **A distance that cannot be counted is never `Bytes`**: a stride not
+/// known, `void`'s, a product or sum that overflows, or a start that is not
+/// itself counted, each answers as below, and a result before the start is
+/// `At::Moved`, certainly off it. A wrong `Bytes` would prove an access
+/// outside the object fits, so where in doubt this answers less.
+///
+/// Where no distance is counted, `At::Moved` where all of these hold, and
+/// `At::Unknown` otherwise:
 ///
 /// * the operator is `+`, or `-` with the followed operand on the left. C17
 ///   6.5.6 p8 keeps `P + N`, `N + P` and `P - N` inside the object `P` points
@@ -186,7 +198,7 @@ pub(super) fn built_from(
 ///   would be saying safe wrongly, on the strength of an invariant nobody
 ///   enforces.
 /// * the followed operand is itself at the start. `q = p + 1; r = q - 1;` has
-///   `r` back at the start, and nothing here carries a distance to know it.
+///   `r` back at the start, which only a counted distance can know.
 ///
 /// Every other operator answers `Unknown`, a `*` included: C17 6.5.5 p2 gives
 /// it arithmetic operands only, and a hand-built IR can hold one anyway. So
@@ -197,21 +209,30 @@ fn offset_of(
     operands: &[&Operand],
     followed: &[LocalIdx],
     value: &Known,
-) -> Offset {
+    stride: Option<u64>,
+) -> At {
     let [one] = followed[..] else {
-        return Offset::Unknown;
+        return At::Unknown;
     };
-
-    let moved = match (op, operands) {
-        (Some(BinOp::Add | BinOp::Sub), [Operand::Copy(_), Operand::Constant(by)])
-        | (Some(BinOp::Add), [Operand::Constant(by), Operand::Copy(_)]) => *by != 0,
-        _ => false,
+    let (by, sign) = match (op, operands) {
+        (Some(BinOp::Add), [Operand::Copy(_), Operand::Constant(by)])
+        | (Some(BinOp::Add), [Operand::Constant(by), Operand::Copy(_)]) => (*by, 1),
+        (Some(BinOp::Sub), [Operand::Copy(_), Operand::Constant(by)]) => (*by, -1),
+        _ => return At::Unknown,
     };
-
-    if moved && value.points_to[one].offset == Offset::Zero {
-        Offset::NonZero
-    } else {
-        Offset::Unknown
+    let start = value.points_to[one].offset;
+    let distance = stride
+        .and_then(|stride| by.checked_mul(i128::from(stride)))
+        .and_then(|bytes| bytes.checked_mul(sign));
+    match (start, distance) {
+        (At::Bytes(at), Some(distance)) => match i128::from(at).checked_add(distance) {
+            Some(0) => At::Bytes(0),
+            Some(reached) if reached > 0 => u64::try_from(reached).map_or(At::Unknown, At::Bytes),
+            Some(_) => At::Moved,
+            None => At::Unknown,
+        },
+        (At::Bytes(0), None) if by != 0 => At::Moved,
+        (At::Bytes(_) | At::Moved | At::Unknown, _) => At::Unknown,
     }
 }
 
@@ -245,7 +266,7 @@ fn offset_of(
 /// a write it cannot narrow.
 ///
 /// **What it may have written is a second, narrower answer**, about
-/// `Known::init` alone: a local of that type which
+/// `Known::written` alone: a local of that type which
 /// `Known::locals_a_write_may_land_in` says the place may land in. A local
 /// the write cannot reach keeps its mark, so a read of it nothing wrote is
 /// still `SC0411`. See ADR-0057.
@@ -285,7 +306,7 @@ pub(super) fn replaced_by(
     // **Through a pointer moved off an array, an element of it**, as the
     // placed store answers: still a write `replaced` makes of every local it
     // may land in, then partly written where it was unwritten before. See
-    // `Known::init`.
+    // `Known::written`.
     let writes = write_effects(
         unit,
         function,
@@ -317,12 +338,12 @@ pub(super) fn replaced_by(
         .collect();
     let alone = written_alone(value, place.local, derefs(place), &landing);
     let proved_alone = alone.is_some();
-    let before: Vec<(LocalIdx, Init, Inits)> = if proved_alone {
+    let before: Vec<(LocalIdx, PlaceInit)> = if proved_alone {
         Vec::new()
     } else {
         landing
             .iter()
-            .map(|&local| (local, value.init[local], value.element_init[local].clone()))
+            .map(|&local| (local, value.written[local].clone()))
             .collect()
     };
     let pending = value.array_writes_before(writes);
@@ -335,11 +356,9 @@ pub(super) fn replaced_by(
         value.written_local(at);
     }
     value.array_writes_after(pending);
-    for (local, mut init, mut elements) in before {
-        init.may_write();
-        elements.may_write_all();
-        value.init[local] = init;
-        value.element_init[local] = elements;
+    for (local, mut written) in before {
+        written.may_write();
+        value.written[local] = written;
     }
 }
 
@@ -365,7 +384,7 @@ pub(super) fn replaced_by(
 /// element it is handed, so what it is handed at a known element other
 /// than the start is in part too. One answer for the placed store, a store
 /// this check cannot place, a library copy and a call. See
-/// `Known::element_init` and ADR-0057.
+/// `Known::written` and ADR-0057.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn write_effects(
     unit: &TranslationUnit,
@@ -421,7 +440,8 @@ pub(super) fn write_effects(
                 }
                 _ => None,
             };
-            let kept = value.element_init[each].len() > 0;
+            let slots = value.written[each].slots().map_or(0, |slots| slots.len());
+            let kept = slots > 0;
             // **A write of part of a local kept whole leaves it possibly
             // unwritten** (#826): where it lands is known, an element of an
             // array or the start of a local that is no array, and it is
@@ -455,8 +475,13 @@ pub(super) fn write_effects(
                 if let (Some(width), Some(size)) = (width, size) {
                     // Narrower than the local, a copy of nothing included: a
                     // test of where it ends in a pointer let `memcpy(&p, &x,
-                    // 0)` write `p` whole. Found by review.
-                    let in_part = !(holds_pointers && array) && width < size;
+                    // 0)` write `p` whole. Found by review. **An array of
+                    // pointers too, unless it is kept per element**, whose
+                    // elements the arms below write: one longer than
+                    // `ELEMENTS_KEPT` is kept whole, and `a[0] = &y;` wrote
+                    // all of it, so `a[5]` was read in silence once a counted
+                    // position proved it inside (#703, #918's review).
+                    let in_part = !(holds_pointers && array && kept) && width < size;
                     if in_part {
                         return Some((each, ArrayWrite::Maybe));
                     }
@@ -474,7 +499,7 @@ pub(super) fn write_effects(
                 // review.
                 Some(0) if call && !array_edge => match width.map(|width| width / pointer_width) {
                     Some(_) if kept && !one_landing => Some(ArrayWrite::Maybe),
-                    Some(covered) if kept && covered < value.element_init[each].len() as u64 => {
+                    Some(covered) if kept && covered < slots as u64 => {
                         Some(ArrayWrite::Covered(covered))
                     }
                     _ => None,
@@ -486,6 +511,14 @@ pub(super) fn write_effects(
                 // Found by review of #667.
                 Some(element) if kept && !from_memory => Some(ArrayWrite::Element(element)),
                 _ if array_edge => Some(ArrayWrite::Maybe),
+                // **A store at an element not known may have missed every
+                // element**, so it writes none for certain: `*e = x;` with
+                // `e` moved through a loop over an array left the elements
+                // the loop never reached written (#893). A call is believed
+                // to write what it is handed, at the boundary. See
+                // ADR-0094 rule 3. **Not an array of one element**, whose
+                // one slot is where any store inside it lands.
+                None if array && !call && slots != 1 => Some(ArrayWrite::Maybe),
                 _ => None,
             }
             .map(|write| (each, write))
@@ -496,7 +529,7 @@ pub(super) fn write_effects(
 /// Whether the local at `index` is an array. One answer for the edge a
 /// pointer moved off it keeps and for the write through such a pointer
 /// being of an element. See `Held::moved_by_arithmetic` and
-/// `Known::init`.
+/// `Known::written`.
 pub(super) fn is_array(unit: &TranslationUnit, function: &Function, index: LocalIdx) -> bool {
     function
         .locals()

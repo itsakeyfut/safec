@@ -1,0 +1,31 @@
+warning[SC0413]: this writes less than a pointer into memory that is read back as pointers
+    ╭─[ a_copy_of_one_byte_into_an_array_of_pointers_names_no_copy_where_another_element_is_read.c:10:5 ]
+    │
+ 10 │     b[0] = 0;
+    │     ────┬───  
+    │         ╰───── written here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: write a pointer whole, or keep bytes written over part of one out of memory read as pointers
+warning[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_copy_of_one_byte_into_an_array_of_pointers_names_no_copy_where_another_element_is_read.c:12:5 ]
+    │
+ 12 │     memcpy(v, b, 1);
+    │     ───────┬───────  
+    │            ╰───────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+warning[SC0411]: this may read a pointer out of memory before anything was assigned to it
+    ╭─[ a_copy_of_one_byte_into_an_array_of_pointers_names_no_copy_where_another_element_is_read.c:13:10 ]
+    │
+ 13 │     int *p = arr[1];
+    │          ─────┬────  
+    │               ╰────── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: assign it on every path before it is read

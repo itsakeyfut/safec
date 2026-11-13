@@ -1,0 +1,60 @@
+error[SC0414]: this stores a pointer where code outside this function may read it, and it points to where a pointer that may have been freed is stored
+    ╭─[ a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:14:5 ]
+    │
+ 14 │     *out = b;
+    │     ────┬───  
+    │         ╰───── stored here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this
+error[SC0414]: this stores a pointer where code outside this function may read it, and it points to where a pointer that may have been freed is stored
+    ╭─[ a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:23:5 ]
+    │
+ 23 │     memcpy(out, &b, 8);
+    │     ─────────┬────────  
+    │              ╰────────── stored here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this
+error[SC0414]: this stores a pointer where code outside this function may read it, and it points to where a pointer that may have been freed is stored
+    ╭─[ a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:31:5 ]
+    │
+ 31 │     *out = b;
+    │     ────┬───  
+    │         ╰───── stored here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this
+error[SC0414]: this stores a pointer where code outside this function may read it, and it points to where a pointer that may have been freed is stored
+    ╭─[ a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:39:5 ]
+    │
+ 39 │     memcpy(out, &b, 8);
+    │     ─────────┬────────  
+    │              ╰────────── stored here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this
+error[SC0403]: this may dereference `b` while it is null
+    ╭─[ a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:21:15 ]
+    │
+ 21 │     *box = x; *b = box; free(x);
+    │               ────┬───  
+    │                   ╰───── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference `b` while it is null
+    ╭─[ a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:37:5 ]
+    │
+ 37 │     *b = x; if (c) free(x);
+    │     ───┬──  
+    │        ╰──── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

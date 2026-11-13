@@ -1,0 +1,14 @@
+error[SC0411]: `*n` is read before anything was assigned to it
+   ╭─[ a_read_of_bytes_a_copy_carried_from_a_block_nothing_wrote_names_the_copy.c:9:10 ]
+   │
+ 7 │     memcpy(n, m, 8);
+   │     ───────┬───────  
+   │            ╰───────── the bytes were copied here from `m`
+   │ 
+ 9 │     int *r = *n;
+   │          ───┬──  
+   │             ╰──── read here
+───╯
+  = note: C17 7.24.2.1 to 7.24.3.1 copy the source's characters into the destination, so bytes nothing wrote there are indeterminate where they land, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = help: write what the copy reads before copying it

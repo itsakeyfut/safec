@@ -1,0 +1,14 @@
+error[SC0411]: this reads a pointer out of memory before anything was assigned to it
+    ╭─[ a_block_grown_by_realloc_is_reported_where_read_past_its_old_size.c:13:10 ]
+    │
+ 11 │     int **c = realloc(b, 16);
+    │               ───────┬──────  
+    │                      ╰──────── the bytes were carried here from `b`
+    │ 
+ 13 │     int *r = c[1];
+    │          ────┬───  
+    │              ╰───── read here
+────╯
+  = note: C17 7.22.3.5 p2 gives the new object the old one's contents and leaves any bytes past the old size indeterminate, so bytes nothing wrote in the old one are indeterminate in the new, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = help: write the block before handing it to `realloc`

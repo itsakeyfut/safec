@@ -1,10 +1,10 @@
-error[SC0413]: this lets a pointer leave that may not point at the start of an object
+error[SC0413]: this writes less than a pointer into memory that is read back as pointers
     ╭─[ a_partial_pointer_read_out_of_a_block_that_also_leaves_is_reported_once.c:12:5 ]
     │
  12 │     memcpy(m, &i, 4);
     │     ────────┬───────  
-    │             ╰───────── stored here
+    │             ╰───────── written here
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: let a pointer leave as a `void *` only at the start of an object
+  = help: write a pointer whole, or keep bytes written over part of one out of memory read as pointers

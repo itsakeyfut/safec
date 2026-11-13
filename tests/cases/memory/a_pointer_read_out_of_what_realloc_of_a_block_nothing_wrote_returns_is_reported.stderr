@@ -1,10 +1,14 @@
 error[SC0411]: `*nw` is read before anything was assigned to it
    ╭─[ a_pointer_read_out_of_what_realloc_of_a_block_nothing_wrote_returns_is_reported.c:9:10 ]
    │
+ 7 │     int **nw = realloc(old, 8);
+   │                ───────┬───────  
+   │                       ╰───────── the bytes were carried here from `old`
+   │ 
  9 │     int *p = *nw;
    │          ───┬───  
    │             ╰───── read here
 ───╯
-  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: C17 7.22.3.5 p2 gives the new object the old one's contents and leaves any bytes past the old size indeterminate, so bytes nothing wrote in the old one are indeterminate in the new, and Annex J.2 lists using that value as undefined
   = note: this check belongs to safety level 1
-  = help: assign to it before reading it, or allocate with `calloc`
+  = help: write the block before handing it to `realloc`

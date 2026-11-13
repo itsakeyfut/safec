@@ -15,7 +15,7 @@ use crate::library::Callee;
 use crate::source::Span;
 
 use super::allocations::Allocations;
-use super::index::{LocalIdx, Site};
+use super::index::{Idx, LocalIdx, Site};
 use super::known::Known;
 use super::parts::Held;
 use crate::reads::derefs;
@@ -381,7 +381,7 @@ impl Landing {
             StoreKind::Direct | StoreKind::Through { .. } | StoreKind::Copy => self.deep > 1,
         };
         let held = &value.points_to[self.pointer];
-        held.beyond().unrecorded_address() || deep_enough
+        held.beyond().any_unknown() || deep_enough
     }
 
     /// Whether it lands nowhere this check names: no allocation and no local.
@@ -417,6 +417,36 @@ impl Landing {
 }
 
 impl Allocations<'_> {
+    /// The one local a write of `wrote` bytes landing as `landing` replaces
+    /// whole: one exact local and nothing else ([`Landing::strong`]), and a
+    /// width known to be exactly the local's size. Anything less is a
+    /// union, since the write may leave part of what was there, a pointer
+    /// among it.
+    ///
+    /// **One rule for a store and a library copy** (the memory model rebuilt
+    /// on #924). The copy asked the width and the store did not, so one byte
+    /// stored through a `char *` into a freed pointer replaced the pointer
+    /// whole, freed state and all: `*c = 1; return p;` built silent where
+    /// `memcpy(c, &z, 1); return p;` is `SC0406`. Found by the architecture
+    /// review of 2026-11-13; on `main` too.
+    pub(super) fn replaces_whole(
+        &self,
+        function: &crate::ir::Function,
+        value: &Known,
+        landing: &Landing,
+        wrote: Option<u64>,
+    ) -> Option<Strong> {
+        let size = |target: LocalIdx| {
+            function
+                .locals()
+                .nth(target.index())
+                .and_then(|local| self.unit.size_of(function.local(local)))
+        };
+        landing
+            .strong(value)
+            .filter(|at| wrote.is_some() && wrote == size(at.local()))
+    }
+
     /// Where a write of `kind` through `pointer`, `deep` dereferences down,
     /// lands. `one_step` is whether the place is exactly one dereference of
     /// the local; a copy's destination with no projection is that.
@@ -465,7 +495,7 @@ impl Allocations<'_> {
         // takes `p`'s value, which may be what the caller stored, and its one
         // recorded site is no proof. Found by review.
         //
-        // **This closure's `from_caller` is implied by `unrecorded_address`
+        // **This closure's `from_caller` is implied by `any_unknown`
         // today, and nothing holds it apart** (this one, not the pointer's
         // own `held.from_caller` below): a load out of a caller's memory marks
         // `loaded` beside it, and the call that marks every escaped local
@@ -474,7 +504,7 @@ impl Allocations<'_> {
         // dropping it from the closure fails no case, no route row and no
         // probe of either source. Kept so that a third source of the mark is not silent here.
         let unrecorded =
-            |local: &Held| local.beyond().is_from_caller() || local.beyond().unrecorded_address();
+            |local: &Held| local.beyond().is_from_caller() || local.beyond().any_unknown();
         let through_unrecorded = held.beyond().is_from_caller()
             || above
                 .iter()

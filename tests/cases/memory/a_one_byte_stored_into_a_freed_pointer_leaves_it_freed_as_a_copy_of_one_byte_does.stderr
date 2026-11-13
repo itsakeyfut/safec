@@ -1,0 +1,10 @@
+error[SC0406]: this returns `p`, which may point to a freed allocation
+    ╭─[ a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:12:5 ]
+    │
+ 12 │     return p;
+    │     ────┬────  
+    │         ╰────── returned here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

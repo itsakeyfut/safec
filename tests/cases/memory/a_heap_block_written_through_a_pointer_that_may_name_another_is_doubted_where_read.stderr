@@ -1,13 +1,3 @@
-error[SC0412]: this may reach outside the object it points at
-   ╭─[ a_heap_block_written_through_a_pointer_that_may_name_another_is_doubted_where_read.c:2:146 ]
-   │
- 2 │ int *f(int * _Nonnull x, int c) { int **b = malloc(16); if (!b) return 0; int **m = malloc(16); if (!m) return 0; b[0] = x; int **p = c ? b : m; p[1] = x; int *r = b[1]; return r; }
-   │                                                                                                                                                  ────┬───  
-   │                                                                                                                                                      ╰───── this check cannot say this is inside its object
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0411]: this may read a pointer out of memory before anything was assigned to it
    ╭─[ a_heap_block_written_through_a_pointer_that_may_name_another_is_doubted_where_read.c:2:161 ]
    │
@@ -19,13 +9,3 @@ error[SC0411]: this may read a pointer out of memory before anything was assigne
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: assign it on every path before it is read
-error[SC0412]: this may reach outside the object it points at
-   ╭─[ a_heap_block_written_through_a_pointer_that_may_name_another_is_doubted_where_read.c:2:161 ]
-   │
- 2 │ int *f(int * _Nonnull x, int c) { int **b = malloc(16); if (!b) return 0; int **m = malloc(16); if (!m) return 0; b[0] = x; int **p = c ? b : m; p[1] = x; int *r = b[1]; return r; }
-   │                                                                                                                                                                 ────┬───  
-   │                                                                                                                                                                     ╰───── this check cannot say this is inside its object
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

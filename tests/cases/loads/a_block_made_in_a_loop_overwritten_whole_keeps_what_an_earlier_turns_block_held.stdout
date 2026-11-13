@@ -1,0 +1,291 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:6:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:7:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:8:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" "x"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int ***" "keep"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int **"
+  Local "_8" "int" "k"
+  Local "_9" "int"
+  Local "_10" "int **" "b"
+  Local "_11" "void *"
+  Local "_12" "int"
+  Local "_13" "int"
+  Local "_14" "int *"
+  Local "_15" "int **"
+  Local "_16" "int *"
+  Local "_17" "int **" "o"
+  Local "_18" "int"
+  Local "_19" "int *" "r"
+  Local "_20" "int"
+  Local "_21" "int"
+  Local "_22" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:9:14 generated
+    Call a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:9:14 written "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:9:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:9:14 generated
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:10:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:10:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:10:9 generated
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:10:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:10:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:10:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:11:19 generated
+    Call a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:11:19 written "malloc" "bb5"
+      Destination "_5"
+      Constant 8
+  Block "bb5"
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:11:12 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:11:19 generated
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:12:9 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_4"
+    Branch a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:12:9 written "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:12:9 generated
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:12:16 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:12:23 generated
+    Return
+  Block "bb7"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:12:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:13:5 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 0
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:13:5 written
+      Destination "_7"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:13:5 generated
+    StorageLive a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:14:10 generated "_8"
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:14:14 written
+      Destination "_8"
+      Use
+        Constant 0
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:14:18 generated
+    Goto "bb9"
+  Block "bb9"
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:14:21 written
+      Destination "_9"
+      Binary "Lt"
+        Copy "_8"
+        Constant 2
+    Branch a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:14:21 written "bb10" "bb11"
+      Copy "_9"
+  Block "bb10"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:14:21 generated
+    StorageLive a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:15:9 generated "_10"
+    ArgumentsEvaluated a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:15:19 generated
+    Call a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:15:19 written "malloc" "bb12"
+      Destination "_11"
+      Constant 8
+  Block "bb11"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:14:21 generated
+    StorageDead a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:29:5 generated "_8"
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:30:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:30:12 generated
+    Return
+  Block "bb12"
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:15:15 written
+      Destination "_10"
+      Use
+        Copy "_11"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:15:19 generated
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:16:13 written
+      Destination "_12"
+      Unary "Not"
+        Copy "_10"
+    Branch a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:16:13 written "bb13" "bb14"
+      Copy "_12"
+  Block "bb13"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:16:13 generated
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:16:17 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:16:24 generated
+    StorageDead a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:16:17 generated "_10"
+    StorageDead a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:16:17 generated "_8"
+    Return
+  Block "bb14"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:16:13 generated
+    Goto "bb15"
+  Block "bb15"
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:17:13 written
+      Destination "_13"
+      Binary "Eq"
+        Copy "_8"
+        Constant 0
+    Branch a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:17:13 written "bb16" "bb17"
+      Copy "_13"
+  Block "bb16"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:17:13 generated
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:18:13 written
+      Destination "_10"
+        Deref
+      Use
+        Copy "_1"
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:18:13 written
+      Destination "_14"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:18:13 generated
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:19:13 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_10"
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:19:13 written
+      Destination "_15"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:19:13 generated
+    Goto "bb18"
+  Block "bb17"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:17:13 generated
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:21:13 written
+      Destination "_10"
+        Deref
+      Use
+        Constant 0
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:21:13 written
+      Destination "_16"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:21:13 generated
+    ArgumentsEvaluated a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:22:13 generated
+    Call a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:22:13 written "free" "bb19"
+      Copy "_1"
+  Block "bb18"
+    StorageDead a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:29:5 generated "_10"
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:14:28 written
+      Destination "_21"
+      Use
+        Copy "_8"
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:14:28 written
+      Destination "_22"
+      Binary "Add"
+        Copy "_8"
+        Constant 1
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:14:28 written
+      Destination "_8"
+      Use
+        Copy "_22"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:14:28 generated
+    Goto "bb9"
+  Block "bb19"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:22:13 generated
+    StorageLive a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:23:13 generated "_17"
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:23:19 written
+      Destination "_17"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:23:23 generated
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:24:17 written
+      Destination "_18"
+      Unary "Not"
+        Copy "_17"
+    Branch a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:24:17 written "bb20" "bb21"
+      Copy "_18"
+  Block "bb20"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:24:17 generated
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:24:21 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:24:28 generated
+    StorageDead a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:24:21 generated "_17"
+    StorageDead a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:24:21 generated "_10"
+    StorageDead a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:24:21 generated "_8"
+    Return
+  Block "bb21"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:24:17 generated
+    Goto "bb22"
+  Block "bb22"
+    StorageLive a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:25:13 generated "_19"
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:25:18 written
+      Destination "_19"
+      Use
+        Copy "_17"
+          Deref
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:25:22 generated
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:26:17 written
+      Destination "_20"
+      Unary "Not"
+        Copy "_19"
+    Branch a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:26:17 written "bb23" "bb24"
+      Copy "_20"
+  Block "bb23"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:26:17 generated
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:26:21 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:26:28 generated
+    StorageDead a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:26:21 generated "_19"
+    StorageDead a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:26:21 generated "_17"
+    StorageDead a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:26:21 generated "_10"
+    StorageDead a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:26:21 generated "_8"
+    Return
+  Block "bb24"
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:26:17 generated
+    Goto "bb25"
+  Block "bb25"
+    Operation a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:27:13 written
+      Destination "_0"
+      Use
+        Copy "_19"
+          Deref
+    Sequenced a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:27:20 generated
+    StorageDead a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:27:13 generated "_19"
+    StorageDead a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:27:13 generated "_17"
+    StorageDead a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:27:13 generated "_10"
+    StorageDead a_block_made_in_a_loop_overwritten_whole_keeps_what_an_earlier_turns_block_held.c:27:13 generated "_8"
+    Return

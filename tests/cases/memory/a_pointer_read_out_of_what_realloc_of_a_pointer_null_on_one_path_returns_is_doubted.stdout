@@ -1,0 +1,151 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:1:7 "realloc" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "p"
+  Local "_2" "int" parameter "n"
+Function a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:3:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int" "x"
+  Local "_3" "int **" "old"
+  Local "_4" "void *"
+  Local "_5" "int **"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Local "_8" "int *"
+  Local "_9" "int **" "pp"
+  Local "_10" "void *"
+  Local "_11" "int"
+  Local "_12" "int *" "p"
+  Local "_13" "int"
+  Block "bb0" entry
+    Operation a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:3:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:4:9 written
+      Destination "_2"
+      Use
+        Constant 1
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:4:13 generated
+    Operation a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:5:11 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:5:17 generated
+    Branch a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:9 generated
+    ArgumentsEvaluated a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:20 generated
+    Call a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:20 written "realloc" "bb4"
+      Destination "_4"
+      Constant 0
+      Constant 8
+  Block "bb2"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:7:16 generated
+    Call a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:7:16 written "realloc" "bb8"
+      Destination "_10"
+      Copy "_3"
+      Constant 8
+  Block "bb4"
+    Operation a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:14 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Operation a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:14 written
+      Destination "_5"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:14 generated
+    Operation a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:39 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_3"
+    Branch a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:39 written "bb5" "bb6"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:39 generated
+    Operation a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:45 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:52 generated
+    Return
+  Block "bb6"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:39 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:62 written
+      Destination "_7"
+      Address
+        Place "_2"
+    Operation a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:55 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:55 written
+      Destination "_8"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:6:55 generated
+    Goto "bb3"
+  Block "bb8"
+    Operation a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:7:11 written
+      Destination "_9"
+      Use
+        Copy "_10"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:7:16 generated
+    Operation a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:8:9 written
+      Destination "_11"
+      Unary "Not"
+        Copy "_9"
+    Branch a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:8:9 written "bb9" "bb10"
+      Copy "_11"
+  Block "bb9"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:8:9 generated
+    ArgumentsEvaluated a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:8:16 generated
+    Call a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:8:16 written "free" "bb12"
+      Copy "_3"
+  Block "bb10"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:8:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:9:10 written
+      Destination "_12"
+      Use
+        Copy "_9"
+          Deref
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:9:14 generated
+    ArgumentsEvaluated a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:10:5 generated
+    Call a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:10:5 written "free" "bb13"
+      Copy "_9"
+  Block "bb12"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:8:16 generated
+    Operation a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:8:27 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:8:34 generated
+    Return
+  Block "bb13"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:10:5 generated
+    Operation a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:11:12 written
+      Destination "_13"
+      Binary "Ne"
+        Copy "_12"
+        Constant 0
+    Operation a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:11:5 written
+      Destination "_0"
+      Use
+        Copy "_13"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_pointer_null_on_one_path_returns_is_doubted.c:11:12 generated
+    Return

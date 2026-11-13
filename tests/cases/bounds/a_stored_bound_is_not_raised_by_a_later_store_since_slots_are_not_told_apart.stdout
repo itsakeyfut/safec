@@ -72,7 +72,7 @@ Function a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_
     ArgumentsEvaluated a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:8:16 generated
     Call a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:8:16 written "malloc" "bb6"
       Destination "_9"
-      Constant 8
+      Constant 16
   Block "bb6"
     Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:8:12 written
       Destination "_8"

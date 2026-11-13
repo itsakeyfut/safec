@@ -1,21 +1,15 @@
-error[SC0413]: this lets `t` leave, which may not point at an object as wide as its type
-   ╭─[ a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:9:5 ]
-   │
- 9 │     memcpy(m, &t, 8);
-   │     ────────┬───────  
-   │             ╰───────── stored here
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0411]: `*ib` may be read before anything was assigned to it
     ╭─[ a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:11:10 ]
     │
+  9 │     memcpy(m, &t, 8);
+    │     ────────┬───────  
+    │             ╰───────── the bytes were copied here
+    │ 
  11 │     int *r = *ib;
     │          ───┬───  
     │             ╰───── read here
 ────╯
-  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: C17 7.24.2.1 to 7.24.3.1 copy the source's characters into the destination, so bytes nothing wrote there are indeterminate where they land, and Annex J.2 lists using that value as undefined
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: assign it on every path before it is read

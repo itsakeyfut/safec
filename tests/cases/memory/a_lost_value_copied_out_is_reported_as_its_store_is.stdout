@@ -1,0 +1,156 @@
+Target "x86_64-pc-windows-msvc"
+Function a_lost_value_copied_out_is_reported_as_its_store_is.c:5:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_lost_value_copied_out_is_reported_as_its_store_is.c:5:27 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_lost_value_copied_out_is_reported_as_its_store_is.c:5:48 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_lost_value_copied_out_is_reported_as_its_store_is.c:6:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "out"
+  Local "_2" "int" parameter "k"
+  Local "_3" "int"
+  Local "_4" "int *" "o"
+  Local "_5" "int" "t"
+  Local "_6" "int"
+  Local "_7" "int *" "p"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int *" "v"
+  Local "_12" "int **"
+  Local "_13" "void *"
+  Local "_14" "int *"
+  Local "_15" "int"
+  Local "_16" "int"
+  Block "bb0" entry
+    Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:7:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_lost_value_copied_out_is_reported_as_its_store_is.c:7:9 written "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:7:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:7:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:8:10 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:8:14 generated
+    Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:9:9 written
+      Destination "_5"
+      Use
+        Constant 0
+    Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:9:13 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:10:12 written
+      Destination "_6"
+      Binary "Lt"
+        Copy "_5"
+        Constant 2
+    Branch a_lost_value_copied_out_is_reported_as_its_store_is.c:10:12 written "bb5" "bb6"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:10:12 generated
+    StorageLive a_lost_value_copied_out_is_reported_as_its_store_is.c:11:9 generated "_7"
+    ArgumentsEvaluated a_lost_value_copied_out_is_reported_as_its_store_is.c:11:18 generated
+    Call a_lost_value_copied_out_is_reported_as_its_store_is.c:11:18 written "malloc" "bb7"
+      Destination "_8"
+      Constant 4
+  Block "bb6"
+    Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:10:12 generated
+    Return
+  Block "bb7"
+    Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:11:14 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:11:18 generated
+    Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:12:13 written
+      Destination "_9"
+      Unary "Not"
+        Copy "_7"
+    Branch a_lost_value_copied_out_is_reported_as_its_store_is.c:12:13 written "bb8" "bb9"
+      Copy "_9"
+  Block "bb8"
+    Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:12:13 generated
+    StorageDead a_lost_value_copied_out_is_reported_as_its_store_is.c:12:17 generated "_7"
+    Return
+  Block "bb9"
+    Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:12:13 generated
+    Goto "bb10"
+  Block "bb10"
+    Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:13:13 written
+      Destination "_10"
+      Binary "Eq"
+        Copy "_5"
+        Constant 1
+    Branch a_lost_value_copied_out_is_reported_as_its_store_is.c:13:13 written "bb11" "bb12"
+      Copy "_10"
+  Block "bb11"
+    Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:13:13 generated
+    StorageLive a_lost_value_copied_out_is_reported_as_its_store_is.c:14:13 generated "_11"
+    Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:14:18 written
+      Destination "_11"
+      Use
+        Copy "_4"
+    Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:14:22 generated
+    Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:15:25 written
+      Destination "_12"
+      Address
+        Place "_11"
+    ArgumentsEvaluated a_lost_value_copied_out_is_reported_as_its_store_is.c:15:13 generated
+    Call a_lost_value_copied_out_is_reported_as_its_store_is.c:15:13 written "memcpy" "bb14"
+      Destination "_13"
+      Copy "_1"
+      Copy "_12"
+      Constant 8
+  Block "bb12"
+    Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:13:13 generated
+    Goto "bb13"
+  Block "bb13"
+    Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:17:9 written
+      Destination "_4"
+      Use
+        Copy "_7"
+    Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:17:9 written
+      Destination "_14"
+      Use
+        Copy "_4"
+    Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:17:9 generated
+    ArgumentsEvaluated a_lost_value_copied_out_is_reported_as_its_store_is.c:18:9 generated
+    Call a_lost_value_copied_out_is_reported_as_its_store_is.c:18:9 written "free" "bb15"
+      Copy "_7"
+  Block "bb14"
+    Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:15:13 generated
+    StorageDead a_lost_value_copied_out_is_reported_as_its_store_is.c:16:9 generated "_11"
+    Goto "bb13"
+  Block "bb15"
+    Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:18:9 generated
+    Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:19:13 written
+      Destination "_15"
+      Binary "Add"
+        Copy "_5"
+        Constant 1
+    Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:19:9 written
+      Destination "_5"
+      Use
+        Copy "_15"
+    Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:19:9 written
+      Destination "_16"
+      Use
+        Copy "_5"
+    Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:19:9 generated
+    StorageDead a_lost_value_copied_out_is_reported_as_its_store_is.c:20:5 generated "_7"
+    Goto "bb4"

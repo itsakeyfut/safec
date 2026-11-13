@@ -59,7 +59,7 @@ Function an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:6
     ArgumentsEvaluated an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:11:16 generated
     Call an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:11:16 written "malloc" "bb5"
       Destination "_5"
-      Constant 8
+      Constant 16
   Block "bb5"
     Operation an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:11:12 written
       Destination "_4"

@@ -8,16 +8,6 @@ error[SC0413]: this lets `e` leave, which may not point at an object as wide as 
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
-error[SC0413]: this lets `box` leave, which may not point at an object as wide as its type
-   ╭─[ a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:9:5 ]
-   │
- 9 │     memcpy(&g, box, 8);
-   │     ─────────┬────────  
-   │              ╰────────── stored here
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0412]: this may reach outside the object `g` points at
     ╭─[ a_pointer_copied_by_memcpy_out_of_a_box_holding_one_moved_off_an_array_writes_it_in_part.c:11:5 ]
     │

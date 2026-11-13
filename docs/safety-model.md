@@ -204,10 +204,23 @@ The limits, each a doubt the reader sees unless it says otherwise:
   or without (ADR-0083).
 * A read through a pointer read out of memory names no element, and asks the
   whole block (ADR-0081).
-* **A silence:** a store at an index this check cannot read writes the whole
-  of a block kept per element, so a block written once at such an index is
-  believed written, and only the store is doubted, as one that may reach
-  outside the block (ADR-0081).
+* A store at an index this check cannot read may have missed every element,
+  so it writes none for certain, and a block or array a loop fills is doubted
+  where it is read until a proof that the loop fills every element
+  ([ADR-0094](adr/0094-a-store-replaces-a-slot-only-where-it-certainly-lands-there-and-is-a-may-write-where-its-position-is-unknown.md),
+  rules 3 and 4). This replaces ADR-0081's silence, where such a store wrote
+  the whole block.
+* A block or local array kept whole, more than 64 pointers or a size that is
+  no whole number of them, is written for certain only by a store as wide as
+  it; any narrower store may have missed the rest, so a read anywhere in it
+  after one is doubted, the element the store wrote included. A block
+  `realloc` grew is doubted, or reported, where it is read past the old size.
+* A store replaces what a block holds only where the block is one pointer
+  wide and made once, so a pointer freed and then overwritten in a block of
+  several slots is still doubted where the block is asked (ADR-0094 rule 1).
+* **A silence:** `strncat` carries nothing of what its source holds, so a
+  pointer it rebuilds out of zeroed memory is used after its free in silence,
+  where `strcpy`, `strncpy` and `strcat` carry it (#691).
 * **A silence:** a pointer not shown to be certainly freed, used by a
   comparison or a branch, is not asked: one freed on some path only, one read
   back out of memory, and one held by a local whose address was taken. One
@@ -216,6 +229,10 @@ The limits, each a doubt the reader sees unless it says otherwise:
 * **A silence:** a `longjmp` back to a `setjmp` runs a call again on an edge
   the graph does not have, so a block the first run left unwritten may be
   believed written where the second run's allocation fails (ADR-0082).
+* **A silence:** a local's address used after the block that declares the
+  local has ended, `int *p; { int x = 1; p = &x; } return *p;`, is not asked:
+  what ends a local's lifetime is the lifetime check's to ask, and until it
+  exists the read is believed (#665).
 * **Not asked here:** a local's address that leaves the function (#883).
   Where it is the only defect, nothing reports it. Arithmetic on a pointer
   that may be null is doubted as a dereference of one is (ADR-0084).
@@ -525,8 +542,14 @@ review that found it measured 17 of them, with 86 cases moved
 ([#782](https://github.com/itsakeyfut/safec/issues/782)). So a callee that
 writes less than it was handed is not detected, as a wrong hatch promise is
 not, and the route matrix's `fresh_call_*` rows hold it as a belief rather
-than a cost. Saying what a callee writes is the declaration the `owner`
-sketch above would carry, not a reading of the caller. A store or a library
+than a cost. **Except through a pointer that may name another place**: one
+handed `p`, either `&a` or `&b`, or `&a` or what this check does not follow,
+writes one of them, so a local every pointer it can find names only beside
+another may have been missed, and a read of `a` after `fill(p, &x)` is
+reported as it is after `*p = &x;`. A block that may hold `&a` or what this
+check does not follow still counts as naming `a` alone. Saying what a
+callee writes is the declaration the `owner` sketch above would carry, not
+a reading of the caller. A store or a library
 copy is no call: one this check cannot place writes a local for certain only
 where it lands there alone, through a pointer that holds nothing this check
 did not follow, and may have missed it otherwise

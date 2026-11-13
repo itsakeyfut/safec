@@ -1,0 +1,153 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:1:7 "realloc" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "p"
+  Local "_2" "int" parameter "n"
+Function a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:3:6 "unknown" declared
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "p"
+Function a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:5:5 "read_out_of_memory"
+  Local "_0" "int" return
+  Local "_1" "int ***" parameter _Nonnull "q"
+  Local "_2" "int **" "o"
+  Local "_3" "int **" "pp"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int *" "p"
+  Local "_7" "int"
+  Block "bb0" entry
+    Operation a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:6:11 written
+      Destination "_2"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:6:15 generated
+    ArgumentsEvaluated a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:7:16 generated
+    Call a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:7:16 written "realloc" "bb1"
+      Destination "_4"
+      Copy "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:7:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:7:16 generated
+    Operation a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:8:9 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:8:9 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:8:9 generated
+    Operation a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:8:14 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:8:21 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:8:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:9:10 written
+      Destination "_6"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:9:14 generated
+    ArgumentsEvaluated a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:10:5 generated
+    Call a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:10:5 written "free" "bb5"
+      Copy "_3"
+  Block "bb5"
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:10:5 generated
+    Operation a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:11:12 written
+      Destination "_7"
+      Binary "Eq"
+        Copy "_6"
+        Constant 0
+    Operation a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:11:5 written
+      Destination "_0"
+      Use
+        Copy "_7"
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:11:12 generated
+    Return
+Function a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:14:5 "written_by_a_call"
+  Local "_0" "int" return
+  Local "_1" "int **" "o"
+  Local "_2" "int ***"
+  Local "_3" "int **" "pp"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int *" "p"
+  Local "_7" "int"
+  Block "bb0" entry
+    Operation a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:15:11 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:15:15 generated
+    Operation a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:16:13 written
+      Destination "_2"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:16:5 generated
+    Call a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:16:5 written "unknown" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:16:5 generated
+    ArgumentsEvaluated a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:17:16 generated
+    Call a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:17:16 written "realloc" "bb2"
+      Destination "_4"
+      Copy "_1"
+      Constant 8
+  Block "bb2"
+    Operation a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:17:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:17:16 generated
+    Operation a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:18:9 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:18:9 written "bb3" "bb4"
+      Copy "_5"
+  Block "bb3"
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:18:9 generated
+    Operation a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:18:14 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:18:21 generated
+    Return
+  Block "bb4"
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:18:9 generated
+    Goto "bb5"
+  Block "bb5"
+    Operation a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:19:10 written
+      Destination "_6"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:19:14 generated
+    ArgumentsEvaluated a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:20:5 generated
+    Call a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:20:5 written "free" "bb6"
+      Copy "_3"
+  Block "bb6"
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:20:5 generated
+    Operation a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:21:12 written
+      Destination "_7"
+      Binary "Eq"
+        Copy "_6"
+        Constant 0
+    Operation a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:21:5 written
+      Destination "_0"
+      Use
+        Copy "_7"
+    Sequenced a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh.c:21:12 generated
+    Return

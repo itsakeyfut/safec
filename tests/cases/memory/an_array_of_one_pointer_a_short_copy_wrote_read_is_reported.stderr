@@ -1,4 +1,4 @@
-error[SC0413]: this lets `x` leave, which may not point at an object as wide as its type
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
    ╭─[ an_array_of_one_pointer_a_short_copy_wrote_read_is_reported.c:2:27 ]
    │
  2 │ int f(int x) { int *m[1]; memcpy(m, &x, 4); int *p = m[0]; return p == 0; }

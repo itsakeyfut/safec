@@ -1966,28 +1966,34 @@ fn a_pointer_scaled_by_a_constant_is_not_proved_to_be_off_the_start() {
     assert_eq!(found[0].unproven, Some(Unproven::Offset));
 }
 
-/// A pointer plus a literal zero is not proved to be off the start.
+/// A pointer plus a literal zero is at its start, and its free is no
+/// interior free.
 ///
 /// ADR-0021 folds `p + 0` away where the C frontend builds the IR, so no C
 /// program reaches this, and `docs/c-family.md` records that nothing enforces
 /// the fold. An IR from a frontend that skipped it hands the check this shape,
 /// and reading the constant is what keeps a zero from being taken for a move.
-/// It answers `Unknown`, as every offset `offset_of` cannot call non-zero does:
-/// a suspicion about a free of the start, which is a false report the reader
-/// can see, where assuming the
-/// constant moved the pointer would be a false proof. See ADR-0036.
+/// Since the distance is counted (ADR-0092 rule 1, #703), a zero moves the
+/// pointer no bytes, so it is at its start; before, it was `Unknown`, a
+/// suspicion the reader could see. Taking the constant for a move would be a
+/// false proof. See ADR-0036.
 ///
-/// Mutation: in `memory/built.rs::offset_of`, answer `true` for every constant
-/// rather than reading it. The free becomes `Conclusion::Unsafe` and this fails
-/// on that field.
+/// Named `a_pointer_plus_a_literal_zero_is_not_proved_to_be_off_the_start`
+/// until #703, the name ADR-0036's Confirmation gives it.
+///
+/// Mutation: in `memory/built.rs::offset_of`, answer `At::Moved` for a
+/// distance of zero. The free becomes an `InteriorFree` that is
+/// `Conclusion::Unsafe`, and this fails.
 #[test]
-fn a_pointer_plus_a_literal_zero_is_not_proved_to_be_off_the_start() {
+fn a_pointer_plus_a_literal_zero_is_at_its_start() {
     let found = freed_after(|to, p, at, then| stepped_by(to, p, 0, at, then));
 
-    assert_eq!(found.len(), 1, "{found:?}");
-    assert_eq!(found[0].kind, Kind::InteriorFree);
-    assert_eq!(found[0].conclusion, Conclusion::Unknown);
-    assert_eq!(found[0].unproven, Some(Unproven::Offset));
+    assert!(
+        found
+            .iter()
+            .all(|finding| finding.kind != Kind::InteriorFree),
+        "{found:?}"
+    );
 }
 
 /// A pointer subtracted from a constant is not proved to be off the start.
@@ -2784,7 +2790,7 @@ fn a_read_reaching_past_a_later_free_is_still_carried_to_it() {
 /// what `helper` returned.
 ///
 /// Mutation: record `Read::Argument` after the call's transfer rather than
-/// before it in `Allocations::terminator`. The entry names the new allocation,
+/// before it in `Allocations::call`. The entry names the new allocation,
 /// the free meets it, and an `SC0407` is reported at `helper` about a pointer
 /// it was never handed, so this fails.
 #[test]

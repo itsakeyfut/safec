@@ -16,6 +16,8 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+mod compare;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// What memory is believed to hold, and what reports it.
@@ -98,6 +100,57 @@ enum Belief {
     /// Mutation: `report::freed_behind` asks nothing;
     /// `left_behind_store_d1_both` fails, among thirty four.
     LeftBehind,
+    /// Put there whole, then half of it overwritten by a copy of an `int`'s
+    /// four bytes, and the slot's container handed to a call this check
+    /// cannot read: the callee reads a pointer made of part of an `int`.
+    /// Asked at the copy, `SC0413`, by ADR-0073 rule 4 where the copy's
+    /// destination says pointers and by the partial pointer record
+    /// (ADR-0087 to ADR-0090) where it does not. Its control copies nothing
+    /// over the pointer. The record's own routes, a copy into a block that
+    /// is held as pointers only later, are ADR-0092's to add.
+    ///
+    /// Mutation: `Allocations::copied_pointers` answers `Whole` for every
+    /// length; `part_pointer_store_d1_both` fails, among twenty four, every row
+    /// at depths one and two. The rows at depth zero, a copy into a local's
+    /// own address, are asked by a second door too and are not held by that
+    /// mutation alone.
+    PartPointer,
+    /// **ADR-0073's three beliefs start here.** Each puts a pointer to
+    /// pointers, `x`, into a slot by each route, and asks what `x` points at
+    /// where it is read back (see `pointer_to_pointers`).
+    ///
+    /// This one: `x` is the address of a `char` array written at its first
+    /// byte alone, read back and loaded through as an `int *`: a local that
+    /// holds no pointer starts unwritten, and a write of part of it leaves it
+    /// possibly unwritten (ADR-0073 rule 2, #822, #826), `SC0411`. Its
+    /// control writes the whole array by a copy of a pointer first.
+    ///
+    /// Mutation: `Allocations::unwritten_at_entry` keeps only a local that
+    /// holds a pointer; `part_local_store_d0_both` fails, among twenty six.
+    /// Mutation: `Allocations::reads_partly` leaves out an array that a
+    /// pointer read out of memory names, as it did before #919;
+    /// `part_local_store_d1_both` fails, among twenty four, every row whose
+    /// address has passed through memory.
+    PartLocal,
+    /// `x` is a block nothing wrote, read back and returned by a function
+    /// whose return type points at a pointer: the caller reads pointers out
+    /// of it (ADR-0073 rule 3, #823, #828), `SC0411` in the `return`'s words.
+    /// Its control writes a pointer into the block first.
+    ///
+    /// Mutation: `report::report_returned_unwritten` asks nothing;
+    /// `returned_store_d1_both` fails, among twenty.
+    Returned,
+    /// `x` is a block held as an `int **`, converted to a `void *` before the
+    /// route puts it there, read back as one and handed to a copy of an
+    /// `int`'s four bytes, then `x` handed to a call that reads pointers out
+    /// of it: what the value points at holds pointers, so the copy writes
+    /// part of one (ADR-0073 rule 4, #818, #830), `SC0413`. No type the copy
+    /// sees says so; the value's record does, carried by the route. Its
+    /// control copies a whole pointer.
+    ///
+    /// Mutation: `Allocations::first_level_holds_a_pointer` answers `false`;
+    /// `held_pointers_store_d1_both` fails, among twenty four.
+    HeldPointers,
 }
 
 /// How a pointer gets where it is read back from.
@@ -154,9 +207,11 @@ enum Route {
     CallStored,
     /// A call handed a local holding a pointer to pointers through
     /// `char ***`, read two levels down, which is where what it was handed at
-    /// below its own level is asked (`Known::handed_contents_at_most`).
-    /// Width only, at a local. Mutation: `handed` bounds no
-    /// `handed_contents_at_most`; `width_call_deep_d0_both` fails.
+    /// below its own level is asked (`Known::handed_at_most`, below its
+    /// first level, which was `handed_contents_at_most` until #804). Width
+    /// only, at a local. Mutation: `handed` bounds
+    /// `handed_at_most` at its first level alone; `width_call_deep_d0_both`
+    /// fails.
     CallDeep,
     /// A `void ***` parameter grown by `realloc` and read two levels down
     /// through an `int ***`, against an `int ***` one: the bound `realloc`
@@ -272,6 +327,216 @@ struct Row {
     shape: Shape,
 }
 
+/// What the matrix says of one field of the memory check's value, `Known`.
+enum Field {
+    /// The beliefs whose rows write it through every route.
+    Belief(&'static [Belief]),
+    /// Why no belief writes it, said where a reader of the matrix looks.
+    Exempt(&'static str),
+}
+
+/// Why a field has no belief yet. A field listed so is the matrix's own
+/// account of what it does not hold, rather than a silence.
+const PENDING: &str = "no belief yet: the corpus holds it, and its rows land with the next change to it (ADR-0091 rule 2)";
+
+/// Where a field of `Known` starts at a function's entry (ADR-0091 rule 3).
+enum Start {
+    /// At the value that doubts: what it says makes the check report rather
+    /// than believe.
+    Doubt,
+    /// At a value that does not doubt, with why that is right there: a
+    /// belief, or a may-fact that is false because nothing has happened yet
+    /// ([`NOTHING_YET`]).
+    Quiet(&'static str),
+}
+
+/// Why a may-fact about what the function has done starts false: at its
+/// entry it has done nothing yet, so false is the fact, not a belief.
+const NOTHING_YET: &str =
+    "a may-fact about what the function has done, and at its entry it has done nothing";
+
+/// Every field of `Known`, each a belief the matrix writes or an exemption
+/// with its reason, and **where it starts**. A field added to `Known` and not
+/// here fails
+/// [`every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption`], so a
+/// new fact of the memory check lands with its rows or says why not. See
+/// ADR-0091 rule 2. A row with no start does not build, and a quiet start
+/// with no reason fails that test: until #933 the rule that a field starts
+/// in doubt was held by review alone (ADR-0091 rule 3).
+const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
+    (
+        "points_to",
+        Field::Belief(&[
+            Belief::Width,
+            Belief::Lost,
+            Belief::Stale,
+            Belief::Caller,
+            Belief::Unreplaced,
+            Belief::HeldPointers,
+        ]),
+        Start::Quiet(
+            "a parameter is believed one whole object of the type it points to, which the caller is asked at every call (ADR-0060), and may be null unless it is `_Nonnull` (#931)",
+        ),
+    ),
+    (
+        "state",
+        Field::Belief(&[
+            Belief::Lost,
+            Belief::Reborn,
+            Belief::StoredFreed,
+            Belief::LeftBehind,
+        ]),
+        Start::Quiet(
+            "a parameter's site is live: a caller that passes a freed pointer is asked so at its call",
+        ),
+    ),
+    ("escaped", Field::Exempt(PENDING), Start::Quiet(NOTHING_YET)),
+    (
+        "handed_away",
+        Field::Exempt(PENDING),
+        Start::Quiet(NOTHING_YET),
+    ),
+    // Every site a parameter stands for that this check exposes, since the
+    // caller may have kept the pointer (ADR-0040).
+    ("exposed", Field::Exempt(PENDING), Start::Doubt),
+    // What an exposed parameter points at is marked as the caller's, so a
+    // load out of it after a call is one this check stopped following
+    // (#482).
+    (
+        "contents",
+        Field::Belief(&[Belief::Width, Belief::Lost, Belief::Stale, Belief::Caller]),
+        Start::Doubt,
+    ),
+    (
+        "realloced",
+        Field::Exempt(PENDING),
+        Start::Quiet(NOTHING_YET),
+    ),
+    // Every local `unwritten_at_entry` names unwritten. A parameter's memory
+    // is the caller's, which may have written it, and is not.
+    (
+        "written",
+        Field::Belief(&[Belief::Fresh, Belief::PartLocal, Belief::Returned]),
+        Start::Doubt,
+    ),
+    ("pending", Field::Exempt(PENDING), Start::Quiet(NOTHING_YET)),
+    ("calls", Field::Exempt(PENDING), Start::Quiet(NOTHING_YET)),
+    (
+        "exposed_after_call",
+        Field::Exempt(PENDING),
+        Start::Quiet(NOTHING_YET),
+    ),
+    // A parameter's block is at least what it points to, which no write is
+    // known to cover (#932); a local is the size its type is.
+    ("extent", Field::Exempt(PENDING), Start::Doubt),
+    (
+        "handed_at_most",
+        Field::Exempt(PENDING),
+        Start::Quiet(NOTHING_YET),
+    ),
+    (
+        "exposed_in_part",
+        Field::Exempt(PENDING),
+        Start::Quiet(NOTHING_YET),
+    ),
+    (
+        "stored_in_part",
+        Field::Exempt(PENDING),
+        Start::Quiet(NOTHING_YET),
+    ),
+    (
+        "stored_out",
+        Field::Belief(&[Belief::StoredOut]),
+        Start::Quiet(NOTHING_YET),
+    ),
+    ("left_at", Field::Exempt(PENDING), Start::Quiet(NOTHING_YET)),
+    (
+        "held_levels",
+        Field::Exempt(
+            "no row yet: a block held as pointers and reached later through a `void *` (ADR-0086) is asked at a `return` the matrix does not write; `HeldPointers` is held by the value's own record, and no row fails when this is never raised",
+        ),
+        Start::Quiet(NOTHING_YET),
+    ),
+    (
+        "part_written",
+        Field::Belief(&[Belief::PartPointer]),
+        Start::Quiet(NOTHING_YET),
+    ),
+    (
+        "handed_untyped",
+        Field::Exempt(PENDING),
+        Start::Quiet(NOTHING_YET),
+    ),
+];
+
+/// The fields of `Known`, read off its declaration.
+fn known_fields() -> Vec<String> {
+    let source = include_str!("../crates/safec-ir/src/memory/known.rs");
+    let start = source
+        .find("pub(super) struct Known {")
+        .expect("`Known` is declared in known.rs");
+    let body = &source[start..];
+    let end = body
+        .find(
+            "
+}",
+        )
+        .expect("`Known`'s declaration ends");
+    body[..end]
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix("pub(super) "))
+        .filter_map(|line| line.split_once(':').map(|(name, _)| name.trim().to_owned()))
+        .collect()
+}
+
+/// Mutation: drop `held_levels`'s row from [`KNOWN_FIELDS`]; this fails and
+/// names it. A field added to `Known` fails to compile first, in the
+/// exhaustive destructures of the join, the entry and a rebirth, and then
+/// here until it has a row. A row left for a field removed fails too, so the
+/// table is never a list of what used to be there.
+///
+/// **It checks names, not that a belief's rows reach the field.** Listing
+/// `stored_out` under `Belief::Fresh`, or `part_written` under
+/// `Belief::Width`, passes, measured in #918's review: which field a row
+/// exercises is not something this test can read off the matrix.
+///
+/// **Nor that a start is the one the field takes**: [`Start`] is what the
+/// row says, and the entry is read by review. Mutation: give a row
+/// `Start::Quiet(" ")`; this fails.
+#[test]
+fn every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption() {
+    let declared = known_fields();
+    let listed: Vec<&str> = KNOWN_FIELDS.iter().map(|(name, _, _)| *name).collect();
+    let missing: Vec<&String> = declared
+        .iter()
+        .filter(|field| !listed.contains(&field.as_str()))
+        .collect();
+    let stale: Vec<&&str> = listed
+        .iter()
+        .filter(|field| !declared.iter().any(|declared| declared == **field))
+        .collect();
+    assert!(
+        missing.is_empty() && stale.is_empty(),
+        "fields of `Known` with no row in KNOWN_FIELDS: {missing:?}; rows for no field: {stale:?}"
+    );
+    for (name, field, start) in KNOWN_FIELDS {
+        match field {
+            Field::Belief(beliefs) => assert!(
+                !beliefs.is_empty() && beliefs.iter().all(|belief| BELIEFS.contains(belief)),
+                "`{name}` names a belief the matrix does not ask"
+            ),
+            Field::Exempt(why) => assert!(!why.is_empty(), "`{name}` is exempt with no reason"),
+        }
+        match start {
+            Start::Doubt => {}
+            Start::Quiet(why) => assert!(
+                !why.trim().is_empty(),
+                "`{name}` starts quiet with no reason (ADR-0091 rule 3)"
+            ),
+        }
+    }
+}
+
 /// Every value of each axis, in the order [`axis_place`] gives them.
 ///
 /// **Adding a value** is: its variant, its arm in [`axis_place`] and
@@ -285,7 +550,7 @@ struct Row {
 /// `the_matrix_is_every_combination_of_its_axes` asks for; each row that
 /// disagrees in [`ACCEPTED`] and each less certain than its store in
 /// [`UNCERTAIN`]; and a blessing.
-const BELIEFS: [Belief; 10] = [
+const BELIEFS: [Belief; 14] = [
     Belief::Width,
     Belief::Fresh,
     Belief::Lost,
@@ -296,6 +561,10 @@ const BELIEFS: [Belief; 10] = [
     Belief::StoredOut,
     Belief::StoredFreed,
     Belief::LeftBehind,
+    Belief::PartPointer,
+    Belief::PartLocal,
+    Belief::Returned,
+    Belief::HeldPointers,
 ];
 const ROUTES: [Route; 26] = [
     Route::Store,
@@ -343,6 +612,10 @@ fn axis_place(row: Row) -> [usize; 4] {
         Belief::StoredOut => 7,
         Belief::StoredFreed => 8,
         Belief::LeftBehind => 9,
+        Belief::PartPointer => 10,
+        Belief::PartLocal => 11,
+        Belief::Returned => 12,
+        Belief::HeldPointers => 13,
     };
     let route = match row.route {
         Route::Store => 0,
@@ -466,7 +739,11 @@ impl Axis for Belief {
             | Belief::Unreplaced
             | Belief::StoredOut
             | Belief::StoredFreed
-            | Belief::LeftBehind => 10,
+            | Belief::LeftBehind
+            | Belief::PartPointer
+            | Belief::PartLocal
+            | Belief::Returned
+            | Belief::HeldPointers => 14,
         }
     }
 }
@@ -924,6 +1201,158 @@ routes! {
     left_behind_by_address_d1_one: LeftBehind ByAddress D1 One;
     left_behind_by_address_loaded_d1_both: LeftBehind ByAddressLoaded D1 Both;
     left_behind_by_address_loaded_d1_one: LeftBehind ByAddressLoaded D1 One;
+    part_pointer_store_d0_both: PartPointer Store D0 Both;
+    part_pointer_store_d0_one: PartPointer Store D0 One;
+    part_pointer_store_d1_both: PartPointer Store D1 Both;
+    part_pointer_store_d1_one: PartPointer Store D1 One;
+    part_pointer_store_d2_both: PartPointer Store D2 Both;
+    part_pointer_store_d2_one: PartPointer Store D2 One;
+    part_pointer_memcpy_d0_both: PartPointer Memcpy D0 Both;
+    part_pointer_memcpy_d0_one: PartPointer Memcpy D0 One;
+    part_pointer_memcpy_d1_both: PartPointer Memcpy D1 Both;
+    part_pointer_memcpy_d1_one: PartPointer Memcpy D1 One;
+    part_pointer_memcpy_d2_both: PartPointer Memcpy D2 Both;
+    part_pointer_memcpy_d2_one: PartPointer Memcpy D2 One;
+    part_pointer_realloc_d1_both: PartPointer Realloc D1 Both;
+    part_pointer_realloc_d1_one: PartPointer Realloc D1 One;
+    part_pointer_realloc_d2_both: PartPointer Realloc D2 Both;
+    part_pointer_realloc_d2_one: PartPointer Realloc D2 One;
+    part_pointer_ret_d0_both: PartPointer Ret D0 Both;
+    part_pointer_ret_d0_one: PartPointer Ret D0 One;
+    part_pointer_ret_d1_both: PartPointer Ret D1 Both;
+    part_pointer_ret_d1_one: PartPointer Ret D1 One;
+    part_pointer_ret_d2_both: PartPointer Ret D2 Both;
+    part_pointer_ret_d2_one: PartPointer Ret D2 One;
+    part_pointer_memcpy_block_d0_both: PartPointer MemcpyFromBlock D0 Both;
+    part_pointer_memcpy_block_d0_one: PartPointer MemcpyFromBlock D0 One;
+    part_pointer_memcpy_block_d1_both: PartPointer MemcpyFromBlock D1 Both;
+    part_pointer_memcpy_block_d1_one: PartPointer MemcpyFromBlock D1 One;
+    part_pointer_memcpy_block_d2_both: PartPointer MemcpyFromBlock D2 Both;
+    part_pointer_memcpy_block_d2_one: PartPointer MemcpyFromBlock D2 One;
+    part_pointer_restored_d0_both: PartPointer Restored D0 Both;
+    part_pointer_restored_d0_one: PartPointer Restored D0 One;
+    part_pointer_restored_d1_both: PartPointer Restored D1 Both;
+    part_pointer_restored_d1_one: PartPointer Restored D1 One;
+    part_pointer_restored_d2_both: PartPointer Restored D2 Both;
+    part_pointer_restored_d2_one: PartPointer Restored D2 One;
+    part_pointer_by_address_d1_both: PartPointer ByAddress D1 Both;
+    part_pointer_by_address_d1_one: PartPointer ByAddress D1 One;
+    part_pointer_by_address_loaded_d1_both: PartPointer ByAddressLoaded D1 Both;
+    part_pointer_by_address_loaded_d1_one: PartPointer ByAddressLoaded D1 One;
+    part_local_store_d0_both: PartLocal Store D0 Both;
+    part_local_store_d0_one: PartLocal Store D0 One;
+    part_local_store_d1_both: PartLocal Store D1 Both;
+    part_local_store_d1_one: PartLocal Store D1 One;
+    part_local_store_d2_both: PartLocal Store D2 Both;
+    part_local_store_d2_one: PartLocal Store D2 One;
+    part_local_memcpy_d0_both: PartLocal Memcpy D0 Both;
+    part_local_memcpy_d0_one: PartLocal Memcpy D0 One;
+    part_local_memcpy_d1_both: PartLocal Memcpy D1 Both;
+    part_local_memcpy_d1_one: PartLocal Memcpy D1 One;
+    part_local_memcpy_d2_both: PartLocal Memcpy D2 Both;
+    part_local_memcpy_d2_one: PartLocal Memcpy D2 One;
+    part_local_realloc_d1_both: PartLocal Realloc D1 Both;
+    part_local_realloc_d1_one: PartLocal Realloc D1 One;
+    part_local_realloc_d2_both: PartLocal Realloc D2 Both;
+    part_local_realloc_d2_one: PartLocal Realloc D2 One;
+    part_local_ret_d0_both: PartLocal Ret D0 Both;
+    part_local_ret_d0_one: PartLocal Ret D0 One;
+    part_local_ret_d1_both: PartLocal Ret D1 Both;
+    part_local_ret_d1_one: PartLocal Ret D1 One;
+    part_local_ret_d2_both: PartLocal Ret D2 Both;
+    part_local_ret_d2_one: PartLocal Ret D2 One;
+    part_local_memcpy_block_d0_both: PartLocal MemcpyFromBlock D0 Both;
+    part_local_memcpy_block_d0_one: PartLocal MemcpyFromBlock D0 One;
+    part_local_memcpy_block_d1_both: PartLocal MemcpyFromBlock D1 Both;
+    part_local_memcpy_block_d1_one: PartLocal MemcpyFromBlock D1 One;
+    part_local_memcpy_block_d2_both: PartLocal MemcpyFromBlock D2 Both;
+    part_local_memcpy_block_d2_one: PartLocal MemcpyFromBlock D2 One;
+    part_local_restored_d0_both: PartLocal Restored D0 Both;
+    part_local_restored_d0_one: PartLocal Restored D0 One;
+    part_local_restored_d1_both: PartLocal Restored D1 Both;
+    part_local_restored_d1_one: PartLocal Restored D1 One;
+    part_local_restored_d2_both: PartLocal Restored D2 Both;
+    part_local_restored_d2_one: PartLocal Restored D2 One;
+    part_local_by_address_d1_both: PartLocal ByAddress D1 Both;
+    part_local_by_address_d1_one: PartLocal ByAddress D1 One;
+    part_local_by_address_loaded_d1_both: PartLocal ByAddressLoaded D1 Both;
+    part_local_by_address_loaded_d1_one: PartLocal ByAddressLoaded D1 One;
+    returned_store_d0_both: Returned Store D0 Both;
+    returned_store_d0_one: Returned Store D0 One;
+    returned_store_d1_both: Returned Store D1 Both;
+    returned_store_d1_one: Returned Store D1 One;
+    returned_store_d2_both: Returned Store D2 Both;
+    returned_store_d2_one: Returned Store D2 One;
+    returned_memcpy_d0_both: Returned Memcpy D0 Both;
+    returned_memcpy_d0_one: Returned Memcpy D0 One;
+    returned_memcpy_d1_both: Returned Memcpy D1 Both;
+    returned_memcpy_d1_one: Returned Memcpy D1 One;
+    returned_memcpy_d2_both: Returned Memcpy D2 Both;
+    returned_memcpy_d2_one: Returned Memcpy D2 One;
+    returned_realloc_d1_both: Returned Realloc D1 Both;
+    returned_realloc_d1_one: Returned Realloc D1 One;
+    returned_realloc_d2_both: Returned Realloc D2 Both;
+    returned_realloc_d2_one: Returned Realloc D2 One;
+    returned_ret_d0_both: Returned Ret D0 Both;
+    returned_ret_d0_one: Returned Ret D0 One;
+    returned_ret_d1_both: Returned Ret D1 Both;
+    returned_ret_d1_one: Returned Ret D1 One;
+    returned_ret_d2_both: Returned Ret D2 Both;
+    returned_ret_d2_one: Returned Ret D2 One;
+    returned_memcpy_block_d0_both: Returned MemcpyFromBlock D0 Both;
+    returned_memcpy_block_d0_one: Returned MemcpyFromBlock D0 One;
+    returned_memcpy_block_d1_both: Returned MemcpyFromBlock D1 Both;
+    returned_memcpy_block_d1_one: Returned MemcpyFromBlock D1 One;
+    returned_memcpy_block_d2_both: Returned MemcpyFromBlock D2 Both;
+    returned_memcpy_block_d2_one: Returned MemcpyFromBlock D2 One;
+    returned_restored_d0_both: Returned Restored D0 Both;
+    returned_restored_d0_one: Returned Restored D0 One;
+    returned_restored_d1_both: Returned Restored D1 Both;
+    returned_restored_d1_one: Returned Restored D1 One;
+    returned_restored_d2_both: Returned Restored D2 Both;
+    returned_restored_d2_one: Returned Restored D2 One;
+    returned_by_address_d1_both: Returned ByAddress D1 Both;
+    returned_by_address_d1_one: Returned ByAddress D1 One;
+    returned_by_address_loaded_d1_both: Returned ByAddressLoaded D1 Both;
+    returned_by_address_loaded_d1_one: Returned ByAddressLoaded D1 One;
+    held_pointers_store_d0_both: HeldPointers Store D0 Both;
+    held_pointers_store_d0_one: HeldPointers Store D0 One;
+    held_pointers_store_d1_both: HeldPointers Store D1 Both;
+    held_pointers_store_d1_one: HeldPointers Store D1 One;
+    held_pointers_store_d2_both: HeldPointers Store D2 Both;
+    held_pointers_store_d2_one: HeldPointers Store D2 One;
+    held_pointers_memcpy_d0_both: HeldPointers Memcpy D0 Both;
+    held_pointers_memcpy_d0_one: HeldPointers Memcpy D0 One;
+    held_pointers_memcpy_d1_both: HeldPointers Memcpy D1 Both;
+    held_pointers_memcpy_d1_one: HeldPointers Memcpy D1 One;
+    held_pointers_memcpy_d2_both: HeldPointers Memcpy D2 Both;
+    held_pointers_memcpy_d2_one: HeldPointers Memcpy D2 One;
+    held_pointers_realloc_d1_both: HeldPointers Realloc D1 Both;
+    held_pointers_realloc_d1_one: HeldPointers Realloc D1 One;
+    held_pointers_realloc_d2_both: HeldPointers Realloc D2 Both;
+    held_pointers_realloc_d2_one: HeldPointers Realloc D2 One;
+    held_pointers_ret_d0_both: HeldPointers Ret D0 Both;
+    held_pointers_ret_d0_one: HeldPointers Ret D0 One;
+    held_pointers_ret_d1_both: HeldPointers Ret D1 Both;
+    held_pointers_ret_d1_one: HeldPointers Ret D1 One;
+    held_pointers_ret_d2_both: HeldPointers Ret D2 Both;
+    held_pointers_ret_d2_one: HeldPointers Ret D2 One;
+    held_pointers_memcpy_block_d0_both: HeldPointers MemcpyFromBlock D0 Both;
+    held_pointers_memcpy_block_d0_one: HeldPointers MemcpyFromBlock D0 One;
+    held_pointers_memcpy_block_d1_both: HeldPointers MemcpyFromBlock D1 Both;
+    held_pointers_memcpy_block_d1_one: HeldPointers MemcpyFromBlock D1 One;
+    held_pointers_memcpy_block_d2_both: HeldPointers MemcpyFromBlock D2 Both;
+    held_pointers_memcpy_block_d2_one: HeldPointers MemcpyFromBlock D2 One;
+    held_pointers_restored_d0_both: HeldPointers Restored D0 Both;
+    held_pointers_restored_d0_one: HeldPointers Restored D0 One;
+    held_pointers_restored_d1_both: HeldPointers Restored D1 Both;
+    held_pointers_restored_d1_one: HeldPointers Restored D1 One;
+    held_pointers_restored_d2_both: HeldPointers Restored D2 Both;
+    held_pointers_restored_d2_one: HeldPointers Restored D2 One;
+    held_pointers_by_address_d1_both: HeldPointers ByAddress D1 Both;
+    held_pointers_by_address_d1_one: HeldPointers ByAddress D1 One;
+    held_pointers_by_address_loaded_d1_both: HeldPointers ByAddressLoaded D1 Both;
+    held_pointers_by_address_loaded_d1_one: HeldPointers ByAddressLoaded D1 One;
 }
 
 /// A combination of the axes no program is written for, and why.
@@ -1693,6 +2122,230 @@ const NOT_WRITTEN: &[Unwritten] = &[
         shape: None,
         why: "a write through a local's address is asked of the door questions, where #802 found the loaded spelling apart",
     },
+    Unwritten {
+        route: Route::Realloc,
+        depth: Some(Depth::D0),
+        belief: Some(Belief::PartPointer),
+        shape: None,
+        why: "a local is not grown by realloc",
+    },
+    Unwritten {
+        route: Route::Call,
+        depth: None,
+        belief: Some(Belief::PartPointer),
+        shape: None,
+        why: "a call writes a value of its own, not the allocation the door question frees",
+    },
+    Unwritten {
+        route: Route::MemcpyHalf,
+        depth: None,
+        belief: Some(Belief::PartPointer),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyPart,
+        depth: None,
+        belief: Some(Belief::PartPointer),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyMaybe,
+        depth: None,
+        belief: Some(Belief::PartPointer),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::CallStored,
+        depth: None,
+        belief: Some(Belief::PartPointer),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::CallDeep,
+        depth: None,
+        belief: Some(Belief::PartPointer),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::ReallocParam,
+        depth: None,
+        belief: Some(Belief::PartPointer),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::Realloc,
+        depth: Some(Depth::D0),
+        belief: Some(Belief::PartLocal),
+        shape: None,
+        why: "a local is not grown by realloc",
+    },
+    Unwritten {
+        route: Route::Call,
+        depth: None,
+        belief: Some(Belief::PartLocal),
+        shape: None,
+        why: "a call writes a pointer of its own, not the `x` this belief asks what it points at",
+    },
+    Unwritten {
+        route: Route::MemcpyHalf,
+        depth: None,
+        belief: Some(Belief::PartLocal),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyPart,
+        depth: None,
+        belief: Some(Belief::PartLocal),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyMaybe,
+        depth: None,
+        belief: Some(Belief::PartLocal),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::CallStored,
+        depth: None,
+        belief: Some(Belief::PartLocal),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::CallDeep,
+        depth: None,
+        belief: Some(Belief::PartLocal),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::ReallocParam,
+        depth: None,
+        belief: Some(Belief::PartLocal),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::Realloc,
+        depth: Some(Depth::D0),
+        belief: Some(Belief::Returned),
+        shape: None,
+        why: "a local is not grown by realloc",
+    },
+    Unwritten {
+        route: Route::Call,
+        depth: None,
+        belief: Some(Belief::Returned),
+        shape: None,
+        why: "a call writes a pointer of its own, not the `x` this belief asks what it points at",
+    },
+    Unwritten {
+        route: Route::MemcpyHalf,
+        depth: None,
+        belief: Some(Belief::Returned),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyPart,
+        depth: None,
+        belief: Some(Belief::Returned),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyMaybe,
+        depth: None,
+        belief: Some(Belief::Returned),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::CallStored,
+        depth: None,
+        belief: Some(Belief::Returned),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::CallDeep,
+        depth: None,
+        belief: Some(Belief::Returned),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::ReallocParam,
+        depth: None,
+        belief: Some(Belief::Returned),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::Realloc,
+        depth: Some(Depth::D0),
+        belief: Some(Belief::HeldPointers),
+        shape: None,
+        why: "a local is not grown by realloc",
+    },
+    Unwritten {
+        route: Route::Call,
+        depth: None,
+        belief: Some(Belief::HeldPointers),
+        shape: None,
+        why: "a call writes a pointer of its own, not the `x` this belief asks what it points at",
+    },
+    Unwritten {
+        route: Route::MemcpyHalf,
+        depth: None,
+        belief: Some(Belief::HeldPointers),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyPart,
+        depth: None,
+        belief: Some(Belief::HeldPointers),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::MemcpyMaybe,
+        depth: None,
+        belief: Some(Belief::HeldPointers),
+        shape: None,
+        why: "a copy's length and its source's writing are asked of freshness, the belief they decide",
+    },
+    Unwritten {
+        route: Route::CallStored,
+        depth: None,
+        belief: Some(Belief::HeldPointers),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::CallDeep,
+        depth: None,
+        belief: Some(Belief::HeldPointers),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
+    Unwritten {
+        route: Route::ReallocParam,
+        depth: None,
+        belief: Some(Belief::HeldPointers),
+        shape: None,
+        why: "what a call or realloc is handed at is a width, and asked of width",
+    },
 ];
 
 /// Which side of a row disagrees with its belief's rule.
@@ -1735,6 +2388,10 @@ const LOST_HANDED: &str = "a lost pointer handed through a call this check canno
 const OLD_BLOCK: &str = "the old block a store replaced in memory is still taken to be there after realloc moves it (#656)";
 const REPORTED_ELSEWHERE: &str = "the free and the call a freed pointer is handed to are each reported where they happen (SC0401, SC0407), and not again at its use; agreeing would report the use too";
 const WRITES_WHAT_IT_IS_HANDED: &str = "a call this check cannot read is believed to write what it is handed, which `docs/safety-model.md` states beside the other boundary beliefs; not believing it refused correct programs that rely on the callee writing (#782)";
+const RETURNED_MAY_NAME: &str = "a return reports a block nothing wrote as certain where a read through memory this check cannot place only may name it, as ADR-0045's walk adds what is exposed below the first level (#922)";
+const RETURNED_ONE_ARM: &str = "a pointer given a call's result on one arm and a null on the other is doubted at its return, since the join keeps no relation between what it names and on which arm a block was written (#923); its hazard is silent by the belief that a call writes what it is handed, as on both arms";
+const ELEMENT_LOST: &str = "a store through a pointer read back out of memory names no element, so it may-writes every element of an array kept per element and writes none for certain, until a pointer loaded keeps its position (ADR-0094 rule 3, #893)";
+const GROWN_THROUGH_MEMORY: &str = "a block `realloc` grew keeps its slots, the ones past the old size unwritten, and a read through a pointer read out of memory names no slot, so it asks the grown tail as well (ADR-0081's limit, #918's review)";
 // The door questions' reasons (#801).
 const DEEP_WRITE_LEAVES: &str = "a write more than one dereference below the pointer it goes through is taken as landing where this check cannot place it, and so as leaving, into memory only this function reads too, which both spellings of it answer alike (ADR-0071 rule 2, #802)";
 const ESCAPED_SOURCE: &str = "the address a copy takes of its source local escapes it (ADR-0017), so what the local holds is doubted behind a later call with nothing freed (#345)";
@@ -1769,6 +2426,21 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         "fresh_call_d2_one",
         Side::Hazard,
         Why::Belief(WRITES_WHAT_IT_IS_HANDED),
+    ),
+    (
+        "fresh_element_slot_d0_both",
+        Side::Control,
+        Why::Cost(ELEMENT_LOST),
+    ),
+    (
+        "part_local_realloc_d2_both",
+        Side::Control,
+        Why::Cost(GROWN_THROUGH_MEMORY),
+    ),
+    (
+        "part_local_realloc_d2_one",
+        Side::Control,
+        Why::Cost(GROWN_THROUGH_MEMORY),
     ),
     ("caller_ret_d0_both", Side::Control, Why::Belief(MAY_FREE)),
     ("caller_ret_d0_one", Side::Control, Why::Belief(MAY_FREE)),
@@ -1813,14 +2485,179 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Belief(MAY_FREE),
     ),
     (
-        "unreplaced_realloc_d2_both",
+        "part_pointer_ret_d0_both",
         Side::Control,
-        Why::Cost(OLD_BLOCK),
+        Why::Belief(VOID_RESULT),
     ),
     (
-        "unreplaced_realloc_d2_one",
+        "part_pointer_ret_d0_one",
         Side::Control,
-        Why::Cost(OLD_BLOCK),
+        Why::Belief(VOID_RESULT),
+    ),
+    (
+        "part_pointer_ret_d1_both",
+        Side::Control,
+        Why::Belief(VOID_RESULT),
+    ),
+    (
+        "part_pointer_ret_d1_one",
+        Side::Control,
+        Why::Belief(VOID_RESULT),
+    ),
+    (
+        "part_pointer_ret_d2_both",
+        Side::Control,
+        Why::Belief(VOID_RESULT),
+    ),
+    (
+        "part_pointer_ret_d2_one",
+        Side::Control,
+        Why::Belief(VOID_RESULT),
+    ),
+    (
+        "held_pointers_ret_d0_both",
+        Side::Control,
+        Why::Belief(VOID_RESULT),
+    ),
+    (
+        "held_pointers_ret_d0_one",
+        Side::Control,
+        Why::Belief(VOID_RESULT),
+    ),
+    (
+        "held_pointers_ret_d1_both",
+        Side::Control,
+        Why::Belief(VOID_RESULT),
+    ),
+    (
+        "held_pointers_ret_d1_one",
+        Side::Control,
+        Why::Belief(VOID_RESULT),
+    ),
+    (
+        "held_pointers_ret_d2_both",
+        Side::Control,
+        Why::Belief(VOID_RESULT),
+    ),
+    (
+        "held_pointers_ret_d2_one",
+        Side::Control,
+        Why::Belief(VOID_RESULT),
+    ),
+    (
+        "part_local_ret_d0_both",
+        Side::Hazard,
+        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
+    ),
+    (
+        "part_local_ret_d1_both",
+        Side::Hazard,
+        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
+    ),
+    (
+        "part_local_ret_d2_both",
+        Side::Hazard,
+        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
+    ),
+    (
+        "returned_by_address_d1_both",
+        Side::Control,
+        Why::Cost(RETURNED_MAY_NAME),
+    ),
+    (
+        "returned_by_address_d1_one",
+        Side::Control,
+        Why::Cost(RETURNED_MAY_NAME),
+    ),
+    (
+        "returned_by_address_loaded_d1_both",
+        Side::Control,
+        Why::Cost(RETURNED_MAY_NAME),
+    ),
+    (
+        "returned_by_address_loaded_d1_one",
+        Side::Control,
+        Why::Cost(RETURNED_MAY_NAME),
+    ),
+    (
+        "returned_memcpy_block_d2_both",
+        Side::Control,
+        Why::Cost(RETURNED_MAY_NAME),
+    ),
+    (
+        "returned_memcpy_block_d2_one",
+        Side::Control,
+        Why::Cost(RETURNED_MAY_NAME),
+    ),
+    (
+        "returned_memcpy_d2_both",
+        Side::Control,
+        Why::Cost(RETURNED_MAY_NAME),
+    ),
+    (
+        "returned_memcpy_d2_one",
+        Side::Control,
+        Why::Cost(RETURNED_MAY_NAME),
+    ),
+    (
+        "returned_realloc_d2_both",
+        Side::Control,
+        Why::Cost(RETURNED_MAY_NAME),
+    ),
+    (
+        "returned_realloc_d2_one",
+        Side::Control,
+        Why::Cost(RETURNED_MAY_NAME),
+    ),
+    (
+        "returned_restored_d2_both",
+        Side::Control,
+        Why::Cost(RETURNED_MAY_NAME),
+    ),
+    (
+        "returned_restored_d2_one",
+        Side::Control,
+        Why::Cost(RETURNED_MAY_NAME),
+    ),
+    (
+        "returned_ret_d0_both",
+        Side::Hazard,
+        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
+    ),
+    (
+        "returned_ret_d0_one",
+        Side::Both,
+        Why::Cost(RETURNED_ONE_ARM),
+    ),
+    (
+        "returned_ret_d1_both",
+        Side::Hazard,
+        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
+    ),
+    (
+        "returned_ret_d1_one",
+        Side::Both,
+        Why::Cost(RETURNED_ONE_ARM),
+    ),
+    (
+        "returned_ret_d2_both",
+        Side::Hazard,
+        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
+    ),
+    (
+        "returned_ret_d2_one",
+        Side::Both,
+        Why::Cost(RETURNED_ONE_ARM),
+    ),
+    (
+        "returned_store_d2_both",
+        Side::Control,
+        Why::Cost(RETURNED_MAY_NAME),
+    ),
+    (
+        "returned_store_d2_one",
+        Side::Control,
+        Why::Cost(RETURNED_MAY_NAME),
     ),
     ("width_ret_d0_both", Side::Control, Why::Belief(VOID_RESULT)),
     ("width_ret_d0_one", Side::Control, Why::Belief(VOID_RESULT)),
@@ -2011,16 +2848,6 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         "left_behind_memcpy_d2_one",
         Side::Control,
         Why::Cost(ESCAPED_SOURCE),
-    ),
-    (
-        "left_behind_realloc_d2_both",
-        Side::Control,
-        Why::Cost(OLD_BLOCK),
-    ),
-    (
-        "left_behind_realloc_d2_one",
-        Side::Control,
-        Why::Cost(OLD_BLOCK),
     ),
     (
         "left_behind_ret_d0_both",
@@ -2270,6 +3097,15 @@ fn mark(row: Row) -> (&'static str, Option<&'static str>) {
             "SC0407",
             Some("where a pointer that may have been freed is stored"),
         ),
+        // **Either wording of `SC0413`**: a copy whose destination says
+        // pointers is asked how wide (ADR-0073 rule 4), and one the record
+        // asks is asked whether it starts an object (ADR-0087).
+        Belief::PartPointer => ("SC0413", None),
+        Belief::PartLocal => ("SC0411", None),
+        // **The `return`'s own words**, since a read of the block is
+        // `SC0411` too and would answer for a route the `return` misses.
+        Belief::Returned => ("SC0411", Some("the caller may read pointers out of it")),
+        Belief::HeldPointers => ("SC0413", None),
     }
 }
 
@@ -2296,15 +3132,24 @@ void use1(int *p);
 
 /// The statements that make the slot, its spelling, and what it lives in.
 fn container(depth: Depth) -> (Vec<String>, &'static str) {
-    let made: &[&str] = match depth {
-        Depth::D0 => &["int *s = 0;"],
-        Depth::D1 => &["int **m = malloc(8);", "if (!m) return 0;"],
-        Depth::D2 => &[
-            "int ***m = malloc(8);",
-            "if (!m) return 0;",
-            "int **n = malloc(8);",
-            "if (!n) return 0;",
-            "*m = n;",
+    container_of(depth, "int *")
+}
+
+/// [`container`] for a slot holding a `ty`, a pointer type spelled with its
+/// last `*`, so that the levels above it are spelled by adding more.
+fn container_of(depth: Depth, ty: &str) -> (Vec<String>, &'static str) {
+    let made = match depth {
+        Depth::D0 => vec![format!("{ty}s = 0;")],
+        Depth::D1 => vec![
+            format!("{ty}*m = malloc(8);"),
+            "if (!m) return 0;".to_owned(),
+        ],
+        Depth::D2 => vec![
+            format!("{ty}**m = malloc(8);"),
+            "if (!m) return 0;".to_owned(),
+            format!("{ty}*n = malloc(8);"),
+            "if (!n) return 0;".to_owned(),
+            "*m = n;".to_owned(),
         ],
     };
     let slot = match depth {
@@ -2312,7 +3157,7 @@ fn container(depth: Depth) -> (Vec<String>, &'static str) {
         Depth::D1 => "*m",
         Depth::D2 => "**m",
     };
-    (made.iter().map(|line| (*line).to_owned()).collect(), slot)
+    (made, slot)
 }
 
 /// What holds the slot, which `Route::Realloc` grows, and the statement that
@@ -2327,10 +3172,15 @@ fn holder(depth: Depth) -> (&'static str, &'static str) {
 
 /// The statements that put `value`, an `int *`, into the slot by `route`.
 fn put(route: Route, depth: Depth, slot: &str, value: &str) -> Vec<String> {
+    put_of(route, depth, slot, value, "int *")
+}
+
+/// [`put`] for a `value` of type `ty`, spelled as [`container_of`] takes it.
+fn put_of(route: Route, depth: Depth, slot: &str, value: &str, ty: &str) -> Vec<String> {
     match route {
         Route::Store => vec![format!("{slot} = {value};")],
         Route::Memcpy => vec![
-            format!("int *v_ = {value};"),
+            format!("{ty}v_ = {value};"),
             format!("memcpy(&{slot}, &v_, 8);"),
         ],
         Route::Ret => vec![format!("{slot} = pass({value});")],
@@ -2338,22 +3188,22 @@ fn put(route: Route, depth: Depth, slot: &str, value: &str) -> Vec<String> {
             let (grown, back) = holder(depth);
             vec![
                 format!("{slot} = {value};"),
-                format!("int **g_ = realloc({grown}, 16);"),
+                format!("{ty}*g_ = realloc({grown}, 16);"),
                 "if (!g_) return 0;".to_owned(),
                 back.to_owned(),
             ]
         }
         Route::MemcpyFromBlock => vec![
-            "int **blk_ = malloc(8);".to_owned(),
+            format!("{ty}*blk_ = malloc(8);"),
             "if (!blk_) return 0;".to_owned(),
             format!("*blk_ = {value};"),
             format!("memcpy(&{slot}, blk_, 8);"),
         ],
         Route::Restored => vec![
-            "int **blk_ = malloc(8);".to_owned(),
+            format!("{ty}*blk_ = malloc(8);"),
             "if (!blk_) return 0;".to_owned(),
             format!("*blk_ = {value};"),
-            "int *t_ = *blk_;".to_owned(),
+            format!("{ty}t_ = *blk_;"),
             format!("{slot} = t_;"),
         ],
         Route::Call | Route::CallStored | Route::CallDeep | Route::ReallocParam => {
@@ -2383,7 +3233,7 @@ fn put(route: Route, depth: Depth, slot: &str, value: &str) -> Vec<String> {
                 Depth::D1,
                 "only the slot at depth one is a level below a local"
             );
-            vec!["int ***t_ = &m;".to_owned(), format!("**t_ = {value};")]
+            vec![format!("{ty}**t_ = &m;"), format!("**t_ = {value};")]
         }
         Route::ByAddressLoaded => {
             assert_eq!(
@@ -2392,8 +3242,8 @@ fn put(route: Route, depth: Depth, slot: &str, value: &str) -> Vec<String> {
                 "only the slot at depth one is a level below a local"
             );
             vec![
-                "int ***t_ = &m;".to_owned(),
-                "int **q_ = *t_;".to_owned(),
+                format!("{ty}**t_ = &m;"),
+                format!("{ty}*q_ = *t_;"),
                 format!("*q_ = {value};"),
             ]
         }
@@ -2931,14 +3781,89 @@ fn door(row: Row, hazard: bool) -> Vec<String> {
             }
             lines.push(handed_over(row.depth).to_owned());
         }
+        Belief::PartPointer => {
+            lines.extend(put_x);
+            if hazard {
+                lines.push("int i_ = 1;".to_owned());
+                lines.push(format!("memcpy(&{slot}, &i_, 4);"));
+            }
+            lines.push(handed_over(row.depth).to_owned());
+        }
         Belief::Width
         | Belief::Fresh
         | Belief::Lost
         | Belief::Stale
         | Belief::Reborn
         | Belief::Caller
-        | Belief::Unreplaced => unreachable!("not a door question; see `program`"),
+        | Belief::Unreplaced
+        | Belief::PartLocal
+        | Belief::Returned
+        | Belief::HeldPointers => unreachable!("not a door question; see `program`"),
     }
+    lines
+}
+
+/// ADR-0073's three beliefs' program: `x`, an `int **`, made as the belief
+/// asks, then put into a slot holding an `int **`, or a `void *` for
+/// [`Belief::HeldPointers`], by the route. What reads it back is the
+/// belief's own, in [`program`].
+fn pointer_to_pointers(row: Row, hazard: bool) -> Vec<String> {
+    let mut lines: Vec<String> = match (row.belief, hazard) {
+        (Belief::PartLocal, true) => vec!["char cb_[8];", "cb_[0] = 0;"],
+        (Belief::PartLocal, false) => vec![
+            "char cb_[8];",
+            "int x0 = 0;",
+            "int *w_ = &x0;",
+            "memcpy(cb_, &w_, 8);",
+        ],
+        (Belief::Returned | Belief::HeldPointers, _) => {
+            vec!["int **x = malloc(8);", "if (!x) return 0;"]
+        }
+        (
+            Belief::Width
+            | Belief::Fresh
+            | Belief::Lost
+            | Belief::Stale
+            | Belief::Reborn
+            | Belief::Caller
+            | Belief::Unreplaced
+            | Belief::StoredOut
+            | Belief::StoredFreed
+            | Belief::LeftBehind
+            | Belief::PartPointer,
+            _,
+        ) => unreachable!("not one of ADR-0073's beliefs; see `program`"),
+    }
+    .into_iter()
+    .map(str::to_owned)
+    .collect();
+    match (row.belief, hazard) {
+        (Belief::PartLocal, _) => {
+            lines.push("void *cv_ = cb_;".to_owned());
+            lines.push("int **x = cv_;".to_owned());
+        }
+        (Belief::Returned, false) => {
+            lines.push("int *y_ = malloc(4);".to_owned());
+            lines.push("if (!y_) return 0;".to_owned());
+            lines.push("*x = y_;".to_owned());
+        }
+        // **Through a `void *`**, so that no type the route or the read back
+        // goes through says pointers, and only what was recorded of `x`'s
+        // block where it was held as an `int **` does (ADR-0086).
+        (Belief::HeldPointers, _) => lines.push("void *xv_ = x;".to_owned()),
+        _ => {}
+    }
+    let (ty, value) = match row.belief {
+        Belief::HeldPointers => ("void *", "xv_"),
+        _ => ("int **", "x"),
+    };
+    let (made, slot) = container_of(row.depth, ty);
+    lines.extend(made);
+    lines.extend(shaped(
+        row.shape,
+        slot,
+        put_of(row.route, row.depth, slot, value, ty),
+    ));
     lines
 }
 
@@ -2954,7 +3879,12 @@ fn program(row: Row, hazard: bool) -> String {
         Belief::Reborn => reborn(row, hazard),
         Belief::Caller => caller(row, hazard),
         Belief::Unreplaced => unreplaced(row, hazard),
-        Belief::StoredOut | Belief::StoredFreed | Belief::LeftBehind => door(row, hazard),
+        Belief::StoredOut | Belief::StoredFreed | Belief::LeftBehind | Belief::PartPointer => {
+            door(row, hazard)
+        }
+        Belief::PartLocal | Belief::Returned | Belief::HeldPointers => {
+            pointer_to_pointers(row, hazard)
+        }
     };
     let read = read_from(row);
     // **The read every belief shares**, but the one asked by address alone,
@@ -2967,10 +3897,39 @@ fn program(row: Row, hazard: bool) -> String {
         _ if kept => vec![format!("use1({read});"), "return 0;".to_owned()],
         // **Nothing read back**: a door question is asked at the write, the
         // free or the call, and `door` ends at it.
-        Belief::StoredOut | Belief::StoredFreed | Belief::LeftBehind => {
+        Belief::StoredOut | Belief::StoredFreed | Belief::LeftBehind | Belief::PartPointer => {
             vec!["return 0;".to_owned()]
         }
         Belief::Unreplaced => vec![format!("int *r = {read};"), "return use2(&r);".to_owned()],
+        // **Loaded through as an `int *`**, which reads the array's bytes.
+        Belief::PartLocal => vec![
+            format!("int **r = {read};"),
+            "if (!r) return 0;".to_owned(),
+            "int *p_ = *r;".to_owned(),
+            "return p_ == 0;".to_owned(),
+        ],
+        Belief::Returned => vec![format!("return {read};")],
+        // **Read back as the `void *` it was put there as**: see
+        // `pointer_to_pointers`.
+        Belief::HeldPointers => {
+            let mut lines = vec![
+                format!("void *d_ = {read};"),
+                "if (!d_) return 0;".to_owned(),
+                "int i_ = 1;".to_owned(),
+            ];
+            if hazard {
+                lines.push("memcpy(d_, &i_, 4);".to_owned());
+            } else {
+                lines.push("int *w_ = &i_;".to_owned());
+                lines.push("memcpy(d_, &w_, 8);".to_owned());
+            }
+            // **Handed on as memory of pointers**, where the callee reads a
+            // pointer made of part of an `int`: a copy into a block nothing
+            // reads after is no hazard, and the partial pointer record asks
+            // it where it leaves rather than at the copy (ADR-0087).
+            lines.push("return use2(x);".to_owned());
+            lines
+        }
         Belief::Width
         | Belief::Fresh
         | Belief::Lost
@@ -2984,7 +3943,12 @@ fn program(row: Row, hazard: bool) -> String {
         ],
     };
     let mut text = String::from(DECLARATIONS);
-    text.push_str(&format!("int f({}) {{\n", parameters(row, hazard)));
+    // **A table of pointers is returned** where the `return` is what asks.
+    let returns = match row.belief {
+        Belief::Returned => "int **",
+        _ => "int ",
+    };
+    text.push_str(&format!("{returns}f({}) {{\n", parameters(row, hazard)));
     for line in body.iter().chain(&tail).map(String::as_str) {
         text.push_str("    ");
         text.push_str(line);
@@ -3039,7 +4003,11 @@ fn parameters(row: Row, hazard: bool) -> &'static str {
         | Belief::Unreplaced
         | Belief::StoredOut
         | Belief::StoredFreed
-        | Belief::LeftBehind => {}
+        | Belief::LeftBehind
+        | Belief::PartPointer
+        | Belief::PartLocal
+        | Belief::Returned
+        | Belief::HeldPointers => {}
     }
     match (row.route, hazard) {
         (Route::ReallocParam, true) => "int k, void ***pm",
@@ -3162,6 +4130,30 @@ fn ask_with(name: &str, source: &str, safety: &str, extra: &[&str]) -> Answer {
         .args(extra)
         .output()
         .expect("the compiler binary was built for this test");
+    // **Against an older build too, where one is named**: a row the older
+    // build answered that this one is quiet on is a silence the matrix's
+    // bless would otherwise write down. See `compare`.
+    if let Some(older) = compare::older_build() {
+        let said = Command::new(&older)
+            .current_dir(&dir)
+            .args([
+                "--color",
+                "never",
+                "--safety",
+                safety,
+                "--emit",
+                "safety-ir",
+            ])
+            .args(["--target", "x86_64-pc-windows-msvc", "-o", "out", "f.c"])
+            .args(extra)
+            .output()
+            .unwrap_or_else(|error| panic!("{}: {error}", older.display()));
+        compare::compare(
+            name,
+            &String::from_utf8_lossy(&said.stderr),
+            &String::from_utf8_lossy(&output.stderr),
+        );
+    }
     let _ = std::fs::remove_dir_all(&dir);
     let stderr = String::from_utf8_lossy(&output.stderr);
     let reports = stderr
@@ -3348,10 +4340,6 @@ const UNCERTAIN: &[(&str, &str)] = &[
     (
         "fresh_memcpy_half_d1_one",
         "on one arm the slot holds what nothing wrote and on the other a null, and their join is a doubt (ADR-0057, #668)",
-    ),
-    (
-        "fresh_memcpy_part_d1_both",
-        "a copy that writes part of a pointer leaves the block in doubt rather than proved unwritten; a missed proof, since the part it misses is unwritten on every path",
     ),
     (
         "fresh_memcpy_maybe_d0_both",
@@ -3546,6 +4534,166 @@ const UNCERTAIN: &[(&str, &str)] = &[
         "a pointer a call this check cannot read returns is lost, and a lost pointer proves nothing freed where it is stored (ADR-0045)",
     ),
 ];
+
+/// Why a row is listed in [`COPY_DIFFERS`] when nothing more is known: it
+/// differed when the test that asks it landed, at `bb36192d`, and each such
+/// row is a rule the store and the copy still answer apart. The entries go
+/// as the rules become one.
+const DIFFERED_WHEN_ASKED: &str = "the store and the copy of one pointer still answer this route apart; it differed when `a_whole_copy_answers_as_its_plain_store` landed (#686)";
+/// What a whole copy is not answered alike with its plain store, row by
+/// row, with why: a library copy of a whole pointer is the store of it, so
+/// any code its hazard or control reports that the store's does not, or the
+/// reverse, is one rule spelled twice (#686, the memory model rebuilt on
+/// #924, stage 2). **Exact in both directions**: a listed row that now
+/// agrees fails too, and its entry goes.
+const COPY_DIFFERS: &[(&str, &str)] = &[
+    ("caller_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("caller_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("fresh_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("fresh_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("fresh_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("held_pointers_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("held_pointers_memcpy_d0_both", DIFFERED_WHEN_ASKED),
+    ("held_pointers_memcpy_d0_one", DIFFERED_WHEN_ASKED),
+    ("held_pointers_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("held_pointers_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("held_pointers_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("held_pointers_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("left_behind_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("left_behind_memcpy_d0_both", DIFFERED_WHEN_ASKED),
+    ("left_behind_memcpy_d0_one", DIFFERED_WHEN_ASKED),
+    ("left_behind_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("left_behind_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("left_behind_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("left_behind_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("part_pointer_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("part_pointer_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("part_pointer_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("part_pointer_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("returned_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
+    ("returned_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("returned_memcpy_d0_both", DIFFERED_WHEN_ASKED),
+    ("returned_memcpy_d0_one", DIFFERED_WHEN_ASKED),
+    ("returned_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("returned_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("returned_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("returned_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_d0_both", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_d0_one", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_d0_both", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_d0_one", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+];
+
+/// The codes a run reports, as a set.
+fn codes(answer: &Answer) -> std::collections::BTreeSet<String> {
+    answer
+        .reports
+        .iter()
+        .map(|(_, code, _)| code.clone())
+        .collect()
+}
+
+/// **A whole copy answers as its plain store**: the same codes on the
+/// hazard and on the control, where `COPY_DIFFERS` does not say why not.
+/// A store and a copy of one pointer were two bodies, and each rule one
+/// learned the other learned later or not at all: `SC0414` by a store and
+/// `SC0407` by the copy of the same pointer, a width asked of a copy into
+/// memory that never leaves and not of the store (#924's architecture
+/// review, 2026-11-13).
+#[test]
+fn a_whole_copy_answers_as_its_plain_store() {
+    let mut wrong = vec![];
+    for &(name, row) in ROWS {
+        if !matches!(row.route, Route::Memcpy | Route::MemcpyFromBlock) {
+            continue;
+        }
+        let Some(&(store_name, store)) = ROWS.iter().find(|(_, store)| {
+            store.route == Route::Store
+                && store.belief == row.belief
+                && store.depth == row.depth
+                && store.shape == row.shape
+        }) else {
+            continue;
+        };
+        let mut differs = vec![];
+        for (side, hazard) in [("hazard", true), ("control", false)] {
+            let by_store = codes(&ask(store_name, &program(store, hazard), "memory"));
+            let by_copy = codes(&ask(name, &program(row, hazard), "memory"));
+            if by_store != by_copy {
+                differs.push(format!("{side}: store {by_store:?}, copy {by_copy:?}"));
+            }
+        }
+        let listed = COPY_DIFFERS.iter().any(|(listed, _)| *listed == name);
+        if differs.is_empty() == listed {
+            wrong.push(format!(
+                "{name} ({}): {}",
+                if listed {
+                    "listed, agrees"
+                } else {
+                    "not listed"
+                },
+                differs.join("; ")
+            ));
+        }
+    }
+    assert!(
+        wrong.is_empty(),
+        "whole copies that do not answer as COPY_DIFFERS says:
+{}",
+        wrong.join(
+            "
+"
+        )
+    );
+}
 
 /// **A route is as certain as its plain store**: where the store spelling of
 /// a row (the same belief, depth and shape) proves its hazard, an error under
@@ -3769,6 +4917,10 @@ fn name_of(row: Row) -> String {
         Belief::StoredOut => "stored_out",
         Belief::StoredFreed => "stored_freed",
         Belief::LeftBehind => "left_behind",
+        Belief::PartPointer => "part_pointer",
+        Belief::PartLocal => "part_local",
+        Belief::Returned => "returned",
+        Belief::HeldPointers => "held_pointers",
     };
     let route = match row.route {
         Route::Store => "store",
@@ -3943,6 +5095,13 @@ const ASKED_WHERE_STORED: &str = "a pointer this check cannot say starts an obje
 /// See ADR-0045.
 const LOST_READ_FROM_A_LOCAL: &str = "a lost pointer read out of a local proves nothing where it is used, and one read out of memory is believed as it was stored (ADR-0045)";
 
+/// Why a pair is listed in [`APART`]: a library copy into memory that does
+/// not leave is not asked the width of what it carries.
+const COPY_STAYS_AT_DEPTH_ZERO: &str = "a library copy into memory that does not leave is not asked the width of what it carries, as a store there is not (the memory model rebuilt on #924, stage 2); at depth zero the block the copy lands in stays in this function, and one level below it is memory a load reached, which may leave";
+/// Why a pair is listed in [`APART`]: a library copy lets a lost value
+/// leave as a store by name does, and one level down the store spelling
+/// does not ask it yet.
+const COPY_ASKS_LOST: &str = "a library copy lets a value this check stopped following leave as `SC0414`, as a store of the same value by name does (#924); one level down the copy reads it out of memory where the lost answer stands, and the store spelling of that route does not ask it yet";
 /// The pairs of a row at depth zero and its row at depth one that answer
 /// differently, with why: each a rule that tells a local from a block on
 /// purpose. Every other pair answers alike in its codes and its exits,
@@ -3951,6 +5110,10 @@ const LOST_READ_FROM_A_LOCAL: &str = "a lost pointer read out of a local proves 
 /// [`every_pair_kept_apart_still_differs`]. Named as the rows are, without
 /// the depth.
 const APART: &[(&str, &str)] = &[
+    ("reborn_memcpy_both", COPY_ASKS_LOST),
+    ("reborn_memcpy_one", COPY_ASKS_LOST),
+    ("reborn_memcpy_block_both", COPY_STAYS_AT_DEPTH_ZERO),
+    ("reborn_memcpy_block_one", COPY_STAYS_AT_DEPTH_ZERO),
     ("caller_ret_both", ASKED_WHERE_STORED),
     ("caller_ret_one", ASKED_WHERE_STORED),
     ("width_ret_both", ASKED_WHERE_STORED),
@@ -4089,8 +5252,14 @@ fn every_pair_kept_apart_still_differs() {
 /// store by `a_route_is_as_certain_as_its_plain_store`. A `match`, so that a
 /// belief added answers here.
 ///
+/// **Not ADR-0073's three either, until #919 and #920 close**: at depth one
+/// `x` is read back out of a block, and what that load carries is what those
+/// two issues and #631 are about, each row of it listed in `ACCEPTED`. The
+/// pairs differ in their exits, which `APART` cannot excuse, so comparing
+/// them would name those issues a second time rather than a route.
+///
 /// Mutation: answer `true` for every belief; `a_route_answers_alike_at_depth_zero_and_one`
-/// fails, `stored_out_store_d0_both` among twenty three pairs it names.
+/// fails, `stored_out_store_d0_both` among the pairs it names.
 fn compared_by_depth(belief: Belief) -> bool {
     match belief {
         Belief::Width
@@ -4100,7 +5269,13 @@ fn compared_by_depth(belief: Belief) -> bool {
         | Belief::Reborn
         | Belief::Caller
         | Belief::Unreplaced => true,
-        Belief::StoredOut | Belief::StoredFreed | Belief::LeftBehind => false,
+        Belief::StoredOut
+        | Belief::StoredFreed
+        | Belief::LeftBehind
+        | Belief::PartPointer
+        | Belief::PartLocal
+        | Belief::Returned
+        | Belief::HeldPointers => false,
     }
 }
 

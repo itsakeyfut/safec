@@ -1,0 +1,132 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:1:28 "realloc" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "p"
+  Local "_2" "int" parameter "n"
+Function a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:2:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "k"
+  Local "_2" "int *" parameter "x"
+  Local "_3" "int **" "q"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int *"
+  Local "_7" "int **" "h"
+  Local "_8" "int **"
+  Local "_9" "int **" "n"
+  Local "_10" "void *"
+  Local "_11" "int"
+  Local "_12" "int *" "r"
+  Local "_13" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:3:15 generated
+    Call a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:3:15 written "malloc" "bb1"
+      Destination "_4"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:3:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:3:15 generated
+    Operation a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:3:30 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:3:30 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:3:30 generated
+    Operation a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:3:34 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:3:41 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:3:30 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:4:5 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_2"
+    Operation a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:4:5 written
+      Destination "_6"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:4:5 generated
+    Operation a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:5:11 written
+      Destination "_7"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:5:15 generated
+    Branch a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:6:9 written "bb5" "bb6"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:6:9 generated
+    Operation a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:6:12 written
+      Destination "_7"
+      Use
+        Constant 0
+    Operation a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:6:12 written
+      Destination "_8"
+      Use
+        Copy "_7"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:6:12 generated
+    Goto "bb7"
+  Block "bb6"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:6:9 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:7:15 generated
+    Call a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:7:15 written "realloc" "bb8"
+      Destination "_10"
+      Copy "_7"
+      Constant 16
+  Block "bb8"
+    Operation a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:7:11 written
+      Destination "_9"
+      Use
+        Copy "_10"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:7:15 generated
+    Operation a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:7:35 written
+      Destination "_11"
+      Unary "Not"
+        Copy "_9"
+    Branch a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:7:35 written "bb9" "bb10"
+      Copy "_11"
+  Block "bb9"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:7:35 generated
+    Operation a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:7:39 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:7:46 generated
+    Return
+  Block "bb10"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:7:35 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:8:10 written
+      Destination "_12"
+      Use
+        Copy "_9"
+          Deref
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:8:14 generated
+    Operation a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:9:12 written
+      Destination "_13"
+      Binary "Eq"
+        Copy "_12"
+        Copy "_2"
+    Operation a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:9:5 written
+      Destination "_0"
+      Use
+        Copy "_13"
+    Sequenced a_pointer_read_out_of_what_realloc_of_a_written_block_or_a_null_returns_is_doubted.c:9:12 generated
+    Return

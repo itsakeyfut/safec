@@ -12,7 +12,7 @@ use crate::source::Span;
 use super::allocations::{Allocations, innermost_element};
 use super::index::{LocalIdx, Site};
 use super::known::Known;
-use super::parts::{Extent, Offset, SiteState, same};
+use super::parts::{At, Extent, SiteState, same};
 
 /// What this check can say about whether an access fits the object its
 /// pointer reaches.
@@ -24,6 +24,9 @@ use super::parts::{Extent, Offset, SiteState, same};
 pub(super) enum Fit {
     Inside,
     Outside {
+        /// How far into the object the access reaches: its width, plus the
+        /// distance in where one was counted (#703).
+        reach: u64,
         extent: Option<u64>,
         made: Option<Span>,
     },
@@ -54,8 +57,9 @@ pub(super) enum Fit {
 ///    read as, and nothing more ([`Held::believed`](super::parts::Held::believed)),
 ///    nor more than what that memory is recorded to hold. One read on some
 ///    paths only is unknown.
-/// 4. Off its start, or perhaps off it: unknown, since no distance is
-///    carried (ADR-0036).
+/// 4. Off its start by a distance not counted, or perhaps off it: unknown.
+///    At a counted distance, the access is asked to reach that far plus its
+///    width (ADR-0092 rule 1, #703).
 /// 5. An edge that may be the address of something inside a local rather
 ///    than the local: unknown, since the local's size is not that object's
 ///    ([`Held::inner_address`](super::parts::Held::inner_address)). Not
@@ -79,9 +83,9 @@ pub(super) fn fits(
 ) -> Option<Fit> {
     let held = &known.points_to[local];
     let holds_something = held.sites().next().is_some()
-        || held.offset != Offset::Zero
+        || held.offset != At::Bytes(0)
         || held.may_be_a_locals_address()
-        || held.beyond().unrecorded_address();
+        || held.beyond().any_unknown();
     if !holds_something {
         return None;
     }
@@ -101,7 +105,7 @@ pub(super) fn fits(
     // through the local itself still doubts all three, which costs a false
     // report and not a silence. See ADR-0060.
     if doubt_unseen_writes
-        && (held.beyond().lost() || held.beyond().foreign() || known.escaped[local])
+        && (held.beyond().stopped_following_or_written_unseen() || known.escaped[local])
     {
         return Some(Fit::Unknown);
     }
@@ -111,7 +115,12 @@ pub(super) fn fits(
     // bound is kept: `if (c) put(pv, &c);` with `put` taking `void **` left
     // `v` holding nothing believed and nothing named, and a read through its
     // address believed a whole `int` (#632).
-    if held.beyond().foreign() && known.handed_at_most[local].is_some_and(|most| most < width) {
+    if held.beyond().foreign()
+        && known.handed_at_most[local]
+            .at(0)
+            .bound()
+            .is_some_and(|most| most < width)
+    {
         return Some(Fit::Unknown);
     }
     let sites = held
@@ -140,7 +149,7 @@ pub(super) fn fits(
     // `Allocations::read_through`, and a pointer handed on is asked at the
     // width its receiver believes, by `report::contents_leaving` (#627); a pointer
     // off its start stored as a `void *` is asked at the store.
-    if let Some(believed) = held.believed {
+    if let Some(believed) = held.believed() {
         let recorded = extents.iter().all(|extent| extent.lower() >= width);
         return Some(if believed >= width && recorded {
             Fit::Inside
@@ -148,15 +157,32 @@ pub(super) fn fits(
             Fit::Unknown
         });
     }
-    if held.beyond().loaded() || held.offset != Offset::Zero {
+    // **At a counted distance in, the access reaches that far plus its
+    // width** (#703): `m[1]` of a block of two `int`s reaches eight bytes and
+    // fits. Off the start by a distance not counted, or not known to be
+    // anywhere, is unknown. A sum that overflows reaches past every object.
+    let reach = match held.offset {
+        At::Bytes(at) => at.checked_add(width),
+        At::Moved | At::Unknown => None,
+    };
+    let Some(reach) = reach.filter(|_| !held.beyond().loaded()) else {
+        return Some(Fit::Unknown);
+    };
+    // **Off its start with no object to be in**, which only arithmetic on a
+    // null leaves: every object it names fits, since it names none, and a
+    // null moved is no pointer into anything. `int *q = p + 1;` with `p`
+    // null was proved inside at `*q` (#703, found while measuring).
+    // Mutation: drop this; `a_pointer_moved_off_null_and_tested_is_not_proved_inside`
+    // is proved inside.
+    if reach != width && extents.is_empty() {
         return Some(Fit::Unknown);
     }
     if held.may_be_a_locals_address() && held.inner_address {
         return Some(Fit::Unknown);
     }
 
-    match folded(&extents, width) {
-        Fit::Outside { extent, .. } => {
+    match folded(&extents, reach) {
+        Fit::Outside { reach, extent, .. } => {
             let mut made: Option<Option<Span>> = None;
             for site in held.sites() {
                 let here = match known.state[site] {
@@ -169,6 +195,7 @@ pub(super) fn fits(
                 });
             }
             Some(Fit::Outside {
+                reach,
                 extent,
                 made: made.flatten(),
             })
@@ -203,7 +230,11 @@ pub(super) fn folded(extents: &[Extent], width: u64) -> Fit {
                 .first()
                 .copied()
                 .filter(|first| bytes.iter().all(|other| other == first));
-            Fit::Outside { extent, made: None }
+            Fit::Outside {
+                reach: width,
+                extent,
+                made: None,
+            }
         }
         None => Fit::Unknown,
     }
@@ -278,8 +309,9 @@ pub(super) fn through_locals(
             None => Fit::Inside,
         };
         answer = Some(match (answer, fit) {
-            (_, Fit::Outside { extent, made }) => Fit::Outside { extent, made },
-            (Some(Fit::Outside { extent, made }), _) => Fit::Outside { extent, made },
+            (_, outside @ Fit::Outside { .. }) | (Some(outside @ Fit::Outside { .. }), _) => {
+                outside
+            }
             (Some(Fit::Unknown), _) | (_, Fit::Unknown) => Fit::Unknown,
             (None | Some(Fit::Inside), Fit::Inside) => Fit::Inside,
         });
@@ -347,7 +379,7 @@ pub(super) type Slots = (Vec<(LocalId, Option<TyId>)>, Vec<(Site, TyId)>, Vec<Si
 ///
 /// **One walk for every question about what a call or a store lets leave**:
 /// `report::contents_leaving` asks each slot whether it fits, and
-/// `Allocations::terminator` takes from it the narrowest type a call was
+/// `Allocations::call` takes from it the narrowest type a call was
 /// handed each local as. Two walks would answer the two differently.
 pub(super) fn slots_leaving(
     analysis: &Allocations<'_>,
@@ -579,7 +611,7 @@ mod tests {
             held.name_local(LocalIdx::of(c));
             held.writes_elsewhere = false;
             held.read_out_of_memory();
-            held.believed = Some(4);
+            held.believe(Some(4));
             assert!(matches!(
                 fits(analysis, function, p, 4, &known, false),
                 Some(Fit::Unknown)

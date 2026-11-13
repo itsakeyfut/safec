@@ -1,6 +1,6 @@
 //! The lattice's parts: what a local may hold, [`Held`], and what it reached,
 //! [`Reached`]; what is known about a site, [`SiteState`], and where in it a
-//! pointer is, [`Offset`]; the facts carried until something answers them, a read
+//! pointer is, [`At`]; the facts carried until something answers them, a read
 //! awaiting the free it is unordered against and a `realloc` awaiting its branch.
 //! What a call's name says is [`crate::library`].
 //!
@@ -11,9 +11,9 @@ use std::collections::BTreeSet;
 use crate::ir::Place;
 use crate::source::{SourceMap, Span};
 
-use super::LostReason;
 use super::bits::Bits;
-use super::index::{Loc, LocalIdx, Site, Table};
+use super::index::{Loc, LocalIdx, Site, Table, Target, Why};
+use super::{Carried, LostReason};
 
 /// A free, and whether C has ordered it before what comes after it.
 ///
@@ -191,42 +191,54 @@ impl SiteState {
     }
 }
 
-/// Where in the allocations it holds a local's value points.
+/// Where in the allocations it holds a local's value points: a position
+/// inside an object, one byte offset (ADR-0092).
 ///
-/// **Three values, because this check can be certain in both directions.**
-/// C17 7.22.3.3 p2 makes a `free` of anything but the pointer an allocation
-/// function returned undefined, and `p + 1` reaches the same allocation `p`
-/// does, so which allocation a value reaches cannot say whether freeing it is
-/// defined. A constant offset can, and one this check cannot evaluate cannot.
-/// See ADR-0036.
+/// **Certain in both directions**, at the start or off it. C17 7.22.3.3 p2
+/// makes a `free` of anything but the pointer an allocation function
+/// returned undefined, and `p + 1` reaches the same allocation `p` does, so
+/// which allocation a value reaches cannot say whether freeing it is
+/// defined. A constant offset can, and one this check cannot evaluate
+/// cannot. See ADR-0036.
+///
+/// **A distance is counted where `built::offset_of` can**, a constant
+/// times the size of what the pointer points at, and `Moved` stands for
+/// every distance off the start it cannot count (ADR-0092 rule 1). A reader
+/// that asks only whether a value is off the start matches `Moved` with
+/// `Bytes(1..)`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Offset {
-    /// The start of every site this local holds, and what a local holding no
-    /// site answers.
-    Zero,
-    /// A non-zero distance from the start of every site it holds.
-    NonZero,
-    /// This check cannot say which.
+pub(super) enum At {
+    /// This many bytes from the start of every site this local holds. `0`
+    /// is the start, and what a local holding no site answers.
+    Bytes(u64),
+    /// Off the start of every site it holds, by a distance not counted.
+    Moved,
+    /// This check cannot say where.
     Unknown,
 }
 
-impl Offset {
-    /// The two together, which is `Unknown` unless they agree.
+impl At {
+    /// The two together: themselves where they agree, `Moved` where both
+    /// are off the start, and `Unknown` otherwise.
     ///
-    /// **`NonZero` survives a join, and that is not slack.** Two paths that
-    /// each moved the pointer off the start both arrive off the start, whatever
-    /// the two distances were, so `if (c) q = p + 1; else q = p + 2; free(q);`
-    /// stays a proof.
+    /// **Off the start survives a join, and that is not slack.** Two paths
+    /// that each moved the pointer off the start both arrive off the start,
+    /// whatever the two distances were, so `if (c) q = p + 1; else q = p +
+    /// 2; free(q);` stays a proof.
     ///
-    /// **`Zero` is not an identity here**, although it is what a local holding
-    /// no site answers. `int *q = 0; if (c) q = p + 1; free(q);` joins a path
-    /// holding nothing with one off the start and answers `Unknown`, which is a
-    /// warning on a program that frees null on one path and an interior
-    /// pointer on the other. That is a false report the reader can see rather
-    /// than saying safe wrongly, and ADR-0036 records it as what three values
-    /// cost.
+    /// **The start is not an identity here**, although it is what a local
+    /// holding no site answers. `int *q = 0; if (c) q = p + 1; free(q);`
+    /// joins a path holding nothing with one off the start and answers
+    /// `Unknown`, which is a warning on a program that frees null on one path
+    /// and an interior pointer on the other. That is a false report the
+    /// reader can see rather than saying safe wrongly, and ADR-0036 records
+    /// it as what three values cost.
     pub(super) fn joined(self, other: Self) -> Self {
-        if self == other { self } else { Self::Unknown }
+        match (self, other) {
+            (here, there) if here == there => here,
+            (At::Moved | At::Bytes(1..), At::Moved | At::Bytes(1..)) => At::Moved,
+            _ => At::Unknown,
+        }
     }
 }
 
@@ -382,6 +394,17 @@ impl Inits {
         }
     }
 
+    /// `len` elements, each `init`.
+    pub(super) fn spread(init: Init, len: usize) -> Self {
+        let mut inits = Self::written(len);
+        match init {
+            Init::Unwritten => inits.unwrite_all(),
+            Init::Maybe => inits.doubt_all(),
+            Init::Written => {}
+        }
+        inits
+    }
+
     /// `len` elements, each [`Init::Unwritten`].
     pub(super) fn unwritten(len: usize) -> Self {
         let mut inits = Self::written(len);
@@ -421,12 +444,6 @@ impl Inits {
                 self.doubted.remove(element);
             }
         }
-    }
-
-    /// Every element [`Init::Written`].
-    pub(super) fn write_all(&mut self) {
-        self.proved.clear_all();
-        self.doubted.clear_all();
     }
 
     /// Every element as [`Init::may_write`] leaves it.
@@ -491,18 +508,208 @@ impl Inits {
     }
 }
 
-/// A heap block's [`Init`] per element, and the block's own `Init` it was
-/// last made from (#873).
+/// Whether a place was written: whole, or one [`Init`] per pointer-sized
+/// slot where it is kept so, for a local and a block alike (ADR-0092 rule
+/// 3). A local array of 2 to `ELEMENTS_KEPT` innermost elements is kept per
+/// slot from the start, and so is a block of 2 to `ELEMENTS_KEPT` pointers
+/// where it is made (#873); every other place is kept whole.
 ///
-/// **Read only while the block's `Init` is still `stamp`.** Every other path
-/// that changes a block's `Init`, a write this check cannot place, a copy, a
-/// doubt, a loop's back edge, changes the block whole and leaves these
-/// behind; the block's own answer is then the one asked, and nothing these
-/// say can take it back. See `Known::block_elements` and ADR-0081.
+/// **The whole answer is computed from the slots**, never stored beside
+/// them, so that no writer pairs a write of the whole with one of its
+/// slots by hand, as fifteen did (#894). **A write of the whole reaches
+/// every slot**: [`Self::set`], [`Self::doubt`] and [`Self::may_write`]
+/// leave each slot as they would leave the place.
+///
+/// **And where its unwritten bytes came from**, [`Self::carried`]: a copy
+/// or a `realloc` that carried bytes nothing wrote into it, or nothing for
+/// bytes an allocation or a local's lifetime left so. Kept beside the
+/// record rather than in each slot, since the slots are two sets of bits.
+/// It decides no conclusion, only what the report about a read says
+/// (#752).
 #[derive(Clone, PartialEq, Eq)]
-pub(super) struct SiteElements {
-    pub(super) stamp: Init,
-    pub(super) elements: Inits,
+pub(super) struct PlaceInit {
+    pub(super) kept: Kept,
+    carried: Option<Carried>,
+}
+
+/// How a [`PlaceInit`] keeps its record.
+#[derive(Clone, PartialEq, Eq)]
+pub(super) enum Kept {
+    /// The place as one.
+    Whole(Init),
+    /// One per slot.
+    Slots(Inits),
+}
+
+impl PlaceInit {
+    /// The place kept whole, as `init`.
+    pub(super) fn whole_of(init: Init) -> Self {
+        PlaceInit {
+            kept: Kept::Whole(init),
+            carried: None,
+        }
+    }
+
+    /// The place kept per slot, as `slots`.
+    pub(super) fn slots_of(slots: Inits) -> Self {
+        PlaceInit {
+            kept: Kept::Slots(slots),
+            carried: None,
+        }
+    }
+
+    /// What the place is as one: the slots' [`Inits::summary`] where kept
+    /// per slot.
+    pub(super) fn whole(&self) -> Init {
+        match &self.kept {
+            Kept::Whole(init) => *init,
+            Kept::Slots(slots) => slots.summary(),
+        }
+    }
+
+    /// The slots, where it is kept per slot.
+    pub(super) fn slots(&self) -> Option<&Inits> {
+        match &self.kept {
+            Kept::Whole(_) => None,
+            Kept::Slots(slots) => Some(slots),
+        }
+    }
+
+    /// The slots, where it is kept per slot, to write.
+    pub(super) fn slots_mut(&mut self) -> Option<&mut Inits> {
+        match &mut self.kept {
+            Kept::Whole(_) => None,
+            Kept::Slots(slots) => Some(slots),
+        }
+    }
+
+    /// `slot`, where it is kept per slot and `slot` is one of them, and the
+    /// whole otherwise.
+    pub(super) fn at(&self, slot: Option<u64>) -> Init {
+        match (&self.kept, slot.and_then(|slot| usize::try_from(slot).ok())) {
+            (Kept::Slots(slots), Some(slot)) if slot < slots.len() => slots.get(slot),
+            _ => self.whole(),
+        }
+    }
+
+    /// What a read of the slots `first..end` finds, where it is kept per
+    /// slot and they are all of it: `Written` where each is, `Unwritten`
+    /// where each is, and `Maybe` otherwise; the whole anywhere else. A copy
+    /// reads its source this way, as a load reads one slot by [`Self::at`]
+    /// (#928).
+    ///
+    /// Mutation: answer the whole always, and
+    /// `a_copy_out_of_a_slot_a_store_wrote_is_not_doubted_where_read` is
+    /// doubted.
+    pub(super) fn over(&self, slots: Option<(u64, u64)>) -> Init {
+        match (&self.kept, slots) {
+            (Kept::Slots(kept), Some((first, end)))
+                if first < end && usize::try_from(end).is_ok_and(|end| end <= kept.len()) =>
+            {
+                (first..end)
+                    .filter_map(|slot| usize::try_from(slot).ok())
+                    .map(|slot| kept.get(slot))
+                    .reduce(|one, other| one.joined(other, false))
+                    .unwrap_or_else(|| self.whole())
+            }
+            _ => self.whole(),
+        }
+    }
+
+    /// `len` slots, each what the place is as one: the slots it keeps where
+    /// it keeps `len` of them, and the whole spread over `len` otherwise.
+    pub(super) fn spread(&self, len: usize) -> Inits {
+        match &self.kept {
+            Kept::Slots(slots) if slots.len() == len => slots.clone(),
+            _ => Inits::spread(self.whole(), len),
+        }
+    }
+
+    /// Make the place `init`, every slot of it, and say nothing of where
+    /// what it holds came from: a write of the whole, an allocation and a
+    /// lifetime beginning each replace what a copy carried there. **No case
+    /// holds the clearing, measured**: on every route built, a join with a
+    /// path that never carried it, or a site made again, clears it first.
+    pub(super) fn set(&mut self, init: Init) {
+        match &mut self.kept {
+            Kept::Whole(whole) => *whole = init,
+            Kept::Slots(slots) => *slots = Inits::spread(init, slots.len()),
+        }
+        self.carried = None;
+    }
+
+    /// Where the bytes nothing wrote in it came from, where a copy or a
+    /// `realloc` carried them and no write of the whole has been since.
+    pub(super) fn carried(&self) -> Option<Carried> {
+        self.carried
+    }
+
+    /// Say that `by` carried the bytes nothing wrote in it, after the write
+    /// that made it so.
+    pub(super) fn carried_by(&mut self, by: Carried) {
+        self.carried = Some(by);
+    }
+
+    /// As [`Init::doubt`] leaves it, every slot of it.
+    pub(super) fn doubt(&mut self) {
+        match &mut self.kept {
+            Kept::Whole(whole) => whole.doubt(),
+            Kept::Slots(slots) => slots.doubt_all(),
+        }
+    }
+
+    /// As [`Init::may_write`] leaves it, every slot of it.
+    pub(super) fn may_write(&mut self) {
+        match &mut self.kept {
+            Kept::Whole(whole) => whole.may_write(),
+            Kept::Slots(slots) => slots.may_write_all(),
+        }
+    }
+
+    /// Joined with `other` as [`Init::joined`] says, slot by slot where both
+    /// keep the same slots, and whole otherwise. **Where its bytes came
+    /// from, where both sides say the same**, and nothing otherwise
+    /// ([`joined_carried`]).
+    pub(super) fn join(&mut self, other: &PlaceInit, back: bool) {
+        self.carried = joined_carried(self.carried, other.carried);
+        match (&mut self.kept, &other.kept) {
+            (Kept::Slots(here), Kept::Slots(there)) if here.len() == there.len() => {
+                here.join(there, back);
+            }
+            _ => self.kept = Kept::Whole(self.whole().joined(other.whole(), back)),
+        }
+    }
+
+    /// As [`Init::unwritten_again`] leaves it, slot by slot where it keeps
+    /// slots, each against what `before` and `back` were at it. Where its
+    /// bytes came from is the join's, already made.
+    ///
+    /// Mutation: leave a place kept whole as it is;
+    /// `a_block_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn`
+    /// fails. Leave a place kept per slot as it is;
+    /// `a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn`
+    /// fails (#886).
+    pub(super) fn unwritten_again(&mut self, before: &PlaceInit, back: &PlaceInit) {
+        match &mut self.kept {
+            Kept::Whole(whole) => {
+                *whole = whole.unwritten_again(before.whole(), back.whole());
+            }
+            Kept::Slots(slots) => {
+                let len = slots.len();
+                slots.unwritten_again(&before.spread(len), &back.spread(len));
+            }
+        }
+    }
+}
+
+/// Where two paths' bytes came from: the one call where both say it, and
+/// nothing otherwise, which only loses what was known and so cannot cycle,
+/// as [`same`] joins where an allocation came from.
+pub(super) fn joined_carried(here: Option<Carried>, there: Option<Carried>) -> Option<Carried> {
+    match (here, there) {
+        (Some(here), Some(there)) if here == there => Some(here),
+        _ => None,
+    }
 }
 
 /// Where an allocation came from, where two paths agree about it.
@@ -516,6 +723,66 @@ pub(super) fn same(here: Option<Span>, there: Option<Span>) -> Option<Span> {
     match (here, there) {
         (Some(here), Some(there)) if here == there => Some(here),
         _ => None,
+    }
+}
+
+/// The earliest write that made a may-fact about a place true, kept for two
+/// lifetimes: **ever**, which outlives the place being made again since a
+/// caller may still hold the allocation it named before, and **now**, since
+/// it was made, which a read inside the function asks. One value, so that a
+/// write notes both and a join joins both: as two fields a pair each, every
+/// write named both tables on its own lines, and #902 and #907 each added
+/// the second of a pair (#934).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct Earliest {
+    ever: Option<Span>,
+    now: Option<Span>,
+}
+
+impl Earliest {
+    /// Nothing made it true.
+    pub(super) fn none() -> Self {
+        Earliest {
+            ever: None,
+            now: None,
+        }
+    }
+
+    /// The earliest write ever.
+    pub(super) fn ever(self) -> Option<Span> {
+        self.ever
+    }
+
+    /// The earliest write since the place was made.
+    pub(super) fn now(self) -> Option<Span> {
+        self.now
+    }
+
+    /// A write at `at` made it true, for both lifetimes.
+    pub(super) fn note(&mut self, sources: &SourceMap, at: Span) {
+        self.join(
+            sources,
+            Earliest {
+                ever: Some(at),
+                now: Some(at),
+            },
+        );
+    }
+
+    /// The earlier of each lifetime's write, where paths meet or a record is
+    /// carried to another place.
+    pub(super) fn join(&mut self, sources: &SourceMap, other: Earliest) {
+        let earliest = |here: Option<Span>, there: Option<Span>| match (here, there) {
+            (Some(here), Some(there)) => Some(earlier(sources, here, there)),
+            (here, there) => here.or(there),
+        };
+        self.ever = earliest(self.ever, other.ever);
+        self.now = earliest(self.now, other.now);
+    }
+
+    /// The place was made again: nothing has made it true since.
+    pub(super) fn made_again(&mut self) {
+        self.now = None;
     }
 }
 
@@ -641,18 +908,7 @@ pub(super) struct Held {
     /// Two things set it: taking an address, `pp = &p;`, and a call this check
     /// cannot read, whose result may be any local whose address escaped. See
     /// ADR-0039.
-    pub(super) names: Bits<Loc>,
-    /// Whether this local may hold an allocation this check can no longer
-    /// name.
-    ///
-    /// Three doors lead here. The site that named what it held was handed to a
-    /// second allocation, which is ADR-0018; or its address had escaped when a
-    /// call this check cannot read ran, and such a call may have written a
-    /// pointer this check has never seen into it, which is ADR-0029; or its
-    /// address had escaped when a write through a pointer this check cannot
-    /// pin down wrote its type, which is ADR-0031 and is the same sentence
-    /// with the writer inside this function.
-    lost: bool,
+    pub(super) names: Bits<Target>,
     /// Where the allocation this local held was freed, when the free could not
     /// say which member of the set it was.
     ///
@@ -692,26 +948,10 @@ pub(super) struct Held {
     /// [`Held::hold`] takes it as an argument, so that a new producer of a site
     /// cannot be written without answering where in it the value points. See
     /// ADR-0036.
-    pub(super) offset: Offset,
-    /// Whether this local may hold a pointer read out of memory.
-    ///
-    /// Such a pointer holds what a cell's `names` records for the allocation
-    /// it was read from, which may be missing members, and this bit is what
-    /// says so: the report reads [`Reached::Partial`] beside those sites, and
-    /// a free of it stays a doubt (ADR-0045). **For the other readers**, what
-    /// a call reaches and what a write stores, it says the value may be
-    /// anything stored, for which "no site" had come to mean "reaches
-    /// nothing". It is not the emptiness of [`Held::sites`], because
-    /// `int *z = 0;` is empty too, and reading it as a load exposed every
-    /// stored pointer at `log_ptr(z)`, measured. See ADR-0040.
-    ///
-    /// It says that the value was read out of memory and not from where, so a
-    /// write through it is unplaced for that part: what it carries is
-    /// exposed. See ADR-0044.
-    loaded: bool,
+    pub(super) offset: At,
     /// The locals code this check cannot read could name where this value
     /// was read out of memory, or where such code may have written it
-    /// ([`Held::foreign`], #661), what
+    /// ([`Why::Foreign`], #661), what
     /// [`Known::locals_named_by_unknown_code`](super::known::Known::locals_named_by_unknown_code)
     /// answered then. Empty where it was neither.
     ///
@@ -727,72 +967,6 @@ pub(super) struct Held {
     /// [`Known::locals_a_write_may_land_in`](super::known::Known::locals_a_write_may_land_in)
     /// alone. See ADR-0057.
     pub(super) named_at_read: Bits<LocalIdx>,
-    /// Whether a call this check cannot read may have written into this
-    /// local, through its address, something no site names.
-    ///
-    /// [`Known::replaced`](super::known::Known::replaced) cannot say this with [`Held::lost`] for a local
-    /// holding no site, because the report reads that bit and ADR-0017 does
-    /// not report an output parameter. So `get(&u)` sets this instead, and
-    /// the report never reads it. A write through such a local exposes what
-    /// it carries, as one through a load does. See ADR-0044.
-    foreign: bool,
-    /// Whether this was read out of an allocation whose cell is `stale_read`, or
-    /// otherwise lost an allocation that may be gone, and may be one.
-    ///
-    /// Set too where a local loses a site whose allocation is not live
-    /// ([`Known::reborn`](super::known::Known::reborn)), by a load through a pointer to such a local, and
-    /// by a call this check cannot read for what it makes lost of the
-    /// caller's, and on every lost local when one is freed ([`Known::lost_may_be_gone`](super::known::Known::lost_may_be_gone)). A
-    /// store of any of them was recorded as nothing and read back
-    /// in silence, where read directly it was doubted. See ADR-0045.
-    ///
-    /// **Not [`Held::lost`], which says the same to the report and more to a
-    /// store.** A local loses a site whenever the site is reborn, whatever
-    /// became of the allocation it named, so `*node = head; head = node;`
-    /// builds a list whose `head` is lost every turn though nothing is freed.
-    /// A store of a lost value marking its container doubted every walk of
-    /// that list, measured; a store of this one marks it, so a doubted load
-    /// copied into another allocation stays doubted. See ADR-0045.
-    stale_read: bool,
-    /// Whether this was read out of an allocation whose cell is
-    /// `unreplaced_read`, which may
-    /// hold a slot a call this check cannot read could not replace, or built
-    /// from such a value.
-    ///
-    /// **Not [`Held::stale_read`], which makes a load lost.** A lost local's
-    /// load is followed no further, so marking that way silenced `d = *c;
-    /// return *d;` after `c = *h;`, a read of a proved free. This one is read
-    /// by [`Known::handed_below`](super::known::Known::handed_below) alone.
-    /// See ADR-0047.
-    unreplaced_read: bool,
-    /// Whether this was read out of an allocation whose cell is `lost`,
-    /// which
-    /// may hold a value this check lost, or built from such a value.
-    ///
-    /// **Not [`Held::lost`] at the read**, which would doubt every walk of a
-    /// list whose nodes hold a lost head. It is made lost only when a lost
-    /// value may have gone, by
-    /// [`Known::lost_may_be_gone`](super::known::Known::lost_may_be_gone):
-    /// `*box = u; r = *box; free(u); v = *r;` with `u` lost to a rebirth read
-    /// `*r` in silence, since `r` was read out before the free (#505). A
-    /// store of it marks where it lands, as a store of a lost value does, so
-    /// a copy into another allocation carries it. See ADR-0045.
-    lost_read: bool,
-    /// Whether this was read out of memory a pointer parameter points at, so
-    /// may be what the caller stored there.
-    ///
-    /// Or handed over by a callee: read out of what a call this check cannot
-    /// read returned, or written by one through an escaped local's address.
-    /// Memory a callee hands back it may still hold, as a caller may (#394).
-    ///
-    /// **Made [`Held::lost`] at a call this check cannot read.** What the
-    /// caller stored behind `pp` is recorded nowhere, so a load of it holds no
-    /// site and nothing a call does could reach it: `q = *pp; release_all();
-    /// return *q;` built. The caller may have stashed it where the call frees
-    /// it, which is ADR-0040's reason for exposing the parameter itself, one
-    /// level in; and its cost, a read after any such call doubted, is the same
-    /// one level in. See ADR-0040.
-    from_caller: bool,
     /// The site a `realloc` or an allocation of indeterminate contents
     /// returned, where this local holds exactly that value: the call's
     /// destination and plain copies of it. Read at a branch on it, by
@@ -808,7 +982,7 @@ pub(super) struct Held {
     /// fact survives the join (ADR-0080). Found by review. See ADR-0039.
     pub(super) returned_by: Option<Site>,
     /// Whether this was read, on every path, out of an allocation
-    /// [`Known::init`](super::known::Known::init) marks, so is
+    /// [`Known::written`](super::known::Known::written) marks, so is
     /// indeterminate (C17 7.22.3.1 p2, 7.22.3.4 p2), and was reported
     /// where it was read. **It decides no report.** It is what drops the
     /// doubt a free or a `realloc` of the value would raise beside that
@@ -816,7 +990,13 @@ pub(super) struct Held {
     /// only where both paths agree. Arithmetic drops it, so `t + 1` is not
     /// followed. See ADR-0057.
     pub(super) fresh_read: bool,
-    /// How many bytes this value is believed to point at the start of, where
+    /// **How wide this value and the memory it points at are believed to
+    /// point, one [`Width`] per level** (ADR-0093 rule 1): level 0 is the
+    /// value itself, [`Self::believed`], and every level after it what
+    /// [`Self::contents_at_most`] reads. One value joined by one rule,
+    /// [`Width::meet`] at every level. What each level means:
+    ///
+    /// Level 0. How many bytes this value is believed to point at the start of, where
     /// it is, on every path, a pointer read out of memory or returned by a
     /// call this check cannot read, and nothing since; or written into the
     /// local through its address by such a call, believed whole as its
@@ -831,7 +1011,7 @@ pub(super) struct Held {
     /// carried onto a path that proved nothing. Dropped at a null, `if (k)
     /// get(&c); char *t = c;` stored or copied and read back as an `int *`
     /// was believed whole, since for such a value no belief was no bound
-    /// (#719). It is [`AS_TYPED`] now, said where the call writes it, since
+    /// (#719). It is [`Width::AsTyped`] now, said where the call writes it, since
     /// no bound is no belief at a load (ADR-0061).
     ///
     /// **The size of what the pointer read points to, and not of what the
@@ -840,13 +1020,20 @@ pub(super) struct Held {
     /// stored that way and read back into `q` is not a whole `int`: believing
     /// `q`'s own type put four bytes on one. The conversion to and from
     /// `void *` needs no cast (C17 6.3.2.3 p1, 6.5.16.1 p1), so a type this
-    /// frontend parses no cast for is still reached. A proof, so an intersection at a join, as [`Self::fresh_read`]
-    /// is, and copied with the value and dropped by anything else, arithmetic
-    /// included. What the sites a load holds say about where it points is
+    /// frontend parses no cast for is still reached. Joined as a proof is,
+    /// since a level that believes nothing is [`Width::Nothing`], which
+    /// absorbs: copied with the value and dropped by anything else,
+    /// arithmetic included. What the sites a load holds say about where it points is
     /// not read for this, since they are held at an offset nobody said. See
     /// ADR-0060.
-    pub(super) believed: Option<u64>,
-    /// How many bytes each pointer stored in what this value points at is
+    ///
+    /// **[`Width::Nothing`] where nothing is believed, and
+    /// [`Width::Unbounded`] for a null**, which is the meet's identity: so a
+    /// null on one path keeps what the other believes, with nothing asked of
+    /// either path at the join (#719), and anything else that believes
+    /// nothing drops it.
+    ///
+    /// Levels 1 and after. How many bytes each pointer stored in what this value points at is
     /// believed to point at, at most, and so on down, one [`Levels`] entry
     /// per level, with no bound where nothing bounds it beyond what this
     /// check recorded there.
@@ -869,10 +1056,11 @@ pub(super) struct Held {
     /// bytes (#634). A load takes what its memory believed one level down,
     /// and a store leaves this behind in the memory it lands in
     /// (a cell's `stored_levels`).
-    /// **A bound and not a proof**, so a join keeps
-    /// the lower of two and a side with none is no bound, the reverse of
-    /// [`Self::believed`]. See ADR-0060.
-    pub(super) contents_at_most: Levels,
+    /// **A bound and not a proof**, by the same meet: a join keeps the lower
+    /// of two, and a side that recorded none is [`Width::Unbounded`], the
+    /// identity, where level 0's none is [`Width::Nothing`], which absorbs.
+    /// See ADR-0060.
+    pub(super) widths: Levels,
     /// Whether the type this value arrived as says the memory it points at
     /// holds pointers, at its first level: `void **` does, though the width
     /// [`Self::contents_at_most`] believes there is `0`, and `int *` does
@@ -910,7 +1098,7 @@ pub(super) struct Held {
     /// **What lets one element be written and another stay unwritten**
     /// (#667). One record per array made a write to `m[0]` a write of `m[1]`,
     /// and a write through `m + 1` either all of `m` or none of it. A join
-    /// keeps it where both paths agree. See `Known::element_init` and
+    /// keeps it where both paths agree. See `Known::written` and
     /// ADR-0057.
     pub(super) element: Option<u64>,
     /// Which element of its one block, the site it holds, this points at,
@@ -922,7 +1110,7 @@ pub(super) struct Held {
     /// unwritten** (#873), as [`Self::element`] does for a local array:
     /// `b[0] = x;` with `b` from `malloc(16)` wrote the whole block before.
     /// Apart from `element`, which is about the edges to locals, so that a
-    /// pointer that may name either keeps both. See `Known::block_elements`
+    /// pointer that may name either keeps both. See `Known::written`
     /// and ADR-0081.
     pub(super) site_element: Option<u64>,
     /// Whether an edge in [`Self::locals`] survives only by the rule of
@@ -936,7 +1124,7 @@ pub(super) struct Held {
     /// always did, through an offset this check cannot read, the write is of
     /// the whole array, as it always was. That is the line between not losing
     /// a proof and not doubting every loop that fills an array. A union. See
-    /// `Known::init` and ADR-0057.
+    /// `Known::written` and ADR-0057.
     pub(super) array_edge: bool,
     /// Whether a store placed through this pointer has written what it
     /// points at since it was given its value, on every path. A read through
@@ -945,101 +1133,180 @@ pub(super) struct Held {
     /// **What keeps the lowering's own read of an assignment's value from
     /// being doubted** (#667): `*e = &x;` reads `*e` back as the value of the
     /// expression, and with `e` moved through a loop the element is not
-    /// known, so the write left the array [`Known::init`] and the
+    /// known, so the write left the array [`Known::written`] and the
     /// read back of it was a doubt about the element just written. Held by
     /// the pointer, so a new value for it clears it and a copy of it keeps
     /// it. An intersection at a join. See `Known::may_be_unwritten`.
     ///
-    /// [`Known::init`]: super::known::Known::init
+    /// [`Known::written`]: super::known::Known::written
     pub(super) stored_through: bool,
+    /// Whether this may be a null pointer, on some path: set by an
+    /// assignment of the constant `0`, a union at a join, kept by a copy of
+    /// the value, and dropped by arithmetic, since a null moved by arithmetic
+    /// is no null (C17 6.5.6 p8 asks the operand to point into an object).
+    ///
+    /// **Set where nothing says the value is not null** (#931): a load and a
+    /// library copy into a local, since memory records no null; a parameter
+    /// not `_Nonnull`; and what a call returns, an allocation's included,
+    /// unless its callee promises it is not. Dropped on the arm of a branch
+    /// that tested the value not null. Given only by a constant, `realloc` of
+    /// a parameter was read as copying an old block on the path where the
+    /// caller passed none, and what it returned was believed written. A
+    /// door that builds a value from [`Marks`] says it; a parameter and a
+    /// call's result set it on the value [`Held::none`] builds, each held by
+    /// a case rather than by the compiler (#931).
+    ///
+    /// **Said rather than inferred** from every other mark being absent,
+    /// which a local nothing was assigned shares with a null and arithmetic
+    /// on a null kept. See ADR-0093 rule 3.
+    ///
+    /// Read by the door that asks it, `realloc`'s, whose result may be
+    /// fresh on the path where it was handed a null (#708); a join needs
+    /// none of it, since a null's own level of [`Self::widths`] is the
+    /// identity there ([`Held::null`]).
+    pub(super) may_be_null: bool,
 }
 
-/// A width that bounds nothing below the type a pointer is read as, which
-/// `as_read.min` in `Allocations::believed_read` turns into that type.
+/// How many bytes the pointers at one level are believed to point at, at
+/// most: no bound, a byte count and the type's own width told apart by
+/// variant, rather than by `None` and a sentinel. See ADR-0093 rule 1.
 ///
-/// **What arrives is believed as it arrives, said rather than left
-/// unsaid**: where nothing is recorded a load now believes nothing
-/// (ADR-0061), so a pointer a call this check cannot read wrote, handed
-/// nothing that bounds a width, is given this, as ADR-0017 and ADR-0060
-/// believe an output. **So is an escaped local a store or a copy this check
-/// cannot place may have written** (`Known::replaced`, ADR-0031), which is
-/// marked as one a call wrote: believed as its type there too, as before
-/// ADR-0061, and asked by what it names where it is read through itself.
-///
-/// Mutation: the walk's arm in `Known::memory_levels` answers `0` for such
-/// a value rather than this;
-/// `a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence`
-/// reports, among others. The store's arm answers without it;
-/// `a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back`
-/// reports.
-pub(super) const AS_TYPED: u64 = u64::MAX;
+/// **Ordered `Unbounded` above `AsTyped` above every `AtMost` above
+/// `Nothing`**, and [`Self::meet`] takes the lower, so `Unbounded` is its
+/// identity, a side that bounds nothing loosening nothing, and `Nothing`
+/// absorbs, a side that believes nothing believing nothing for both.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Width {
+    /// Nothing bounds it: nothing was stored or handed there.
+    Unbounded,
+    /// At most this many bytes.
+    AtMost(u64),
+    /// As wide as the type it is read as, no wider, which `as_read.min` in
+    /// `Allocations::believed_read` turns into that type.
+    ///
+    /// **What arrives is believed as it arrives, said rather than left
+    /// unsaid**: where nothing is recorded a load believes nothing
+    /// (ADR-0061), so a pointer a call this check cannot read wrote, handed
+    /// nothing that bounds a width, is given this, as ADR-0017 and ADR-0060
+    /// believe an output. **So is an escaped local a store or a copy this
+    /// check cannot place may have written** (`Known::replaced`, ADR-0031),
+    /// which is marked as one a call wrote: believed as its type there too,
+    /// as before ADR-0061, and asked by what it names where it is read
+    /// through itself. See `Known::stored_width`.
+    ///
+    /// Mutation: `Known::stored_width` answers `AtMost(0)` where it answers
+    /// this, for the store and the load of a local's level at once;
+    /// `a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence`
+    /// and
+    /// `a_pointer_a_call_handed_nothing_may_have_written_on_one_arm_is_believed_as_its_type_when_stored_and_read_back`
+    /// report, among others.
+    AsTyped,
+    /// Nothing is believed: a pointer's own width where nothing vouched for
+    /// it, and a block's level a store recorded no width at, which no other
+    /// record may stand in for (`Cell::poured`, #767). Read as nothing at a
+    /// load (ADR-0061).
+    Nothing,
+}
 
-/// The lower of two bounds, where `None` is no bound: a side that bounds
-/// nothing does not loosen one that does. See [`Held::contents_at_most`].
-///
-/// **A copy is one of these joins**: `pm = m;` builds `pm` from a value
-/// with no bound and accumulates `m` into it, so a version that let a side
-/// with none loosen the other lost every bound at its first copy. Mutation:
-/// answer `None` where one side has no bound;
-/// `a_void_pointer_to_pointer_parameter_read_through_an_int_alias_is_asked`
-/// goes silent, among others.
-pub(super) fn bounded(here: Option<u64>, there: Option<u64>) -> Option<u64> {
-    match (here, there) {
-        (Some(here), Some(there)) => Some(here.min(there)),
-        (Some(only), None) | (None, Some(only)) => Some(only),
-        (None, None) => None,
+impl Width {
+    /// The lower of the two.
+    ///
+    /// **A copy is one of these joins**: `pm = m;` builds `pm` from a value
+    /// with no bound and accumulates `m` into it, so a version that let a
+    /// side with none loosen the other lost every bound at its first copy.
+    /// Mutation: answer `Unbounded` where one side is; most of the corpus
+    /// fails, `a_block_made_on_one_arm_only_keeps_its_mark_where_the_arms_meet`
+    /// among it, and so does
+    /// `a_width_meets_as_a_bound_does_over_every_combination` at the
+    /// identity.
+    pub(super) fn meet(self, other: Width) -> Width {
+        match (self, other) {
+            (Width::Nothing, _) | (_, Width::Nothing) => Width::Nothing,
+            (Width::Unbounded, other) | (other, Width::Unbounded) => other,
+            (Width::AsTyped, other) | (other, Width::AsTyped) => other,
+            (Width::AtMost(here), Width::AtMost(there)) => Width::AtMost(here.min(there)),
+        }
+    }
+
+    /// This width as an `Option<u64>`, `None` for no bound and for no
+    /// belief, which a reader of one reads alike, and `u64::MAX` for the
+    /// type's, which the width it is read as then bounds: what a reader that
+    /// still takes one is given.
+    pub(super) fn bound(self) -> Option<u64> {
+        match self {
+            Width::Unbounded | Width::Nothing => None,
+            Width::AtMost(bytes) => Some(bytes),
+            Width::AsTyped => Some(u64::MAX),
+        }
+    }
+
+    /// The belief an `Option<u64>` spells, `None` believing nothing: what a
+    /// value's level 0 is given ([`Held::believe`]).
+    pub(super) fn of_belief(belief: Option<u64>) -> Width {
+        belief.map_or(Width::Nothing, |bytes| Width::of_bound(Some(bytes)))
+    }
+
+    /// The bound an `Option<u64>` spells, `None` bounding nothing:
+    /// [`Self::bound`] read back, but for `Nothing`.
+    pub(super) fn of_bound(bound: Option<u64>) -> Width {
+        match bound {
+            None => Width::Unbounded,
+            Some(u64::MAX) => Width::AsTyped,
+            Some(bytes) => Width::AtMost(bytes),
+        }
     }
 }
 
 /// How many bytes the pointers each level below a pointer's memory hold are
 /// believed to point at, at most: index 0 for the pointers stored in that
 /// memory, index 1 for the pointers stored where those point, and so on. A
-/// level past the end, and an entry of `None`, is no bound. See
-/// [`Held::contents_at_most`] and ADR-0060.
+/// level past the end is no bound. See [`Width`], [`Held::contents_at_most`]
+/// and ADR-0060.
 ///
 /// **No list is longer than [`Allocations::deepest_pointer`](super::allocations::Allocations::deepest_pointer)**,
 /// the deepest pointer type among the function's locals. The two that build
 /// one are [`Allocations::type_levels`](super::allocations::Allocations::type_levels),
 /// which stops there, and [`Self::stored_under`], which drops what would pass it;
-/// [`Self::below`] and a join make none longer than their inputs. So the
+/// [`Self::below`] and a join make none longer than their inputs. **A
+/// handed bound is one longer**, its own level 0 put before such a list
+/// (`Known::handed_at_most`), and is never stored, so it builds nothing
+/// deeper. So the
 /// lattice this sits in has a finite height by construction, and no loop of
 /// stores and loads can grow one for a fixpoint to chase. What is dropped is
 /// a level no read in this function can ask, since a place dereferenced `d`
 /// times to a pointer goes through a local at least `d + 1` deep and asks
 /// index `d - 1`.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub(super) struct Levels(Vec<Option<u64>>);
+pub(super) struct Levels(Vec<Width>);
 
 impl Levels {
-    /// One bound per level, from the shallowest, as given.
-    pub(super) fn from_bounds(bounds: Vec<Option<u64>>) -> Self {
-        Levels(bounds)
+    /// One width per level, from the shallowest, as given.
+    pub(super) fn new(widths: Vec<Width>) -> Self {
+        Levels(widths)
     }
 
-    /// The bound at one level, `None` past the end.
-    pub(super) fn at(&self, level: usize) -> Option<u64> {
-        self.0.get(level).copied().flatten()
+    /// The width at one level, no bound past the end.
+    pub(super) fn at(&self, level: usize) -> Width {
+        self.0.get(level).copied().unwrap_or(Width::Unbounded)
     }
 
-    /// No bound at level 0, whatever was recorded there: what a read out of
-    /// a cell a store recorded no width in believes. See
-    /// [`Cell::unrecorded`](Cell).
-    pub(super) fn forget_first(&mut self) {
-        if let Some(first) = self.0.first_mut() {
-            *first = None;
+    /// `first` at level 0, whatever was there, and every level below kept.
+    pub(super) fn set_first(&mut self, first: Width) {
+        match self.0.first_mut() {
+            Some(here) => *here = first,
+            None => self.0.push(first),
         }
     }
 
-    /// The lower of the two at every level, where `None` is no bound, as
-    /// [`bounded`] says for one: a side that bounds nothing at a level does
-    /// not loosen one that does, and a shorter list bounds nothing past its
-    /// end.
+    /// The lower of the two at every level, as [`Width::meet`] says for one:
+    /// a side that bounds nothing at a level does not loosen one that does,
+    /// and a shorter list bounds nothing past its end.
     pub(super) fn bound_by(&mut self, other: &Levels) {
         if self.0.len() < other.0.len() {
-            self.0.resize(other.0.len(), None);
+            self.0.resize(other.0.len(), Width::Unbounded);
         }
         for (level, here) in self.0.iter_mut().enumerate() {
-            *here = bounded(*here, other.at(level));
+            *here = here.meet(other.at(level));
         }
     }
 
@@ -1053,18 +1320,26 @@ impl Levels {
     /// reader of it believing `read` takes it to be: what a departure asks
     /// of the memory it lets leave. A level either side has no bound at asks
     /// nothing, and a reader's `0` is below nothing, so a receiver's type
-    /// stopping short of the memory's asks nothing below it.
+    /// stopping short of the memory's asks nothing below it. **A level that
+    /// believes nothing is narrower than any reader that reads a width
+    /// there**: a store that recorded none there (#767).
     pub(super) fn narrower_than(&self, read: &Levels) -> bool {
         self.0
             .iter()
             .zip(&read.0)
-            .any(|pair| matches!(pair, (Some(held), Some(read)) if held < read))
+            .any(|(held, read)| match (held, read) {
+                (_, Width::Unbounded) => false,
+                (Width::Nothing, _) => true,
+                (held, read) => {
+                    matches!((held.bound(), read.bound()), (Some(held), Some(read)) if held < read)
+                }
+            })
     }
 
     /// What memory holding a pointer that believes `self` of its own memory
     /// holds: `first` for that pointer, which is what a store of it records
     /// at its own level, and `self` one level down, no longer than `depth`.
-    pub(super) fn stored_under(&self, first: Option<u64>, depth: usize) -> Levels {
+    pub(super) fn stored_under(&self, first: Width, depth: usize) -> Levels {
         Levels(
             std::iter::once(first)
                 .chain(self.0.iter().copied())
@@ -1075,6 +1350,36 @@ impl Levels {
 }
 
 impl Held {
+    /// How many bytes this value is believed to point at the start of,
+    /// level 0 of [`Self::widths`]: `None` where nothing is believed, a null
+    /// included, and `u64::MAX` for the type's width ([`Width::bound`]).
+    pub(super) fn believed(&self) -> Option<u64> {
+        self.widths.at(0).bound()
+    }
+
+    /// Believe `belief` of this value at level 0, `None` believing nothing.
+    pub(super) fn believe(&mut self, belief: Option<u64>) {
+        self.widths.set_first(Width::of_belief(belief));
+    }
+
+    /// What this value believes of the memory it points at, every level of
+    /// [`Self::widths`] below its own.
+    pub(super) fn contents_at_most(&self) -> Levels {
+        self.widths.below(1)
+    }
+
+    /// Believe `contents` of the memory this value points at, below its own
+    /// level, which is kept.
+    pub(super) fn set_contents(&mut self, contents: &Levels) {
+        self.widths = contents.stored_under(self.widths.at(0), usize::MAX);
+    }
+
+    /// Bound what this value believes of the memory it points at by
+    /// `contents`, the lower at every level below its own.
+    pub(super) fn bound_contents(&mut self, contents: &Levels) {
+        self.widths
+            .bound_by(&contents.stored_under(Width::Unbounded, usize::MAX));
+    }
     /// How wide the objects this value names are recorded, at the least:
     /// each site at its [`Extent`]'s lower bound, `AtLeast(0)` where it has
     /// none, and each local whose address it holds at the local's size,
@@ -1084,9 +1389,17 @@ impl Held {
     /// nothing is recorded believes nothing (ADR-0061), this is what keeps
     /// the common case, `*box = &q; int *t = *box; *t = 1;`, proved.
     ///
-    /// **`Some(0)` off its start or inside a local**, since neither has a
-    /// width to read: `Offset` carries no distance (ADR-0036), and a local's
-    /// size is not the size of something inside it. **And where it is
+    /// **What is left of the object past where it points**, the extent
+    /// less a position [`At::Bytes`] counts: `m + 1` into `int *m[2]` is
+    /// eight bytes wide, as wide as the `int *` it names. Read as `0`
+    /// wherever it was off the start, a pointer to the last element stored
+    /// and read back was doubted wherever it was written through or handed
+    /// on, seven reports in the corpus, each of a write that fits. Found by
+    /// the architecture review of 2026-11-13.
+    ///
+    /// **`Some(0)` off its start by a distance not counted, or inside a
+    /// local**, since neither has a width to read (ADR-0092 rule 1), and a
+    /// local's size is not the size of something inside it. **And where it is
     /// lost**, since what it holds may be an object no site it names stands
     /// for: a loop's earlier `malloc(1)` joined into `x = malloc(4)` on one
     /// arm leaves `x` naming the four-byte site alone, and `*box = x; int *t
@@ -1109,52 +1422,70 @@ impl Held {
     /// belief. Kept the least so that the record alone never says more than
     /// every object it stands for.
     pub(super) fn recorded_width(&self, extent: &Table<Loc, Option<Extent>>) -> Option<u64> {
-        if self.offset != Offset::Zero || self.inner_address || self.beyond().unrecorded_address() {
+        let at = match self.offset {
+            At::Bytes(at) => at,
+            At::Moved | At::Unknown => return Some(0),
+        };
+        if self.inner_address || self.beyond().any_unknown() {
             return Some(0);
         }
         // **One rule for both kinds of place**: a site nothing made and a
         // local with no size are both nothing read, `0`. See `Known::extent`.
         self.names
             .ones()
-            .map(|place| extent[place].unwrap_or(Extent::AtLeast(0)).lower())
+            .filter_map(Target::place)
+            .map(|place| {
+                extent[place]
+                    .unwrap_or(Extent::AtLeast(0))
+                    .lower()
+                    .saturating_sub(at)
+            })
             .min()
-    }
-
-    /// Whether this value names nothing at all: no allocation, no local's
-    /// address, and none of the marks that say it may hold what this check
-    /// did not follow: a null, or a local nothing was assigned, which
-    /// [`Self::joined`] tells apart from the null by `Known::init`. The test
-    /// `Known::names_no_more_than_its_sites` makes, with no site either, on
-    /// one value rather than on a local: a field added to one is a field
-    /// to answer in the other. What [`Self::joined`] asks of a path before
-    /// it drops that path's want of [`Self::believed`] (#719).
-    ///
-    /// **And at its start**, as `report::fits` asks of a null: arithmetic on
-    /// a null holds none of the rest and is not null, and a null test does
-    /// not catch it. Without it `int *p = 0; p = p + 1; if (k) p = *pp;`
-    /// kept the load's belief across the join and proved `*p` whole where
-    /// main doubted it. Found by review.
-    fn names_nothing(&self) -> bool {
-        self.offset == Offset::Zero && !self.names.any() && self.beyond().is_nothing()
     }
 
     /// What this value may hold beyond what its sites and its edges name.
     /// See [`Beyond`].
     pub(super) fn beyond(&self) -> Beyond {
-        let unrecorded = Unrecorded {
-            lost: self.lost,
-            loaded: self.loaded,
-            foreign: self.foreign,
-            from_caller: self.from_caller,
-            stale_read: self.stale_read,
-            lost_read: self.lost_read,
-            unreplaced_read: self.unreplaced_read,
+        // **Every reason, by a `match` with no wildcard**, so a reason added
+        // to `Why` is `error[E0004]` here until a question answers it: built
+        // from seven reads by name, a reason added was named by values and
+        // asked by nothing, found by the architecture review of 2026-11-13.
+        let mut unrecorded = Unrecorded {
+            lost: false,
+            loaded: false,
+            foreign: false,
+            from_caller: false,
+            stale_read: false,
+            lost_read: false,
+            unreplaced_read: false,
         };
+        for &why in Why::ALL.iter().filter(|&&why| self.may_name(why)) {
+            match why {
+                Why::Lost => unrecorded.lost = true,
+                Why::Loaded => unrecorded.loaded = true,
+                Why::Foreign => unrecorded.foreign = true,
+                Why::FromCaller => unrecorded.from_caller = true,
+                Why::StaleRead => unrecorded.stale_read = true,
+                Why::LostRead => unrecorded.lost_read = true,
+                Why::UnreplacedRead => unrecorded.unreplaced_read = true,
+            }
+        }
         if unrecorded.any() {
             Beyond::Unrecorded(unrecorded)
         } else {
             Beyond::Nothing
         }
+    }
+
+    /// Whether this value may name the place this check does not model for
+    /// `why`: what each mark was before it was a member of the set.
+    pub(super) fn may_name(&self, why: Why) -> bool {
+        self.names.get(Target::Unknown(why))
+    }
+
+    /// Name the place this check does not model for `why`.
+    pub(super) fn name_unknown(&mut self, why: Why) {
+        self.names.set(Target::Unknown(why));
     }
 
     // **The marks are set by event, not by name**: each method below sets
@@ -1163,53 +1494,53 @@ impl Held {
     // are private here.
 
     /// Read out of memory: what a cell records of where it was read from
-    /// may be missing members. Sets [`Held::loaded`].
+    /// may be missing members. Sets [`Why::Loaded`].
     pub(super) fn read_out_of_memory(&mut self) {
-        self.loaded = true;
+        self.name_unknown(Why::Loaded);
     }
 
     /// May hold an allocation this check can no longer name: written past a
     /// local's end, written by a call this check cannot read through an
     /// escaped local holding a site, or the result of such a call where a
-    /// lost value was exposed. Sets [`Held::lost`].
+    /// lost value was exposed. Sets [`Why::Lost`].
     pub(super) fn lost_its_allocation(&mut self) {
-        self.lost = true;
+        self.name_unknown(Why::Lost);
     }
 
     /// Lost, and what it holds may be gone: read through a pointer to a
     /// lost local, a caller's or a callee's value at a call that may free
-    /// it, or a lost value when one is freed. Sets [`Held::lost`] and
-    /// [`Held::stale_read`].
+    /// it, or a lost value when one is freed. Sets [`Why::Lost`] and
+    /// [`Why::StaleRead`].
     ///
     /// Mutations: leave out `stale_read`, and
     /// `a_lost_pointer_freed_then_stored_is_doubted_when_read_back` fails;
     /// leave out `lost`, and
     /// `a_local_this_check_lost_read_through_its_address_is_doubted` does.
     pub(super) fn lost_and_may_be_gone(&mut self) {
-        self.lost = true;
-        self.stale_read = true;
+        self.name_unknown(Why::Lost);
+        self.name_unknown(Why::StaleRead);
     }
 
-    /// Lost a site whose allocation is not live. Sets [`Held::stale_read`].
+    /// Lost a site whose allocation is not live. Sets [`Why::StaleRead`].
     pub(super) fn lost_a_site_that_may_be_gone(&mut self) {
-        self.stale_read = true;
+        self.name_unknown(Why::StaleRead);
     }
 
     /// Read out of memory a lost value may have been stored in. Sets
-    /// [`Held::lost_read`].
+    /// [`Why::LostRead`].
     pub(super) fn read_where_a_lost_value_may_be(&mut self) {
-        self.lost_read = true;
+        self.name_unknown(Why::LostRead);
     }
 
-    /// Handed over by a caller or a callee. Sets [`Held::from_caller`].
+    /// Handed over by a caller or a callee. Sets [`Why::FromCaller`].
     pub(super) fn handed_over(&mut self) {
-        self.from_caller = true;
+        self.name_unknown(Why::FromCaller);
     }
 
     /// Written through its address by a call this check cannot read. Sets
-    /// [`Held::foreign`].
+    /// [`Why::Foreign`].
     pub(super) fn written_by_unknown_code(&mut self) {
-        self.foreign = true;
+        self.name_unknown(Why::Foreign);
     }
 
     /// Whether this local may hold a local's address, on some path.
@@ -1228,32 +1559,46 @@ impl Held {
 
     /// Every local whose address this value may be, its address edges.
     pub(super) fn locals(&self) -> impl Iterator<Item = LocalIdx> + '_ {
-        self.names.ones().filter_map(Loc::local)
+        self.names.ones().filter_map(Target::local)
     }
 
     /// Whether this value may be `local`'s address.
     pub(super) fn names_local(&self, local: LocalIdx) -> bool {
-        self.names.get(Loc::Local(local))
+        self.names.get(Target::Local(local))
     }
 
     /// Also be `local`'s address.
     pub(super) fn name_local(&mut self, local: LocalIdx) {
-        self.names.set(Loc::Local(local));
+        self.names.set(Target::Local(local));
     }
 
     /// No longer be `local`'s address.
     pub(super) fn unname_local(&mut self, local: LocalIdx) {
-        self.names.remove(Loc::Local(local));
+        self.names.remove(Target::Local(local));
     }
 
     /// Whether this value holds `site`.
     pub(super) fn has_site(&self, site: Site) -> bool {
-        self.names.get(Loc::Heap(site))
+        self.names.get(Target::Heap(site))
     }
 
     /// Whether this value holds any site.
     pub(super) fn holds_a_site(&self) -> bool {
         self.sites().next().is_some()
+    }
+
+    /// A null pointer: nothing, and [`Self::may_be_null`], at the identity
+    /// of [`Width::meet`] at its own level, so that a join keeps what the
+    /// other path believes (#719). See ADR-0093 rule 3.
+    ///
+    /// Mutation: leave its level 0 `Nothing`; `a_load_on_one_arm_and_a_null_on_the_other_stored_in_memory_is_bounded_at_what_the_load_believed`
+    /// fails, among eight cases, and so does the route matrix's
+    /// `width_memcpy_d0_one`.
+    pub(super) fn null(sites: usize) -> Self {
+        let mut null = Held::none(sites);
+        null.may_be_null = true;
+        null.widths.set_first(Width::Unbounded);
+        null
     }
 
     /// A local holding nothing, in a function with this many sites, and a
@@ -1269,7 +1614,7 @@ impl Held {
                 // would be a warning about an offset nobody wrote, on every path
                 // that holds nothing and, through `Held::hold`'s join, on every
                 // parameter. See ADR-0036.
-                offset: Offset::Zero,
+                offset: At::Bytes(0),
                 loaded: false,
                 foreign: false,
                 stale_read: false,
@@ -1278,14 +1623,17 @@ impl Held {
                 from_caller: false,
                 returned_by: None,
                 fresh_read: false,
-                believed: None,
-                contents_at_most: Levels::default(),
+                widths: Levels::new(vec![Width::Nothing]),
                 arrived_holds_pointer: false,
                 inner_address: false,
                 element: None,
                 site_element: None,
                 array_edge: false,
                 stored_through: false,
+                // Nothing held, nor null: a local nothing was assigned is
+                // indeterminate, and handing one to `realloc` is undefined
+                // already. The identity of a join's union, too.
+                may_be_null: false,
             },
         )
     }
@@ -1308,39 +1656,46 @@ impl Held {
             from_caller,
             returned_by,
             fresh_read,
-            believed,
-            contents_at_most,
+            widths,
             arrived_holds_pointer,
             inner_address,
             element,
             site_element,
             array_edge,
             stored_through,
+            may_be_null,
         } = marks;
-        Held {
-            names: Bits::new(Loc::count(sites)),
-            lost,
+        let mut held = Held {
+            names: Bits::new(Target::count(sites)),
             freed,
             writes_elsewhere,
             offset,
-            loaded,
             named_at_read: Bits::new(sites),
-            foreign,
-            stale_read,
-            unreplaced_read,
-            lost_read,
-            from_caller,
             returned_by,
             fresh_read,
-            believed,
-            contents_at_most,
+            widths,
             arrived_holds_pointer,
             inner_address,
             element,
             site_element,
             array_edge,
             stored_through,
+            may_be_null,
+        };
+        for (marked, why) in [
+            (lost, Why::Lost),
+            (loaded, Why::Loaded),
+            (foreign, Why::Foreign),
+            (from_caller, Why::FromCaller),
+            (stale_read, Why::StaleRead),
+            (lost_read, Why::LostRead),
+            (unreplaced_read, Why::UnreplacedRead),
+        ] {
+            if marked {
+                held.name_unknown(why);
+            }
         }
+        held
     }
 
     /// Also hold this site, at this offset into it.
@@ -1354,12 +1709,12 @@ impl Held {
     ///
     /// **Joined rather than assigned.** A call's destination and a parameter
     /// hold on a local [`Held::none`] or [`Held::clear`] has just left at
-    /// `Zero`, where the two agree. An opaque call's result is where they part:
-    /// it holds its own site at `Zero` and then what the call may have
+    /// `Bytes(0)`, where the two agree. An opaque call's result is where they part:
+    /// it holds its own site at `Bytes(0)` and then what the call may have
     /// returned at `Unknown`, and the join makes the whole `Unknown`, which is
     /// the answer that cannot claim more than both said.
-    pub(super) fn hold(&mut self, site: Site, offset: Offset) {
-        self.names.set(Loc::Heap(site));
+    pub(super) fn hold(&mut self, site: Site, offset: At) {
+        self.names.set(Target::Heap(site));
         self.offset = self.offset.joined(offset);
     }
 
@@ -1397,7 +1752,7 @@ impl Held {
 
     /// Every site held, in order.
     pub(super) fn sites(&self) -> impl Iterator<Item = Site> + '_ {
-        self.names.ones().filter_map(Loc::site)
+        self.names.ones().filter_map(Target::site)
     }
 
     /// Hold nothing, and hold nothing unnameable either.
@@ -1421,53 +1776,39 @@ impl Held {
         // past an exhaustive match, one type over.
         let Held {
             names,
-            lost,
             freed,
             writes_elsewhere,
             offset,
-            loaded,
             named_at_read,
-            foreign,
-            stale_read,
-            unreplaced_read,
-            lost_read,
-            from_caller,
             returned_by,
             fresh_read,
-            believed,
-            contents_at_most,
+            widths,
             arrived_holds_pointer,
             inner_address,
             element,
             site_element,
             array_edge,
             stored_through,
+            may_be_null,
         } = self;
+        *may_be_null = false;
         names.clear_all();
         *fresh_read = false;
-        *believed = None;
-        *contents_at_most = Levels::default();
+        *widths = Levels::new(vec![Width::Nothing]);
         *arrived_holds_pointer = false;
         *inner_address = false;
         *element = None;
         *site_element = None;
         *array_edge = false;
         *stored_through = false;
-        *from_caller = false;
         *returned_by = None;
-        *lost = false;
-        *loaded = false;
         named_at_read.clear_all();
-        *foreign = false;
-        *stale_read = false;
-        *unreplaced_read = false;
-        *lost_read = false;
         *freed = None;
         // What a local is given ends the claim that this check knew where a
         // write through it landed, along with the set that claim was about.
         *writes_elsewhere = true;
         // What `Held::none` answers, for its reason.
-        *offset = Offset::Zero;
+        *offset = At::Bytes(0);
     }
 
     /// Also hold everything that one holds, where two paths meet.
@@ -1485,51 +1826,44 @@ impl Held {
     /// left the local unwritten. The zero of the proofs an intersection
     /// joins, `freed`, `fresh_read` and `stored_through`, of `returned_by`,
     /// and of `writes_elsewhere`, whose `true` gives up. Neither for
-    /// `offset`, whose `Zero` joined with `NonZero` is `Unknown`
-    /// ([`Offset::joined`]).
+    /// `offset`, whose `Bytes(0)` joined with `Moved` is `Unknown`
+    /// ([`At::joined`]).
     ///
-    /// `unwritten` is whether each side left the local unwritten
-    /// (`Known::init`), which no field here says: such a local names
-    /// nothing and is no null, and `memcpy(m, &t, 8)` of a `t` written on one
-    /// arm only, read back as an `int *`, was believed whole once it was
-    /// taken for one. Found by review.
-    pub(super) fn joined(&mut self, other: &Held, sources: &SourceMap, unwritten: (bool, bool)) {
-        // Asked of each path as it arrived, before any field below is joined.
-        let (self_names_nothing, other_names_nothing) = (
-            self.names_nothing() && !unwritten.0,
-            other.names_nothing() && !unwritten.1,
-        );
+    /// **A local nothing was assigned is no null**, though it names nothing
+    /// as one does: `memcpy(m, &t, 8)` of a `t` written on one arm only, read
+    /// back as an `int *`, was believed whole once it was taken for one.
+    /// Found by review. [`Self::may_be_null`] tells the two apart.
+    pub(super) fn joined(&mut self, other: &Held, sources: &SourceMap) {
         // Every field named, never `..`, in this method and in its neighbour
         // alike: a field added to this struct is `error[E0027]` in both and has
         // to say what it means in each. ADR-0024 is why there are two places
         // to answer.
         let Held {
             names,
-            lost,
             freed,
             writes_elsewhere,
             offset,
-            loaded,
             named_at_read,
-            foreign,
-            stale_read,
-            unreplaced_read,
-            lost_read,
-            from_caller,
             returned_by,
             fresh_read,
-            believed,
-            contents_at_most,
+            widths,
             arrived_holds_pointer,
             inner_address,
             element,
             site_element,
             array_edge,
             stored_through,
+            may_be_null,
         } = self;
+        // A may-fact, so a union: null on either path is null on one.
+        *may_be_null = *may_be_null || other.may_be_null;
         *inner_address = *inner_address || other.inner_address;
-        // A bound, so the lower of two, and a side with none is no bound.
-        contents_at_most.bound_by(&other.contents_at_most);
+        // **The lower of two at every level**, level 0 the proof
+        // `believed` is and the rest bounds: a null on one path is the
+        // identity at level 0, and neither widens nor narrows what the other
+        // believes (#719); anything else that believes nothing drops it. See
+        // `Self::widths`.
+        widths.bound_by(&other.widths);
         // A may-fact, so a union: a path that says pointers asks.
         *arrived_holds_pointer = *arrived_holds_pointer || other.arrived_holds_pointer;
         if *returned_by != other.returned_by {
@@ -1537,24 +1871,8 @@ impl Held {
         }
         // A proof, so an intersection, as `freed` is.
         *fresh_read = *fresh_read && other.fresh_read;
-        // A proof as well: believed where every path read it out of memory,
-        // and then only as much as the path that believed least. A null on
-        // one path neither widens nor narrows what the other believes, so it
-        // is no such path (#719). See `Self::believed`.
-        *believed = match (*believed, other.believed) {
-            (Some(here), Some(there)) => Some(here.min(there)),
-            (Some(only), None) if other_names_nothing => Some(only),
-            (None, Some(only)) if self_names_nothing => Some(only),
-            _ => None,
-        };
         *offset = offset.joined(other.offset);
-        *from_caller = *from_caller || other.from_caller;
-        *loaded = *loaded || other.loaded;
         named_at_read.union_with(&other.named_at_read);
-        *foreign = *foreign || other.foreign;
-        *stale_read = *stale_read || other.stale_read;
-        *unreplaced_read = *unreplaced_read || other.unreplaced_read;
-        *lost_read = *lost_read || other.lost_read;
         // **A path that knows where a write through this local lands and a
         // path that does not is a path that does not.** This is what keeps a
         // strong update out of `if (c) { pp = &p; } *pp = q;`, where the
@@ -1562,9 +1880,8 @@ impl Held {
         // all of it. See ADR-0028.
         *writes_elsewhere = *writes_elsewhere || other.writes_elsewhere;
         let here_has_edge = names.ones().any(|place| place.local().is_some());
-        let here_has_site = names.ones().any(|place| place.local().is_none());
+        let here_has_site = names.ones().any(|place| place.site().is_some());
         names.union_with(&other.names);
-        *lost = *lost || other.lost;
         // **An intersection, where every other field here is a union.** The
         // rest of this struct holds may-facts, which grow where paths meet.
         // This one is a proof, and a path that did not free proves nothing:
@@ -1610,39 +1927,34 @@ impl Held {
     pub(super) fn accumulated(&mut self, other: &Held) {
         let Held {
             names,
-            lost,
             freed,
             writes_elsewhere,
             offset,
-            loaded,
             named_at_read,
-            foreign,
-            stale_read,
-            unreplaced_read,
-            lost_read,
-            from_caller,
             returned_by,
             fresh_read,
-            believed,
-            contents_at_most,
+            widths,
             arrived_holds_pointer,
             inner_address,
             element,
             site_element,
             array_edge,
             stored_through,
+            // **Not taken from an operand**: a value built from operands is
+            // arithmetic on them, and a null moved is no null.
+            may_be_null: _,
         } = self;
         *inner_address = *inner_address || other.inner_address;
-        // `*tab + 1` points into the same memory, which holds what it held.
-        contents_at_most.bound_by(&other.contents_at_most);
+        // `*tab + 1` points into the same memory, which holds what it held,
+        // at every level below its own.
+        widths.bound_by(&other.widths);
         *arrived_holds_pointer = *arrived_holds_pointer || other.arrived_holds_pointer;
-        *from_caller = *from_caller || other.from_caller;
         // Arithmetic builds a new value, which is no longer exactly what a
         // `realloc` returned. See ADR-0039.
         *returned_by = None;
         // Nor the start of what was read, so nothing about it is believed.
         // See ADR-0060.
-        *believed = None;
+        widths.set_first(Width::Nothing);
         // Nor certainly what was read: not followed. **No case holds this**,
         // measured: arithmetic builds on `Held::none`, and a store into a
         // local through its address is into one whose address escaped,
@@ -1650,12 +1962,7 @@ impl Held {
         *fresh_read = false;
 
         // `*tab + 1` is built from a pointer read out of memory, and is one.
-        *loaded = *loaded || other.loaded;
         named_at_read.union_with(&other.named_at_read);
-        *foreign = *foreign || other.foreign;
-        *stale_read = *stale_read || other.stale_read;
-        *unreplaced_read = *unreplaced_read || other.unreplaced_read;
-        *lost_read = *lost_read || other.lost_read;
 
         // **Where the result points is the fold's to say, and not this
         // method's**, for the reason the line below gives about the proof:
@@ -1665,7 +1972,7 @@ impl Held {
         // where the target and the value written start over it, or copy
         // into its address with `memcpy`, which is unknown either way. See
         // ADR-0036.
-        *offset = Offset::Unknown;
+        *offset = At::Unknown;
 
         // **A second operand takes the proof with it.** What
         // [`Self::freed`] is worth is that freeing this local again takes the
@@ -1683,9 +1990,8 @@ impl Held {
         // out of operands, through [`Held::moved_by_arithmetic`]. See
         // ADR-0019.
         let here_has_edge = names.ones().any(|place| place.local().is_some());
-        let here_has_site = names.ones().any(|place| place.local().is_none());
+        let here_has_site = names.ones().any(|place| place.site().is_some());
         names.union_with(&other.names);
-        *lost = *lost || other.lost;
         // As the join keeps it, before the union. See `Held::element`.
         *element = joined_element(
             here_has_edge,
@@ -1716,8 +2022,8 @@ impl Held {
     /// silence.
     pub(super) fn lose(&mut self, site: Site) {
         if self.has_site(site) {
-            self.names.remove(Loc::Heap(site));
-            self.lost = true;
+            self.names.remove(Target::Heap(site));
+            self.name_unknown(Why::Lost);
         }
     }
 
@@ -1762,7 +2068,7 @@ impl Held {
     pub(super) fn moved_by_arithmetic(&mut self, by: Option<i128>) {
         // **Kept by the array rule alone**, where the move is known not to
         // be zero: an earlier rule dropped this edge. See `Held::array_edge`.
-        if matches!(self.offset, Offset::NonZero) && self.may_be_a_locals_address() {
+        if matches!(self.offset, At::Moved | At::Bytes(1..)) && self.may_be_a_locals_address() {
             self.array_edge = true;
         }
         // **The element moves by what was added**, where both are known: `by`
@@ -1911,35 +2217,31 @@ fn joined_element(
     }
 }
 
-/// What a block holds: the one record a site's memory keeps, a [`Held`]
-/// read as the value a pointer stored there may be (#780).
+/// What a block holds: the one record a site's memory keeps, what a pointer
+/// stored there may name and how wide it is believed (#780).
 ///
-/// **A type of its own around the `Held`, with no `Deref`**, so that what a
-/// cell is asked is what these methods answer and nothing else: a cell sets
-/// its names, its bound and four marks, and every other field of the `Held`
-/// inside it is the default [`Held::none`] gives, which a value's question,
-/// `Held::beyond` or `Held::certain_target`, would read as a fact about
-/// what is stored there. Asking one of a cell does not compile: measured,
-/// `contents[site].beyond()` and `contents[site].certain_target()` are
-/// `error[E0599]`. Found by review. See ADR-0063.
+/// **A type of its own, not a [`Held`]**, so that what a cell is asked is
+/// what these methods answer and nothing else: a value's question,
+/// `Held::beyond` or `Held::certain_target`, read of a cell would take its
+/// defaults for facts about what is stored there. Asking one of a cell does
+/// not compile: `contents[site].beyond()` and
+/// `contents[site].certain_target()` are `error[E0599]`. Found by review.
+/// See ADR-0063.
 #[derive(Clone, PartialEq, Eq)]
 pub(super) struct Cell {
     /// What a pointer stored there may be.
-    held: Held,
-    /// Whether a store into it stored a value that is not a pointer by its
-    /// type, which records no width for what a load reads back there.
     ///
-    /// **"Stored with no width", told apart from "nothing stored"**, which
-    /// `held`'s `believed` alone cannot say, since `None` is both no bound
-    /// and nothing recorded, and the identity of [`Cell::absorb`]. So a path
-    /// that stored an `int` where the other stored `malloc(4)` was believed
-    /// four bytes wide where the arms meet: `if (c) *ib = 7; else *box =
-    /// malloc(4); *s = 1;` with `s = *box` built in silence (#767). Joined
-    /// by union, so it is absorbing at a join, and read by
-    /// `Known::memory_levels`, which believes no width at level 0 of a read
-    /// out of a cell that has it, as ADR-0061 says of memory where nothing
-    /// is recorded. **Not for a null**, which names nothing: marking one
-    /// would forget every width after `*box = 0;`. Level 0 only, by the
+    /// **Its level 0 is `Nothing` where a store stored a value that is not
+    /// a pointer by its type**, which records no width for what a load reads
+    /// back there, told apart from nothing stored, which is `Unbounded`, the
+    /// identity of [`Cell::absorb`]. Both were `None` once, so a path that
+    /// stored an `int` where the other stored `malloc(4)` was believed four
+    /// bytes wide where the arms meet: `if (c) *ib = 7; else *box =
+    /// malloc(4); *s = 1;` with `s = *box` built in silence (#767). It
+    /// absorbs at a join, and `Known::memory_levels` reads it as no width at
+    /// level 0 of a read out of the cell, as ADR-0061 says of memory where
+    /// nothing is recorded. **Not for a null**, which names nothing: marking
+    /// one would forget every width after `*box = 0;`. Level 0 only, by the
     /// user's decision on #767: no program shows a width forgotten below it
     /// being hidden.
     ///
@@ -1949,68 +2251,86 @@ pub(super) struct Cell {
     /// is doubted at a read of `*box`, a false report accepted on #767 by
     /// the user's decision, where clearing the mark would leave `box[0]`
     /// read in silence after `box[1]` was written.
-    unrecorded: bool,
+    widths: Levels,
+    /// **What a pointer stored there may name**: sites, locals, and the
+    /// places this check does not model ([`Target::Unknown`]) for the four
+    /// reasons memory keeps: a stale or a lost value stored, a store that
+    /// could not be placed, and the caller's.
+    ///
+    /// **Two fields of its own, not a whole [`Held`]** (the memory model
+    /// rebuilt on #924, stage 3): a cell wrapped a value of 22 fields and
+    /// used two, so each of its four doors named all 22 and a field added
+    /// to `Held` was answered at seven doors where it is answered at four.
+    names: Bits<Target>,
 }
 
 impl Cell {
     /// A block nothing was stored in, which is [`Cell::absorb`]'s identity.
     pub(super) fn none(locals: usize) -> Self {
+        // **Nothing stored bounds nothing**, at every level, level 0 too,
+        // where a value's own [`Held::none`] believes nothing.
         Cell {
-            held: Held::none(locals),
-            unrecorded: false,
+            widths: Levels::default(),
+            names: Bits::new(Target::count(locals)),
         }
     }
 
     /// Every site a pointer stored there may hold.
     pub(super) fn sites(&self) -> impl Iterator<Item = Site> + '_ {
-        self.held.sites()
+        self.names.ones().filter_map(Target::site)
     }
 
     /// Every local whose address a pointer stored there may be.
     pub(super) fn locals(&self) -> impl Iterator<Item = LocalIdx> + '_ {
-        self.held.locals()
+        self.names.ones().filter_map(Target::local)
     }
 
     /// Whether a pointer stored there may hold `site`.
     pub(super) fn has_site(&self, site: Site) -> bool {
-        self.held.has_site(site)
+        self.names.get(Target::Heap(site))
     }
 
     /// Whether a pointer stored there may be `local`'s address.
     pub(super) fn names_local(&self, local: LocalIdx) -> bool {
-        self.held.names_local(local)
+        self.names.get(Target::Local(local))
+    }
+
+    /// Whether a pointer stored there may name what this check does not
+    /// model for `why`.
+    fn may_name(&self, why: Why) -> bool {
+        self.names.get(Target::Unknown(why))
     }
 
     /// Whether what is stored there may be a pointer to an allocation that
     /// is gone and whose site names a new one. See `Known::contents`.
     pub(super) fn stale_read(&self) -> bool {
-        self.held.stale_read
+        self.may_name(Why::StaleRead)
     }
 
     /// Mark what is stored there as possibly gone. See `Known::contents`.
     pub(super) fn mark_stale_read(&mut self) {
-        self.held.stale_read = true;
+        self.names.set(Target::Unknown(Why::StaleRead));
     }
 
     /// Mark a slot there as one a call could not replace.
     pub(super) fn mark_unreplaced_read(&mut self) {
-        self.held.unreplaced_read = true;
+        self.names.set(Target::Unknown(Why::UnreplacedRead));
     }
 
     /// Whether a value this check lost may have been stored there.
     pub(super) fn lost(&self) -> bool {
-        self.held.lost
+        self.may_name(Why::Lost)
     }
 
     /// Whether what is stored there may be a pointer a caller or a callee
     /// handed over. See `Known::contents`.
     pub(super) fn holds_from_caller(&self) -> bool {
-        self.held.from_caller
+        self.may_name(Why::FromCaller)
     }
 
     /// Mark what is stored there as a caller's or a callee's.
     pub(super) fn mark_from_caller(&mut self) {
-        self.held.from_caller = true;
+        self.names.set(Target::Unknown(Why::FromCaller));
     }
 
     /// The fields a site made again keeps, each answered: called by
@@ -2018,56 +2338,12 @@ impl Cell {
     /// here until it says what a site made again does to it.
     pub(super) fn kept_when_reborn(&self) {
         let Cell {
-            held,
-            // Kept, as `names` is: the slots of the new allocation are not
-            // told apart from the old one's, and a width forgotten only
-            // doubts.
-            unrecorded: _,
+            names: _,
+            widths: _,
         } = self;
         // **What the site's own cell keeps when it names a new
         // allocation**, field by field, so that a field added to `Held`
         // is asked here what a site made again does to it.
-        let Held {
-            // Kept: what the old allocation may hold stays in the row, below.
-            // See ADR-0045.
-            names: _,
-            // Kept, as `names` is: the slots of the new allocation are not
-            // told apart from the old one's, and a bound kept only doubts.
-            believed: _,
-            contents_at_most: _,
-            // Not recorded in memory: a load takes it from the type it is
-            // read as. See `Held::arrived_holds_pointer`.
-            arrived_holds_pointer: _,
-            // Kept, and set below in every container that held the site.
-            stale_read: _,
-            // Kept, as `stale_read` is: the slots of the new allocation are
-            // not told apart from the old one's.
-            unreplaced_read: _,
-            // Kept, as `stale_read` is: the slots of the new allocation are
-            // not told apart from the old one's.
-            lost: _,
-            // Kept, as the entry and `stale_read` are: the slots of the new
-            // allocation are not told apart from the old one's. No case
-            // tells this from clearing it, measured: every other local
-            // holding the site is lost a few lines below, so a load out of
-            // it is doubted either way.
-            from_caller: _,
-            // Not recorded in memory. See `Cell::absorb`.
-            lost_read: _,
-            freed: _,
-            writes_elsewhere: _,
-            offset: _,
-            loaded: _,
-            named_at_read: _,
-            foreign: _,
-            returned_by: _,
-            fresh_read: _,
-            inner_address: _,
-            element: _,
-            site_element: _,
-            array_edge: _,
-            stored_through: _,
-        } = held;
     }
 
     /// How many bytes each pointer stored there, and each level below it,
@@ -2075,16 +2351,13 @@ impl Cell {
     /// [`Held::contents_at_most`], which is what a store records
     /// (`Levels::stored_under`). See `Known::contents`.
     pub(super) fn stored_levels(&self) -> Levels {
-        self.held
-            .contents_at_most
-            .stored_under(self.held.believed, usize::MAX)
+        self.widths.clone()
     }
 
     /// Bound what is stored there by `levels`, the lower of the two at every
     /// level, as a store's own record is joined in by [`Self::absorb`].
     pub(super) fn bound_stored(&mut self, levels: &Levels) {
-        self.held.believed = bounded(self.held.believed, levels.at(0));
-        self.held.contents_at_most.bound_by(&levels.below(1));
+        self.widths.bound_by(levels);
     }
 
     /// What a load that reads through this block gives the value it reads:
@@ -2101,56 +2374,31 @@ impl Cell {
     /// load given `lost` itself doubts every walk of a list built in a loop
     /// with nothing freed, whose head is lost every turn,
     /// `a_list_built_in_a_loop_with_nothing_freed_is_walked_without_a_doubt`.
-    /// Every field is named, so a field added is `error[E0027]` here until
-    /// it says what a load takes of it.
+    /// Every field of the cell is named, so a field added is `error[E0027]`
+    /// here until it says what a load takes of it.
     pub(super) fn taken_by_a_load(&self, held: &mut Held) {
-        let Held {
-            stale_read,
-            unreplaced_read,
-            lost,
+        // Its names are read below for the reasons a load takes; the places
+        // and the width are the load's own walk's.
+        let Cell {
             names: _,
-            // What it names is the last level's, and its bounds are
-            // `Known::memory_levels`', which reads every level.
-            believed: _,
-            contents_at_most: _,
-            // Not recorded in memory: a load takes it from the type it is
-            // read as. See `Held::arrived_holds_pointer`.
-            arrived_holds_pointer: _,
-            // Read by `Allocations::reads_caller_memory`, which is the
-            // caller's answer to `load_into`.
-            from_caller: _,
-            // Not recorded in memory. See `Cell::absorb`.
-            lost_read: _,
-            freed: _,
-            writes_elsewhere: _,
-            offset: _,
-            loaded: _,
-            named_at_read: _,
-            foreign: _,
-            returned_by: _,
-            fresh_read: _,
-            inner_address: _,
-            element: _,
-            site_element: _,
-            array_edge: _,
-            stored_through: _,
-        } = &self.held;
+            widths: _,
+        } = self;
         // Read out of an allocation that may hold one that is gone. See
         // ADR-0045.
-        if *stale_read {
-            held.lost = true;
-            held.stale_read = true;
+        if self.may_name(Why::StaleRead) {
+            held.name_unknown(Why::Lost);
+            held.name_unknown(Why::StaleRead);
         }
         // Read out of an allocation that may hold a slot a call could not
         // replace, which is asked where it is handed by address and nowhere
         // else. See ADR-0047.
-        if *unreplaced_read {
-            held.unreplaced_read = true;
+        if self.may_name(Why::UnreplacedRead) {
+            held.name_unknown(Why::UnreplacedRead);
         }
         // Read out of an allocation that may hold a lost value, which is made
         // lost if a lost value goes. See `Held::lost_read`.
-        if *lost {
-            held.lost_read = true;
+        if self.may_name(Why::Lost) {
+            held.name_unknown(Why::LostRead);
         }
     }
 
@@ -2168,7 +2416,6 @@ impl Cell {
         named: impl IntoIterator<Item = LocalIdx>,
         stored: &Levels,
         from: &Held,
-        unrecorded: bool,
     ) -> Cell {
         let mut poured = Cell::none(locals);
         for site in sites {
@@ -2177,26 +2424,19 @@ impl Cell {
         // And the locals whose address it carries, which are no site. See
         // ADR-0045.
         for target in named {
-            poured.held.name_local(target);
+            poured.names.set(Target::Local(target));
         }
         poured.bound_stored(stored);
-        poured.unrecorded = unrecorded;
-        // Every field named, never `..`, as `Self::absorb` and
-        // `Self::taken_by_a_load` name them: a mark memory keeps that no
-        // door puts there is a mark no load ever sees, so a field added to
-        // `Held` is `error[E0027]` here until it says what a store leaves of
-        // it. Found by review.
+        // Every field named, never `..`: a mark memory keeps that no door
+        // puts there is a mark no load ever sees, so a field added to `Held`
+        // is `error[E0027]` here until it says what a store leaves of it.
+        // Found by review.
         let Held {
-            stale_read,
-            unreplaced_read,
-            lost,
-            lost_read,
-            from_caller,
             // What it names and how wide, given apart by the door, which
-            // knows what the write carried.
+            // knows what the write carried; the reasons it may name what
+            // this check does not model are poured below.
             names: _,
-            believed: _,
-            contents_at_most: _,
+            widths: _,
             // Not recorded in memory: a load takes it from the type it is
             // read as. See `Held::arrived_holds_pointer`.
             arrived_holds_pointer: _,
@@ -2204,9 +2444,7 @@ impl Cell {
             freed: _,
             writes_elsewhere: _,
             offset: _,
-            loaded: _,
             named_at_read: _,
-            foreign: _,
             returned_by: _,
             fresh_read: _,
             inner_address: _,
@@ -2214,22 +2452,28 @@ impl Cell {
             site_element: _,
             array_edge: _,
             stored_through: _,
+            // Not recorded in memory, so a load gives none.
+            may_be_null: _,
         } = from;
-        poured.held.stale_read = *stale_read;
-        poured.held.unreplaced_read = *unreplaced_read;
-        poured.held.lost = *lost || *lost_read;
-        poured.held.from_caller = *from_caller;
+        for (marked, why) in [
+            (from.may_name(Why::StaleRead), Why::StaleRead),
+            (from.may_name(Why::UnreplacedRead), Why::UnreplacedRead),
+            (
+                from.may_name(Why::Lost) || from.may_name(Why::LostRead),
+                Why::Lost,
+            ),
+            (from.may_name(Why::FromCaller), Why::FromCaller),
+        ] {
+            if marked {
+                poured.names.set(Target::Unknown(why));
+            }
+        }
         poured
     }
 
     /// A pointer stored there may also hold `site`.
     pub(super) fn name_site(&mut self, site: Site) {
-        self.held.names.set(Loc::Heap(site));
-    }
-
-    /// Whether a store recorded no width here. See [`Cell::unrecorded`].
-    pub(super) fn unrecorded(&self) -> bool {
-        self.unrecorded
+        self.names.set(Target::Heap(site));
     }
 
     /// `other`, poured into this block or brought by another path: a union
@@ -2237,49 +2481,16 @@ impl Cell {
     /// level, and every mark either has. **Not [`Held::joined`]**, which is
     /// a value's join where two paths meet and believes a width only where
     /// every path read one: a block gathers every store into it, and nothing
-    /// stored is no bound, as [`bounded`] says, so [`Held::none`] is this
+    /// stored is no bound, as [`Width::meet`] says, so [`Held::none`] is this
     /// join's identity and a block nothing was stored in is one. `other` is
-    /// destructured with no `..`, so a field added to `Held` is
-    /// `error[E0027]` here until it says what memory keeps of it.
+    /// destructured with no `..`, so a field added to a cell is
+    /// `error[E0027]` here until it says how two blocks' records join.
     pub(super) fn absorb(&mut self, other: &Cell) {
-        // **Absorbing**: a path that stored with no width is no belief
-        // whatever the other recorded. See [`Cell::unrecorded`].
-        self.unrecorded |= other.unrecorded;
-        let Held {
-            names,
-            believed,
-            contents_at_most,
-            stale_read,
-            unreplaced_read,
-            lost,
-            from_caller,
-            // Not recorded in memory: a load out of a block reads what
-            // `Known::load_into` reads, which is the fields above.
-            lost_read: _,
-            freed: _,
-            writes_elsewhere: _,
-            offset: _,
-            loaded: _,
-            named_at_read: _,
-            foreign: _,
-            returned_by: _,
-            fresh_read: _,
-            inner_address: _,
-            element: _,
-            site_element: _,
-            array_edge: _,
-            stored_through: _,
-            // Not recorded in memory: a load takes it from the type it is
-            // read as. See `Held::arrived_holds_pointer`.
-            arrived_holds_pointer: _,
-        } = &other.held;
-        self.held.names.union_with(names);
-        self.held.believed = bounded(self.held.believed, *believed);
-        self.held.contents_at_most.bound_by(contents_at_most);
-        self.held.stale_read |= *stale_read;
-        self.held.unreplaced_read |= *unreplaced_read;
-        self.held.lost |= *lost;
-        self.held.from_caller |= *from_caller;
+        let Cell { names, widths } = other;
+        self.names.union_with(names);
+        // **The lower at every level**, and a store that recorded no width at
+        // level 0 absorbs whatever the other recorded (#767).
+        self.widths.bound_by(widths);
     }
 }
 
@@ -2288,12 +2499,14 @@ impl Cell {
 /// names each one, and one it leaves out is not its precise default in
 /// silence: the copy into a local's address set seven marks and not
 /// `element`, so its write is of the whole array (#706), and the store's
-/// landing did the same (#705). See [`Held`] for what each mark means.
+/// landing did the same (#705). Seven of them are reasons, which
+/// [`Held::from_marks`] makes places of [`Held::names`] ([`Why`] says what
+/// each means); the rest are fields of [`Held`].
 pub(super) struct Marks {
     pub(super) lost: bool,
     pub(super) freed: Option<Freeing>,
     pub(super) writes_elsewhere: bool,
-    pub(super) offset: Offset,
+    pub(super) offset: At,
     pub(super) loaded: bool,
     pub(super) foreign: bool,
     pub(super) stale_read: bool,
@@ -2302,37 +2515,38 @@ pub(super) struct Marks {
     pub(super) from_caller: bool,
     pub(super) returned_by: Option<Site>,
     pub(super) fresh_read: bool,
-    pub(super) believed: Option<u64>,
-    pub(super) contents_at_most: Levels,
+    pub(super) widths: Levels,
     pub(super) arrived_holds_pointer: bool,
     pub(super) inner_address: bool,
     pub(super) element: Option<u64>,
     pub(super) site_element: Option<u64>,
     pub(super) array_edge: bool,
     pub(super) stored_through: bool,
+    pub(super) may_be_null: bool,
 }
 
 /// What a value may hold beyond what its sites and its edges name: the one
 /// answer every reader asks, so that a mark added to it is a compile error
 /// wherever it has to be answered.
 ///
-/// **Seven marks and two questions.** `lost`, `loaded` and `foreign` say the
-/// value may be an address this function never recorded, which
-/// [`Beyond::unrecorded_address`] asks; `from_caller`, `stale_read`,
-/// `lost_read` and `unreplaced_read` say where what it names came from, and
-/// [`Beyond::is_nothing`] asks whether any of the seven is set, for a reader
-/// that has to know the value names exactly its sites. Every question here
-/// that asks more than one mark names every mark, `_` for one it does not
-/// read, so a mark added is `error[E0063]` where [`Held::beyond`] builds it
+/// **Seven reasons, and a question per subset that answers differently.**
+/// `lost`, `loaded` and `foreign` say the value may be an address this
+/// function never recorded, and `from_caller`, `stale_read`, `lost_read`
+/// and `unreplaced_read` say where what it names came from.
+/// [`Beyond::any_unknown`] asks whether any of the seven is named, and
+/// [`Beyond::is_nothing`] whether none is; each narrower question below
+/// says what answering it as `any_unknown` moved. Every question that asks
+/// more than one reason names every reason, `_` for one it does not read,
+/// so a reason added is `error[E0004]` where [`Held::beyond`] builds this
 /// and `error[E0027]` where it is read. See ADR-0063.
 ///
-/// **The marks are private to this file**, and this is the only way to read
-/// one elsewhere: naming `held.foreign` from `transfer.rs` is `error[E0616]`.
-/// Five readers once each asked whether a value may be unrecorded with
-/// `lost` and `loaded` and not `foreign`, each composing its own subset
-/// (f46b9f9c); a question asked here is written once and read by name.
-/// [`Held`]'s setters are named for the event that sets a mark, for the
-/// same reason.
+/// **A question asked here is written once and read by name**: five
+/// readers once each asked whether a value may be unrecorded with `lost`
+/// and `loaded` and not `foreign`, each composing its own subset
+/// (f46b9f9c). The compiler does not hold readers to it: a reason is a
+/// place of [`Held::names`], `Target::Unknown(why)`, which a reader in
+/// another file can ask directly. [`Held`]'s setters are named for the
+/// event that sets a reason, for the same reason.
 pub(super) enum Beyond {
     /// It names exactly what its sites and edges say.
     Nothing,
@@ -2369,42 +2583,175 @@ impl Unrecorded {
 }
 
 impl Beyond {
-    /// [`Held::lost`]: this check stopped following the value.
+    /// **Whether it may name anything this check does not model**, for any
+    /// reason [`Why`] gives. It answers what `read_or_written_unseen` and
+    /// `unrecorded_address` answered apart, and answering it as either
+    /// moved no case and no route row, measured against the build before
+    /// (the memory model rebuilt on #924, stage 1). The questions that ask
+    /// one reason apart from the rest each move an answer where they are
+    /// asked as this one: `is_from_caller` doubts `main`'s arguments after a
+    /// call, which ADR-0040 believes, and `unreplaced_read` doubts every
+    /// control of the route matrix's `unreplaced` rows.
+    pub(super) fn any_unknown(&self) -> bool {
+        matches!(self, Beyond::Unrecorded(unrecorded) if unrecorded.any())
+    }
+
+    /// [`Why::Lost`]: this check stopped following the value.
+    ///
+    /// **This mark alone**: its readers ask whether this check let go of the value, which no other mark says. Every mark is named, `_` for one not read, so a mark added
+    /// is `error[E0027]` here and has to be answered (#853).
+    ///
+    /// **Asked of these reasons and not of any, measured** (the memory
+    /// model rebuilt on #924, stage 1): answered as `any_unknown`, 479
+    /// corpus cases and route rows moved, 11 of them saying less than
+    /// the build before, and 26 cases named as a deliberate quiet were
+    /// doubted. Which reasons it leaves out is a choice, and this is its
+    /// cost.
     pub(super) fn lost(&self) -> bool {
-        matches!(self, Beyond::Unrecorded(Unrecorded { lost: true, .. }))
+        match self {
+            Beyond::Nothing => false,
+            Beyond::Unrecorded(Unrecorded {
+                lost,
+                loaded: _,
+                foreign: _,
+                from_caller: _,
+                stale_read: _,
+                lost_read: _,
+                unreplaced_read: _,
+            }) => *lost,
+        }
     }
 
-    /// [`Held::loaded`]: the value was read out of memory.
+    /// [`Why::Loaded`]: the value was read out of memory.
+    ///
+    /// **This mark alone**: its readers ask how wide a pointer read out of memory is believed, which the other marks do not decide. Every mark is named, `_` for one not read, so a mark added
+    /// is `error[E0027]` here and has to be answered (#853).
+    ///
+    /// **Asked of these reasons and not of any, measured** (the memory
+    /// model rebuilt on #924, stage 1): answered as `any_unknown`, 194
+    /// corpus cases and route rows moved, 4 of them saying less than
+    /// the build before, and 14 cases named as a deliberate quiet were
+    /// doubted. Which reasons it leaves out is a choice, and this is its
+    /// cost.
     pub(super) fn loaded(&self) -> bool {
-        matches!(self, Beyond::Unrecorded(Unrecorded { loaded: true, .. }))
+        match self {
+            Beyond::Nothing => false,
+            Beyond::Unrecorded(Unrecorded {
+                lost: _,
+                loaded,
+                foreign: _,
+                from_caller: _,
+                stale_read: _,
+                lost_read: _,
+                unreplaced_read: _,
+            }) => *loaded,
+        }
     }
 
-    /// [`Held::foreign`]: a call this check cannot read wrote the value.
+    /// [`Why::Foreign`]: a call this check cannot read wrote the value.
+    ///
+    /// **This mark alone**: its readers ask what a call this check cannot read handed back. Every mark is named, `_` for one not read, so a mark added
+    /// is `error[E0027]` here and has to be answered (#853).
+    ///
+    /// **Asked of these reasons and not of any, measured** (the memory
+    /// model rebuilt on #924, stage 1): answered as `any_unknown`, 80
+    /// corpus cases and route rows moved, 72 of them saying less than
+    /// the build before, and 0 cases named as a deliberate quiet were
+    /// doubted. Which reasons it leaves out is a choice, and this is its
+    /// cost.
     pub(super) fn foreign(&self) -> bool {
-        matches!(self, Beyond::Unrecorded(Unrecorded { foreign: true, .. }))
+        match self {
+            Beyond::Nothing => false,
+            Beyond::Unrecorded(Unrecorded {
+                lost: _,
+                loaded: _,
+                foreign,
+                from_caller: _,
+                stale_read: _,
+                lost_read: _,
+                unreplaced_read: _,
+            }) => *foreign,
+        }
     }
 
-    /// [`Held::from_caller`]: a caller or a callee handed the value over.
+    /// [`Why::FromCaller`]: a caller or a callee handed the value over.
+    ///
+    /// **This mark alone**: its readers ask whether the value is the caller's, which only this provenance says. Every mark is named, `_` for one not read, so a mark added
+    /// is `error[E0027]` here and has to be answered (#853).
+    ///
+    /// **Asked of these reasons and not of any, measured** (the memory
+    /// model rebuilt on #924, stage 1): answered as `any_unknown`, 27
+    /// corpus cases and route rows moved, 0 of them saying less than
+    /// the build before, and 2 cases named as a deliberate quiet were
+    /// doubted. Which reasons it leaves out is a choice, and this is its
+    /// cost.
     pub(super) fn is_from_caller(&self) -> bool {
-        matches!(
-            self,
+        match self {
+            Beyond::Nothing => false,
             Beyond::Unrecorded(Unrecorded {
-                from_caller: true,
-                ..
-            })
-        )
+                lost: _,
+                loaded: _,
+                foreign: _,
+                from_caller,
+                stale_read: _,
+                lost_read: _,
+                unreplaced_read: _,
+            }) => *from_caller,
+        }
     }
 
-    /// [`Held::unreplaced_read`]: the value may be a slot a call could not
+    /// [`Why::UnreplacedRead`]: the value may be a slot a call could not
     /// replace.
+    ///
+    /// **This mark alone**: its one reader asks whether a slot may still hold what a call left there. Every mark is named, `_` for one not read, so a mark added
+    /// is `error[E0027]` here and has to be answered (#853).
+    ///
+    /// **Asked of these reasons and not of any, measured** (the memory
+    /// model rebuilt on #924, stage 1): answered as `any_unknown`, 49
+    /// corpus cases and route rows moved, 0 of them saying less than
+    /// the build before, and 1 cases named as a deliberate quiet were
+    /// doubted. Which reasons it leaves out is a choice, and this is its
+    /// cost.
     pub(super) fn unreplaced_read(&self) -> bool {
-        matches!(
-            self,
+        match self {
+            Beyond::Nothing => false,
             Beyond::Unrecorded(Unrecorded {
-                unreplaced_read: true,
-                ..
-            })
-        )
+                lost: _,
+                loaded: _,
+                foreign: _,
+                from_caller: _,
+                stale_read: _,
+                lost_read: _,
+                unreplaced_read,
+            }) => *unreplaced_read,
+        }
+    }
+
+    /// Whether this check stopped following the value, or a call it cannot read
+    /// wrote it: what it holds may be anything, wherever it came from.
+    ///
+    /// One question where its readers each composed it from two marks. Every mark is named, `_` for one not read, so a mark added is
+    /// `error[E0027]` here (#853).
+    ///
+    /// **Asked of these reasons and not of any, measured** (the memory
+    /// model rebuilt on #924, stage 1): answered as `any_unknown`, 320
+    /// corpus cases and route rows moved, 44 of them saying less than
+    /// the build before, and 16 cases named as a deliberate quiet were
+    /// doubted. Which reasons it leaves out is a choice, and this is its
+    /// cost.
+    pub(super) fn stopped_following_or_written_unseen(&self) -> bool {
+        match self {
+            Beyond::Nothing => false,
+            Beyond::Unrecorded(Unrecorded {
+                lost,
+                loaded: _,
+                foreign,
+                from_caller: _,
+                stale_read: _,
+                lost_read: _,
+                unreplaced_read: _,
+            }) => *lost || *foreign,
+        }
     }
 
     /// Whether the value may be a lost one: lost, or read out of memory a
@@ -2416,6 +2763,13 @@ impl Beyond {
     /// `a_lost_pointer_read_back_before_its_free_is_doubted_when_used`
     /// fails; leave out `lost`, and
     /// `a_lost_pointer_freed_then_stored_is_doubted_when_read_back` does.
+    ///
+    /// **Asked of these reasons and not of any, measured** (the memory
+    /// model rebuilt on #924, stage 1): answered as `any_unknown`, 8
+    /// corpus cases and route rows moved, 3 of them saying less than
+    /// the build before, and 0 cases named as a deliberate quiet were
+    /// doubted. Which reasons it leaves out is a choice, and this is its
+    /// cost.
     pub(super) fn may_hold_a_lost_value(&self) -> bool {
         match self {
             Beyond::Nothing => false,
@@ -2439,25 +2793,6 @@ impl Beyond {
         }
     }
 
-    /// Whether the value may be an address this function never recorded:
-    /// lost, read out of memory, or written by a call this check cannot
-    /// read. Not where what it names came from, which the provenance marks
-    /// say and a reader asks of them itself.
-    pub(super) fn unrecorded_address(&self) -> bool {
-        match self {
-            Beyond::Nothing => false,
-            Beyond::Unrecorded(Unrecorded {
-                lost,
-                loaded,
-                foreign,
-                from_caller: _,
-                stale_read: _,
-                lost_read: _,
-                unreplaced_read: _,
-            }) => *lost || *loaded || *foreign,
-        }
-    }
-
     /// Whether a write through the value lands only where its edges say: none
     /// of the marks that say it may hold what this check did not follow,
     /// lost, written by code this check cannot read, read out of a caller's
@@ -2474,6 +2809,13 @@ impl Beyond {
     /// written the local. They are kept, by the author's decision, because a
     /// mark kept here can only add a doubt, and one dropped would be a silence
     /// on a route nobody has built yet.
+    ///
+    /// **Asked of these reasons and not of any, measured** (the memory
+    /// model rebuilt on #924, stage 1): answered as `any_unknown`, 11
+    /// corpus cases and route rows moved, 3 of them saying less than
+    /// the build before, and 1 cases named as a deliberate quiet were
+    /// doubted. Which reasons it leaves out is a choice, and this is its
+    /// cost.
     pub(super) fn believed_to_reach_only_its_edges(&self) -> bool {
         match self {
             Beyond::Nothing => true,
@@ -2505,9 +2847,11 @@ mod tests {
     /// answer, over every pair and triple of both kinds of join. Mutation:
     /// join `Unwritten` and `Written` at a back edge as `Maybe`; this fails,
     /// since the back edge's order puts `Unwritten` below `Written`, and so
-    /// do the corpus's loops that fill a block, a scalar local and an array,
-    /// `an_allocation_filled_by_a_loop_is_not_doubted_as_unwritten` among
-    /// them. Mutation: join them as `Written` at a forward join; this fails,
+    /// do four corpus cases of a pointer freed on a later turn,
+    /// `a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned`
+    /// among them. The loops that fill a block or an array no longer fail
+    /// it: a store at an index this check cannot read is a may-write since
+    /// #893. Mutation: join them as `Written` at a forward join; this fails,
     /// and so does its own case below.
     #[test]
     fn an_init_join_is_commutative_idempotent_associative_and_monotone() {
@@ -2629,7 +2973,7 @@ mod tests {
         assert_eq!(written, Init::Maybe);
     }
 
-    use super::{Extent, Freeing, Held, Init, Inits, Levels, Offset, SiteState, earlier};
+    use super::{At, Extent, Freeing, Held, Init, Inits, Levels, SiteState, Why, Width, earlier};
     use crate::memory::index::{Idx, LocalIdx, Site};
     use crate::source::inside;
     use crate::source::{FileId, SourceMap, Span};
@@ -2644,15 +2988,107 @@ mod tests {
     /// `take` in `Levels::stored_under`. This fails at the first assertion.
     #[test]
     fn a_store_cannot_make_a_list_longer_than_the_function_s_depth() {
-        let held = Levels::from_bounds(vec![Some(8), Some(0)]);
+        let held = Levels::new(vec![Width::AtMost(8), Width::AtMost(0)]);
         assert_eq!(
-            held.stored_under(Some(4), 2),
-            Levels::from_bounds(vec![Some(4), Some(8)])
+            held.stored_under(Width::AtMost(4), 2),
+            Levels::new(vec![Width::AtMost(4), Width::AtMost(8)])
         );
         assert_eq!(
-            held.stored_under(None, 3),
-            Levels::from_bounds(vec![None, Some(8), Some(0)])
+            held.stored_under(Width::Unbounded, 3),
+            Levels::new(vec![Width::Unbounded, Width::AtMost(8), Width::AtMost(0)])
         );
+    }
+
+    /// Two positions join to themselves where they agree, to `Moved` where
+    /// both are off the start by any distances, and to `Unknown` where one
+    /// is at the start and the other is not or either is unknown (ADR-0092
+    /// rule 1). A program reaches the second where two arms move a pointer
+    /// by different constants.
+    ///
+    /// Mutation: drop the arm that joins two positions off the start; this
+    /// fails at `Bytes(4)` beside `Bytes(8)`.
+    #[test]
+    fn two_positions_off_the_start_join_off_the_start_whatever_the_distances() {
+        assert_eq!(At::Bytes(4).joined(At::Bytes(4)), At::Bytes(4));
+        assert_eq!(At::Bytes(4).joined(At::Bytes(8)), At::Moved);
+        assert_eq!(At::Moved.joined(At::Bytes(8)), At::Moved);
+        assert_eq!(At::Bytes(0).joined(At::Moved), At::Unknown);
+        assert_eq!(At::Bytes(0).joined(At::Bytes(4)), At::Unknown);
+        assert_eq!(At::Moved.joined(At::Unknown), At::Unknown);
+    }
+
+    /// The lower of two bounds, where `None` is no bound: what
+    /// [`Width::meet`] is held to over the `Option<u64>` a bound spells.
+    fn bounded(here: Option<u64>, there: Option<u64>) -> Option<u64> {
+        match (here, there) {
+            (Some(here), Some(there)) => Some(here.min(there)),
+            (Some(only), None) | (None, Some(only)) => Some(only),
+            (None, None) => None,
+        }
+    }
+
+    /// `Width::meet` is a meet, over every combination of a set that holds
+    /// each variant and byte counts on either side of one another: it is
+    /// commutative, associative and idempotent, `Unbounded` is its identity
+    /// and `Nothing` absorbs, it is never above either side, and it answers
+    /// what [`bounded`] does over the `Option<u64>` a bound spells.
+    /// ADR-0093 rule 1.
+    ///
+    /// Mutation: let `AsTyped` win over a byte count in `meet`; this fails,
+    /// at the meet that is above one side. Mutation: answer `Unbounded` for
+    /// `(Unbounded, other)`; this fails at the identity. Mutation: drop the
+    /// `Nothing` arm; this fails where it is to absorb. Mutation: have
+    /// `Width::of_belief` spell no belief as `Unbounded`, the identity,
+    /// rather than `Nothing`; this fails at the belief spelled back.
+    #[test]
+    fn a_width_meets_as_a_bound_does_over_every_combination() {
+        let widths = [
+            Width::Unbounded,
+            Width::AsTyped,
+            Width::AtMost(0),
+            Width::AtMost(4),
+            Width::AtMost(8),
+            Width::Nothing,
+        ];
+        let rank = |width: Width| match width {
+            Width::Nothing => 0,
+            Width::AtMost(bytes) => u128::from(bytes) + 1,
+            Width::AsTyped => u128::from(u64::MAX) + 2,
+            Width::Unbounded => u128::from(u64::MAX) + 3,
+        };
+        for a in widths {
+            assert_eq!(a.meet(a), a, "idempotent at {a:?}");
+            assert_eq!(a.meet(Width::Unbounded), a, "identity at {a:?}");
+            assert_eq!(a.meet(Width::Nothing), Width::Nothing, "absorbing at {a:?}");
+            if a != Width::Nothing {
+                assert_eq!(Width::of_bound(a.bound()), a, "spelled back at {a:?}");
+                // A belief spells "none" as what absorbs, which a bound
+                // spells as the identity: the one place the two part.
+                assert_eq!(
+                    Width::of_belief(a.bound()),
+                    if a == Width::Unbounded {
+                        Width::Nothing
+                    } else {
+                        a
+                    },
+                    "a belief spelled back at {a:?}"
+                );
+            }
+            for b in widths {
+                let met = a.meet(b);
+                assert_eq!(met, b.meet(a), "commutative at {a:?}, {b:?}");
+                assert!(
+                    rank(met) <= rank(a) && rank(met) <= rank(b),
+                    "{met:?} is above {a:?} or {b:?}"
+                );
+                if a != Width::Nothing && b != Width::Nothing {
+                    assert_eq!(met.bound(), bounded(a.bound(), b.bound()), "{a:?}, {b:?}");
+                }
+                for c in widths {
+                    assert_eq!(a.meet(b).meet(c), a.meet(b.meet(c)), "{a:?}, {b:?}, {c:?}");
+                }
+            }
+        }
     }
 
     /// A shorter list bounds nothing past its end, and a side with no bound
@@ -2662,11 +3098,11 @@ mod tests {
     /// assertion, which loses the `0` at index 1.
     #[test]
     fn a_shorter_list_bounds_nothing_past_its_end() {
-        let mut here = Levels::from_bounds(vec![Some(8)]);
-        here.bound_by(&Levels::from_bounds(vec![None, Some(0)]));
-        assert_eq!(here, Levels::from_bounds(vec![Some(8), Some(0)]));
-        here.bound_by(&Levels::from_bounds(vec![Some(4)]));
-        assert_eq!(here, Levels::from_bounds(vec![Some(4), Some(0)]));
+        let mut here = Levels::new(vec![Width::AtMost(8)]);
+        here.bound_by(&Levels::new(vec![Width::Unbounded, Width::AtMost(0)]));
+        assert_eq!(here, Levels::new(vec![Width::AtMost(8), Width::AtMost(0)]));
+        here.bound_by(&Levels::new(vec![Width::AtMost(4)]));
+        assert_eq!(here, Levels::new(vec![Width::AtMost(4), Width::AtMost(0)]));
     }
 
     /// Two sizes for one object meet as a bound below both, and one size
@@ -2707,13 +3143,13 @@ mod tests {
     #[test]
     fn clearing_a_local_leaves_it_no_site_and_no_edge() {
         let mut held = Held::none(4);
-        held.hold(Site::at(1), Offset::Zero);
+        held.hold(Site::at(1), At::Bytes(0));
         held.name_local(LocalIdx::at(3));
         held.writes_elsewhere = false;
-        held.offset = Offset::NonZero;
-        held.lost_read = true;
-        held.unreplaced_read = true;
-        held.foreign = true;
+        held.offset = At::Moved;
+        held.name_unknown(Why::LostRead);
+        held.name_unknown(Why::UnreplacedRead);
+        held.name_unknown(Why::Foreign);
         held.arrived_holds_pointer = true;
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", "free(p);");
@@ -2725,12 +3161,42 @@ mod tests {
         assert!(held.sites().next().is_none());
         assert!(!held.may_be_a_locals_address());
         assert!(held.writes_elsewhere);
-        assert_eq!(held.offset, Offset::Zero);
-        assert!(!held.lost_read);
-        assert!(!held.unreplaced_read);
-        assert!(!held.foreign);
+        assert_eq!(held.offset, At::Bytes(0));
+        assert!(!held.may_name(Why::LostRead));
+        assert!(!held.may_name(Why::UnreplacedRead));
+        assert!(!held.may_name(Why::Foreign));
         assert!(held.freed.is_none());
         assert!(!held.arrived_holds_pointer);
+    }
+
+    /// What a local is given drops every mark the old value carried: the
+    /// cleared value is a value that holds nothing, [`Held::none`], whatever
+    /// it held before. Each field below is set away from that first.
+    ///
+    /// Mutation: have `clear` leave any one of `may_be_null`, `fresh_read`,
+    /// `widths`, `inner_address`, `element`, `site_element`, `array_edge`,
+    /// `stored_through`, `returned_by`, `named_at_read`, `stale_read`,
+    /// `from_caller`, `lost` or `loaded`. This fails; no corpus case did for
+    /// the first eleven, measured in #918's review.
+    #[test]
+    fn clearing_a_local_drops_every_mark_it_had() {
+        let mut held = Held::none(4);
+        held.may_be_null = true;
+        held.fresh_read = true;
+        held.widths = Levels::new(vec![Width::AtMost(4), Width::AtMost(8)]);
+        held.inner_address = true;
+        held.element = Some(1);
+        held.site_element = Some(2);
+        held.array_edge = true;
+        held.stored_through = true;
+        held.returned_by = Some(Site::at(2));
+        held.named_at_read.set(LocalIdx::at(1));
+        held.name_unknown(Why::StaleRead);
+        held.name_unknown(Why::FromCaller);
+        held.name_unknown(Why::Lost);
+        held.name_unknown(Why::Loaded);
+        held.clear();
+        assert!(held == Held::none(4));
     }
 
     /// One edge that is all of where a write lands is one certain local, and

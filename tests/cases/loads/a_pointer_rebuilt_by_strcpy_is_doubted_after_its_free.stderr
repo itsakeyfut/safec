@@ -1,0 +1,30 @@
+warning[SC0412]: this may reach outside the object `cb` points at
+    ╭─[ a_pointer_rebuilt_by_strcpy_is_doubted_after_its_free.c:13:5 ]
+    │
+ 13 │     strcpy(cb, ca);
+    │     ───────┬──────  
+    │            ╰──────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+warning[SC0412]: this may reach outside the object `ca` points at
+    ╭─[ a_pointer_rebuilt_by_strcpy_is_doubted_after_its_free.c:13:5 ]
+    │
+ 13 │     strcpy(cb, ca);
+    │     ───────┬──────  
+    │            ╰──────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+warning[SC0402]: this uses `q`, which may have been freed
+    ╭─[ a_pointer_rebuilt_by_strcpy_is_doubted_after_its_free.c:17:9 ]
+    │
+ 17 │     int r = *q;
+    │         ───┬──  
+    │            ╰──── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

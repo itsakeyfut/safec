@@ -18,16 +18,15 @@ error[SC0412]: this may reach outside the object it points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
-error[SC0412]: this may reach outside the object `v` points at
+error[SC0412]: this reaches 20 bytes into an object of 16 bytes
     ╭─[ a_pointer_moved_after_its_local_s_address_was_stored_in_an_allocation_is_asked.c:15:5 ]
     │
  15 │     ***m = 1;
     │     ────┬───  
-    │         ╰───── this check cannot say this is inside its object
+    │         ╰───── wider than the object it reaches
 ────╯
   = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+  = help: make the object at least as wide as this access, or reach less of it
 error[SC0403]: this may dereference a null pointer
     ╭─[ a_pointer_moved_after_its_local_s_address_was_stored_in_an_allocation_is_asked.c:15:5 ]
     │

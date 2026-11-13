@@ -690,9 +690,9 @@ pub(crate) fn tested_against_null(
     //
     // **Nothing holds this `None`, and nothing can.** Answering such a
     // condition non-null instead leaves the suite green, because an `int` is
-    // never read through, and the memory check acts on a branch only for a
-    // local holding exactly what a `realloc` returned, which an `int` does
-    // not, so no report moves. It is the answer that is right about the
+    // never read through, and what the memory check does on a branch an
+    // `int` decides, dropping `Held::may_be_null` (#931), is about a pointer
+    // and no reader asks it of an `int`, so no report moves. It is the answer that is right about the
     // branch rather than one a test can tell apart.
     None
 }

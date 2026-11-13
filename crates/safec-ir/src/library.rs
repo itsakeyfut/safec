@@ -146,22 +146,35 @@ pub(crate) enum Callee {
     /// the old one held (p2). See ADR-0039.
     Reallocates,
     /// A C library function that frees nothing and returns its first argument:
-    /// `memset`, `strcpy`, `strncpy`, `strcat` and `strncat`, whose clauses in
-    /// C17 7.24.2 to 7.24.6 each say so.
+    /// `memset` and `strncat`, whose clauses in C17 7.24.3.2 and 7.24.6.1
+    /// each say so.
     ///
     /// **What it is handed is exposed all the same**, because it copies bytes
     /// and a pointer is bytes, and a local whose address it is handed may be
     /// written through it. See ADR-0039.
     ReturnsFirst,
-    /// `memcpy` and `memmove`: what [`Callee::ReturnsFirst`] is, and a copy of
-    /// an object besides, so that what the destination may contain gains what
-    /// the source contains (C17 7.24.2.1 and 7.24.2.2 copy the object's bytes).
+    /// `memcpy`, `memmove`, `strcpy`, `strncpy` and `strcat`: what
+    /// [`Callee::ReturnsFirst`] is, and a copy of an object besides, so that
+    /// what the destination may contain gains what the source contains (C17
+    /// 7.24.2.1 to 7.24.3.1 copy the object's bytes).
     ///
-    /// **Not the string functions**, whose copies end at a null byte (7.24.2.3
-    /// and on), which a pointer's representation may hold, so a stored pointer
-    /// is not copied whole by them. A variant of its own rather than a name
-    /// read inside the transfer, so that every reader of the callee answers
-    /// for it. See ADR-0039.
+    /// **The string copies too**, though they stop at a null byte (7.24.2.3
+    /// p2) or pad with them (7.24.2.4 p3): stopping short of a pointer's
+    /// last byte is not copying none of it. A pointer's high bytes are zero
+    /// on a 64-bit target, so `strcpy` into zeroed memory leaves the whole
+    /// pointer there, and read as copying nothing, a pointer it rebuilt was
+    /// used after its free in silence (#691). Carrying what the source holds
+    /// can only add a doubt; `strcat` appends after a string whose length
+    /// nothing here reads, which is the start of an empty one.
+    ///
+    /// **Not `strncat`**, whose third argument bounds what it reads of the
+    /// source (7.24.3.2 p2) where every reader of this variant reads it as
+    /// the length written, `Allocations::copied_pointers` among them. So a
+    /// pointer it rebuilds is still used after its free in silence, the
+    /// silence #691 closed for the others, by the author's decision.
+    /// `a_pointer_rebuilt_by_strncat_is_not_yet_doubted` holds it.
+    /// A variant of its own rather than a name read inside the transfer, so
+    /// that every reader of the callee answers for it. See ADR-0039.
     Copies,
     /// One of [`DOES_NOT_RETURN`](crate::ir::DOES_NOT_RETURN): `abort`,
     /// `exit`, `_Exit` and `quick_exit`, believed by name as the lowering and
@@ -205,7 +218,7 @@ pub(crate) enum Makes {
 #[derive(Clone, Copy)]
 pub(crate) enum Leaves {
     /// Indeterminate bytes: `malloc` (C17 7.22.3.4 p2) and `aligned_alloc`
-    /// (7.22.3.1 p2). The allocation is unwritten, `Known::init`. See ADR-0057.
+    /// (7.22.3.1 p2). The allocation is unwritten, `Known::written`. See ADR-0057.
     Indeterminate,
     /// Zero bits, which is a null pointer on every target here: `calloc`
     /// (7.22.3.2 p2).
@@ -246,10 +259,40 @@ pub(crate) struct Library {
     pub(crate) callee: Callee,
     /// How far it reaches through each argument it reads or writes through.
     pub(crate) reaches: &'static [(usize, Reach)],
+    /// Whether it writes bytes of its own where its first argument points,
+    /// starting there, for the length its `reaches` gives that argument
+    /// ([`Library::fill_length`]): `memset`, whose write is part of a
+    /// pointer where that length ends part way through one (#913).
+    /// Not a string copy, `strncpy`'s padding included, whose bytes are a
+    /// copy's and asked by the copy's rules. **A
+    /// column, not a name the transfer matches**, so that a row added later
+    /// answers it or does not compile: read as `name == "memset"`, a row of
+    /// the same function under another name left the part of a pointer it
+    /// wrote silent. Found by the architecture review of 2026-11-13.
+    pub(crate) fills: bool,
     /// How many bytes it makes, where it makes an allocation.
     pub(crate) makes: Option<Makes>,
     /// What it leaves in what it makes: `Some` exactly where `makes` is.
     pub(crate) leaves: Option<Leaves>,
+}
+
+impl Library {
+    /// The argument a row that [`Library::fills`] is handed its length in:
+    /// the one its `reaches` gives its first argument. **Read off the row**,
+    /// so the column cannot say one length and the transfer read another:
+    /// read as the third argument, a row taking its length second filled
+    /// in silence. Found by review.
+    pub(crate) fn fill_length(&self) -> Option<usize> {
+        if !self.fills {
+            return None;
+        }
+        self.reaches
+            .iter()
+            .find_map(|&(argument, reach)| match (argument, reach) {
+                (0, Reach::Length(length)) => Some(length),
+                _ => None,
+            })
+    }
 }
 
 /// Every library function the memory check reads by name, with what each is
@@ -270,6 +313,7 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Pointer],
         callee: Callee::Frees,
         reaches: &[],
+        fills: false,
         makes: None,
         leaves: None,
     },
@@ -278,6 +322,7 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Integer],
         callee: Callee::Allocates,
         reaches: &[],
+        fills: false,
         makes: Some(Makes::Argument(0)),
         leaves: Some(Leaves::Indeterminate),
     },
@@ -286,6 +331,7 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Integer, Shape::Integer],
         callee: Callee::Allocates,
         reaches: &[],
+        fills: false,
         makes: Some(Makes::Product(0, 1)),
         leaves: Some(Leaves::ZeroBits),
     },
@@ -294,6 +340,7 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Integer, Shape::Integer],
         callee: Callee::Allocates,
         reaches: &[],
+        fills: false,
         makes: Some(Makes::Argument(1)),
         leaves: Some(Leaves::Indeterminate),
     },
@@ -302,6 +349,7 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Pointer, Shape::Integer],
         callee: Callee::Reallocates,
         reaches: &[],
+        fills: false,
         makes: Some(Makes::Argument(1)),
         leaves: Some(Leaves::TheOld),
     },
@@ -310,6 +358,7 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Pointer, Shape::Pointer, Shape::Integer],
         callee: Callee::Copies,
         reaches: &[(0, Reach::Length(2)), (1, Reach::Length(2))],
+        fills: false,
         makes: None,
         leaves: None,
     },
@@ -318,6 +367,7 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Pointer, Shape::Pointer, Shape::Integer],
         callee: Callee::Copies,
         reaches: &[(0, Reach::Length(2)), (1, Reach::Length(2))],
+        fills: false,
         makes: None,
         leaves: None,
     },
@@ -326,30 +376,34 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Pointer, Shape::Integer, Shape::Integer],
         callee: Callee::ReturnsFirst,
         reaches: &[(0, Reach::Length(2))],
+        fills: true,
         makes: None,
         leaves: None,
     },
     Library {
         name: "strcpy",
         parameters: &[Shape::Pointer, Shape::Pointer],
-        callee: Callee::ReturnsFirst,
+        callee: Callee::Copies,
         reaches: &[(0, Reach::String), (1, Reach::String)],
+        fills: false,
         makes: None,
         leaves: None,
     },
     Library {
         name: "strncpy",
         parameters: &[Shape::Pointer, Shape::Pointer, Shape::Integer],
-        callee: Callee::ReturnsFirst,
+        callee: Callee::Copies,
         reaches: &[(0, Reach::Length(2)), (1, Reach::String)],
+        fills: false,
         makes: None,
         leaves: None,
     },
     Library {
         name: "strcat",
         parameters: &[Shape::Pointer, Shape::Pointer],
-        callee: Callee::ReturnsFirst,
+        callee: Callee::Copies,
         reaches: &[(0, Reach::String), (1, Reach::String)],
+        fills: false,
         makes: None,
         leaves: None,
     },
@@ -358,6 +412,7 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Pointer, Shape::Pointer, Shape::Integer],
         callee: Callee::ReturnsFirst,
         reaches: &[(0, Reach::String), (1, Reach::String)],
+        fills: false,
         makes: None,
         leaves: None,
     },
@@ -366,6 +421,7 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Pointer, Shape::Pointer, Shape::Integer],
         callee: Callee::Opaque,
         reaches: &[(0, Reach::Length(2)), (1, Reach::Length(2))],
+        fills: false,
         makes: None,
         leaves: None,
     },
@@ -374,6 +430,7 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Pointer, Shape::Integer, Shape::Integer],
         callee: Callee::Opaque,
         reaches: &[(0, Reach::Length(2))],
+        fills: false,
         makes: None,
         leaves: None,
     },
@@ -382,6 +439,7 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Pointer],
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String)],
+        fills: false,
         makes: None,
         leaves: None,
     },
@@ -390,6 +448,7 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Pointer, Shape::Pointer],
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String), (1, Reach::String)],
+        fills: false,
         makes: None,
         leaves: None,
     },
@@ -398,6 +457,7 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Pointer, Shape::Pointer, Shape::Integer],
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String), (1, Reach::String)],
+        fills: false,
         makes: None,
         leaves: None,
     },
@@ -406,6 +466,7 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Pointer, Shape::Integer],
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String)],
+        fills: false,
         makes: None,
         leaves: None,
     },
@@ -414,6 +475,7 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Pointer, Shape::Integer],
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String)],
+        fills: false,
         makes: None,
         leaves: None,
     },
@@ -422,7 +484,34 @@ pub(crate) const LIBRARY: &[Library] = &[
         parameters: &[Shape::Pointer, Shape::Pointer],
         callee: Callee::Opaque,
         reaches: &[(0, Reach::String), (1, Reach::String)],
+        fills: false,
         makes: None,
         leaves: None,
     },
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::{LIBRARY, Shape};
+
+    /// A row that fills names, through its `reaches`, an integer argument
+    /// its length is handed in. Without one, [`super::Library::fill_length`]
+    /// answers nothing and the row's fill is never asked. Mutation: give the
+    /// `memset` row `reaches: &[]`; this fails.
+    #[test]
+    fn every_row_that_fills_says_which_integer_argument_is_its_length() {
+        for row in LIBRARY.iter().filter(|row| row.fills) {
+            let length = row.fill_length().unwrap_or_else(|| {
+                panic!(
+                    "`{}` fills, and its `reaches` names no length for its first argument",
+                    row.name
+                )
+            });
+            assert!(
+                matches!(row.parameters.get(length), Some(Shape::Integer)),
+                "`{}` fills for the length in argument {length}, which is not an integer",
+                row.name
+            );
+        }
+    }
+}

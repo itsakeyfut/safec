@@ -1,0 +1,158 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:6:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:7:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:8:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:9:6 "stored"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "out"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int *" "x"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:10:14 generated
+    Call a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:10:14 written "malloc" "bb1"
+      Destination "_4"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:10:10 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:10:14 generated
+    Operation a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:11:9 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:11:9 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:11:9 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:11:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Branch a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:12:9 written "bb5" "bb6"
+      Copy "_2"
+  Block "bb5"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:12:9 generated
+    ArgumentsEvaluated a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:12:12 generated
+    Call a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:12:12 written "free" "bb8"
+      Copy "_3"
+  Block "bb6"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:12:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:13:9 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_1"
+    Branch a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:13:9 written "bb9" "bb10"
+      Copy "_6"
+  Block "bb8"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:12:12 generated
+    Goto "bb7"
+  Block "bb9"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:13:9 generated
+    Return
+  Block "bb10"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:13:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:14:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:14:5 written
+      Destination "_7"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:14:5 generated
+    Return
+Function a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:16:6 "copied"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "out"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int *" "x"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "int **"
+  Local "_8" "void *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:17:14 generated
+    Call a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:17:14 written "malloc" "bb1"
+      Destination "_4"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:17:10 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:17:14 generated
+    Operation a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:18:9 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:18:9 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:18:9 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:18:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Branch a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:19:9 written "bb5" "bb6"
+      Copy "_2"
+  Block "bb5"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:19:9 generated
+    ArgumentsEvaluated a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:19:12 generated
+    Call a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:19:12 written "free" "bb8"
+      Copy "_3"
+  Block "bb6"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:19:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:20:9 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_1"
+    Branch a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:20:9 written "bb9" "bb10"
+      Copy "_6"
+  Block "bb8"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:19:12 generated
+    Goto "bb7"
+  Block "bb9"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:20:9 generated
+    Return
+  Block "bb10"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:20:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:21:17 written
+      Destination "_7"
+      Address
+        Place "_3"
+    ArgumentsEvaluated a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:21:5 generated
+    Call a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:21:5 written "memcpy" "bb12"
+      Destination "_8"
+      Copy "_1"
+      Copy "_7"
+      Constant 8
+  Block "bb12"
+    Sequenced a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:21:5 generated
+    Return
