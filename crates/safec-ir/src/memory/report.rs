@@ -2250,15 +2250,19 @@ pub(super) fn copied_away(
     // review of 2026-11-13. What it still leaves out is the lost answer the
     // copy's own taking of `&v` makes, which a block holding its own address
     // was doubted for.
+    //
+    // **The value is asked as what is below it is**, by
+    // `Below::MayBeFreed`: asked of what is certainly freed alone, a pointer
+    // freed on one arm copied out was the argument door's `SC0407` where its
+    // store is `SC0414`, the pair the level below had until one fix. Found
+    // by the architecture review of 2026-11-13.
     let value_lost = from.projection.is_empty() && known.points_to[source.local].beyond().lost();
     let reached: Vec<Reached> = known
         .handed_reached(&source)
         .into_iter()
         .filter(|reached| match reached {
-            Reached::Site(site) => matches!(known.state[*site], SiteState::Freed { .. }),
-            Reached::SetFreed(_) => true,
             Reached::Lost(_) => value_lost,
-            Reached::Partial => false,
+            other => Below::MayBeFreed.asks(other, known),
         })
         .collect();
     // **Or a freed pointer one level below what it copies**, as the store
@@ -2665,9 +2669,9 @@ enum Below {
     /// Everything [`Known::handed_below`] answers: a store, a `return` and
     /// an argument.
     Everything,
-    /// **What may be freed there, or lost**: a library copy, which reads
-    /// through a local whose address it took, so what is below it is always
-    /// partly unknown. Asked of everything, a block that holds itself was
+    /// **What may be freed there, or lost**: a library copy, of the value it
+    /// copies and of what is below it, which reads through a local whose
+    /// address it took, so what is below it is always partly unknown. Asked of everything, a block that holds itself was
     /// doubted freed with no free in the program; asked of what is
     /// certainly freed alone, a pointer freed on one arm was the argument
     /// door's `SC0407` where the store said `SC0414`. A pointer below that

@@ -1,0 +1,20 @@
+warning[SC0414]: this stores `x` where code outside this function may read it, and it may point to a freed allocation
+    ╭─[ a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:14:5 ]
+    │
+ 14 │     *out = x;
+    │     ────┬───  
+    │         ╰───── stored here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0414]: this stores `x` where code outside this function may read it, and it may point to a freed allocation
+    ╭─[ a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy.c:21:5 ]
+    │
+ 21 │     memcpy(out, &x, 8);
+    │     ─────────┬────────  
+    │              ╰────────── stored here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

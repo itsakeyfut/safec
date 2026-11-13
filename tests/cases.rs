@@ -1817,6 +1817,9 @@ cases! {
         // Mutation: the `memset` notes part of a pointer only where its
         // destination has no projection; the `SC0413` goes.
         a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // Mutation: `copied_away` asks the value itself of what is certainly
+        // freed alone; the copy is the argument door's `SC0407` again.
+        a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A block held as `int **` reaches the caller through a `void *`
         // level, at the top or below a box, by every door: the block records
         // the type it was held as (#902, ADR-0086). Mutation: `held_below`
