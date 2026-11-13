@@ -9334,6 +9334,40 @@ error[SC0413]: d
     assert!(compare::lost(&doubted, &older).is_empty());
 }
 
+/// What the comparison refuses: a diagnostic said twice and now once is one
+/// lost, counted as a multiset; a loss fails unless the allowed file gives
+/// the program a reason; and nothing lost is never refused. The refusal
+/// names the program and what it lost.
+///
+/// Mutation: `compare::lost` stops counting down what it matched; the
+/// second report of the pair answers itself and nothing is lost. Mutation:
+/// `compare::refusal` answers `None` whatever it lost; the first refusal is
+/// gone. Mutation: `compare::allowed_in` matches no line; the allowed loss
+/// is refused.
+#[test]
+fn a_loss_is_counted_per_report_and_refused_unless_the_program_is_allowed() {
+    let twice = compare::diagnostics(
+        "error[SC0411]: a
+   ╭─[ c.c:3:5 ]
+error[SC0411]: a
+   ╭─[ c.c:3:5 ]
+",
+    );
+    let once = compare::diagnostics(
+        "error[SC0411]: a
+   ╭─[ c.c:3:5 ]
+",
+    );
+    assert_eq!(compare::lost(&twice, &once).len(), 1);
+    let refusal = compare::refusal("p", &twice, &once, None)
+        .expect("a report the newer build lost is refused");
+    assert!(refusal.contains("`p`") && refusal.contains("error[SC0411] at c.c:3:5, proved"));
+    let allowed = compare::allowed_in("q other\np the copy now reads its source\n", "p");
+    assert_eq!(allowed.as_deref(), Some("the copy now reads its source"));
+    assert!(compare::refusal("p", &twice, &once, allowed).is_none());
+    assert!(compare::refusal("p", &once, &twice, None).is_none());
+}
+
 /// What an older build of `safec`, `older`, prints to `stderr` for one case,
 /// run as [`run_case`] runs it: from a directory of its own outside the
 /// corpus, handed the bare file name, with the same arguments.

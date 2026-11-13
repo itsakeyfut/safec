@@ -107,6 +107,12 @@ fn allowed(name: &str) -> Option<String> {
     let path = std::env::var_os("SAFEC_COMPARE_ALLOWED").filter(|path| !path.is_empty())?;
     let text = std::fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("{}: {error}", PathBuf::from(&path).display()));
+    allowed_in(&text, name)
+}
+
+/// Why `name` may lose what it said, where `text`, an allowed file's
+/// contents, lists it: one program per line, the name and then the reason.
+pub(crate) fn allowed_in(text: &str, name: &str) -> Option<String> {
     text.lines().find_map(|line| {
         let (case, reason) = line.trim().split_once(char::is_whitespace)?;
         (case == name).then(|| reason.trim().to_owned())
@@ -137,9 +143,23 @@ pub(crate) fn compare(name: &str, older_stderr: &str, newer_stderr: &str) {
             writeln!(file, "{name}").expect("the comparison report can be written");
         }
     }
-    let lost = lost(&older, &newer);
-    if lost.is_empty() || allowed(name).is_some() {
-        return;
+    if let Some(refusal) = refusal(name, &older, &newer, allowed(name)) {
+        panic!("{refusal}");
+    }
+}
+
+/// What [`compare`] fails with for `name`, where the newer build lost
+/// something the older one said and `allowed` gives no reason it may: the
+/// whole decision apart from the files it reads, so that a test can ask it.
+pub(crate) fn refusal(
+    name: &str,
+    older: &[Diagnostic],
+    newer: &[Diagnostic],
+    allowed: Option<String>,
+) -> Option<String> {
+    let lost = lost(older, newer);
+    if lost.is_empty() || allowed.is_some() {
+        return None;
     }
     let lines: Vec<String> = lost
         .iter()
@@ -148,10 +168,10 @@ pub(crate) fn compare(name: &str, older_stderr: &str, newer_stderr: &str) {
             format!("{} at {}, {proved}", d.opens, d.at)
         })
         .collect();
-    panic!(
+    Some(format!(
         "`{name}`: the older build said what this one does not:\n  {}\n\
          Read why; if it is right, list `{name}` with the reason in the file \
          SAFEC_COMPARE_ALLOWED names.",
         lines.join("\n  ")
-    );
+    ))
 }
