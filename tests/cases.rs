@@ -1791,8 +1791,8 @@ cases! {
         // `Known::held_below`; this hangs.
         a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `copied_away` asks nothing below what it copies; the copy
-        // is `SC0407` again. Ask below without its filter to what is known
-        // freed, and this fails too, with the route matrix.
+        // is `SC0407` again. Ask below of what is certainly freed alone, and
+        // the copy of a pointer freed on one arm is `SC0407` again.
         a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block held as `int **` reaches the caller through a `void *`
         // level, at the top or below a box, by every door: the block records

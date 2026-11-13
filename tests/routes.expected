@@ -59,8 +59,8 @@ fresh_memcpy_maybe_d1_both hazard=1:SC0411 control=0:- allowed=0:SC0411
 fresh_memcpy_maybe_d2_both hazard=1:SC0403,SC0411 control=1:SC0403 allowed=0:SC0403,SC0411
 fresh_memcpy_part_d1_both hazard=1:SC0411,SC0413 control=0:- allowed=1:SC0411,SC0413
 fresh_memcpy_short_d1_both hazard=1:SC0411 control=0:- allowed=0:SC0411
-fresh_memcpy_unplaced_d1_both hazard=1:SC0402,SC0403,SC0407,SC0411 control=1:SC0402,SC0403,SC0407 allowed=0:SC0402,SC0403,SC0407,SC0411
-fresh_memcpy_unplaced_d1_one hazard=1:SC0402,SC0403,SC0407,SC0411 control=1:SC0402,SC0403,SC0407 allowed=0:SC0402,SC0403,SC0407,SC0411
+fresh_memcpy_unplaced_d1_both hazard=1:SC0402,SC0403,SC0407,SC0411 control=1:SC0402,SC0403,SC0407,SC0414 allowed=0:SC0402,SC0403,SC0407,SC0411
+fresh_memcpy_unplaced_d1_one hazard=1:SC0402,SC0403,SC0407,SC0411 control=1:SC0402,SC0403,SC0407,SC0414 allowed=0:SC0402,SC0403,SC0407,SC0411
 fresh_memcpy_unread_d1_both hazard=1:SC0411,SC0412 control=1:SC0412 allowed=0:SC0411,SC0412
 fresh_memcpy_unread_d1_one hazard=1:SC0411,SC0412 control=1:SC0412 allowed=0:SC0411,SC0412
 fresh_realloc_d0_both hazard=1:SC0411 control=0:- allowed=1:SC0411

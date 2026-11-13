@@ -23,3 +23,19 @@ int copied(int ****out) {
     memcpy(out, &b, 8);
     return 1;
 }
+int stored_maybe(int ***out, int c) {
+    int *x = malloc(4); if (x == 0) return 0;
+    int **b = malloc(8); if (b == 0) return 0;
+    *b = x; if (c) free(x);
+    if (out == 0) return 0;
+    *out = b;
+    return 1;
+}
+int copied_maybe(int ***out, int c) {
+    int *x = malloc(4); if (x == 0) return 0;
+    int **b = malloc(8); if (b == 0) return 0;
+    *b = x; if (c) free(x);
+    if (out == 0) return 0;
+    memcpy(out, &b, 8);
+    return 1;
+}
