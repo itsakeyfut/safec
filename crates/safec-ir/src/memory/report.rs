@@ -3314,8 +3314,56 @@ pub(super) fn copied_away(
             Reached::Lost(_) | Reached::Partial => false,
         })
         .collect();
+    // **And a freed pointer one level below what it copies**, as the store
+    // asks it (`stored_away`): asked by the store alone, `*out = b;` was
+    // `SC0414` and `memcpy(out, &b, 8)` of the same `b` was the argument
+    // door's `SC0407` (the memory model rebuilt on #924, stage 2). Said, it
+    // stands for the copy, so the argument door says nothing more of it.
+    // **Or a freed pointer one level below what it copies**, as the store
+    // asks it (`stored_away`, by `freed_behind`): asked by the store alone,
+    // `*out = b;` was `SC0414` and `memcpy(out, &b, 8)` of the same `b` was
+    // the argument door's `SC0407` (the memory model rebuilt on #924, stage
+    // 2). **Only what is known freed there**, as this door asks of what it
+    // copies itself: the local a copy reads through has had its address
+    // taken, so what is below it is always partly unknown, and a block that
+    // holds itself was doubted freed with no free in the program. Said, it
+    // stands for the copy, so the argument door says nothing more of it.
     if reached.is_empty() {
-        return None;
+        let below: Vec<Reached> = known
+            .handed_below(&source)
+            .into_iter()
+            .filter(|reached| match reached {
+                Reached::Site(site) => matches!(known.state[*site], SiteState::Freed { .. }),
+                Reached::SetFreed(_) => true,
+                Reached::Lost(_) | Reached::Partial => false,
+            })
+            .collect();
+        let verdict = verdict(analysis.sources, Kind::FreedBehindStore, below, known)?;
+        say(
+            analysis.sources,
+            findings,
+            said,
+            &Place {
+                local: source.local,
+                projection: source
+                    .projection
+                    .iter()
+                    .cloned()
+                    .chain([Projection::Deref])
+                    .collect(),
+            },
+            Finding {
+                function: analysis.function,
+                kind: Kind::FreedBehindStore,
+                conclusion: Conclusion::Unknown,
+                at: store.at,
+                local: None,
+                freed: verdict.freed,
+                made: verdict.made,
+                unproven: verdict.unproven,
+            },
+        );
+        return Some(from.clone());
     }
     let verdict = verdict(analysis.sources, Kind::StoreAfterFree, reached, known)?;
     say(
