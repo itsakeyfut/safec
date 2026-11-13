@@ -1978,8 +1978,10 @@ impl Known {
             _ => self.levels_below(local, dereferences - 1).1,
         };
         let held = &self.points_to[local];
-        // `Beyond::unrecorded_address` with `loaded` and `foreign` taken
-        // apart: keep the two in step.
+        // `Beyond::any_unknown` asked in two parts, what each level read or
+        // a call wrote through `Self::unnamed_below` and the pointer's own
+        // `lost` here, then the rest by what was named at the read: keep
+        // the parts in step with it.
         if self.unnamed_below(local, dereferences) || held.beyond().lost() {
             lands.extend(self.locals_named_by_unknown_code());
         } else if held.beyond().any_unknown() {
@@ -2829,7 +2831,7 @@ impl Known {
     /// **An escaped local that may hold a pointer read out of memory, one it
     /// lost, or one a call this check cannot read wrote, reaches what is
     /// stored**, since a callee handed its address can read that pointer out
-    /// of it and nothing here names what it is: `Beyond::unrecorded_address`.
+    /// of it and nothing here names what it is: `Beyond::any_unknown`.
     /// The third moved no case when it was added, measured. See ADR-0040.
     pub(super) fn reach_of(&self, named: impl Iterator<Item = Site>) -> Vec<Site> {
         let mut reach: Vec<Site> = named.collect();

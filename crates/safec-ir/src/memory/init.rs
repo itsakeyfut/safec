@@ -832,8 +832,8 @@ impl Allocations<'_> {
     ///
     /// Mutation: weaken `all` to `any` over the sites, and
     /// `a_pointer_read_through_either_of_two_allocations_one_written_is_doubted`
-    /// is reported as certain. **`loaded`, among the marks
-    /// `Beyond::unrecorded_address` asks, is held** by
+    /// is reported as certain. **`loaded`, among the reasons
+    /// `Beyond::any_unknown` asks, is held** by
     /// `a_pointer_no_call_can_reach_is_not_written_by_a_store_this_check_cannot_place`,
     /// which gains a false certain report without it, and by
     /// `a_pointer_read_out_of_memory_that_names_a_block_nothing_wrote_is_doubted_where_read_through`,

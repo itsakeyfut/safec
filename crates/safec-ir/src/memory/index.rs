@@ -122,11 +122,11 @@ macro_rules! reasons {
 }
 
 reasons! {
-/// Why a value may name a place this check does not model: each is one of
-/// the marks a value carried before it was a place.
+/// Why a value may name a place this check does not model. Each is a place
+/// a value may name, `Target::Unknown(why)`, and was a mark of its own
+/// before it was one.
 enum Why {
-    /// Whether this local may hold an allocation this check can no longer
-    /// name.
+    /// An allocation this check can no longer name.
     ///
     /// Three doors lead here. The site that named what it held was handed to a
     /// second allocation, which is ADR-0018; or its address had escaped when a
@@ -136,11 +136,11 @@ enum Why {
     /// pin down wrote its type, which is ADR-0031 and is the same sentence
     /// with the writer inside this function.
     Lost,
-    /// Whether this local may hold a pointer read out of memory.
+    /// A pointer read out of memory.
     ///
     /// Such a pointer holds what a cell's `names` records for the allocation
-    /// it was read from, which may be missing members, and this bit is what
-    /// says so: the report reads [`Reached::Partial`](super::parts::Reached::Partial) beside those sites, and
+    /// it was read from, which may be missing members, and this reason is
+    /// what says so: the report reads [`Reached::Partial`](super::parts::Reached::Partial) beside those sites, and
     /// a free of it stays a doubt (ADR-0045). **For the other readers**, what
     /// a call reaches and what a write stores, it says the value may be
     /// anything stored, for which "no site" had come to mean "reaches
@@ -152,17 +152,19 @@ enum Why {
     /// write through it is unplaced for that part: what it carries is
     /// exposed. See ADR-0044.
     Loaded,
-    /// Whether a call this check cannot read may have written into this
-    /// local, through its address, something no site names.
+    /// Something no site names, written into a local through its address by
+    /// a call this check cannot read.
     ///
     /// [`Known::replaced`](super::known::Known::replaced) cannot say this with [`Why::Lost`] for a local
-    /// holding no site, because the report reads that bit and ADR-0017 does
-    /// not report an output parameter. So `get(&u)` sets this instead, and
-    /// the report never reads it. A write through such a local exposes what
+    /// holding no site, because the report asks that reason whether a value
+    /// was lost and ADR-0017 does not report an output parameter. So
+    /// `get(&u)` names this instead, which [`Beyond::lost`](super::parts::Beyond::lost)
+    /// does not read; the report reads it only among every reason, as
+    /// [`Beyond::any_unknown`](super::parts::Beyond::any_unknown) does. A write through such a local exposes what
     /// it carries, as one through a load does. See ADR-0044.
     Foreign,
-    /// Whether this was read out of memory a pointer parameter points at, so
-    /// may be what the caller stored there.
+    /// A value read out of memory a pointer parameter points at, so what the
+    /// caller may have stored there.
     ///
     /// Or handed over by a callee: read out of what a call this check cannot
     /// read returned, or written by one through an escaped local's address.
@@ -176,8 +178,8 @@ enum Why {
     /// level in; and its cost, a read after any such call doubted, is the same
     /// one level in. See ADR-0040.
     FromCaller,
-    /// Whether this was read out of an allocation whose cell is `stale_read`, or
-    /// otherwise lost an allocation that may be gone, and may be one.
+    /// A value read out of an allocation whose cell is `stale_read`, or one
+    /// that otherwise lost an allocation that may be gone, and may be it.
     ///
     /// Set too where a local loses a site whose allocation is not live
     /// ([`Known::reborn`](super::known::Known::reborn)), by a load through a pointer to such a local, and
@@ -194,9 +196,8 @@ enum Why {
     /// that list, measured; a store of this one marks it, so a doubted load
     /// copied into another allocation stays doubted. See ADR-0045.
     StaleRead,
-    /// Whether this was read out of an allocation whose cell is `lost`,
-    /// which
-    /// may hold a value this check lost, or built from such a value.
+    /// A value read out of an allocation whose cell is `lost`, which may
+    /// hold a value this check lost, or built from such a value.
     ///
     /// **Not [`Why::Lost`] at the read**, which would doubt every walk of a
     /// list whose nodes hold a lost head. It is made lost only when a lost
@@ -207,10 +208,9 @@ enum Why {
     /// store of it marks where it lands, as a store of a lost value does, so
     /// a copy into another allocation carries it. See ADR-0045.
     LostRead,
-    /// Whether this was read out of an allocation whose cell is
-    /// `unreplaced_read`, which may
-    /// hold a slot a call this check cannot read could not replace, or built
-    /// from such a value.
+    /// A value read out of an allocation whose cell is `unreplaced_read`,
+    /// which may hold a slot a call this check cannot read could not
+    /// replace, or built from such a value.
     ///
     /// **Not [`Why::StaleRead`], which makes a load lost.** A lost local's
     /// load is followed no further, so marking that way silenced `d = *c;

@@ -270,8 +270,8 @@ impl Allocations<'_> {
         // **A fill of part of a pointer writes part of one**, as a copy of
         // that length does: `memset(m, 1, 4)` into memory later held as
         // pointers left a pointer of four set bytes and four others in
-        // silence (#913). Only a row that `fills`, whose write starts at what
-        // it is handed; a string function's ends where its string does.
+        // silence (#913). Only a row that `fills`, whose bytes are its own; a
+        // string copy's are a copy's, asked by the copy's rules.
         //
         // **Asked of every row, whatever it does besides, at the length its
         // own row says**: asked inside the arm of the rows that copy, and of

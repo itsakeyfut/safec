@@ -426,9 +426,9 @@ impl Allocations<'_> {
     }
 
     /// Record a write through `local` at `at` as writing part of a pointer
-    /// in each block or local it names that is wide enough to hold one, where
-    /// it points at a position counted from the start. One body for a
-    /// narrow store and a partial `memset`. See [`Self::note_narrow_store`].
+    /// in each block or local it names that is wide enough to hold one,
+    /// whatever its position: what a write lands in one dereference down.
+    /// See [`Self::note_landing_in_part`].
     pub(super) fn note_part_of_a_pointer(&self, local: LocalId, at: Span, value: &mut Known) {
         let held = &value.points_to[local];
         let places: Vec<Loc> = held
@@ -1197,7 +1197,7 @@ impl Allocations<'_> {
     /// a pointer read out of memory.
     ///
     /// Read through one `Deref` of a local holding sites, with nothing
-    /// `Beyond::unrecorded_address` names besides (a load, a pointer it lost,
+    /// `Beyond::any_unknown` names besides (a load, a pointer it lost,
     /// one a call wrote), what those allocations may contain. Read any other
     /// way, or held by a local that may hold such a pointer, what is stored
     /// anywhere, [`Known::stored`]. **A local merely holding no site answers

@@ -495,7 +495,7 @@ impl Allocations<'_> {
         // takes `p`'s value, which may be what the caller stored, and its one
         // recorded site is no proof. Found by review.
         //
-        // **This closure's `from_caller` is implied by `unrecorded_address`
+        // **This closure's `from_caller` is implied by `any_unknown`
         // today, and nothing holds it apart** (this one, not the pointer's
         // own `held.from_caller` below): a load out of a caller's memory marks
         // `loaded` beside it, and the call that marks every escaped local

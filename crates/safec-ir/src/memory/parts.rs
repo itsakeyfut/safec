@@ -1152,7 +1152,9 @@ pub(super) struct Held {
     /// that tested the value not null. Given only by a constant, `realloc` of
     /// a parameter was read as copying an old block on the path where the
     /// caller passed none, and what it returned was believed written. A
-    /// door answers it in [`Marks`], so a door added says it.
+    /// door that builds a value from [`Marks`] says it; a parameter and a
+    /// call's result set it on the value [`Held::none`] builds, each held by
+    /// a case rather than by the compiler (#931).
     ///
     /// **Said rather than inferred** from every other mark being absent,
     /// which a local nothing was assigned shares with a null and arithmetic
@@ -2293,14 +2295,14 @@ impl Cell {
         self.names.get(Target::Local(local))
     }
 
-    /// Whether what is stored there may be a pointer to an allocation that
-    /// is gone and whose site names a new one. See `Known::contents`.
     /// Whether a pointer stored there may name what this check does not
     /// model for `why`.
     fn may_name(&self, why: Why) -> bool {
         self.names.get(Target::Unknown(why))
     }
 
+    /// Whether what is stored there may be a pointer to an allocation that
+    /// is gone and whose site names a new one. See `Known::contents`.
     pub(super) fn stale_read(&self) -> bool {
         self.may_name(Why::StaleRead)
     }
@@ -2497,7 +2499,9 @@ impl Cell {
 /// names each one, and one it leaves out is not its precise default in
 /// silence: the copy into a local's address set seven marks and not
 /// `element`, so its write is of the whole array (#706), and the store's
-/// landing did the same (#705). See [`Held`] for what each mark means.
+/// landing did the same (#705). Seven of them are reasons, which
+/// [`Held::from_marks`] makes places of [`Held::names`] ([`Why`] says what
+/// each means); the rest are fields of [`Held`].
 pub(super) struct Marks {
     pub(super) lost: bool,
     pub(super) freed: Option<Freeing>,
@@ -2525,24 +2529,24 @@ pub(super) struct Marks {
 /// answer every reader asks, so that a mark added to it is a compile error
 /// wherever it has to be answered.
 ///
-/// **Seven marks and two questions.** `lost`, `loaded` and `foreign` say the
-/// value may be an address this function never recorded, which
-/// [`Beyond::any_unknown`] asks with the other four, measured to answer the
-/// same where it is asked (#924's rebuild, stage 1); `from_caller`, `stale_read`,
-/// `lost_read` and `unreplaced_read` say where what it names came from, and
-/// [`Beyond::is_nothing`] asks whether any of the seven is set, for a reader
-/// that has to know the value names exactly its sites. Every question here
-/// that asks more than one mark names every mark, `_` for one it does not
-/// read, so a mark added is `error[E0063]` where [`Held::beyond`] builds it
+/// **Seven reasons, and a question per subset that answers differently.**
+/// `lost`, `loaded` and `foreign` say the value may be an address this
+/// function never recorded, and `from_caller`, `stale_read`, `lost_read`
+/// and `unreplaced_read` say where what it names came from.
+/// [`Beyond::any_unknown`] asks whether any of the seven is named, and
+/// [`Beyond::is_nothing`] whether none is; each narrower question below
+/// says what answering it as `any_unknown` moved. Every question that asks
+/// more than one reason names every reason, `_` for one it does not read,
+/// so a reason added is `error[E0004]` where [`Held::beyond`] builds this
 /// and `error[E0027]` where it is read. See ADR-0063.
 ///
-/// **The marks are private to this file**, and this is the only way to read
-/// one elsewhere: naming `held.foreign` from `transfer.rs` is `error[E0616]`.
-/// Five readers once each asked whether a value may be unrecorded with
-/// `lost` and `loaded` and not `foreign`, each composing its own subset
-/// (f46b9f9c); a question asked here is written once and read by name.
-/// [`Held`]'s setters are named for the event that sets a mark, for the
-/// same reason.
+/// **A question asked here is written once and read by name**: five
+/// readers once each asked whether a value may be unrecorded with `lost`
+/// and `loaded` and not `foreign`, each composing its own subset
+/// (f46b9f9c). The compiler does not hold readers to it: a reason is a
+/// place of [`Held::names`], `Target::Unknown(why)`, which a reader in
+/// another file can ask directly. [`Held`]'s setters are named for the
+/// event that sets a reason, for the same reason.
 pub(super) enum Beyond {
     /// It names exactly what its sites and edges say.
     Nothing,

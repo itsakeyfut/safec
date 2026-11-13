@@ -4535,17 +4535,17 @@ const UNCERTAIN: &[(&str, &str)] = &[
     ),
 ];
 
+/// Why a row is listed in [`COPY_DIFFERS`] when nothing more is known: it
+/// differed when the test that asks it landed, at `bb36192d`, and each such
+/// row is a rule the store and the copy still answer apart. The entries go
+/// as the rules become one.
+const DIFFERED_WHEN_ASKED: &str = "the store and the copy of one pointer still answer this route apart; it differed when `a_whole_copy_answers_as_its_plain_store` landed (#686)";
 /// What a whole copy is not answered alike with its plain store, row by
 /// row, with why: a library copy of a whole pointer is the store of it, so
 /// any code its hazard or control reports that the store's does not, or the
 /// reverse, is one rule spelled twice (#686, the memory model rebuilt on
 /// #924, stage 2). **Exact in both directions**: a listed row that now
 /// agrees fails too, and its entry goes.
-/// Why a row is listed in [`COPY_DIFFERS`] when nothing more is known: it
-/// differed when the test that asks it landed, at `bb36192d`, and each such
-/// row is a rule the store and the copy still answer apart. The entries go
-/// as the rules become one.
-const DIFFERED_WHEN_ASKED: &str = "the store and the copy of one pointer still answer this route apart; it differed when `a_whole_copy_answers_as_its_plain_store` landed (#686)";
 const COPY_DIFFERS: &[(&str, &str)] = &[
     ("caller_memcpy_d2_both", DIFFERED_WHEN_ASKED),
     ("caller_memcpy_d2_one", DIFFERED_WHEN_ASKED),
@@ -5095,6 +5095,13 @@ const ASKED_WHERE_STORED: &str = "a pointer this check cannot say starts an obje
 /// See ADR-0045.
 const LOST_READ_FROM_A_LOCAL: &str = "a lost pointer read out of a local proves nothing where it is used, and one read out of memory is believed as it was stored (ADR-0045)";
 
+/// Why a pair is listed in [`APART`]: a library copy into memory that does
+/// not leave is not asked the width of what it carries.
+const COPY_STAYS_AT_DEPTH_ZERO: &str = "a library copy into memory that does not leave is not asked the width of what it carries, as a store there is not (the memory model rebuilt on #924, stage 2); at depth zero the block the copy lands in stays in this function, and one level below it is memory a load reached, which may leave";
+/// Why a pair is listed in [`APART`]: a library copy lets a lost value
+/// leave as a store by name does, and one level down the store spelling
+/// does not ask it yet.
+const COPY_ASKS_LOST: &str = "a library copy lets a value this check stopped following leave as `SC0414`, as a store of the same value by name does (#924); one level down the copy reads it out of memory where the lost answer stands, and the store spelling of that route does not ask it yet";
 /// The pairs of a row at depth zero and its row at depth one that answer
 /// differently, with why: each a rule that tells a local from a block on
 /// purpose. Every other pair answers alike in its codes and its exits,
@@ -5102,8 +5109,6 @@ const LOST_READ_FROM_A_LOCAL: &str = "a lost pointer read out of a local proves 
 /// pair listed here that no longer differs fails
 /// [`every_pair_kept_apart_still_differs`]. Named as the rows are, without
 /// the depth.
-const COPY_STAYS_AT_DEPTH_ZERO: &str = "a library copy into memory that does not leave is not asked the width of what it carries, as a store there is not (the memory model rebuilt on #924, stage 2); at depth zero the block the copy lands in stays in this function, and one level below it is memory a load reached, which may leave";
-const COPY_ASKS_LOST: &str = "a library copy lets a value this check stopped following leave as `SC0414`, as a store of the same value by name does (#924); one level down the copy reads it out of memory where the lost answer stands, and the store spelling of that route does not ask it yet";
 const APART: &[(&str, &str)] = &[
     ("reborn_memcpy_both", COPY_ASKS_LOST),
     ("reborn_memcpy_one", COPY_ASKS_LOST),

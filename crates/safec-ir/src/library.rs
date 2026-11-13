@@ -263,7 +263,8 @@ pub(crate) struct Library {
     /// starting there, for the length its `reaches` gives that argument
     /// ([`Library::fill_length`]): `memset`, whose write is part of a
     /// pointer where that length ends part way through one (#913).
-    /// Not a string function, whose write ends where its string does. **A
+    /// Not a string copy, `strncpy`'s padding included, whose bytes are a
+    /// copy's and asked by the copy's rules. **A
     /// column, not a name the transfer matches**, so that a row added later
     /// answers it or does not compile: read as `name == "memset"`, a row of
     /// the same function under another name left the part of a pointer it

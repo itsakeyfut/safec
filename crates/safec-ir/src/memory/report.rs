@@ -2273,13 +2273,7 @@ pub(super) fn copied_away(
     // asks it (`stored_away`, by `freed_behind`): asked by the store alone,
     // `*out = b;` was `SC0414` and `memcpy(out, &b, 8)` of the same `b` was
     // the argument door's `SC0407` (the memory model rebuilt on #924, stage
-    // 2). **Only what is freed there, certainly or on some path**: the local
-    // a copy reads through has had its address taken, so what is below it
-    // is always partly unknown, and asked of everything below, a block that
-    // holds itself was doubted freed with no free in the program; asked of
-    // what is certainly freed alone, a pointer freed on one arm was the
-    // argument door's `SC0407` where the store said `SC0414`. Said, it
-    // stands for the copy, so the argument door says nothing more of it.
+    // 2), narrowed as `Below::MayBeFreed` says.
     if reached.is_empty() {
         let told = freed_behind(
             findings,
