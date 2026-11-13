@@ -324,7 +324,8 @@ cases! {
         // whole `memset`, whole pointers, and an `int` store into memory of
         // `int`s are not reported. Mutation: `note_narrow_store` records
         // nothing; the first and third go silent. Mutation: the `memset` arm
-        // records nothing; the second goes silent.
+        // records nothing; the second goes silent. Mutation: `memset`'s
+        // row says it `fills` nothing; the second goes silent.
         an_int_stored_into_a_table_of_pointers_that_leaves_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_memset_of_part_of_a_pointer_into_a_table_that_leaves_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_char_stored_into_a_pointer_read_back_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

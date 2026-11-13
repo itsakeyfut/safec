@@ -404,12 +404,10 @@ impl Allocations<'_> {
                 // **A `memset` of part of a pointer writes part of one**, as
                 // a copy of that length does: `memset(m, 1, 4)` into memory
                 // later held as pointers left a pointer of four set bytes
-                // and four others in silence (#913). Only `memset`, whose
+                // and four others in silence (#913). Only a row that `fills`, `memset`, whose
                 // write starts at what it is handed; a string function's
                 // ends where its string does. See `Self::note_part_of_a_pointer`.
-                if self
-                    .library(*callee)
-                    .is_some_and(|row| row.name == "memset")
+                if self.library(*callee).is_some_and(|row| row.fills)
                     && !matches!(
                         self.copied_pointers(*callee, arguments),
                         CopiedPointers::Whole
