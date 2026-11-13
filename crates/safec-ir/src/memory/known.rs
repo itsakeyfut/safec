@@ -1808,6 +1808,14 @@ impl Known {
     /// built silent where the store `*p = &x;` is `SC0411`. Found by the
     /// architecture review of 2026-11-13; on `main` too.
     ///
+    /// **What this check does not model is another place** a pointer may
+    /// name: `fill(p, &x)` with `p` either `&a` or what an earlier call
+    /// filled in was believed to write `a`, and a read of `a` built silent,
+    /// found by review. Asked of a pointer and not yet of what a block
+    /// holds: a block may name what is not modelled because an address was
+    /// stored where this check cannot place it, and asked there, two
+    /// output-parameter beliefs below are doubted.
+    ///
     /// **A local named alone by any of them stays believed written**, the
     /// output-parameter idiom (#782): `stash(&p); p = m; tick();` reaches `m`
     /// through `p` alone. So does one no pointer this function recorded
@@ -1822,24 +1830,35 @@ impl Known {
         let reached = self.unknown_code_reaches();
         let mut beside = BTreeSet::new();
         let mut alone = BTreeSet::new();
-        let mut ask =
-            |sites: Vec<Site>, locals: Vec<LocalIdx>| match (sites.len(), locals.as_slice()) {
-                (0, [local]) => {
-                    alone.insert(*local);
-                }
-                _ => beside.extend(locals),
-            };
+        let mut ask = |sites: Vec<Site>, locals: Vec<LocalIdx>, unmodelled: bool| match (
+            sites.len(),
+            locals.as_slice(),
+            unmodelled,
+        ) {
+            (0, [local], false) => {
+                alone.insert(*local);
+            }
+            _ => beside.extend(locals),
+        };
         for &holder in handed {
             let held = &self.points_to[holder];
-            ask(held.sites().collect(), held.locals().collect());
+            ask(
+                held.sites().collect(),
+                held.locals().collect(),
+                held.beyond().any_unknown(),
+            );
         }
         for &holder in &reached.locals {
             let held = &self.points_to[holder];
-            ask(held.sites().collect(), held.locals().collect());
+            ask(
+                held.sites().collect(),
+                held.locals().collect(),
+                held.beyond().any_unknown(),
+            );
         }
         for &container in &reached.sites {
             let cell = &self.contents[container];
-            ask(cell.sites().collect(), cell.locals().collect());
+            ask(cell.sites().collect(), cell.locals().collect(), false);
         }
         beside.retain(|local| !alone.contains(local));
         beside
