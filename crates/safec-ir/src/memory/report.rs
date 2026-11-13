@@ -2257,6 +2257,10 @@ pub(super) fn copied_away(
     // store is `SC0414`, the pair the level below had until one fix. Found
     // by the architecture review of 2026-11-13.
     let value_lost = from.projection.is_empty() && known.points_to[source.local].beyond().lost();
+    //
+    // **Without the `Partial` below keeps** ([`Below::narrowed`]): what is
+    // asked here is the value the copy itself reads, and a freed block it
+    // reads out of is proved, as `memcpy(pp, b, 8)` after `free(b)` is.
     let reached: Vec<Reached> = known
         .handed_reached(&source)
         .into_iter()
@@ -2616,11 +2620,7 @@ fn freed_behind(
     known: &Known,
     asked: Below,
 ) -> bool {
-    let below: Vec<Reached> = known
-        .handed_below(place)
-        .into_iter()
-        .filter(|reached| asked.asks(reached, known))
-        .collect();
+    let below = asked.narrowed(known.handed_below(place), known);
     let Some(verdict) = verdict(analysis.sources, kind, below, known) else {
         return false;
     };
@@ -2671,8 +2671,9 @@ enum Below {
     Everything,
     /// **What may be freed there, or lost**: a library copy, of the value it
     /// copies and of what is below it, which reads through a local whose
-    /// address it took, so what is below it is always partly unknown. Asked of everything, a block that holds itself was
-    /// doubted freed with no free in the program; asked of what is
+    /// address it took, so what is below it is always partly unknown.
+    /// Asked of everything, a block that holds itself was doubted freed
+    /// with no free in the program; asked of what is
     /// certainly freed alone, a pointer freed on one arm was the argument
     /// door's `SC0407` where the store said `SC0414`. A pointer below that
     /// this check stopped following is asked, as the store asks it.
@@ -2680,6 +2681,32 @@ enum Below {
 }
 
 impl Below {
+    /// What of `all` is asked: what [`Self::asks`] keeps, and **beside it
+    /// the `Reached::Partial` that `all` held**. The narrowing chooses
+    /// what a doubt is about; it does not make what is below known. Left
+    /// out, a copy whose only answer below was one freed site proved
+    /// `SC0414` where its store, asked of the same `Partial`, doubts it,
+    /// and `verdict` relies on a freed-behind answer never being settled.
+    /// Found by review.
+    fn narrowed(self, all: Vec<Reached>, known: &Known) -> Vec<Reached> {
+        let partial = all
+            .iter()
+            .any(|reached| matches!(reached, Reached::Partial));
+        let mut kept: Vec<Reached> = all
+            .into_iter()
+            .filter(|reached| self.asks(reached, known))
+            .collect();
+        if partial
+            && !kept.is_empty()
+            && !kept
+                .iter()
+                .any(|reached| matches!(reached, Reached::Partial))
+        {
+            kept.push(Reached::Partial);
+        }
+        kept
+    }
+
     fn asks(self, reached: &Reached, known: &Known) -> bool {
         match self {
             Below::Everything => true,

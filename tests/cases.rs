@@ -1797,7 +1797,9 @@ cases! {
         a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `copied_away` asks nothing below what it copies; the copy
         // is `SC0407` again. Ask below of what is certainly freed alone, and
-        // the copy of a pointer freed on one arm is `SC0407` again.
+        // the copy of a pointer freed on one arm is `SC0407` again. Drop the
+        // `Reached::Partial` that `Below::narrowed` keeps, and the copy is
+        // proved where its store is a doubt.
         a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `Below::MayBeFreed` leaves out `Reached::Lost`; the copy
         // is the argument door's `SC0407` again.
