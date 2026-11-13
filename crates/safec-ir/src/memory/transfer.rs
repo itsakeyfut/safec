@@ -2981,14 +2981,16 @@ impl Analysis for Allocations<'_> {
                         // is read as no smaller and no larger than the row,
                         // so a distance counted against the object is one
                         // counted against the row, and a pointer to an
-                        // array parameter keeps its proof.
+                        // array parameter keeps its proof. Not asked of an
+                        // inner address or of what this check does not
+                        // follow: `Held::recorded_width` reads both as no
+                        // width at all, so a position kept for them proves
+                        // nothing.
                         if let Some(row) =
                             self.row_converted_to_its_element(function, source.local, destination)
                         {
                             let held = &value.points_to[destination];
                             let whole = held.offset == At::Bytes(0)
-                                && !held.inner_address
-                                && !held.beyond().any_unknown()
                                 && self.unit.size_of(row).is_some_and(|row| {
                                     held.sites()
                                         .map(Loc::Heap)
