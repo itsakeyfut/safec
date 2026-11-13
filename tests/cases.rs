@@ -1800,6 +1800,9 @@ cases! {
         // Mutation: `copied_away` leaves out every lost answer again; this
         // goes silent.
         a_lost_value_copied_out_is_reported_as_its_store_is: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `reached_only_beside_another` answers nothing; `a` is
+        // believed written by the call and the `SC0411` goes.
+        a_call_handed_a_pointer_to_either_of_two_locals_may_have_missed_each: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block held as `int **` reaches the caller through a `void *`
         // level, at the top or below a box, by every door: the block records
         // the type it was held as (#902, ADR-0086). Mutation: `held_below`

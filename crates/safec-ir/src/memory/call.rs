@@ -1076,7 +1076,19 @@ impl Allocations<'_> {
                     value.exposed_in_part[*local] = true;
                 }
                 let pending = value.array_writes_before(partial);
-                value.replaced(|_| true, |local| may_write[local], WrittenBy::Call);
+                let holders: Vec<LocalId> = handed
+                    .iter()
+                    .filter_map(|argument| match argument {
+                        Operand::Copy(place) if place.projection.is_empty() => Some(place.local),
+                        _ => None,
+                    })
+                    .collect();
+                let beside = value.reached_only_beside_another(&holders);
+                value.replaced(
+                    |_| true,
+                    |local| may_write[local],
+                    WrittenBy::Call { beside: &beside },
+                );
                 value.array_writes_after(pending);
                 // **And as what each local it reaches was handed**, which is
                 // the most its body can be asked to have written there: a

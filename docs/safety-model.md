@@ -542,7 +542,10 @@ review that found it measured 17 of them, with 86 cases moved
 ([#782](https://github.com/itsakeyfut/safec/issues/782)). So a callee that
 writes less than it was handed is not detected, as a wrong hatch promise is
 not, and the route matrix's `fresh_call_*` rows hold it as a belief rather
-than a cost. Saying what a callee writes is the declaration the `owner`
+than a cost. **Except through a pointer that may name another place**: one
+handed `p`, either `&a` or `&b`, writes one of them, so a local every pointer
+it can find names only beside another may have been missed, and a read of `a`
+after `fill(p)` is reported as it is after `*p = &x;`. Saying what a callee writes is the declaration the `owner`
 sketch above would carry, not a reading of the caller. A store or a library
 copy is no call: one this check cannot place writes a local for certain only
 where it lands there alone, through a pointer that holds nothing this check

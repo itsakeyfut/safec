@@ -1801,6 +1801,53 @@ impl Known {
         self.unknown_code_reaches().sites
     }
 
+    /// The locals a call this check cannot read reaches only through a
+    /// pointer that may name something else as well, so it may have written
+    /// another in its place: every pointer it can find, `handed` and those
+    /// stored in what is exposed, asked what it names, and a local named
+    /// beside another place by each one that names it at all. **A pointer
+    /// that may name two places writes one of them.** `fill(p)` with `p`
+    /// either `&a` or `&b` was believed to write both, and a read of `a`
+    /// built silent where the store `*p = &x;` is `SC0411`. Found by the
+    /// architecture review of 2026-11-13; on `main` too.
+    ///
+    /// **A local named alone by any of them stays believed written**, the
+    /// output-parameter idiom (#782): `stash(&p); p = m; tick();` reaches `m`
+    /// through `p` alone. So does one no pointer this function recorded
+    /// names, an address stored where this check cannot place it, since
+    /// nothing says what else was beside it there.
+    ///
+    /// **Asked of what the call can find, not of what an earlier call
+    /// kept**: `keep(p); tick();` believes `a` written at `tick`, since `p`
+    /// itself was never handed and is not found. That read is still
+    /// reported, as a use of a pointer this check stopped following.
+    pub(super) fn reached_only_beside_another(&self, handed: &[LocalId]) -> BTreeSet<LocalIdx> {
+        let reached = self.unknown_code_reaches();
+        let mut beside = BTreeSet::new();
+        let mut alone = BTreeSet::new();
+        let mut ask =
+            |sites: Vec<Site>, locals: Vec<LocalIdx>| match (sites.len(), locals.as_slice()) {
+                (0, [local]) => {
+                    alone.insert(*local);
+                }
+                _ => beside.extend(locals),
+            };
+        for &holder in handed {
+            let held = &self.points_to[holder];
+            ask(held.sites().collect(), held.locals().collect());
+        }
+        for &holder in &reached.locals {
+            let held = &self.points_to[holder];
+            ask(held.sites().collect(), held.locals().collect());
+        }
+        for &container in &reached.sites {
+            let cell = &self.contents[container];
+            ask(cell.sites().collect(), cell.locals().collect());
+        }
+        beside.retain(|local| !alone.contains(local));
+        beside
+    }
+
     /// The walk [`Self::locals_named_by_unknown_code`] and
     /// [`Self::sites_named_by_unknown_code`] share, from what is exposed and
     /// every exposed local, so the sites and the locals cannot come from two
@@ -2963,7 +3010,7 @@ impl Known {
         &mut self,
         may_hold: impl Fn(LocalIdx) -> bool,
         may_write: impl Fn(LocalIdx) -> bool,
-        writer: WrittenBy,
+        writer: WrittenBy<'_>,
     ) {
         let named_now = self.locals_named_by_unknown_code();
         for local in self.escaped.indices() {
@@ -3009,7 +3056,12 @@ impl Known {
             // call's belief wrote it for certain (#803). See ADR-0074.
             if may_write(local) && self.escaped[local] {
                 match writer {
-                    WrittenBy::Call => self.believed_written_local_by_unknown_code(local),
+                    WrittenBy::Call { beside } if beside.contains(&local) => {
+                        self.written[local].may_write();
+                    }
+                    WrittenBy::Call { beside: _ } => {
+                        self.believed_written_local_by_unknown_code(local);
+                    }
                     WrittenBy::StoreOrCopy => {
                         self.written[local].may_write();
                     }
@@ -3029,10 +3081,12 @@ struct Closed {
 /// Who [`Known::replaced`] answers for, matched without a default arm so
 /// that a writer added answers what it does to a local it may reach.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum WrittenBy {
+pub(super) enum WrittenBy<'a> {
     /// A call this check cannot read, believed to write what it may reach
-    /// (#782).
-    Call,
+    /// (#782), except `beside`, which it reaches only through a pointer that
+    /// may name another place and so may have missed. See
+    /// [`Known::reached_only_beside_another`].
+    Call { beside: &'a BTreeSet<LocalIdx> },
     /// A store or a library copy this check could not prove one local for,
     /// which may have missed each it may reach. See ADR-0074.
     StoreOrCopy,
