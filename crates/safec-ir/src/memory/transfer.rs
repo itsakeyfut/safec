@@ -2312,6 +2312,54 @@ impl Analysis for Allocations<'_> {
                 origin: _,
             } => {}
             Element::Assign(operation) => {
+                // **The store door's answer for every field, never `..`**, as
+                // the copy's and `realloc`'s are, so a field added to `Known`
+                // is `error[E0027]` here too: the store is the door fixed most
+                // often, and was outside this table (the memory model rebuilt
+                // on #924, stage 2).
+                let Known {
+                    // Written directly: the value of the local assigned, and
+                    // of a local the store lands in through its address.
+                    points_to: _,
+                    // Written directly where a local's address is taken.
+                    escaped: _,
+                    // Written directly, `Known::written_local`, and through
+                    // `Self::initialised_by`: what the store writes.
+                    written: _,
+                    // Written directly: how many levels a block it holds was
+                    // held as pointers.
+                    held_levels: _,
+                    // Through `Self::land_contents`: what the blocks it lands
+                    // in may contain, and what an unplaced store exposes.
+                    contents: _,
+                    exposed: _,
+                    lost_exposed: _,
+                    // Through `Known::noticed`, where what it stores reaches
+                    // memory a pending read or call may see.
+                    pending: _,
+                    calls: _,
+                    exposed_after_call: _,
+                    // Through `Self::mark_leaving`: a store into memory that
+                    // leaves marks what it carries (ADR-0085).
+                    stored_out: _,
+                    left_at: _,
+                    // Through `Self::note_less_than_a_pointer`: a store
+                    // narrower than a pointer (ADR-0087).
+                    part_written: _,
+                    // Read, by `Self::replaces` and the part-of-a-pointer
+                    // rule: how wide each place is.
+                    extent: _,
+                    // Through `Known::pour`, which the landing pours with.
+                    stored_in_part: _,
+                    // Not written by this arm itself; a store changes none of
+                    // these except through a helper named above.
+                    state: _,
+                    handed_away: _,
+                    realloced: _,
+                    handed_at_most: _,
+                    exposed_in_part: _,
+                    handed_untyped: _,
+                } = &*value;
                 // **What a store that leaves carries is stored out**, asked
                 // before it lands, as the store door asks it: the sites the
                 // stored value holds, and what a pointer read out of memory
