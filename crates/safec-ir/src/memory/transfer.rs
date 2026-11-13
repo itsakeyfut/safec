@@ -21,7 +21,7 @@ use super::init::Wrote;
 use super::known::{ELEMENTS_KEPT, Known};
 use super::parts::{
     At, Cell, Earliest, Extent, Freeing, Held, Init, Inits, Levels, Marks, PendingRead, PlaceInit,
-    Reached, SiteState, Width, earlier, joined_carried,
+    Reached, Row, SiteState, Width, earlier, joined_carried,
 };
 use super::store::{Landing, StoreKind, Strong};
 use crate::library::{Callee, Library};
@@ -172,14 +172,29 @@ impl Allocations<'_> {
     /// exception, and what a missed arm would mean is that a write through a
     /// pointer silently carries nothing, which is a silence rather than a build
     /// error.
-    fn carried(&self, function: &Function, written_value: &Rvalue, value: &Known) -> Held {
+    fn carried(
+        &self,
+        function: &Function,
+        written_value: &Rvalue,
+        into: &Place,
+        value: &Known,
+    ) -> Held {
         match written_value {
             // `*pp = q + 1;` arrives here as a copy, not as the arithmetic:
             // the lowering puts the addition in a temporary and copies it
             // out, and the direct assignment in `Allocations::element` has
             // already given that temporary `q`'s sites.
+            //
+            // **Taken as the type it is stored as**, as a copy into a local
+            // is: `*vp = &a[0];` with `vp` a `void **` stores a pointer that
+            // walks `a[0]`'s row, and read back as an `int *` it still does.
+            // Found by review (#947). See `Self::converted`.
             Rvalue::Use(Operand::Copy(source)) if source.projection.is_empty() => {
-                value.points_to[source.local].clone()
+                let mut held = value.points_to[source.local].clone();
+                if let Some(to) = self.unit.place_ty(function, into) {
+                    self.converted(&mut held, function.local(source.local), to, &value.extent);
+                }
+                held
             }
             // The arithmetic written straight into the place, which no C
             // reaches for the reason above and another frontend may. The
@@ -589,6 +604,55 @@ impl Allocations<'_> {
             levels.push(Width::AtMost(width));
         }
         Some(Levels::new(levels))
+    }
+
+    /// `held`, a value of pointer type `from`, taken as one of pointer type
+    /// `to`. **Where a pointer to an array is taken as a pointer to anything
+    /// else, it walks that array's elements**: `a[0]` of `int a[2][2]` is
+    /// `&a[0]` taken as an `int *`, and from then on it is in a row of eight
+    /// bytes inside an object of sixteen, so `a[0][2]` reaches past its row,
+    /// which C17 6.5.6 p8 makes undefined (Annex J.2 names `a[1][7]` of `int
+    /// a[4][5]`). Counted against the object it was proved to fit (#947).
+    ///
+    /// A row already walked is narrowed, and a row that is the whole of
+    /// every object the value names is no row: at its start, and every
+    /// object's lower bound the row's size, which is all a fit ever counts
+    /// against (`fit::fits`), so a pointer to an array parameter keeps its
+    /// proof. A position not counted has no row to be in.
+    pub(super) fn converted(
+        &self,
+        held: &mut Held,
+        from: TyId,
+        to: TyId,
+        extent: &Table<Loc, Option<Extent>>,
+    ) {
+        let (Ty::Pointer(from), Ty::Pointer(to)) = (self.unit.ty(from), self.unit.ty(to)) else {
+            return;
+        };
+        if from == to || !matches!(self.unit.ty(from), Ty::Array { .. }) {
+            return;
+        }
+        let At::Bytes(at) = held.offset else {
+            return;
+        };
+        let entered = self.unit.size_of(from).map(|len| Row { start: at, len });
+        let row = match (held.row, entered) {
+            (Some(walked), Some(entered)) => walked.within(entered),
+            (None, entered) => entered,
+            (Some(_), None) => None,
+        };
+        let Some(row) = row else {
+            held.row = None;
+            held.offset = At::Unknown;
+            return;
+        };
+        let whole = row.start == 0
+            && held
+                .sites()
+                .map(Loc::Heap)
+                .chain(held.locals().map(Loc::Local))
+                .all(|place| extent[place].is_some_and(|extent| extent.lower() == row.len));
+        held.row = (!whole).then_some(row);
     }
 
     /// Whether a value of type `ty` points at memory that holds pointers,
@@ -2487,7 +2551,7 @@ impl Analysis for Allocations<'_> {
                 });
                 if marks {
                     let carried: Vec<Site> = self
-                        .carried(function, &operation.value, value)
+                        .carried(function, &operation.value, &operation.place, value)
                         .sites()
                         .collect();
                     // How many levels the stored-into type reads pointers at.
@@ -2598,7 +2662,7 @@ impl Analysis for Allocations<'_> {
                 // exposing branch, which is a false report the reader can see
                 // until it is recorded inside the local instead. See ADR-0039.
                 if !operation.place.projection.is_empty() {
-                    let written = self.carried(function, &operation.value, value);
+                    let written = self.carried(function, &operation.value, &operation.place, value);
                     // **A pointer that reaches an array only by #639's rule,
                     // stored**, into memory or into a local through its
                     // address, either of which a load reads back without its
@@ -2863,7 +2927,7 @@ impl Analysis for Allocations<'_> {
                     // a pointer that must, and telling those apart is
                     // ADR-0028.
                     //
-                    let written = self.carried(function, &operation.value, value);
+                    let written = self.carried(function, &operation.value, &operation.place, value);
 
                     // **A write this check can be certain about replaces what
                     // the target held.** The set names one local and says it
@@ -2941,7 +3005,17 @@ impl Analysis for Allocations<'_> {
                     // headline program is not an error at all.
                     Rvalue::Use(Operand::Copy(source)) if source.projection.is_empty() => {
                         let indeterminate = value.holds_fresh_read(LocalIdx::of(source.local));
-                        value.replace(at, value.points_to[source.local].clone());
+                        // **Taken as the type it is assigned to**: a pointer
+                        // to a row taken as a pointer to its elements walks
+                        // the row. See `Self::converted`.
+                        let mut held = value.points_to[source.local].clone();
+                        self.converted(
+                            &mut held,
+                            function.local(source.local),
+                            function.local(destination),
+                            &value.extent,
+                        );
+                        value.replace(at, held);
                         // See `Known::holds_fresh_read`.
                         value.points_to[destination].fresh_read = indeterminate;
                     }

@@ -18,8 +18,8 @@ use crate::source::{SourceMap, Span, inside};
 use super::allocations::{Allocations, handed_places, stored_pointer};
 use super::built::named;
 use super::fit::{
-    Fit, fits, folded, only_if_certain, pointee, pointee_width, read_from_locals, slots_leaving,
-    through_locals,
+    Fit, fits, fits_as_bytes, folded, only_if_certain, pointee, pointee_width, read_from_locals,
+    slots_leaving, through_locals,
 };
 use super::index::{Idx, Loc, LocalIdx, Site};
 use super::known::Known;
@@ -1011,7 +1011,7 @@ pub(super) fn reached_by_library(
         // have written it unseen, as an access does.
         let fit = if place.projection.is_empty() {
             match width {
-                Some(width) => fits(analysis, function, local, width, known, true),
+                Some(width) => fits_as_bytes(analysis, function, local, width, known, true),
                 // Anything that holds something is unknown here.
                 None => fits(analysis, function, local, 0, known, true).map(|_| Fit::Unknown),
             }

@@ -1335,8 +1335,22 @@ impl Allocations<'_> {
             // 7.24.6 say so of each. See ADR-0039.
             Callee::ReturnsFirst | Callee::Copies => {
                 let first = match arguments.first() {
+                    // **Taken as the parameter it was handed to**, which is
+                    // where a pointer to a row becomes a `void *`:
+                    // `memcpy(&a[0], b, 4)` returns a pointer that walks
+                    // `a[0]`'s row. Found by review (#947). See
+                    // `Self::converted`.
                     Some(Operand::Copy(source)) if source.projection.is_empty() => {
-                        value.points_to[source.local].clone()
+                        let mut held = value.points_to[source.local].clone();
+                        if let Some(parameter) = self.unit.function(*callee).parameters().next() {
+                            self.converted(
+                                &mut held,
+                                function.local(source.local),
+                                self.unit.function(*callee).local(parameter),
+                                &value.extent,
+                            );
+                        }
+                        held
                     }
                     // `memset(*tab, 0, 4)` returns a pointer read out of
                     // memory, and says so, as an assignment of `*tab` would.

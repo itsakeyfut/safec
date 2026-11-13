@@ -6403,6 +6403,27 @@ cases! {
         an_index_one_past_the_end_of_an_allocation_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_index_one_past_the_end_of_a_local_array_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_index_this_check_cannot_read_into_an_allocation_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A subscript past its row, inside the whole object, by every route
+        // a pointer into a row takes (#947): each `SC0412` at the access,
+        // and an access inside a row proved. Mutation: drop the row where a
+        // pointer to an array is taken as a pointer to anything else
+        // (`Allocations::converted` leaves `held.row` as it was); the seven
+        // overruns, the store through `void **`, `memcpy`'s result and the
+        // step back from `r[1]` go silent. Mutation: ask the row at a store
+        // with no conversion (`carried` copies the value as it was); the
+        // store through `void **` goes silent. Mutation: count a row starting
+        // anywhere as the whole object; the step back from `r[1]` goes
+        // silent. Mutation: ignore the row at a typed access in `fit`; every
+        // overrun goes silent.
+        a_subscript_past_its_row_of_an_array_of_arrays_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A row that is the whole object is no row, so a pointer into an
+        // array of one row joins a plain pointer with its position kept, and
+        // `memset` of a whole array of arrays through `&a[0]` writes the
+        // object it may. Mutation: keep a row that is the whole object; the
+        // join loses its position and `p[1]` is doubted. Mutation: ask the
+        // row of a library call's bytes (`fits` in place of `fits_as_bytes`
+        // in `report::reached_by_library`); the `memset` is doubted.
+        a_pointer_into_a_whole_row_is_proved_and_bytes_may_cover_every_row: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer stored into a row is reported where it is stored and read
         // back, and named as freed at `*q` (#639). Mutation: the edge is
         // dropped for every local again; this loses the `SC0402`.
