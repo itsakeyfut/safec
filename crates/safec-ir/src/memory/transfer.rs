@@ -381,31 +381,47 @@ impl Allocations<'_> {
     /// it points at a position counted from the start. One body for a
     /// narrow store and a partial `memset`. See [`Self::note_narrow_store`].
     pub(super) fn note_part_of_a_pointer(&self, local: LocalId, at: Span, value: &mut Known) {
+        let held = &value.points_to[local];
+        let places: Vec<Loc> = held
+            .sites()
+            .map(Loc::Heap)
+            .chain(held.locals().map(Loc::Local))
+            .collect();
+        self.note_less_than_a_pointer(places, at, value);
+    }
+
+    /// **A write of less than a pointer into `places`**, whoever wrote it: a
+    /// store narrower than a pointer, a `memset` or a library copy whose
+    /// length ends part way through one. **One rule for the three** (the
+    /// memory model rebuilt on #924, stage 2): written three times, they
+    /// noted different places, and `c[0] = one;`, `memset(c, 1, 1);` and
+    /// `memcpy(c, &one, 1);` over one stored pointer gave three answers.
+    ///
+    /// **Every place not known to be narrower than a pointer**, which holds
+    /// no pointer to be part of: noted, `memcpy(&k, &i, 4)` of an `int` into
+    /// an `int` moved the report off the copy that wrote half a pointer,
+    /// found by review. A place of no constant size may hold one, and is
+    /// noted, whatever the write's position.
+    ///
+    /// **And what was stored through a pointer there is no longer what a
+    /// read through it reads**: `*m = x; *c = 1; q = *m;` with `c` into `m`'s
+    /// block read half of `x` in silence, found while measuring #917.
+    pub(super) fn note_less_than_a_pointer(
+        &self,
+        places: impl IntoIterator<Item = Loc>,
+        at: Span,
+        value: &mut Known,
+    ) {
         let target = self.unit.target();
         let pointer = u64::from(target.pointer_bits() / target.char().bits());
-        let held = &value.points_to[local];
-        if !matches!(held.offset, At::Bytes(_)) {
-            return;
-        }
-        let wide_enough =
-            |extent: Option<Extent>| extent.is_some_and(|extent| extent.lower() >= pointer);
-        let mut places: Vec<Loc> = held
-            .sites()
-            .filter(|&site| wide_enough(value.extent[site]))
-            .map(Loc::Heap)
+        let narrower = |extent: Option<Extent>| matches!(extent, Some(Extent::Exactly(size)) if size < pointer);
+        let places: Vec<Loc> = places
+            .into_iter()
+            .filter(|&place| !narrower(value.extent[place]))
             .collect();
-        places.extend(
-            held.locals()
-                .filter(|&local| wide_enough(value.extent[local]))
-                .map(Loc::Local),
-        );
         for &written in &places {
             value.note_part_written(self.sources, written, at);
         }
-        // **And what was stored through a pointer there is no longer what a
-        // read through it reads**, as after a partial copy: `*m = x; *c = 1;
-        // q = *m;` with `c` into `m`'s block read half of `x` in silence.
-        // Found while measuring #917.
         value.written_over(&places);
     }
 

@@ -663,20 +663,11 @@ impl Allocations<'_> {
                             // a partial copy of its own. A block, or a local
                             // whose size this check cannot read, is noted.
                             if in_part {
-                                let target = self.unit.target();
-                                let pointer =
-                                    u64::from(target.pointer_bits() / target.char().bits());
-                                let fits = |at: Loc| match at {
-                                    Loc::Heap(_) | Loc::Unknown(_) => true,
-                                    Loc::Local(local) => function
-                                        .locals()
-                                        .nth(local.index())
-                                        .and_then(|local| self.unit.size_of(function.local(local)))
-                                        .is_none_or(|size| size >= pointer),
-                                };
-                                for &at in to.iter().filter(|&&at| fits(at)) {
-                                    value.note_part_written(self.sources, at, origin.span());
-                                }
+                                self.note_less_than_a_pointer(
+                                    to.iter().copied(),
+                                    origin.span(),
+                                    value,
+                                );
                             }
                             // **And what was stored through a pointer there is
                             // no longer what a read through it reads**: the
