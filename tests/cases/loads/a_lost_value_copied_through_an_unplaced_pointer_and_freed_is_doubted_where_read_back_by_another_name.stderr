@@ -1,3 +1,13 @@
+error[SC0414]: this stores `u` where code outside this function may read it, and this check stopped following it
+    ╭─[ a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:17:5 ]
+    │
+ 17 │     memcpy(w, &u, 8);
+    │     ────────┬───────  
+    │             ╰───────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
 error[SC0401]: this frees `u`, which this check stopped following
     ╭─[ a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:18:14 ]
     │

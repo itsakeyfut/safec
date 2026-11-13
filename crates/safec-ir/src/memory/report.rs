@@ -2241,20 +2241,24 @@ pub(super) fn copied_away(
             source
         }
     };
+    // **A value this check stopped following is asked as the store asks
+    // it**, where the value itself was lost: `*out = v;` with `v` a pointer
+    // an earlier turn's block lost is `SC0414`, and its copy said nothing,
+    // since the copy left out every lost answer, found by the architecture
+    // review of 2026-11-13. What it still leaves out is the lost answer the
+    // copy's own taking of `&v` makes, which a block holding its own address
+    // was doubted for.
+    let value_lost = from.projection.is_empty() && known.points_to[source.local].beyond().lost();
     let reached: Vec<Reached> = known
         .handed_reached(&source)
         .into_iter()
         .filter(|reached| match reached {
             Reached::Site(site) => matches!(known.state[*site], SiteState::Freed { .. }),
             Reached::SetFreed(_) => true,
-            Reached::Lost(_) | Reached::Partial => false,
+            Reached::Lost(_) => value_lost,
+            Reached::Partial => false,
         })
         .collect();
-    // **And a freed pointer one level below what it copies**, as the store
-    // asks it (`stored_away`): asked by the store alone, `*out = b;` was
-    // `SC0414` and `memcpy(out, &b, 8)` of the same `b` was the argument
-    // door's `SC0407` (the memory model rebuilt on #924, stage 2). Said, it
-    // stands for the copy, so the argument door says nothing more of it.
     // **Or a freed pointer one level below what it copies**, as the store
     // asks it (`stored_away`, by `freed_behind`): asked by the store alone,
     // `*out = b;` was `SC0414` and `memcpy(out, &b, 8)` of the same `b` was

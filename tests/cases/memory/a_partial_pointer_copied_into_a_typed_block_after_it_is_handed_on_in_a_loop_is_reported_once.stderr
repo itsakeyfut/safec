@@ -38,6 +38,16 @@ error[SC0411]: this lets a pointer leave to memory that may not have been writte
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: write every pointer in it on every path before the function returns, or allocate it with `calloc`
+error[SC0414]: this stores `i` where code outside this function may read it, and this check stopped following it
+    ╭─[ a_partial_pointer_copied_into_a_typed_block_after_it_is_handed_on_in_a_loop_is_reported_once.c:11:9 ]
+    │
+ 11 │         memcpy(m, &i, 4);
+    │         ────────┬───────  
+    │                 ╰───────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
 error[SC0407]: this passes `m`, which may point to a freed allocation
     ╭─[ a_partial_pointer_copied_into_a_typed_block_after_it_is_handed_on_in_a_loop_is_reported_once.c:11:9 ]
     │
@@ -48,13 +58,3 @@ error[SC0407]: this passes `m`, which may point to a freed allocation
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0407]: this passes a pointer to where a pointer that may have been freed is stored
-    ╭─[ a_partial_pointer_copied_into_a_typed_block_after_it_is_handed_on_in_a_loop_is_reported_once.c:11:9 ]
-    │
- 11 │         memcpy(m, &i, 4);
-    │         ────────┬───────  
-    │                 ╰───────── passed here, perhaps holding a freed pointer behind it
-────╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this one

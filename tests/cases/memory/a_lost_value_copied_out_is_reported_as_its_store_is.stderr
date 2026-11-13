@@ -1,0 +1,10 @@
+error[SC0414]: this stores `v` where code outside this function may read it, and this check stopped following it
+    ╭─[ a_lost_value_copied_out_is_reported_as_its_store_is.c:15:13 ]
+    │
+ 15 │             memcpy(out, &v, 8);
+    │             ─────────┬────────  
+    │                      ╰────────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds

@@ -5108,7 +5108,10 @@ const LOST_READ_FROM_A_LOCAL: &str = "a lost pointer read out of a local proves 
 /// [`every_pair_kept_apart_still_differs`]. Named as the rows are, without
 /// the depth.
 const COPY_STAYS_AT_DEPTH_ZERO: &str = "a library copy into memory that does not leave is not asked the width of what it carries, as a store there is not (the memory model rebuilt on #924, stage 2); at depth zero the block the copy lands in stays in this function, and one level below it is memory a load reached, which may leave";
+const COPY_ASKS_LOST: &str = "a library copy lets a value this check stopped following leave as `SC0414`, as a store of the same value by name does (#924); one level down the copy reads it out of memory where the lost answer stands, and the store spelling of that route does not ask it yet";
 const APART: &[(&str, &str)] = &[
+    ("reborn_memcpy_both", COPY_ASKS_LOST),
+    ("reborn_memcpy_one", COPY_ASKS_LOST),
     ("reborn_memcpy_block_both", COPY_STAYS_AT_DEPTH_ZERO),
     ("reborn_memcpy_block_one", COPY_STAYS_AT_DEPTH_ZERO),
     ("caller_ret_both", ASKED_WHERE_STORED),
