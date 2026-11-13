@@ -4573,22 +4573,12 @@ const COPY_DIFFERS: &[(&str, &str)] = &[
     ("left_behind_memcpy_d2_one", DIFFERED_WHEN_ASKED),
     ("lost_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
     ("lost_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
     ("lost_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
     ("lost_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
     ("lost_memcpy_d1_both", DIFFERED_WHEN_ASKED),
     ("lost_memcpy_d1_one", DIFFERED_WHEN_ASKED),
     ("lost_memcpy_d2_both", DIFFERED_WHEN_ASKED),
     ("lost_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("part_local_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
-    ("part_local_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("part_local_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
-    ("part_local_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
-    ("part_local_memcpy_d0_both", DIFFERED_WHEN_ASKED),
-    ("part_local_memcpy_d0_one", DIFFERED_WHEN_ASKED),
-    ("part_local_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("part_local_memcpy_d1_one", DIFFERED_WHEN_ASKED),
     ("part_pointer_memcpy_d1_both", DIFFERED_WHEN_ASKED),
     ("part_pointer_memcpy_d1_one", DIFFERED_WHEN_ASKED),
     ("part_pointer_memcpy_d2_both", DIFFERED_WHEN_ASKED),
@@ -4645,14 +4635,6 @@ const COPY_DIFFERS: &[(&str, &str)] = &[
     ("stored_out_memcpy_d1_one", DIFFERED_WHEN_ASKED),
     ("stored_out_memcpy_d2_both", DIFFERED_WHEN_ASKED),
     ("stored_out_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("width_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
-    ("width_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("width_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
-    ("width_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
-    ("width_memcpy_d0_both", DIFFERED_WHEN_ASKED),
-    ("width_memcpy_d0_one", DIFFERED_WHEN_ASKED),
-    ("width_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("width_memcpy_d1_one", DIFFERED_WHEN_ASKED),
 ];
 
 /// The codes a run reports, as a set.
@@ -5125,7 +5107,10 @@ const LOST_READ_FROM_A_LOCAL: &str = "a lost pointer read out of a local proves 
 /// pair listed here that no longer differs fails
 /// [`every_pair_kept_apart_still_differs`]. Named as the rows are, without
 /// the depth.
+const COPY_STAYS_AT_DEPTH_ZERO: &str = "a library copy into memory that does not leave is not asked the width of what it carries, as a store there is not (the memory model rebuilt on #924, stage 2); at depth zero the block the copy lands in stays in this function, and one level below it is memory a load reached, which may leave";
 const APART: &[(&str, &str)] = &[
+    ("reborn_memcpy_block_both", COPY_STAYS_AT_DEPTH_ZERO),
+    ("reborn_memcpy_block_one", COPY_STAYS_AT_DEPTH_ZERO),
     ("caller_ret_both", ASKED_WHERE_STORED),
     ("caller_ret_one", ASKED_WHERE_STORED),
     ("width_ret_both", ASKED_WHERE_STORED),

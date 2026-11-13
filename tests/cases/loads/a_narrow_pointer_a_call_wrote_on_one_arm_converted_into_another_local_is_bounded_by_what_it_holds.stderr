@@ -8,16 +8,6 @@ error[SC0413]: this lets `v` leave, which may not point at an object as wide as 
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
-error[SC0413]: this lets `c` leave, which may not point at an object as wide as its type
-    ╭─[ a_narrow_pointer_a_call_wrote_on_one_arm_converted_into_another_local_is_bounded_by_what_it_holds.c:14:5 ]
-    │
- 14 │     memcpy(m, &c, 8);
-    │     ────────┬───────  
-    │             ╰───────── stored here
-────╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0412]: this may reach outside the object `r` points at
     ╭─[ a_narrow_pointer_a_call_wrote_on_one_arm_converted_into_another_local_is_bounded_by_what_it_holds.c:18:5 ]
     │

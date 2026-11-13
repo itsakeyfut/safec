@@ -2544,11 +2544,24 @@ pub(super) fn departed_at_call(
             // destination, asked nothing and built where main refused it.
             // Found by review. The destination is read for its type alone,
             // below, where it is a place.
+            //
+            // **Its width only where it may leave**, as the store door asks
+            // it (`departed_in_element`): a copy into memory nothing outside
+            // this function reads is a store there, whose width a load that
+            // reads it back asks. Asked regardless, `memcpy(b, &v, 8)` into
+            // this function's own block said a pointer to one byte left
+            // where `*b = v;` said nothing (the memory model rebuilt on #924,
+            // stage 2). Part of a pointer is still asked here, below, as
+            // ADR-0073 rule 4 asks it; where no `Store` is made, as above,
+            // the width is asked too.
+            let stays = analysis
+                .store_at(terminator, known)
+                .is_some_and(|store| !store.leaves);
             let source_ty = match arguments.get(1) {
                 Some(Operand::Copy(place)) => analysis.unit.place_ty(function, place),
                 Some(Operand::Constant(_)) | None => None,
             };
-            if let (Some(source), Some(source_ty)) = (arguments.get(1), source_ty) {
+            if let (Some(source), Some(source_ty), false) = (arguments.get(1), source_ty, stays) {
                 contents_leaving(
                     findings,
                     departed,
@@ -2571,7 +2584,7 @@ pub(super) fn departed_at_call(
                 Some(Operand::Copy(place)) => analysis.unit.place_ty(function, place),
                 Some(Operand::Constant(_)) | None => None,
             };
-            if let (Some(source), Some(into_ty)) = (arguments.get(1), into_ty) {
+            if let (Some(source), Some(into_ty), false) = (arguments.get(1), into_ty, stays) {
                 contents_leaving(
                     findings,
                     departed,
