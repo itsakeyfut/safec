@@ -372,22 +372,34 @@ impl Allocations<'_> {
     /// (#917), was counted as writing the slot whole. See
     /// `Known::part_written`, ADR-0087 and ADR-0092 rule 5.
     ///
-    /// **Only where it is placed**: one dereference, at a position counted
-    /// from the start. A store at a position this check cannot count, a
-    /// `char` loop's `c[i] = 0;` among them, is no partial write here, since
-    /// it may fill every byte of the slot over the loop; such a store is a
-    /// may-write of the slot instead (ADR-0094 rule 3, #893).
-    /// **Not memory narrower than a pointer**, which holds no pointer to make
-    /// of it. A store of a pointer's whole width is not narrow.
-    fn note_narrow_store(&self, place: &Place, wrote: Write, at: Span, value: &mut Known) {
-        if derefs(place) != 1 {
-            return;
-        }
+    /// **Wherever it lands, at any depth**: one dereference in what its
+    /// pointer names, and deeper in what the level above may be, the
+    /// store's own [`Landing`]. Asked at one dereference alone, `**cc = 1;`
+    /// with `*cc` into memory of pointers wrote the slot whole where `*c =
+    /// 1;` is part of a pointer; found by the architecture review of
+    /// 2026-11-13. A store at a position this check cannot count, a `char`
+    /// loop's `c[i] = 0;` among them, is a may-write of the slot as well
+    /// (ADR-0094 rule 3, #893). **Not memory narrower than a pointer**,
+    /// which holds no pointer to make of it. A store of a pointer's whole
+    /// width is not narrow.
+    fn note_narrow_store(&self, landing: &Landing, wrote: Write, at: Span, value: &mut Known) {
         let target = self.unit.target();
         let pointer = u64::from(target.pointer_bits() / target.char().bits());
-        let narrow = wrote.width.is_some_and(|width| width < pointer);
-        if narrow {
-            self.note_part_of_a_pointer(place.local, at, value);
+        if !wrote.width.is_some_and(|width| width < pointer) {
+            return;
+        }
+        match landing.deep {
+            0 => {}
+            1 => self.note_part_of_a_pointer(landing.pointer, at, value),
+            _ => {
+                let places: Vec<Loc> = landing
+                    .containers
+                    .iter()
+                    .map(|&site| Loc::Heap(site))
+                    .chain(landing.targets.iter().map(|&local| Loc::Local(local)))
+                    .collect();
+                self.note_less_than_a_pointer(places, at, value);
+            }
         }
     }
 
@@ -2503,7 +2515,7 @@ impl Analysis for Allocations<'_> {
                 );
                 // And part of a pointer, where it is narrower than one. See
                 // `Self::note_narrow_store`.
-                self.note_narrow_store(&operation.place, wrote, operation.origin.span(), value);
+                self.note_narrow_store(&before, wrote, operation.origin.span(), value);
 
                 // **Into the allocations the pointer holds, what the write
                 // carries is inside them**, exposed whenever they are, by

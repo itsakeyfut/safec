@@ -1804,6 +1804,9 @@ cases! {
         // Mutation: `reached_only_beside_another` answers nothing; `a` is
         // believed written by the call and the `SC0411` goes.
         a_call_handed_a_pointer_to_either_of_two_locals_may_have_missed_each: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `note_narrow_store` notes nothing below one
+        // dereference; the store's `SC0413` goes.
+        a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block held as `int **` reaches the caller through a `void *`
         // level, at the top or below a box, by every door: the block records
         // the type it was held as (#902, ADR-0086). Mutation: `held_below`
