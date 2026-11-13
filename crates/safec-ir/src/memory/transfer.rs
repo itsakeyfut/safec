@@ -16,7 +16,7 @@ use super::LostReason;
 use super::allocations::{Allocations, innermost_element, stored_pointer};
 use super::built::{built_from, named};
 use super::fit::{Fit, fits};
-use super::index::{Idx, Loc, LocalIdx, Site, Table};
+use super::index::{Idx, Loc, LocalIdx, Site, Table, Target};
 use super::init::Wrote;
 use super::known::{ELEMENTS_KEPT, Known};
 use super::parts::{
@@ -908,7 +908,6 @@ impl Allocations<'_> {
             pending: _,
             calls: _,
             exposed_after_call: _,
-            lost_exposed: _,
             // Read: how wide what is read out of is, by `Self::contents_read`
             // and `Self::read_from_fits`.
             extent: _,
@@ -1596,7 +1595,6 @@ impl Allocations<'_> {
             pending,
             calls,
             exposed_after_call,
-            lost_exposed,
             extent,
             handed_at_most,
             exposed_in_part,
@@ -1655,7 +1653,7 @@ impl Allocations<'_> {
         for place in written.indices() {
             let there = &from.written[place];
             let site = match place {
-                Loc::Local(_) | Loc::Unknown(_) => {
+                Loc::Local(_) => {
                     written[place].join(there, back);
                     continue;
                 }
@@ -1731,8 +1729,6 @@ impl Allocations<'_> {
         for (here, there) in handed_at_most.iter_mut().zip(&from.handed_at_most) {
             here.bound_by(there);
         }
-        // A may-fact, so a union, as `exposed` is.
-        *lost_exposed |= from.lost_exposed;
         // A side that never made the site says nothing about it. A local's
         // size is the same on both sides, and joins as itself. Two sides
         // that both did are joined as `Extent::joined` says, which only
@@ -2084,7 +2080,7 @@ impl Analysis for Allocations<'_> {
             // parameter included: what a caller holds is its own local.
             escaped: Table::filled(false, self.locals),
             handed_away: Table::filled(false, self.locals),
-            exposed: Table::filled(false, Loc::count(self.locals)),
+            exposed: Table::filled(false, Target::count(self.locals)),
             contents: Table::filled(Cell::none(self.locals), self.locals),
             realloced: Table::filled(None, self.locals),
             // Nothing has been read yet, so there is nothing a free could be
@@ -2092,7 +2088,6 @@ impl Analysis for Allocations<'_> {
             pending: BTreeMap::new(),
             calls: BTreeMap::new(),
             exposed_after_call: BTreeSet::new(),
-            lost_exposed: false,
             // Nothing is made yet but the parameters, below, and every local
             // is the size its type is. See `Known::extent`.
             extent: {
@@ -2115,7 +2110,7 @@ impl Analysis for Allocations<'_> {
             // (`Self::elements_at_entry`), and whole for every other place.
             written: {
                 let unwritten = self.unwritten_at_entry();
-                let mut written =
+                let mut written: Table<Loc, PlaceInit> =
                     Table::filled(PlaceInit::whole_of(Init::Written), Loc::count(self.locals));
                 for (local, slots) in written.locals().zip(self.elements_at_entry()) {
                     written[local] = if slots.len() > 0 {
@@ -2360,7 +2355,6 @@ impl Analysis for Allocations<'_> {
                     // in may contain, and what an unplaced store exposes.
                     contents: _,
                     exposed: _,
-                    lost_exposed: _,
                     // Through `Known::noticed`, where what it stores reaches
                     // memory a pending read or call may see.
                     pending: _,

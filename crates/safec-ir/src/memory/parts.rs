@@ -12,7 +12,7 @@ use crate::ir::Place;
 use crate::source::{SourceMap, Span};
 
 use super::bits::Bits;
-use super::index::{Loc, LocalIdx, Site, Table, Why};
+use super::index::{Loc, LocalIdx, Site, Table, Target, Why};
 use super::{Carried, LostReason};
 
 /// A free, and whether C has ordered it before what comes after it.
@@ -908,7 +908,7 @@ pub(super) struct Held {
     /// Two things set it: taking an address, `pp = &p;`, and a call this check
     /// cannot read, whose result may be any local whose address escaped. See
     /// ADR-0039.
-    pub(super) names: Bits<Loc>,
+    pub(super) names: Bits<Target>,
     /// Where the allocation this local held was freed, when the free could not
     /// say which member of the set it was.
     ///
@@ -1431,7 +1431,7 @@ impl Held {
         // local with no size are both nothing read, `0`. See `Known::extent`.
         self.names
             .ones()
-            .filter(|place| !matches!(place, Loc::Unknown(_)))
+            .filter_map(Target::place)
             .map(|place| {
                 extent[place]
                     .unwrap_or(Extent::AtLeast(0))
@@ -1478,12 +1478,12 @@ impl Held {
     /// Whether this value may name the place this check does not model for
     /// `why`: what each mark was before it was a member of the set.
     pub(super) fn may_name(&self, why: Why) -> bool {
-        self.names.get(Loc::Unknown(why))
+        self.names.get(Target::Unknown(why))
     }
 
     /// Name the place this check does not model for `why`.
     pub(super) fn name_unknown(&mut self, why: Why) {
-        self.names.set(Loc::Unknown(why));
+        self.names.set(Target::Unknown(why));
     }
 
     // **The marks are set by event, not by name**: each method below sets
@@ -1557,27 +1557,27 @@ impl Held {
 
     /// Every local whose address this value may be, its address edges.
     pub(super) fn locals(&self) -> impl Iterator<Item = LocalIdx> + '_ {
-        self.names.ones().filter_map(Loc::local)
+        self.names.ones().filter_map(Target::local)
     }
 
     /// Whether this value may be `local`'s address.
     pub(super) fn names_local(&self, local: LocalIdx) -> bool {
-        self.names.get(Loc::Local(local))
+        self.names.get(Target::Local(local))
     }
 
     /// Also be `local`'s address.
     pub(super) fn name_local(&mut self, local: LocalIdx) {
-        self.names.set(Loc::Local(local));
+        self.names.set(Target::Local(local));
     }
 
     /// No longer be `local`'s address.
     pub(super) fn unname_local(&mut self, local: LocalIdx) {
-        self.names.remove(Loc::Local(local));
+        self.names.remove(Target::Local(local));
     }
 
     /// Whether this value holds `site`.
     pub(super) fn has_site(&self, site: Site) -> bool {
-        self.names.get(Loc::Heap(site))
+        self.names.get(Target::Heap(site))
     }
 
     /// Whether this value holds any site.
@@ -1664,7 +1664,7 @@ impl Held {
             may_be_null,
         } = marks;
         let mut held = Held {
-            names: Bits::new(Loc::count(sites)),
+            names: Bits::new(Target::count(sites)),
             freed,
             writes_elsewhere,
             offset,
@@ -1712,7 +1712,7 @@ impl Held {
     /// returned at `Unknown`, and the join makes the whole `Unknown`, which is
     /// the answer that cannot claim more than both said.
     pub(super) fn hold(&mut self, site: Site, offset: At) {
-        self.names.set(Loc::Heap(site));
+        self.names.set(Target::Heap(site));
         self.offset = self.offset.joined(offset);
     }
 
@@ -1750,7 +1750,7 @@ impl Held {
 
     /// Every site held, in order.
     pub(super) fn sites(&self) -> impl Iterator<Item = Site> + '_ {
-        self.names.ones().filter_map(Loc::site)
+        self.names.ones().filter_map(Target::site)
     }
 
     /// Hold nothing, and hold nothing unnameable either.
@@ -2020,7 +2020,7 @@ impl Held {
     /// silence.
     pub(super) fn lose(&mut self, site: Site) {
         if self.has_site(site) {
-            self.names.remove(Loc::Heap(site));
+            self.names.remove(Target::Heap(site));
             self.name_unknown(Why::Lost);
         }
     }
@@ -2251,7 +2251,7 @@ pub(super) struct Cell {
     /// read in silence after `box[1]` was written.
     widths: Levels,
     /// **What a pointer stored there may name**: sites, locals, and the
-    /// places this check does not model ([`Loc::Unknown`]) for the four
+    /// places this check does not model ([`Target::Unknown`]) for the four
     /// reasons memory keeps: a stale or a lost value stored, a store that
     /// could not be placed, and the caller's.
     ///
@@ -2259,7 +2259,7 @@ pub(super) struct Cell {
     /// rebuilt on #924, stage 3): a cell wrapped a value of 22 fields and
     /// used two, so each of its four doors named all 22 and a field added
     /// to `Held` was answered at seven doors where it is answered at four.
-    names: Bits<Loc>,
+    names: Bits<Target>,
 }
 
 impl Cell {
@@ -2269,28 +2269,28 @@ impl Cell {
         // where a value's own [`Held::none`] believes nothing.
         Cell {
             widths: Levels::default(),
-            names: Bits::new(Loc::count(locals)),
+            names: Bits::new(Target::count(locals)),
         }
     }
 
     /// Every site a pointer stored there may hold.
     pub(super) fn sites(&self) -> impl Iterator<Item = Site> + '_ {
-        self.names.ones().filter_map(Loc::site)
+        self.names.ones().filter_map(Target::site)
     }
 
     /// Every local whose address a pointer stored there may be.
     pub(super) fn locals(&self) -> impl Iterator<Item = LocalIdx> + '_ {
-        self.names.ones().filter_map(Loc::local)
+        self.names.ones().filter_map(Target::local)
     }
 
     /// Whether a pointer stored there may hold `site`.
     pub(super) fn has_site(&self, site: Site) -> bool {
-        self.names.get(Loc::Heap(site))
+        self.names.get(Target::Heap(site))
     }
 
     /// Whether a pointer stored there may be `local`'s address.
     pub(super) fn names_local(&self, local: LocalIdx) -> bool {
-        self.names.get(Loc::Local(local))
+        self.names.get(Target::Local(local))
     }
 
     /// Whether what is stored there may be a pointer to an allocation that
@@ -2298,7 +2298,7 @@ impl Cell {
     /// Whether a pointer stored there may name what this check does not
     /// model for `why`.
     fn may_name(&self, why: Why) -> bool {
-        self.names.get(Loc::Unknown(why))
+        self.names.get(Target::Unknown(why))
     }
 
     pub(super) fn stale_read(&self) -> bool {
@@ -2307,12 +2307,12 @@ impl Cell {
 
     /// Mark what is stored there as possibly gone. See `Known::contents`.
     pub(super) fn mark_stale_read(&mut self) {
-        self.names.set(Loc::Unknown(Why::StaleRead));
+        self.names.set(Target::Unknown(Why::StaleRead));
     }
 
     /// Mark a slot there as one a call could not replace.
     pub(super) fn mark_unreplaced_read(&mut self) {
-        self.names.set(Loc::Unknown(Why::UnreplacedRead));
+        self.names.set(Target::Unknown(Why::UnreplacedRead));
     }
 
     /// Whether a value this check lost may have been stored there.
@@ -2328,7 +2328,7 @@ impl Cell {
 
     /// Mark what is stored there as a caller's or a callee's.
     pub(super) fn mark_from_caller(&mut self) {
-        self.names.set(Loc::Unknown(Why::FromCaller));
+        self.names.set(Target::Unknown(Why::FromCaller));
     }
 
     /// The fields a site made again keeps, each answered: called by
@@ -2422,7 +2422,7 @@ impl Cell {
         // And the locals whose address it carries, which are no site. See
         // ADR-0045.
         for target in named {
-            poured.names.set(Loc::Local(target));
+            poured.names.set(Target::Local(target));
         }
         poured.bound_stored(stored);
         // Every field named, never `..`: a mark memory keeps that no door
@@ -2463,7 +2463,7 @@ impl Cell {
             (from.may_name(Why::FromCaller), Why::FromCaller),
         ] {
             if marked {
-                poured.names.set(Loc::Unknown(why));
+                poured.names.set(Target::Unknown(why));
             }
         }
         poured
@@ -2471,7 +2471,7 @@ impl Cell {
 
     /// A pointer stored there may also hold `site`.
     pub(super) fn name_site(&mut self, site: Site) {
-        self.names.set(Loc::Heap(site));
+        self.names.set(Target::Heap(site));
     }
 
     /// `other`, poured into this block or brought by another path: a union

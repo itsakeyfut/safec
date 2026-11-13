@@ -5463,11 +5463,11 @@ cases! {
         // nothing, before the later call returns it, where nothing after the
         // call frees one. Found by review. Mutation: have the result read
         // whether its own call was handed a lost value rather than
-        // `Known::lost_exposed`; all six go quiet at `*r`.
-        // Mutation: join `Known::lost_exposed` as an intersection; the
-        // second alone does. Mutation: mark the result `Held::lost_read`
-        // rather than lost; the third, fifth and sixth go quiet. Mutation:
-        // clear `Known::lost_exposed` at a free; the fifth goes quiet, which
+        // `Known::exposed`'s lost slot; all six go quiet at `*r`.
+        // Mutation: join that slot as an intersection; the second alone
+        // does. Mutation: mark the result `Held::lost_read` rather than
+        // lost; the third, fifth and sixth go quiet. Mutation: clear
+        // that slot at a free; the fifth goes quiet, which
         // is what holds that the fact is never cleared. What it costs: the
         // result is doubted with no free after it, and so is a fresh
         // allocation a later call returns, since the call may have returned

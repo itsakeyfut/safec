@@ -154,6 +154,8 @@ finds the new one without the record being edited.
 | `Allocations::terminator`'s transfer of a call, with `made_extent`, `handed`, `handed_site`, `past_the_old_size`, `frees_callers` and `holds_something_unnameable` | `Allocations::call` and those helpers, in `memory/call.rs`; `terminator` hands the call to it | #936 |
 | `report::report_left_unwritten`, `report::report_returned_unwritten`, `report::copied_unwritten`, `report::source_may_be_unwritten`, `report::loaded_indeterminate`, `report::may_say`, `report::unwritten_read`, `report::PartialDoor`, `report::UnwrittenDoor` and the rest of the unwritten questions | the same names in `memory/unwritten.rs`, one family of `report.rs` moved to a file of its own | #924 |
 | `Known::part_written_since_made` | `Known::part_written`, one `Earliest` per place: `now()` is what `part_written_since_made` held, `ever()` what `part_written` did | #934 |
+| `Known::lost_exposed` | `Known::exposed[Target::Unknown(Why::Lost)]`, a slot of what code this check cannot read may hold | #924 |
+| `Loc::Unknown`, and `Loc` as what a pointer names | `Target`, what a pointer names: `Target::Unknown`, and `Target::Heap` and `Target::Local` for a `Loc`, which is now storage alone | #924 |
 | `AS_TYPED` | `Width::AsTyped` | #804 |
 | `Cell::unrecorded` | `Width::Nothing` at a cell's level 0 | #804 |
 | `a_pointer_plus_a_literal_zero_is_not_proved_to_be_off_the_start` | `a_pointer_plus_a_literal_zero_is_at_its_start`, which a counted distance now proves | #703 |

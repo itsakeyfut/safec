@@ -12,7 +12,7 @@ use crate::source::Span;
 use super::allocations::{Allocations, handed_places, innermost_element};
 use super::built::{named, replaced_by};
 use super::fit::{Fit, fits, slots_from, slots_leaving};
-use super::index::{Idx, Loc, LocalIdx, Site, Table};
+use super::index::{Idx, Loc, LocalIdx, Site, Table, Target, Why};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
@@ -239,7 +239,7 @@ impl Allocations<'_> {
         };
         if hands_a_lost_value {
             value.lost_may_be_gone();
-            value.lost_exposed = true;
+            value.exposed[Target::Unknown(Why::Lost)] = true;
         }
 
         let may_free = match kind {
@@ -455,7 +455,6 @@ impl Allocations<'_> {
                     calls: _,
                     exposed_after_call: _,
                     // Not touched by a copy.
-                    lost_exposed: _,
                     // Read: how much the copy covers, and how wide what it
                     // carries is believed.
                     extent: _,
@@ -1579,7 +1578,6 @@ impl Allocations<'_> {
                     pending: _,
                     calls: _,
                     exposed_after_call: _,
-                    lost_exposed: _,
                     // The new block's size, where its site is made.
                     extent: _,
                     // A local's; not touched by `realloc`.
@@ -1684,7 +1682,7 @@ impl Allocations<'_> {
                 // `stash(u); free(u); r = fetch(); *r` and `release_all()` in
                 // place of the free read in silence, since nothing after the
                 // call made it lost. Found by review. See ADR-0045.
-                if value.lost_exposed {
+                if value.exposed[Target::Unknown(Why::Lost)] {
                     value.points_to[result].lost_its_allocation();
                 }
                 let exposed: Vec<Site> = value

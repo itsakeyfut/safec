@@ -18,7 +18,9 @@
 //! table of places is indexed by a site and by a local alike, so the two
 //! index types guard nothing there; what does is that a reader answering
 //! the two kinds apart is a `match` on [`Loc`], which a third kind would
-//! have to answer.
+//! have to answer. **And what a pointer names, [`Target`]**, a place or
+//! something this check does not model, so that a table of what places
+//! hold has no slot for the second.
 
 use std::ops::{Index, IndexMut};
 
@@ -59,23 +61,43 @@ impl Idx for Site {
 /// that a statement reads or writes: this is what such a place may name.
 ///
 /// **Interleaved**, `Heap(s)` at `2s` and `Local(l)` at `2l + 1`, so that a
-/// [`Bits`](super::bits::Bits) or a [`Table`] of places needs no count of
-/// locals to be indexed and takes the memory the two tables took. A reader
-/// that answers the two kinds differently is a `match` on it, so a kind
-/// added is `error[E0004]` at each: measured, at the five there are, the
-/// two projections below, [`Idx::index`], and the unwritten belief's join
-/// and back edge. See ADR-0063.
+/// [`Table`] of places needs no count of locals to be indexed and takes the
+/// memory the two tables took. A reader that answers the two kinds
+/// differently is a `match` on it, so a kind added is `error[E0004]` at
+/// each. See ADR-0063.
+///
+/// **Storage, and nothing a pointer merely names**: what is written, how
+/// wide it is, what part of a pointer it holds. What a pointer may name is
+/// a [`Target`], which has a third kind, the place this check does not
+/// model. Kept as one type, a table of what a place holds had a slot per
+/// reason this check does not model, which no reader asked and any could
+/// have written, and every reader of the places a pointer names filtered
+/// the unknown ones out by hand (the memory model rebuilt on #924, found by
+/// the architecture review of 2026-11-13).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(super) enum Loc {
     /// An allocation site.
     Heap(Site),
     /// A local.
     Local(LocalIdx),
-    /// **Something this check does not model**, for the reason [`Why`]
-    /// gives: a member of a points-to set like any other place, so a value
-    /// that may name what was not recorded says so by what it names, joined
-    /// and poured with the rest of the set rather than by a mark of its own
-    /// carried beside it (the memory model rebuilt on #924, stage 1).
+}
+
+/// **What a pointer may name**: a place, or something this check does not
+/// model, for the reason [`Why`] gives. A member of a points-to set like
+/// any other, so a value that may name what was not recorded says so by
+/// what it names, joined and poured with the rest of the set rather than by
+/// a mark of its own carried beside it (the memory model rebuilt on #924,
+/// stage 1). And what code this check cannot read may hold,
+/// `Known::exposed`, a lost value among it.
+///
+/// `Unknown(why)` at `why`, then a [`Loc`] at its own index past them all.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub(super) enum Target {
+    /// An allocation site.
+    Heap(Site),
+    /// A local.
+    Local(LocalIdx),
+    /// Something this check does not model.
     Unknown(Why),
 }
 
@@ -200,42 +222,21 @@ enum Why {
 }
 
 impl Loc {
-    /// The site this place is, if it is one.
-    pub(super) fn site(self) -> Option<Site> {
-        match self {
-            Loc::Heap(site) => Some(site),
-            Loc::Local(_) | Loc::Unknown(_) => None,
-        }
-    }
-
-    /// The local this place is, if it is one.
-    pub(super) fn local(self) -> Option<LocalIdx> {
-        match self {
-            Loc::Heap(_) | Loc::Unknown(_) => None,
-            Loc::Local(local) => Some(local),
-        }
-    }
-
     /// How many places a function with `locals` locals has: a site and a
-    /// local per local, since a site is named by the local it landed in,
-    /// and one unknown place per [`Why`].
+    /// local per local, since a site is named by the local it landed in.
     pub(super) fn count(locals: usize) -> usize {
-        Why::ALL.len() + 2 * locals
+        2 * locals
     }
 }
 
 impl Idx for Loc {
     fn index(self) -> usize {
         match self {
-            Loc::Unknown(why) => why as usize,
-            Loc::Heap(site) => Why::ALL.len() + 2 * site.index(),
-            Loc::Local(local) => Why::ALL.len() + 2 * local.index() + 1,
+            Loc::Heap(site) => 2 * site.index(),
+            Loc::Local(local) => 2 * local.index() + 1,
         }
     }
     fn at(position: usize) -> Self {
-        let Some(position) = position.checked_sub(Why::ALL.len()) else {
-            return Loc::Unknown(Why::ALL[position]);
-        };
         if position % 2 == 0 {
             Loc::Heap(Site::at(position / 2))
         } else {
@@ -244,97 +245,189 @@ impl Idx for Loc {
     }
 }
 
+impl Target {
+    /// The site this names, if it is one.
+    pub(super) fn site(self) -> Option<Site> {
+        match self {
+            Target::Heap(site) => Some(site),
+            Target::Local(_) | Target::Unknown(_) => None,
+        }
+    }
+
+    /// The local this names, if it is one.
+    pub(super) fn local(self) -> Option<LocalIdx> {
+        match self {
+            Target::Heap(_) | Target::Unknown(_) => None,
+            Target::Local(local) => Some(local),
+        }
+    }
+
+    /// The place this names, if it is one this check models.
+    pub(super) fn place(self) -> Option<Loc> {
+        match self {
+            Target::Heap(site) => Some(Loc::Heap(site)),
+            Target::Local(local) => Some(Loc::Local(local)),
+            Target::Unknown(_) => None,
+        }
+    }
+
+    /// How many targets a function with `locals` locals has: one unknown
+    /// place per [`Why`], then every [`Loc`].
+    pub(super) fn count(locals: usize) -> usize {
+        Why::ALL.len() + Loc::count(locals)
+    }
+}
+
+impl From<Loc> for Target {
+    fn from(place: Loc) -> Target {
+        match place {
+            Loc::Heap(site) => Target::Heap(site),
+            Loc::Local(local) => Target::Local(local),
+        }
+    }
+}
+
+impl Idx for Target {
+    fn index(self) -> usize {
+        match self {
+            Target::Unknown(why) => why as usize,
+            Target::Heap(site) => Why::ALL.len() + Loc::Heap(site).index(),
+            Target::Local(local) => Why::ALL.len() + Loc::Local(local).index(),
+        }
+    }
+    fn at(position: usize) -> Self {
+        match position.checked_sub(Why::ALL.len()) {
+            Some(position) => Target::from(Loc::at(position)),
+            None => Target::Unknown(Why::ALL[position]),
+        }
+    }
+}
+
+/// An index a table is kept by that has a slot for every site and every
+/// local: [`Loc`] and [`Target`]. So that a table of either is read by the
+/// kind of place a reader holds, through one set of impls rather than two.
+pub(super) trait ByPlace: Idx {
+    /// Where the places start, past what is not one.
+    const PLACES_FROM: usize;
+    /// This index for a place.
+    fn of_place(place: Loc) -> Self;
+}
+
+impl ByPlace for Loc {
+    const PLACES_FROM: usize = 0;
+    fn of_place(place: Loc) -> Self {
+        place
+    }
+}
+
+impl ByPlace for Target {
+    const PLACES_FROM: usize = Why::ALL.len();
+    fn of_place(place: Loc) -> Self {
+        Target::from(place)
+    }
+}
+
 /// A table of places, read by the kind of place a reader holds: a site, a
 /// local, or the IR's own name for a local. One table where there were two
 /// (#779), so a reader of a site and a reader of a local read the same
 /// memory, each through its own index type.
-impl<T> Table<Loc, T> {
-    /// Every site the table has, in order.
-    pub(super) fn sites(&self) -> impl Iterator<Item = Site> + use<T> {
-        (0..(self.len() - Why::ALL.len()) / 2).map(Site::at)
-    }
+///
+/// An inherent impl per index, by a macro, since one generic over
+/// [`ByPlace`] would be reachable wider than the trait is.
+macro_rules! places_of {
+    ($index:ty) => {
+        impl<T> Table<$index, T> {
+            /// Every site the table has, in order.
+            pub(super) fn sites(&self) -> impl Iterator<Item = Site> + use<T> {
+                (0..(self.len() - <$index as ByPlace>::PLACES_FROM) / 2).map(Site::at)
+            }
 
-    /// Every local the table has, in order.
-    pub(super) fn locals(&self) -> impl Iterator<Item = LocalIdx> + use<T> {
-        (0..(self.len() - Why::ALL.len()) / 2).map(LocalIdx::at)
-    }
+            /// Every local the table has, in order.
+            pub(super) fn locals(&self) -> impl Iterator<Item = LocalIdx> + use<T> {
+                (0..(self.len() - <$index as ByPlace>::PLACES_FROM) / 2).map(LocalIdx::at)
+            }
+        }
+    };
 }
 
-impl<T> Index<Site> for Table<Loc, T> {
+places_of!(Loc);
+places_of!(Target);
+
+impl<P: ByPlace, T> Index<Site> for Table<P, T> {
     type Output = T;
     fn index(&self, site: Site) -> &T {
-        &self[Loc::Heap(site)]
+        &self[P::of_place(Loc::Heap(site))]
     }
 }
 
-impl<T> IndexMut<Site> for Table<Loc, T> {
+impl<P: ByPlace, T> IndexMut<Site> for Table<P, T> {
     fn index_mut(&mut self, site: Site) -> &mut T {
-        &mut self[Loc::Heap(site)]
+        &mut self[P::of_place(Loc::Heap(site))]
     }
 }
 
-impl<T> Index<LocalIdx> for Table<Loc, T> {
+impl<P: ByPlace, T> Index<LocalIdx> for Table<P, T> {
     type Output = T;
     fn index(&self, local: LocalIdx) -> &T {
-        &self[Loc::Local(local)]
+        &self[P::of_place(Loc::Local(local))]
     }
 }
 
-impl<T> IndexMut<LocalIdx> for Table<Loc, T> {
+impl<P: ByPlace, T> IndexMut<LocalIdx> for Table<P, T> {
     fn index_mut(&mut self, local: LocalIdx) -> &mut T {
-        &mut self[Loc::Local(local)]
+        &mut self[P::of_place(Loc::Local(local))]
     }
 }
 
-impl<T> Index<LocalId> for Table<Loc, T> {
+impl<P: ByPlace, T> Index<LocalId> for Table<P, T> {
     type Output = T;
     fn index(&self, local: LocalId) -> &T {
-        &self[Loc::Local(LocalIdx::of(local))]
+        &self[P::of_place(Loc::Local(LocalIdx::of(local)))]
     }
 }
 
-impl<T> IndexMut<LocalId> for Table<Loc, T> {
+impl<P: ByPlace, T> IndexMut<LocalId> for Table<P, T> {
     fn index_mut(&mut self, local: LocalId) -> &mut T {
-        &mut self[Loc::Local(LocalIdx::of(local))]
+        &mut self[P::of_place(Loc::Local(LocalIdx::of(local)))]
     }
 }
 
-impl<T> Index<&LocalId> for Table<Loc, T> {
+impl<P: ByPlace, T> Index<&LocalId> for Table<P, T> {
     type Output = T;
     fn index(&self, local: &LocalId) -> &T {
-        &self[Loc::Local(LocalIdx::of(local))]
+        &self[P::of_place(Loc::Local(LocalIdx::of(local)))]
     }
 }
 
-impl<T> IndexMut<&LocalId> for Table<Loc, T> {
+impl<P: ByPlace, T> IndexMut<&LocalId> for Table<P, T> {
     fn index_mut(&mut self, local: &LocalId) -> &mut T {
-        &mut self[Loc::Local(LocalIdx::of(local))]
+        &mut self[P::of_place(Loc::Local(LocalIdx::of(local)))]
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Idx, Loc, LocalIdx, Site, Why};
+    use super::{Idx, LocalIdx, Site, Target, Why};
 
-    /// Every place has an index of its own, and the round trip through it is
+    /// Every target has an index of its own, and the round trip through it is
     /// the identity: an unknown place for each reason, then a site and a local
-    /// per local. Mutation: give `Loc::Unknown` an index of `why as usize + 1`;
+    /// per local. Mutation: give `Target::Unknown` an index of `why as usize + 1`;
     /// this fails, as a reason sharing the first site's index once did.
     #[test]
     fn every_place_has_an_index_of_its_own() {
-        let mut places: Vec<Loc> = Why::ALL.iter().map(|&why| Loc::Unknown(why)).collect();
+        let mut places: Vec<Target> = Why::ALL.iter().map(|&why| Target::Unknown(why)).collect();
         for at in 0..3 {
-            places.push(Loc::Heap(Site::at(at)));
-            places.push(Loc::Local(LocalIdx::at(at)));
+            places.push(Target::Heap(Site::at(at)));
+            places.push(Target::Local(LocalIdx::at(at)));
         }
         let indices: Vec<usize> = places.iter().map(|&place| place.index()).collect();
         for (place, &index) in places.iter().zip(&indices) {
-            assert_eq!(Loc::at(index), *place);
+            assert_eq!(Target::at(index), *place);
         }
         let mut sorted = indices.clone();
         sorted.sort_unstable();
         sorted.dedup();
         assert_eq!(sorted.len(), indices.len(), "{indices:?}");
-        assert_eq!(Loc::count(3), indices.len());
+        assert_eq!(Target::count(3), indices.len());
     }
 }

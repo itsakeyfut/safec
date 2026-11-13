@@ -426,11 +426,6 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
         Field::Exempt(PENDING),
         Start::Quiet(NOTHING_YET),
     ),
-    (
-        "lost_exposed",
-        Field::Exempt(PENDING),
-        Start::Quiet(NOTHING_YET),
-    ),
     // A parameter's block is at least what it points to, which no write is
     // known to cover (#932); a local is the size its type is.
     ("extent", Field::Exempt(PENDING), Start::Doubt),

@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::ir::{LocalId, Operand, Place, TyId};
 use crate::source::{SourceMap, Span};
 
-use super::index::{Loc, LocalIdx, Site, Table};
+use super::index::{Loc, LocalIdx, Site, Table, Target};
 use super::parts::{
     At, Cell, Earliest, Extent, Held, Init, Kept, Levels, PendingRead, PlaceInit, Reached, Read,
     ReadKey, Realloced, SiteState, Width, read_key,
@@ -87,7 +87,22 @@ pub(super) struct Known {
     /// reported `SC0411`, which the reader sees. A bit set where no call can
     /// reach clears a mark, and a read nothing wrote goes silent. See
     /// ADR-0057.
-    pub(super) exposed: Table<Loc, bool>,
+    ///
+    /// **And whether a value this check lost has been handed to such a
+    /// call**, which may have kept it: `exposed[Target::Unknown(Why::Lost)]`,
+    /// the lost value being one more thing such code may hold. A lost value
+    /// names no site, so nothing of it is exposed otherwise, and the result
+    /// of a later such call, which holds every exposed site, carried nothing
+    /// of it: `stash(u); r = fetch(); free(u); v = *r;` read `*r` in silence
+    /// where a named `u` was reported (#511). Set where such a call is a
+    /// trigger for [`Self::lost_may_be_gone`], read by the result of that
+    /// call and every later one, which is lost, and never cleared. A lost
+    /// value an escaped local, or memory it points at, may hold counts as
+    /// handed to every such call, as `reach_of` has it for a named one
+    /// (#515). See ADR-0045. **A slot of this table, not a field beside
+    /// it**, as it was until the memory model was rebuilt on #924: the two
+    /// were joined, cleared and read by separate lines that said the same.
+    pub(super) exposed: Table<Target, bool>,
     /// Per site, what its memory holds: the cell, a [`Held`] read as the
     /// value a pointer stored there may be, and [`Held::none`] where nothing
     /// was stored (#780). A store pours into it by [`Cell::absorb`]; a load
@@ -338,22 +353,6 @@ pub(super) struct Known {
     /// call, then the read, and [`Self::noticed`] cannot tell a read that is
     /// not pending yet. [`Self::meeting`] asks this instead. See ADR-0042.
     pub(super) exposed_after_call: BTreeSet<Site>,
-    /// Whether a value this check lost has been handed to a call it cannot
-    /// read, which may have kept it: the lost counterpart of
-    /// [`Self::exposed`].
-    ///
-    /// **A lost value names no site**, so nothing of it is exposed, and the
-    /// result of a later such call, which holds every exposed site, carried
-    /// nothing of it: `stash(u); r = fetch(); free(u); v = *r;` read `*r` in
-    /// silence where a named `u` was reported (#511). Set where such a call
-    /// is a trigger for [`Self::lost_may_be_gone`], and read by the result of
-    /// that call and every later one, which is lost. A union at a join, and
-    /// never cleared, as `exposed` is not: nothing takes back what a callee
-    /// was handed. A lost value an escaped local, or memory it points at,
-    /// may hold counts as handed to every such call, as `reach_of` has it for
-    /// a named one (#515). See
-    /// ADR-0045.
-    pub(super) lost_exposed: bool,
     /// Per site, how many bytes the object it stands for takes, as far as
     /// this check read it, and `None` where nothing has made the site on this
     /// path.
@@ -608,7 +607,6 @@ impl Known {
             pending: _,
             calls: _,
             exposed_after_call: _,
-            lost_exposed: _,
             // A local's size, the same in every lifetime.
             extent: _,
             // Not touched here, and nothing has asked whether a lifetime
@@ -659,7 +657,6 @@ impl Known {
             pending: _,
             calls: _,
             exposed_after_call: _,
-            lost_exposed: _,
             // A local's size, the same in every lifetime.
             extent: _,
             // Not touched here, as in `Self::clear`.
@@ -2135,7 +2132,6 @@ impl Known {
             calls: _,
             exposed_after_call,
             // About no site.
-            lost_exposed: _,
             // Left to the caller, which writes what the new allocation takes
             // on the line after this, since only it knows what made it. A
             // local's size is not about the site.
