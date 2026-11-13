@@ -4540,6 +4540,184 @@ const UNCERTAIN: &[(&str, &str)] = &[
     ),
 ];
 
+/// What a whole copy is not answered alike with its plain store, row by
+/// row, with why: a library copy of a whole pointer is the store of it, so
+/// any code its hazard or control reports that the store's does not, or the
+/// reverse, is one rule spelled twice (#686, the memory model rebuilt on
+/// #924, stage 2). **Exact in both directions**: a listed row that now
+/// agrees fails too, and its entry goes.
+/// Why a row is listed in [`COPY_DIFFERS`] when nothing more is known: it
+/// differed when the test that asks it landed, at `bb36192d`, and each such
+/// row is a rule the store and the copy still answer apart. The entries go
+/// as the rules become one.
+const DIFFERED_WHEN_ASKED: &str = "the store and the copy of one pointer still answer this route apart; it differed when `a_whole_copy_answers_as_its_plain_store` landed (#686)";
+const COPY_DIFFERS: &[(&str, &str)] = &[
+    ("caller_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("caller_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("fresh_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("fresh_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("fresh_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("held_pointers_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("held_pointers_memcpy_d0_both", DIFFERED_WHEN_ASKED),
+    ("held_pointers_memcpy_d0_one", DIFFERED_WHEN_ASKED),
+    ("held_pointers_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("held_pointers_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("held_pointers_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("held_pointers_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("left_behind_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("left_behind_memcpy_d0_both", DIFFERED_WHEN_ASKED),
+    ("left_behind_memcpy_d0_one", DIFFERED_WHEN_ASKED),
+    ("left_behind_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("left_behind_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("left_behind_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("left_behind_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("lost_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("part_local_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
+    ("part_local_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("part_local_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
+    ("part_local_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
+    ("part_local_memcpy_d0_both", DIFFERED_WHEN_ASKED),
+    ("part_local_memcpy_d0_one", DIFFERED_WHEN_ASKED),
+    ("part_local_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("part_local_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("part_pointer_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("part_pointer_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("part_pointer_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("part_pointer_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("reborn_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("returned_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
+    ("returned_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("returned_memcpy_d0_both", DIFFERED_WHEN_ASKED),
+    ("returned_memcpy_d0_one", DIFFERED_WHEN_ASKED),
+    ("returned_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("returned_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("returned_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("returned_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("stale_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_d0_both", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_d0_one", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("stored_freed_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_d0_both", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_d0_one", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("stored_out_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("width_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
+    ("width_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("width_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
+    ("width_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
+    ("width_memcpy_d0_both", DIFFERED_WHEN_ASKED),
+    ("width_memcpy_d0_one", DIFFERED_WHEN_ASKED),
+    ("width_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("width_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+];
+
+/// The codes a run reports, as a set.
+fn codes(answer: &Answer) -> std::collections::BTreeSet<String> {
+    answer
+        .reports
+        .iter()
+        .map(|(_, code, _)| code.clone())
+        .collect()
+}
+
+/// **A whole copy answers as its plain store**: the same codes on the
+/// hazard and on the control, where `COPY_DIFFERS` does not say why not.
+/// A store and a copy of one pointer were two bodies, and each rule one
+/// learned the other learned later or not at all: `SC0414` by a store and
+/// `SC0407` by the copy of the same pointer, a width asked of a copy into
+/// memory that never leaves and not of the store (#924's architecture
+/// review, 2026-11-13).
+#[test]
+fn a_whole_copy_answers_as_its_plain_store() {
+    let mut wrong = vec![];
+    for &(name, row) in ROWS {
+        if !matches!(row.route, Route::Memcpy | Route::MemcpyFromBlock) {
+            continue;
+        }
+        let Some(&(store_name, store)) = ROWS.iter().find(|(_, store)| {
+            store.route == Route::Store
+                && store.belief == row.belief
+                && store.depth == row.depth
+                && store.shape == row.shape
+        }) else {
+            continue;
+        };
+        let mut differs = vec![];
+        for (side, hazard) in [("hazard", true), ("control", false)] {
+            let by_store = codes(&ask(store_name, &program(store, hazard), "memory"));
+            let by_copy = codes(&ask(name, &program(row, hazard), "memory"));
+            if by_store != by_copy {
+                differs.push(format!("{side}: store {by_store:?}, copy {by_copy:?}"));
+            }
+        }
+        let listed = COPY_DIFFERS.iter().any(|(listed, _)| *listed == name);
+        if differs.is_empty() == listed {
+            wrong.push(format!(
+                "{name} ({}): {}",
+                if listed {
+                    "listed, agrees"
+                } else {
+                    "not listed"
+                },
+                differs.join("; ")
+            ));
+        }
+    }
+    assert!(
+        wrong.is_empty(),
+        "whole copies that do not answer as COPY_DIFFERS says:
+{}",
+        wrong.join(
+            "
+"
+        )
+    );
+}
+
 /// **A route is as certain as its plain store**: where the store spelling of
 /// a row (the same belief, depth and shape) proves its hazard, an error under
 /// `--allow-unknown`, the row's own hazard proves it too, unless
