@@ -1807,6 +1807,9 @@ cases! {
         // Mutation: `note_narrow_store` notes nothing below one
         // dereference; the store's `SC0413` goes.
         a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `Allocations::replaces_whole` asks no width; the store
+        // replaces `p` whole and this goes silent.
+        a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block held as `int **` reaches the caller through a `void *`
         // level, at the top or below a box, by every door: the block records
         // the type it was held as (#902, ADR-0086). Mutation: `held_below`

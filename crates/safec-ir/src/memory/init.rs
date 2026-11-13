@@ -13,7 +13,7 @@ use crate::source::Span;
 
 use super::allocations::Allocations;
 use super::built::replaced_by;
-use super::index::{Idx, Loc, LocalIdx, Site, Table};
+use super::index::{Loc, LocalIdx, Site, Table};
 use super::known::{Known, WrittenBy};
 use super::parts::{At, Held, Init};
 use super::store::{Certain, Landing, StoreKind, Strong, written_alone};
@@ -1021,11 +1021,9 @@ impl Allocations<'_> {
     }
 
     /// The one local a library copy into `dest` of `bytes` replaces, where
-    /// it replaces one: one exact local and nothing else
-    /// ([`Landing::strong`]), and a constant length of exactly its
-    /// size, as a store's certain write replaces its target (ADR-0028). Not
-    /// a longer one, which writes past the local and is the bounds rule's to
-    /// report.
+    /// it replaces one: [`Allocations::replaces_whole`], the store's rule,
+    /// with a constant length of exactly its size (ADR-0028). Not a longer
+    /// one, which writes past the local and is the bounds rule's to report.
     /// Anything less is a union, since a copy may write part of a pointer,
     /// or none (#395). **One answer for the value the copy leaves and for
     /// whether it is marked as a call's write**, so that the two cannot
@@ -1055,14 +1053,6 @@ impl Allocations<'_> {
             dest.projection.is_empty(),
             StoreKind::Copy,
         );
-        let size = |target: LocalIdx| {
-            function
-                .locals()
-                .nth(target.index())
-                .and_then(|local| self.unit.size_of(function.local(local)))
-        };
-        landing
-            .strong(value)
-            .filter(|at| bytes.is_some() && bytes == size(at.local()))
+        self.replaces_whole(function, value, &landing, bytes)
     }
 }

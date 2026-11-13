@@ -2825,7 +2825,10 @@ impl Analysis for Allocations<'_> {
                     // cannot be recorded on the local whose address is taken.
                     // See ADR-0028. An analysis that proves anything positive
                     // about a local has to answer for its address escaping.
-                    if let Some(at) = certain {
+                    //
+                    // **Only where it writes the whole local**, the rule a
+                    // library copy asks too. See `Allocations::replaces_whole`.
+                    if let Some(at) = self.replaces_whole(function, value, &before, wrote.width) {
                         value.replace(at, written);
                         return;
                     }

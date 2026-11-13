@@ -1,0 +1,81 @@
+Target "x86_64-pc-windows-msvc"
+Function a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:6:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:6:27 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:7:6 "f"
+  Local "_0" "int *" return
+  Local "_1" "int *" "p"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "void *" "v"
+  Local "_5" "int **"
+  Local "_6" "char *" "c"
+  Local "_7" "char"
+  Block "bb0" entry
+    ArgumentsEvaluated a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:8:14 generated
+    Call a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:8:14 written "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:8:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:8:14 generated
+    Operation a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:8:29 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:8:29 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:8:29 generated
+    Operation a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:8:33 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:8:40 generated
+    Return
+  Block "bb3"
+    Sequenced a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:8:29 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:9:5 generated
+    Call a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:9:5 written "free" "bb5"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:9:5 generated
+    Operation a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:10:15 written
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:10:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:10:15 generated
+    Operation a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:10:25 written
+      Destination "_6"
+      Use
+        Copy "_4"
+    Sequenced a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:10:29 generated
+    Operation a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:11:5 written
+      Destination "_6"
+        Deref
+      Use
+        Constant 1
+    Operation a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:11:5 written
+      Destination "_7"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:11:5 generated
+    Operation a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:12:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:12:12 generated
+    Return
