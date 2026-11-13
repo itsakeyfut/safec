@@ -1116,14 +1116,14 @@ impl Allocations<'_> {
         }
         let held = &known.points_to[place.local];
         if place.projection.is_empty() {
-            return if held.beyond().unrecorded_address() {
+            return if held.beyond().any_unknown() {
                 known.stored()
             } else {
                 Vec::new()
             };
         }
         if place.projection.as_slice() == [Projection::Deref]
-            && !held.beyond().unrecorded_address()
+            && !held.beyond().any_unknown()
             && held.sites().next().is_some()
         {
             return held

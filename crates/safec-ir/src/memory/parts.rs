@@ -1413,7 +1413,7 @@ impl Held {
     /// belief. Kept the least so that the record alone never says more than
     /// every object it stands for.
     pub(super) fn recorded_width(&self, extent: &Table<Loc, Option<Extent>>) -> Option<u64> {
-        if self.offset != At::Bytes(0) || self.inner_address || self.beyond().unrecorded_address() {
+        if self.offset != At::Bytes(0) || self.inner_address || self.beyond().any_unknown() {
             return Some(0);
         }
         // **One rule for both kinds of place**: a site nothing made and a
@@ -2552,7 +2552,8 @@ pub(super) struct Marks {
 ///
 /// **Seven marks and two questions.** `lost`, `loaded` and `foreign` say the
 /// value may be an address this function never recorded, which
-/// [`Beyond::unrecorded_address`] asks; `from_caller`, `stale_read`,
+/// [`Beyond::any_unknown`] asks with the other four, measured to answer the
+/// same where it is asked (#924's rebuild, stage 1); `from_caller`, `stale_read`,
 /// `lost_read` and `unreplaced_read` say where what it names came from, and
 /// [`Beyond::is_nothing`] asks whether any of the seven is set, for a reader
 /// that has to know the value names exactly its sites. Every question here
@@ -2603,6 +2604,19 @@ impl Unrecorded {
 }
 
 impl Beyond {
+    /// **Whether it may name anything this check does not model**, for any
+    /// reason [`Why`] gives. It answers what `read_or_written_unseen` and
+    /// `unrecorded_address` answered apart, and answering it as either
+    /// moved no case and no route row, measured against the build before
+    /// (the memory model rebuilt on #924, stage 1). The questions that ask
+    /// one reason apart from the rest each move an answer where they are
+    /// asked as this one: `is_from_caller` doubts `main`'s arguments after a
+    /// call, which ADR-0040 believes, and `unreplaced_read` doubts every
+    /// control of the route matrix's `unreplaced` rows.
+    pub(super) fn any_unknown(&self) -> bool {
+        matches!(self, Beyond::Unrecorded(unrecorded) if unrecorded.any())
+    }
+
     /// [`Why::Lost`]: this check stopped following the value.
     ///
     /// **This mark alone**: its readers ask whether this check let go of the value, which no other mark says. Every mark is named, `_` for one not read, so a mark added
@@ -2719,27 +2733,6 @@ impl Beyond {
         }
     }
 
-    /// Whether the value was read out of memory or written by a call this check
-    /// cannot read: what it is believed to point at is what that read or call
-    /// recorded, not what this function stored.
-    ///
-    /// One question where its readers each composed it from two marks. Every mark is named, `_` for one not read, so a mark added is
-    /// `error[E0027]` here (#853).
-    pub(super) fn read_or_written_unseen(&self) -> bool {
-        match self {
-            Beyond::Nothing => false,
-            Beyond::Unrecorded(Unrecorded {
-                lost: _,
-                loaded,
-                foreign,
-                from_caller: _,
-                stale_read: _,
-                lost_read: _,
-                unreplaced_read: _,
-            }) => *loaded || *foreign,
-        }
-    }
-
     /// Whether the value may be a lost one: lost, or read out of memory a
     /// lost value may have been stored in. Asked by
     /// `Known::lost_may_be_gone`, which makes such a value gone at a free,
@@ -2769,25 +2762,6 @@ impl Beyond {
         match self {
             Beyond::Nothing => true,
             Beyond::Unrecorded(_) => false,
-        }
-    }
-
-    /// Whether the value may be an address this function never recorded:
-    /// lost, read out of memory, or written by a call this check cannot
-    /// read. Not where what it names came from, which the provenance marks
-    /// say and a reader asks of them itself.
-    pub(super) fn unrecorded_address(&self) -> bool {
-        match self {
-            Beyond::Nothing => false,
-            Beyond::Unrecorded(Unrecorded {
-                lost,
-                loaded,
-                foreign,
-                from_caller: _,
-                stale_read: _,
-                lost_read: _,
-                unreplaced_read: _,
-            }) => *lost || *loaded || *foreign,
         }
     }
 

@@ -1223,7 +1223,7 @@ impl Known {
     /// See [`Self::reachable_now`].
     fn exposed_through(&self, local: LocalId) -> Vec<Site> {
         let from = &self.points_to[local];
-        if from.beyond().read_or_written_unseen() {
+        if from.beyond().any_unknown() {
             self.reachable_now().into_iter().collect()
         } else {
             Vec::new()
@@ -1919,7 +1919,7 @@ impl Known {
         // apart: keep the two in step.
         if self.unnamed_below(local, dereferences) || held.beyond().lost() {
             lands.extend(self.locals_named_by_unknown_code());
-        } else if held.beyond().read_or_written_unseen() {
+        } else if held.beyond().any_unknown() {
             lands.extend(held.named_at_read.ones());
         }
         lands.into_iter().collect()
@@ -1936,8 +1936,7 @@ impl Known {
     /// of memory is answered as of its read (#648), and one a call wrote as
     /// of the call (#661). See ADR-0057 and ADR-0041.
     pub(super) fn through_unnamed(&self, local: LocalId, dereferences: usize) -> bool {
-        self.points_to[local].beyond().unrecorded_address()
-            || self.unnamed_below(local, dereferences)
+        self.points_to[local].beyond().any_unknown() || self.unnamed_below(local, dereferences)
     }
 
     /// The second half of [`Self::through_unnamed`]: whether a level
@@ -1951,7 +1950,7 @@ impl Known {
             !sites.is_empty()
                 || locals
                     .iter()
-                    .any(|&held| self.points_to[held].beyond().unrecorded_address())
+                    .any(|&held| self.points_to[held].beyond().any_unknown())
         })
     }
 
@@ -2776,7 +2775,7 @@ impl Known {
         for (local, &escaped) in self.escaped.enumerated() {
             if escaped {
                 reach.extend(self.points_to[local].sites());
-                unnamed |= self.points_to[local].beyond().unrecorded_address();
+                unnamed |= self.points_to[local].beyond().any_unknown();
             }
         }
         if unnamed {

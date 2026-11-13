@@ -3290,7 +3290,7 @@ pub(super) fn copied_away(
             if from.projection.is_empty()
                 && held.sites().next().is_none()
                 && matches!(held.offset, At::Bytes(0))
-                && !held.beyond().unrecorded_address() =>
+                && !held.beyond().any_unknown() =>
         {
             Place::local(
                 function

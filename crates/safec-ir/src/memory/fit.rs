@@ -85,7 +85,7 @@ pub(super) fn fits(
     let holds_something = held.sites().next().is_some()
         || held.offset != At::Bytes(0)
         || held.may_be_a_locals_address()
-        || held.beyond().unrecorded_address();
+        || held.beyond().any_unknown();
     if !holds_something {
         return None;
     }

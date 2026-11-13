@@ -381,7 +381,7 @@ impl Landing {
             StoreKind::Direct | StoreKind::Through { .. } | StoreKind::Copy => self.deep > 1,
         };
         let held = &value.points_to[self.pointer];
-        held.beyond().unrecorded_address() || deep_enough
+        held.beyond().any_unknown() || deep_enough
     }
 
     /// Whether it lands nowhere this check names: no allocation and no local.
@@ -474,7 +474,7 @@ impl Allocations<'_> {
         // dropping it from the closure fails no case, no route row and no
         // probe of either source. Kept so that a third source of the mark is not silent here.
         let unrecorded =
-            |local: &Held| local.beyond().is_from_caller() || local.beyond().unrecorded_address();
+            |local: &Held| local.beyond().is_from_caller() || local.beyond().any_unknown();
         let through_unrecorded = held.beyond().is_from_caller()
             || above
                 .iter()

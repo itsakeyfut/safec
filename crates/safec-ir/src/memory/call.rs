@@ -254,7 +254,7 @@ impl Allocations<'_> {
             && handed.iter().any(|argument| match argument {
                 Operand::Copy(place) => {
                     let held = &value.points_to[place.local];
-                    !place.projection.is_empty() || held.beyond().unrecorded_address()
+                    !place.projection.is_empty() || held.beyond().any_unknown()
                 }
                 Operand::Constant(_) => false,
             })
@@ -1960,7 +1960,7 @@ impl Allocations<'_> {
             Operand::Copy(place) => {
                 let held = &known.points_to[place.local];
                 place.projection.is_empty()
-                    && (held.beyond().unrecorded_address() || held.may_be_a_locals_address())
+                    && (held.beyond().any_unknown() || held.may_be_a_locals_address())
             }
         })
     }

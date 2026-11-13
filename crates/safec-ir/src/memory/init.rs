@@ -147,7 +147,7 @@ impl Allocations<'_> {
                     // where the store is placed: `m[0] = p;` writes `m`. Where
                     // it is not placed, `replaced_by` below clears the
                     // locals it may land in. See `Known::written`.
-                    if one_step && !held.beyond().unrecorded_address() {
+                    if one_step && !held.beyond().any_unknown() {
                         let edges: Vec<LocalIdx> = held.locals().collect();
                         let sites: Vec<Site> = held.sites().collect();
                         let site_element = held.site_element;
@@ -449,7 +449,7 @@ impl Allocations<'_> {
                     Some(Operand::Copy(source)) if source.projection.is_empty() => {
                         let held = &value.points_to[source.local];
                         let slots = self.slots_read(held, bytes);
-                        let plain = !(held.beyond().unrecorded_address() || held.inner_address);
+                        let plain = !(held.beyond().any_unknown() || held.inner_address);
                         let locals_unwritten = plain
                             && held.sites().next().is_none()
                             && held.may_be_a_locals_address()
@@ -889,7 +889,7 @@ impl Allocations<'_> {
         source.projection.as_slice() == [Projection::Deref]
             && self.may_be_pointer(function, source)
             && (through.sites().next().is_some() || through.may_be_a_locals_address())
-            && !(through.beyond().unrecorded_address() || through.inner_address)
+            && !(through.beyond().any_unknown() || through.inner_address)
             && through.sites().all(|site| {
                 value
                     .site_init_at(site, self.slot_read(through))
