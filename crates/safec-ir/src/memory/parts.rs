@@ -1387,10 +1387,17 @@ impl Held {
     /// nothing is recorded believes nothing (ADR-0061), this is what keeps
     /// the common case, `*box = &q; int *t = *box; *t = 1;`, proved.
     ///
-    /// **`Some(0)` off its start or inside a local**, since neither has a
-    /// width to read where it is off its start, which `fits` asks with the
-    /// distance counted (ADR-0092 rule 1), and a local's
-    /// size is not the size of something inside it. **And where it is
+    /// **What is left of the object past where it points**, the extent
+    /// less a position [`At::Bytes`] counts: `m + 1` into `int *m[2]` is
+    /// eight bytes wide, as wide as the `int *` it names. Read as `0`
+    /// wherever it was off the start, a pointer to the last element stored
+    /// and read back was doubted wherever it was written through or handed
+    /// on, seven reports in the corpus, each of a write that fits. Found by
+    /// the architecture review of 2026-11-13.
+    ///
+    /// **`Some(0)` off its start by a distance not counted, or inside a
+    /// local**, since neither has a width to read (ADR-0092 rule 1), and a
+    /// local's size is not the size of something inside it. **And where it is
     /// lost**, since what it holds may be an object no site it names stands
     /// for: a loop's earlier `malloc(1)` joined into `x = malloc(4)` on one
     /// arm leaves `x` naming the four-byte site alone, and `*box = x; int *t
@@ -1413,7 +1420,11 @@ impl Held {
     /// belief. Kept the least so that the record alone never says more than
     /// every object it stands for.
     pub(super) fn recorded_width(&self, extent: &Table<Loc, Option<Extent>>) -> Option<u64> {
-        if self.offset != At::Bytes(0) || self.inner_address || self.beyond().any_unknown() {
+        let at = match self.offset {
+            At::Bytes(at) => at,
+            At::Moved | At::Unknown => return Some(0),
+        };
+        if self.inner_address || self.beyond().any_unknown() {
             return Some(0);
         }
         // **One rule for both kinds of place**: a site nothing made and a
@@ -1421,7 +1432,12 @@ impl Held {
         self.names
             .ones()
             .filter(|place| !matches!(place, Loc::Unknown(_)))
-            .map(|place| extent[place].unwrap_or(Extent::AtLeast(0)).lower())
+            .map(|place| {
+                extent[place]
+                    .unwrap_or(Extent::AtLeast(0))
+                    .lower()
+                    .saturating_sub(at)
+            })
             .min()
     }
 

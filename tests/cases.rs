@@ -1208,7 +1208,8 @@ cases! {
         a_pointer_read_back_out_of_a_local_or_a_block_names_no_element: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read back out of either of two locals naming different elements.
         // Mutation: take the first local's element; this goes silent. Found
-        // by review.
+        // by review. Mutation: `Held::recorded_width` answers `0` off the
+        // start again; the store `*g = &x;` through `m + 1` is `SC0412`.
         a_pointer_read_back_out_of_either_of_two_locals_names_no_element: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // **Nor where the copy may write part of a pointer**: half of `e`
         // copied into `g` is not a pointer to `m[1]`, so the write through
