@@ -6394,20 +6394,32 @@ cases! {
         // (#703, ADR-0092 rule 1), and one past its end is shown outside; an
         // index this check cannot read stays unknown. Mutation: count no
         // distance in `built::offset_of`, answering `At::Moved` as before;
-        // the first three are `SC0412` again and the two after them only
+        // the first two are `SC0412` again and the two after them only
         // doubted. Mutation: answer a distance that cannot be counted as
         // `Bytes(0)`; the last is proved inside.
         an_access_past_the_start_of_a_local_array_is_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_index_past_the_start_of_an_allocation_is_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        an_element_of_an_array_of_arrays_is_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_index_one_past_the_end_of_an_allocation_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_index_one_past_the_end_of_a_local_array_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_index_this_check_cannot_read_into_an_allocation_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An element inside its row of an array of arrays: the distance is
+        // counted against the object, which may be wider than the row, so
+        // until a position records its row it is doubted, and the proof comes
+        // back with the row (#947, #944). Mutation: keep the position where a
+        // pointer to a row becomes a pointer to its element; this is proved
+        // inside again, and so is the row overrun in
+        // `a_subscript_past_its_row_of_an_array_of_arrays_is_doubted`.
+        an_element_inside_its_row_of_an_array_of_arrays_is_doubted_until_the_row_is_recorded: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: keep the position where a pointer to a row becomes a
+        // pointer to its element; each of the seven goes silent.
+        a_subscript_past_its_row_of_an_array_of_arrays_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer stored into a row is reported where it is stored and read
         // back, and named as freed at `*q` (#639). Mutation: the edge is
         // dropped for every local again; this loses the `SC0402`.
         a_pointer_stored_into_a_row_and_freed_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `type_levels` stops at an array; this is reported.
+        // Mutation: a pointer to a row that is the whole object loses its
+        // position too (#947); this is reported, and four more.
         a_pointer_read_out_of_an_array_of_pointers_behind_a_parameter_is_believed_as_its_element: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: the width a local was handed as skips an array of
         // pointers rather than reading its element; this goes silent.
@@ -6417,7 +6429,7 @@ cases! {
         an_array_too_large_to_count_is_not_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `innermost_element` strips one dimension only; this panics at
         // `type_levels`.
-        a_pointer_read_out_of_an_array_of_arrays_of_pointers_behind_a_parameter_is_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_an_array_of_arrays_of_pointers_behind_a_parameter_is_doubted_until_the_row_is_recorded: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory and handed straight on is believed by
         // the type it is read as, here a `void *`, which is narrower than the
         // `int` the parameter believes. Mutation: answer such an argument

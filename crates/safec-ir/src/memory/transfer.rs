@@ -591,6 +591,27 @@ impl Allocations<'_> {
         Some(Levels::new(levels))
     }
 
+    /// The array, where assigning `source` to `destination` converts a
+    /// pointer to it into a pointer to something that is not an array: the
+    /// conversion that takes `&a[0]` of an array of arrays into its row's
+    /// elements, a row that may be smaller than the object it is in.
+    fn row_converted_to_its_element(
+        &self,
+        function: &Function,
+        source: LocalId,
+        destination: LocalId,
+    ) -> Option<TyId> {
+        let (Ty::Pointer(from), Ty::Pointer(to)) = (
+            self.unit.ty(function.local(source)),
+            self.unit.ty(function.local(destination)),
+        ) else {
+            return None;
+        };
+        (matches!(self.unit.ty(from), Ty::Array { .. })
+            && !matches!(self.unit.ty(to), Ty::Array { .. }))
+        .then_some(from)
+    }
+
     /// Whether a value of type `ty` points at memory that holds pointers,
     /// through an array to its element as [`Self::type_levels`] reads it:
     /// `void **` and `int *(*)[2]` do, `int *` and `void *` do not. See
@@ -2944,6 +2965,43 @@ impl Analysis for Allocations<'_> {
                         value.replace(at, value.points_to[source.local].clone());
                         // See `Known::holds_fresh_read`.
                         value.points_to[destination].fresh_read = indeterminate;
+                        // **A pointer into a row has no position this check
+                        // can count against the row.** `a[0][2]` of `int
+                        // a[2][2]` converts `&a[0]`, a pointer to the row,
+                        // into a pointer to its element, and its distance is
+                        // inside the object and outside the row, which C17
+                        // 6.5.6 p8 makes undefined (Annex J.2 names
+                        // `a[1][7]` of `int a[4][5]`). Counted against the
+                        // object, it was proved to fit; until a position can
+                        // say which row it is in, it is not counted, and the
+                        // access is doubted as before c4cc026d (#947).
+                        //
+                        // **Unless the row is the whole object**: the
+                        // pointer is at its start and every object it names
+                        // is read as no smaller and no larger than the row,
+                        // so a distance counted against the object is one
+                        // counted against the row, and a pointer to an
+                        // array parameter keeps its proof.
+                        if let Some(row) =
+                            self.row_converted_to_its_element(function, source.local, destination)
+                        {
+                            let held = &value.points_to[destination];
+                            let whole = held.offset == At::Bytes(0)
+                                && !held.inner_address
+                                && !held.beyond().any_unknown()
+                                && self.unit.size_of(row).is_some_and(|row| {
+                                    held.sites()
+                                        .map(Loc::Heap)
+                                        .chain(held.locals().map(Loc::Local))
+                                        .all(|at| {
+                                            value.extent[at]
+                                                .is_some_and(|extent| extent.lower() == row)
+                                        })
+                                });
+                            if !whole {
+                                value.points_to[destination].offset = At::Unknown;
+                            }
+                        }
                     }
                     // **Arithmetic on a pointer is followed.** C17 6.5.6 p8
                     // keeps the result inside the object the operand points

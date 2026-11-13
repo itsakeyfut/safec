@@ -1,0 +1,100 @@
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:10:5 ]
+    │
+ 10 │     a[0][2] = 3;
+    │     ─────┬─────  
+    │          ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:15:5 ]
+    │
+ 15 │     a[1][0] = 3;
+    │     ─────┬─────  
+    │          ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:16:5 ]
+    │
+ 16 │     return a[0][2];
+    │     ───────┬───────  
+    │            ╰───────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:22:5 ]
+    │
+ 22 │     m[0][2] = 1;
+    │     ─────┬─────  
+    │          ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:28:5 ]
+    │
+ 28 │     a[0][0] = 1;
+    │     ─────┬─────  
+    │          ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:29:5 ]
+    │
+ 29 │     return a[1][-2];
+    │     ────────┬───────  
+    │             ╰───────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:35:5 ]
+    │
+ 35 │     (*pa)[2] = 1;
+    │     ──────┬─────  
+    │           ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:40:5 ]
+    │
+ 40 │     a[1][0] = 1;
+    │     ─────┬─────  
+    │          ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:42:5 ]
+    │
+ 42 │     return p[2];
+    │     ──────┬─────  
+    │           ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:47:5 ]
+    │
+ 47 │     a[1][7] = 0;
+    │     ─────┬─────  
+    │          ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
