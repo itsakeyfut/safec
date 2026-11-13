@@ -1428,15 +1428,30 @@ impl Held {
     /// What this value may hold beyond what its sites and its edges name.
     /// See [`Beyond`].
     pub(super) fn beyond(&self) -> Beyond {
-        let unrecorded = Unrecorded {
-            lost: self.may_name(Why::Lost),
-            loaded: self.may_name(Why::Loaded),
-            foreign: self.may_name(Why::Foreign),
-            from_caller: self.may_name(Why::FromCaller),
-            stale_read: self.may_name(Why::StaleRead),
-            lost_read: self.may_name(Why::LostRead),
-            unreplaced_read: self.may_name(Why::UnreplacedRead),
+        // **Every reason, by a `match` with no wildcard**, so a reason added
+        // to `Why` is `error[E0004]` here until a question answers it: built
+        // from seven reads by name, a reason added was named by values and
+        // asked by nothing, found by the architecture review of 2026-11-13.
+        let mut unrecorded = Unrecorded {
+            lost: false,
+            loaded: false,
+            foreign: false,
+            from_caller: false,
+            stale_read: false,
+            lost_read: false,
+            unreplaced_read: false,
         };
+        for &why in Why::ALL.iter().filter(|&&why| self.may_name(why)) {
+            match why {
+                Why::Lost => unrecorded.lost = true,
+                Why::Loaded => unrecorded.loaded = true,
+                Why::Foreign => unrecorded.foreign = true,
+                Why::FromCaller => unrecorded.from_caller = true,
+                Why::StaleRead => unrecorded.stale_read = true,
+                Why::LostRead => unrecorded.lost_read = true,
+                Why::UnreplacedRead => unrecorded.unreplaced_read = true,
+            }
+        }
         if unrecorded.any() {
             Beyond::Unrecorded(unrecorded)
         } else {
@@ -2565,6 +2580,13 @@ impl Beyond {
     ///
     /// **This mark alone**: its readers ask whether this check let go of the value, which no other mark says. Every mark is named, `_` for one not read, so a mark added
     /// is `error[E0027]` here and has to be answered (#853).
+    ///
+    /// **Asked of these reasons and not of any, measured** (the memory
+    /// model rebuilt on #924, stage 1): answered as `any_unknown`, 479
+    /// corpus cases and route rows moved, 11 of them saying less than
+    /// the build before, and 26 cases named as a deliberate quiet were
+    /// doubted. Which reasons it leaves out is a choice, and this is its
+    /// cost.
     pub(super) fn lost(&self) -> bool {
         match self {
             Beyond::Nothing => false,
@@ -2584,6 +2606,13 @@ impl Beyond {
     ///
     /// **This mark alone**: its readers ask how wide a pointer read out of memory is believed, which the other marks do not decide. Every mark is named, `_` for one not read, so a mark added
     /// is `error[E0027]` here and has to be answered (#853).
+    ///
+    /// **Asked of these reasons and not of any, measured** (the memory
+    /// model rebuilt on #924, stage 1): answered as `any_unknown`, 194
+    /// corpus cases and route rows moved, 4 of them saying less than
+    /// the build before, and 14 cases named as a deliberate quiet were
+    /// doubted. Which reasons it leaves out is a choice, and this is its
+    /// cost.
     pub(super) fn loaded(&self) -> bool {
         match self {
             Beyond::Nothing => false,
@@ -2603,6 +2632,13 @@ impl Beyond {
     ///
     /// **This mark alone**: its readers ask what a call this check cannot read handed back. Every mark is named, `_` for one not read, so a mark added
     /// is `error[E0027]` here and has to be answered (#853).
+    ///
+    /// **Asked of these reasons and not of any, measured** (the memory
+    /// model rebuilt on #924, stage 1): answered as `any_unknown`, 80
+    /// corpus cases and route rows moved, 72 of them saying less than
+    /// the build before, and 0 cases named as a deliberate quiet were
+    /// doubted. Which reasons it leaves out is a choice, and this is its
+    /// cost.
     pub(super) fn foreign(&self) -> bool {
         match self {
             Beyond::Nothing => false,
@@ -2622,6 +2658,13 @@ impl Beyond {
     ///
     /// **This mark alone**: its readers ask whether the value is the caller's, which only this provenance says. Every mark is named, `_` for one not read, so a mark added
     /// is `error[E0027]` here and has to be answered (#853).
+    ///
+    /// **Asked of these reasons and not of any, measured** (the memory
+    /// model rebuilt on #924, stage 1): answered as `any_unknown`, 27
+    /// corpus cases and route rows moved, 0 of them saying less than
+    /// the build before, and 2 cases named as a deliberate quiet were
+    /// doubted. Which reasons it leaves out is a choice, and this is its
+    /// cost.
     pub(super) fn is_from_caller(&self) -> bool {
         match self {
             Beyond::Nothing => false,
@@ -2642,6 +2685,13 @@ impl Beyond {
     ///
     /// **This mark alone**: its one reader asks whether a slot may still hold what a call left there. Every mark is named, `_` for one not read, so a mark added
     /// is `error[E0027]` here and has to be answered (#853).
+    ///
+    /// **Asked of these reasons and not of any, measured** (the memory
+    /// model rebuilt on #924, stage 1): answered as `any_unknown`, 49
+    /// corpus cases and route rows moved, 0 of them saying less than
+    /// the build before, and 1 cases named as a deliberate quiet were
+    /// doubted. Which reasons it leaves out is a choice, and this is its
+    /// cost.
     pub(super) fn unreplaced_read(&self) -> bool {
         match self {
             Beyond::Nothing => false,
@@ -2662,6 +2712,13 @@ impl Beyond {
     ///
     /// One question where its readers each composed it from two marks. Every mark is named, `_` for one not read, so a mark added is
     /// `error[E0027]` here (#853).
+    ///
+    /// **Asked of these reasons and not of any, measured** (the memory
+    /// model rebuilt on #924, stage 1): answered as `any_unknown`, 320
+    /// corpus cases and route rows moved, 44 of them saying less than
+    /// the build before, and 16 cases named as a deliberate quiet were
+    /// doubted. Which reasons it leaves out is a choice, and this is its
+    /// cost.
     pub(super) fn stopped_following_or_written_unseen(&self) -> bool {
         match self {
             Beyond::Nothing => false,
@@ -2686,6 +2743,13 @@ impl Beyond {
     /// `a_lost_pointer_read_back_before_its_free_is_doubted_when_used`
     /// fails; leave out `lost`, and
     /// `a_lost_pointer_freed_then_stored_is_doubted_when_read_back` does.
+    ///
+    /// **Asked of these reasons and not of any, measured** (the memory
+    /// model rebuilt on #924, stage 1): answered as `any_unknown`, 8
+    /// corpus cases and route rows moved, 3 of them saying less than
+    /// the build before, and 0 cases named as a deliberate quiet were
+    /// doubted. Which reasons it leaves out is a choice, and this is its
+    /// cost.
     pub(super) fn may_hold_a_lost_value(&self) -> bool {
         match self {
             Beyond::Nothing => false,
@@ -2725,6 +2789,13 @@ impl Beyond {
     /// written the local. They are kept, by the author's decision, because a
     /// mark kept here can only add a doubt, and one dropped would be a silence
     /// on a route nobody has built yet.
+    ///
+    /// **Asked of these reasons and not of any, measured** (the memory
+    /// model rebuilt on #924, stage 1): answered as `any_unknown`, 11
+    /// corpus cases and route rows moved, 3 of them saying less than
+    /// the build before, and 1 cases named as a deliberate quiet were
+    /// doubted. Which reasons it leaves out is a choice, and this is its
+    /// cost.
     pub(super) fn believed_to_reach_only_its_edges(&self) -> bool {
         match self {
             Beyond::Nothing => true,
