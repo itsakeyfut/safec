@@ -16,11 +16,11 @@ use super::index::{Idx, Loc, LocalIdx, Site, Table, Target, Why};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
-    At, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, PlaceInit, Read, Realloced,
-    SiteState, Width,
+    At, Cell, Extent, Freeing, Held, Init, Inits, Levels, PlaceInit, Read, Realloced, SiteState,
+    Width,
 };
 use super::store::{StoreKind, Strong};
-use super::transfer::{CopiedPointers, Pours, believed_width};
+use super::transfer::{CopiedPointers, Pours, ReadAs, believed_width};
 use super::{Carried, Carrier};
 use crate::library::{Callee, Leaves, Makes, Reach};
 use crate::reads::derefs;
@@ -543,7 +543,7 @@ impl Allocations<'_> {
                             }
                             // **What it copies is a load of the source one level
                             // further**, `memcpy(box, pp, 8)` being `*box =
-                            // *pp;`, built by the load's own `Known::load_into`
+                            // *pp;`, built by the load's own `Allocations::read_at`
                             // rather than by a copy of it to drift (#777): the
                             // sites and addresses one level below the source,
                             // whatever type the source was declared with, since
@@ -561,46 +561,13 @@ impl Allocations<'_> {
                             // memcpy(&g, box, 8); g[0] = &x;` believed `m[0]`
                             // written where `g = box[0];` doubts it. Found by
                             // review, each.
-                            let mut read = Held::from_marks(
-                                value.points_to.len(),
-                                Marks {
-                                    lost: false,
-                                    freed: None,
-                                    writes_elsewhere: true,
-                                    offset: At::Bytes(0),
-                                    loaded: true,
-                                    foreign: false,
-                                    stale_read: false,
-                                    unreplaced_read: false,
-                                    lost_read: false,
-                                    from_caller: false,
-                                    returned_by: None,
-                                    fresh_read: false,
-                                    widths: Levels::new(vec![Width::Nothing]),
-                                    // Nor any type, as `widths`.
-                                    arrived_holds_pointer: false,
-                                    inner_address: false,
-                                    element: None,
-                                    site_element: None,
-                                    array_edge: false,
-                                    stored_through: false,
-                                    // As a load's (#931).
-                                    may_be_null: true,
-                                },
-                            );
-                            let caller =
-                                self.reads_caller_memory(source.local, from_depth + 1, value);
-                            value.load_into(
-                                &mut read,
+                            let read = self.read_at(
+                                function,
                                 source.local,
                                 from_depth + 1,
-                                &|local| self.is_array(function, local),
-                                caller,
+                                value,
+                                ReadAs::Bytes,
                             );
-                            // As of this copy. See `Held::named_at_read`.
-                            for named in value.locals_named_by_unknown_code() {
-                                read.named_at_read.set(named);
-                            }
                             // Where it lands, as a store one dereference
                             // further would. See `store::Landing`.
                             let landing = self.landing(

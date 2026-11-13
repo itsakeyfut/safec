@@ -881,6 +881,32 @@ impl Allocations<'_> {
     /// when handed one. One rule in several places drifts apart.
     /// See ADR-0067.
     pub(super) fn read_through(&self, function: &Function, source: &Place, value: &Known) -> Held {
+        self.read_at(
+            function,
+            source.local,
+            derefs(source),
+            value,
+            ReadAs::Typed(source),
+        )
+    }
+
+    /// What a value read `depth` dereferences through `local` holds, read
+    /// as `read_as` says: by a load, as the type of the place it reads, and
+    /// by a library copy, as bytes of no type. **One body for both** (the
+    /// memory model rebuilt on #924): the copy built its own value beside
+    /// the load's, the same marks and the same `Known::load_into`, and each
+    /// fix to one had to be carried to the other (#777, #929). What the
+    /// type decides is answered by `read_as` at each place it is asked, so
+    /// the two cannot differ anywhere else. Found by the architecture
+    /// review of 2026-11-13.
+    pub(super) fn read_at(
+        &self,
+        function: &Function,
+        local: LocalId,
+        depth: usize,
+        value: &Known,
+        read_as: ReadAs<'_>,
+    ) -> Held {
         // **The load door's answer for every field, never `..`**, so a field
         // added to `Known` answers here for what a load does with it. A load
         // writes no field: what it reads becomes a `Held`, which the
@@ -941,9 +967,14 @@ impl Allocations<'_> {
                 // read any object, so a pointer copied a byte at a time is
                 // copied, and the byte carries what was stored where it was
                 // read from, marked as a load is so that it proves nothing
-                // about what it names. See ADR-0046.
-                loaded: self.may_be_pointer(function, source)
-                    || self.reads_a_byte(function, source),
+                // about what it names. See ADR-0046. **And bytes copied are
+                // a load of whatever they hold.**
+                loaded: match read_as {
+                    ReadAs::Typed(source) => {
+                        self.may_be_pointer(function, source) || self.reads_a_byte(function, source)
+                    }
+                    ReadAs::Bytes => true,
+                },
                 foreign: false,
                 stale_read: false,
                 unreplaced_read: false,
@@ -970,19 +1001,32 @@ impl Allocations<'_> {
                 // Mutation: take the type alone, and
                 // `a_void_pointer_three_levels_deep_converted_whole_is_believed_below_its_first_level`
                 // goes silent.
-                widths: self.contents_read(function, source, value).stored_under(
-                    Width::of_belief(
-                        self.pointee_size(function, source)
-                            .map(|_| self.believed_read(function, source, value)),
-                    ),
-                    usize::MAX,
-                ),
+                //
+                // **Bytes are read as nothing**, and believe no width: a
+                // copy is asked per place it lands in, by what that place is
+                // declared as.
+                widths: match read_as {
+                    ReadAs::Typed(source) => {
+                        self.contents_read(function, source, value).stored_under(
+                            Width::of_belief(
+                                self.pointee_size(function, source)
+                                    .map(|_| self.believed_read(function, source, value)),
+                            ),
+                            usize::MAX,
+                        )
+                    }
+                    ReadAs::Bytes => Levels::new(vec![Width::Nothing]),
+                },
                 // And whether that type holds pointers in its memory, which
                 // `0` there does not say. See `Held::arrived_holds_pointer`.
-                arrived_holds_pointer: self
-                    .unit
-                    .place_ty(function, source)
-                    .is_some_and(|ty| self.first_level_holds_a_pointer(ty)),
+                // Bytes have no type, as `widths`.
+                arrived_holds_pointer: match read_as {
+                    ReadAs::Typed(source) => self
+                        .unit
+                        .place_ty(function, source)
+                        .is_some_and(|ty| self.first_level_holds_a_pointer(ty)),
+                    ReadAs::Bytes => false,
+                },
                 inner_address: false,
                 element: None,
                 site_element: None,
@@ -1003,21 +1047,26 @@ impl Allocations<'_> {
         // said, so that a dereference of it can be asked about what it may
         // point at. `loaded` stays set, which is what marks the set as
         // possibly incomplete for every reader. See ADR-0045.
-        let depth = derefs(source);
         if held.beyond().loaded() && depth > 0 {
             // What memory holds there, and the marks a load out of it
             // carries, read as `built::built_from` reads them. See
             // `Known::load_into`.
             let named_a_local = value.load_into(
                 &mut held,
-                source.local,
+                local,
                 depth,
                 &|local| self.is_array(function, local),
-                self.reads_caller_memory(source.local, depth, value),
+                self.reads_caller_memory(local, depth, value),
             );
             if named_a_local {
                 held.writes_elsewhere = true;
             }
+            // **What follows is a load's alone**: the width its type says
+            // and whether its read is fresh. A copy asks both per place it
+            // lands in, where a type is.
+            let ReadAs::Typed(source) = read_as else {
+                return held;
+            };
             // **Believed only where every local it may be read out of fits
             // what it is read as.** A local is no memory with a door: an
             // assignment to it is asked nowhere, and a `void *` a callee
@@ -1026,9 +1075,10 @@ impl Allocations<'_> {
             // asks it (ADR-0060), without doubting the escape its address
             // is. `int *q = *pi; *q = 1;` with `v = p + 4` after `pi = &v`
             // is unknown at `*q` for it (#627).
-            if held.believed().is_some_and(|width| {
-                !self.read_from_fits(function, source.local, depth, width, value)
-            }) {
+            if held
+                .believed()
+                .is_some_and(|width| !self.read_from_fits(function, local, depth, width, value))
+            {
                 held.believe(None);
             }
             // The question the report asks at this read, so that a value
@@ -3245,4 +3295,14 @@ mod caller_memory {
         value.points_to[holder].hold(Site::of(LocalIdx::of(other)), At::Bytes(0));
         assert!(!analysis.reads_caller_memory(holder, 1, &value));
     }
+}
+
+/// How [`Allocations::read_at`] reads a value: as the type of the place a
+/// load reads, or as bytes, which a library copy reads and which have none.
+#[derive(Clone, Copy)]
+pub(super) enum ReadAs<'p> {
+    /// A load of this place, read as its type.
+    Typed(&'p Place),
+    /// Bytes a library copy reads, of no type.
+    Bytes,
 }
