@@ -448,14 +448,16 @@ impl Allocations<'_> {
                         let held = &value.points_to[source.local];
                         let slots = self.slots_read(held, bytes);
                         let plain = !(held.beyond().any_unknown() || held.inner_address);
+                        let local_slots = self.slots_read_of_locals(held, bytes);
                         let locals_unwritten = plain
                             && held.sites().next().is_none()
                             && held.may_be_a_locals_address()
-                            && held.locals().all(|l| value.certainly_unwritten(l, None));
-                        let locals_maybe = held.locals().any(|l| {
-                            value.certainly_unwritten(l, None)
-                                || value.may_be_unwritten(l, None, true)
-                        });
+                            && held
+                                .locals()
+                                .all(|l| value.written[l].over(local_slots).is_unwritten());
+                        let locals_maybe = held
+                            .locals()
+                            .any(|l| value.written[l].over(local_slots).may_be_unwritten());
                         (
                             value.names_only_fresh(source.local, slots) || locals_unwritten,
                             value.may_name_fresh(source.local, slots) || locals_maybe,
@@ -868,12 +870,36 @@ impl Allocations<'_> {
     /// goes silent; end at the last slot it reads whole, and
     /// `a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt`
     /// does.
-    fn slots_read(&self, through: &Held, bytes: Option<u64>) -> Option<(u64, u64)> {
+    pub(super) fn slots_read(&self, through: &Held, bytes: Option<u64>) -> Option<(u64, u64)> {
+        self.slots_read_from(through.site_element, through.offset, bytes)
+    }
+
+    /// [`Self::slots_read`] of a local the value names, from the element it
+    /// names there (`Held::element`) or its counted position: **the one
+    /// rule the copy's transfer and its report both read a source by** (the
+    /// memory model rebuilt on #924, stage 2). Asked of a local at any
+    /// element by the transfer and slot by slot by the report,
+    /// `a[0] = x; memcpy(out, a, 8); r = *out;` was doubted at `*out` and
+    /// asked nothing at the copy.
+    pub(super) fn slots_read_of_locals(
+        &self,
+        through: &Held,
+        bytes: Option<u64>,
+    ) -> Option<(u64, u64)> {
+        self.slots_read_from(through.element, through.offset, bytes)
+    }
+
+    fn slots_read_from(
+        &self,
+        slot: Option<u64>,
+        offset: At,
+        bytes: Option<u64>,
+    ) -> Option<(u64, u64)> {
         let target = self.unit.target();
         let pointer = u64::from(target.pointer_bits() / target.char().bits());
-        let start = match through.site_element {
+        let start = match slot {
             Some(element) => element.checked_mul(pointer)?,
-            None => match through.offset {
+            None => match offset {
                 At::Bytes(at) => at,
                 At::Moved | At::Unknown => return None,
             },

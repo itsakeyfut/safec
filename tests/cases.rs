@@ -549,6 +549,9 @@ cases! {
         // allocation; it goes silent.
         a_copy_of_a_block_nothing_wrote_into_caller_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_out_of_a_slot_a_store_wrote_is_not_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the transfer asks a local source at any element again; this
+        // is doubted at `*out`.
+        a_copy_out_of_a_written_slot_of_a_local_array_is_read_as_its_store_reads_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_out_of_a_slot_nothing_wrote_beside_a_written_one_is_reported_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `slots_read` takes a counted position as `0`; this goes

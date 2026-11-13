@@ -26,7 +26,7 @@ use super::fit::{
 use super::index::{Idx, Loc, LocalIdx, Site};
 use super::known::Known;
 use super::parts::{
-    At, Extent, Freeing, Init, Levels, PlaceInit, Reached, Read, SiteState, Width, earlier, same,
+    At, Extent, Freeing, Init, Levels, Reached, Read, SiteState, Width, earlier, same,
 };
 use super::store::{StoreKind, Written};
 use super::transfer::CopiedPointers;
@@ -2278,36 +2278,24 @@ fn source_may_be_unwritten(
                 known.certainly_unwritten(local, None) || known.may_be_unwritten(local, None, true)
             });
     }
+    // **One rule for a block and a local, and the one the copy's transfer
+    // reads its source by** (`Allocations::slots_read`,
+    // `Allocations::slots_read_of_locals`): the slots the copy covers where
+    // the place keeps slots, from the slot the pointer is known to point at.
+    // A block's was asked whole, so `b[0] = x; memcpy(out, b, 8);` was
+    // doubted for `b[1]` (#894); and read here apart from the transfer, a
+    // local array was asked here slot by slot and there at any element, so
+    // `a[0] = x; memcpy(out, a, 8); r = *out;` was doubted at `*out` and
+    // asked nothing at the copy (the memory model rebuilt on #924, stage 2).
     let held = &known.points_to[from.local];
-    let target = analysis.unit.target();
-    let pointer = u64::from(target.pointer_bits() / target.char().bits());
-    let covered = analysis
-        .constant_argument(callee, arguments, 2)
-        .map(|length| length.div_ceil(pointer));
-    // **One rule for a block and a local**, each at the slots the copy
-    // covers where it keeps slots, from the slot the pointer is known to
-    // point at: a block's was asked whole, so `b[0] = x; memcpy(out, b, 8);`
-    // with `b` from `malloc(16)` was doubted for `b[1]` where the same out
-    // of a local array was not (#894).
-    let covers_unwritten = |written: &PlaceInit, start: Option<u64>| {
-        let Some(slots) = written.slots() else {
-            return written.whole().may_be_unwritten();
-        };
-        match (start, covered) {
-            (Some(start), Some(count)) => (start..start.saturating_add(count)).any(|slot| {
-                usize::try_from(slot)
-                    .ok()
-                    .filter(|&slot| slot < slots.len())
-                    .is_some_and(|slot| slots.get(slot).may_be_unwritten())
-            }),
-            (Some(_) | None, _) => slots.any_may_be_unwritten(),
-        }
-    };
+    let bytes = analysis.constant_argument(callee, arguments, 2);
+    let site_slots = analysis.slots_read(held, bytes);
+    let local_slots = analysis.slots_read_of_locals(held, bytes);
     held.sites()
-        .any(|site| covers_unwritten(&known.written[site], held.site_element))
+        .any(|site| known.written[site].over(site_slots).may_be_unwritten())
         || held
             .locals()
-            .any(|local| covers_unwritten(&known.written[local], held.element))
+            .any(|local| known.written[local].over(local_slots).may_be_unwritten())
 }
 
 /// Whether what `operand` points at holds a pointer, by what it points at
