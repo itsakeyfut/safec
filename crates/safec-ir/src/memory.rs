@@ -78,6 +78,7 @@ mod parts;
 mod report;
 mod store;
 mod transfer;
+mod unwritten;
 
 use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
@@ -96,11 +97,11 @@ use allocations::Allocations;
 use built::named;
 use index::Table;
 use report::{
-    UnwrittenAsk, after_a_call, asked_unwritten_in_element, asked_unwritten_in_terminator,
-    copied_away, departed_at_call, departed_in_element, freed_after_its_read_was_reported, handed,
-    handed_stored_out, may_not_fit, reached_by_library, reported, returned, stored_away, used,
-    used_before, used_by_value,
+    after_a_call, copied_away, departed_at_call, departed_in_element,
+    freed_after_its_read_was_reported, handed, handed_stored_out, may_not_fit, reached_by_library,
+    reported, returned, stored_away, used, used_before, used_by_value,
 };
+use unwritten::{UnwrittenAsk, asked_unwritten_in_element, asked_unwritten_in_terminator};
 
 /// The library call that carried bytes nothing wrote into a place, and the
 /// local it read them through, for the report about a read of them (#752).
