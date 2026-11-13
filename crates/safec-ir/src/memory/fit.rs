@@ -81,6 +81,58 @@ pub(super) fn fits(
     known: &Known,
     doubt_unseen_writes: bool,
 ) -> Option<Fit> {
+    reached(
+        analysis,
+        function,
+        local,
+        width,
+        known,
+        doubt_unseen_writes,
+        Access::Typed,
+    )
+}
+
+/// [`fits`] for an access as bytes, by a library function handed the
+/// pointer: what it reads or writes may cover the whole object, which C17
+/// 6.3.2.3 p7 allows, so the row the pointer walks is not asked.
+/// `memset(a, 0, sizeof a)` of `int a[2][2]` writes the whole object
+/// through a pointer that walks `a[0]`'s row. See `Row`.
+pub(super) fn fits_as_bytes(
+    analysis: &Allocations<'_>,
+    function: &Function,
+    local: LocalId,
+    width: u64,
+    known: &Known,
+    doubt_unseen_writes: bool,
+) -> Option<Fit> {
+    reached(
+        analysis,
+        function,
+        local,
+        width,
+        known,
+        doubt_unseen_writes,
+        Access::Bytes,
+    )
+}
+
+/// How an access reads the object: as the type the pointer points at, or
+/// as bytes.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Access {
+    Typed,
+    Bytes,
+}
+
+fn reached(
+    analysis: &Allocations<'_>,
+    function: &Function,
+    local: LocalId,
+    width: u64,
+    known: &Known,
+    doubt_unseen_writes: bool,
+    access: Access,
+) -> Option<Fit> {
     let held = &known.points_to[local];
     let holds_something = held.sites().next().is_some()
         || held.offset != At::Bytes(0)
@@ -168,6 +220,14 @@ pub(super) fn fits(
     let Some(reach) = reach.filter(|_| !held.beyond().loaded()) else {
         return Some(Fit::Unknown);
     };
+    // **Inside the row it walks, where it walks one**, for a typed access:
+    // past its row is undefined though the object is wider, and doubted,
+    // since the object around it is not what is reached. See `Row` (#947).
+    if let (Access::Typed, Some(row), At::Bytes(at)) = (access, held.row, held.offset) {
+        if !row.holds(at, width) {
+            return Some(Fit::Unknown);
+        }
+    }
     // **Off its start with no object to be in**, which only arithmetic on a
     // null leaves: every object it names fits, since it names none, and a
     // null moved is no pointer into anything. `int *q = p + 1;` with `p`

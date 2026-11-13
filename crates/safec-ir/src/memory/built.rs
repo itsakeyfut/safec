@@ -125,6 +125,13 @@ pub(super) fn built_from(
     }
 
     reached.offset = offset_of(op, operands, &followed, value, stride);
+    // **Arithmetic stays in the row the pointer walks**: `q + 2` with `q`
+    // in `a[0]`'s row is still in that row, and reaching past it is what is
+    // asked. See `Row`.
+    reached.row = match followed[..] {
+        [one] => value.points_to[one].row,
+        _ => None,
+    };
     // **And it contributes what it holds**, what a load out of the same place
     // assigned to a local is given, at an offset nobody said since the
     // distance is not carried (ADR-0036). `loaded` below keeps every reader

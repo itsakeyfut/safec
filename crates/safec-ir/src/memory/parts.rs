@@ -242,6 +242,40 @@ impl At {
     }
 }
 
+/// The array a pointer walks the elements of, where it is narrower than the
+/// object the pointer names: `start` bytes from that object's start, `len`
+/// bytes long. Set where a pointer to an array is taken as a pointer to
+/// anything else (`Allocations::converted`), so `a[0]` of `int a[2][2]`
+/// walks the eight bytes of its row and `a[0][2]` reaches past them, which
+/// C17 6.5.6 p8 makes undefined though the object is wider (Annex J.2,
+/// #947).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct Row {
+    pub(super) start: u64,
+    pub(super) len: u64,
+}
+
+impl Row {
+    /// Where an access of `width` bytes at `at` stays inside the row.
+    pub(super) fn holds(self, at: u64, width: u64) -> bool {
+        at >= self.start
+            && at
+                .checked_add(width)
+                .is_some_and(|reach| reach <= self.start.saturating_add(self.len))
+    }
+
+    /// The part of this row that `other` covers, where it covers any: a
+    /// pointer converted twice walks the narrower array.
+    pub(super) fn within(self, other: Row) -> Option<Row> {
+        let start = self.start.max(other.start);
+        let end = (self.start.saturating_add(self.len)).min(other.start.saturating_add(other.len));
+        (end > start).then(|| Row {
+            start,
+            len: end - start,
+        })
+    }
+}
+
 /// How many bytes the object a site stands for takes, as far as this check
 /// read it.
 ///
@@ -949,6 +983,11 @@ pub(super) struct Held {
     /// cannot be written without answering where in it the value points. See
     /// ADR-0036.
     pub(super) offset: At,
+    /// The array this value walks the elements of, where it is narrower than
+    /// what it names; `None` is the whole object. **Asked by a typed access
+    /// alone**: a library function reading or writing bytes may cover the
+    /// whole object, which C17 6.3.2.3 p7 allows. See [`Row`] and #947.
+    pub(super) row: Option<Row>,
     /// The locals code this check cannot read could name where this value
     /// was read out of memory, or where such code may have written it
     /// ([`Why::Foreign`], #661), what
@@ -1429,6 +1468,14 @@ impl Held {
         if self.inner_address || self.beyond().any_unknown() {
             return Some(0);
         }
+        // No wider than what is left of its row, where it walks one.
+        let row_left = self.row.map(|row| {
+            if at < row.start {
+                0
+            } else {
+                row.start.saturating_add(row.len).saturating_sub(at)
+            }
+        });
         // **One rule for both kinds of place**: a site nothing made and a
         // local with no size are both nothing read, `0`. See `Known::extent`.
         self.names
@@ -1440,6 +1487,7 @@ impl Held {
                     .lower()
                     .saturating_sub(at)
             })
+            .chain(row_left)
             .min()
     }
 
@@ -1670,6 +1718,9 @@ impl Held {
             freed,
             writes_elsewhere,
             offset,
+            // No door makes a value inside a row; a conversion does. See
+            // `Row`.
+            row: None,
             named_at_read: Bits::new(sites),
             returned_by,
             fresh_read,
@@ -1779,6 +1830,7 @@ impl Held {
             freed,
             writes_elsewhere,
             offset,
+            row,
             named_at_read,
             returned_by,
             fresh_read,
@@ -1792,6 +1844,7 @@ impl Held {
             may_be_null,
         } = self;
         *may_be_null = false;
+        *row = None;
         names.clear_all();
         *fresh_read = false;
         *widths = Levels::new(vec![Width::Nothing]);
@@ -1843,6 +1896,7 @@ impl Held {
             freed,
             writes_elsewhere,
             offset,
+            row,
             named_at_read,
             returned_by,
             fresh_read,
@@ -1855,6 +1909,17 @@ impl Held {
             stored_through,
             may_be_null,
         } = self;
+        // **One row where both paths walk it**, and a side naming nothing,
+        // a null, is the identity. Two rows, or a row and the whole object,
+        // leave no position counted against either: kept, a row joined with
+        // a wider path would prove an access past the row. Asked before the
+        // union below. See `Row`.
+        let here_names = names.ones().any(|named| named.place().is_some());
+        let there_names = other.names.ones().any(|named| named.place().is_some());
+        let rows_disagree = here_names && there_names && *row != other.row;
+        if !here_names {
+            *row = other.row;
+        }
         // A may-fact, so a union: null on either path is null on one.
         *may_be_null = *may_be_null || other.may_be_null;
         *inner_address = *inner_address || other.inner_address;
@@ -1872,6 +1937,10 @@ impl Held {
         // A proof, so an intersection, as `freed` is.
         *fresh_read = *fresh_read && other.fresh_read;
         *offset = offset.joined(other.offset);
+        if rows_disagree {
+            *row = None;
+            *offset = At::Unknown;
+        }
         named_at_read.union_with(&other.named_at_read);
         // **A path that knows where a write through this local lands and a
         // path that does not is a path that does not.** This is what keeps a
@@ -1930,6 +1999,9 @@ impl Held {
             freed,
             writes_elsewhere,
             offset,
+            // Where the result points is the fold's to say, as `offset` is
+            // below; `built_from` gives it the pointer operand's row.
+            row: _,
             named_at_read,
             returned_by,
             fresh_read,
@@ -2444,6 +2516,7 @@ impl Cell {
             freed: _,
             writes_elsewhere: _,
             offset: _,
+            row: _,
             named_at_read: _,
             returned_by: _,
             fresh_read: _,

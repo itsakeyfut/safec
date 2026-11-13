@@ -1,7 +1,10 @@
 // A subscript past the end of its row of an array of arrays, inside the
 // whole object, is undefined (C17 6.5.6 p8; Annex J.2 names `a[1][7]` of
 // `int a[4][5]`). Counted against the object, each of these was proved to
-// fit after #924; each is doubted at the access (#947).
+// fit after #924; each is doubted at the access, however the pointer into
+// the row travels: copied, stored through a `void **`, handed back by
+// `memcpy`, or moved back from the next row. An access inside a row is
+// proved (#947).
 void *malloc(int n);
 void free(void *p);
 
@@ -45,4 +48,38 @@ int through_a_pointer_to_an_element(void) {
 void the_example_the_standard_gives(void) {
     int a[4][5];
     a[1][7] = 0;
+}
+
+void through_a_void_pointer_slot(void) {
+    int a[2][2];
+    void *v;
+    void **vp = &v;
+    *vp = &a[0];
+    int *q = v;
+    if (!q) return;
+    q[2] = 1;
+}
+
+void *memcpy(void *d, void *s, int n);
+
+void through_what_memcpy_hands_back(void) {
+    int a[2][2];
+    int b[1];
+    b[0] = 0;
+    int *q = memcpy(&a[0], b, 4);
+    if (!q) return;
+    q[2] = 1;
+}
+
+void back_from_the_next_row(void) {
+    int b[2];
+    int (*r)[2] = &b;
+    int *p = r[1];
+    p[-1] = 1;
+}
+
+int inside_a_row(void) {
+    int a[2][3];
+    a[1][2] = 5;
+    return a[1][2];
 }

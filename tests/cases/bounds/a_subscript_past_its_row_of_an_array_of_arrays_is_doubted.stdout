@@ -1,11 +1,11 @@
 Target "x86_64-pc-windows-msvc"
-Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:5:7 "malloc" declared
+Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:8:7 "malloc" declared
   Local "_0" "void *" return
   Local "_1" "int" parameter "n"
-Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:6:6 "free" declared
+Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:9:6 "free" declared
   Local "_0" "void" return
   Local "_1" "void *" parameter "p"
-Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:8:6 "past_a_row"
+Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:11:6 "past_a_row"
   Local "_0" "void" return
   Local "_1" "int[2][2]" "a"
   Local "_2" "int (*)[2]"
@@ -13,34 +13,34 @@ Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:8:6 "past_a
   Local "_4" "int *"
   Local "_5" "int"
   Block "bb0" entry
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:10:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:13:5 generated
       Destination "_2"
       Address
         Place "_1"
           Index
             Constant 0
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:10:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:13:5 generated
       Destination "_3"
       Use
         Copy "_2"
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:10:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:13:5 written
       Destination "_4"
       Binary "Add"
         Copy "_3"
         Constant 2
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:10:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:13:5 written
       Destination "_4"
         Deref
       Use
         Constant 3
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:10:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:13:5 written
       Destination "_5"
       Use
         Copy "_4"
           Deref
-    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:10:5 generated
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:13:5 generated
     Return
-Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:13:5 "read_past_a_row"
+Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:16:5 "read_past_a_row"
   Local "_0" "int" return
   Local "_1" "int[2][2]" "a"
   Local "_2" "int (*)[2]"
@@ -51,55 +51,55 @@ Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:13:5 "read_
   Local "_7" "int *"
   Local "_8" "int *"
   Block "bb0" entry
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:15:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:18:5 generated
       Destination "_2"
       Address
         Place "_1"
           Index
             Constant 0
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:15:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:18:5 written
       Destination "_3"
       Binary "Add"
         Copy "_2"
         Constant 1
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:15:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:18:5 generated
       Destination "_4"
       Use
         Copy "_3"
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:15:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:18:5 written
       Destination "_4"
         Deref
       Use
         Constant 3
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:15:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:18:5 written
       Destination "_5"
       Use
         Copy "_4"
           Deref
-    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:15:5 generated
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:16:12 generated
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:18:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:19:12 generated
       Destination "_6"
       Address
         Place "_1"
           Index
             Constant 0
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:16:12 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:19:12 generated
       Destination "_7"
       Use
         Copy "_6"
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:16:12 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:19:12 written
       Destination "_8"
       Binary "Add"
         Copy "_7"
         Constant 2
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:16:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:19:5 written
       Destination "_0"
       Use
         Copy "_8"
           Deref
-    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:16:12 generated
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:19:12 generated
     Return
-Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:19:6 "past_a_row_of_a_block"
+Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:22:6 "past_a_row_of_a_block"
   Local "_0" "void" return
   Local "_1" "int (*)[2]" "m"
   Local "_2" "void *"
@@ -108,56 +108,56 @@ Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:19:6 "past_
   Local "_5" "int *"
   Local "_6" "int"
   Block "bb0" entry
-    ArgumentsEvaluated a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:20:19 generated
-    Call a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:20:19 written "malloc" "bb1"
+    ArgumentsEvaluated a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:23:19 generated
+    Call a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:23:19 written "malloc" "bb1"
       Destination "_2"
       Constant 16
   Block "bb1"
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:20:11 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:23:11 written
       Destination "_1"
       Use
         Copy "_2"
-    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:20:19 generated
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:21:9 written
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:23:19 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:24:9 written
       Destination "_3"
       Unary "Not"
         Copy "_1"
-    Branch a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:21:9 written "bb2" "bb3"
+    Branch a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:24:9 written "bb2" "bb3"
       Copy "_3"
   Block "bb2"
-    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:21:9 generated
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:24:9 generated
     Return
   Block "bb3"
-    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:21:9 generated
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:24:9 generated
     Goto "bb4"
   Block "bb4"
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:22:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:25:5 generated
       Destination "_4"
       Use
         Copy "_1"
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:22:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:25:5 written
       Destination "_5"
       Binary "Add"
         Copy "_4"
         Constant 2
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:22:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:25:5 written
       Destination "_5"
         Deref
       Use
         Constant 1
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:22:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:25:5 written
       Destination "_6"
       Use
         Copy "_5"
           Deref
-    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:22:5 generated
-    ArgumentsEvaluated a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:23:5 generated
-    Call a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:23:5 written "free" "bb5"
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:25:5 generated
+    ArgumentsEvaluated a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:26:5 generated
+    Call a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:26:5 written "free" "bb5"
       Copy "_1"
   Block "bb5"
-    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:23:5 generated
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:26:5 generated
     Return
-Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:26:5 "before_a_row"
+Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:29:5 "before_a_row"
   Local "_0" "int" return
   Local "_1" "int[2][2]" "a"
   Local "_2" "int (*)[2]"
@@ -168,55 +168,55 @@ Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:26:5 "befor
   Local "_7" "int *"
   Local "_8" "int *"
   Block "bb0" entry
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:28:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:31:5 generated
       Destination "_2"
       Address
         Place "_1"
           Index
             Constant 0
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:28:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:31:5 generated
       Destination "_3"
       Use
         Copy "_2"
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:28:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:31:5 written
       Destination "_3"
         Deref
       Use
         Constant 1
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:28:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:31:5 written
       Destination "_4"
       Use
         Copy "_3"
           Deref
-    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:28:5 generated
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:29:12 generated
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:31:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:32:12 generated
       Destination "_5"
       Address
         Place "_1"
           Index
             Constant 0
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:29:12 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:32:12 written
       Destination "_6"
       Binary "Add"
         Copy "_5"
         Constant 1
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:29:12 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:32:12 generated
       Destination "_7"
       Use
         Copy "_6"
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:29:12 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:32:12 written
       Destination "_8"
       Binary "Add"
         Copy "_7"
         Constant -2
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:29:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:32:5 written
       Destination "_0"
       Use
         Copy "_8"
           Deref
-    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:29:12 generated
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:32:12 generated
     Return
-Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:32:6 "through_a_pointer_to_a_row"
+Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:35:6 "through_a_pointer_to_a_row"
   Local "_0" "void" return
   Local "_1" "int[2][2]" "a"
   Local "_2" "int (*)[2]" "pa"
@@ -225,39 +225,39 @@ Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:32:6 "throu
   Local "_5" "int *"
   Local "_6" "int"
   Block "bb0" entry
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:34:21 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:37:21 generated
       Destination "_3"
       Address
         Place "_1"
           Index
             Constant 0
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:34:11 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:37:11 written
       Destination "_2"
       Use
         Copy "_3"
-    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:34:20 generated
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:35:6 generated
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:37:20 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:38:6 generated
       Destination "_4"
       Use
         Copy "_2"
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:35:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:38:5 written
       Destination "_5"
       Binary "Add"
         Copy "_4"
         Constant 2
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:35:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:38:5 written
       Destination "_5"
         Deref
       Use
         Constant 1
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:35:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:38:5 written
       Destination "_6"
       Use
         Copy "_5"
           Deref
-    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:35:5 generated
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:38:5 generated
     Return
-Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:38:5 "through_a_pointer_to_an_element"
+Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:41:5 "through_a_pointer_to_an_element"
   Local "_0" "int" return
   Local "_1" "int[2][2]" "a"
   Local "_2" "int (*)[2]"
@@ -270,65 +270,65 @@ Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:38:5 "throu
   Local "_9" "int *"
   Local "_10" "int *"
   Block "bb0" entry
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:40:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:43:5 generated
       Destination "_2"
       Address
         Place "_1"
           Index
             Constant 0
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:40:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:43:5 written
       Destination "_3"
       Binary "Add"
         Copy "_2"
         Constant 1
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:40:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:43:5 generated
       Destination "_4"
       Use
         Copy "_3"
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:40:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:43:5 written
       Destination "_4"
         Deref
       Use
         Constant 1
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:40:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:43:5 written
       Destination "_5"
       Use
         Copy "_4"
           Deref
-    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:40:5 generated
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:41:15 generated
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:43:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:44:15 generated
       Destination "_7"
       Address
         Place "_1"
           Index
             Constant 0
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:41:15 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:44:15 generated
       Destination "_8"
       Use
         Copy "_7"
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:41:15 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:44:15 written
       Destination "_9"
       Binary "Add"
         Copy "_8"
         Constant 1
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:41:10 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:44:10 written
       Destination "_6"
       Use
         Copy "_9"
-    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:41:14 generated
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:42:12 written
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:44:14 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:45:12 written
       Destination "_10"
       Binary "Add"
         Copy "_6"
         Constant 2
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:42:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:45:5 written
       Destination "_0"
       Use
         Copy "_10"
           Deref
-    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:42:12 generated
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:45:12 generated
     Return
-Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:45:6 "the_example_the_standard_gives"
+Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:48:6 "the_example_the_standard_gives"
   Local "_0" "void" return
   Local "_1" "int[4][5]" "a"
   Local "_2" "int (*)[5]"
@@ -337,35 +337,321 @@ Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:45:6 "the_e
   Local "_5" "int *"
   Local "_6" "int"
   Block "bb0" entry
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:47:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:50:5 generated
       Destination "_2"
       Address
         Place "_1"
           Index
             Constant 0
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:47:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:50:5 written
       Destination "_3"
       Binary "Add"
         Copy "_2"
         Constant 1
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:47:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:50:5 generated
       Destination "_4"
       Use
         Copy "_3"
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:47:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:50:5 written
       Destination "_5"
       Binary "Add"
         Copy "_4"
         Constant 7
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:47:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:50:5 written
       Destination "_5"
         Deref
       Use
         Constant 0
-    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:47:5 written
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:50:5 written
       Destination "_6"
       Use
         Copy "_5"
           Deref
-    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:47:5 generated
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:50:5 generated
+    Return
+Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:53:6 "through_a_void_pointer_slot"
+  Local "_0" "void" return
+  Local "_1" "int[2][2]" "a"
+  Local "_2" "void *" "v"
+  Local "_3" "void **" "vp"
+  Local "_4" "void **"
+  Local "_5" "int (*)[2]"
+  Local "_6" "void *"
+  Local "_7" "int *" "q"
+  Local "_8" "int"
+  Local "_9" "int *"
+  Local "_10" "int"
+  Block "bb0" entry
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:56:17 written
+      Destination "_4"
+      Address
+        Place "_2"
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:56:12 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:56:17 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:57:12 generated
+      Destination "_5"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:57:5 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:57:5 written
+      Destination "_6"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:57:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:58:10 written
+      Destination "_7"
+      Use
+        Copy "_2"
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:58:14 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:59:9 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_7"
+    Branch a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:59:9 written "bb1" "bb2"
+      Copy "_8"
+  Block "bb1"
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:59:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:59:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:60:5 written
+      Destination "_9"
+      Binary "Add"
+        Copy "_7"
+        Constant 2
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:60:5 written
+      Destination "_9"
+        Deref
+      Use
+        Constant 1
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:60:5 written
+      Destination "_10"
+      Use
+        Copy "_9"
+          Deref
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:60:5 generated
+    Return
+Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:63:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:65:6 "through_what_memcpy_hands_back"
+  Local "_0" "void" return
+  Local "_1" "int[2][2]" "a"
+  Local "_2" "int[1]" "b"
+  Local "_3" "int *"
+  Local "_4" "int"
+  Local "_5" "int *" "q"
+  Local "_6" "int (*)[2]"
+  Local "_7" "int *"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int *"
+  Local "_11" "int"
+  Block "bb0" entry
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:68:5 generated
+      Destination "_3"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:68:5 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 0
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:68:5 written
+      Destination "_4"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:68:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:69:22 generated
+      Destination "_6"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:69:28 generated
+      Destination "_7"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:69:14 generated
+    Call a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:69:14 written "memcpy" "bb1"
+      Destination "_8"
+      Copy "_6"
+      Copy "_7"
+      Constant 4
+  Block "bb1"
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:69:10 written
+      Destination "_5"
+      Use
+        Copy "_8"
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:69:14 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:70:9 written
+      Destination "_9"
+      Unary "Not"
+        Copy "_5"
+    Branch a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:70:9 written "bb2" "bb3"
+      Copy "_9"
+  Block "bb2"
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:70:9 generated
+    Return
+  Block "bb3"
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:70:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:71:5 written
+      Destination "_10"
+      Binary "Add"
+        Copy "_5"
+        Constant 2
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:71:5 written
+      Destination "_10"
+        Deref
+      Use
+        Constant 1
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:71:5 written
+      Destination "_11"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:71:5 generated
+    Return
+Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:74:6 "back_from_the_next_row"
+  Local "_0" "void" return
+  Local "_1" "int[2]" "b"
+  Local "_2" "int (*)[2]" "r"
+  Local "_3" "int (*)[2]"
+  Local "_4" "int *" "p"
+  Local "_5" "int (*)[2]"
+  Local "_6" "int *"
+  Local "_7" "int *"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:76:19 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:76:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:76:19 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:77:14 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_2"
+        Constant 1
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:77:14 generated
+      Destination "_6"
+      Use
+        Copy "_5"
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:77:10 written
+      Destination "_4"
+      Use
+        Copy "_6"
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:77:14 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:78:5 written
+      Destination "_7"
+      Binary "Add"
+        Copy "_4"
+        Constant -1
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:78:5 written
+      Destination "_7"
+        Deref
+      Use
+        Constant 1
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:78:5 written
+      Destination "_8"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:78:5 generated
+    Return
+Function a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:81:5 "inside_a_row"
+  Local "_0" "int" return
+  Local "_1" "int[2][3]" "a"
+  Local "_2" "int (*)[3]"
+  Local "_3" "int (*)[3]"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Local "_6" "int"
+  Local "_7" "int (*)[3]"
+  Local "_8" "int (*)[3]"
+  Local "_9" "int *"
+  Local "_10" "int *"
+  Block "bb0" entry
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:83:5 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:83:5 written
+      Destination "_3"
+      Binary "Add"
+        Copy "_2"
+        Constant 1
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:83:5 generated
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:83:5 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_4"
+        Constant 2
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:83:5 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 5
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:83:5 written
+      Destination "_6"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:83:5 generated
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:84:12 generated
+      Destination "_7"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:84:12 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_7"
+        Constant 1
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:84:12 generated
+      Destination "_9"
+      Use
+        Copy "_8"
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:84:12 written
+      Destination "_10"
+      Binary "Add"
+        Copy "_9"
+        Constant 2
+    Operation a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:84:5 written
+      Destination "_0"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_subscript_past_its_row_of_an_array_of_arrays_is_doubted.c:84:12 generated
     Return
