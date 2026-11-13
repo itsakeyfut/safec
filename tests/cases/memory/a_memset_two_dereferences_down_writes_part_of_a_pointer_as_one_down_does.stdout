@@ -1,0 +1,141 @@
+Target "x86_64-pc-windows-msvc"
+Function a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:6:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:7:7 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
+Function a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:8:6 "use" declared
+  Local "_0" "void" return
+Function a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:9:6 "f"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "pp"
+  Local "_2" "int"
+  Local "_3" "void *" "m"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "void **" "box"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "void *"
+  Local "_10" "int"
+  Local "_11" "void *"
+  Local "_12" "void **" "q"
+  Local "_13" "void **"
+  Block "bb0" entry
+    Operation a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:10:9 written
+      Destination "_2"
+      Unary "Not"
+        Copy "_1"
+    Branch a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:10:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:10:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:10:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:11:15 generated
+    Call a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:11:15 written "malloc" "bb4"
+      Destination "_4"
+      Constant 16
+  Block "bb4"
+    Operation a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:11:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:11:15 generated
+    Operation a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:12:9 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:12:9 written "bb5" "bb6"
+      Copy "_5"
+  Block "bb5"
+    Sequenced a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:12:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:12:9 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:13:18 generated
+    Call a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:13:18 written "malloc" "bb8"
+      Destination "_7"
+      Constant 8
+  Block "bb8"
+    Operation a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:13:12 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:13:18 generated
+    Operation a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:14:9 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_6"
+    Branch a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:14:9 written "bb9" "bb10"
+      Copy "_8"
+  Block "bb9"
+    Sequenced a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:14:9 generated
+    Return
+  Block "bb10"
+    Sequenced a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:14:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:15:5 written
+      Destination "_6"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:15:5 written
+      Destination "_9"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:15:5 generated
+    Operation a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:16:9 written
+      Destination "_10"
+      Unary "Not"
+        Copy "_6"
+          Deref
+    Branch a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:16:9 written "bb12" "bb13"
+      Copy "_10"
+  Block "bb12"
+    Sequenced a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:16:9 generated
+    Return
+  Block "bb13"
+    Sequenced a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:16:9 generated
+    Goto "bb14"
+  Block "bb14"
+    ArgumentsEvaluated a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:17:5 generated
+    Call a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:17:5 written "memset" "bb15"
+      Destination "_11"
+      Copy "_6"
+        Deref
+      Constant 1
+      Constant 4
+  Block "bb15"
+    Sequenced a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:17:5 generated
+    Operation a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:18:12 written
+      Destination "_12"
+      Use
+        Copy "_3"
+    Sequenced a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:18:16 generated
+    Operation a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:19:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_12"
+    Operation a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:19:5 written
+      Destination "_13"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:19:5 generated
+    ArgumentsEvaluated a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:20:5 generated
+    Call a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:20:5 written "use" "bb16"
+  Block "bb16"
+    Sequenced a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:20:5 generated
+    Return

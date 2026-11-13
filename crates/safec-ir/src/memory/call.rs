@@ -413,9 +413,19 @@ impl Allocations<'_> {
                         CopiedPointers::Whole
                     )
                 {
+                    // Wherever it lands, as a store's write does. See
+                    // `Self::note_landing_in_part`.
                     if let Some(Operand::Copy(dest)) = arguments.first() {
-                        if dest.projection.is_empty() {
-                            self.note_part_of_a_pointer(dest.local, origin.span(), value);
+                        let into_depth = derefs(dest);
+                        if dest.projection.is_empty() || into_depth > 0 {
+                            let landing = self.landing(
+                                value,
+                                dest.local,
+                                into_depth + 1,
+                                into_depth == 0,
+                                StoreKind::Copy,
+                            );
+                            self.note_landing_in_part(&landing, origin.span(), value);
                         }
                     }
                 }

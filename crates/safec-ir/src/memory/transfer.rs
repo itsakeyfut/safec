@@ -388,6 +388,16 @@ impl Allocations<'_> {
         if !wrote.width.is_some_and(|width| width < pointer) {
             return;
         }
+        self.note_landing_in_part(landing, at, value);
+    }
+
+    /// Record a write of less than a pointer landing as `landing` as part
+    /// of a pointer in what it lands in, at any depth. **One body for a
+    /// narrow store and a partial `memset`**: asked at one dereference alone
+    /// by the `memset`, `memset(*box, 1, 4)` into memory later let leave as
+    /// pointers noted nothing where `memset(t, 1, 4)` of the same block is
+    /// `SC0413`. Found by the architecture review of 2026-11-13.
+    pub(super) fn note_landing_in_part(&self, landing: &Landing, at: Span, value: &mut Known) {
         match landing.deep {
             0 => {}
             1 => self.note_part_of_a_pointer(landing.pointer, at, value),
