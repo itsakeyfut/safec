@@ -2049,6 +2049,7 @@ pub(super) fn returned(
             operation.origin.span(),
             Kind::FreedBehindReturn,
             known,
+            Below::Everything,
         );
         return;
     };
@@ -2154,6 +2155,7 @@ pub(super) fn stored_away(
             store.at,
             Kind::FreedBehindStore,
             known,
+            Below::Everything,
         );
         return;
     };
@@ -2271,44 +2273,19 @@ pub(super) fn copied_away(
     // argument door's `SC0407` where the store said `SC0414`. Said, it
     // stands for the copy, so the argument door says nothing more of it.
     if reached.is_empty() {
-        let below: Vec<Reached> = known
-            .handed_below(&source)
-            .into_iter()
-            .filter(|reached| match reached {
-                Reached::Site(site) => matches!(
-                    known.state[*site],
-                    SiteState::Freed { .. } | SiteState::Unknown
-                ),
-                Reached::SetFreed(_) => true,
-                Reached::Lost(_) | Reached::Partial => false,
-            })
-            .collect();
-        let verdict = verdict(analysis.sources, Kind::FreedBehindStore, below, known)?;
-        say(
-            analysis.sources,
+        let told = freed_behind(
             findings,
             said,
-            &Place {
-                local: source.local,
-                projection: source
-                    .projection
-                    .iter()
-                    .cloned()
-                    .chain([Projection::Deref])
-                    .collect(),
-            },
-            Finding {
-                function: analysis.function,
-                kind: Kind::FreedBehindStore,
-                conclusion: Conclusion::Unknown,
-                at: store.at,
-                local: None,
-                freed: verdict.freed,
-                made: verdict.made,
-                unproven: verdict.unproven,
-            },
+            analysis,
+            &source,
+            store.at,
+            Kind::FreedBehindStore,
+            known,
+            Below::MayBeFreed,
         );
-        return Some(from.clone());
+        // Said, it stands for the copy, so the argument door says nothing
+        // more of it; unsaid, the argument door asks.
+        return told.then(|| from.clone());
     }
     let verdict = verdict(analysis.sources, Kind::StoreAfterFree, reached, known)?;
     say(
@@ -2607,6 +2584,7 @@ pub(super) fn handed(
             origin.span(),
             Kind::FreedBehindArgument,
             known,
+            Below::Everything,
         );
     }
 }
@@ -2623,6 +2601,7 @@ pub(super) fn handed(
 /// **Asked only where the pointer itself drew nothing**, which each caller
 /// checks first: a pointer reported in its own right says more than what it
 /// holds behind it, as `give(tab, *tab)` shows at a call.
+#[allow(clippy::too_many_arguments)]
 fn freed_behind(
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place, usize)>,
@@ -2631,9 +2610,15 @@ fn freed_behind(
     at: Span,
     kind: Kind,
     known: &Known,
-) {
-    let Some(verdict) = verdict(analysis.sources, kind, known.handed_below(place), known) else {
-        return;
+    asked: Below,
+) -> bool {
+    let below: Vec<Reached> = known
+        .handed_below(place)
+        .into_iter()
+        .filter(|reached| asked.asks(reached, known))
+        .collect();
+    let Some(verdict) = verdict(analysis.sources, kind, below, known) else {
+        return false;
     };
     say(
         analysis.sources,
@@ -2663,6 +2648,47 @@ fn freed_behind(
             unproven: verdict.unproven,
         },
     );
+    true
+}
+
+/// What [`freed_behind`] asks of what is below a pointer that leaves.
+///
+/// **One function with the copy's narrowing named, not a second body**
+/// (the memory model rebuilt on #924). A library copy re-spelled the
+/// question inline with its own filter, and each fix to one spelling had
+/// to be carried to the other: a freed pointer below was the store's
+/// `SC0414` and the copy's `SC0407` until one fix, and a value this check
+/// stopped following one level below was still the copy's `SC0407` after
+/// it. Found by the architecture review of 2026-11-13.
+#[derive(Clone, Copy)]
+enum Below {
+    /// Everything [`Known::handed_below`] answers: a store, a `return` and
+    /// an argument.
+    Everything,
+    /// **What may be freed there, or lost**: a library copy, which reads
+    /// through a local whose address it took, so what is below it is always
+    /// partly unknown. Asked of everything, a block that holds itself was
+    /// doubted freed with no free in the program; asked of what is
+    /// certainly freed alone, a pointer freed on one arm was the argument
+    /// door's `SC0407` where the store said `SC0414`. A pointer below that
+    /// this check stopped following is asked, as the store asks it.
+    MayBeFreed,
+}
+
+impl Below {
+    fn asks(self, reached: &Reached, known: &Known) -> bool {
+        match self {
+            Below::Everything => true,
+            Below::MayBeFreed => match reached {
+                Reached::Site(site) => matches!(
+                    known.state[*site],
+                    SiteState::Freed { .. } | SiteState::Unknown
+                ),
+                Reached::SetFreed(_) | Reached::Lost(_) => true,
+                Reached::Partial => false,
+            },
+        }
+    }
 }
 
 /// Put this finding at its caret, or leave the one already standing there.

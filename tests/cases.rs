@@ -1798,6 +1798,9 @@ cases! {
         // is `SC0407` again. Ask below of what is certainly freed alone, and
         // the copy of a pointer freed on one arm is `SC0407` again.
         a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `Below::MayBeFreed` leaves out `Reached::Lost`; the copy
+        // is the argument door's `SC0407` again.
+        a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `copied_away` leaves out every lost answer again; this
         // goes silent.
         a_lost_value_copied_out_is_reported_as_its_store_is: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
