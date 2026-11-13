@@ -19,6 +19,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod compare;
+
 /// One `#[test]` per case, and the roster the unlisted-file guard reads, from
 /// one literal table.
 ///
@@ -9066,6 +9068,14 @@ fn run_case(group: &str, name: &str, args: &[&str]) {
         .code()
         .unwrap_or_else(|| panic!("case `{name}`: the compiler was killed by a signal"));
 
+    // **Against an older build too, where one is named**, before anything is
+    // written: what it reported and this one does not is a silence a bless
+    // would otherwise record as expected. See `compare`.
+    if let Some(older) = compare::older_build() {
+        let said = run_older(group, name, args, &older);
+        compare::compare(name, &said, &String::from_utf8_lossy(&output.stderr));
+    }
+
     // Before anything is written, so that a refused bless leaves the case as
     // it was. **Its diagnostics as well as its exit**: a case that only
     // warns exits 0 either way, and its silence is in `stderr` alone.
@@ -9243,6 +9253,76 @@ fn every_case_a_bless_may_silence_is_one_with_a_reason() {
             "`{case}` in `SILENCED` gives no reason"
         );
     }
+}
+
+/// The comparison keys a diagnostic by where it points and whether it was
+/// proved, not by its words: a report moved to another line, or a proof made
+/// a doubt, is one lost; a change of words is none.
+///
+/// Mutation: key by level and code alone in `compare::diagnostics`, dropping
+/// `at`; this fails.
+#[test]
+fn an_older_builds_report_moved_or_weakened_counts_as_lost_and_reworded_does_not() {
+    let said = "error[SC0411]: a
+   ╭─[ c.c:3:5 ]
+error[SC0413]: b
+   ╭─[ c.c:4:1 ]
+";
+    let older = compare::diagnostics(said);
+    assert_eq!(older.len(), 2);
+    assert_eq!(older[0].at, "c.c:3:5");
+    let moved = compare::diagnostics(
+        "error[SC0411]: a
+   ╭─[ c.c:9:5 ]
+error[SC0413]: b
+   ╭─[ c.c:4:1 ]
+",
+    );
+    assert_eq!(compare::lost(&older, &moved).len(), 1);
+    let doubted = compare::diagnostics(
+        "error[SC0411]: a
+   ╭─[ c.c:3:5 ]
+  = note: this could not be proven
+error[SC0413]: b
+   ╭─[ c.c:4:1 ]
+",
+    );
+    assert_eq!(compare::lost(&older, &doubted).len(), 1);
+    let reworded = compare::diagnostics(
+        "error[SC0411]: c
+   ╭─[ c.c:3:5 ]
+error[SC0413]: d
+   ╭─[ c.c:4:1 ]
+",
+    );
+    assert!(compare::lost(&older, &reworded).is_empty());
+    assert!(compare::lost(&doubted, &older).is_empty());
+}
+
+/// What an older build of `safec`, `older`, prints to `stderr` for one case,
+/// run as [`run_case`] runs it: from a directory of its own outside the
+/// corpus, handed the bare file name, with the same arguments.
+fn run_older(group: &str, name: &str, args: &[&str], older: &Path) -> String {
+    let dir = work_dir(group, name).with_extension("older");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("a case's working directory can be made");
+    let input = format!("{name}.c");
+    for file in [input.clone(), format!("{name}.h")] {
+        let source = group_dir(group).join(&file);
+        if source.exists() {
+            std::fs::copy(&source, dir.join(&file))
+                .unwrap_or_else(|error| panic!("case `{name}`: `{file}` cannot be read: {error}"));
+        }
+    }
+    let output = Command::new(older)
+        .current_dir(&dir)
+        .args(["--color", "never"])
+        .args(args)
+        .arg(&input)
+        .output()
+        .unwrap_or_else(|error| panic!("{}: {error}", older.display()));
+    let _ = std::fs::remove_dir_all(&dir);
+    String::from_utf8_lossy(&output.stderr).into_owned()
 }
 
 /// Where one group's cases live.

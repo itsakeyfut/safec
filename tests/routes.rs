@@ -16,6 +16,8 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+mod compare;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// What memory is believed to hold, and what reports it.
@@ -4133,6 +4135,30 @@ fn ask_with(name: &str, source: &str, safety: &str, extra: &[&str]) -> Answer {
         .args(extra)
         .output()
         .expect("the compiler binary was built for this test");
+    // **Against an older build too, where one is named**: a row the older
+    // build answered that this one is quiet on is a silence the matrix's
+    // bless would otherwise write down. See `compare`.
+    if let Some(older) = compare::older_build() {
+        let said = Command::new(&older)
+            .current_dir(&dir)
+            .args([
+                "--color",
+                "never",
+                "--safety",
+                safety,
+                "--emit",
+                "safety-ir",
+            ])
+            .args(["--target", "x86_64-pc-windows-msvc", "-o", "out", "f.c"])
+            .args(extra)
+            .output()
+            .unwrap_or_else(|error| panic!("{}: {error}", older.display()));
+        compare::compare(
+            name,
+            &String::from_utf8_lossy(&said.stderr),
+            &String::from_utf8_lossy(&output.stderr),
+        );
+    }
     let _ = std::fs::remove_dir_all(&dir);
     let stderr = String::from_utf8_lossy(&output.stderr);
     let reports = stderr
