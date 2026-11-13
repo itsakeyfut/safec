@@ -146,7 +146,7 @@ pub(super) struct Known {
     /// reaches through it, and read by a
     /// load out of the allocation as a pointer this check stopped following.
     /// Set too where such a load is stored into another allocation, through
-    /// [`Held::stale_read`].
+    /// [`Why::StaleRead`](super::index::Why::StaleRead).
     /// Nothing clears it: slots are not told apart, so a store into one may
     /// leave the old pointer in another. See ADR-0045.
     ///
@@ -155,7 +155,7 @@ pub(super) struct Known {
     /// this check cannot read reached through another route and could not
     /// replace there. Set by [`Known::held_out_of_reach`](super::known::Known::held_out_of_reach), carried where what
     /// a load out of it holds is stored or copied, and read through
-    /// [`Held::unreplaced_read`] by [`Known::handed_below`](super::known::Known::handed_below) alone. Nothing
+    /// [`Why::UnreplacedRead`](super::index::Why::UnreplacedRead) by [`Known::handed_below`](super::known::Known::handed_below) alone. Nothing
     /// clears it, since slots are not told apart. See ADR-0047.
     ///
     /// **`lost`**:
@@ -170,7 +170,7 @@ pub(super) struct Known {
     ///
     /// **`from_caller`**:
     /// Whether what it contains may include a pointer a caller or
-    /// a callee handed over: one [`Held::from_caller`] marks, stored here.
+    /// a callee handed over: one [`Why::FromCaller`](super::index::Why::FromCaller) marks, stored here.
     ///
     /// **The mark lived on locals only**, so a store recorded the sites such
     /// a pointer holds, which are none, and `*box = q; release_all(); r =
@@ -1026,7 +1026,7 @@ impl Known {
 
     /// Whether a local a read `depth` dereferences below `local` passes
     /// through holds memory a caller or a callee handed over,
-    /// [`Held::from_caller`], so that `pr = &r; s = *pr;` carries what `s =
+    /// [`Why::FromCaller`](super::index::Why::FromCaller), so that `pr = &r; s = *pr;` carries what `s =
     /// r;` would. Read along the walk [`Self::lost_through`] takes, for its
     /// reason: the mark is on the local, and the sites alone would read as
     /// this function's own. Without it the read through the address was
@@ -2712,7 +2712,7 @@ impl Known {
     /// *box = w;`, and an allocation it was stored in before the free,
     /// `*box = u; free(u);`, are no more or less likely to be what went than
     /// the local handed to `free`. So every lost local carries
-    /// [`Held::stale_read`] from here, and a store of it marks where it
+    /// [`Why::StaleRead`](super::index::Why::StaleRead) from here, and a store of it marks where it
     /// lands, and every allocation whose cell is `lost` is `stale_read`, so
     /// a load out of it is one this check stopped following. Marking too much
     /// is a doubt; marking only the local handed over left the other three
@@ -2919,7 +2919,7 @@ impl Known {
     /// has escaped, and nothing here can say which local that reaches: the
     /// address may have been stashed anywhere on the way. So every escaped
     /// local it could have reached holds something this check cannot name,
-    /// which is what [`Held::lost`] says and is ADR-0018's fact through a
+    /// which is what [`Why::Lost`](super::index::Why::Lost) says and is ADR-0018's fact through a
     /// second door.
     ///
     /// **Which locals that is belongs to the caller**, because the two writers
@@ -2948,7 +2948,7 @@ impl Known {
     /// [`Allocations::touching`](super::allocations::Allocations::touching)'s own rule whatever this says.
     ///
     /// **Left alone here, not for good.** A call this check cannot read
-    /// marks what it wrote as handed over, [`Held::from_caller`], and the
+    /// marks what it wrote as handed over, [`Why::FromCaller`](super::index::Why::FromCaller), and the
     /// next such call makes it lost by that route, so the idiom is quiet
     /// only until a later call that may free what it was handed (#394).
     ///

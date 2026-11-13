@@ -71,6 +71,124 @@ pub(super) enum Loc {
     Heap(Site),
     /// A local.
     Local(LocalIdx),
+    /// **Something this check does not model**, for the reason [`Why`]
+    /// gives: a member of a points-to set like any other place, so a value
+    /// that may name what was not recorded says so by what it names, joined
+    /// and poured with the rest of the set rather than by a mark of its own
+    /// carried beside it (the memory model rebuilt on #924, stage 1).
+    Unknown(Why),
+}
+
+/// Why a value may name a place this check does not model: each is one of
+/// the marks a value carried before it was a place.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub(super) enum Why {
+    /// Whether this local may hold an allocation this check can no longer
+    /// name.
+    ///
+    /// Three doors lead here. The site that named what it held was handed to a
+    /// second allocation, which is ADR-0018; or its address had escaped when a
+    /// call this check cannot read ran, and such a call may have written a
+    /// pointer this check has never seen into it, which is ADR-0029; or its
+    /// address had escaped when a write through a pointer this check cannot
+    /// pin down wrote its type, which is ADR-0031 and is the same sentence
+    /// with the writer inside this function.
+    Lost,
+    /// Whether this local may hold a pointer read out of memory.
+    ///
+    /// Such a pointer holds what a cell's `names` records for the allocation
+    /// it was read from, which may be missing members, and this bit is what
+    /// says so: the report reads [`Reached::Partial`](super::parts::Reached::Partial) beside those sites, and
+    /// a free of it stays a doubt (ADR-0045). **For the other readers**, what
+    /// a call reaches and what a write stores, it says the value may be
+    /// anything stored, for which "no site" had come to mean "reaches
+    /// nothing". It is not the emptiness of [`Held::sites`](super::parts::Held::sites), because
+    /// `int *z = 0;` is empty too, and reading it as a load exposed every
+    /// stored pointer at `log_ptr(z)`, measured. See ADR-0040.
+    ///
+    /// It says that the value was read out of memory and not from where, so a
+    /// write through it is unplaced for that part: what it carries is
+    /// exposed. See ADR-0044.
+    Loaded,
+    /// Whether a call this check cannot read may have written into this
+    /// local, through its address, something no site names.
+    ///
+    /// [`Known::replaced`](super::known::Known::replaced) cannot say this with [`Why::Lost`] for a local
+    /// holding no site, because the report reads that bit and ADR-0017 does
+    /// not report an output parameter. So `get(&u)` sets this instead, and
+    /// the report never reads it. A write through such a local exposes what
+    /// it carries, as one through a load does. See ADR-0044.
+    Foreign,
+    /// Whether this was read out of memory a pointer parameter points at, so
+    /// may be what the caller stored there.
+    ///
+    /// Or handed over by a callee: read out of what a call this check cannot
+    /// read returned, or written by one through an escaped local's address.
+    /// Memory a callee hands back it may still hold, as a caller may (#394).
+    ///
+    /// **Made [`Why::Lost`] at a call this check cannot read.** What the
+    /// caller stored behind `pp` is recorded nowhere, so a load of it holds no
+    /// site and nothing a call does could reach it: `q = *pp; release_all();
+    /// return *q;` built. The caller may have stashed it where the call frees
+    /// it, which is ADR-0040's reason for exposing the parameter itself, one
+    /// level in; and its cost, a read after any such call doubted, is the same
+    /// one level in. See ADR-0040.
+    FromCaller,
+    /// Whether this was read out of an allocation whose cell is `stale_read`, or
+    /// otherwise lost an allocation that may be gone, and may be one.
+    ///
+    /// Set too where a local loses a site whose allocation is not live
+    /// ([`Known::reborn`](super::known::Known::reborn)), by a load through a pointer to such a local, and
+    /// by a call this check cannot read for what it makes lost of the
+    /// caller's, and on every lost local when one is freed ([`Known::lost_may_be_gone`](super::known::Known::lost_may_be_gone)). A
+    /// store of any of them was recorded as nothing and read back
+    /// in silence, where read directly it was doubted. See ADR-0045.
+    ///
+    /// **Not [`Why::Lost`], which says the same to the report and more to a
+    /// store.** A local loses a site whenever the site is reborn, whatever
+    /// became of the allocation it named, so `*node = head; head = node;`
+    /// builds a list whose `head` is lost every turn though nothing is freed.
+    /// A store of a lost value marking its container doubted every walk of
+    /// that list, measured; a store of this one marks it, so a doubted load
+    /// copied into another allocation stays doubted. See ADR-0045.
+    StaleRead,
+    /// Whether this was read out of an allocation whose cell is `lost`,
+    /// which
+    /// may hold a value this check lost, or built from such a value.
+    ///
+    /// **Not [`Why::Lost`] at the read**, which would doubt every walk of a
+    /// list whose nodes hold a lost head. It is made lost only when a lost
+    /// value may have gone, by
+    /// [`Known::lost_may_be_gone`](super::known::Known::lost_may_be_gone):
+    /// `*box = u; r = *box; free(u); v = *r;` with `u` lost to a rebirth read
+    /// `*r` in silence, since `r` was read out before the free (#505). A
+    /// store of it marks where it lands, as a store of a lost value does, so
+    /// a copy into another allocation carries it. See ADR-0045.
+    LostRead,
+    /// Whether this was read out of an allocation whose cell is
+    /// `unreplaced_read`, which may
+    /// hold a slot a call this check cannot read could not replace, or built
+    /// from such a value.
+    ///
+    /// **Not [`Why::StaleRead`], which makes a load lost.** A lost local's
+    /// load is followed no further, so marking that way silenced `d = *c;
+    /// return *d;` after `c = *h;`, a read of a proved free. This one is read
+    /// by [`Known::handed_below`](super::known::Known::handed_below) alone.
+    /// See ADR-0047.
+    UnreplacedRead,
+}
+
+impl Why {
+    /// Every reason, in its place order.
+    pub(super) const ALL: [Why; 7] = [
+        Why::Lost,
+        Why::Loaded,
+        Why::Foreign,
+        Why::FromCaller,
+        Why::StaleRead,
+        Why::LostRead,
+        Why::UnreplacedRead,
+    ];
 }
 
 impl Loc {
@@ -78,33 +196,38 @@ impl Loc {
     pub(super) fn site(self) -> Option<Site> {
         match self {
             Loc::Heap(site) => Some(site),
-            Loc::Local(_) => None,
+            Loc::Local(_) | Loc::Unknown(_) => None,
         }
     }
 
     /// The local this place is, if it is one.
     pub(super) fn local(self) -> Option<LocalIdx> {
         match self {
-            Loc::Heap(_) => None,
+            Loc::Heap(_) | Loc::Unknown(_) => None,
             Loc::Local(local) => Some(local),
         }
     }
 
     /// How many places a function with `locals` locals has: a site and a
-    /// local per local, since a site is named by the local it landed in.
+    /// local per local, since a site is named by the local it landed in,
+    /// and one unknown place per [`Why`].
     pub(super) fn count(locals: usize) -> usize {
-        2 * locals
+        Why::ALL.len() + 2 * locals
     }
 }
 
 impl Idx for Loc {
     fn index(self) -> usize {
         match self {
-            Loc::Heap(site) => 2 * site.index(),
-            Loc::Local(local) => 2 * local.index() + 1,
+            Loc::Unknown(why) => why as usize,
+            Loc::Heap(site) => Why::ALL.len() + 2 * site.index(),
+            Loc::Local(local) => Why::ALL.len() + 2 * local.index() + 1,
         }
     }
     fn at(position: usize) -> Self {
+        let Some(position) = position.checked_sub(Why::ALL.len()) else {
+            return Loc::Unknown(Why::ALL[position]);
+        };
         if position % 2 == 0 {
             Loc::Heap(Site::at(position / 2))
         } else {
@@ -120,12 +243,12 @@ impl Idx for Loc {
 impl<T> Table<Loc, T> {
     /// Every site the table has, in order.
     pub(super) fn sites(&self) -> impl Iterator<Item = Site> + use<T> {
-        (0..self.len() / 2).map(Site::at)
+        (0..(self.len() - Why::ALL.len()) / 2).map(Site::at)
     }
 
     /// Every local the table has, in order.
     pub(super) fn locals(&self) -> impl Iterator<Item = LocalIdx> + use<T> {
-        (0..self.len() / 2).map(LocalIdx::at)
+        (0..(self.len() - Why::ALL.len()) / 2).map(LocalIdx::at)
     }
 }
 

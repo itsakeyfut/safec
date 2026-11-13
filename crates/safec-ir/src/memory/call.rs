@@ -667,7 +667,7 @@ impl Allocations<'_> {
                                 let pointer =
                                     u64::from(target.pointer_bits() / target.char().bits());
                                 let fits = |at: Loc| match at {
-                                    Loc::Heap(_) => true,
+                                    Loc::Heap(_) | Loc::Unknown(_) => true,
                                     Loc::Local(local) => function
                                         .locals()
                                         .nth(local.index())

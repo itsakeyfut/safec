@@ -12,7 +12,7 @@ use crate::ir::Place;
 use crate::source::{SourceMap, Span};
 
 use super::bits::Bits;
-use super::index::{Loc, LocalIdx, Site, Table};
+use super::index::{Loc, LocalIdx, Site, Table, Why};
 use super::{Carried, LostReason};
 
 /// A free, and whether C has ordered it before what comes after it.
@@ -909,17 +909,6 @@ pub(super) struct Held {
     /// cannot read, whose result may be any local whose address escaped. See
     /// ADR-0039.
     pub(super) names: Bits<Loc>,
-    /// Whether this local may hold an allocation this check can no longer
-    /// name.
-    ///
-    /// Three doors lead here. The site that named what it held was handed to a
-    /// second allocation, which is ADR-0018; or its address had escaped when a
-    /// call this check cannot read ran, and such a call may have written a
-    /// pointer this check has never seen into it, which is ADR-0029; or its
-    /// address had escaped when a write through a pointer this check cannot
-    /// pin down wrote its type, which is ADR-0031 and is the same sentence
-    /// with the writer inside this function.
-    lost: bool,
     /// Where the allocation this local held was freed, when the free could not
     /// say which member of the set it was.
     ///
@@ -960,25 +949,9 @@ pub(super) struct Held {
     /// cannot be written without answering where in it the value points. See
     /// ADR-0036.
     pub(super) offset: At,
-    /// Whether this local may hold a pointer read out of memory.
-    ///
-    /// Such a pointer holds what a cell's `names` records for the allocation
-    /// it was read from, which may be missing members, and this bit is what
-    /// says so: the report reads [`Reached::Partial`] beside those sites, and
-    /// a free of it stays a doubt (ADR-0045). **For the other readers**, what
-    /// a call reaches and what a write stores, it says the value may be
-    /// anything stored, for which "no site" had come to mean "reaches
-    /// nothing". It is not the emptiness of [`Held::sites`], because
-    /// `int *z = 0;` is empty too, and reading it as a load exposed every
-    /// stored pointer at `log_ptr(z)`, measured. See ADR-0040.
-    ///
-    /// It says that the value was read out of memory and not from where, so a
-    /// write through it is unplaced for that part: what it carries is
-    /// exposed. See ADR-0044.
-    loaded: bool,
     /// The locals code this check cannot read could name where this value
     /// was read out of memory, or where such code may have written it
-    /// ([`Held::foreign`], #661), what
+    /// ([`Why::Foreign`], #661), what
     /// [`Known::locals_named_by_unknown_code`](super::known::Known::locals_named_by_unknown_code)
     /// answered then. Empty where it was neither.
     ///
@@ -994,72 +967,6 @@ pub(super) struct Held {
     /// [`Known::locals_a_write_may_land_in`](super::known::Known::locals_a_write_may_land_in)
     /// alone. See ADR-0057.
     pub(super) named_at_read: Bits<LocalIdx>,
-    /// Whether a call this check cannot read may have written into this
-    /// local, through its address, something no site names.
-    ///
-    /// [`Known::replaced`](super::known::Known::replaced) cannot say this with [`Held::lost`] for a local
-    /// holding no site, because the report reads that bit and ADR-0017 does
-    /// not report an output parameter. So `get(&u)` sets this instead, and
-    /// the report never reads it. A write through such a local exposes what
-    /// it carries, as one through a load does. See ADR-0044.
-    foreign: bool,
-    /// Whether this was read out of an allocation whose cell is `stale_read`, or
-    /// otherwise lost an allocation that may be gone, and may be one.
-    ///
-    /// Set too where a local loses a site whose allocation is not live
-    /// ([`Known::reborn`](super::known::Known::reborn)), by a load through a pointer to such a local, and
-    /// by a call this check cannot read for what it makes lost of the
-    /// caller's, and on every lost local when one is freed ([`Known::lost_may_be_gone`](super::known::Known::lost_may_be_gone)). A
-    /// store of any of them was recorded as nothing and read back
-    /// in silence, where read directly it was doubted. See ADR-0045.
-    ///
-    /// **Not [`Held::lost`], which says the same to the report and more to a
-    /// store.** A local loses a site whenever the site is reborn, whatever
-    /// became of the allocation it named, so `*node = head; head = node;`
-    /// builds a list whose `head` is lost every turn though nothing is freed.
-    /// A store of a lost value marking its container doubted every walk of
-    /// that list, measured; a store of this one marks it, so a doubted load
-    /// copied into another allocation stays doubted. See ADR-0045.
-    stale_read: bool,
-    /// Whether this was read out of an allocation whose cell is
-    /// `unreplaced_read`, which may
-    /// hold a slot a call this check cannot read could not replace, or built
-    /// from such a value.
-    ///
-    /// **Not [`Held::stale_read`], which makes a load lost.** A lost local's
-    /// load is followed no further, so marking that way silenced `d = *c;
-    /// return *d;` after `c = *h;`, a read of a proved free. This one is read
-    /// by [`Known::handed_below`](super::known::Known::handed_below) alone.
-    /// See ADR-0047.
-    unreplaced_read: bool,
-    /// Whether this was read out of an allocation whose cell is `lost`,
-    /// which
-    /// may hold a value this check lost, or built from such a value.
-    ///
-    /// **Not [`Held::lost`] at the read**, which would doubt every walk of a
-    /// list whose nodes hold a lost head. It is made lost only when a lost
-    /// value may have gone, by
-    /// [`Known::lost_may_be_gone`](super::known::Known::lost_may_be_gone):
-    /// `*box = u; r = *box; free(u); v = *r;` with `u` lost to a rebirth read
-    /// `*r` in silence, since `r` was read out before the free (#505). A
-    /// store of it marks where it lands, as a store of a lost value does, so
-    /// a copy into another allocation carries it. See ADR-0045.
-    lost_read: bool,
-    /// Whether this was read out of memory a pointer parameter points at, so
-    /// may be what the caller stored there.
-    ///
-    /// Or handed over by a callee: read out of what a call this check cannot
-    /// read returned, or written by one through an escaped local's address.
-    /// Memory a callee hands back it may still hold, as a caller may (#394).
-    ///
-    /// **Made [`Held::lost`] at a call this check cannot read.** What the
-    /// caller stored behind `pp` is recorded nowhere, so a load of it holds no
-    /// site and nothing a call does could reach it: `q = *pp; release_all();
-    /// return *q;` built. The caller may have stashed it where the call frees
-    /// it, which is ADR-0040's reason for exposing the parameter itself, one
-    /// level in; and its cost, a read after any such call doubted, is the same
-    /// one level in. See ADR-0040.
-    from_caller: bool,
     /// The site a `realloc` or an allocation of indeterminate contents
     /// returned, where this local holds exactly that value: the call's
     /// destination and plain copies of it. Read at a branch on it, by
@@ -1513,6 +1420,7 @@ impl Held {
         // local with no size are both nothing read, `0`. See `Known::extent`.
         self.names
             .ones()
+            .filter(|place| !matches!(place, Loc::Unknown(_)))
             .map(|place| extent[place].unwrap_or(Extent::AtLeast(0)).lower())
             .min()
     }
@@ -1521,13 +1429,13 @@ impl Held {
     /// See [`Beyond`].
     pub(super) fn beyond(&self) -> Beyond {
         let unrecorded = Unrecorded {
-            lost: self.lost,
-            loaded: self.loaded,
-            foreign: self.foreign,
-            from_caller: self.from_caller,
-            stale_read: self.stale_read,
-            lost_read: self.lost_read,
-            unreplaced_read: self.unreplaced_read,
+            lost: self.may_name(Why::Lost),
+            loaded: self.may_name(Why::Loaded),
+            foreign: self.may_name(Why::Foreign),
+            from_caller: self.may_name(Why::FromCaller),
+            stale_read: self.may_name(Why::StaleRead),
+            lost_read: self.may_name(Why::LostRead),
+            unreplaced_read: self.may_name(Why::UnreplacedRead),
         };
         if unrecorded.any() {
             Beyond::Unrecorded(unrecorded)
@@ -1536,59 +1444,70 @@ impl Held {
         }
     }
 
+    /// Whether this value may name the place this check does not model for
+    /// `why`: what each mark was before it was a member of the set.
+    pub(super) fn may_name(&self, why: Why) -> bool {
+        self.names.get(Loc::Unknown(why))
+    }
+
+    /// Name the place this check does not model for `why`.
+    pub(super) fn name_unknown(&mut self, why: Why) {
+        self.names.set(Loc::Unknown(why));
+    }
+
     // **The marks are set by event, not by name**: each method below sets
     // every mark its event sets, so a writer outside this file cannot set
     // one of a pair and forget the other. See [`Beyond`] for why the marks
     // are private here.
 
     /// Read out of memory: what a cell records of where it was read from
-    /// may be missing members. Sets [`Held::loaded`].
+    /// may be missing members. Sets [`Why::Loaded`].
     pub(super) fn read_out_of_memory(&mut self) {
-        self.loaded = true;
+        self.name_unknown(Why::Loaded);
     }
 
     /// May hold an allocation this check can no longer name: written past a
     /// local's end, written by a call this check cannot read through an
     /// escaped local holding a site, or the result of such a call where a
-    /// lost value was exposed. Sets [`Held::lost`].
+    /// lost value was exposed. Sets [`Why::Lost`].
     pub(super) fn lost_its_allocation(&mut self) {
-        self.lost = true;
+        self.name_unknown(Why::Lost);
     }
 
     /// Lost, and what it holds may be gone: read through a pointer to a
     /// lost local, a caller's or a callee's value at a call that may free
-    /// it, or a lost value when one is freed. Sets [`Held::lost`] and
-    /// [`Held::stale_read`].
+    /// it, or a lost value when one is freed. Sets [`Why::Lost`] and
+    /// [`Why::StaleRead`].
     ///
     /// Mutations: leave out `stale_read`, and
     /// `a_lost_pointer_freed_then_stored_is_doubted_when_read_back` fails;
     /// leave out `lost`, and
     /// `a_local_this_check_lost_read_through_its_address_is_doubted` does.
     pub(super) fn lost_and_may_be_gone(&mut self) {
-        self.lost = true;
-        self.stale_read = true;
+        self.name_unknown(Why::Lost);
+        self.name_unknown(Why::StaleRead);
     }
 
-    /// Lost a site whose allocation is not live. Sets [`Held::stale_read`].
+    /// Lost a site whose allocation is not live. Sets [`Why::StaleRead`].
     pub(super) fn lost_a_site_that_may_be_gone(&mut self) {
-        self.stale_read = true;
+        self.name_unknown(Why::StaleRead);
     }
 
     /// Read out of memory a lost value may have been stored in. Sets
-    /// [`Held::lost_read`].
+    /// [`Why::LostRead`].
     pub(super) fn read_where_a_lost_value_may_be(&mut self) {
-        self.lost_read = true;
+        self.name_unknown(Why::LostRead);
     }
 
-    /// Handed over by a caller or a callee. Sets [`Held::from_caller`].
+    /// Handed over by a caller or a callee. Sets [`Why::FromCaller`].
     pub(super) fn handed_over(&mut self) {
-        self.from_caller = true;
+        self.name_unknown(Why::FromCaller);
     }
 
     /// Written through its address by a call this check cannot read. Sets
-    /// [`Held::foreign`].
+    /// [`Why::Foreign`].
     pub(super) fn written_by_unknown_code(&mut self) {
-        self.foreign = true;
+        self.name_unknown(Why::Foreign);
     }
 
     /// Whether this local may hold a local's address, on some path.
@@ -1713,19 +1632,12 @@ impl Held {
             stored_through,
             may_be_null,
         } = marks;
-        Held {
+        let mut held = Held {
             names: Bits::new(Loc::count(sites)),
-            lost,
             freed,
             writes_elsewhere,
             offset,
-            loaded,
             named_at_read: Bits::new(sites),
-            foreign,
-            stale_read,
-            unreplaced_read,
-            lost_read,
-            from_caller,
             returned_by,
             fresh_read,
             widths,
@@ -1736,7 +1648,21 @@ impl Held {
             array_edge,
             stored_through,
             may_be_null,
+        };
+        for (marked, why) in [
+            (lost, Why::Lost),
+            (loaded, Why::Loaded),
+            (foreign, Why::Foreign),
+            (from_caller, Why::FromCaller),
+            (stale_read, Why::StaleRead),
+            (lost_read, Why::LostRead),
+            (unreplaced_read, Why::UnreplacedRead),
+        ] {
+            if marked {
+                held.name_unknown(why);
+            }
         }
+        held
     }
 
     /// Also hold this site, at this offset into it.
@@ -1817,17 +1743,10 @@ impl Held {
         // past an exhaustive match, one type over.
         let Held {
             names,
-            lost,
             freed,
             writes_elsewhere,
             offset,
-            loaded,
             named_at_read,
-            foreign,
-            stale_read,
-            unreplaced_read,
-            lost_read,
-            from_caller,
             returned_by,
             fresh_read,
             widths,
@@ -1849,15 +1768,8 @@ impl Held {
         *site_element = None;
         *array_edge = false;
         *stored_through = false;
-        *from_caller = false;
         *returned_by = None;
-        *lost = false;
-        *loaded = false;
         named_at_read.clear_all();
-        *foreign = false;
-        *stale_read = false;
-        *unreplaced_read = false;
-        *lost_read = false;
         *freed = None;
         // What a local is given ends the claim that this check knew where a
         // write through it landed, along with the set that claim was about.
@@ -1895,17 +1807,10 @@ impl Held {
         // to answer.
         let Held {
             names,
-            lost,
             freed,
             writes_elsewhere,
             offset,
-            loaded,
             named_at_read,
-            foreign,
-            stale_read,
-            unreplaced_read,
-            lost_read,
-            from_caller,
             returned_by,
             fresh_read,
             widths,
@@ -1934,13 +1839,7 @@ impl Held {
         // A proof, so an intersection, as `freed` is.
         *fresh_read = *fresh_read && other.fresh_read;
         *offset = offset.joined(other.offset);
-        *from_caller = *from_caller || other.from_caller;
-        *loaded = *loaded || other.loaded;
         named_at_read.union_with(&other.named_at_read);
-        *foreign = *foreign || other.foreign;
-        *stale_read = *stale_read || other.stale_read;
-        *unreplaced_read = *unreplaced_read || other.unreplaced_read;
-        *lost_read = *lost_read || other.lost_read;
         // **A path that knows where a write through this local lands and a
         // path that does not is a path that does not.** This is what keeps a
         // strong update out of `if (c) { pp = &p; } *pp = q;`, where the
@@ -1948,9 +1847,8 @@ impl Held {
         // all of it. See ADR-0028.
         *writes_elsewhere = *writes_elsewhere || other.writes_elsewhere;
         let here_has_edge = names.ones().any(|place| place.local().is_some());
-        let here_has_site = names.ones().any(|place| place.local().is_none());
+        let here_has_site = names.ones().any(|place| place.site().is_some());
         names.union_with(&other.names);
-        *lost = *lost || other.lost;
         // **An intersection, where every other field here is a union.** The
         // rest of this struct holds may-facts, which grow where paths meet.
         // This one is a proof, and a path that did not free proves nothing:
@@ -1996,17 +1894,10 @@ impl Held {
     pub(super) fn accumulated(&mut self, other: &Held) {
         let Held {
             names,
-            lost,
             freed,
             writes_elsewhere,
             offset,
-            loaded,
             named_at_read,
-            foreign,
-            stale_read,
-            unreplaced_read,
-            lost_read,
-            from_caller,
             returned_by,
             fresh_read,
             widths,
@@ -2025,7 +1916,6 @@ impl Held {
         // at every level below its own.
         widths.bound_by(&other.widths);
         *arrived_holds_pointer = *arrived_holds_pointer || other.arrived_holds_pointer;
-        *from_caller = *from_caller || other.from_caller;
         // Arithmetic builds a new value, which is no longer exactly what a
         // `realloc` returned. See ADR-0039.
         *returned_by = None;
@@ -2039,12 +1929,7 @@ impl Held {
         *fresh_read = false;
 
         // `*tab + 1` is built from a pointer read out of memory, and is one.
-        *loaded = *loaded || other.loaded;
         named_at_read.union_with(&other.named_at_read);
-        *foreign = *foreign || other.foreign;
-        *stale_read = *stale_read || other.stale_read;
-        *unreplaced_read = *unreplaced_read || other.unreplaced_read;
-        *lost_read = *lost_read || other.lost_read;
 
         // **Where the result points is the fold's to say, and not this
         // method's**, for the reason the line below gives about the proof:
@@ -2072,9 +1957,8 @@ impl Held {
         // out of operands, through [`Held::moved_by_arithmetic`]. See
         // ADR-0019.
         let here_has_edge = names.ones().any(|place| place.local().is_some());
-        let here_has_site = names.ones().any(|place| place.local().is_none());
+        let here_has_site = names.ones().any(|place| place.site().is_some());
         names.union_with(&other.names);
-        *lost = *lost || other.lost;
         // As the join keeps it, before the union. See `Held::element`.
         *element = joined_element(
             here_has_edge,
@@ -2106,7 +1990,7 @@ impl Held {
     pub(super) fn lose(&mut self, site: Site) {
         if self.has_site(site) {
             self.names.remove(Loc::Heap(site));
-            self.lost = true;
+            self.name_unknown(Why::Lost);
         }
     }
 
@@ -2371,33 +2255,33 @@ impl Cell {
     /// Whether what is stored there may be a pointer to an allocation that
     /// is gone and whose site names a new one. See `Known::contents`.
     pub(super) fn stale_read(&self) -> bool {
-        self.held.stale_read
+        self.held.may_name(Why::StaleRead)
     }
 
     /// Mark what is stored there as possibly gone. See `Known::contents`.
     pub(super) fn mark_stale_read(&mut self) {
-        self.held.stale_read = true;
+        self.held.name_unknown(Why::StaleRead);
     }
 
     /// Mark a slot there as one a call could not replace.
     pub(super) fn mark_unreplaced_read(&mut self) {
-        self.held.unreplaced_read = true;
+        self.held.name_unknown(Why::UnreplacedRead);
     }
 
     /// Whether a value this check lost may have been stored there.
     pub(super) fn lost(&self) -> bool {
-        self.held.lost
+        self.held.may_name(Why::Lost)
     }
 
     /// Whether what is stored there may be a pointer a caller or a callee
     /// handed over. See `Known::contents`.
     pub(super) fn holds_from_caller(&self) -> bool {
-        self.held.from_caller
+        self.held.may_name(Why::FromCaller)
     }
 
     /// Mark what is stored there as a caller's or a callee's.
     pub(super) fn mark_from_caller(&mut self) {
-        self.held.from_caller = true;
+        self.held.name_unknown(Why::FromCaller);
     }
 
     /// The fields a site made again keeps, each answered: called by
@@ -2419,27 +2303,20 @@ impl Cell {
             // read as. See `Held::arrived_holds_pointer`.
             arrived_holds_pointer: _,
             // Kept, and set below in every container that held the site.
-            stale_read: _,
             // Kept, as `stale_read` is: the slots of the new allocation are
             // not told apart from the old one's.
-            unreplaced_read: _,
             // Kept, as `stale_read` is: the slots of the new allocation are
             // not told apart from the old one's.
-            lost: _,
             // Kept, as the entry and `stale_read` are: the slots of the new
             // allocation are not told apart from the old one's. No case
             // tells this from clearing it, measured: every other local
             // holding the site is lost a few lines below, so a load out of
             // it is doubted either way.
-            from_caller: _,
             // Not recorded in memory. See `Cell::absorb`.
-            lost_read: _,
             freed: _,
             writes_elsewhere: _,
             offset: _,
-            loaded: _,
             named_at_read: _,
-            foreign: _,
             returned_by: _,
             fresh_read: _,
             inner_address: _,
@@ -2484,9 +2361,6 @@ impl Cell {
     /// it says what a load takes of it.
     pub(super) fn taken_by_a_load(&self, held: &mut Held) {
         let Held {
-            stale_read,
-            unreplaced_read,
-            lost,
             names: _,
             // What it names is the last level's, and its bounds are
             // `Known::memory_levels`', which reads every level.
@@ -2496,15 +2370,11 @@ impl Cell {
             arrived_holds_pointer: _,
             // Read by `Allocations::reads_caller_memory`, which is the
             // caller's answer to `load_into`.
-            from_caller: _,
             // Not recorded in memory. See `Cell::absorb`.
-            lost_read: _,
             freed: _,
             writes_elsewhere: _,
             offset: _,
-            loaded: _,
             named_at_read: _,
-            foreign: _,
             returned_by: _,
             fresh_read: _,
             inner_address: _,
@@ -2517,20 +2387,20 @@ impl Cell {
         } = &self.held;
         // Read out of an allocation that may hold one that is gone. See
         // ADR-0045.
-        if *stale_read {
-            held.lost = true;
-            held.stale_read = true;
+        if self.held.may_name(Why::StaleRead) {
+            held.name_unknown(Why::Lost);
+            held.name_unknown(Why::StaleRead);
         }
         // Read out of an allocation that may hold a slot a call could not
         // replace, which is asked where it is handed by address and nowhere
         // else. See ADR-0047.
-        if *unreplaced_read {
-            held.unreplaced_read = true;
+        if self.held.may_name(Why::UnreplacedRead) {
+            held.name_unknown(Why::UnreplacedRead);
         }
         // Read out of an allocation that may hold a lost value, which is made
         // lost if a lost value goes. See `Held::lost_read`.
-        if *lost {
-            held.lost_read = true;
+        if self.held.may_name(Why::Lost) {
+            held.name_unknown(Why::LostRead);
         }
     }
 
@@ -2565,11 +2435,6 @@ impl Cell {
         // `Held` is `error[E0027]` here until it says what a store leaves of
         // it. Found by review.
         let Held {
-            stale_read,
-            unreplaced_read,
-            lost,
-            lost_read,
-            from_caller,
             // What it names and how wide, given apart by the door, which
             // knows what the write carried.
             names: _,
@@ -2581,9 +2446,7 @@ impl Cell {
             freed: _,
             writes_elsewhere: _,
             offset: _,
-            loaded: _,
             named_at_read: _,
-            foreign: _,
             returned_by: _,
             fresh_read: _,
             inner_address: _,
@@ -2594,10 +2457,19 @@ impl Cell {
             // Not recorded in memory, so a load gives none.
             may_be_null: _,
         } = from;
-        poured.held.stale_read = *stale_read;
-        poured.held.unreplaced_read = *unreplaced_read;
-        poured.held.lost = *lost || *lost_read;
-        poured.held.from_caller = *from_caller;
+        for (marked, why) in [
+            (from.may_name(Why::StaleRead), Why::StaleRead),
+            (from.may_name(Why::UnreplacedRead), Why::UnreplacedRead),
+            (
+                from.may_name(Why::Lost) || from.may_name(Why::LostRead),
+                Why::Lost,
+            ),
+            (from.may_name(Why::FromCaller), Why::FromCaller),
+        ] {
+            if marked {
+                poured.held.name_unknown(why);
+            }
+        }
         poured
     }
 
@@ -2619,19 +2491,12 @@ impl Cell {
         let Held {
             names,
             widths,
-            stale_read,
-            unreplaced_read,
-            lost,
-            from_caller,
             // Not recorded in memory: a load out of a block reads what
             // `Known::load_into` reads, which is the fields above.
-            lost_read: _,
             freed: _,
             writes_elsewhere: _,
             offset: _,
-            loaded: _,
             named_at_read: _,
-            foreign: _,
             returned_by: _,
             fresh_read: _,
             inner_address: _,
@@ -2649,10 +2514,6 @@ impl Cell {
         // **The lower at every level**, and a store that recorded no width at
         // level 0 absorbs whatever the other recorded (#767).
         self.held.widths.bound_by(widths);
-        self.held.stale_read |= *stale_read;
-        self.held.unreplaced_read |= *unreplaced_read;
-        self.held.lost |= *lost;
-        self.held.from_caller |= *from_caller;
     }
 }
 
@@ -2742,7 +2603,7 @@ impl Unrecorded {
 }
 
 impl Beyond {
-    /// [`Held::lost`]: this check stopped following the value.
+    /// [`Why::Lost`]: this check stopped following the value.
     ///
     /// **This mark alone**: its readers ask whether this check let go of the value, which no other mark says. Every mark is named, `_` for one not read, so a mark added
     /// is `error[E0027]` here and has to be answered (#853).
@@ -2761,7 +2622,7 @@ impl Beyond {
         }
     }
 
-    /// [`Held::loaded`]: the value was read out of memory.
+    /// [`Why::Loaded`]: the value was read out of memory.
     ///
     /// **This mark alone**: its readers ask how wide a pointer read out of memory is believed, which the other marks do not decide. Every mark is named, `_` for one not read, so a mark added
     /// is `error[E0027]` here and has to be answered (#853).
@@ -2780,7 +2641,7 @@ impl Beyond {
         }
     }
 
-    /// [`Held::foreign`]: a call this check cannot read wrote the value.
+    /// [`Why::Foreign`]: a call this check cannot read wrote the value.
     ///
     /// **This mark alone**: its readers ask what a call this check cannot read handed back. Every mark is named, `_` for one not read, so a mark added
     /// is `error[E0027]` here and has to be answered (#853).
@@ -2799,7 +2660,7 @@ impl Beyond {
         }
     }
 
-    /// [`Held::from_caller`]: a caller or a callee handed the value over.
+    /// [`Why::FromCaller`]: a caller or a callee handed the value over.
     ///
     /// **This mark alone**: its readers ask whether the value is the caller's, which only this provenance says. Every mark is named, `_` for one not read, so a mark added
     /// is `error[E0027]` here and has to be answered (#853).
@@ -2818,7 +2679,7 @@ impl Beyond {
         }
     }
 
-    /// [`Held::unreplaced_read`]: the value may be a slot a call could not
+    /// [`Why::UnreplacedRead`]: the value may be a slot a call could not
     /// replace.
     ///
     /// **This mark alone**: its one reader asks whether a slot may still hold what a call left there. Every mark is named, `_` for one not read, so a mark added
@@ -3103,7 +2964,7 @@ mod tests {
         assert_eq!(written, Init::Maybe);
     }
 
-    use super::{At, Extent, Freeing, Held, Init, Inits, Levels, SiteState, Width, earlier};
+    use super::{At, Extent, Freeing, Held, Init, Inits, Levels, SiteState, Why, Width, earlier};
     use crate::memory::index::{Idx, LocalIdx, Site};
     use crate::source::inside;
     use crate::source::{FileId, SourceMap, Span};
@@ -3277,9 +3138,9 @@ mod tests {
         held.name_local(LocalIdx::at(3));
         held.writes_elsewhere = false;
         held.offset = At::Moved;
-        held.lost_read = true;
-        held.unreplaced_read = true;
-        held.foreign = true;
+        held.name_unknown(Why::LostRead);
+        held.name_unknown(Why::UnreplacedRead);
+        held.name_unknown(Why::Foreign);
         held.arrived_holds_pointer = true;
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", "free(p);");
@@ -3292,9 +3153,9 @@ mod tests {
         assert!(!held.may_be_a_locals_address());
         assert!(held.writes_elsewhere);
         assert_eq!(held.offset, At::Bytes(0));
-        assert!(!held.lost_read);
-        assert!(!held.unreplaced_read);
-        assert!(!held.foreign);
+        assert!(!held.may_name(Why::LostRead));
+        assert!(!held.may_name(Why::UnreplacedRead));
+        assert!(!held.may_name(Why::Foreign));
         assert!(held.freed.is_none());
         assert!(!held.arrived_holds_pointer);
     }
@@ -3321,10 +3182,10 @@ mod tests {
         held.stored_through = true;
         held.returned_by = Some(Site::at(2));
         held.named_at_read.set(LocalIdx::at(1));
-        held.stale_read = true;
-        held.from_caller = true;
-        held.lost = true;
-        held.loaded = true;
+        held.name_unknown(Why::StaleRead);
+        held.name_unknown(Why::FromCaller);
+        held.name_unknown(Why::Lost);
+        held.name_unknown(Why::Loaded);
         held.clear();
         assert!(held == Held::none(4));
     }

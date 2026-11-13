@@ -1612,7 +1612,7 @@ impl Allocations<'_> {
         for place in written.indices() {
             let there = &from.written[place];
             let site = match place {
-                Loc::Local(_) => {
+                Loc::Local(_) | Loc::Unknown(_) => {
                     written[place].join(there, back);
                     continue;
                 }
