@@ -229,6 +229,10 @@ The limits, each a doubt the reader sees unless it says otherwise:
 * **A silence:** a `longjmp` back to a `setjmp` runs a call again on an edge
   the graph does not have, so a block the first run left unwritten may be
   believed written where the second run's allocation fails (ADR-0082).
+* **A silence:** a local's address used after the block that declares the
+  local has ended, `int *p; { int x = 1; p = &x; } return *p;`, is not asked:
+  what ends a local's lifetime is the lifetime check's to ask, and until it
+  exists the read is believed (#665).
 * **Not asked here:** a local's address that leaves the function (#883).
   Where it is the only defect, nothing reports it. Arithmetic on a pointer
   that may be null is doubted as a dereference of one is (ADR-0084).
