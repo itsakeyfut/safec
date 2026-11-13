@@ -27,6 +27,24 @@ use super::store::{Landing, StoreKind, Strong};
 use crate::library::{Callee, Library};
 use crate::reads::{dereferenced_in_element, dereferenced_in_terminator, derefs};
 
+/// **What a write writes, as the transfer asks it**: whether what it
+/// writes may be a pointer, how many levels below it hold pointers, and how
+/// many bytes it writes. A store says these from the type of the place it
+/// writes; a library copy, which has no type, says them from what it copies
+/// and its length. Said once where the write is read, so that no rule below
+/// asks a type of its own (the memory model rebuilt on #924, stage 2): the
+/// store's rules read the place's type at each one, and a copy, whose place
+/// is a `void *`, could not be handed to them.
+#[derive(Clone, Copy)]
+pub(super) struct Write {
+    /// Whether what is written may be a pointer.
+    pub(super) pointer: bool,
+    /// How many levels below what is written hold pointers.
+    pub(super) levels: usize,
+    /// How many bytes are written, where that is known.
+    pub(super) width: Option<u64>,
+}
+
 /// What [`Allocations::land_contents`] is told of one write beyond where it
 /// lands.
 pub(super) enum Pours {
@@ -330,19 +348,20 @@ impl Allocations<'_> {
     /// dereference, at the width of what it stores.
     fn store_replaces(
         &self,
-        function: &Function,
         place: &Place,
+        wrote: Write,
         landing: &Landing,
         value: &Known,
     ) -> Option<Site> {
         if place.projection.as_slice() != [Projection::Deref] {
             return None;
         }
-        let width = self
-            .unit
-            .place_ty(function, place)
-            .and_then(|ty| self.unit.size_of(ty));
-        self.replaces(landing, value.points_to[place.local].offset, width, value)
+        self.replaces(
+            landing,
+            value.points_to[place.local].offset,
+            wrote.width,
+            value,
+        )
     }
 
     /// Record a store narrower than a pointer as writing part of one, in each
@@ -360,17 +379,13 @@ impl Allocations<'_> {
     /// may-write of the slot instead (ADR-0094 rule 3, #893).
     /// **Not memory narrower than a pointer**, which holds no pointer to make
     /// of it. A store of a pointer's whole width is not narrow.
-    fn note_narrow_store(&self, function: &Function, place: &Place, at: Span, value: &mut Known) {
+    fn note_narrow_store(&self, place: &Place, wrote: Write, at: Span, value: &mut Known) {
         if derefs(place) != 1 {
             return;
         }
         let target = self.unit.target();
         let pointer = u64::from(target.pointer_bits() / target.char().bits());
-        let narrow = self
-            .unit
-            .place_ty(function, place)
-            .and_then(|ty| self.unit.size_of(ty))
-            .is_some_and(|width| width < pointer);
+        let narrow = wrote.width.is_some_and(|width| width < pointer);
         if narrow {
             self.note_part_of_a_pointer(place.local, at, value);
         }
@@ -2360,6 +2375,14 @@ impl Analysis for Allocations<'_> {
                     exposed_in_part: _,
                     handed_untyped: _,
                 } = &*value;
+                // What this store writes, from the type of the place it
+                // writes, said once. See `Write`.
+                let place_ty = self.unit.place_ty(function, &operation.place);
+                let wrote = Write {
+                    pointer: self.may_be_pointer(function, &operation.place),
+                    levels: place_ty.map_or(0, |ty| self.levels_holding_pointers(ty)),
+                    width: place_ty.and_then(|ty| self.unit.size_of(ty)),
+                };
                 // **What a store that leaves carries is stored out**, asked
                 // before it lands, as the store door asks it: the sites the
                 // stored value holds, and what a pointer read out of memory
@@ -2382,7 +2405,7 @@ impl Analysis for Allocations<'_> {
                         // added is answered here.
                         StoreKind::Copy => false,
                     };
-                    kind && store.leaves && self.may_be_pointer(function, &store.into)
+                    kind && store.leaves && wrote.pointer
                 });
                 if marks {
                     let carried: Vec<Site> = self
@@ -2390,10 +2413,7 @@ impl Analysis for Allocations<'_> {
                         .sites()
                         .collect();
                     // How many levels the stored-into type reads pointers at.
-                    let levels = self
-                        .unit
-                        .place_ty(function, &operation.place)
-                        .map_or(0, |ty| self.levels_holding_pointers(ty));
+                    let levels = wrote.levels;
                     let read_out = match &operation.value {
                         Rvalue::Use(written) => self.read_out(function, written, value),
                         _ => Vec::new(),
@@ -2478,11 +2498,12 @@ impl Analysis for Allocations<'_> {
                         place: &operation.place,
                         landing: &before,
                         unwritten_before: &unwritten_before,
+                        width: wrote.width,
                     },
                 );
                 // And part of a pointer, where it is narrower than one. See
                 // `Self::note_narrow_store`.
-                self.note_narrow_store(function, &operation.place, operation.origin.span(), value);
+                self.note_narrow_store(&operation.place, wrote, operation.origin.span(), value);
 
                 // **Into the allocations the pointer holds, what the write
                 // carries is inside them**, exposed whenever they are, by
@@ -2698,7 +2719,7 @@ impl Analysis for Allocations<'_> {
                     // one above whatever it names, and one with no `bound`
                     // names nothing, which is a null and bounds nothing. See
                     // `Cell::held`.
-                    let first = if self.may_be_pointer(function, &operation.place) {
+                    let first = if wrote.pointer {
                         value.stored_width(&written, held_in)
                     } else {
                         Width::Nothing
@@ -2741,15 +2762,10 @@ impl Analysis for Allocations<'_> {
                         &poured,
                         &in_part,
                         Pours::Store {
-                            pointer_stored: self.may_be_pointer(function, &operation.place),
+                            pointer_stored: wrote.pointer,
                             carried,
                             span: operation.origin.span(),
-                            replaces: self.store_replaces(
-                                function,
-                                &operation.place,
-                                &landing,
-                                value,
-                            ),
+                            replaces: self.store_replaces(&operation.place, wrote, &landing, value),
                         },
                     );
                 }

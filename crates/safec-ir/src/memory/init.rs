@@ -32,6 +32,9 @@ pub(super) enum Wrote<'a> {
         place: &'a Place,
         landing: &'a Landing,
         unwritten_before: &'a Table<LocalIdx, bool>,
+        /// How many bytes it writes, which `Write` says once for the store
+        /// rather than this rule asking the place's type again.
+        width: Option<u64>,
     },
     /// A library copy handed `dest` first and `source` second, which
     /// exposes `reach`, and whose length covers the pointers it writes as
@@ -105,6 +108,7 @@ impl Allocations<'_> {
                 place,
                 landing,
                 unwritten_before,
+                width,
             } => {
                 let pointer = place.local;
                 let one_step = landing.one_step;
@@ -134,10 +138,6 @@ impl Allocations<'_> {
                 // believed written, and only the doubt whether a read past
                 // its start fits stood in for the slots nothing wrote, the
                 // shape #703 exposed (#932). See ADR-0094 rule 3.
-                let width = self
-                    .unit
-                    .place_ty(function, place)
-                    .and_then(|ty| self.unit.size_of(ty));
                 let offset = value.points_to[pointer].offset;
                 let covers_block =
                     |value: &Known, site: Site| value.covers_whole(Loc::Heap(site), offset, width);
@@ -206,9 +206,7 @@ impl Allocations<'_> {
                             1,
                             edges.iter().copied(),
                             false,
-                            self.unit
-                                .place_ty(function, place)
-                                .and_then(|ty| self.unit.size_of(ty)),
+                            width,
                         );
                         // **A local is written for certain only where it is
                         // the one place the store lands**, as a site is
