@@ -1,0 +1,83 @@
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_local_a_library_copy_or_fill_of_a_length_not_read_wrote_is_doubted.c:12:5 ]
+    │
+ 12 │     memcpy(&p, &src, n);
+    │     ─────────┬─────────  
+    │              ╰─────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_local_a_library_copy_or_fill_of_a_length_not_read_wrote_is_doubted.c:12:5 ]
+    │
+ 12 │     memcpy(&p, &src, n);
+    │     ─────────┬─────────  
+    │              ╰─────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0411]: `p` may be read before anything was assigned to it
+    ╭─[ a_local_a_library_copy_or_fill_of_a_length_not_read_wrote_is_doubted.c:13:5 ]
+    │
+ 13 │     return p;
+    │     ────┬────  
+    │         ╰────── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else
+error[SC0413]: this lets `p` leave, which may not point at an object as wide as its type
+    ╭─[ a_local_a_library_copy_or_fill_of_a_length_not_read_wrote_is_doubted.c:13:5 ]
+    │
+ 13 │     return p;
+    │     ────┬────  
+    │         ╰────── returned here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_local_a_library_copy_or_fill_of_a_length_not_read_wrote_is_doubted.c:18:5 ]
+    │
+ 18 │     memset(&q, 0, n);
+    │     ────────┬───────  
+    │             ╰───────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0411]: `q` may be read before anything was assigned to it
+    ╭─[ a_local_a_library_copy_or_fill_of_a_length_not_read_wrote_is_doubted.c:19:5 ]
+    │
+ 19 │     return q;
+    │     ────┬────  
+    │         ╰────── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_local_a_library_copy_or_fill_of_a_length_not_read_wrote_is_doubted.c:24:5 ]
+    │
+ 24 │     memset(v, 0, n);
+    │     ───────┬───────  
+    │            ╰───────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0411]: this may read a pointer out of memory before anything was assigned to it
+    ╭─[ a_local_a_library_copy_or_fill_of_a_length_not_read_wrote_is_doubted.c:25:5 ]
+    │
+ 25 │     return v[0];
+    │     ──────┬─────  
+    │           ╰─────── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path before it is read

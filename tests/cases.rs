@@ -1842,6 +1842,9 @@ cases! {
         // (`Callee::Reads` answered as an opaque result); the `SC0402` after
         // `free(s)`, the second free and the free past the start go quiet.
         a_library_function_that_only_reads_writes_nothing_it_is_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `Allocations::covers_exactly` answers `true` for a length
+        // it cannot read; the three `SC0411` go.
+        a_local_a_library_copy_or_fill_of_a_length_not_read_wrote_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `note_narrow_store` notes nothing below one
         // dereference; the store's `SC0413` goes.
         a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
