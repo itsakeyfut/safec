@@ -126,7 +126,7 @@ pub(super) fn handed_places<'a>(
     arguments: &'a [Operand],
 ) -> Vec<&'a Place> {
     let arguments = match analysis.callee(callee) {
-        Callee::Opaque | Callee::ReturnsFirst | Callee::Copies => arguments,
+        Callee::Opaque | Callee::ReturnsFirst | Callee::Copies | Callee::Reads => arguments,
         Callee::Reallocates => &arguments[arguments.len().min(1)..],
         // A call that does not return reads nothing it is handed after its
         // arguments are evaluated, which `dereferenced_in_terminator` asks.

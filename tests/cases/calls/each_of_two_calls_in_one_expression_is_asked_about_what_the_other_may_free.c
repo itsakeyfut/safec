@@ -1,4 +1,4 @@
-int strlen(char *s);
+int look(char *s);
 
 int f(char *s, char *t) {
     if (s == 0) {
@@ -7,5 +7,5 @@ int f(char *s, char *t) {
     if (t == 0) {
         return 0;
     }
-    return strlen(s) + strlen(t);
+    return look(s) + look(t);
 }

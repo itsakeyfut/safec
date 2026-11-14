@@ -1837,6 +1837,11 @@ cases! {
         // reads go quiet. Mutation: drop `|| !arrays.is_empty()` there, so
         // what is split off the array may be named alone; `b == 0` goes quiet.
         a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the rows that only read are `Callee::Opaque` again; the
+        // three reads go quiet. Mutation: what a search returns names nothing
+        // (`Callee::Reads` answered as an opaque result); the `SC0402` after
+        // `free(s)`, the second free and the free past the start go quiet.
+        a_library_function_that_only_reads_writes_nothing_it_is_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `note_narrow_store` notes nothing below one
         // dereference; the store's `SC0413` goes.
         a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -6639,7 +6644,8 @@ cases! {
         a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `strlen(s)` has made `s` unknown by the time `strlen(t)` is asked,
         // and C may run `strlen(t)` first. Mutation: drop `read.reachable` from
-        // the filter in `used_before`; the report at `strlen(s)` goes.
+        // the filter in `used_before`; the report at `look(s)` goes. Not
+        // `strlen`, which frees nothing (#952).
         each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The other side: an allocation no call was handed and nothing stored
         // is not one a call this check cannot read may free. Mutation: count

@@ -1,5 +1,5 @@
 Target "x86_64-pc-windows-msvc"
-Function each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:1:5 "strlen" declared
+Function each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:1:5 "look" declared
   Local "_0" "int" return
   Local "_1" "char *" parameter "s"
 Function each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:3:5 "f"
@@ -50,11 +50,11 @@ Function each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_f
     Sequenced each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:7:9 generated
     Goto "bb6"
   Block "bb6"
-    Call each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:12 written "strlen" "bb7"
+    Call each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:12 written "look" "bb7"
       Destination "_5"
       Copy "_1"
   Block "bb7"
-    Call each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:24 written "strlen" "bb8"
+    Call each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:22 written "look" "bb8"
       Destination "_6"
       Copy "_2"
   Block "bb8"

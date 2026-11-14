@@ -188,6 +188,18 @@ pub(crate) enum Callee {
     /// use(p);` doubted `p` (#586). No execution continues past it, so the
     /// value before it is the one that claims least beyond it.
     Ends,
+    /// A C library function that only reads what it is handed: it writes
+    /// none of it, frees none of it and keeps none of it past its return.
+    /// `memcmp`, `memchr`, `strlen`, `strcmp`, `strncmp`, `strchr`,
+    /// `strrchr` and `strstr`, whose clauses in C17 7.24.4, 7.24.5 and
+    /// 7.24.6.3 give each a comparison, a search or a count and nothing
+    /// else.
+    ///
+    /// **Not believed to write what it is handed**, as [`Callee::Opaque`]
+    /// is (#782): read so, `int *a[1]; memchr(a, 0, 8); int *q = a[0];`
+    /// believed `a` written and the read built silent (#952). What it
+    /// returns is answered as an opaque call's is.
+    Reads,
     /// Anything else. It may free what it was passed and this cannot tell.
     Opaque,
 }
@@ -419,7 +431,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     Library {
         name: "memcmp",
         parameters: &[Shape::Pointer, Shape::Pointer, Shape::Integer],
-        callee: Callee::Opaque,
+        callee: Callee::Reads,
         reaches: &[(0, Reach::Length(2)), (1, Reach::Length(2))],
         fills: false,
         makes: None,
@@ -428,7 +440,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     Library {
         name: "memchr",
         parameters: &[Shape::Pointer, Shape::Integer, Shape::Integer],
-        callee: Callee::Opaque,
+        callee: Callee::Reads,
         reaches: &[(0, Reach::Length(2))],
         fills: false,
         makes: None,
@@ -437,7 +449,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     Library {
         name: "strlen",
         parameters: &[Shape::Pointer],
-        callee: Callee::Opaque,
+        callee: Callee::Reads,
         reaches: &[(0, Reach::String)],
         fills: false,
         makes: None,
@@ -446,7 +458,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     Library {
         name: "strcmp",
         parameters: &[Shape::Pointer, Shape::Pointer],
-        callee: Callee::Opaque,
+        callee: Callee::Reads,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         fills: false,
         makes: None,
@@ -455,7 +467,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     Library {
         name: "strncmp",
         parameters: &[Shape::Pointer, Shape::Pointer, Shape::Integer],
-        callee: Callee::Opaque,
+        callee: Callee::Reads,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         fills: false,
         makes: None,
@@ -464,7 +476,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     Library {
         name: "strchr",
         parameters: &[Shape::Pointer, Shape::Integer],
-        callee: Callee::Opaque,
+        callee: Callee::Reads,
         reaches: &[(0, Reach::String)],
         fills: false,
         makes: None,
@@ -473,7 +485,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     Library {
         name: "strrchr",
         parameters: &[Shape::Pointer, Shape::Integer],
-        callee: Callee::Opaque,
+        callee: Callee::Reads,
         reaches: &[(0, Reach::String)],
         fills: false,
         makes: None,
@@ -482,7 +494,7 @@ pub(crate) const LIBRARY: &[Library] = &[
     Library {
         name: "strstr",
         parameters: &[Shape::Pointer, Shape::Pointer],
-        callee: Callee::Opaque,
+        callee: Callee::Reads,
         reaches: &[(0, Reach::String), (1, Reach::String)],
         fills: false,
         makes: None,
@@ -492,7 +504,31 @@ pub(crate) const LIBRARY: &[Library] = &[
 
 #[cfg(test)]
 mod tests {
-    use super::{LIBRARY, Shape};
+    use super::{Callee, LIBRARY, Shape};
+
+    /// The rows whose clause gives them a comparison, a search or a count
+    /// and nothing else are read as writing nothing they are handed, so a
+    /// row moved back to `Callee::Opaque` is a named failure rather than an
+    /// array believed written by `memchr` (#952). Mutation: read `memchr`
+    /// as `Callee::Opaque`; this fails.
+    #[test]
+    fn every_row_that_only_reads_writes_nothing_it_is_handed() {
+        // C17 7.24.4.1, 7.24.4.2, 7.24.4.4; 7.24.5.1, 7.24.5.2, 7.24.5.5,
+        // 7.24.5.7; 7.24.6.3.
+        let reading = [
+            "memcmp", "strcmp", "strncmp", "memchr", "strchr", "strrchr", "strstr", "strlen",
+        ];
+        for name in reading {
+            let row = LIBRARY
+                .iter()
+                .find(|row| row.name == name)
+                .unwrap_or_else(|| panic!("`{name}` has a row"));
+            assert!(
+                matches!(row.callee, Callee::Reads),
+                "`{name}` only reads what it is handed"
+            );
+        }
+    }
 
     /// A row that fills names, through its `reaches`, an integer argument
     /// its length is handed in. Without one, [`super::Library::fill_length`]

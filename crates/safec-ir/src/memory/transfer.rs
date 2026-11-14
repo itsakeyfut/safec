@@ -1365,7 +1365,11 @@ impl Allocations<'_> {
                 // Every kind written out, so that one added later is asked
                 // whether what it returns was handed over.
                 let handed_over = match self.callee(*callee) {
-                    Callee::Opaque => true,
+                    // A search names what it searched rather than a site of
+                    // its own, so nothing holds this mark; marked all the
+                    // same, since a mark can only add a doubt. See
+                    // `Callee::Reads`.
+                    Callee::Opaque | Callee::Reads => true,
                     Callee::Frees
                     | Callee::Allocates
                     | Callee::Reallocates

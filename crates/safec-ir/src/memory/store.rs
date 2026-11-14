@@ -143,6 +143,7 @@ impl Allocations<'_> {
             | Callee::Reallocates
             | Callee::ReturnsFirst
             | Callee::Ends
+            | Callee::Reads
             | Callee::Opaque => false,
         };
         if !copies {

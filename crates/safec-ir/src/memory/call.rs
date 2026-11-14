@@ -173,6 +173,7 @@ impl Allocations<'_> {
             | Callee::Allocates
             | Callee::ReturnsFirst
             | Callee::Copies
+            | Callee::Reads
             | Callee::Opaque => arguments,
         };
         let touched = Self::touching(handed.iter(), value);
@@ -231,6 +232,7 @@ impl Allocations<'_> {
                 | Callee::ReturnsFirst
                 | Callee::Copies
                 | Callee::Ends
+                | Callee::Reads
                 | Callee::Opaque,
                 _,
             ) => None,
@@ -281,7 +283,9 @@ impl Allocations<'_> {
         // below, so that the two cannot disagree about what it was handed.
         let opaque = match kind {
             Callee::Opaque => true,
-            Callee::Frees
+            // Keeps nothing it is handed. See `Callee::Reads`.
+            Callee::Reads
+            | Callee::Frees
             | Callee::Allocates
             | Callee::Reallocates
             | Callee::ReturnsFirst
@@ -340,6 +344,7 @@ impl Allocations<'_> {
             | Callee::ReturnsFirst
             | Callee::Copies
             | Callee::Ends
+            | Callee::Reads
             | Callee::Opaque => false,
         };
         if may_free
@@ -622,6 +627,7 @@ impl Allocations<'_> {
                     | Callee::Reallocates
                     | Callee::ReturnsFirst
                     | Callee::Ends
+                    | Callee::Reads
                     | Callee::Opaque => false,
                 };
                 if copies {
@@ -1006,6 +1012,10 @@ impl Allocations<'_> {
                     },
                 );
             }
+            // **Writes, frees and keeps nothing it is handed**, so nothing
+            // here: not exposed, not believed written (#782 is for a call
+            // this check cannot read), not freed. See `Callee::Reads` (#952).
+            Callee::Reads => {}
             Callee::Opaque => {
                 // **What the caller stored is out of sight from here on**, as
                 // it is after a free of the caller's pointer. See ADR-0040.
@@ -1499,6 +1509,28 @@ impl Allocations<'_> {
                 value.replace(at, first);
                 return;
             }
+            // **What a search returns points into what it searched**, or is
+            // null: C17 7.24.5 gives `memchr`, `strchr`, `strrchr` and
+            // `strstr` a pointer into their first argument or a null, at an
+            // offset nothing here counts. Answered as an opaque call's result,
+            // it named nothing it was handed, and `p = strchr(s, 1); free(s);
+            // return *p;` read freed memory in silence, found by review. A
+            // count or a comparison returns an integer, which holds nothing.
+            // See `Callee::Reads` (#952).
+            Callee::Reads => {
+                let into = match arguments.first() {
+                    Some(Operand::Copy(source)) if self.is_pointer(function, place.local) => {
+                        let mut held = self.handed_value(function, source, value);
+                        held.offset = At::Unknown;
+                        held.row = None;
+                        held.may_be_null = true;
+                        held
+                    }
+                    Some(_) | None => Held::none(value.points_to.len()),
+                };
+                value.replace(at, into);
+                return;
+            }
             Callee::Allocates | Callee::Reallocates | Callee::Opaque => {}
         }
 
@@ -1528,6 +1560,9 @@ impl Allocations<'_> {
         let made = match kind {
             Callee::Allocates | Callee::Reallocates => Some(origin.span()),
             Callee::Opaque | Callee::Frees | Callee::ReturnsFirst | Callee::Copies => None,
+            Callee::Reads => {
+                unreachable!("`Allocations::call` returns for it where its result is decided")
+            }
             Callee::Ends => {
                 unreachable!("`Allocations::call` returns for it where `handed` is decided")
             }
@@ -1544,6 +1579,9 @@ impl Allocations<'_> {
         // where that body is one this check reads. See ADR-0060.
         let opaque = match kind {
             Callee::Opaque => true,
+            Callee::Reads => {
+                unreachable!("`Allocations::call` returns for it where its result is decided")
+            }
             Callee::Frees
             | Callee::Allocates
             | Callee::Reallocates
@@ -1776,6 +1814,9 @@ impl Allocations<'_> {
             | Callee::ReturnsFirst
             | Callee::Copies
             | Callee::Opaque => {}
+            Callee::Reads => {
+                unreachable!("`Allocations::call` returns for it where its result is decided")
+            }
         }
         // **Or any allocation code this check cannot read may reach**, which a
         // call it cannot read may hand back: `stash(p); q = fetch();` may make
@@ -1787,6 +1828,9 @@ impl Allocations<'_> {
         match kind {
             Callee::Ends => {
                 unreachable!("`Allocations::call` returns for it where `handed` is decided")
+            }
+            Callee::Reads => {
+                unreachable!("`Allocations::call` returns for it where its result is decided")
             }
             Callee::Opaque => {
                 // **What it returned may hold a pointer the callee kept**, the
@@ -1879,6 +1923,9 @@ impl Allocations<'_> {
     ) -> Extent {
         let constant = |index: usize| self.constant_argument(callee, handed, index);
         match kind {
+            Callee::Reads => {
+                unreachable!("`Allocations::call` returns for it where its result is decided")
+            }
             Callee::Opaque => {
                 return Extent::AtLeast(self.pointee_size(function, destination).unwrap_or(0));
             }
