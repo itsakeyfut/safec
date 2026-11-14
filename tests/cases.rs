@@ -1821,6 +1821,11 @@ cases! {
         // dereference certainly of one local as a load (`handed_value` skips
         // `read_from_locals`); the last function is reported.
         a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: count a pointer at an uncounted element as naming the
+        // array alone in `reached_only_beside_another`; the first and last
+        // reads go quiet. Mutation: drop `|| !arrays.is_empty()` there, so
+        // what is split off the array may be named alone; `b == 0` goes quiet.
+        a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `note_narrow_store` notes nothing below one
         // dereference; the store's `SC0413` goes.
         a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -2228,10 +2233,11 @@ cases! {
         // the block whole there, as #726 does a block kept whole; this goes
         // silent.
         a_heap_block_written_through_a_pointer_read_back_out_of_memory_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A call is believed to write what it is handed, so the may-write is
-        // a store's and not a call's. Mutation: drop `!call` from the arm in
-        // `built::write_effects`; this gains a false `SC0411`.
-        a_local_array_handed_to_a_call_at_an_element_not_known_is_believed_written_by_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An array handed at an element this check cannot count may have
+        // been written in part by the call (#951). Mutation: count a pointer
+        // at an uncounted element as naming the array alone in
+        // `reached_only_beside_another`; this goes quiet.
+        a_local_array_handed_to_a_call_at_an_element_not_known_may_have_missed_the_rest: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written at one element before an inner loop that makes it again:
         // unwritten again at the back edge element by element, found by
         // review, where `main` reported it and a whole-block test was silent.

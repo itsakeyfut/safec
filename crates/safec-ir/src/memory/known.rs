@@ -1835,6 +1835,16 @@ impl Known {
     /// not reach `p`, so `if (*pp) fill(*pp);` doubts it where `t = *pp;
     /// if (t) fill(t);` does not.
     ///
+    /// **Nor is one element of an array the array**: a pointer at an element
+    /// this check cannot count, `&arr[k]`, names the array beside its other
+    /// elements, so the call may have written one and missed the rest, and
+    /// each is a may-write, as a store through the same pointer is
+    /// (ADR-0094 rule 3). Believed to write the whole array, `fill(&arr[k],
+    /// &x); return arr[0] == 0;` was quiet at the read (#951). A pointer at
+    /// the array's start, `fill(arr)`, still hands the whole array over. A
+    /// block cannot say which element it points at, so `&arr[k]` kept in a
+    /// block is still taken as the whole array (#938).
+    ///
     /// **A local named alone by any of them stays believed written**, the
     /// output-parameter idiom (#782): `stash(&p); p = m; tick();` reaches `m`
     /// through `p` alone. So does one no pointer this function recorded
@@ -1845,7 +1855,11 @@ impl Known {
     /// kept**: `keep(p); tick();` believes `a` written at `tick`, since `p`
     /// itself was never handed and is not found. That read is still
     /// reported, as a use of a pointer this check stopped following.
-    pub(super) fn reached_only_beside_another(&self, handed: &[Held]) -> BTreeSet<LocalIdx> {
+    pub(super) fn reached_only_beside_another(
+        &self,
+        handed: &[Held],
+        is_array: impl Fn(LocalIdx) -> bool,
+    ) -> BTreeSet<LocalIdx> {
         let reached = self.unknown_code_reaches();
         let mut beside = BTreeSet::new();
         let mut alone = BTreeSet::new();
@@ -1859,20 +1873,31 @@ impl Known {
             }
             _ => beside.extend(locals),
         };
-        for held in handed {
-            ask(
-                held.sites().collect(),
-                held.locals().collect(),
-                held.beyond().any_unknown() || held.may_be_null,
-            );
-        }
-        for &holder in &reached.locals {
-            let held = &self.points_to[holder];
-            ask(
-                held.sites().collect(),
-                held.locals().collect(),
-                held.beyond().any_unknown() || held.may_be_null,
-            );
+        // **One question per value, however it was found**, so the value a
+        // call is handed and one it finds in a local cannot be asked
+        // differently. A pointer at an element it cannot count names an
+        // array beside its other elements; and what it names besides the
+        // array is beside the array, never alone: split off without saying
+        // so, `p` either `&b` or `&arr[k]` left `b` named alone and believed
+        // written. Found by review.
+        {
+            let mut ask_value = |held: &Held| {
+                let in_part = held.element.is_none() || held.array_edge;
+                let (arrays, rest): (Vec<LocalIdx>, Vec<LocalIdx>) =
+                    held.locals().partition(|&local| in_part && is_array(local));
+                ask(
+                    held.sites().collect(),
+                    rest,
+                    held.beyond().any_unknown() || held.may_be_null || !arrays.is_empty(),
+                );
+                ask(Vec::new(), arrays, true);
+            };
+            for held in handed {
+                ask_value(held);
+            }
+            for &holder in &reached.locals {
+                ask_value(&self.points_to[holder]);
+            }
         }
         for &container in &reached.sites {
             let cell = &self.contents[container];
