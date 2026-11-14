@@ -1365,7 +1365,9 @@ impl Allocations<'_> {
                 // Every kind written out, so that one added later is asked
                 // whether what it returns was handed over.
                 let handed_over = match self.callee(*callee) {
-                    Callee::Opaque => true,
+                    // A reading function's result, as an opaque call's. See
+                    // `Callee::Reads`.
+                    Callee::Opaque | Callee::Reads => true,
                     Callee::Frees
                     | Callee::Allocates
                     | Callee::Reallocates

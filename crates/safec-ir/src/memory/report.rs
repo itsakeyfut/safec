@@ -351,6 +351,7 @@ pub(super) fn reported(
         | Callee::ReturnsFirst
         | Callee::Copies
         | Callee::Ends
+        | Callee::Reads
         | Callee::Opaque => {
             return Vec::new();
         }
@@ -1807,7 +1808,10 @@ pub(super) fn departed_at_call(
         | Callee::Allocates
         | Callee::Reallocates
         | Callee::ReturnsFirst
-        | Callee::Ends => return,
+        | Callee::Ends
+        // Keeps nothing it is handed, so nothing leaves into it. See
+        // `Callee::Reads`.
+        | Callee::Reads => return,
     }
     let reached: Vec<usize> = analysis
         .library(*callee)
@@ -1963,6 +1967,7 @@ pub(super) fn freed_after_its_read_was_reported(
         | Callee::ReturnsFirst
         | Callee::Copies
         | Callee::Ends
+        | Callee::Reads
         | Callee::Opaque => return None,
     }
     match arguments.first() {
@@ -2388,7 +2393,8 @@ pub(super) fn handed_stored_out(
         | Callee::Allocates
         | Callee::ReturnsFirst
         | Callee::Copies
-        | Callee::Ends => return,
+        | Callee::Ends
+        | Callee::Reads => return,
     }
     let stored: Vec<Site> = freed_by_opaque_call(analysis, function, *callee, arguments, known)
         .into_iter()
@@ -2568,6 +2574,7 @@ pub(super) fn handed(
         | Callee::Reallocates
         | Callee::ReturnsFirst
         | Callee::Ends
+        | Callee::Reads
         | Callee::Opaque => false,
     };
     let destination = match arguments.first() {
@@ -2880,7 +2887,7 @@ pub(super) fn used_before(
         // `malloc` frees nothing and takes no pointer, so a read carried to it
         // is a read this call has nothing to say about; the library functions
         // that return their first argument free nothing either.
-        Callee::Allocates | Callee::ReturnsFirst | Callee::Copies => return,
+        Callee::Allocates | Callee::ReturnsFirst | Callee::Copies | Callee::Reads => return,
         // Frees nothing, and nothing after it runs: a read unordered against
         // it either ran before it or never ran. Answered as `Callee::Opaque`
         // is, `(a[0] + (*out = a, 0)) + (exit(1), 0)` doubted `a[0]`, since
