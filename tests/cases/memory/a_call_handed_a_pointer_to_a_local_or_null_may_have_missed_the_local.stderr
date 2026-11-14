@@ -1,0 +1,44 @@
+error[SC0411]: `a` may be read before anything was assigned to it
+    ╭─[ a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:15:12 ]
+    │
+ 15 │     return a == 0;
+    │            ───┬──  
+    │               ╰──── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else
+error[SC0411]: `a` may be read before anything was assigned to it
+    ╭─[ a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:23:12 ]
+    │
+ 23 │     return a == 0;
+    │            ───┬──  
+    │               ╰──── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else
+error[SC0411]: `a` may be read before anything was assigned to it
+    ╭─[ a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:31:5 ]
+    │
+ 31 │     return a;
+    │     ────┬────  
+    │         ╰────── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else
+error[SC0411]: `a` may be read before anything was assigned to it
+    ╭─[ a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:41:12 ]
+    │
+ 41 │     return a == 0;
+    │            ───┬──  
+    │               ╰──── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else

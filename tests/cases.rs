@@ -1813,6 +1813,9 @@ cases! {
         // Mutation: `reached_only_beside_another` asks a pointer only its
         // sites and locals; `a` is believed written and the `SC0411` goes.
         a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `reached_only_beside_another` counts a pointer that may
+        // be null as naming its local alone; the four reads go quiet.
+        a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `note_narrow_store` notes nothing below one
         // dereference; the store's `SC0413` goes.
         a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
