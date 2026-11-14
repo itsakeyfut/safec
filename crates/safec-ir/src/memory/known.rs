@@ -1820,10 +1820,20 @@ impl Known {
     /// null on the other hands `a`'s address over on one path only, so the
     /// call may not have written it, and `p = 0; if (k) p = &a; fill(p);`
     /// read `a` in silence (#950). A pointer tested not null first names
-    /// `a` alone again, as `if (p) fill(p);` does. Asked of a pointer
-    /// handed as a local or held in one the call can find; one handed
-    /// through a projection, `fill(*pp)`, is not asked at all yet (#949),
-    /// and a block cannot say it may hold a null (#938).
+    /// `a` alone again, as `if (p) fill(p);` does. A block cannot say it
+    /// may hold a null yet (#938).
+    ///
+    /// **`handed` is the values the call is handed, however spelled**: a
+    /// pointer handed through a projection, `fill(*pp)` or `fill(q[0])`, is
+    /// asked as what a load of it holds, as a pointer handed as a local is
+    /// asked as what the local holds. Asked of locals alone, a projected
+    /// argument was never asked, and `fill(*pp)` with `*pp` either `&a` or
+    /// `&b` believed both written (#949). **What it costs**: a pointer read
+    /// out of an array element or a block is a load, so `fill(ps[0])` and
+    /// `fill(*box)` with the slot certainly `&a` doubt the call wrote `a`,
+    /// as `t = ps[0]; fill(t);` already did; and a null test of `*pp` does
+    /// not reach `p`, so `if (*pp) fill(*pp);` doubts it where `t = *pp;
+    /// if (t) fill(t);` does not.
     ///
     /// **A local named alone by any of them stays believed written**, the
     /// output-parameter idiom (#782): `stash(&p); p = m; tick();` reaches `m`
@@ -1835,7 +1845,7 @@ impl Known {
     /// kept**: `keep(p); tick();` believes `a` written at `tick`, since `p`
     /// itself was never handed and is not found. That read is still
     /// reported, as a use of a pointer this check stopped following.
-    pub(super) fn reached_only_beside_another(&self, handed: &[LocalId]) -> BTreeSet<LocalIdx> {
+    pub(super) fn reached_only_beside_another(&self, handed: &[Held]) -> BTreeSet<LocalIdx> {
         let reached = self.unknown_code_reaches();
         let mut beside = BTreeSet::new();
         let mut alone = BTreeSet::new();
@@ -1849,8 +1859,7 @@ impl Known {
             }
             _ => beside.extend(locals),
         };
-        for &holder in handed {
-            let held = &self.points_to[holder];
+        for held in handed {
             ask(
                 held.sites().collect(),
                 held.locals().collect(),
