@@ -1,0 +1,291 @@
+Target "x86_64-pc-windows-msvc"
+Function a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:6:6 "fill" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "p"
+Function a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:7:6 "stash" declared
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "p"
+Function a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:8:6 "tick" declared
+  Local "_0" "void" return
+Function a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:10:5 "null_then_a"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "k"
+  Local "_2" "int *" "a"
+  Local "_3" "int **" "p"
+  Local "_4" "int **"
+  Local "_5" "int **"
+  Local "_6" "int"
+  Block "bb0" entry
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:12:11 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:12:15 generated
+    Branch a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:13:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:13:9 generated
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:13:16 written
+      Destination "_4"
+      Address
+        Place "_2"
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:13:12 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:13:12 written
+      Destination "_5"
+      Use
+        Copy "_3"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:13:12 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:13:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:14:5 generated
+    Call a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:14:5 written "fill" "bb4"
+      Copy "_3"
+  Block "bb4"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:14:5 generated
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:15:12 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:15:5 written
+      Destination "_0"
+      Use
+        Copy "_6"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:15:12 generated
+    Return
+Function a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:18:5 "a_then_null"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "k"
+  Local "_2" "int *" "a"
+  Local "_3" "int **" "p"
+  Local "_4" "int **"
+  Local "_5" "int **"
+  Local "_6" "int"
+  Block "bb0" entry
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:20:15 written
+      Destination "_4"
+      Address
+        Place "_2"
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:20:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:20:15 generated
+    Branch a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:21:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:21:9 generated
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:21:12 written
+      Destination "_3"
+      Use
+        Constant 0
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:21:12 written
+      Destination "_5"
+      Use
+        Copy "_3"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:21:12 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:21:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:22:5 generated
+    Call a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:22:5 written "fill" "bb4"
+      Copy "_3"
+  Block "bb4"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:22:5 generated
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:23:12 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:23:5 written
+      Destination "_0"
+      Use
+        Copy "_6"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:23:12 generated
+    Return
+Function a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:26:6 "returned"
+  Local "_0" "int *" return
+  Local "_1" "int" parameter "k"
+  Local "_2" "int *" "a"
+  Local "_3" "int **" "p"
+  Local "_4" "int **"
+  Local "_5" "int **"
+  Block "bb0" entry
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:28:11 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:28:15 generated
+    Branch a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:29:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:29:9 generated
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:29:16 written
+      Destination "_4"
+      Address
+        Place "_2"
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:29:12 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:29:12 written
+      Destination "_5"
+      Use
+        Copy "_3"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:29:12 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:29:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:30:5 generated
+    Call a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:30:5 written "fill" "bb4"
+      Copy "_3"
+  Block "bb4"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:30:5 generated
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:31:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:31:12 generated
+    Return
+Function a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:34:5 "kept_then_called"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "k"
+  Local "_2" "int *" "a"
+  Local "_3" "int **" "p"
+  Local "_4" "int ***"
+  Local "_5" "int **"
+  Local "_6" "int **"
+  Local "_7" "int **"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:37:11 written
+      Destination "_4"
+      Address
+        Place "_3"
+    ArgumentsEvaluated a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:37:5 generated
+    Call a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:37:5 written "stash" "bb1"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:37:5 generated
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:38:5 written
+      Destination "_3"
+      Use
+        Constant 0
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:38:5 written
+      Destination "_5"
+      Use
+        Copy "_3"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:38:5 generated
+    Branch a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:39:9 written "bb2" "bb3"
+      Copy "_1"
+  Block "bb2"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:39:9 generated
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:39:16 written
+      Destination "_6"
+      Address
+        Place "_2"
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:39:12 written
+      Destination "_3"
+      Use
+        Copy "_6"
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:39:12 written
+      Destination "_7"
+      Use
+        Copy "_3"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:39:12 generated
+    Goto "bb4"
+  Block "bb3"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:39:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:40:5 generated
+    Call a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:40:5 written "tick" "bb5"
+  Block "bb5"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:40:5 generated
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:41:12 written
+      Destination "_8"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:41:5 written
+      Destination "_0"
+      Use
+        Copy "_8"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:41:12 generated
+    Return
+Function a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:44:5 "tested_first"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "k"
+  Local "_2" "int *" "a"
+  Local "_3" "int **" "p"
+  Local "_4" "int **"
+  Local "_5" "int **"
+  Local "_6" "int"
+  Block "bb0" entry
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:46:11 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:46:15 generated
+    Branch a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:47:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:47:9 generated
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:47:16 written
+      Destination "_4"
+      Address
+        Place "_2"
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:47:12 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:47:12 written
+      Destination "_5"
+      Use
+        Copy "_3"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:47:12 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:47:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Branch a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:48:9 written "bb4" "bb5"
+      Copy "_3"
+  Block "bb4"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:48:9 generated
+    ArgumentsEvaluated a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:49:9 generated
+    Call a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:49:9 written "fill" "bb7"
+      Copy "_3"
+  Block "bb5"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:48:9 generated
+    Goto "bb6"
+  Block "bb6"
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:52:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:52:12 generated
+    Return
+  Block "bb7"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:49:9 generated
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:50:16 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Operation a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:50:9 written
+      Destination "_0"
+      Use
+        Copy "_6"
+    Sequenced a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local.c:50:16 generated
+    Return
