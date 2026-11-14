@@ -224,12 +224,11 @@ enum Why {
     /// no address of anything, so nothing this check names is what it
     /// points at, and a null test proves nothing about it.
     ///
-    /// **Not [`Why::Lost`], which a block cannot carry to a load**: a load
-    /// out of a block marked lost is [`Why::LostRead`], doubted only once a
-    /// lost value may have gone (ADR-0045), and `memset(b, 1, 8); r = *b;
-    /// if (!r) return 0; return *r;` read through it in silence. This one is
-    /// carried by a block to every load out of it, and doubted at a use as
-    /// a lost value is (#948).
+    /// **Not [`Why::Lost`], which a block cannot carry to a load whole**: a
+    /// load out of a block marked lost is [`Why::LostRead`] (ADR-0067), and
+    /// a block filled so was read through in silence. This one is carried by
+    /// a block to every load out of it, and doubted at a use as a lost value
+    /// is (#948).
     Forged,
 }
 }

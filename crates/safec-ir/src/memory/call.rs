@@ -10,7 +10,7 @@ use crate::ir::{
 use crate::library::Library;
 use crate::source::Span;
 
-use super::allocations::{Allocations, handed_places, innermost_element};
+use super::allocations::{Allocations, handed_places, innermost_element, stored_pointer};
 use super::built::{named, replaced_by};
 use super::fit::{Fit, fits, read_from_locals, slots_from, slots_leaving};
 use super::index::{Idx, Loc, LocalIdx, Site, Table, Target, Why};
@@ -27,19 +27,29 @@ use crate::library::{Callee, Leaves, Makes, Reach};
 use crate::reads::derefs;
 
 impl Allocations<'_> {
-    /// A fill of bytes this check does not take for a pointer, landing as
-    /// `landing`: every block and local it lands in may now hold a pointer
-    /// this check lost, beside what it held. A union, since the fill may land
-    /// elsewhere and may cover part of the slots. See #948.
-    fn fill_lands_lost(&self, landing: &Landing, value: &mut Known) {
-        let mut lost = Held::none(value.points_to.len());
-        lost.name_unknown(Why::Forged);
+    /// A fill of bytes no write made a pointer, landing as `landing`: each
+    /// block and local it may land in may now hold them, as `Why::Forged`,
+    /// beside what it held. The caller has decided the bytes are not all
+    /// zero and that they cover at least one pointer's width.
+    ///
+    /// **Whatever the memory's type**: the bytes are marked where they land,
+    /// and a copy out of them carries the mark on, so a fill into a `char`
+    /// buffer copied into a slot of pointers through a `void *` is read back
+    /// as what it is. Asked of the type of the pointer written through, a
+    /// fill through a `void *` landed nothing, found by review. **A union**,
+    /// `replaces: None`, since the fill may land elsewhere or in part; and
+    /// no width recorded, `Width::Unbounded`, since the bytes are no pointer
+    /// to an object of any width. Locals are marked here, since
+    /// `land_contents` pours into blocks alone.
+    fn fill_lands_forged(&self, landing: &Landing, value: &mut Known) {
+        let mut forged = Held::none(value.points_to.len());
+        forged.name_unknown(Why::Forged);
         let poured = Cell::poured(
             value.points_to.len(),
             std::iter::empty(),
             std::iter::empty(),
             &Levels::new(vec![Width::Unbounded]),
-            &lost,
+            &forged,
         );
         self.land_contents(value, landing, &poured, &[], Pours::Copy { replaces: None });
         for &local in &landing.targets {
@@ -47,19 +57,30 @@ impl Allocations<'_> {
         }
     }
 
-    /// Whether `dest`, a pointer a fill or a copy writes through, points at
-    /// memory whose type holds pointers: bytes written into `int`s or
-    /// `char`s are read back as what they are, and only a slot of pointers
-    /// reads them as an address.
-    fn holds_a_pointer_at(&self, function: &Function, dest: &Place) -> bool {
-        self.unit
-            .place_ty(function, dest)
-            .is_some_and(|ty| self.first_level_holds_a_pointer(ty))
+    /// Whether a write landing as `landing` may land in memory that holds
+    /// pointers: a local whose type holds one, or a block held as pointers
+    /// (`Known::held_levels`). Asked of where the bytes land rather than of
+    /// the type of the pointer written through, which says nothing through
+    /// a `void *`.
+    fn lands_in_pointers(&self, function: &Function, landing: &Landing, value: &Known) -> bool {
+        landing
+            .containers
+            .iter()
+            .any(|&site| value.held_levels[site] > 0)
+            || landing.targets.iter().any(|&target| {
+                function
+                    .locals()
+                    .nth(target.index())
+                    .is_some_and(|local| stored_pointer(self.unit, function.local(local)).is_some())
+            })
     }
 
     /// Whether `source`, a pointer a library copy reads through, points at
     /// memory whose type holds no pointer: `char`s or `int`s, or an array of
-    /// them. Not `void`, which says nothing of what is there.
+    /// them. Not `void`, which says nothing of what is there; bytes a fill
+    /// put there carry `Why::Forged` themselves. **Every kind of type
+    /// answered by name**, so a scalar kind added is `error[E0004]` here
+    /// rather than read as possibly holding a pointer.
     fn holds_no_pointer(&self, function: &Function, source: &Place) -> bool {
         let Some(ty) = self.unit.place_ty(function, source) else {
             return false;
@@ -67,8 +88,11 @@ impl Allocations<'_> {
         let Ty::Pointer(pointee) = self.unit.ty(ty) else {
             return false;
         };
-        let inner = innermost_element(self.unit, pointee);
-        matches!(self.unit.ty(inner), Ty::Char | Ty::Int)
+        match self.unit.ty(innermost_element(self.unit, pointee)) {
+            Ty::Char | Ty::Int => true,
+            Ty::Void | Ty::Pointer(_) => false,
+            Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
+        }
     }
 
     /// What an argument spelled as `place` hands a call: the local's value
@@ -348,14 +372,9 @@ impl Allocations<'_> {
         if let Some(length) = self.library(*callee).and_then(Library::fill_length) {
             let covered = self.pointers_covered(*callee, arguments, length);
             // **Bytes it fills are no pointer this check follows**, unless
-            // they are all zero: `memset(a, 1, 8)` over a slot of pointers
-            // leaves a pointer of eight ones there, and read back it named
-            // nothing, so a null test took it for null and the dereference
-            // after it fit vacuously; over a slot holding `&x` it left `&x`
-            // believed. A slot it covers whole may now hold a pointer this
-            // check lost, beside what it held, wherever the fill lands, and
-            // a dereference of it is doubted, as every lost value's is.
-            // Found by a hunt (#948).
+            // they are all zero, where it covers at least one pointer's
+            // width; a fill of less is part of one, noted below. See
+            // `Why::Forged` (#948).
             let zero = matches!(arguments.get(1), Some(Operand::Constant(0)));
             if !zero && !matches!(covered, CopiedPointers::NoneWhole) {
                 if let Some(Operand::Copy(dest)) = arguments.first() {
@@ -368,9 +387,7 @@ impl Allocations<'_> {
                             into_depth == 0,
                             StoreKind::Copy,
                         );
-                        if self.holds_a_pointer_at(function, dest) {
-                            self.fill_lands_lost(&landing, value);
-                        }
+                        self.fill_lands_forged(&landing, value);
                     }
                 }
             }
@@ -676,18 +693,24 @@ impl Allocations<'_> {
                                 ReadAs::Bytes,
                             );
                             // **Bytes out of memory that holds no pointer are
-                            // no pointer this check follows**: `memcpy(b, s,
-                            // 8)` of a `char s[8]` filled with ones put a
-                            // pointer nothing names in `b`'s slot, and read
-                            // back, a null test took it for null and the
-                            // dereference after it fit vacuously. Where the
-                            // source's type holds no pointer and what was
-                            // read names nothing, what is copied is a pointer
-                            // this check lost. Found by a hunt (#948).
+                            // no pointer this check follows**, where what was
+                            // read names nothing and they land in memory that
+                            // holds pointers: copied into `int`s they are read
+                            // back as `int`s. See `Why::Forged` (#948).
                             if self.holds_no_pointer(function, source)
-                                && self.holds_a_pointer_at(function, dest)
                                 && read.sites().next().is_none()
                                 && read.locals().next().is_none()
+                                && self.lands_in_pointers(
+                                    function,
+                                    &self.landing(
+                                        value,
+                                        dest.local,
+                                        into_depth + 1,
+                                        into_depth == 0,
+                                        StoreKind::Copy,
+                                    ),
+                                    value,
+                                )
                             {
                                 read.name_unknown(Why::Forged);
                             }

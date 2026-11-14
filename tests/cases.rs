@@ -250,7 +250,10 @@ cases! {
         // pointer carries what it read; the copy out of `char`s goes silent.
         // Mutation: a load out of a block keeps no `Why::Forged`; the fill
         // over a stored pointer and the copy go silent. Mutation: a fill of
-        // zero lands too; the zero fill is reported.
+        // zero lands too; the zero fill is reported. Mutation: a copy asks the
+        // type of the pointer it writes through, not where it lands
+        // (`lands_in_pointers` false); the copy out of `int`s a store wrote
+        // goes silent, the others carrying the fill's mark.
         a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written by a store first. Mutation: have a store through one
         // dereference leave its sites fresh. It is reported.

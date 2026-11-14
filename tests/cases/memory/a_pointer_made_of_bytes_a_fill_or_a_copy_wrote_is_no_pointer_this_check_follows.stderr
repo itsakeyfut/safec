@@ -1,7 +1,7 @@
 error[SC0402]: this uses `r`, which this check stopped following
-    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:17:5 ]
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:19:5 ]
     │
- 17 │     return *r;
+ 19 │     return *r;
     │     ─────┬────  
     │          ╰────── this check cannot say what this points at
 ────╯
@@ -9,9 +9,9 @@ error[SC0402]: this uses `r`, which this check stopped following
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
 error[SC0412]: this may reach outside the object `r` points at
-    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:17:5 ]
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:19:5 ]
     │
- 17 │     return *r;
+ 19 │     return *r;
     │     ─────┬────  
     │          ╰────── this check cannot say this is inside its object
 ────╯
@@ -19,9 +19,9 @@ error[SC0412]: this may reach outside the object `r` points at
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0402]: this uses `r`, which this check stopped following
-    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:25:5 ]
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:27:5 ]
     │
- 25 │     return *r;
+ 27 │     return *r;
     │     ─────┬────  
     │          ╰────── this check cannot say what this points at
 ────╯
@@ -29,9 +29,9 @@ error[SC0402]: this uses `r`, which this check stopped following
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
 error[SC0412]: this may reach outside the object `r` points at
-    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:25:5 ]
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:27:5 ]
     │
- 25 │     return *r;
+ 27 │     return *r;
     │     ─────┬────  
     │          ╰────── this check cannot say this is inside its object
 ────╯
@@ -39,9 +39,9 @@ error[SC0412]: this may reach outside the object `r` points at
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0402]: this uses `r`, which this check stopped following
-    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:36:5 ]
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:38:5 ]
     │
- 36 │     return *r;
+ 38 │     return *r;
     │     ─────┬────  
     │          ╰────── this check cannot say what this points at
 ────╯
@@ -49,9 +49,9 @@ error[SC0402]: this uses `r`, which this check stopped following
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
 error[SC0412]: this may reach outside the object `r` points at
-    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:36:5 ]
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:38:5 ]
     │
- 36 │     return *r;
+ 38 │     return *r;
     │     ─────┬────  
     │          ╰────── this check cannot say this is inside its object
 ────╯
@@ -59,9 +59,9 @@ error[SC0412]: this may reach outside the object `r` points at
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0402]: this uses `r`, which this check stopped following
-    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:44:5 ]
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:46:5 ]
     │
- 44 │     return *r;
+ 46 │     return *r;
     │     ─────┬────  
     │          ╰────── this check cannot say what this points at
 ────╯
@@ -69,9 +69,9 @@ error[SC0402]: this uses `r`, which this check stopped following
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
 error[SC0412]: this may reach outside the object `r` points at
-    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:44:5 ]
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:46:5 ]
     │
- 44 │     return *r;
+ 46 │     return *r;
     │     ─────┬────  
     │          ╰────── this check cannot say this is inside its object
 ────╯
@@ -79,9 +79,9 @@ error[SC0412]: this may reach outside the object `r` points at
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0402]: this uses `r`, which this check stopped following
-    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:55:5 ]
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:57:5 ]
     │
- 55 │     return *r;
+ 57 │     return *r;
     │     ─────┬────  
     │          ╰────── this check cannot say what this points at
 ────╯
@@ -89,12 +89,116 @@ error[SC0402]: this uses `r`, which this check stopped following
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
 error[SC0412]: this may reach outside the object `r` points at
-    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:55:5 ]
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:57:5 ]
     │
- 55 │     return *r;
+ 57 │     return *r;
     │     ─────┬────  
     │          ╰────── this check cannot say this is inside its object
 ────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0402]: this uses `r`, which this check stopped following
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:86:5 ]
+    │
+ 86 │     return *r;
+    │     ─────┬────  
+    │          ╰────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0412]: this may reach outside the object `r` points at
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:86:5 ]
+    │
+ 86 │     return *r;
+    │     ─────┬────  
+    │          ╰────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0402]: this uses `r`, which this check stopped following
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:98:5 ]
+    │
+ 98 │     return *r;
+    │     ─────┬────  
+    │          ╰────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0412]: this may reach outside the object `r` points at
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:98:5 ]
+    │
+ 98 │     return *r;
+    │     ─────┬────  
+    │          ╰────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0402]: this uses `r`, which this check stopped following
+     ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:110:5 ]
+     │
+ 110 │     return *r;
+     │     ─────┬────  
+     │          ╰────── this check cannot say what this points at
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0412]: this may reach outside the object `r` points at
+     ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:110:5 ]
+     │
+ 110 │     return *r;
+     │     ─────┬────  
+     │          ╰────── this check cannot say this is inside its object
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0413]: this writes less than a pointer into memory that is read back as pointers
+     ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:117:5 ]
+     │
+ 117 │     s[0] = 1;
+     │     ────┬───  
+     │         ╰───── written here
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write a pointer whole, or keep bytes written over part of one out of memory read as pointers
+error[SC0411]: `*b` may be read before anything was assigned to it
+     ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:120:10 ]
+     │
+ 119 │     memcpy(b, s, 8);
+     │     ───────┬───────  
+     │            ╰───────── the bytes were copied here
+ 120 │     int *r = *b;
+     │          ───┬──  
+     │             ╰──── read here
+─────╯
+  = note: C17 7.24.2.1 to 7.24.3.1 copy the source's characters into the destination, so bytes nothing wrote there are indeterminate where they land, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path before it is read
+error[SC0402]: this uses `r`, which this check stopped following
+     ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:122:5 ]
+     │
+ 122 │     return *r;
+     │     ─────┬────  
+     │          ╰────── this check cannot say what this points at
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0412]: this may reach outside the object `r` points at
+     ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:122:5 ]
+     │
+ 122 │     return *r;
+     │     ─────┬────  
+     │          ╰────── this check cannot say this is inside its object
+─────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
