@@ -1828,7 +1828,12 @@ impl Known {
     /// asked as what a load of it holds, as a pointer handed as a local is
     /// asked as what the local holds. Asked of locals alone, a projected
     /// argument was never asked, and `fill(*pp)` with `*pp` either `&a` or
-    /// `&b` believed both written (#949).
+    /// `&b` believed both written (#949). **What it costs**: a pointer read
+    /// out of an array element or a block is a load, so `fill(ps[0])` and
+    /// `fill(*box)` with the slot certainly `&a` doubt the call wrote `a`,
+    /// as `t = ps[0]; fill(t);` already did; and a null test of `*pp` does
+    /// not reach `p`, so `if (*pp) fill(*pp);` doubts it where `t = *pp;
+    /// if (t) fill(t);` does not.
     ///
     /// **A local named alone by any of them stays believed written**, the
     /// output-parameter idiom (#782): `stash(&p); p = m; tick();` reaches `m`
