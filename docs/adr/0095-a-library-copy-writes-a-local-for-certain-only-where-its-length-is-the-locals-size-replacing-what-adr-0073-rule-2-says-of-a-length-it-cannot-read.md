@@ -65,6 +65,12 @@ Measured on the #942 branch by applying each change and restoring it:
   `a_char_buffer_a_copy_of_its_whole_length_wrote_read_as_a_pointer_is_not_doubted`
   among them, and 34 route rows, so a copy of exactly the local's size still
   writes it.
+* **Held by nothing**: a shorter constant length counted as covering the
+  local. `built::write_effects` already leaves a local written in part
+  possibly unwritten (ADR-0073 rule 2), so a copy or a fill of 4 bytes into a
+  pointer local, through a local pointer or one read back out of memory, and
+  of 8 into an array of two, printed the same with and without that half,
+  measured.
 
 ### Consequences
 
