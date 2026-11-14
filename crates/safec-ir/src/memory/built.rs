@@ -7,7 +7,7 @@ use crate::ir::{BinOp, Function, LocalId, Operand, Place, TranslationUnit, Ty};
 use super::allocations::{innermost_element, stored_pointer};
 use super::index::{Idx, LocalIdx, Site, Table};
 use super::known::{ArrayWrite, Known, WrittenBy};
-use super::parts::{At, Held, PlaceInit, Reached};
+use super::parts::{At, Held, Levels, Marks, PlaceInit, Reached, Width};
 use super::store::written_alone;
 use crate::reads::derefs;
 
@@ -115,7 +115,34 @@ pub(super) fn built_from(
         })
         .collect();
 
-    let mut reached = Held::none(value.points_to.len());
+    // Every mark said, as a door does (#939): what each operand holds is
+    // folded in by `accumulated`, whose union starts from this.
+    let mut reached = Held::from_marks(
+        value.points_to.len(),
+        Marks {
+            lost: false,
+            freed: None,
+            writes_elsewhere: true,
+            offset: At::Bytes(0),
+            loaded: false,
+            foreign: false,
+            stale_read: false,
+            unreplaced_read: false,
+            lost_read: false,
+            from_caller: false,
+            forged: false,
+            returned_by: None,
+            fresh_read: false,
+            widths: Levels::new(vec![Width::Nothing]),
+            arrived_holds_pointer: false,
+            inner_address: false,
+            element: None,
+            site_element: None,
+            array_edge: false,
+            stored_through: false,
+            may_be_null: false,
+        },
+    );
     for &source in &followed {
         reached.accumulated(&value.points_to[source]);
     }

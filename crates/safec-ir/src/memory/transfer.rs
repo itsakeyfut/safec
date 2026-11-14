@@ -258,9 +258,32 @@ impl Allocations<'_> {
             // follows to an allocation, so the target is given nothing: a
             // write this check cannot follow is not evidence that the old
             // contents are gone.
-            Rvalue::Use(Operand::Constant(_)) | Rvalue::Address(_) => {
-                Held::none(value.points_to.len())
-            }
+            Rvalue::Use(Operand::Constant(_)) | Rvalue::Address(_) => Held::from_marks(
+                value.points_to.len(),
+                Marks {
+                    lost: false,
+                    freed: None,
+                    writes_elsewhere: true,
+                    offset: At::Bytes(0),
+                    loaded: false,
+                    foreign: false,
+                    stale_read: false,
+                    unreplaced_read: false,
+                    lost_read: false,
+                    from_caller: false,
+                    forged: false,
+                    returned_by: None,
+                    fresh_read: false,
+                    widths: Levels::new(vec![Width::Nothing]),
+                    arrived_holds_pointer: false,
+                    inner_address: false,
+                    element: None,
+                    site_element: None,
+                    array_edge: false,
+                    stored_through: false,
+                    may_be_null: false,
+                },
+            ),
         }
     }
 
@@ -1075,6 +1098,7 @@ impl Allocations<'_> {
                 unreplaced_read: false,
                 lost_read: false,
                 from_caller: false,
+                forged: false,
                 returned_by: None,
                 fresh_read: false,
                 // **Believed to point at one whole object of the type it is
@@ -2220,7 +2244,35 @@ impl Analysis for Allocations<'_> {
 
     fn on_entry(&self) -> Self::Value {
         let mut known = Known {
-            points_to: Table::filled(Held::none(self.locals), self.locals),
+            points_to: Table::filled(
+                Held::from_marks(
+                    self.locals,
+                    Marks {
+                        lost: false,
+                        freed: None,
+                        writes_elsewhere: true,
+                        offset: At::Bytes(0),
+                        loaded: false,
+                        foreign: false,
+                        stale_read: false,
+                        unreplaced_read: false,
+                        lost_read: false,
+                        from_caller: false,
+                        forged: false,
+                        returned_by: None,
+                        fresh_read: false,
+                        widths: Levels::new(vec![Width::Nothing]),
+                        arrived_holds_pointer: false,
+                        inner_address: false,
+                        element: None,
+                        site_element: None,
+                        array_edge: false,
+                        stored_through: false,
+                        may_be_null: false,
+                    },
+                ),
+                self.locals,
+            ),
             // Nothing has allocated into any of these yet, so none of them can
             // say where it came from. A parameter stays this way: its
             // allocation happened somewhere this check cannot see.
@@ -2297,6 +2349,36 @@ impl Analysis for Allocations<'_> {
         // nothing. See ADR-0060.
         let function = self.unit.function(self.function);
         for &parameter in &self.parameters {
+            known.points_to[parameter] = Held::from_marks(
+                self.locals,
+                Marks {
+                    lost: false,
+                    freed: None,
+                    writes_elsewhere: true,
+                    offset: At::Bytes(0),
+                    loaded: false,
+                    foreign: false,
+                    stale_read: false,
+                    unreplaced_read: false,
+                    lost_read: false,
+                    from_caller: false,
+                    forged: false,
+                    returned_by: None,
+                    fresh_read: false,
+                    widths: Levels::new(vec![Width::Nothing]),
+                    // And it arrives as its type. See `Held::arrived_holds_pointer`.
+                    arrived_holds_pointer: self
+                        .first_level_holds_a_pointer(function.local(parameter)),
+                    inner_address: false,
+                    element: None,
+                    site_element: None,
+                    array_edge: false,
+                    stored_through: false,
+                    // **And may be null, unless it is `_Nonnull`**: the caller may
+                    // pass none (#931).
+                    may_be_null: function.nonnull(parameter).is_none(),
+                },
+            );
             known.points_to[parameter].hold(Site::of(LocalIdx::of(parameter)), At::Bytes(0));
             // And what its memory holds is believed as its type says, which
             // the caller asked where it stored it. See `Held::contents_at_most`.
@@ -2304,11 +2386,6 @@ impl Analysis for Allocations<'_> {
                 .type_levels(function.local(parameter))
                 .unwrap_or_default();
             known.points_to[parameter].set_contents(&contents);
-            known.points_to[parameter].arrived_holds_pointer =
-                self.first_level_holds_a_pointer(function.local(parameter));
-            // **And may be null, unless it is `_Nonnull`**: the caller may
-            // pass none (#931).
-            known.points_to[parameter].may_be_null = function.nonnull(parameter).is_none();
             known.extent[Site::of(LocalIdx::of(parameter))] = Some(Extent::AtLeast(
                 self.pointee_size(function, &Place::local(parameter))
                     .unwrap_or(0),
@@ -3117,7 +3194,35 @@ impl Analysis for Allocations<'_> {
                         value.replace(at, Held::null(value.points_to.len()));
                     }
                     Rvalue::Use(Operand::Constant(_)) => {
-                        value.replace(at, Held::none(value.points_to.len()));
+                        value.replace(
+                            at,
+                            Held::from_marks(
+                                value.points_to.len(),
+                                Marks {
+                                    lost: false,
+                                    freed: None,
+                                    writes_elsewhere: true,
+                                    offset: At::Bytes(0),
+                                    loaded: false,
+                                    foreign: false,
+                                    stale_read: false,
+                                    unreplaced_read: false,
+                                    lost_read: false,
+                                    from_caller: false,
+                                    forged: false,
+                                    returned_by: None,
+                                    fresh_read: false,
+                                    widths: Levels::new(vec![Width::Nothing]),
+                                    arrived_holds_pointer: false,
+                                    inner_address: false,
+                                    element: None,
+                                    site_element: None,
+                                    array_edge: false,
+                                    stored_through: false,
+                                    may_be_null: false,
+                                },
+                            ),
+                        );
                     }
                     // The address of a place is not an allocation this check
                     // follows: nothing here frees a local's own storage, which
@@ -3133,57 +3238,75 @@ impl Analysis for Allocations<'_> {
                     // `int **pp = &p; *pp = q; free(q); free(p);` silent about
                     // a double free.
                     Rvalue::Address(taken) => {
-                        value.replace(at, Held::none(value.points_to.len()));
+                        // Where what was taken is the local's own start, or
+                        // its first element: the lowering builds an index
+                        // only as a constant zero, and every other element
+                        // is reached by arithmetic.
+                        let at_start = taken
+                            .projection
+                            .iter()
+                            .all(|step| matches!(step, Projection::Index(Operand::Constant(0))));
+                        value.replace(
+                            at,
+                            Held::from_marks(
+                                value.points_to.len(),
+                                Marks {
+                                    lost: false,
+                                    freed: None,
+                                    // **The set is all of it, where the address is of the local
+                                    // itself**, which lets a write through it replace rather than
+                                    // union. See ADR-0028.
+                                    //
+                                    // `&*pp` is not that. C17 6.5.3.2 p3 makes it `pp`, so the
+                                    // place it names is what `pp` points at and not `pp`, while
+                                    // the edge below can only name a local. The union is the
+                                    // right answer to an edge that names the wrong thing and a
+                                    // replacement is not, so the flag stays set and the write
+                                    // stays a may-write. No C reaches this: the lowering applies
+                                    // the same clause and folds `&*pp` to a copy of `pp`. Another
+                                    // frontend need not, which is `docs/c-family.md`'s reason for
+                                    // the IR expressing the shape at all.
+                                    //
+                                    // **An element of a local array is the shape C does reach**:
+                                    // the lowering converts `a` to `&a[0]`, an index under this
+                                    // `Address`, and a store through it is a may-write for the
+                                    // same answer, since one element written does not replace
+                                    // what the rest of the array holds (#621).
+                                    writes_elsewhere: !taken.projection.is_empty(),
+                                    offset: At::Bytes(0),
+                                    loaded: false,
+                                    foreign: false,
+                                    stale_read: false,
+                                    unreplaced_read: false,
+                                    lost_read: false,
+                                    from_caller: false,
+                                    forged: false,
+                                    returned_by: None,
+                                    fresh_read: false,
+                                    widths: Levels::new(vec![Width::Nothing]),
+                                    arrived_holds_pointer: false,
+                                    // And an access through it is not an access of the local the
+                                    // edge names, unless what was taken is that local's own
+                                    // start. See `Held::inner_address`.
+                                    inner_address: !at_start,
+                                    // **The element it points at**, where what was taken is an
+                                    // array's start. See `Held::element`.
+                                    element: (self.is_array(function, LocalIdx::of(taken.local))
+                                        && at_start)
+                                        .then_some(0),
+                                    site_element: None,
+                                    array_edge: false,
+                                    stored_through: false,
+                                    may_be_null: false,
+                                },
+                            ),
+                        );
                         // **The edge and the bit, and both are needed.** The
                         // bit outlives everything done to this destination and
                         // is what keeps an escaped local unproved; the edge
                         // dies with the destination and is what lets a write
                         // through it be followed. See ADR-0019.
                         value.points_to[destination].name_local(LocalIdx::of(taken.local));
-                        // **And the set is all of it, where the address is of
-                        // the local itself.** `Held::clear` ran a line above,
-                        // so this destination points at exactly this local,
-                        // which is what lets a write through it replace rather
-                        // than union. See ADR-0028.
-                        //
-                        // `&*pp` is not that. C17 6.5.3.2 p3 makes it `pp`, so
-                        // the place it names is what `pp` points at and not
-                        // `pp`, while the edge above can only name a local. The
-                        // union is the right answer to an edge that names the
-                        // wrong thing and a replacement is not, so the flag
-                        // stays set and the write stays a may-write. No C
-                        // reaches this: the lowering applies the same clause and
-                        // folds `&*pp` to a copy of `pp`. Another frontend need
-                        // not, which is `docs/c-family.md`'s reason for the IR
-                        // expressing the shape at all.
-                        //
-                        // **An element of a local array is the shape C does
-                        // reach**: the lowering converts `a` to `&a[0]`, an
-                        // index under this `Address`, and a store through it is a
-                        // may-write for the same answer, since one element
-                        // written does not replace what the rest of the array
-                        // holds (#621).
-                        value.points_to[destination].writes_elsewhere =
-                            !taken.projection.is_empty();
-                        // **The element it points at**, where what was taken
-                        // is an array's start: the lowering builds an index
-                        // only as a constant zero, and every other element
-                        // is reached by arithmetic. See `Held::element`.
-                        if self.is_array(function, LocalIdx::of(taken.local))
-                            && taken
-                                .projection
-                                .iter()
-                                .all(|step| matches!(step, Projection::Index(Operand::Constant(0))))
-                        {
-                            value.points_to[destination].element = Some(0);
-                        }
-                        // And an access through it is not an access of the
-                        // local the edge names, unless what was taken is that
-                        // local's own start. See `Held::inner_address`.
-                        value.points_to[destination].inner_address = !taken
-                            .projection
-                            .iter()
-                            .all(|step| matches!(step, Projection::Index(Operand::Constant(0))));
                         value.escaped[taken.local] = true;
                         value.unproved(LocalIdx::of(taken.local));
                         // What the local holds is reachable to every call from

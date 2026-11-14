@@ -1656,7 +1656,12 @@ impl Held {
 
     /// A local holding nothing, in a function with this many sites, and a
     /// block nothing was stored in, which is [`Cell::absorb`]'s identity.
-    pub(super) fn none(sites: usize) -> Self {
+    ///
+    /// **Private to this file**: a door outside it builds its value through
+    /// [`Held::from_marks`], naming every mark, so that a mark added to
+    /// [`Marks`] is `error[E0063]` at that door rather than this function's
+    /// answer taken in silence (#939).
+    fn none(sites: usize) -> Self {
         Held::from_marks(
             sites,
             Marks {
@@ -1674,6 +1679,7 @@ impl Held {
                 unreplaced_read: false,
                 lost_read: false,
                 from_caller: false,
+                forged: false,
                 returned_by: None,
                 fresh_read: false,
                 widths: Levels::new(vec![Width::Nothing]),
@@ -1707,6 +1713,7 @@ impl Held {
             unreplaced_read,
             lost_read,
             from_caller,
+            forged,
             returned_by,
             fresh_read,
             widths,
@@ -1746,6 +1753,7 @@ impl Held {
             (stale_read, Why::StaleRead),
             (lost_read, Why::LostRead),
             (unreplaced_read, Why::UnreplacedRead),
+            (forged, Why::Forged),
         ] {
             if marked {
                 held.name_unknown(why);
@@ -2598,6 +2606,7 @@ pub(super) struct Marks {
     pub(super) unreplaced_read: bool,
     pub(super) lost_read: bool,
     pub(super) from_caller: bool,
+    pub(super) forged: bool,
     pub(super) returned_by: Option<Site>,
     pub(super) fresh_read: bool,
     pub(super) widths: Levels,
