@@ -1841,7 +1841,9 @@ impl Known {
     /// each is a may-write, as a store through the same pointer is
     /// (ADR-0094 rule 3). Believed to write the whole array, `fill(&arr[k],
     /// &x); return arr[0] == 0;` was quiet at the read (#951). A pointer at
-    /// the array's start, `fill(arr)`, still hands the whole array over.
+    /// the array's start, `fill(arr)`, still hands the whole array over. A
+    /// block cannot say which element it points at, so `&arr[k]` kept in a
+    /// block is still taken as the whole array (#938).
     ///
     /// **A local named alone by any of them stays believed written**, the
     /// output-parameter idiom (#782): `stash(&p); p = m; tick();` reaches `m`
