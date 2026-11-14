@@ -298,6 +298,17 @@ impl Library {
         if !self.fills {
             return None;
         }
+        self.written_length()
+    }
+
+    /// The argument that says how many bytes the row writes from its
+    /// destination's start: the one its `reaches` gives its first argument,
+    /// for a fill and a copy alike. **None where the destination is reached
+    /// as a string**: `strncat`'s third argument caps what it appends after
+    /// the string already there (C17 7.24.3.2), so read as bytes written,
+    /// `strncat(&p, &src, 8)` wrote `p` whole and a read of its last bytes,
+    /// never written, was silent. Found by review (#942).
+    pub(crate) fn written_length(&self) -> Option<usize> {
         self.reaches
             .iter()
             .find_map(|&(argument, reach)| match (argument, reach) {

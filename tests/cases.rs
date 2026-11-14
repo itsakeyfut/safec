@@ -1843,7 +1843,9 @@ cases! {
         // `free(s)`, the second free and the free past the start go quiet.
         a_library_function_that_only_reads_writes_nothing_it_is_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `Allocations::covers_exactly` answers `true` for a length
-        // it cannot read; the three `SC0411` go.
+        // it cannot read; the three `SC0411` go. Mutation: a copy's bytes are
+        // its third argument again, not `Library::written_length`'s; the
+        // `SC0411` at `return r` goes.
         a_local_a_library_copy_or_fill_of_a_length_not_read_wrote_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `note_narrow_store` notes nothing below one
         // dereference; the store's `SC0413` goes.

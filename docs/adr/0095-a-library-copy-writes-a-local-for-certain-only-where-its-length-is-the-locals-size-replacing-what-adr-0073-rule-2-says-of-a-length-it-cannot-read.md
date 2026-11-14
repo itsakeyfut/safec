@@ -50,7 +50,13 @@ Chosen: the width asked of a store, by the author (#942's design, step 5 of
 2. **A length this check cannot read, or a shorter one, is a may-write** of
    that local, as every other local the copy may land in already is. A longer
    one is the bounds rule's to report, as before.
-3. ADR-0073 rule 2's sentence "a copy of a length it cannot read, still write
+3. **Its length is the one the row says it writes from its destination's
+   start**: the argument `reaches` gives the first argument,
+   `Library::written_length`, and not the third argument whatever the row.
+   `strncat`'s third caps what it appends after the string already there
+   (C17 7.24.3.2), so it names none, and `strncat(&r, &src, 8)` does not
+   write `r` whole. Found by review.
+4. ADR-0073 rule 2's sentence "a copy of a length it cannot read, still write
    it whole" is replaced by rule 1 here. The rest of ADR-0073 rule 2 stands,
    and its store clause had already been replaced by ADR-0094 rule 3.
 
@@ -65,6 +71,9 @@ Measured on the #942 branch by applying each change and restoring it:
   `a_char_buffer_a_copy_of_its_whole_length_wrote_read_as_a_pointer_is_not_doubted`
   among them, and 34 route rows, so a copy of exactly the local's size still
   writes it.
+* `Allocations::written_bytes` answering the third argument for every row
+  again fails the same case, whose `SC0411` at `return r` after `strncat`
+  goes.
 * **Held by nothing**: a shorter constant length counted as covering the
   local. `built::write_effects` already leaves a local written in part
   possibly unwritten (ADR-0073 rule 2), so a copy or a fill of 4 bytes into a

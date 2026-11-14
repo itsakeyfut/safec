@@ -863,7 +863,7 @@ impl Allocations<'_> {
                                 function,
                                 value,
                                 arguments.first(),
-                                self.constant_argument(*callee, arguments, 2),
+                                self.written_bytes(*callee, arguments),
                             );
                             for &target in &targets {
                                 let mut each = read.clone();
@@ -971,7 +971,7 @@ impl Allocations<'_> {
                                 self.replaces(
                                     &landing,
                                     value.points_to[dest.local].offset,
-                                    self.constant_argument(*callee, arguments, 2),
+                                    self.written_bytes(*callee, arguments),
                                     value,
                                 )
                             } else {
@@ -999,7 +999,7 @@ impl Allocations<'_> {
                         reach,
                         span: origin.span(),
                         length: self.copied_pointers(*callee, arguments),
-                        bytes: self.constant_argument(*callee, arguments, 2),
+                        bytes: self.written_bytes(*callee, arguments),
                         source: arguments.get(1),
                         // A source read as far as a string runs is a string
                         // copy, and the table says which of its arguments it
