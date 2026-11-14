@@ -218,6 +218,18 @@ enum Why {
     /// by [`Known::handed_below`](super::known::Known::handed_below) alone.
     /// See ADR-0047.
     UnreplacedRead,
+    /// Bytes that were not written as a pointer, read as one: what a fill
+    /// of a byte that may not be zero leaves in a slot of pointers, or a
+    /// library copy out of memory that holds no pointer. Read back, it is
+    /// no address of anything, so nothing this check names is what it
+    /// points at, and a null test proves nothing about it.
+    ///
+    /// **Not [`Why::Lost`], which a block cannot carry to a load whole**: a
+    /// load out of a block marked lost is [`Why::LostRead`] (ADR-0067), and
+    /// a block filled so was read through in silence. This one is carried by
+    /// a block to every load out of it, and doubted at a use as a lost value
+    /// is (#948).
+    Forged,
 }
 }
 

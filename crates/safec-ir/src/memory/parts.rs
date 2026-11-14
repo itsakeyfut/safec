@@ -1516,6 +1516,11 @@ impl Held {
                 Why::StaleRead => unrecorded.stale_read = true,
                 Why::LostRead => unrecorded.lost_read = true,
                 Why::UnreplacedRead => unrecorded.unreplaced_read = true,
+                // **A lost value to every question asked of it**: no address
+                // this check follows, so nothing it names is what it points
+                // at. What sets it apart is only that a block carries it to a
+                // load whole (`Cell::taken_by_a_load`). See `Why::Forged`.
+                Why::Forged => unrecorded.lost = true,
             }
         }
         if unrecorded.any() {
@@ -2467,6 +2472,12 @@ impl Cell {
         if self.may_name(Why::UnreplacedRead) {
             held.name_unknown(Why::UnreplacedRead);
         }
+        // **Bytes that were never a pointer stay so, read back**: not made
+        // `lost_read`, which a dereference proves nothing about until a lost
+        // value goes. See `Why::Forged` (#948).
+        if self.may_name(Why::Forged) {
+            held.name_unknown(Why::Forged);
+        }
         // Read out of an allocation that may hold a lost value, which is made
         // lost if a lost value goes. See `Held::lost_read`.
         if self.may_name(Why::Lost) {
@@ -2536,6 +2547,7 @@ impl Cell {
                 Why::Lost,
             ),
             (from.may_name(Why::FromCaller), Why::FromCaller),
+            (from.may_name(Why::Forged), Why::Forged),
         ] {
             if marked {
                 poured.names.set(Target::Unknown(why));
