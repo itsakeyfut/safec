@@ -1820,7 +1820,10 @@ impl Known {
     /// null on the other hands `a`'s address over on one path only, so the
     /// call may not have written it, and `p = 0; if (k) p = &a; fill(p);`
     /// read `a` in silence (#950). A pointer tested not null first names
-    /// `a` alone again, as `if (p) fill(p);` does.
+    /// `a` alone again, as `if (p) fill(p);` does. Asked of a pointer
+    /// handed as a local or held in one the call can find; one handed
+    /// through a projection, `fill(*pp)`, is not asked at all yet (#949),
+    /// and a block cannot say it may hold a null (#938).
     ///
     /// **A local named alone by any of them stays believed written**, the
     /// output-parameter idiom (#782): `stash(&p); p = m; tick();` reaches `m`
