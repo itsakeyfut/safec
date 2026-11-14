@@ -1089,7 +1089,8 @@ impl Allocations<'_> {
                         Operand::Constant(_) => None,
                     })
                     .collect();
-                let beside = value.reached_only_beside_another(&holders);
+                let beside = value
+                    .reached_only_beside_another(&holders, |local| self.is_array(function, local));
                 value.replaced(
                     |_| true,
                     |local| may_write[local],
