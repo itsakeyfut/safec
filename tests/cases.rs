@@ -1838,7 +1838,9 @@ cases! {
         // what is split off the array may be named alone; `b == 0` goes quiet.
         a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: the rows that only read are `Callee::Opaque` again; the
-        // three reads go quiet.
+        // three reads go quiet. Mutation: what a search returns names nothing
+        // (`Callee::Reads` answered as an opaque result); the `SC0402` after
+        // `free(s)`, the second free and the free past the start go quiet.
         a_library_function_that_only_reads_writes_nothing_it_is_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `note_narrow_store` notes nothing below one
         // dereference; the store's `SC0413` goes.

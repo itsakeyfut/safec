@@ -1,7 +1,7 @@
 error[SC0411]: this reads a pointer out of memory before anything was assigned to it
-    ╭─[ a_library_function_that_only_reads_writes_nothing_it_is_handed.c:14:10 ]
+    ╭─[ a_library_function_that_only_reads_writes_nothing_it_is_handed.c:20:10 ]
     │
- 14 │     int *q = a[0];
+ 20 │     int *q = a[0];
     │          ────┬───  
     │              ╰───── read here
 ────╯
@@ -9,9 +9,9 @@ error[SC0411]: this reads a pointer out of memory before anything was assigned t
   = note: this check belongs to safety level 1
   = help: assign to it before reading it
 error[SC0411]: this reads a pointer out of memory before anything was assigned to it
-    ╭─[ a_library_function_that_only_reads_writes_nothing_it_is_handed.c:23:10 ]
+    ╭─[ a_library_function_that_only_reads_writes_nothing_it_is_handed.c:29:10 ]
     │
- 23 │     int *q = a[0];
+ 29 │     int *q = a[0];
     │          ────┬───  
     │              ╰───── read here
 ────╯
@@ -19,9 +19,9 @@ error[SC0411]: this reads a pointer out of memory before anything was assigned t
   = note: this check belongs to safety level 1
   = help: assign to it before reading it
 error[SC0412]: this may reach outside the object it points at
-    ╭─[ a_library_function_that_only_reads_writes_nothing_it_is_handed.c:31:5 ]
+    ╭─[ a_library_function_that_only_reads_writes_nothing_it_is_handed.c:37:5 ]
     │
- 31 │     strlen(s);
+ 37 │     strlen(s);
     │     ────┬────  
     │         ╰────── this check cannot say this is inside its object
 ────╯
@@ -29,12 +29,92 @@ error[SC0412]: this may reach outside the object it points at
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0411]: this reads a pointer out of memory before anything was assigned to it
-    ╭─[ a_library_function_that_only_reads_writes_nothing_it_is_handed.c:32:10 ]
+    ╭─[ a_library_function_that_only_reads_writes_nothing_it_is_handed.c:38:10 ]
     │
- 32 │     int *q = a[0];
+ 38 │     int *q = a[0];
     │          ────┬───  
     │              ╰───── read here
 ────╯
   = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
   = note: this check belongs to safety level 1
   = help: assign to it before reading it
+error[SC0412]: this may reach outside the object `s` points at
+    ╭─[ a_library_function_that_only_reads_writes_nothing_it_is_handed.c:54:15 ]
+    │
+ 54 │     char *p = strchr(s, 1);
+    │               ──────┬─────  
+    │                     ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0402]: this uses `p` after it was freed
+    ╭─[ a_library_function_that_only_reads_writes_nothing_it_is_handed.c:57:5 ]
+    │
+ 50 │     char *s = malloc(8);
+    │               ────┬────  
+    │                   ╰────── allocated here
+    │ 
+ 56 │     free(s);
+    │     ───┬───  
+    │        ╰───── freed here
+ 57 │     return *p;
+    │     ─────┬────  
+    │          ╰────── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0412]: this may reach outside the object `p` points at
+    ╭─[ a_library_function_that_only_reads_writes_nothing_it_is_handed.c:57:5 ]
+    │
+ 57 │     return *p;
+    │     ─────┬────  
+    │          ╰────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0401]: this frees `p`, which was freed already
+    ╭─[ a_library_function_that_only_reads_writes_nothing_it_is_handed.c:66:5 ]
+    │
+ 61 │     char *s = malloc(8);
+    │               ────┬────  
+    │                   ╰────── allocated here
+    │ 
+ 65 │     free(s);
+    │     ───┬───  
+    │        ╰───── freed here
+ 66 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed again here
+────╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first
+error[SC0404]: this frees `p`, which may not be the start of an allocation
+    ╭─[ a_library_function_that_only_reads_writes_nothing_it_is_handed.c:66:5 ]
+    │
+ 61 │     char *s = malloc(8);
+    │               ────┬────  
+    │                   ╰────── allocated here
+    │ 
+ 66 │     free(p);
+    │     ───┬───  
+    │        ╰───── this offset may not be zero
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: free the pointer the allocation was made with if this offset can be non-zero
+error[SC0404]: this frees `p`, which may not be the start of an allocation
+    ╭─[ a_library_function_that_only_reads_writes_nothing_it_is_handed.c:75:5 ]
+    │
+ 70 │     char *s = malloc(8);
+    │               ────┬────  
+    │                   ╰────── allocated here
+    │ 
+ 75 │     free(p);
+    │     ───┬───  
+    │        ╰───── this offset may not be zero
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: free the pointer the allocation was made with if this offset can be non-zero

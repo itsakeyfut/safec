@@ -1,21 +1,31 @@
 Target "x86_64-pc-windows-msvc"
-Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:6:7 "memchr" declared
+Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:9:7 "memchr" declared
   Local "_0" "void *" return
   Local "_1" "void *" parameter "s"
   Local "_2" "int" parameter "c"
   Local "_3" "int" parameter "n"
-Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:7:5 "memcmp" declared
+Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:10:5 "memcmp" declared
   Local "_0" "int" return
   Local "_1" "void *" parameter "a"
   Local "_2" "void *" parameter "b"
   Local "_3" "int" parameter "n"
-Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:8:5 "strlen" declared
+Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:11:5 "strlen" declared
   Local "_0" "int" return
   Local "_1" "char *" parameter "s"
-Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:9:6 "fill" declared
+Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:12:6 "fill" declared
   Local "_0" "void" return
   Local "_1" "int **" parameter "p"
-Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:11:5 "searched"
+Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:13:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:14:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:15:7 "strchr" declared
+  Local "_0" "char *" return
+  Local "_1" "char *" parameter "s"
+  Local "_2" "int" parameter "c"
+Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:17:5 "searched"
   Local "_0" "int" return
   Local "_1" "int *[1]" "a"
   Local "_2" "int **"
@@ -24,44 +34,44 @@ Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:11:5 "
   Local "_5" "int **"
   Local "_6" "int"
   Block "bb0" entry
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:13:12 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:19:12 generated
       Destination "_2"
       Address
         Place "_1"
           Index
             Constant 0
-    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:13:5 generated
-    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:13:5 written "memchr" "bb1"
+    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:19:5 generated
+    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:19:5 written "memchr" "bb1"
       Destination "_3"
       Copy "_2"
       Constant 0
       Constant 8
   Block "bb1"
-    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:13:5 generated
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:14:14 generated
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:19:5 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:20:14 generated
       Destination "_5"
       Address
         Place "_1"
           Index
             Constant 0
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:14:10 written
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:20:10 written
       Destination "_4"
       Use
         Copy "_5"
           Deref
-    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:14:14 generated
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:15:12 written
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:20:14 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:21:12 written
       Destination "_6"
       Binary "Ne"
         Copy "_4"
         Constant 0
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:15:5 written
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:21:5 written
       Destination "_0"
       Use
         Copy "_6"
-    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:15:12 generated
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:21:12 generated
     Return
-Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:18:5 "compared"
+Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:24:5 "compared"
   Local "_0" "int" return
   Local "_1" "int *[1]" "a"
   Local "_2" "int *[1]" "b"
@@ -74,67 +84,67 @@ Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:18:5 "
   Local "_9" "int **"
   Local "_10" "int"
   Block "bb0" entry
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:21:5 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:27:5 generated
       Destination "_3"
       Address
         Place "_2"
           Index
             Constant 0
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:21:5 written
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:27:5 written
       Destination "_3"
         Deref
       Use
         Constant 0
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:21:5 written
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:27:5 written
       Destination "_4"
       Use
         Copy "_3"
           Deref
-    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:21:5 generated
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:22:12 generated
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:27:5 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:28:12 generated
       Destination "_5"
       Address
         Place "_1"
           Index
             Constant 0
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:22:15 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:28:15 generated
       Destination "_6"
       Address
         Place "_2"
           Index
             Constant 0
-    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:22:5 generated
-    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:22:5 written "memcmp" "bb1"
+    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:28:5 generated
+    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:28:5 written "memcmp" "bb1"
       Destination "_7"
       Copy "_5"
       Copy "_6"
       Constant 8
   Block "bb1"
-    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:22:5 generated
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:23:14 generated
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:28:5 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:29:14 generated
       Destination "_9"
       Address
         Place "_1"
           Index
             Constant 0
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:23:10 written
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:29:10 written
       Destination "_8"
       Use
         Copy "_9"
           Deref
-    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:23:14 generated
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:24:12 written
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:29:14 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:30:12 written
       Destination "_10"
       Binary "Ne"
         Copy "_8"
         Constant 0
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:24:5 written
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:30:5 written
       Destination "_0"
       Use
         Copy "_10"
-    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:24:12 generated
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:30:12 generated
     Return
-Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:27:5 "measured"
+Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:33:5 "measured"
   Local "_0" "int" return
   Local "_1" "char[4]" "s"
   Local "_2" "char *"
@@ -146,59 +156,59 @@ Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:27:5 "
   Local "_8" "int **"
   Local "_9" "int"
   Block "bb0" entry
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:29:5 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:35:5 generated
       Destination "_2"
       Address
         Place "_1"
           Index
             Constant 0
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:29:5 written
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:35:5 written
       Destination "_2"
         Deref
       Use
         Constant 0
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:29:5 written
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:35:5 written
       Destination "_3"
       Use
         Copy "_2"
           Deref
-    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:29:5 generated
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:31:12 generated
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:35:5 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:37:12 generated
       Destination "_5"
       Address
         Place "_1"
           Index
             Constant 0
-    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:31:5 generated
-    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:31:5 written "strlen" "bb1"
+    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:37:5 generated
+    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:37:5 written "strlen" "bb1"
       Destination "_6"
       Copy "_5"
   Block "bb1"
-    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:31:5 generated
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:32:14 generated
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:37:5 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:38:14 generated
       Destination "_8"
       Address
         Place "_4"
           Index
             Constant 0
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:32:10 written
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:38:10 written
       Destination "_7"
       Use
         Copy "_8"
           Deref
-    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:32:14 generated
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:33:12 written
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:38:14 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:39:12 written
       Destination "_9"
       Binary "Ne"
         Copy "_7"
         Constant 0
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:33:5 written
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:39:5 written
       Destination "_0"
       Use
         Copy "_9"
-    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:33:12 generated
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:39:12 generated
     Return
-Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:36:5 "filled"
+Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:42:5 "filled"
   Local "_0" "int" return
   Local "_1" "int *[1]" "a"
   Local "_2" "int **"
@@ -206,37 +216,290 @@ Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:36:5 "
   Local "_4" "int **"
   Local "_5" "int"
   Block "bb0" entry
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:38:10 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:44:10 generated
       Destination "_2"
       Address
         Place "_1"
           Index
             Constant 0
-    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:38:5 generated
-    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:38:5 written "fill" "bb1"
+    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:44:5 generated
+    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:44:5 written "fill" "bb1"
       Copy "_2"
   Block "bb1"
-    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:38:5 generated
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:39:14 generated
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:44:5 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:45:14 generated
       Destination "_4"
       Address
         Place "_1"
           Index
             Constant 0
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:39:10 written
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:45:10 written
       Destination "_3"
       Use
         Copy "_4"
           Deref
-    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:39:14 generated
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:40:12 written
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:45:14 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:46:12 written
       Destination "_5"
       Binary "Ne"
         Copy "_3"
         Constant 0
-    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:40:5 written
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:46:5 written
       Destination "_0"
       Use
         Copy "_5"
-    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:40:12 generated
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:46:12 generated
+    Return
+Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:49:5 "found_then_freed"
+  Local "_0" "int" return
+  Local "_1" "char *" "s"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "char"
+  Local "_5" "char *"
+  Local "_6" "char"
+  Local "_7" "char *" "p"
+  Local "_8" "char *"
+  Local "_9" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:50:15 generated
+    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:50:15 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:50:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:50:15 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:51:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_library_function_that_only_reads_writes_nothing_it_is_handed.c:51:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:51:9 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:51:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:51:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:51:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:52:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:52:5 written
+      Destination "_4"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:52:5 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:53:5 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_1"
+        Constant 1
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:53:5 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 0
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:53:5 written
+      Destination "_6"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:53:5 generated
+    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:54:15 generated
+    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:54:15 written "strchr" "bb5"
+      Destination "_8"
+      Copy "_1"
+      Constant 1
+  Block "bb5"
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:54:11 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:54:15 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:55:9 written
+      Destination "_9"
+      Unary "Not"
+        Copy "_7"
+    Branch a_library_function_that_only_reads_writes_nothing_it_is_handed.c:55:9 written "bb6" "bb7"
+      Copy "_9"
+  Block "bb6"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:55:9 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:55:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:55:20 generated
+    Return
+  Block "bb7"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:55:9 generated
+    Goto "bb8"
+  Block "bb8"
+    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:56:5 generated
+    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:56:5 written "free" "bb9"
+      Copy "_1"
+  Block "bb9"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:56:5 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:57:5 written
+      Destination "_0"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:57:12 generated
+    Return
+Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:60:6 "found_and_freed_twice"
+  Local "_0" "void" return
+  Local "_1" "char *" "s"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "char"
+  Local "_5" "char *" "p"
+  Local "_6" "void *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:61:15 generated
+    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:61:15 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:61:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:61:15 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:62:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_library_function_that_only_reads_writes_nothing_it_is_handed.c:62:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:62:9 generated
+    Return
+  Block "bb3"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:62:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:63:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:63:5 written
+      Destination "_4"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:63:5 generated
+    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:64:15 generated
+    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:64:15 written "memchr" "bb5"
+      Destination "_6"
+      Copy "_1"
+      Constant 1
+      Constant 1
+  Block "bb5"
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:64:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:64:15 generated
+    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:65:5 generated
+    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:65:5 written "free" "bb6"
+      Copy "_1"
+  Block "bb6"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:65:5 generated
+    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:66:5 generated
+    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:66:5 written "free" "bb7"
+      Copy "_5"
+  Block "bb7"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:66:5 generated
+    Return
+Function a_library_function_that_only_reads_writes_nothing_it_is_handed.c:69:6 "found_past_the_start_and_freed"
+  Local "_0" "void" return
+  Local "_1" "char *" "s"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "char"
+  Local "_5" "char *"
+  Local "_6" "char"
+  Local "_7" "char *" "p"
+  Local "_8" "void *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:70:15 generated
+    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:70:15 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:70:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:70:15 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:71:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_library_function_that_only_reads_writes_nothing_it_is_handed.c:71:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:71:9 generated
+    Return
+  Block "bb3"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:71:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:72:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 0
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:72:5 written
+      Destination "_4"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:72:5 generated
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:73:5 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_1"
+        Constant 1
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:73:5 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 1
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:73:5 written
+      Destination "_6"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:73:5 generated
+    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:74:15 generated
+    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:74:15 written "memchr" "bb5"
+      Destination "_8"
+      Copy "_1"
+      Constant 1
+      Constant 2
+  Block "bb5"
+    Operation a_library_function_that_only_reads_writes_nothing_it_is_handed.c:74:11 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:74:15 generated
+    ArgumentsEvaluated a_library_function_that_only_reads_writes_nothing_it_is_handed.c:75:5 generated
+    Call a_library_function_that_only_reads_writes_nothing_it_is_handed.c:75:5 written "free" "bb6"
+      Copy "_7"
+  Block "bb6"
+    Sequenced a_library_function_that_only_reads_writes_nothing_it_is_handed.c:75:5 generated
     Return
