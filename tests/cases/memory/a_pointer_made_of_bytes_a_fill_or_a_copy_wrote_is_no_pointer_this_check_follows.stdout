@@ -1,0 +1,518 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:8:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:9:7 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
+Function a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:10:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:12:5 "filled_local_array"
+  Local "_0" "int" return
+  Local "_1" "int *[1]" "a"
+  Local "_2" "int **"
+  Local "_3" "void *"
+  Local "_4" "int *" "r"
+  Local "_5" "int **"
+  Local "_6" "int"
+  Block "bb0" entry
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:14:12 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:14:5 generated
+    Call a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:14:5 written "memset" "bb1"
+      Destination "_3"
+      Copy "_2"
+      Constant 1
+      Constant 8
+  Block "bb1"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:14:5 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:15:14 generated
+      Destination "_5"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:15:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:15:14 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:16:9 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_4"
+    Branch a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:16:9 written "bb2" "bb3"
+      Copy "_6"
+  Block "bb2"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:16:9 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:16:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:16:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:16:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:17:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:17:12 generated
+    Return
+Function a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:20:5 "filled_local"
+  Local "_0" "int" return
+  Local "_1" "int *" "q"
+  Local "_2" "int **"
+  Local "_3" "void *"
+  Local "_4" "int *" "r"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:22:12 written
+      Destination "_2"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:22:5 generated
+    Call a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:22:5 written "memset" "bb1"
+      Destination "_3"
+      Copy "_2"
+      Constant 1
+      Constant 8
+  Block "bb1"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:22:5 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:23:10 written
+      Destination "_4"
+      Use
+        Copy "_1"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:23:14 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:24:9 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_4"
+    Branch a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:24:9 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:24:9 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:24:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:24:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:24:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:25:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:25:12 generated
+    Return
+Function a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:28:5 "filled_over_a_stored_pointer"
+  Local "_0" "int" return
+  Local "_1" "int" "x"
+  Local "_2" "int **" "b"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Local "_7" "void *"
+  Local "_8" "int *" "r"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:29:9 written
+      Destination "_1"
+      Use
+        Constant 1
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:29:13 generated
+    ArgumentsEvaluated a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:30:15 generated
+    Call a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:30:15 written "malloc" "bb1"
+      Destination "_3"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:30:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:30:15 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:31:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:31:9 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:31:9 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:31:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:31:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:31:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:32:10 written
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:32:5 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:32:5 written
+      Destination "_6"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:32:5 generated
+    ArgumentsEvaluated a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:33:5 generated
+    Call a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:33:5 written "memset" "bb5"
+      Destination "_7"
+      Copy "_2"
+      Constant 1
+      Constant 8
+  Block "bb5"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:33:5 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:34:10 written
+      Destination "_8"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:34:14 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:35:9 written
+      Destination "_9"
+      Unary "Not"
+        Copy "_8"
+    Branch a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:35:9 written "bb6" "bb7"
+      Copy "_9"
+  Block "bb6"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:35:9 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:35:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:35:20 generated
+    Return
+  Block "bb7"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:35:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:36:5 written
+      Destination "_0"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:36:12 generated
+    Return
+Function a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:39:5 "filled_by_a_byte_not_known"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "n"
+  Local "_2" "int *[1]" "a"
+  Local "_3" "int **"
+  Local "_4" "void *"
+  Local "_5" "int *" "r"
+  Local "_6" "int **"
+  Local "_7" "int"
+  Block "bb0" entry
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:41:12 generated
+      Destination "_3"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:41:5 generated
+    Call a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:41:5 written "memset" "bb1"
+      Destination "_4"
+      Copy "_3"
+      Copy "_1"
+      Constant 8
+  Block "bb1"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:41:5 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:42:14 generated
+      Destination "_6"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:42:10 written
+      Destination "_5"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:42:14 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:43:9 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_5"
+    Branch a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:43:9 written "bb2" "bb3"
+      Copy "_7"
+  Block "bb2"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:43:9 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:43:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:43:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:43:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:44:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:44:12 generated
+    Return
+Function a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:47:5 "copied_out_of_chars"
+  Local "_0" "int" return
+  Local "_1" "int **" "b"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "char[8]" "s"
+  Local "_5" "char *"
+  Local "_6" "void *"
+  Local "_7" "char *"
+  Local "_8" "void *"
+  Local "_9" "int *" "r"
+  Local "_10" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:48:15 generated
+    Call a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:48:15 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:48:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:48:15 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:49:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:49:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:49:9 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:49:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:49:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:49:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:51:12 generated
+      Destination "_5"
+      Address
+        Place "_4"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:51:5 generated
+    Call a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:51:5 written "memset" "bb5"
+      Destination "_6"
+      Copy "_5"
+      Constant 1
+      Constant 8
+  Block "bb5"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:51:5 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:52:15 generated
+      Destination "_7"
+      Address
+        Place "_4"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:52:5 generated
+    Call a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:52:5 written "memcpy" "bb6"
+      Destination "_8"
+      Copy "_1"
+      Copy "_7"
+      Constant 8
+  Block "bb6"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:52:5 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:53:10 written
+      Destination "_9"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:53:14 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:54:9 written
+      Destination "_10"
+      Unary "Not"
+        Copy "_9"
+    Branch a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:54:9 written "bb7" "bb8"
+      Copy "_10"
+  Block "bb7"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:54:9 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:54:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:54:20 generated
+    Return
+  Block "bb8"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:54:9 generated
+    Goto "bb9"
+  Block "bb9"
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:55:5 written
+      Destination "_0"
+      Use
+        Copy "_9"
+          Deref
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:55:12 generated
+    Return
+Function a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:58:5 "filled_with_zero"
+  Local "_0" "int" return
+  Local "_1" "int *[1]" "a"
+  Local "_2" "int **"
+  Local "_3" "void *"
+  Local "_4" "int *" "r"
+  Local "_5" "int **"
+  Local "_6" "int"
+  Block "bb0" entry
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:60:12 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:60:5 generated
+    Call a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:60:5 written "memset" "bb1"
+      Destination "_3"
+      Copy "_2"
+      Constant 0
+      Constant 8
+  Block "bb1"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:60:5 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:61:14 generated
+      Destination "_5"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:61:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:61:14 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:62:9 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_4"
+    Branch a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:62:9 written "bb2" "bb3"
+      Copy "_6"
+  Block "bb2"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:62:9 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:62:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:62:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:62:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:63:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:63:12 generated
+    Return
+Function a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:66:5 "copied_into_ints"
+  Local "_0" "int" return
+  Local "_1" "int *" "m"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "char[8]" "s"
+  Local "_5" "char *"
+  Local "_6" "void *"
+  Local "_7" "char *"
+  Local "_8" "void *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:67:14 generated
+    Call a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:67:14 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:67:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:67:14 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:68:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:68:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:68:9 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:68:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:68:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:68:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:70:12 generated
+      Destination "_5"
+      Address
+        Place "_4"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:70:5 generated
+    Call a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:70:5 written "memset" "bb5"
+      Destination "_6"
+      Copy "_5"
+      Constant 1
+      Constant 8
+  Block "bb5"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:70:5 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:71:15 generated
+      Destination "_7"
+      Address
+        Place "_4"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:71:5 generated
+    Call a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:71:5 written "memcpy" "bb6"
+      Destination "_8"
+      Copy "_1"
+      Copy "_7"
+      Constant 8
+  Block "bb6"
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:71:5 generated
+    Operation a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:72:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:72:12 generated
+    Return

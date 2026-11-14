@@ -242,8 +242,16 @@ cases! {
         // records a width, so the write is doubted (ADR-0061), where main
         // believed the type and built it. Found by review of #735. Mutation:
         // believe the type where nothing is recorded in
-        // `Allocations::believed_read`; this goes silent.
+        // `Allocations::believed_read`; the `SC0412` goes. The pointer read
+        // back is bytes no write made a pointer, and is `SC0402` too (#948).
         a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: a fill lands nothing (`fill_lands_lost` not called); the
+        // four fills go silent. Mutation: a copy out of memory holding no
+        // pointer carries what it read; the copy out of `char`s goes silent.
+        // Mutation: a load out of a block keeps no `Why::Forged`; the fill
+        // over a stored pointer and the copy go silent. Mutation: a fill of
+        // zero lands too; the zero fill is reported.
+        a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written by a store first. Mutation: have a store through one
         // dereference leave its sites fresh. It is reported.
         a_pointer_read_out_of_memory_a_store_wrote_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
