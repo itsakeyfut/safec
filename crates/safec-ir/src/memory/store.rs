@@ -437,15 +437,27 @@ impl Allocations<'_> {
         landing: &Landing,
         wrote: Option<u64>,
     ) -> Option<Strong> {
-        let size = |target: LocalIdx| {
-            function
-                .locals()
-                .nth(target.index())
-                .and_then(|local| self.unit.size_of(function.local(local)))
-        };
         landing
             .strong(value)
-            .filter(|at| wrote.is_some() && wrote == size(at.local()))
+            .filter(|at| self.covers_exactly(function, at.local(), wrote))
+    }
+
+    /// Whether a write of `wrote` bytes is known to cover `target` exactly:
+    /// a width read, equal to the local's size. The width
+    /// [`Self::replaces_whole`] asks, and a library copy's certain write of
+    /// the one local it lands in asks too (#942), so that the two cannot
+    /// answer one length differently.
+    pub(super) fn covers_exactly(
+        &self,
+        function: &crate::ir::Function,
+        target: LocalIdx,
+        wrote: Option<u64>,
+    ) -> bool {
+        let size = function
+            .locals()
+            .nth(target.index())
+            .and_then(|local| self.unit.size_of(function.local(local)));
+        wrote.is_some() && wrote == size
     }
 
     /// Where a write of `kind` through `pointer`, `deep` dereferences down,

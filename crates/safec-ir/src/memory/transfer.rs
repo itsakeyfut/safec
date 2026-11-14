@@ -106,6 +106,15 @@ impl Allocations<'_> {
         u64::try_from(integer.convert(*value)).ok()
     }
 
+    /// How many bytes a library copy or fill writes from its destination's
+    /// start, where that is a constant: the argument
+    /// [`Library::written_length`](crate::library::Library::written_length)
+    /// names, and nothing for a row that names none.
+    pub(super) fn written_bytes(&self, callee: FuncId, arguments: &[Operand]) -> Option<u64> {
+        let length = self.library(callee)?.written_length()?;
+        self.constant_argument(callee, arguments, length)
+    }
+
     /// How the length a library copy is handed, its third argument, covers
     /// the pointers it writes, counted in the target's pointer width: a
     /// copy of four bytes where pointers take eight writes half of one, and

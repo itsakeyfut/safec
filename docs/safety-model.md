@@ -210,6 +210,11 @@ The limits, each a doubt the reader sees unless it says otherwise:
   ([ADR-0094](adr/0094-a-store-replaces-a-slot-only-where-it-certainly-lands-there-and-is-a-may-write-where-its-position-is-unknown.md),
   rules 3 and 4). This replaces ADR-0081's silence, where such a store wrote
   the whole block.
+* A library copy or fill writes the one local it lands in for certain only
+  where its length is a constant equal to the local's size, as a store is
+  ([ADR-0095](adr/0095-a-library-copy-writes-a-local-for-certain-only-where-its-length-is-the-locals-size-replacing-what-adr-0073-rule-2-says-of-a-length-it-cannot-read.md)).
+  A length this check cannot read may be zero, so the local is doubted
+  where it is read.
 * A block or local array kept whole, more than 64 pointers or a size that is
   no whole number of them, is written for certain only by a store as wide as
   it; any narrower store may have missed the rest, so a read anywhere in it

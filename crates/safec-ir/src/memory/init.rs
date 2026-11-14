@@ -726,10 +726,19 @@ impl Allocations<'_> {
                     // may have written, so that a pointer the copy goes
                     // through, `p` in `memcpy(*pp, ..)`, would no longer
                     // follow what it names. Found while implementing.
+                    // **And only of exactly its size**, the width
+                    // `Allocations::replaces_whole` asks of a store: a length
+                    // this check cannot read may be zero, and a shorter one
+                    // leaves part of the local as it was, so either is a
+                    // may-write. `memcpy(&p, &src, n); return p;` returned a
+                    // pointer nothing may have written in silence (#942).
+                    // A longer one is the bounds rule's to report. See
+                    // ADR-0095.
                     let alone = match (dest, &written) {
                         (Some(Operand::Copy(dest)), Some(lands)) => {
                             written_alone(value, dest.local, derefs(dest) + 1, lands)
                                 .filter(|_| lands_in_no_block)
+                                .filter(|at| self.covers_exactly(function, at.local(), bytes))
                         }
                         _ => None,
                     };
