@@ -1,7 +1,7 @@
 error[SC0413]: this lets `p` leave, which may not point at an object as wide as its type
-    ╭─[ a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:13:5 ]
+    ╭─[ a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:15:5 ]
     │
- 13 │     fill(p, &x);
+ 15 │     fill(p, &x);
     │     ─────┬─────  
     │          ╰─────── passed here
 ────╯
@@ -9,9 +9,9 @@ error[SC0413]: this lets `p` leave, which may not point at an object as wide as 
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0411]: this may read a pointer out of memory before anything was assigned to it
-    ╭─[ a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:14:12 ]
+    ╭─[ a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:16:12 ]
     │
- 14 │     return arr[0] == 0;
+ 16 │     return arr[0] == 0;
     │            ─────┬─────  
     │                 ╰─────── read here
 ────╯
@@ -20,9 +20,9 @@ error[SC0411]: this may read a pointer out of memory before anything was assigne
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: assign it on every path before it is read
 error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
-    ╭─[ a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:20:5 ]
+    ╭─[ a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:22:5 ]
     │
- 20 │     fill(&arr[1], &x);
+ 22 │     fill(&arr[1], &x);
     │     ────────┬────────  
     │             ╰────────── passed here
 ────╯
@@ -30,9 +30,51 @@ error[SC0413]: this lets a pointer leave that may not point at an object as wide
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
 error[SC0411]: this may read a pointer out of memory before anything was assigned to it
-    ╭─[ a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:21:12 ]
+    ╭─[ a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:23:12 ]
     │
- 21 │     return arr[0] == 0;
+ 23 │     return arr[0] == 0;
+    │            ─────┬─────  
+    │                 ╰─────── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path before it is read
+error[SC0413]: this lets `p` leave, which may not point at an object as wide as its type
+    ╭─[ a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:39:5 ]
+    │
+ 39 │     fill(p, &x);
+    │     ─────┬─────  
+    │          ╰─────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0411]: `b` may be read before anything was assigned to it
+    ╭─[ a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:40:12 ]
+    │
+ 40 │     return b == 0;
+    │            ───┬──  
+    │               ╰──── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:50:5 ]
+    │
+ 50 │     p = &arr[k];
+    │     ─────┬─────  
+    │          ╰─────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0411]: this may read a pointer out of memory before anything was assigned to it
+    ╭─[ a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:52:12 ]
+    │
+ 52 │     return arr[0] == 0;
     │            ─────┬─────  
     │                 ╰─────── read here
 ────╯

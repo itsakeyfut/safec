@@ -1822,8 +1822,9 @@ cases! {
         // `read_from_locals`); the last function is reported.
         a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: count a pointer at an uncounted element as naming the
-        // array alone in `reached_only_beside_another`; the first read goes
-        // quiet.
+        // array alone in `reached_only_beside_another`; the first and last
+        // reads go quiet. Mutation: drop `|| !arrays.is_empty()` there, so
+        // what is split off the array may be named alone; `b == 0` goes quiet.
         a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `note_narrow_store` notes nothing below one
         // dereference; the store's `SC0413` goes.

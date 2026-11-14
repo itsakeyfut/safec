@@ -1871,42 +1871,30 @@ impl Known {
             }
             _ => beside.extend(locals),
         };
-        // A pointer at an element it cannot count names an array beside its
-        // other elements.
-        let in_part = |held: &Held| held.element.is_none() || held.array_edge;
-        for held in handed {
-            let part = in_part(held);
-            ask(
-                held.sites().collect(),
-                held.locals()
-                    .filter(|&local| !(part && is_array(local)))
-                    .collect(),
-                held.beyond().any_unknown() || held.may_be_null,
-            );
-            if part {
+        // **One question per value, however it was found**, so the value a
+        // call is handed and one it finds in a local cannot be asked
+        // differently. A pointer at an element it cannot count names an
+        // array beside its other elements; and what it names besides the
+        // array is beside the array, never alone: split off without saying
+        // so, `p` either `&b` or `&arr[k]` left `b` named alone and believed
+        // written. Found by review.
+        {
+            let mut ask_value = |held: &Held| {
+                let in_part = held.element.is_none() || held.array_edge;
+                let (arrays, rest): (Vec<LocalIdx>, Vec<LocalIdx>) =
+                    held.locals().partition(|&local| in_part && is_array(local));
                 ask(
-                    Vec::new(),
-                    held.locals().filter(|&local| is_array(local)).collect(),
-                    true,
+                    held.sites().collect(),
+                    rest,
+                    held.beyond().any_unknown() || held.may_be_null || !arrays.is_empty(),
                 );
+                ask(Vec::new(), arrays, true);
+            };
+            for held in handed {
+                ask_value(held);
             }
-        }
-        for &holder in &reached.locals {
-            let held = &self.points_to[holder];
-            let part = in_part(held);
-            ask(
-                held.sites().collect(),
-                held.locals()
-                    .filter(|&local| !(part && is_array(local)))
-                    .collect(),
-                held.beyond().any_unknown() || held.may_be_null,
-            );
-            if part {
-                ask(
-                    Vec::new(),
-                    held.locals().filter(|&local| is_array(local)).collect(),
-                    true,
-                );
+            for &holder in &reached.locals {
+                ask_value(&self.points_to[holder]);
             }
         }
         for &container in &reached.sites {
