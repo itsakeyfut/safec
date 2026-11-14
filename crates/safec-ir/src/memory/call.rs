@@ -12,7 +12,7 @@ use crate::source::Span;
 
 use super::allocations::{Allocations, handed_places, innermost_element};
 use super::built::{named, replaced_by};
-use super::fit::{Fit, fits, slots_from, slots_leaving};
+use super::fit::{Fit, fits, read_from_locals, slots_from, slots_leaving};
 use super::index::{Idx, Loc, LocalIdx, Site, Table, Target, Why};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
@@ -27,6 +27,29 @@ use crate::library::{Callee, Leaves, Makes, Reach};
 use crate::reads::derefs;
 
 impl Allocations<'_> {
+    /// What an argument spelled as `place` hands a call: the local's value
+    /// where it is a local; **the one local a dereference certainly reads**,
+    /// `fill(*pp)` with `pp` certainly `&p` handing `p`'s value; and
+    /// otherwise what a load of it holds, marked as a load, which names what
+    /// this check does not follow beside it. Read as a load wherever it is
+    /// certain, `fill(*pp)` with `p` certainly `&a` doubted that the call
+    /// wrote `a`, and a corpus case kept quiet on purpose was reported.
+    /// Found while implementing #949.
+    fn handed_value(&self, function: &Function, place: &Place, value: &Known) -> Held {
+        let depth = derefs(place);
+        if place.projection.is_empty() {
+            return value.points_to[place.local].clone();
+        }
+        if depth == place.projection.len() {
+            if let (locals, true) = read_from_locals(function, value, place.local, depth) {
+                if let [read] = locals[..] {
+                    return value.points_to[read].clone();
+                }
+            }
+        }
+        self.read_through(function, place, value)
+    }
+
     /// The transfer of `Terminator::Call`, after
     /// [`Analysis::terminator`](crate::dataflow::Analysis::terminator) has
     /// noted what the call dereferences: `callee` called with `arguments`,
@@ -1057,11 +1080,13 @@ impl Allocations<'_> {
                     value.exposed_in_part[*local] = true;
                 }
                 let pending = value.array_writes_before(partial);
-                let holders: Vec<LocalId> = handed
+                // What each argument hands over, however it is spelled. See
+                // `Known::reached_only_beside_another`.
+                let holders: Vec<Held> = handed
                     .iter()
                     .filter_map(|argument| match argument {
-                        Operand::Copy(place) if place.projection.is_empty() => Some(place.local),
-                        _ => None,
+                        Operand::Copy(place) => Some(self.handed_value(function, place, value)),
+                        Operand::Constant(_) => None,
                     })
                     .collect();
                 let beside = value.reached_only_beside_another(&holders);

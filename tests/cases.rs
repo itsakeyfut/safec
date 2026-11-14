@@ -1816,6 +1816,11 @@ cases! {
         // Mutation: `reached_only_beside_another` counts a pointer that may
         // be null as naming its local alone; the four reads go quiet.
         a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: hand `reached_only_beside_another` the arguments with no
+        // projection alone; the five reads go quiet. Mutation: read a
+        // dereference certainly of one local as a load (`handed_value` skips
+        // `read_from_locals`); the last function is reported.
+        a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `note_narrow_store` notes nothing below one
         // dereference; the store's `SC0413` goes.
         a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
