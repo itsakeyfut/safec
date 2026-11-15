@@ -1119,6 +1119,8 @@ routes! {
     unreplaced_restored_d1_one: Unreplaced Restored D1 One;
     unreplaced_restored_d2_both: Unreplaced Restored D2 Both;
     unreplaced_restored_d2_one: Unreplaced Restored D2 One;
+    fresh_memcpy_unread_d0_both: Fresh MemcpyUnread D0 Both;
+    fresh_memcpy_unread_d0_one: Fresh MemcpyUnread D0 One;
     fresh_memcpy_unread_d1_both: Fresh MemcpyUnread D1 Both;
     fresh_memcpy_unread_d1_one: Fresh MemcpyUnread D1 One;
     fresh_memcpy_short_d1_both: Fresh MemcpyShort D1 Both;
@@ -4707,6 +4709,14 @@ const UNCERTAIN: &[(&str, &str)] = &[
         "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
     ),
     (
+        "fresh_memcpy_unread_d0_both",
+        "a copy of a length this check cannot read may not cover the slot, so what it leaves there is a doubt",
+    ),
+    (
+        "fresh_memcpy_unread_d0_one",
+        "a copy of a length this check cannot read may not cover the slot, so what it leaves there is a doubt",
+    ),
+    (
         "fresh_memcpy_unread_d1_both",
         "a copy of a length this check cannot read may not cover the slot, so what it leaves there is a doubt",
     ),
@@ -5421,9 +5431,9 @@ const WRITTEN_ONLY: &[WrittenOnly] = &[
     (
         Route::MemcpyUnread,
         Belief::Fresh,
-        &[Depth::D1],
+        &[Depth::D0, Depth::D1],
         &[Shape::Both, Shape::One],
-        "a copy's length is asked of freshness in a block, whose size is what it covers",
+        "a copy's length is asked of freshness in a block and at a local, whose size is what it covers (#942); one level further down is the same block",
     ),
     (
         Route::MemcpyShort,
