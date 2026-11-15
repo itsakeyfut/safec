@@ -308,6 +308,18 @@ impl Library {
     /// the string already there (C17 7.24.3.2), so read as bytes written,
     /// `strncat(&p, &src, 8)` wrote `p` whole and a read of its last bytes,
     /// never written, was silent. Found by review (#942).
+    /// Whether the row copies bytes as they are, `memcpy` and `memmove`, and
+    /// not as far as a string runs, which stops at a null and may pad with
+    /// zeros (C17 7.24.2.3 to 7.24.3.2): no argument is reached as a string.
+    /// **Asked here once** (#975), where the copy's transfer and its block
+    /// replacement each spelled it, so the two could answer one row apart.
+    pub(crate) fn writes_byte_for_byte(&self) -> bool {
+        !self
+            .reaches
+            .iter()
+            .any(|(_, reach)| matches!(reach, Reach::String))
+    }
+
     pub(crate) fn written_length(&self) -> Option<usize> {
         self.reaches
             .iter()
@@ -537,6 +549,40 @@ mod tests {
             assert!(
                 matches!(row.callee, Callee::Reads),
                 "`{name}` only reads what it is handed"
+            );
+        }
+    }
+
+    /// Which rows that write what they are handed write it byte for byte,
+    /// written out rather than read off `reaches`, so that this is a
+    /// definition and not the function restated: a copy of bytes against a
+    /// copy of a string (C17 7.24.2.1, 7.24.2.2, 7.24.6.1 against 7.24.2.3,
+    /// 7.24.2.4, 7.24.3.1, 7.24.3.2). Mutation: answer `true` for every row;
+    /// this fails at `strcpy`.
+    #[test]
+    fn every_row_that_writes_says_whether_it_copies_bytes_as_they_are() {
+        let rows = [
+            ("memcpy", true),
+            ("memmove", true),
+            ("memset", true),
+            ("strcpy", false),
+            ("strncpy", false),
+            ("strcat", false),
+            ("strncat", false),
+        ];
+        for row in LIBRARY
+            .iter()
+            .filter(|row| matches!(row.callee, Callee::Copies | Callee::ReturnsFirst))
+        {
+            let &(_, expected) = rows
+                .iter()
+                .find(|(name, _)| *name == row.name)
+                .unwrap_or_else(|| panic!("`{}` writes and is not listed here", row.name));
+            assert_eq!(
+                row.writes_byte_for_byte(),
+                expected,
+                "`{}` copies bytes as they are",
+                row.name
             );
         }
     }
