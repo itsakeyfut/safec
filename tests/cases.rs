@@ -1851,6 +1851,9 @@ cases! {
         // its edges (`any_unknown()` dropped in `initialised_by`); `r` is
         // reported as certainly read before anything wrote it.
         a_copy_from_a_pointer_that_may_be_memory_a_caller_wrote_reports_its_destination_as_maybe_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `Known::carried_through_an_address` answers `false` for
+        // `UnreplacedRead`; the `SC0407` at `use2(&s)` goes.
+        a_pointer_read_back_through_a_locals_address_keeps_the_slot_a_call_could_not_replace: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `|| *foreign` dropped from
         // `Beyond::believed_to_reach_only_its_edges`; the `SC0411` becomes an
         // `SC0406`.
