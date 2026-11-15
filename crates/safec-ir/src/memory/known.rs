@@ -15,7 +15,7 @@ use super::parts::{
     At, Cell, Earliest, Extent, Held, Init, Kept, Levels, PendingRead, PlaceInit, Reached, Read,
     ReadKey, Realloced, SiteState, Width, read_key,
 };
-use super::store::{Certain, Strong, WrittenLocal};
+use super::store::{Certain, Landing, Strong, WrittenLocal};
 use super::{LostReason, named};
 use crate::reads::derefs;
 use crate::source::inside;
@@ -2034,30 +2034,15 @@ impl Known {
     }
 
     /// Whether a write through `dereferences` dereferences of `local` goes
-    /// through a pointer that may hold an address this function never
-    /// recorded: a level the write reads its way through between `local`
-    /// and the one written, read out of memory, lost, or written by code
-    /// this check cannot read. A level that is an
-    /// allocation counts as memory. Whether a write leaves this function's
-    /// sight asks this whole; where it may land asks [`Self::unnamed_below`]
-    /// and the pointer's own marks apart, because a pointer itself read out
-    /// of memory is answered as of its read (#648), and one a call wrote as
-    /// of the call (#661). See ADR-0057 and ADR-0041.
-    ///
-    /// **`local`'s own marks are not asked here**: [`Self::leaves`] is
-    /// answered only beside `store::Landing::unnamed`, which asks
-    /// `any_unknown` of the same pointer at both callers in `store.rs`, so
-    /// asked here too it decided nothing, measured (#946). A caller that
-    /// asks `leaves` alone has to ask the pointer's marks itself.
-    pub(super) fn through_unnamed(&self, local: LocalId, dereferences: usize) -> bool {
-        self.unnamed_below(local, dereferences)
-    }
-
-    /// The second half of [`Self::through_unnamed`]: whether a level
-    /// between `local` and the one written may hold an address this function
-    /// never recorded. Apart, because such a level is read at the write and
+    /// through a level between `local` and the one written that may hold an
+    /// address this function never recorded: read out of memory, lost, or
+    /// written by code this check cannot read. A level that is an
+    /// allocation counts as memory. `local`'s own marks are asked apart,
+    /// `store::Landing::unnamed` where a write leaves and the pointer's
+    /// `beyond` where it may land, because a level is read at the write and
     /// `local` was read earlier, so [`Self::locals_a_write_may_land_in`]
-    /// answers the two as of different points (#648).
+    /// answers the two as of different points (#648), and one a call wrote
+    /// as of the call (#661). See ADR-0057 and ADR-0041.
     fn unnamed_below(&self, local: LocalId, dereferences: usize) -> bool {
         (0..dereferences.saturating_sub(1)).any(|level| {
             let (sites, locals) = self.levels_below(local, level);
@@ -2428,16 +2413,18 @@ impl Known {
     }
 
     /// Whether a store to `place`, a place of dereferences, may land where code
-    /// outside this function may read it, by what the value reaches. Half of
-    /// `store::Store::leaves`, which adds where the write's landing is unnamed
-    /// or unplaced (#802), and that one answer is what the store door,
+    /// outside this function may read it, by what the value reaches and by
+    /// how `landing` lands. What `store::Store::leaves` holds, and that one
+    /// answer is what the store door,
     /// `report::stored_away`, and what [`Self::stored_out`] records both read,
     /// so the two orders of a store and a free agree (#650):
     ///
-    /// - anywhere at all, where a level on the way down may hold an address
-    ///   this function never recorded, [`Known::through_unnamed`]: `**ppp = x`.
-    ///   Where the pointer itself may, `*pp = x` with `pp` read out of a
-    ///   parameter's memory, `store::Landing::unnamed` answers beside this;
+    /// - anywhere at all, where the pointer or a level on the way down may
+    ///   hold an address this function never recorded, `landing`'s
+    ///   `store::Landing::unnamed` and [`Known::unnamed_below`]: `**ppp = x`,
+    ///   and `*pp = x` with `pp` read out of a parameter's memory;
+    /// - anywhere at all, where the landing is unplaced,
+    ///   `store::Landing::unplaced` (#802);
     /// - anywhere at all, where the pointer names nothing this check followed,
     ///   neither an allocation nor a local: one moved off a local that is not
     ///   an array by a non-zero constant (ADR-0019) may be any of them, and
@@ -2451,12 +2438,17 @@ impl Known {
     ///
     /// **The allocations below the first level, at a store of more than one
     /// dereference, decide no case, measured**: such a store reaches
-    /// `through_unnamed` or the locals first in every program the corpus has.
-    /// And the first two parts each hold `**ppp = x` alone, so only dropping
-    /// both silences it.
-    pub(super) fn leaves(&self, place: &Place) -> bool {
+    /// `unnamed_below` or the locals first in every program the corpus has.
+    ///
+    /// **The landing is an argument so that it cannot be left out**: its
+    /// marks were once asked both here and beside this at every caller, and
+    /// the copy here decided nothing, measured (#946). Dropped from here
+    /// alone, a caller asking this without them would have stored `*pp = x`
+    /// in silence; taken as an argument, it is asked here once and a caller
+    /// cannot skip it.
+    pub(super) fn leaves(&self, place: &Place, landing: &Landing) -> bool {
         let depth = derefs(place);
-        if self.through_unnamed(place.local, depth) {
+        if landing.unnamed(self) || landing.unplaced() || self.unnamed_below(place.local, depth) {
             return true;
         }
         let reachable = self.sites_named_by_unknown_code();
