@@ -5845,7 +5845,12 @@ fn answers_as(
         if !subject(row) {
             continue;
         }
+        // **A subject row with no reference fails**, rather than going
+        // unasked: skipped in silence, `twin_of` losing `memmove` took every
+        // `memmove` row out of the comparison and its never-more-certain
+        // check, and the test stayed green. Found by review.
         let Some(route) = reference(row) else {
+            wrong.push(format!("{name}: a {what} row with no route to answer as"));
             continue;
         };
         let Some(&(other_name, other)) = ROWS.iter().find(|(_, other)| {
@@ -5854,6 +5859,9 @@ fn answers_as(
                 && other.depth == row.depth
                 && other.shape == row.shape
         }) else {
+            wrong.push(format!(
+                "{name}: no {route:?} row at its belief, depth and shape"
+            ));
             continue;
         };
         let mut differs = vec![];
@@ -5914,7 +5922,8 @@ fn answers_as(
 /// this fails at `lost_memcpy_d2_both` and its kin as a copy proving
 /// `SC0414` its twin does not. Mutation: list a row that agrees; this fails
 /// as "listed, agrees". Mutation: drop `Route::Memmove` from the routes
-/// asked; this fails at every `memmove` entry.
+/// asked; this fails at every `memmove` entry. Mutation: `twin_of` answers
+/// `None` for `MemcpyFromBlock`; this fails at every block copy row.
 #[test]
 fn a_whole_copy_answers_as_a_store_over_its_own_program() {
     let wrong = answers_as(
