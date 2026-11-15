@@ -858,6 +858,12 @@ impl Allocations<'_> {
                             // apart, it drifted from the load once (#929) and
                             // kept a fresh source's case the load already had
                             // (#791, #977).
+                            //
+                            // Mutation: believe the type `*source` is read as
+                            // alone, and
+                            // `a_void_pointer_copied_out_of_memory_is_believed_as_wide_as_its_record_says`
+                            // and `held_pointers_memcpy_d0_both` among the route
+                            // rows fail.
                             let mut as_loaded = source.clone();
                             as_loaded.projection.push(Projection::Deref);
                             let width = self.believed_read(function, &as_loaded, value);
