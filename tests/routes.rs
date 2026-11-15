@@ -4599,124 +4599,253 @@ const UNCERTAIN: &[(&str, &str)] = &[
     ),
 ];
 
-/// Why a row is listed in [`COPY_DIFFERS`] when nothing more is known: it
-/// differed when the test that asks it landed, at `bb36192d`, and each such
-/// row is a rule the store and the copy still answer apart. The entries go
-/// as the rules become one.
-const DIFFERED_WHEN_ASKED: &str = "the store and the copy of one pointer still answer this route apart; it differed when `a_whole_copy_answers_as_its_plain_store` landed (#686)";
+/// A row of [`COPY_DIFFERS`]: the copy's call is asked at its arguments,
+/// `SC0407`, where the store is asked at its own door alone, or the same
+/// report lands on another line. One rule spelled at two doors, which
+/// #926 asks through one function.
+const ASKED_AT_ITS_ARGUMENTS: &str = "the copy's call is asked at its arguments, `SC0407`, where the store is asked at its own door alone (#926)";
+/// A row of [`COPY_DIFFERS`]: how wide the write is, and what it carries,
+/// asked apart, `SC0412` or `SC0413` on one side alone, proved on one, or
+/// `SC0413` where the store says `SC0414` (#926). **The copy may be the
+/// quieter side**: in `stored_out_memcpy_block_d2_both` the store doubts an
+/// eight-byte write through a pointer a call may have replaced, `SC0412`,
+/// and the copy of the same eight bytes through it says nothing of its
+/// bounds, refused only by the `SC0402` on the same line. A doubt raised
+/// elsewhere, which #926 has to close, not a reason to keep it.
+const WIDTH_ASKED_APART: &str = "the copy and the store ask the width of the write apart, `SC0412` or `SC0413` on one side alone or proved on one (#926)";
+/// A row of [`COPY_DIFFERS`]: a doubt the copy raises and its store does
+/// not, on a program the store answers without it (#926).
+const COPY_DOUBTS_MORE: &str = "the copy doubts what its store does not, `SC0401`, `SC0402`, `SC0406` or `SC0407` away from the put (#926)";
+/// A row of [`COPY_DIFFERS`]: a doubt the store raises and its copy does
+/// not: `SC0402` on the control, where the program frees nothing;
+/// `SC0414` where the copy says `SC0407` on the same line; and in
+/// `stored_out_memcpy_block_d0_both`, read by hand, `SC0401` at a free that
+/// nothing freed before, which the program does not need (#926).
+const STORE_DOUBTS_MORE: &str = "the store doubts what its copy does not (#926)";
+/// A row of [`COPY_DIFFERS`]: a library copy that leaves is asked whether
+/// what it carries was freed only as a doubt, where its store proves it
+/// (ADR-0068 rule 3).
+const FREED_ONLY_AS_A_DOUBT: &str = "a library copy that leaves is asked whether what it carries was freed only as a doubt, where its store proves it (ADR-0068 rule 3)";
+/// A row of [`COPY_DIFFERS`]: a copy carries bytes nothing wrote without
+/// reading them as a pointer, since it copies characters (C17 7.24.2.1),
+/// so the slot is reported where it is read, where the store reads the
+/// pointer at the put.
+const INDETERMINATE_BYTES_ARE_COPIED: &str = "a copy carries bytes nothing wrote without reading them as a pointer (C17 7.24.2.1), so it is reported where the slot is read and not at the put";
 /// What a whole copy is not answered alike with its plain store, row by
-/// row, with why: a library copy of a whole pointer is the store of it, so
-/// any code its hazard or control reports that the store's does not, or the
-/// reverse, is one rule spelled twice (#686, the memory model rebuilt on
-/// #924, stage 2). **Exact in both directions**: a listed row that now
-/// agrees fails too, and its entry goes.
-const COPY_DIFFERS: &[(&str, &str)] = &[
-    ("caller_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
-    ("caller_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
-    ("caller_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("caller_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("caller_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("caller_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("fresh_memcpy_d0_both", DIFFERED_WHEN_ASKED),
-    ("fresh_memcpy_d0_one", DIFFERED_WHEN_ASKED),
-    ("fresh_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("fresh_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("fresh_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("fresh_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("held_pointers_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("held_pointers_memcpy_d0_both", DIFFERED_WHEN_ASKED),
-    ("held_pointers_memcpy_d0_one", DIFFERED_WHEN_ASKED),
-    ("held_pointers_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("held_pointers_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("held_pointers_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("held_pointers_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("left_behind_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("left_behind_memcpy_d0_both", DIFFERED_WHEN_ASKED),
-    ("left_behind_memcpy_d0_one", DIFFERED_WHEN_ASKED),
-    ("left_behind_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("left_behind_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("left_behind_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("left_behind_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("part_pointer_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("part_pointer_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("part_pointer_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("part_pointer_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("returned_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
-    ("returned_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("returned_memcpy_d0_both", DIFFERED_WHEN_ASKED),
-    ("returned_memcpy_d0_one", DIFFERED_WHEN_ASKED),
-    ("returned_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("returned_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("returned_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("returned_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_d0_both", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_d0_one", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_d0_both", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_d0_one", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("unreplaced_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
-    ("unreplaced_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("unreplaced_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
-    ("unreplaced_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
-    ("unreplaced_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
-    ("unreplaced_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
-    ("unreplaced_memcpy_d0_both", DIFFERED_WHEN_ASKED),
-    ("unreplaced_memcpy_d0_one", DIFFERED_WHEN_ASKED),
-    ("unreplaced_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("unreplaced_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("unreplaced_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("unreplaced_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("width_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
-    ("width_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("width_memcpy_d0_both", DIFFERED_WHEN_ASKED),
-    ("width_memcpy_d0_one", DIFFERED_WHEN_ASKED),
+/// row, with every reason it differs: a library copy of a whole pointer is
+/// the store of it, so any report its hazard or control makes that the
+/// store's does not, or the reverse, is one rule spelled twice (#686, the
+/// memory model rebuilt on #924, stage 2). **Exact in both directions**: a
+/// listed row that now agrees fails too, and its entry goes. Each reason
+/// was read off what the row's two programs report, measured when this
+/// list was written (#943); a reason naming #926 goes when that issue asks
+/// the rule through one function.
+const COPY_DIFFERS: &[(&str, &[&str])] = &[
+    ("caller_memcpy_block_d1_both", &[COPY_DOUBTS_MORE]),
+    ("caller_memcpy_block_d1_one", &[COPY_DOUBTS_MORE]),
+    ("caller_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
+    ("caller_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
+    ("caller_memcpy_d2_both", &[WIDTH_ASKED_APART]),
+    ("caller_memcpy_d2_one", &[WIDTH_ASKED_APART]),
+    ("fresh_memcpy_d0_both", &[INDETERMINATE_BYTES_ARE_COPIED]),
+    ("fresh_memcpy_d0_one", &[INDETERMINATE_BYTES_ARE_COPIED]),
+    ("fresh_memcpy_d1_both", &[INDETERMINATE_BYTES_ARE_COPIED]),
+    ("fresh_memcpy_d1_one", &[INDETERMINATE_BYTES_ARE_COPIED]),
+    (
+        "fresh_memcpy_d2_both",
+        &[INDETERMINATE_BYTES_ARE_COPIED, WIDTH_ASKED_APART],
+    ),
+    (
+        "fresh_memcpy_d2_one",
+        &[INDETERMINATE_BYTES_ARE_COPIED, WIDTH_ASKED_APART],
+    ),
+    ("held_pointers_memcpy_block_d0_one", &[COPY_DOUBTS_MORE]),
+    ("held_pointers_memcpy_d0_both", &[COPY_DOUBTS_MORE]),
+    ("held_pointers_memcpy_d0_one", &[COPY_DOUBTS_MORE]),
+    ("held_pointers_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
+    ("held_pointers_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
+    (
+        "held_pointers_memcpy_d2_both",
+        &[COPY_DOUBTS_MORE, STORE_DOUBTS_MORE],
+    ),
+    (
+        "held_pointers_memcpy_d2_one",
+        &[COPY_DOUBTS_MORE, STORE_DOUBTS_MORE],
+    ),
+    ("left_behind_memcpy_block_d0_one", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memcpy_d0_both", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memcpy_d0_one", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memcpy_d2_both", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memcpy_d2_one", &[COPY_DOUBTS_MORE]),
+    ("lost_memcpy_block_d0_both", &[STORE_DOUBTS_MORE]),
+    ("lost_memcpy_block_d0_one", &[STORE_DOUBTS_MORE]),
+    ("lost_memcpy_block_d2_both", &[WIDTH_ASKED_APART]),
+    ("lost_memcpy_block_d2_one", &[WIDTH_ASKED_APART]),
+    ("lost_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
+    ("lost_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
+    (
+        "lost_memcpy_d2_both",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    ("lost_memcpy_d2_one", &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART]),
+    ("part_pointer_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
+    ("part_pointer_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
+    ("part_pointer_memcpy_d2_both", &[COPY_DOUBTS_MORE]),
+    ("part_pointer_memcpy_d2_one", &[COPY_DOUBTS_MORE]),
+    (
+        "reborn_memcpy_block_d0_both",
+        &[ASKED_AT_ITS_ARGUMENTS, STORE_DOUBTS_MORE],
+    ),
+    (
+        "reborn_memcpy_block_d0_one",
+        &[ASKED_AT_ITS_ARGUMENTS, STORE_DOUBTS_MORE],
+    ),
+    (
+        "reborn_memcpy_block_d1_both",
+        &[ASKED_AT_ITS_ARGUMENTS, WIDTH_ASKED_APART],
+    ),
+    (
+        "reborn_memcpy_block_d1_one",
+        &[ASKED_AT_ITS_ARGUMENTS, WIDTH_ASKED_APART],
+    ),
+    ("reborn_memcpy_block_d2_both", &[WIDTH_ASKED_APART]),
+    ("reborn_memcpy_block_d2_one", &[WIDTH_ASKED_APART]),
+    ("reborn_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
+    ("reborn_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
+    (
+        "reborn_memcpy_d2_both",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    (
+        "reborn_memcpy_d2_one",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    ("returned_memcpy_block_d0_both", &[COPY_DOUBTS_MORE]),
+    ("returned_memcpy_block_d0_one", &[COPY_DOUBTS_MORE]),
+    ("returned_memcpy_d0_both", &[COPY_DOUBTS_MORE]),
+    ("returned_memcpy_d0_one", &[COPY_DOUBTS_MORE]),
+    ("returned_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
+    ("returned_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
+    ("returned_memcpy_d2_both", &[COPY_DOUBTS_MORE]),
+    ("returned_memcpy_d2_one", &[COPY_DOUBTS_MORE]),
+    (
+        "stale_memcpy_block_d0_both",
+        &[ASKED_AT_ITS_ARGUMENTS, STORE_DOUBTS_MORE],
+    ),
+    (
+        "stale_memcpy_block_d0_one",
+        &[ASKED_AT_ITS_ARGUMENTS, STORE_DOUBTS_MORE],
+    ),
+    ("stale_memcpy_block_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("stale_memcpy_block_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    (
+        "stale_memcpy_block_d2_both",
+        &[ASKED_AT_ITS_ARGUMENTS, WIDTH_ASKED_APART],
+    ),
+    (
+        "stale_memcpy_block_d2_one",
+        &[ASKED_AT_ITS_ARGUMENTS, WIDTH_ASKED_APART],
+    ),
+    ("stale_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
+    ("stale_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
+    (
+        "stale_memcpy_d2_both",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    (
+        "stale_memcpy_d2_one",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    (
+        "stored_freed_memcpy_block_d0_both",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memcpy_block_d0_one",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memcpy_block_d1_both",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memcpy_block_d1_one",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memcpy_block_d2_both",
+        &[FREED_ONLY_AS_A_DOUBT, WIDTH_ASKED_APART],
+    ),
+    (
+        "stored_freed_memcpy_block_d2_one",
+        &[FREED_ONLY_AS_A_DOUBT, WIDTH_ASKED_APART],
+    ),
+    (
+        "stored_freed_memcpy_d0_both",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memcpy_d0_one",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memcpy_d1_both",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memcpy_d1_one",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memcpy_d2_both",
+        &[FREED_ONLY_AS_A_DOUBT, WIDTH_ASKED_APART],
+    ),
+    (
+        "stored_freed_memcpy_d2_one",
+        &[FREED_ONLY_AS_A_DOUBT, WIDTH_ASKED_APART],
+    ),
+    ("stored_out_memcpy_block_d0_both", &[STORE_DOUBTS_MORE]),
+    ("stored_out_memcpy_block_d0_one", &[COPY_DOUBTS_MORE]),
+    ("stored_out_memcpy_block_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("stored_out_memcpy_block_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("stored_out_memcpy_block_d2_both", &[WIDTH_ASKED_APART]),
+    ("stored_out_memcpy_block_d2_one", &[WIDTH_ASKED_APART]),
+    ("stored_out_memcpy_d0_both", &[COPY_DOUBTS_MORE]),
+    ("stored_out_memcpy_d0_one", &[COPY_DOUBTS_MORE]),
+    (
+        "stored_out_memcpy_d1_both",
+        &[ASKED_AT_ITS_ARGUMENTS, COPY_DOUBTS_MORE],
+    ),
+    (
+        "stored_out_memcpy_d1_one",
+        &[ASKED_AT_ITS_ARGUMENTS, COPY_DOUBTS_MORE],
+    ),
+    (
+        "stored_out_memcpy_d2_both",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    (
+        "stored_out_memcpy_d2_one",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    ("unreplaced_memcpy_block_d0_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_block_d0_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_block_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_block_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_block_d2_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_block_d2_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_d0_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_d0_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_d2_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_d2_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("width_memcpy_block_d0_both", &[WIDTH_ASKED_APART]),
+    ("width_memcpy_block_d0_one", &[WIDTH_ASKED_APART]),
+    ("width_memcpy_d0_both", &[WIDTH_ASKED_APART]),
+    ("width_memcpy_d0_one", &[WIDTH_ASKED_APART]),
 ];
 
 /// **A whole copy answers as its plain store**: the same reports on the
