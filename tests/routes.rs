@@ -5360,6 +5360,11 @@ const COPY_DIFFERS: &[(&str, &[&str])] = &[
 /// `COPY_DIFFERS` does not say why not. Asked as a set of codes, a copy
 /// that proved what its store only doubted passed (a0e35e92), and so did a
 /// report that moved to another line (#943).
+///
+/// Mutation: `copied_away` reports its finding as `Conclusion::Unsafe`;
+/// this fails at `lost_memcpy_d2_both` and its kin as a copy proving
+/// `SC0414` its store does not, rows `COPY_DIFFERS` lists. Mutation: list a
+/// row that agrees; this fails as "listed, agrees".
 /// A store and a copy of one pointer were two bodies, and each rule one
 /// learned the other learned later or not at all: `SC0414` by a store and
 /// `SC0407` by the copy of the same pointer, a width asked of a copy into
