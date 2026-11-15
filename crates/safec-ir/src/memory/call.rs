@@ -847,34 +847,34 @@ impl Allocations<'_> {
                             // `m[0]` believed written where the store form is
                             // doubted.
                             let targets = landing.targets.clone();
-                            // **Believed as a load at the local's type would be**,
-                            // `s = *(T **)&v`: that type, no wider than the
-                            // source's memory recorded, as `believed_read`
-                            // answers a load (ADR-0061). Carried with no belief,
-                            // `memcpy(&s, &v, 8)` of a whole `int`'s address was
-                            // doubted at `*s` where `s = v;` is not (#769).
+                            // **Believed as a load of the source would be**:
+                            // what `*source` is read as, no wider than the
+                            // source's memory recorded, and as its type where
+                            // that read is of memory nothing wrote, one answer
+                            // for the copy and the load, `believed_read`
+                            // (ADR-0061). Carried with no belief, `memcpy(&s,
+                            // &v, 8)` of a whole `int`'s address was doubted at
+                            // `*s` where `s = v;` is not (#769). Spelled here
+                            // apart, it drifted from the load once (#929). A
+                            // source of memory nothing wrote is `believed_read`'s
+                            // own case too, asked at `*source` alone as the copy
+                            // asked it, so the copy keeps no arm for it (#977).
+                            //
+                            // Mutation: believe the type `*source` is read as
+                            // alone, and
+                            // `a_void_pointer_copied_out_of_memory_is_believed_as_wide_as_its_record_says`,
+                            // `a_pointer_copied_into_a_local_through_a_pointer_read_out_of_fresh_memory_keeps_its_doubt`
+                            // and the route matrix's
+                            // `a_whole_copy_answers_as_a_store_over_its_own_program`
+                            // fail.
+                            let mut as_loaded = source.clone();
+                            as_loaded.projection.push(Projection::Deref);
+                            let width = self.believed_read(function, &as_loaded, value);
+                            // What the source's memory recorded, which bounds a
+                            // copy into a `void *` local below.
                             let recorded = value
                                 .memory_levels(source.local, from_depth + 1, self.deepest_pointer)
                                 .at(0);
-                            // **As its type where what it copies is read
-                            // fresh**, as `believed_read` believes such a load:
-                            // the local then holds what nothing wrote, as one
-                            // never assigned does, and a read of it is
-                            // reported where it is read, once; nothing was
-                            // stored to record a width. Carried with none,
-                            // `memcpy(&s, b, 8)` of fresh `b` was doubted again
-                            // at `*s` where `memcpy(m, b, 8)` was not (#791).
-                            // **At depth zero only**, the one level `*source`
-                            // asks. See ADR-0057 and ADR-0061.
-                            let fresh = from_depth == 0
-                                && self.reads_fresh(
-                                    function,
-                                    &Place {
-                                        local: source.local,
-                                        projection: vec![Projection::Deref],
-                                    },
-                                    value,
-                                );
                             // **And it replaces the local where it is the
                             // store's certain one**, as `s = v;` does: one
                             // local and nothing else (`Landing::strong`),
@@ -892,20 +892,32 @@ impl Allocations<'_> {
                             );
                             for &target in &targets {
                                 let mut each = read.clone();
-                                let local = function.locals().nth(target.index());
-                                // **By `believed_width`, as a load is**: a
-                                // `void *` at what the record says (#929).
-                                // Spelled here as a type's width alone,
-                                // `memcpy(&w, pv, 8)` proved nothing where
-                                // `w = *pv;` does.
-                                let typed = local.map_or(Some(0), |local| {
-                                    self.typed_width(function, &Place::local(local))
-                                });
-                                let as_read = typed.unwrap_or(0);
-                                let width = believed_width(typed, recorded);
-                                each.believe(if fresh {
-                                    Some(as_read)
-                                } else {
+                                // **And no wider than the local's own type**,
+                                // the copy's own arm: the bytes land in a local
+                                // declared as what they are read as later, and
+                                // `s = *(T **)m` reads at `T`. Believed at
+                                // `*source`'s type alone, `memcpy(&s, m, 8)`
+                                // with `m` an `int **` parameter and `s` a
+                                // `char *` read an `int` through `s` in
+                                // silence, where it was doubted (#977). **A
+                                // `void *` local, which no type bounds, at what
+                                // the record says** (`believed_width`), as one
+                                // read `void *t = *m;` is when what it read was
+                                // written: bounded by `*source`'s type alone, a
+                                // copy into `t` out of memory nothing wrote was
+                                // believed whole, and a read of four bytes
+                                // through `t` was not doubted where it had been
+                                // (#977). So a copy is never believed wider than
+                                // the destination's type or its record gave it.
+                                let typed = function
+                                    .locals()
+                                    .nth(target.index())
+                                    .map_or(Some(0), |local| {
+                                        self.typed_width(function, &Place::local(local))
+                                    });
+                                let width = width
+                                    .min(typed.unwrap_or_else(|| believed_width(None, recorded)));
+                                each.believe(
                                     self.read_from_fits(
                                         function,
                                         source.local,
@@ -913,8 +925,8 @@ impl Allocations<'_> {
                                         width,
                                         value,
                                     )
-                                    .then_some(width)
-                                });
+                                    .then_some(width),
+                                );
                                 // The one target, which is all `targets`
                                 // holds where the copy replaces it; any
                                 // other is a may-write, as a union is.
