@@ -2592,7 +2592,7 @@ impl Cell {
 /// names each one, and one it leaves out is not its precise default in
 /// silence: the copy into a local's address set seven marks and not
 /// `element`, so its write is of the whole array (#706), and the store's
-/// landing did the same (#705). Seven of them are reasons, which
+/// landing did the same (#705). Eight of them are reasons, which
 /// [`Held::from_marks`] makes places of [`Held::names`] ([`Why`] says what
 /// each means); the rest are fields of [`Held`].
 pub(super) struct Marks {
