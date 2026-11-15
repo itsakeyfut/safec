@@ -2824,20 +2824,9 @@ impl Analysis for Allocations<'_> {
                     } else {
                         Vec::new()
                     };
-                    // And as through one dereference, where a level above
-                    // reached them only by the rule that keeps an edge through
-                    // a known move: `**ppp = q;` with `*ppp = &z + 7` proved a
-                    // use after free once the one-step store was marked and
-                    // this was not. Found by review. See
+                    // A local the write may land in past its end was marked by
+                    // `Self::initialised_by` above, at every depth. See
                     // `Allocations::past_end_targets`.
-                    let past_end = if deep > 1 {
-                        self.past_end_targets(value, operation.place.local, deep, one_step)
-                    } else {
-                        Vec::new()
-                    };
-                    for target in past_end {
-                        self.written_past_its_end(function, value, target, &unwritten_before);
-                    }
                     for &target in &deep_targets {
                         value.target_union(target, &written);
                     }

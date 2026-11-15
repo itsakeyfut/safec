@@ -538,28 +538,30 @@ impl Allocations<'_> {
 
     /// The locals a write through `pointer`, `deep` dereferences down, may
     /// land in past their end, each to be handed to
-    /// `Allocations::written_past_its_end`: the locals it lands in, where the
-    /// pointer it is written through was moved off a local by arithmetic
-    /// (`Held::array_edge`). That pointer is `pointer` itself at one exact
-    /// dereference, `one_step`, and a pointer the level above may be deeper
-    /// down, as [`Self::landing`] finds the locals.
+    /// `Allocations::written_past_its_end`. Nothing, unless the pointer the
+    /// write goes through was moved off a local by arithmetic
+    /// (`Held::array_edge`):
     ///
-    /// **Asked by the store and the library copy alike**, at every depth:
-    /// the store through one dereference, the store deeper down and the copy
-    /// each spelled it once, so a rule changed in one could leave the others
-    /// behind (#976). The store through one dereference asked it only where
-    /// its write replaced no value, and now asks it always: no case or route
-    /// row writes through a moved pointer a value it replaces, measured, and
-    /// a local marked lost after such a write is a doubt rather than a proof.
+    /// - at one exact dereference, `one_step`, that pointer is `pointer`
+    ///   itself, and the answer is the locals it names; `deep` is not read;
+    /// - deeper, it is any pointer the level above may be, and the answer is
+    ///   the locals that level names, as [`Self::landing`] finds them;
+    /// - at one dereference with a further projection, nothing.
+    ///
+    /// **Asked by the store and the library copy alike.** The store through
+    /// one dereference, the store deeper down and the copy each spelled it
+    /// once, so a rule changed in one could leave the others behind (#976).
+    /// A copy's destination is `*dest`, so it asks at `derefs(dest) + 1`,
+    /// one exact dereference where `dest` is a plain local.
     ///
     /// Mutation: answer nothing, and
     /// `a_use_after_freeing_a_local_an_int_was_stored_past_through_a_moved_pointer_is_not_proved`
     /// fails; answer nothing for a depth above one, and
     /// `a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved`
-    /// does. **No program isolates the copy's ask**, measured: those two
-    /// spelled as a copy, and `a_local_copied_past_its_end_is_doubted_where_read`,
-    /// report the same with it answering nothing; it is asked so that the
-    /// copy cannot answer a destination the store answers differently.
+    /// does. **No test holds the copy's ask**: measured, the copy spellings
+    /// of those two programs and `a_local_copied_past_its_end_is_doubted_where_read`
+    /// report the same with the copy asking nothing. A program that tells
+    /// them apart belongs in the corpus with this mutation named.
     pub(super) fn past_end_targets(
         &self,
         value: &Known,

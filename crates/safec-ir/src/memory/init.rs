@@ -112,8 +112,11 @@ impl Allocations<'_> {
             } => {
                 let pointer = place.local;
                 let one_step = landing.one_step;
-                // Asked before the write, as the copy and the deeper store
-                // ask it. See `Allocations::past_end_targets`.
+                // **And a local it may write past the end of**, at every depth:
+                // `**ppp = q;` with `*ppp = &z + 7` proved a use after free
+                // once the one-step store was marked and the deeper one was
+                // not. Asked before the write changes what the pointer reaches.
+                // See `Allocations::past_end_targets`.
                 let past_end = self.past_end_targets(value, pointer, landing.deep, one_step);
                 // **A write through a pointer may write an allocation**, of
                 // any type, and what it wrote is no longer indeterminate.
@@ -309,9 +312,9 @@ impl Allocations<'_> {
                 }
                 if !place.projection.is_empty() && landing.strong(value).is_none() {
                     replaced_by(self.unit, function, place, value);
-                }
-                for target in past_end {
-                    self.written_past_its_end(function, value, target, unwritten_before);
+                    for target in past_end {
+                        self.written_past_its_end(function, value, target, unwritten_before);
+                    }
                 }
             }
             Wrote::Copy {
@@ -327,12 +330,12 @@ impl Allocations<'_> {
                 // through the same pointer marks it: lost, and in doubt where
                 // it was unwritten. `pp = &z + 1; memcpy(pp, &px, 8); q = z;`
                 // reported only the out-of-bounds copy, where `*pp = &x;`
-                // also doubts the read of `z` (#729). Which locals, the
-                // store's own answer. See `Allocations::past_end_targets` and
-                // `Allocations::written_past_its_end`.
-                // Of a destination reached by dereferences alone, the one
-                // place `may_land` below takes a copy's destination to be.
+                // also doubts the read of `z` (#729). Which locals is the
+                // store's own answer, `Allocations::past_end_targets`.
                 let unwritten_before = value.unwritten_locals();
+                // Asked only of a destination reached by dereferences alone,
+                // which is the one shape `may_land` below takes a copy's
+                // destination to have.
                 let past_end: Vec<LocalIdx> = match dest {
                     Some(Operand::Copy(dest))
                         if dest
