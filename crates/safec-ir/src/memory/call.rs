@@ -17,8 +17,8 @@ use super::index::{Idx, Loc, LocalIdx, Site, Table, Target, Why};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
-    At, Cell, Extent, Freeing, Held, Init, Inits, Levels, PlaceInit, Read, Realloced, SiteState,
-    Width,
+    At, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, PlaceInit, Read, Realloced,
+    SiteState, Width,
 };
 use super::store::{Landing, StoreKind, Strong};
 use super::transfer::{CopiedPointers, Pours, ReadAs, believed_width};
@@ -42,8 +42,33 @@ impl Allocations<'_> {
     /// to an object of any width. Locals are marked here, since
     /// `land_contents` pours into blocks alone.
     fn fill_lands_forged(&self, landing: &Landing, value: &mut Known) {
-        let mut forged = Held::none(value.points_to.len());
-        forged.name_unknown(Why::Forged);
+        let forged = Held::from_marks(
+            value.points_to.len(),
+            Marks {
+                lost: false,
+                freed: None,
+                writes_elsewhere: true,
+                offset: At::Bytes(0),
+                loaded: false,
+                foreign: false,
+                stale_read: false,
+                unreplaced_read: false,
+                lost_read: false,
+                from_caller: false,
+                // The bytes a fill wrote, which name nothing a write made a pointer.
+                forged: true,
+                returned_by: None,
+                fresh_read: false,
+                widths: Levels::new(vec![Width::Nothing]),
+                arrived_holds_pointer: false,
+                inner_address: false,
+                element: None,
+                site_element: None,
+                array_edge: false,
+                stored_through: false,
+                may_be_null: false,
+            },
+        );
         let poured = Cell::poured(
             value.points_to.len(),
             std::iter::empty(),
@@ -1472,7 +1497,35 @@ impl Allocations<'_> {
             // destination. A frontend that gives it one gives it a `void`
             // local, which holds none of this.
             Callee::Frees => {
-                value.replace(at, Held::none(value.points_to.len()));
+                value.replace(
+                    at,
+                    Held::from_marks(
+                        value.points_to.len(),
+                        Marks {
+                            lost: false,
+                            freed: None,
+                            writes_elsewhere: true,
+                            offset: At::Bytes(0),
+                            loaded: false,
+                            foreign: false,
+                            stale_read: false,
+                            unreplaced_read: false,
+                            lost_read: false,
+                            from_caller: false,
+                            forged: false,
+                            returned_by: None,
+                            fresh_read: false,
+                            widths: Levels::new(vec![Width::Nothing]),
+                            arrived_holds_pointer: false,
+                            inner_address: false,
+                            element: None,
+                            site_element: None,
+                            array_edge: false,
+                            stored_through: false,
+                            may_be_null: false,
+                        },
+                    ),
+                );
                 return;
             }
             // What it returns is its first argument, unmoved: C17 7.24.2 to
@@ -1504,7 +1557,32 @@ impl Allocations<'_> {
                     // family stops exposing what it is handed, its result is
                     // not a silence. See ADR-0040.
                     Some(Operand::Copy(source)) => self.read_through(function, source, value),
-                    Some(Operand::Constant(_)) | None => Held::none(value.points_to.len()),
+                    Some(Operand::Constant(_)) | None => Held::from_marks(
+                        value.points_to.len(),
+                        Marks {
+                            lost: false,
+                            freed: None,
+                            writes_elsewhere: true,
+                            offset: At::Bytes(0),
+                            loaded: false,
+                            foreign: false,
+                            stale_read: false,
+                            unreplaced_read: false,
+                            lost_read: false,
+                            from_caller: false,
+                            forged: false,
+                            returned_by: None,
+                            fresh_read: false,
+                            widths: Levels::new(vec![Width::Nothing]),
+                            arrived_holds_pointer: false,
+                            inner_address: false,
+                            element: None,
+                            site_element: None,
+                            array_edge: false,
+                            stored_through: false,
+                            may_be_null: false,
+                        },
+                    ),
                 };
                 value.replace(at, first);
                 return;
@@ -1526,7 +1604,32 @@ impl Allocations<'_> {
                         held.may_be_null = true;
                         held
                     }
-                    Some(_) | None => Held::none(value.points_to.len()),
+                    Some(_) | None => Held::from_marks(
+                        value.points_to.len(),
+                        Marks {
+                            lost: false,
+                            freed: None,
+                            writes_elsewhere: true,
+                            offset: At::Bytes(0),
+                            loaded: false,
+                            foreign: false,
+                            stale_read: false,
+                            unreplaced_read: false,
+                            lost_read: false,
+                            from_caller: false,
+                            forged: false,
+                            returned_by: None,
+                            fresh_read: false,
+                            widths: Levels::new(vec![Width::Nothing]),
+                            arrived_holds_pointer: false,
+                            inner_address: false,
+                            element: None,
+                            site_element: None,
+                            array_edge: false,
+                            stored_through: false,
+                            may_be_null: false,
+                        },
+                    ),
                 };
                 value.replace(at, into);
                 return;
@@ -1545,7 +1648,59 @@ impl Allocations<'_> {
         // this site every turn, and what the call returns may be last turn's
         // allocation, exposed, which the site number cannot tell apart.
         let was_exposed = value.exposed[site];
-        value.replace(at, Held::none(value.points_to.len()));
+        // **What a call this check cannot read returns is believed whole**,
+        // as a parameter is, and bounded by what it may return that this
+        // check recorded: an allocation this function handed it is folded in
+        // at its size. The `return` in its body is where the belief is asked,
+        // where that body is one this check reads. See ADR-0060.
+        let opaque = match kind {
+            Callee::Opaque => true,
+            Callee::Reads => {
+                unreachable!("`Allocations::call` returns for it where its result is decided")
+            }
+            Callee::Frees
+            | Callee::Allocates
+            | Callee::Reallocates
+            | Callee::ReturnsFirst
+            | Callee::Copies
+            | Callee::Ends => false,
+        };
+        value.replace(
+            at,
+            Held::from_marks(
+                value.points_to.len(),
+                Marks {
+                    lost: false,
+                    freed: None,
+                    writes_elsewhere: true,
+                    offset: At::Bytes(0),
+                    loaded: false,
+                    foreign: false,
+                    stale_read: false,
+                    unreplaced_read: false,
+                    lost_read: false,
+                    from_caller: false,
+                    forged: false,
+                    returned_by: None,
+                    fresh_read: false,
+                    widths: Levels::new(vec![Width::Nothing]),
+                    // And what an opaque call returns arrives as its type, as a parameter does.
+                    arrived_holds_pointer: opaque
+                        && self
+                            .unit
+                            .place_ty(function, place)
+                            .is_some_and(|ty| self.first_level_holds_a_pointer(ty)),
+                    inner_address: false,
+                    element: None,
+                    site_element: None,
+                    array_edge: false,
+                    stored_through: false,
+                    // **And may be null**, an allocation's result as much as an opaque
+                    // call's, unless its callee promises otherwise (#931).
+                    may_be_null: self.unit.function(*callee).promised().is_none(),
+                },
+            ),
+        );
         // At its start: the site is whatever the call handed back, so the
         // value is that value and not an offset into it.
         value.points_to[result].hold(site, At::Bytes(0));
@@ -1568,27 +1723,7 @@ impl Allocations<'_> {
             }
         };
         value.reborn(site, made);
-        // **And may be null**, an allocation's result as much as an opaque
-        // call's, unless its callee promises otherwise (#931).
-        value.points_to[result].may_be_null = self.unit.function(*callee).promised().is_none();
         value.extent[site] = Some(self.made_extent(function, *callee, kind, arguments, place));
-        // **What a call this check cannot read returns is believed whole**,
-        // as a parameter is, and bounded by what it may return that this
-        // check recorded: an allocation this function handed it is folded in
-        // at its size. The `return` in its body is where the belief is asked,
-        // where that body is one this check reads. See ADR-0060.
-        let opaque = match kind {
-            Callee::Opaque => true,
-            Callee::Reads => {
-                unreachable!("`Allocations::call` returns for it where its result is decided")
-            }
-            Callee::Frees
-            | Callee::Allocates
-            | Callee::Reallocates
-            | Callee::ReturnsFirst
-            | Callee::Copies
-            | Callee::Ends => false,
-        };
         if opaque {
             let believed = self.pointee_size(function, place);
             value.points_to[result].believe(believed);
@@ -1599,10 +1734,6 @@ impl Allocations<'_> {
                 .and_then(|ty| self.type_levels(ty))
                 .unwrap_or_default();
             value.points_to[result].set_contents(&contents);
-            value.points_to[result].arrived_holds_pointer = self
-                .unit
-                .place_ty(function, place)
-                .is_some_and(|ty| self.first_level_holds_a_pointer(ty));
         }
         // **Its contents are indeterminate** where its row says so, and for
         // `realloc` where it was handed a pointer that is certainly null, as
