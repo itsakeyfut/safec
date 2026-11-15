@@ -20,7 +20,7 @@ use super::allocations::{Allocations, innermost_element, stored_pointer};
 use super::assigned;
 use super::bits::Bits;
 use super::fit::{pointee, pointee_width};
-use super::index::{Loc, LocalIdx, Site};
+use super::index::{LocalIdx, Site, Storage};
 use super::known::Known;
 use super::parts::{Init, SiteState};
 use super::store::{StoreKind, Written};
@@ -223,13 +223,13 @@ pub(super) fn asked_unwritten_in_terminator(
                             && !(depth == 0 && known.points_to[source.local].stored_through)
                         {
                             let (sites, locals) = known.levels_below(source.local, depth);
-                            let places = sites
+                            let storages = sites
                                 .into_iter()
-                                .map(Loc::Heap)
-                                .chain(locals.into_iter().map(Loc::Local));
+                                .map(Storage::Heap)
+                                .chain(locals.into_iter().map(Storage::Local));
                             ask_partial(
                                 PartialDoor::CopyOut,
-                                places,
+                                storages,
                                 findings,
                                 ask.analysis,
                                 known,
@@ -288,7 +288,7 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
     // ADR-0087.
     ask_partial(
         PartialDoor::Exit,
-        asked.iter().map(|&(site, _)| Loc::Heap(site)),
+        asked.iter().map(|&(site, _)| Storage::Heap(site)),
         findings,
         ask.analysis,
         known,
@@ -333,7 +333,7 @@ pub(super) fn says_nothing_of_its_pointee(analysis: &Allocations<'_>, ty: TyId) 
 }
 
 /// The doors that ask whether a write left part of a pointer in what they
-/// reach (ADR-0087, #914): each passes the places it reaches to
+/// reach (ADR-0087, #914): each passes the storages it reaches to
 /// [`ask_partial`], which reads the record the door names here, so that
 /// which record a door reads is said in one place. A `match` with no
 /// wildcard, so a door added answers which it reads (`error[E0004]`).
@@ -364,7 +364,7 @@ impl PartialDoor {
     /// `ever`, measured**, nor the exit's `Known::stored_out` doing so: a
     /// site made again in a loop meets the turn that wrote it at the loop's
     /// head, so `now` still holds the write wherever the block leaves.
-    fn record(self, known: &Known, at: Loc) -> Option<Span> {
+    fn record(self, known: &Known, at: Storage) -> Option<Span> {
         match self {
             PartialDoor::Exit | PartialDoor::Return | PartialDoor::Call => {
                 known.part_written[at].ever()
@@ -382,16 +382,16 @@ impl PartialDoor {
     }
 }
 
-/// Report, at the write, each of `places` whose record `door` reads says a
+/// Report, at the write, each of `storages` whose record `door` reads says a
 /// write left part of a pointer there.
 pub(super) fn ask_partial(
     door: PartialDoor,
-    places: impl IntoIterator<Item = Loc>,
+    storages: impl IntoIterator<Item = Storage>,
     findings: &mut Vec<Finding>,
     analysis: &Allocations<'_>,
     known: &Known,
 ) {
-    for at in places {
+    for at in storages {
         if let Some(copy) = door.record(known, at) {
             push_part_of_a_pointer(findings, analysis, copy, door.asked());
         }
@@ -593,7 +593,7 @@ fn report_returned_unwritten(
             .iter()
             .flatten()
             .chain(&below)
-            .map(|&site| Loc::Heap(site)),
+            .map(|&site| Storage::Heap(site)),
         findings,
         analysis,
         known,
@@ -916,9 +916,9 @@ pub(super) fn loaded_indeterminate(
             )
         };
         // **Where the bytes came from, where a copy or a `realloc` carried
-        // them**: asked of each place read that may be unwritten, and said
+        // them**: asked of each storage read that may be unwritten, and said
         // only where every one names the same call, since a read that may
-        // reach two such places has no one source to name (#752).
+        // reach two such storages has no one source to name (#752).
         let mut origins = blocks_read(&place, known)
             .into_iter()
             .filter(|&at| known.written[at].whole() != Init::Written)
@@ -965,7 +965,7 @@ pub(super) fn loaded_indeterminate(
 /// gone through last may name, as [`loaded_indeterminate`] names the slot
 /// (#768). **Locals as well as blocks**, since a local array keeps the
 /// partial pointer record too (ADR-0090).
-fn blocks_read(place: &Place, known: &Known) -> Vec<Loc> {
+fn blocks_read(place: &Place, known: &Known) -> Vec<Storage> {
     let depth = derefs(place);
     let (sites, locals): (Vec<Site>, Vec<LocalIdx>) = if depth > 1 {
         let (sites, locals) = known.levels_below(place.local, depth - 1);
@@ -976,8 +976,8 @@ fn blocks_read(place: &Place, known: &Known) -> Vec<Loc> {
     };
     sites
         .into_iter()
-        .map(Loc::Heap)
-        .chain(locals.into_iter().map(Loc::Local))
+        .map(Storage::Heap)
+        .chain(locals.into_iter().map(Storage::Local))
         .collect()
 }
 

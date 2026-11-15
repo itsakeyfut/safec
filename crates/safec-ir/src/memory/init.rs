@@ -13,7 +13,7 @@ use crate::source::Span;
 
 use super::allocations::Allocations;
 use super::built::replaced_by;
-use super::index::{Loc, LocalIdx, Site, Table};
+use super::index::{LocalIdx, Site, Storage, Table};
 use super::known::{Known, WrittenBy};
 use super::parts::{At, Held, Init};
 use super::store::{Certain, Landing, StoreKind, Strong, written_alone};
@@ -139,8 +139,9 @@ impl Allocations<'_> {
                 // its start fits stood in for the slots nothing wrote, the
                 // shape #703 exposed (#932). See ADR-0094 rule 3.
                 let offset = value.points_to[pointer].offset;
-                let covers_block =
-                    |value: &Known, site: Site| value.covers_whole(Loc::Heap(site), offset, width);
+                let covers_block = |value: &Known, site: Site| {
+                    value.covers_whole(Storage::Heap(site), offset, width)
+                };
                 if derefs(place) > 0 {
                     let held = &value.points_to[pointer];
                     // **And a local it may land in**, the local its edges name
@@ -539,7 +540,7 @@ impl Allocations<'_> {
                         Some(Operand::Copy(_) | Operand::Constant(_)) | None => At::Unknown,
                     };
                     let covers_whole = |value: &Known, site: Site| {
-                        value.covers_whole(Loc::Heap(site), dest_at, bytes)
+                        value.covers_whole(Storage::Heap(site), dest_at, bytes)
                     };
                     // The slots a copy from a counted position of a known
                     // length covers whole are written, and the rest keep what
@@ -762,7 +763,7 @@ impl Allocations<'_> {
                         && matches!(value.points_to[dest.local].offset, At::Bytes(0));
                     for &local in lands {
                         let covers = value.covers_whole(
-                            Loc::Local(local),
+                            Storage::Local(local),
                             value.points_to[dest.local].offset,
                             bytes,
                         );
