@@ -4050,6 +4050,55 @@ struct Answer {
     exit: i32,
     /// Each report: whether it is an error, its code, and its message.
     reports: Vec<(bool, String, String)>,
+    /// Each report as [`compare::diagnostics`] keys it: its level and code,
+    /// whether it was proved, and the line it points at, where it points at
+    /// one. [`aligned`] places the line against another program's.
+    keyed: Vec<(String, bool, Option<usize>)>,
+}
+
+/// Where a report points, against another spelling of the same program:
+/// on a line both share at their start, counted from it; on a line both
+/// share at their end, counted from it; or among the lines that differ,
+/// which put the pointer there. Two routes into one slot differ only in
+/// how they put it, and a report on the same shared line, or anywhere on
+/// the put, is the same report.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum Place {
+    Before(usize),
+    Put,
+    After(usize),
+    Nowhere,
+}
+
+/// `answer`'s reports keyed by level, code, whether proved and [`Place`],
+/// with `source` its program and `other` the program it is compared with,
+/// as a sorted multiset.
+fn aligned(answer: &Answer, source: &str, other: &str) -> Vec<(String, bool, Place)> {
+    let mine: Vec<&str> = source.lines().collect();
+    let theirs: Vec<&str> = other.lines().collect();
+    let before = mine.iter().zip(&theirs).take_while(|(a, b)| a == b).count();
+    let after = mine
+        .iter()
+        .rev()
+        .zip(theirs.iter().rev())
+        .take_while(|(a, b)| a == b)
+        .count()
+        .min(mine.len().min(theirs.len()) - before);
+    let mut keyed: Vec<(String, bool, Place)> = answer
+        .keyed
+        .iter()
+        .map(|(opens, proved, line)| {
+            let place = match *line {
+                None => Place::Nowhere,
+                Some(line) if line <= before => Place::Before(line),
+                Some(line) if line > mine.len() - after => Place::After(mine.len() - line),
+                Some(_) => Place::Put,
+            };
+            (opens.clone(), *proved, place)
+        })
+        .collect();
+    keyed.sort();
+    keyed
 }
 
 impl Answer {
@@ -4156,6 +4205,17 @@ fn ask_with(name: &str, source: &str, safety: &str, extra: &[&str]) -> Answer {
     }
     let _ = std::fs::remove_dir_all(&dir);
     let stderr = String::from_utf8_lossy(&output.stderr);
+    let keyed: Vec<(String, bool, Option<usize>)> = compare::diagnostics(&stderr)
+        .into_iter()
+        .map(|diagnostic| {
+            let line = diagnostic
+                .at
+                .rsplit(':')
+                .nth(1)
+                .and_then(|line| line.parse::<usize>().ok());
+            (diagnostic.opens, diagnostic.proved, line)
+        })
+        .collect();
     let reports = stderr
         .lines()
         .filter_map(|line| {
@@ -4171,7 +4231,11 @@ fn ask_with(name: &str, source: &str, safety: &str, extra: &[&str]) -> Answer {
         .status
         .code()
         .unwrap_or_else(|| panic!("row `{name}`: the compiler was killed by a signal"));
-    Answer { exit, reports }
+    Answer {
+        exit,
+        reports,
+        keyed,
+    }
 }
 
 /// Which side of `row` disagrees with its belief's rule, if either.
@@ -4547,8 +4611,15 @@ const DIFFERED_WHEN_ASKED: &str = "the store and the copy of one pointer still a
 /// #924, stage 2). **Exact in both directions**: a listed row that now
 /// agrees fails too, and its entry goes.
 const COPY_DIFFERS: &[(&str, &str)] = &[
+    ("caller_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
+    ("caller_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
+    ("caller_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("caller_memcpy_d1_one", DIFFERED_WHEN_ASKED),
     ("caller_memcpy_d2_both", DIFFERED_WHEN_ASKED),
     ("caller_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("fresh_memcpy_d0_both", DIFFERED_WHEN_ASKED),
+    ("fresh_memcpy_d0_one", DIFFERED_WHEN_ASKED),
+    ("fresh_memcpy_d1_both", DIFFERED_WHEN_ASKED),
     ("fresh_memcpy_d1_one", DIFFERED_WHEN_ASKED),
     ("fresh_memcpy_d2_both", DIFFERED_WHEN_ASKED),
     ("fresh_memcpy_d2_one", DIFFERED_WHEN_ASKED),
@@ -4630,19 +4701,30 @@ const COPY_DIFFERS: &[(&str, &str)] = &[
     ("stored_out_memcpy_d1_one", DIFFERED_WHEN_ASKED),
     ("stored_out_memcpy_d2_both", DIFFERED_WHEN_ASKED),
     ("stored_out_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("unreplaced_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
+    ("unreplaced_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("unreplaced_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
+    ("unreplaced_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
+    ("unreplaced_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
+    ("unreplaced_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
+    ("unreplaced_memcpy_d0_both", DIFFERED_WHEN_ASKED),
+    ("unreplaced_memcpy_d0_one", DIFFERED_WHEN_ASKED),
+    ("unreplaced_memcpy_d1_both", DIFFERED_WHEN_ASKED),
+    ("unreplaced_memcpy_d1_one", DIFFERED_WHEN_ASKED),
+    ("unreplaced_memcpy_d2_both", DIFFERED_WHEN_ASKED),
+    ("unreplaced_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+    ("width_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
+    ("width_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
+    ("width_memcpy_d0_both", DIFFERED_WHEN_ASKED),
+    ("width_memcpy_d0_one", DIFFERED_WHEN_ASKED),
 ];
 
-/// The codes a run reports, as a set.
-fn codes(answer: &Answer) -> std::collections::BTreeSet<String> {
-    answer
-        .reports
-        .iter()
-        .map(|(_, code, _)| code.clone())
-        .collect()
-}
-
-/// **A whole copy answers as its plain store**: the same codes on the
-/// hazard and on the control, where `COPY_DIFFERS` does not say why not.
+/// **A whole copy answers as its plain store**: the same reports on the
+/// hazard and on the control, each the same code, proved or not alike, and
+/// on the same line or anywhere on the put ([`aligned`]), where
+/// `COPY_DIFFERS` does not say why not. Asked as a set of codes, a copy
+/// that proved what its store only doubted passed (a0e35e92), and so did a
+/// report that moved to another line (#943).
 /// A store and a copy of one pointer were two bodies, and each rule one
 /// learned the other learned later or not at all: `SC0414` by a store and
 /// `SC0407` by the copy of the same pointer, a width asked of a copy into
@@ -4665,10 +4747,39 @@ fn a_whole_copy_answers_as_its_plain_store() {
         };
         let mut differs = vec![];
         for (side, hazard) in [("hazard", true), ("control", false)] {
-            let by_store = codes(&ask(store_name, &program(store, hazard), "memory"));
-            let by_copy = codes(&ask(name, &program(row, hazard), "memory"));
+            let (store_source, copy_source) = (program(store, hazard), program(row, hazard));
+            let by_store = aligned(
+                &ask(store_name, &store_source, "memory"),
+                &store_source,
+                &copy_source,
+            );
+            let by_copy = aligned(
+                &ask(name, &copy_source, "memory"),
+                &copy_source,
+                &store_source,
+            );
             if by_store != by_copy {
                 differs.push(format!("{side}: store {by_store:?}, copy {by_copy:?}"));
+            }
+            // **More certain than its store, listed or not**: a code the
+            // copy proves and the store does not prove anywhere. A listed
+            // row may differ, and nothing then asked how, so a copy that
+            // proved `SC0414` where its store doubted it passed (a0e35e92).
+            let proved = |keyed: &[(String, bool, Place)]| -> std::collections::BTreeSet<String> {
+                keyed
+                    .iter()
+                    .filter(|(_, proved, _)| *proved)
+                    .map(|(opens, _, _)| opens.clone())
+                    .collect()
+            };
+            let surer: Vec<String> = proved(&by_copy)
+                .difference(&proved(&by_store))
+                .cloned()
+                .collect();
+            if !surer.is_empty() {
+                wrong.push(format!(
+                    "{name} ({side}): the copy proves {surer:?}, which its store does not"
+                ));
             }
         }
         let listed = COPY_DIFFERS.iter().any(|(listed, _)| *listed == name);
@@ -4686,7 +4797,7 @@ fn a_whole_copy_answers_as_its_plain_store() {
     }
     assert!(
         wrong.is_empty(),
-        "whole copies that do not answer as COPY_DIFFERS says:
+        "whole copies that do not answer as COPY_DIFFERS says, or prove more than their store:
 {}",
         wrong.join(
             "
