@@ -14,13 +14,15 @@
 //! parameter or a call's result, [`Site::of`] and [`Site::local`] say so
 //! where it happens. See ADR-0063.
 //!
-//! **And one kind of place, [`Loc`], where a question is asked of both.** A
-//! table of places is indexed by a site and by a local alike, so the two
-//! index types guard nothing there; what does is that a reader answering
-//! the two kinds apart is a `match` on [`Loc`], which a third kind would
-//! have to answer. **And what a pointer names, [`Target`]**, a place or
-//! something this check does not model, so that a table of what places
-//! hold has no slot for the second.
+//! **And one kind of storage, [`Storage`], where a question is asked of
+//! both.** A table kept per storage is indexed by a site and by a local
+//! alike, so the two index types guard nothing there; what does is that a
+//! reader answering the two kinds apart is a `match` on [`Storage`], which a
+//! third kind would have to answer. **And what a pointer names,
+//! [`Referent`]**, a storage or something this check does not model, so
+//! that a table of what storage holds has no slot for the second. "Place"
+//! in this module is the IR's [`Place`](crate::ir::Place) and nothing else
+//! (#945).
 
 use std::ops::{Index, IndexMut};
 
@@ -55,34 +57,35 @@ impl Idx for Site {
     }
 }
 
-/// One kind of place: an allocation site or a local, which this check used
-/// to keep in two tables per question and answer twice (#779). **Not the
-/// IR's [`Place`](crate::ir::Place)**, which is a local with a projection
-/// that a statement reads or writes: this is what such a place may name.
+/// Where bytes are kept: an allocation site or a local, which this check
+/// used to keep in two tables per question and answer twice (#779). **Not
+/// the IR's [`Place`](crate::ir::Place)**, which is a local with a
+/// projection that a statement reads or writes: this is what such a place
+/// may name.
 ///
 /// **Interleaved**, `Heap(s)` at `2s` and `Local(l)` at `2l + 1`, so that a
-/// [`Table`] of places needs no count of locals to be indexed and takes the
+/// [`Table`] per storage needs no count of locals to be indexed and takes the
 /// memory the two tables took. A reader that answers the two kinds
 /// differently is a `match` on it, so a kind added is `error[E0004]` at
 /// each. See ADR-0063.
 ///
 /// **Storage, and nothing a pointer merely names**: what is written, how
 /// wide it is, what part of a pointer it holds. What a pointer may name is
-/// a [`Target`], which has a third kind, the place this check does not
-/// model. Kept as one type, a table of what a place holds had a slot per
+/// a [`Referent`], which has a third kind, what this check does not
+/// model. Kept as one type, a table of what storage holds had a slot per
 /// reason this check does not model, which no reader asked and any could
-/// have written, and every reader of the places a pointer names filtered
+/// have written, and every reader of the storage a pointer names filtered
 /// the unknown ones out by hand (the memory model rebuilt on #924, found by
 /// the architecture review of 2026-11-13).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub(super) enum Loc {
+pub(super) enum Storage {
     /// An allocation site.
     Heap(Site),
     /// A local.
     Local(LocalIdx),
 }
 
-/// **What a pointer may name**: a place, or something this check does not
+/// **What a pointer may name**: a storage, or something this check does not
 /// model, for the reason [`Why`] gives. A member of a points-to set like
 /// any other, so a value that may name what was not recorded says so by
 /// what it names, joined and poured with the rest of the set rather than by
@@ -90,9 +93,9 @@ pub(super) enum Loc {
 /// stage 1). And what code this check cannot read may hold,
 /// `Known::exposed`, a lost value among it.
 ///
-/// `Unknown(why)` at `why`, then a [`Loc`] at its own index past them all.
+/// `Unknown(why)` at `why`, then a [`Storage`] at its own index past them all.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub(super) enum Target {
+pub(super) enum Referent {
     /// An allocation site.
     Heap(Site),
     /// A local.
@@ -122,8 +125,8 @@ macro_rules! reasons {
 }
 
 reasons! {
-/// Why a value may name a place this check does not model. Each is a place
-/// a value may name, `Target::Unknown(why)`, and was a mark of its own
+/// Why a value may name what this check does not model. Each is a referent
+/// a value may name, `Referent::Unknown(why)`, and was a mark of its own
 /// before it was one.
 enum Why {
     /// An allocation this check can no longer name.
@@ -233,213 +236,214 @@ enum Why {
 }
 }
 
-impl Loc {
-    /// How many places a function with `locals` locals has: a site and a
+impl Storage {
+    /// How many storages a function with `locals` locals has: a site and a
     /// local per local, since a site is named by the local it landed in.
     pub(super) fn count(locals: usize) -> usize {
         2 * locals
     }
 }
 
-impl Idx for Loc {
+impl Idx for Storage {
     fn index(self) -> usize {
         match self {
-            Loc::Heap(site) => 2 * site.index(),
-            Loc::Local(local) => 2 * local.index() + 1,
+            Storage::Heap(site) => 2 * site.index(),
+            Storage::Local(local) => 2 * local.index() + 1,
         }
     }
     fn at(position: usize) -> Self {
         if position % 2 == 0 {
-            Loc::Heap(Site::at(position / 2))
+            Storage::Heap(Site::at(position / 2))
         } else {
-            Loc::Local(LocalIdx::at(position / 2))
+            Storage::Local(LocalIdx::at(position / 2))
         }
     }
 }
 
-impl Target {
+impl Referent {
     /// The site this names, if it is one.
     pub(super) fn site(self) -> Option<Site> {
         match self {
-            Target::Heap(site) => Some(site),
-            Target::Local(_) | Target::Unknown(_) => None,
+            Referent::Heap(site) => Some(site),
+            Referent::Local(_) | Referent::Unknown(_) => None,
         }
     }
 
     /// The local this names, if it is one.
     pub(super) fn local(self) -> Option<LocalIdx> {
         match self {
-            Target::Heap(_) | Target::Unknown(_) => None,
-            Target::Local(local) => Some(local),
+            Referent::Heap(_) | Referent::Unknown(_) => None,
+            Referent::Local(local) => Some(local),
         }
     }
 
-    /// The place this names, if it is one this check models.
-    pub(super) fn place(self) -> Option<Loc> {
+    /// The storage this names, if it is one this check models.
+    pub(super) fn storage(self) -> Option<Storage> {
         match self {
-            Target::Heap(site) => Some(Loc::Heap(site)),
-            Target::Local(local) => Some(Loc::Local(local)),
-            Target::Unknown(_) => None,
+            Referent::Heap(site) => Some(Storage::Heap(site)),
+            Referent::Local(local) => Some(Storage::Local(local)),
+            Referent::Unknown(_) => None,
         }
     }
 
-    /// How many targets a function with `locals` locals has: one unknown
-    /// place per [`Why`], then every [`Loc`].
+    /// How many referents a function with `locals` locals has: one unknown
+    /// referent per [`Why`], then every [`Storage`].
     pub(super) fn count(locals: usize) -> usize {
-        Why::ALL.len() + Loc::count(locals)
+        Why::ALL.len() + Storage::count(locals)
     }
 }
 
-impl From<Loc> for Target {
-    fn from(place: Loc) -> Target {
-        match place {
-            Loc::Heap(site) => Target::Heap(site),
-            Loc::Local(local) => Target::Local(local),
+impl From<Storage> for Referent {
+    fn from(storage: Storage) -> Referent {
+        match storage {
+            Storage::Heap(site) => Referent::Heap(site),
+            Storage::Local(local) => Referent::Local(local),
         }
     }
 }
 
-impl Idx for Target {
+impl Idx for Referent {
     fn index(self) -> usize {
         match self {
-            Target::Unknown(why) => why as usize,
-            Target::Heap(site) => Why::ALL.len() + Loc::Heap(site).index(),
-            Target::Local(local) => Why::ALL.len() + Loc::Local(local).index(),
+            Referent::Unknown(why) => why as usize,
+            Referent::Heap(site) => Why::ALL.len() + Storage::Heap(site).index(),
+            Referent::Local(local) => Why::ALL.len() + Storage::Local(local).index(),
         }
     }
     fn at(position: usize) -> Self {
         match position.checked_sub(Why::ALL.len()) {
-            Some(position) => Target::from(Loc::at(position)),
-            None => Target::Unknown(Why::ALL[position]),
+            Some(position) => Referent::from(Storage::at(position)),
+            None => Referent::Unknown(Why::ALL[position]),
         }
     }
 }
 
 /// An index a table is kept by that has a slot for every site and every
-/// local: [`Loc`] and [`Target`]. So that a table of either is read by the
-/// kind of place a reader holds, through one set of impls rather than two.
-pub(super) trait ByPlace: Idx {
-    /// Where the places start, past what is not one.
-    const PLACES_FROM: usize;
-    /// This index for a place.
-    fn of_place(place: Loc) -> Self;
+/// local: [`Storage`] and [`Referent`]. So that a table of either is read by the
+/// kind of storage a reader holds, through one set of impls rather than two.
+pub(super) trait ByStorage: Idx {
+    /// Where the storages start, past what is not one.
+    const STORAGE_FROM: usize;
+    /// This index for a storage.
+    fn of_storage(storage: Storage) -> Self;
 }
 
-impl ByPlace for Loc {
-    const PLACES_FROM: usize = 0;
-    fn of_place(place: Loc) -> Self {
-        place
+impl ByStorage for Storage {
+    const STORAGE_FROM: usize = 0;
+    fn of_storage(storage: Storage) -> Self {
+        storage
     }
 }
 
-impl ByPlace for Target {
-    const PLACES_FROM: usize = Why::ALL.len();
-    fn of_place(place: Loc) -> Self {
-        Target::from(place)
+impl ByStorage for Referent {
+    const STORAGE_FROM: usize = Why::ALL.len();
+    fn of_storage(storage: Storage) -> Self {
+        Referent::from(storage)
     }
 }
 
-/// A table of places, read by the kind of place a reader holds: a site, a
+/// A table per storage, read by the kind of storage a reader holds: a site, a
 /// local, or the IR's own name for a local. One table where there were two
 /// (#779), so a reader of a site and a reader of a local read the same
 /// memory, each through its own index type.
 ///
 /// An inherent impl per index, by a macro, since one generic over
-/// [`ByPlace`] would be reachable wider than the trait is.
-macro_rules! places_of {
+/// [`ByStorage`] would be reachable wider than the trait is.
+macro_rules! storage_of {
     ($index:ty) => {
         impl<T> Table<$index, T> {
             /// Every site the table has, in order.
             pub(super) fn sites(&self) -> impl Iterator<Item = Site> + use<T> {
-                (0..(self.len() - <$index as ByPlace>::PLACES_FROM) / 2).map(Site::at)
+                (0..(self.len() - <$index as ByStorage>::STORAGE_FROM) / 2).map(Site::at)
             }
 
             /// Every local the table has, in order.
             pub(super) fn locals(&self) -> impl Iterator<Item = LocalIdx> + use<T> {
-                (0..(self.len() - <$index as ByPlace>::PLACES_FROM) / 2).map(LocalIdx::at)
+                (0..(self.len() - <$index as ByStorage>::STORAGE_FROM) / 2).map(LocalIdx::at)
             }
         }
     };
 }
 
-places_of!(Loc);
-places_of!(Target);
+storage_of!(Storage);
+storage_of!(Referent);
 
-impl<P: ByPlace, T> Index<Site> for Table<P, T> {
+impl<P: ByStorage, T> Index<Site> for Table<P, T> {
     type Output = T;
     fn index(&self, site: Site) -> &T {
-        &self[P::of_place(Loc::Heap(site))]
+        &self[P::of_storage(Storage::Heap(site))]
     }
 }
 
-impl<P: ByPlace, T> IndexMut<Site> for Table<P, T> {
+impl<P: ByStorage, T> IndexMut<Site> for Table<P, T> {
     fn index_mut(&mut self, site: Site) -> &mut T {
-        &mut self[P::of_place(Loc::Heap(site))]
+        &mut self[P::of_storage(Storage::Heap(site))]
     }
 }
 
-impl<P: ByPlace, T> Index<LocalIdx> for Table<P, T> {
+impl<P: ByStorage, T> Index<LocalIdx> for Table<P, T> {
     type Output = T;
     fn index(&self, local: LocalIdx) -> &T {
-        &self[P::of_place(Loc::Local(local))]
+        &self[P::of_storage(Storage::Local(local))]
     }
 }
 
-impl<P: ByPlace, T> IndexMut<LocalIdx> for Table<P, T> {
+impl<P: ByStorage, T> IndexMut<LocalIdx> for Table<P, T> {
     fn index_mut(&mut self, local: LocalIdx) -> &mut T {
-        &mut self[P::of_place(Loc::Local(local))]
+        &mut self[P::of_storage(Storage::Local(local))]
     }
 }
 
-impl<P: ByPlace, T> Index<LocalId> for Table<P, T> {
+impl<P: ByStorage, T> Index<LocalId> for Table<P, T> {
     type Output = T;
     fn index(&self, local: LocalId) -> &T {
-        &self[P::of_place(Loc::Local(LocalIdx::of(local)))]
+        &self[P::of_storage(Storage::Local(LocalIdx::of(local)))]
     }
 }
 
-impl<P: ByPlace, T> IndexMut<LocalId> for Table<P, T> {
+impl<P: ByStorage, T> IndexMut<LocalId> for Table<P, T> {
     fn index_mut(&mut self, local: LocalId) -> &mut T {
-        &mut self[P::of_place(Loc::Local(LocalIdx::of(local)))]
+        &mut self[P::of_storage(Storage::Local(LocalIdx::of(local)))]
     }
 }
 
-impl<P: ByPlace, T> Index<&LocalId> for Table<P, T> {
+impl<P: ByStorage, T> Index<&LocalId> for Table<P, T> {
     type Output = T;
     fn index(&self, local: &LocalId) -> &T {
-        &self[P::of_place(Loc::Local(LocalIdx::of(local)))]
+        &self[P::of_storage(Storage::Local(LocalIdx::of(local)))]
     }
 }
 
-impl<P: ByPlace, T> IndexMut<&LocalId> for Table<P, T> {
+impl<P: ByStorage, T> IndexMut<&LocalId> for Table<P, T> {
     fn index_mut(&mut self, local: &LocalId) -> &mut T {
-        &mut self[P::of_place(Loc::Local(LocalIdx::of(local)))]
+        &mut self[P::of_storage(Storage::Local(LocalIdx::of(local)))]
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Idx, LocalIdx, Site, Target, Why};
+    use super::{Idx, LocalIdx, Referent, Site, Why};
 
-    /// Every target has an index of its own, and the round trip through it is
-    /// the identity: an unknown place for each reason, then a site and a local
-    /// per local. Mutation: give `Target::Unknown` an index of `why as usize + 1`;
+    /// Every referent has an index of its own, and the round trip through it is
+    /// the identity: an unknown referent for each reason, then a site and a local
+    /// per local. Mutation: give `Referent::Unknown` an index of `why as usize + 1`;
     /// this fails, as a reason sharing the first site's index once did.
     #[test]
-    fn every_place_has_an_index_of_its_own() {
-        let mut places: Vec<Target> = Why::ALL.iter().map(|&why| Target::Unknown(why)).collect();
+    fn every_referent_has_an_index_of_its_own() {
+        let mut places: Vec<Referent> =
+            Why::ALL.iter().map(|&why| Referent::Unknown(why)).collect();
         for at in 0..3 {
-            places.push(Target::Heap(Site::at(at)));
-            places.push(Target::Local(LocalIdx::at(at)));
+            places.push(Referent::Heap(Site::at(at)));
+            places.push(Referent::Local(LocalIdx::at(at)));
         }
         let indices: Vec<usize> = places.iter().map(|&place| place.index()).collect();
         for (place, &index) in places.iter().zip(&indices) {
-            assert_eq!(Target::at(index), *place);
+            assert_eq!(Referent::at(index), *place);
         }
         let mut sorted = indices.clone();
         sorted.sort_unstable();
         sorted.dedup();
         assert_eq!(sorted.len(), indices.len(), "{indices:?}");
-        assert_eq!(Target::count(3), indices.len());
+        assert_eq!(Referent::count(3), indices.len());
     }
 }

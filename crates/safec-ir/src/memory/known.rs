@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::ir::{LocalId, Operand, Place, TyId};
 use crate::source::{SourceMap, Span};
 
-use super::index::{Loc, LocalIdx, Site, Table, Target};
+use super::index::{LocalIdx, Referent, Site, Storage, Table};
 use super::parts::{
     At, Cell, Earliest, Extent, Held, Init, Kept, Levels, PendingRead, PlaceInit, Reached, Read,
     ReadKey, Realloced, SiteState, Width, read_key,
@@ -89,7 +89,7 @@ pub(super) struct Known {
     /// ADR-0057.
     ///
     /// **And whether a value this check lost has been handed to such a
-    /// call**, which may have kept it: `exposed[Target::Unknown(Why::Lost)]`,
+    /// call**, which may have kept it: `exposed[Referent::Unknown(Why::Lost)]`,
     /// the lost value being one more thing such code may hold. A lost value
     /// names no site, so nothing of it is exposed otherwise, and the result
     /// of a later such call, which holds every exposed site, carried nothing
@@ -102,7 +102,7 @@ pub(super) struct Known {
     /// (#515). See ADR-0045. **A slot of this table, not a field beside
     /// it**, as it was until the memory model was rebuilt on #924: the two
     /// were joined, cleared and read by separate lines that said the same.
-    pub(super) exposed: Table<Target, bool>,
+    pub(super) exposed: Table<Referent, bool>,
     /// Per site, what its memory holds: the cell, a [`Held`] read as the
     /// value a pointer stored there may be, and [`Held::none`] where nothing
     /// was stored (#780). A store pours into it by [`Cell::absorb`]; a load
@@ -203,9 +203,9 @@ pub(super) struct Known {
     /// on a pointer holding it says whether it succeeded. See [`Realloced`]
     /// and ADR-0039.
     pub(super) realloced: Table<Site, Option<Realloced>>,
-    /// **Whether each place was written, one record per place, whole or per
-    /// slot** ([`PlaceInit`], ADR-0092 rule 3), its whole answer what is said
-    /// below of a place.
+    /// **Whether each storage was written, one record per storage, whole or
+    /// per slot** ([`PlaceInit`], ADR-0092 rule 3), its whole answer what is
+    /// said below of a storage.
     ///
     /// Per site, whether it is an allocation `malloc` or `aligned_alloc` made
     /// and nothing has written since: [`Init::Unwritten`] on every path, and
@@ -323,7 +323,7 @@ pub(super) struct Known {
     /// block kept whole may have missed the rest of it (#918's review). Kept
     /// inline, whole or per slot, with where its unwritten bytes came from
     /// (#752). See ADR-0081.
-    pub(super) written: Table<Loc, PlaceInit>,
+    pub(super) written: Table<Storage, PlaceInit>,
     /// What has been read through a pointer since the last sequence point.
     ///
     /// **Ordered containers because a lattice value has to be canonical, and
@@ -364,11 +364,11 @@ pub(super) struct Known {
     /// object it reaches. See ADR-0060.
     ///
     /// **And per local, its size on this target**, in the same table: one
-    /// kind of place (#779). [`Extent::Exactly`] where the local has a size
+    /// kind of storage (#779). [`Extent::Exactly`] where the local has a size
     /// and `None` where it has none, written where the function starts and
     /// never after, since a local is the one object its name stands for. What
     /// [`Held::recorded_width`] reads a local's address at.
-    pub(super) extent: Table<Loc, Option<Extent>>,
+    pub(super) extent: Table<Storage, Option<Extent>>,
     /// Per local, how many bytes a pointer a call may write into it is
     /// believed to point at, at most: the narrowest width the parameters
     /// it was handed through believe at its level, and `0` where one was a
@@ -475,7 +475,7 @@ pub(super) struct Known {
     /// side's type said then. **Or into a block it was copied or
     /// `realloc`ed from**, whose bytes this one now holds: the record is
     /// carried to the new block (#905, ADR-0088). **A local's too**, by
-    /// `Loc`, so a stack buffer between two copies, or a partial copy made
+    /// `Storage`, so a stack buffer between two copies, or a partial copy made
     /// straight into one, carries it on (#908, ADR-0090).
     ///
     /// **Asked where the block is later held as memory of pointers**: where
@@ -494,7 +494,7 @@ pub(super) struct Known {
     /// Asked by the kept one, a loop that allocated, read a whole pointer,
     /// and only then copied part of one into the block was doubted at the
     /// copy every turn, found by review. One value for the two (#934).
-    pub(super) part_written: Table<Loc, Earliest>,
+    pub(super) part_written: Table<Storage, Earliest>,
     /// Per local, each type a call this check cannot read reached it as on
     /// the walk a departure takes, where that type is untyped somewhere
     /// below: `void`, `char` or `int` bytes, a pointer whose chain ends in
@@ -523,11 +523,11 @@ pub(super) struct Known {
     /// ADR-0060.
     ///
     /// **And per site, each type such a call reached the memory it names
-    /// as**, in the same table: one kind of place (#779). `keep(m); *m = &w;
+    /// as**, in the same table: one kind of storage (#779). `keep(m); *m = &w;
     /// other();` may write `w`. Kept where the site is made again
     /// (`Self::reborn`), as `names` is, since the old allocation's address
     /// may still be held and the slots of the two are not told apart.
-    pub(super) handed_untyped: Table<Loc, Vec<Option<TyId>>>,
+    pub(super) handed_untyped: Table<Storage, Vec<Option<TyId>>>,
 }
 
 impl Known {
@@ -540,19 +540,21 @@ impl Known {
     /// pointer into it, keeping the earlier of what was there: one body for
     /// the copy that writes it and the copy and `realloc` that carry it, so
     /// the three join it alike. See [`Self::part_written`] and ADR-0088.
-    pub(super) fn note_part_written(&mut self, sources: &SourceMap, site: Loc, copy: Span) {
+    pub(super) fn note_part_written(&mut self, sources: &SourceMap, site: Storage, copy: Span) {
         self.part_written[site].note(sources, copy);
     }
 
     /// What was stored through a pointer naming any of `places` is no longer
     /// what a read through it reads, since a write of part of a pointer
     /// landed over it there. See `Held::stored_through`.
-    pub(super) fn written_over(&mut self, places: &[Loc]) {
+    pub(super) fn written_over(&mut self, places: &[Storage]) {
         for held in self.points_to.iter_mut() {
-            let names = held.sites().any(|site| places.contains(&Loc::Heap(site)))
+            let names = held
+                .sites()
+                .any(|site| places.contains(&Storage::Heap(site)))
                 || held
                     .locals()
-                    .any(|local| places.contains(&Loc::Local(local)));
+                    .any(|local| places.contains(&Storage::Local(local)));
             if names {
                 held.stored_through = false;
             }
@@ -562,7 +564,12 @@ impl Known {
     /// Carry what `from` recorded to every site in `to`, as a copy or a
     /// `realloc` moves the bytes: each record from its own, so that what a
     /// read here asks comes only from blocks made since (ADR-0088).
-    pub(super) fn carry_part_written(&mut self, sources: &SourceMap, from: &[Loc], to: &[Loc]) {
+    pub(super) fn carry_part_written(
+        &mut self,
+        sources: &SourceMap,
+        from: &[Storage],
+        to: &[Storage],
+    ) {
         let mut carried = Earliest::none();
         for &block in from {
             carried.join(sources, self.part_written[block]);
@@ -1802,7 +1809,7 @@ impl Known {
     /// pointer that may name something else as well, so it may have written
     /// another in its place: every pointer it can find, `handed` and those
     /// stored in what is exposed, asked what it names, and a local named
-    /// beside another place by each one that names it at all. **A pointer
+    /// beside another storage by each one that names it at all. **A pointer
     /// that may name two places writes one of them.** `fill(p)` with `p`
     /// either `&a` or `&b` was believed to write both, and a read of `a`
     /// built silent where the store `*p = &x;` is `SC0411`. Found by the
@@ -2505,7 +2512,7 @@ impl Known {
     /// **The one answer the store and the library copy both ask** (#926):
     /// spelled at each door, the copy kept believing a block it wrote one
     /// slot of written whole after the store had stopped (#925).
-    pub(super) fn covers_whole(&self, at: Loc, offset: At, width: Option<u64>) -> bool {
+    pub(super) fn covers_whole(&self, at: Storage, offset: At, width: Option<u64>) -> bool {
         match self.extent[at] {
             Some(Extent::Exactly(size)) => {
                 !matches!(offset, At::Moved | At::Bytes(1..))

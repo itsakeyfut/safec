@@ -13,7 +13,7 @@ use crate::source::Span;
 use super::allocations::{Allocations, handed_places, innermost_element, stored_pointer};
 use super::built::{named, replaced_by};
 use super::fit::{Fit, fits, read_from_locals, slots_from, slots_leaving};
-use super::index::{Idx, Loc, LocalIdx, Site, Table, Target, Why};
+use super::index::{Idx, LocalIdx, Referent, Site, Storage, Table, Why};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
@@ -360,7 +360,7 @@ impl Allocations<'_> {
         };
         if hands_a_lost_value {
             value.lost_may_be_gone();
-            value.exposed[Target::Unknown(Why::Lost)] = true;
+            value.exposed[Referent::Unknown(Why::Lost)] = true;
         }
 
         let may_free = match kind {
@@ -779,16 +779,16 @@ impl Allocations<'_> {
                             // recorded nothing (#908). See ADR-0090.
                             let (from_sites, from_locals) =
                                 value.levels_below(source.local, from_depth);
-                            let from: Vec<Loc> = from_sites
+                            let from: Vec<Storage> = from_sites
                                 .into_iter()
-                                .map(Loc::Heap)
-                                .chain(from_locals.into_iter().map(Loc::Local))
+                                .map(Storage::Heap)
+                                .chain(from_locals.into_iter().map(Storage::Local))
                                 .collect();
-                            let to: Vec<Loc> = landing
+                            let to: Vec<Storage> = landing
                                 .containers
                                 .iter()
-                                .map(|&site| Loc::Heap(site))
-                                .chain(landing.targets.iter().map(|&local| Loc::Local(local)))
+                                .map(|&site| Storage::Heap(site))
+                                .chain(landing.targets.iter().map(|&local| Storage::Local(local)))
                                 .collect();
                             // Whether this copy writes a record, by carrying
                             // one or by being partial, for the reset below.
@@ -818,7 +818,7 @@ impl Allocations<'_> {
                             // `*p = x; memcpy(buf, &i, 4); s = *p;` read half a
                             // pointer in silence, for a block as for a local,
                             // found by review. See `Held::stored_through`.
-                            let recorded: Vec<Loc> = to
+                            let recorded: Vec<Storage> = to
                                 .iter()
                                 .copied()
                                 .filter(|&at| value.part_written[at].now().is_some())
@@ -1928,7 +1928,11 @@ impl Allocations<'_> {
                     // **And whether a copy wrote part of a pointer into
                     // it**, the bytes it moves: `n = realloc(m, 8); void
                     // **q = n; *pp = q;` built silent (#905). See ADR-0088.
-                    value.carry_part_written(self.sources, &[Loc::Heap(old)], &[Loc::Heap(site)]);
+                    value.carry_part_written(
+                        self.sources,
+                        &[Storage::Heap(old)],
+                        &[Storage::Heap(site)],
+                    );
                     let held = value.contents[old].clone();
                     value.pour(&[site], &held, &[]);
                 }
@@ -1987,7 +1991,7 @@ impl Allocations<'_> {
                 // `stash(u); free(u); r = fetch(); *r` and `release_all()` in
                 // place of the free read in silence, since nothing after the
                 // call made it lost. Found by review. See ADR-0045.
-                if value.exposed[Target::Unknown(Why::Lost)] {
+                if value.exposed[Referent::Unknown(Why::Lost)] {
                     value.points_to[result].lost_its_allocation();
                 }
                 let exposed: Vec<Site> = value
@@ -2324,14 +2328,14 @@ impl Allocations<'_> {
             (believed, false)
         } else {
             old.iter().fold((u64::MAX, true), |(least, exact), &old| {
-                match value.extent[Loc::Heap(old)] {
+                match value.extent[Storage::Heap(old)] {
                     Some(Extent::Exactly(size)) => (least.min(size), exact),
                     Some(Extent::AtLeast(size)) => (least.min(size), false),
                     None => (0, false),
                 }
             })
         };
-        let new = match value.extent[Loc::Heap(site)] {
+        let new = match value.extent[Storage::Heap(site)] {
             Some(Extent::Exactly(size)) => Some(size),
             Some(Extent::AtLeast(_)) | None => None,
         };

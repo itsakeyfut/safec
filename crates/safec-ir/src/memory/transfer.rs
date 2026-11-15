@@ -16,7 +16,7 @@ use super::LostReason;
 use super::allocations::{Allocations, innermost_element, stored_pointer};
 use super::built::{built_from, named};
 use super::fit::{Fit, fits};
-use super::index::{Idx, Loc, LocalIdx, Site, Table, Target};
+use super::index::{Idx, LocalIdx, Referent, Site, Storage, Table};
 use super::init::Wrote;
 use super::known::{ELEMENTS_KEPT, Known};
 use super::parts::{
@@ -461,11 +461,11 @@ impl Allocations<'_> {
             0 => {}
             1 => self.note_part_of_a_pointer(landing.pointer, at, value),
             _ => {
-                let places: Vec<Loc> = landing
+                let places: Vec<Storage> = landing
                     .containers
                     .iter()
-                    .map(|&site| Loc::Heap(site))
-                    .chain(landing.targets.iter().map(|&local| Loc::Local(local)))
+                    .map(|&site| Storage::Heap(site))
+                    .chain(landing.targets.iter().map(|&local| Storage::Local(local)))
                     .collect();
                 self.note_less_than_a_pointer(places, at, value);
             }
@@ -478,10 +478,10 @@ impl Allocations<'_> {
     /// See [`Self::note_landing_in_part`].
     pub(super) fn note_part_of_a_pointer(&self, local: LocalId, at: Span, value: &mut Known) {
         let held = &value.points_to[local];
-        let places: Vec<Loc> = held
+        let places: Vec<Storage> = held
             .sites()
-            .map(Loc::Heap)
-            .chain(held.locals().map(Loc::Local))
+            .map(Storage::Heap)
+            .chain(held.locals().map(Storage::Local))
             .collect();
         self.note_less_than_a_pointer(places, at, value);
     }
@@ -493,10 +493,10 @@ impl Allocations<'_> {
     /// noted different places, and `c[0] = one;`, `memset(c, 1, 1);` and
     /// `memcpy(c, &one, 1);` over one stored pointer gave three answers.
     ///
-    /// **Every place not known to be narrower than a pointer**, which holds
+    /// **Every storage not known to be narrower than a pointer**, which holds
     /// no pointer to be part of: noted, `memcpy(&k, &i, 4)` of an `int` into
     /// an `int` moved the report off the copy that wrote half a pointer,
-    /// found by review. A place of no constant size may hold one, and is
+    /// found by review. A storage of no constant size may hold one, and is
     /// noted, whatever the write's position.
     ///
     /// **And what was stored through a pointer there is no longer what a
@@ -504,14 +504,14 @@ impl Allocations<'_> {
     /// block read half of `x` in silence, found while measuring #917.
     pub(super) fn note_less_than_a_pointer(
         &self,
-        places: impl IntoIterator<Item = Loc>,
+        places: impl IntoIterator<Item = Storage>,
         at: Span,
         value: &mut Known,
     ) {
         let target = self.unit.target();
         let pointer = u64::from(target.pointer_bits() / target.char().bits());
         let narrower = |extent: Option<Extent>| matches!(extent, Some(Extent::Exactly(size)) if size < pointer);
-        let places: Vec<Loc> = places
+        let places: Vec<Storage> = places
             .into_iter()
             .filter(|&place| !narrower(value.extent[place]))
             .collect();
@@ -656,7 +656,7 @@ impl Allocations<'_> {
         held: &mut Held,
         from: TyId,
         to: TyId,
-        extent: &Table<Loc, Option<Extent>>,
+        extent: &Table<Storage, Option<Extent>>,
     ) {
         let (Ty::Pointer(from), Ty::Pointer(to)) = (self.unit.ty(from), self.unit.ty(to)) else {
             return;
@@ -681,8 +681,8 @@ impl Allocations<'_> {
         let whole = row.start == 0
             && held
                 .sites()
-                .map(Loc::Heap)
-                .chain(held.locals().map(Loc::Local))
+                .map(Storage::Heap)
+                .chain(held.locals().map(Storage::Local))
                 .all(|place| extent[place].is_some_and(|extent| extent.lower() == row.len));
         held.row = (!whole).then_some(row);
     }
@@ -1826,11 +1826,11 @@ impl Allocations<'_> {
         for place in written.indices() {
             let there = &from.written[place];
             let site = match place {
-                Loc::Local(_) => {
+                Storage::Local(_) => {
                     written[place].join(there, back);
                     continue;
                 }
-                Loc::Heap(site) => site,
+                Storage::Heap(site) => site,
             };
             let here = &written[place];
             let (whole_here, whole_there) = (here.whole(), there.whole());
@@ -2281,7 +2281,7 @@ impl Analysis for Allocations<'_> {
             // parameter included: what a caller holds is its own local.
             escaped: Table::filled(false, self.locals),
             handed_away: Table::filled(false, self.locals),
-            exposed: Table::filled(false, Target::count(self.locals)),
+            exposed: Table::filled(false, Referent::count(self.locals)),
             contents: Table::filled(Cell::none(self.locals), self.locals),
             realloced: Table::filled(None, self.locals),
             // Nothing has been read yet, so there is nothing a free could be
@@ -2293,7 +2293,7 @@ impl Analysis for Allocations<'_> {
             // is the size its type is. See `Known::extent`.
             extent: {
                 let function = self.unit.function(self.function);
-                let mut extent = Table::filled(None, Loc::count(self.locals));
+                let mut extent = Table::filled(None, Storage::count(self.locals));
                 for local in function.locals() {
                     extent[local] = self
                         .unit
@@ -2304,15 +2304,17 @@ impl Analysis for Allocations<'_> {
             },
             // Nothing stored and nothing handed to a call yet.
             handed_at_most: Table::filled(Levels::default(), self.locals),
-            // Every place written but the locals `unwritten_at_entry` names,
+            // Every storage written but the locals `unwritten_at_entry` names,
             // every local but a parameter: a parameter's memory is the
             // caller's, which may have written it, and an allocation is made
             // fresh where it is made. **Per slot for a local array kept so**
             // (`Self::elements_at_entry`), and whole for every other place.
             written: {
                 let unwritten = self.unwritten_at_entry();
-                let mut written: Table<Loc, PlaceInit> =
-                    Table::filled(PlaceInit::whole_of(Init::Written), Loc::count(self.locals));
+                let mut written: Table<Storage, PlaceInit> = Table::filled(
+                    PlaceInit::whole_of(Init::Written),
+                    Storage::count(self.locals),
+                );
                 for (local, slots) in written.locals().zip(self.elements_at_entry()) {
                     written[local] = if slots.len() > 0 {
                         PlaceInit::slots_of(slots)
@@ -2331,9 +2333,9 @@ impl Analysis for Allocations<'_> {
             stored_out: Table::filled(Earliest::none(), self.locals),
             left_at: Table::filled(None, self.locals),
             held_levels: Table::filled(0, self.locals),
-            part_written: Table::filled(Earliest::none(), Loc::count(self.locals)),
+            part_written: Table::filled(Earliest::none(), Storage::count(self.locals)),
             // No call has been handed anything yet.
-            handed_untyped: Table::filled(Vec::new(), Loc::count(self.locals)),
+            handed_untyped: Table::filled(Vec::new(), Storage::count(self.locals)),
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -2452,7 +2454,7 @@ impl Analysis for Allocations<'_> {
         for place in into.written.indices() {
             // **Not a site the paths into the loop did not name**, which the
             // back edge made and nothing before it wrote.
-            if let Loc::Heap(site) = place {
+            if let Storage::Heap(site) = place {
                 if matches!(before.state[site], SiteState::Unheld) {
                     continue;
                 }

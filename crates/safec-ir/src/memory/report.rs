@@ -21,7 +21,7 @@ use super::fit::{
     Fit, fits, fits_as_bytes, folded, only_if_certain, pointee, pointee_width, read_from_locals,
     slots_leaving, through_locals,
 };
-use super::index::{Idx, Loc, LocalIdx, Site};
+use super::index::{Idx, LocalIdx, Site, Storage};
 use super::known::Known;
 use super::parts::{At, Extent, Freeing, Levels, Reached, Read, SiteState, Width, earlier, same};
 use super::store::{StoreKind, Written};
@@ -1906,7 +1906,7 @@ pub(super) fn departed_at_call(
             named.extend(known.held_below(below, levels.saturating_sub(1)));
             ask_partial(
                 PartialDoor::Call,
-                named.into_iter().map(Loc::Heap),
+                named.into_iter().map(Storage::Heap),
                 findings,
                 analysis,
                 known,
