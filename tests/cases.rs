@@ -1863,6 +1863,9 @@ cases! {
         // Mutation: drop the bound by the local's own type in the copy
         // arm; the `SC0412` at `*w` goes.
         a_pointer_copied_into_a_narrower_local_is_believed_no_wider_than_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: bound a copy into a `void *` local by nothing; the
+        // `SC0412` at `*w` goes.
+        a_pointer_copied_into_a_void_pointer_out_of_memory_nothing_wrote_is_doubted_where_read_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `|| *foreign` dropped from
         // `Beyond::believed_to_reach_only_its_edges`; the `SC0411` becomes an
         // `SC0406`.
