@@ -348,6 +348,12 @@ enum Field {
 /// account of what it does not hold, rather than a silence.
 const PENDING: &str = "no belief yet: the corpus holds it, and its rows land with the next change to it (ADR-0091 rule 2)";
 
+/// Why a field about what one expression has done is exempt: reads,
+/// calls and exposures between two sequence points (ADR-0042), which a
+/// route, one write and one read in statements of their own, never leaves
+/// unsequenced.
+const UNSEQUENCED: &str = "a fact about what is unsequenced inside one expression (ADR-0042), and each route is statements of its own, so no row leaves a read and a call unsequenced";
+
 /// Where a field of `Known` starts at a function's entry (ADR-0091 rule 3).
 enum Start {
     /// At the value that doubts: what it says makes the check report rather
@@ -399,10 +405,18 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
             "a parameter's site is live: a caller that passes a freed pointer is asked so at its call",
         ),
     ),
-    ("escaped", Field::Exempt(PENDING), Start::Quiet(NOTHING_YET)),
+    (
+        "escaped",
+        Field::Exempt(
+            "set by taking a local's address, which every route through an address does on the hazard and the control alike, so no row tells it apart",
+        ),
+        Start::Quiet(NOTHING_YET),
+    ),
     (
         "handed_away",
-        Field::Exempt(PENDING),
+        Field::Exempt(
+            "set only where a call this check cannot read is certainly handed a local's address as an argument, which no route into memory does",
+        ),
         Start::Quiet(NOTHING_YET),
     ),
     // Every site a parameter stands for that this check exposes, since the
@@ -418,7 +432,9 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
     ),
     (
         "realloced",
-        Field::Exempt(PENDING),
+        Field::Exempt(
+            "what a `realloc` was handed until a branch says whether it succeeded (ADR-0039); the `Realloc` routes test their result at once, so no row reads it unsettled, and the corpus does",
+        ),
         Start::Quiet(NOTHING_YET),
     ),
     // Every local `unwritten_at_entry` names unwritten. A parameter's memory
@@ -428,29 +444,43 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
         Field::Belief(&[Belief::Fresh, Belief::PartLocal, Belief::Returned]),
         Start::Doubt,
     ),
-    ("pending", Field::Exempt(PENDING), Start::Quiet(NOTHING_YET)),
-    ("calls", Field::Exempt(PENDING), Start::Quiet(NOTHING_YET)),
+    (
+        "pending",
+        Field::Exempt(UNSEQUENCED),
+        Start::Quiet(NOTHING_YET),
+    ),
+    (
+        "calls",
+        Field::Exempt(UNSEQUENCED),
+        Start::Quiet(NOTHING_YET),
+    ),
     (
         "exposed_after_call",
-        Field::Exempt(PENDING),
+        Field::Exempt(UNSEQUENCED),
         Start::Quiet(NOTHING_YET),
     ),
     // A parameter's block is at least what it points to, which no write is
     // known to cover (#932); a local is the size its type is.
     ("extent", Field::Exempt(PENDING), Start::Doubt),
+    // Read where a call wrote a local: `Route::CallStored` and
+    // `Route::CallDeep` name the mutation that silences them.
     (
         "handed_at_most",
-        Field::Exempt(PENDING),
+        Field::Belief(&[Belief::Width]),
         Start::Quiet(NOTHING_YET),
     ),
     (
         "exposed_in_part",
-        Field::Exempt(PENDING),
+        Field::Exempt(
+            "set where a local array is handed to a call only through a pointer moved off its start, and no route hands an array to a call",
+        ),
         Start::Quiet(NOTHING_YET),
     ),
+    // Read by a load out of memory that names an array: `Route::ElementSlot`
+    // names the mutation that silences it.
     (
         "stored_in_part",
-        Field::Exempt(PENDING),
+        Field::Belief(&[Belief::Fresh]),
         Start::Quiet(NOTHING_YET),
     ),
     (
@@ -458,7 +488,13 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
         Field::Belief(&[Belief::StoredOut]),
         Start::Quiet(NOTHING_YET),
     ),
-    ("left_at", Field::Exempt(PENDING), Start::Quiet(NOTHING_YET)),
+    (
+        "left_at",
+        Field::Exempt(
+            "asked at the function's exit of a block a store let leave holding pointers (ADR-0076); `Belief::Returned` asks a block a `return` lets leave, and no row stores a block out and fills it after",
+        ),
+        Start::Quiet(NOTHING_YET),
+    ),
     (
         "held_levels",
         Field::Exempt(
@@ -471,9 +507,11 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
         Field::Belief(&[Belief::PartPointer]),
         Start::Quiet(NOTHING_YET),
     ),
+    // Read where a pointer is passed on after a call kept a local untyped:
+    // the `Kept*` routes name the mutations that silence it.
     (
         "handed_untyped",
-        Field::Exempt(PENDING),
+        Field::Belief(&[Belief::Width]),
         Start::Quiet(NOTHING_YET),
     ),
 ];
@@ -511,7 +549,8 @@ fn known_fields() -> Vec<String> {
 ///
 /// **Nor that a start is the one the field takes**: [`Start`] is what the
 /// row says, and the entry is read by review. Mutation: give a row
-/// `Start::Quiet(" ")`; this fails.
+/// `Start::Quiet(" ")`; this fails. Mutation: give `left_at` the exemption
+/// `PENDING` again; this fails, since it starts quiet.
 #[test]
 fn every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption() {
     let declared = known_fields();
@@ -534,7 +573,17 @@ fn every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption() {
                 !beliefs.is_empty() && beliefs.iter().all(|belief| BELIEFS.contains(belief)),
                 "`{name}` names a belief the matrix does not ask"
             ),
-            Field::Exempt(why) => assert!(!why.is_empty(), "`{name}` is exempt with no reason"),
+            Field::Exempt(why) => {
+                assert!(!why.is_empty(), "`{name}` is exempt with no reason");
+                // **A field that starts quiet says why no row writes it in
+                // its own words** (#943): it is a belief or a may-fact the
+                // check does not doubt, so the generic reason that a row
+                // will come later hid which beliefs had none.
+                assert!(
+                    !(*why == PENDING && matches!(start, Start::Quiet(_))),
+                    "`{name}` starts quiet and is exempt only as `PENDING`; name the belief that writes it or say why none can"
+                );
+            }
         }
         match start {
             Start::Doubt => {}
