@@ -1860,6 +1860,9 @@ cases! {
         // Mutation: `Allocations::past_end_targets` answers nothing for a
         // depth above one; the `SC0402` at `*a` becomes certain.
         a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: drop the bound by the local's own type in the copy
+        // arm; the `SC0412` at `*w` goes.
+        a_pointer_copied_into_a_narrower_local_is_believed_no_wider_than_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `|| *foreign` dropped from
         // `Beyond::believed_to_reach_only_its_edges`; the `SC0411` becomes an
         // `SC0406`.

@@ -884,6 +884,23 @@ impl Allocations<'_> {
                             );
                             for &target in &targets {
                                 let mut each = read.clone();
+                                // **And no wider than the local's own type**,
+                                // the copy's own arm: the bytes land in a local
+                                // declared as what they are read as later, and
+                                // `s = *(T **)m` reads at `T`. Believed at
+                                // `*source`'s type alone, `memcpy(&s, m, 8)`
+                                // with `m` an `int **` parameter and `s` a
+                                // `char *` read an `int` through `s` in
+                                // silence, where it was doubted (#977). A
+                                // `void *` local bounds nothing, as a load of
+                                // one does not.
+                                let typed = function
+                                    .locals()
+                                    .nth(target.index())
+                                    .map_or(Some(0), |local| {
+                                        self.typed_width(function, &Place::local(local))
+                                    });
+                                let width = typed.map_or(width, |typed| width.min(typed));
                                 each.believe(
                                     self.read_from_fits(
                                         function,
