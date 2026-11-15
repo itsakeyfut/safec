@@ -77,6 +77,10 @@ fresh_memmove_d1_both hazard=1:SC0411 control=0:- allowed=1:SC0411
 fresh_memmove_d1_one hazard=1:SC0411,SC0412 control=0:- allowed=0:SC0411,SC0412
 fresh_memmove_d2_both hazard=1:SC0403,SC0411,SC0412 control=1:SC0403 allowed=0:SC0403,SC0411,SC0412
 fresh_memmove_d2_one hazard=1:SC0403,SC0411,SC0412 control=1:SC0403 allowed=0:SC0403,SC0411,SC0412
+fresh_memset_whole_d1_both hazard=1:SC0411 control=1:SC0412 allowed=1:SC0411
+fresh_memset_whole_d1_one hazard=1:SC0411,SC0412 control=1:SC0412 allowed=0:SC0411,SC0412
+fresh_memset_whole_d2_both hazard=1:SC0403,SC0411,SC0412 control=1:SC0403,SC0412 allowed=0:SC0403,SC0411,SC0412
+fresh_memset_whole_d2_one hazard=1:SC0403,SC0411,SC0412 control=1:SC0403,SC0412 allowed=0:SC0403,SC0411,SC0412
 fresh_realloc_d0_both hazard=1:SC0411 control=0:- allowed=1:SC0411
 fresh_realloc_d0_one hazard=1:SC0411 control=0:- allowed=1:SC0411
 fresh_realloc_d1_both hazard=1:SC0411 control=0:- allowed=1:SC0411

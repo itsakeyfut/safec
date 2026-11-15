@@ -305,6 +305,11 @@ enum Route {
     /// the side that doubts (#802): the two now answer alike, and both are in
     /// `ACCEPTED` for leaving where nothing outside reads.
     ByAddressLoaded,
+    /// The slot filled with zero by `memset`, the whole of it, against half
+    /// of it in the hazard: a fill writes what it covers, and a fill of four
+    /// bytes leaves the rest of a pointer as nothing wrote it. Asked of
+    /// freshness only, the belief a fill decides (#943).
+    MemsetWhole,
 }
 
 /// Where the slot is: a local, or one or two levels below one.
@@ -570,7 +575,7 @@ const BELIEFS: [Belief; 14] = [
     Belief::Returned,
     Belief::HeldPointers,
 ];
-const ROUTES: [Route; 27] = [
+const ROUTES: [Route; 28] = [
     Route::Store,
     Route::Memcpy,
     Route::Memmove,
@@ -598,6 +603,7 @@ const ROUTES: [Route; 27] = [
     Route::KeptBlock,
     Route::ByAddress,
     Route::ByAddressLoaded,
+    Route::MemsetWhole,
 ];
 const DEPTHS: [Depth; 3] = [Depth::D0, Depth::D1, Depth::D2];
 const SHAPES: [Shape; 2] = [Shape::Both, Shape::One];
@@ -650,6 +656,7 @@ fn axis_place(row: Row) -> [usize; 4] {
         Route::KeptBlock => 24,
         Route::ByAddress => 25,
         Route::ByAddressLoaded => 26,
+        Route::MemsetWhole => 27,
     };
     let depth = match row.depth {
         Depth::D0 => 0,
@@ -765,6 +772,7 @@ impl Axis for Route {
             | Route::Ret
             | Route::MemcpyFromBlock
             | Route::MemcpyHalf
+            | Route::MemsetWhole
             | Route::MemcpyPart
             | Route::MemcpyMaybe
             | Route::CallStored
@@ -783,7 +791,7 @@ impl Axis for Route {
             | Route::KeptBytes
             | Route::KeptBlock
             | Route::ByAddress
-            | Route::ByAddressLoaded => 27,
+            | Route::ByAddressLoaded => 28,
         }
     }
 }
@@ -907,6 +915,10 @@ routes! {
     fresh_realloc_d1_one: Fresh Realloc D1 One;
     fresh_realloc_d2_both: Fresh Realloc D2 Both;
     fresh_realloc_d2_one: Fresh Realloc D2 One;
+    fresh_memset_whole_d1_both: Fresh MemsetWhole D1 Both;
+    fresh_memset_whole_d1_one: Fresh MemsetWhole D1 One;
+    fresh_memset_whole_d2_both: Fresh MemsetWhole D2 Both;
+    fresh_memset_whole_d2_one: Fresh MemsetWhole D2 One;
     fresh_memcpy_half_d1_both: Fresh MemcpyHalf D1 Both;
     fresh_memcpy_half_d1_one: Fresh MemcpyHalf D1 One;
     fresh_memcpy_half_d2_both: Fresh MemcpyHalf D2 Both;
@@ -3302,6 +3314,7 @@ fn mark(row: Row) -> (&'static str, Option<&'static str>) {
         | Route::Ret
         | Route::MemcpyFromBlock
         | Route::MemcpyHalf
+        | Route::MemsetWhole
         | Route::MemcpyPart
         | Route::MemcpyMaybe
         | Route::CallStored
@@ -3348,6 +3361,7 @@ void free(void *p);
 void *realloc(void *p, int n);
 void *memcpy(void *d, void *s, int n);
 void *memmove(void *d, void *s, int n);
+void *memset(void *s, int c, int n);
 void *pass(void *p);
 void get_narrow(char **p);
 void get_wide(int **p);
@@ -3449,6 +3463,7 @@ fn put_of(route: Route, depth: Depth, slot: &str, value: &str, ty: &str) -> Vec<
             unreachable!("only `Belief::Width` writes through a call or a parameter; see `width`")
         }
         Route::MemcpyHalf
+        | Route::MemsetWhole
         | Route::MemcpyPart
         | Route::MemcpyMaybe
         | Route::MemcpyUnread
@@ -3633,6 +3648,7 @@ fn width(row: Row, hazard: bool) -> Vec<String> {
             kept
         }
         Route::MemcpyHalf
+        | Route::MemsetWhole
         | Route::MemcpyPart
         | Route::MemcpyMaybe
         | Route::MemcpyUnread
@@ -3668,7 +3684,7 @@ fn fresh(row: Row, hazard: bool) -> Vec<String> {
     lines.push("if (!b) return 0;".to_owned());
     let covers = matches!(
         row.route,
-        Route::MemcpyHalf | Route::MemcpyPart | Route::MemcpyMaybe
+        Route::MemcpyHalf | Route::MemcpyPart | Route::MemcpyMaybe | Route::MemsetWhole
     );
     if !hazard && !covers {
         lines.push("int x = 0;".to_owned());
@@ -3681,6 +3697,10 @@ fn fresh(row: Row, hazard: bool) -> Vec<String> {
         // These three ask what the copy covers, so the source is written in
         // both programs, and the two differ in the length or in the arm the
         // source is written on.
+        Route::MemsetWhole => vec![format!(
+            "memset(&{slot}, 0, {});",
+            if hazard { 4 } else { 8 }
+        )],
         Route::MemcpyHalf => {
             lines.push("int x = 0;".to_owned());
             lines.push("*b = &x;".to_owned());
@@ -4220,6 +4240,7 @@ fn read_from(row: Row) -> String {
         | Route::Ret
         | Route::MemcpyFromBlock
         | Route::MemcpyHalf
+        | Route::MemsetWhole
         | Route::MemcpyMaybe
         | Route::Restored
         | Route::MemcpyUnread
@@ -4264,6 +4285,7 @@ fn parameters(row: Row, hazard: bool) -> &'static str {
             | Route::Ret
             | Route::MemcpyFromBlock
             | Route::MemcpyHalf
+            | Route::MemsetWhole
             | Route::MemcpyPart
             | Route::MemcpyMaybe
             | Route::CallStored
@@ -4707,6 +4729,18 @@ const UNCERTAIN: &[(&str, &str)] = &[
     (
         "width_restored_d0_one",
         "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
+    ),
+    (
+        "fresh_memset_whole_d1_one",
+        "a fill leaves the bytes it does not cover as they were, which is asked where the slot is read and not at the fill, so a path or a level that may have written them makes it a doubt; the store reads what nothing wrote at the put",
+    ),
+    (
+        "fresh_memset_whole_d2_both",
+        "a fill leaves the bytes it does not cover as they were, which is asked where the slot is read and not at the fill, so a path or a level that may have written them makes it a doubt; the store reads what nothing wrote at the put",
+    ),
+    (
+        "fresh_memset_whole_d2_one",
+        "a fill leaves the bytes it does not cover as they were, which is asked where the slot is read and not at the fill, so a path or a level that may have written them makes it a doubt; the store reads what nothing wrote at the put",
     ),
     (
         "fresh_memcpy_unread_d0_both",
@@ -5436,6 +5470,13 @@ const WRITTEN_ONLY: &[WrittenOnly] = &[
         "a copy's length is asked of freshness in a block and at a local, whose size is what it covers (#942); one level further down is the same block",
     ),
     (
+        Route::MemsetWhole,
+        Belief::Fresh,
+        &[Depth::D1, Depth::D2],
+        &[Shape::Both, Shape::One],
+        "a fill writes no pointer of its own, so what it covers is asked of freshness alone; a local slot is made with a value, so half a fill into it leaves the rest written",
+    ),
+    (
         Route::MemcpyShort,
         Belief::Fresh,
         &[Depth::D1],
@@ -5616,6 +5657,7 @@ fn name_of(row: Row) -> String {
         Route::KeptBlock => "kept_block",
         Route::ByAddress => "by_address",
         Route::ByAddressLoaded => "by_address_loaded",
+        Route::MemsetWhole => "memset_whole",
     };
     let depth = match row.depth {
         Depth::D0 => "d0",
