@@ -368,55 +368,55 @@ macro_rules! storage_of {
 storage_of!(Storage);
 storage_of!(Referent);
 
-impl<P: ByStorage, T> Index<Site> for Table<P, T> {
+impl<S: ByStorage, T> Index<Site> for Table<S, T> {
     type Output = T;
     fn index(&self, site: Site) -> &T {
-        &self[P::of_storage(Storage::Heap(site))]
+        &self[S::of_storage(Storage::Heap(site))]
     }
 }
 
-impl<P: ByStorage, T> IndexMut<Site> for Table<P, T> {
+impl<S: ByStorage, T> IndexMut<Site> for Table<S, T> {
     fn index_mut(&mut self, site: Site) -> &mut T {
-        &mut self[P::of_storage(Storage::Heap(site))]
+        &mut self[S::of_storage(Storage::Heap(site))]
     }
 }
 
-impl<P: ByStorage, T> Index<LocalIdx> for Table<P, T> {
+impl<S: ByStorage, T> Index<LocalIdx> for Table<S, T> {
     type Output = T;
     fn index(&self, local: LocalIdx) -> &T {
-        &self[P::of_storage(Storage::Local(local))]
+        &self[S::of_storage(Storage::Local(local))]
     }
 }
 
-impl<P: ByStorage, T> IndexMut<LocalIdx> for Table<P, T> {
+impl<S: ByStorage, T> IndexMut<LocalIdx> for Table<S, T> {
     fn index_mut(&mut self, local: LocalIdx) -> &mut T {
-        &mut self[P::of_storage(Storage::Local(local))]
+        &mut self[S::of_storage(Storage::Local(local))]
     }
 }
 
-impl<P: ByStorage, T> Index<LocalId> for Table<P, T> {
+impl<S: ByStorage, T> Index<LocalId> for Table<S, T> {
     type Output = T;
     fn index(&self, local: LocalId) -> &T {
-        &self[P::of_storage(Storage::Local(LocalIdx::of(local)))]
+        &self[S::of_storage(Storage::Local(LocalIdx::of(local)))]
     }
 }
 
-impl<P: ByStorage, T> IndexMut<LocalId> for Table<P, T> {
+impl<S: ByStorage, T> IndexMut<LocalId> for Table<S, T> {
     fn index_mut(&mut self, local: LocalId) -> &mut T {
-        &mut self[P::of_storage(Storage::Local(LocalIdx::of(local)))]
+        &mut self[S::of_storage(Storage::Local(LocalIdx::of(local)))]
     }
 }
 
-impl<P: ByStorage, T> Index<&LocalId> for Table<P, T> {
+impl<S: ByStorage, T> Index<&LocalId> for Table<S, T> {
     type Output = T;
     fn index(&self, local: &LocalId) -> &T {
-        &self[P::of_storage(Storage::Local(LocalIdx::of(local)))]
+        &self[S::of_storage(Storage::Local(LocalIdx::of(local)))]
     }
 }
 
-impl<P: ByStorage, T> IndexMut<&LocalId> for Table<P, T> {
+impl<S: ByStorage, T> IndexMut<&LocalId> for Table<S, T> {
     fn index_mut(&mut self, local: &LocalId) -> &mut T {
-        &mut self[P::of_storage(Storage::Local(LocalIdx::of(local)))]
+        &mut self[S::of_storage(Storage::Local(LocalIdx::of(local)))]
     }
 }
 
@@ -430,15 +430,15 @@ mod tests {
     /// this fails, as a reason sharing the first site's index once did.
     #[test]
     fn every_referent_has_an_index_of_its_own() {
-        let mut places: Vec<Referent> =
+        let mut referents: Vec<Referent> =
             Why::ALL.iter().map(|&why| Referent::Unknown(why)).collect();
         for at in 0..3 {
-            places.push(Referent::Heap(Site::at(at)));
-            places.push(Referent::Local(LocalIdx::at(at)));
+            referents.push(Referent::Heap(Site::at(at)));
+            referents.push(Referent::Local(LocalIdx::at(at)));
         }
-        let indices: Vec<usize> = places.iter().map(|&place| place.index()).collect();
-        for (place, &index) in places.iter().zip(&indices) {
-            assert_eq!(Referent::at(index), *place);
+        let indices: Vec<usize> = referents.iter().map(|&referent| referent.index()).collect();
+        for (referent, &index) in referents.iter().zip(&indices) {
+            assert_eq!(Referent::at(index), *referent);
         }
         let mut sorted = indices.clone();
         sorted.sort_unstable();

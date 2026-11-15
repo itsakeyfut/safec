@@ -1481,8 +1481,8 @@ impl Held {
         self.names
             .ones()
             .filter_map(Referent::storage)
-            .map(|place| {
-                extent[place]
+            .map(|storage| {
+                extent[storage]
                     .unwrap_or(Extent::AtLeast(0))
                     .lower()
                     .saturating_sub(at)
@@ -1968,8 +1968,8 @@ impl Held {
         // union below leaves one target and only this says the set is not
         // all of it. See ADR-0028.
         *writes_elsewhere = *writes_elsewhere || other.writes_elsewhere;
-        let here_has_edge = names.ones().any(|place| place.local().is_some());
-        let here_has_site = names.ones().any(|place| place.site().is_some());
+        let here_has_edge = names.ones().any(|referent| referent.local().is_some());
+        let here_has_site = names.ones().any(|referent| referent.site().is_some());
         names.union_with(&other.names);
         // **An intersection, where every other field here is a union.** The
         // rest of this struct holds may-facts, which grow where paths meet.
@@ -2081,8 +2081,8 @@ impl Held {
         // flag beside it are decided again by both callers that build a value
         // out of operands, through [`Held::moved_by_arithmetic`]. See
         // ADR-0019.
-        let here_has_edge = names.ones().any(|place| place.local().is_some());
-        let here_has_site = names.ones().any(|place| place.site().is_some());
+        let here_has_edge = names.ones().any(|referent| referent.local().is_some());
+        let here_has_site = names.ones().any(|referent| referent.site().is_some());
         names.union_with(&other.names);
         // As the join keeps it, before the union. See `Held::element`.
         *element = joined_element(

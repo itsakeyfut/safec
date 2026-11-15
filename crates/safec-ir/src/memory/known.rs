@@ -540,21 +540,21 @@ impl Known {
     /// pointer into it, keeping the earlier of what was there: one body for
     /// the copy that writes it and the copy and `realloc` that carry it, so
     /// the three join it alike. See [`Self::part_written`] and ADR-0088.
-    pub(super) fn note_part_written(&mut self, sources: &SourceMap, site: Storage, copy: Span) {
-        self.part_written[site].note(sources, copy);
+    pub(super) fn note_part_written(&mut self, sources: &SourceMap, storage: Storage, copy: Span) {
+        self.part_written[storage].note(sources, copy);
     }
 
-    /// What was stored through a pointer naming any of `places` is no longer
+    /// What was stored through a pointer naming any of `storages` is no longer
     /// what a read through it reads, since a write of part of a pointer
     /// landed over it there. See `Held::stored_through`.
-    pub(super) fn written_over(&mut self, places: &[Storage]) {
+    pub(super) fn written_over(&mut self, storages: &[Storage]) {
         for held in self.points_to.iter_mut() {
             let names = held
                 .sites()
-                .any(|site| places.contains(&Storage::Heap(site)))
+                .any(|site| storages.contains(&Storage::Heap(site)))
                 || held
                     .locals()
-                    .any(|local| places.contains(&Storage::Local(local)));
+                    .any(|local| storages.contains(&Storage::Local(local)));
             if names {
                 held.stored_through = false;
             }

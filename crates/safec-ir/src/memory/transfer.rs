@@ -461,13 +461,13 @@ impl Allocations<'_> {
             0 => {}
             1 => self.note_part_of_a_pointer(landing.pointer, at, value),
             _ => {
-                let places: Vec<Storage> = landing
+                let storages: Vec<Storage> = landing
                     .containers
                     .iter()
                     .map(|&site| Storage::Heap(site))
                     .chain(landing.targets.iter().map(|&local| Storage::Local(local)))
                     .collect();
-                self.note_less_than_a_pointer(places, at, value);
+                self.note_less_than_a_pointer(storages, at, value);
             }
         }
     }
@@ -478,19 +478,19 @@ impl Allocations<'_> {
     /// See [`Self::note_landing_in_part`].
     pub(super) fn note_part_of_a_pointer(&self, local: LocalId, at: Span, value: &mut Known) {
         let held = &value.points_to[local];
-        let places: Vec<Storage> = held
+        let storages: Vec<Storage> = held
             .sites()
             .map(Storage::Heap)
             .chain(held.locals().map(Storage::Local))
             .collect();
-        self.note_less_than_a_pointer(places, at, value);
+        self.note_less_than_a_pointer(storages, at, value);
     }
 
-    /// **A write of less than a pointer into `places`**, whoever wrote it: a
+    /// **A write of less than a pointer into `storages`**, whoever wrote it: a
     /// store narrower than a pointer, a `memset` or a library copy whose
     /// length ends part way through one. **One rule for the three** (the
     /// memory model rebuilt on #924, stage 2): written three times, they
-    /// noted different places, and `c[0] = one;`, `memset(c, 1, 1);` and
+    /// noted different storages, and `c[0] = one;`, `memset(c, 1, 1);` and
     /// `memcpy(c, &one, 1);` over one stored pointer gave three answers.
     ///
     /// **Every storage not known to be narrower than a pointer**, which holds
@@ -504,21 +504,21 @@ impl Allocations<'_> {
     /// block read half of `x` in silence, found while measuring #917.
     pub(super) fn note_less_than_a_pointer(
         &self,
-        places: impl IntoIterator<Item = Storage>,
+        storages: impl IntoIterator<Item = Storage>,
         at: Span,
         value: &mut Known,
     ) {
         let target = self.unit.target();
         let pointer = u64::from(target.pointer_bits() / target.char().bits());
         let narrower = |extent: Option<Extent>| matches!(extent, Some(Extent::Exactly(size)) if size < pointer);
-        let places: Vec<Storage> = places
+        let storages: Vec<Storage> = storages
             .into_iter()
-            .filter(|&place| !narrower(value.extent[place]))
+            .filter(|&storage| !narrower(value.extent[storage]))
             .collect();
-        for &written in &places {
+        for &written in &storages {
             value.note_part_written(self.sources, written, at);
         }
-        value.written_over(&places);
+        value.written_over(&storages);
     }
 
     /// How many innermost elements one object of `ty` holds: an array's
