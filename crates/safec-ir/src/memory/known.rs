@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::ir::{LocalId, Operand, Place, TyId};
 use crate::source::{SourceMap, Span};
 
-use super::index::{LocalIdx, Referent, Site, Storage, Table};
+use super::index::{LocalIdx, Referent, Site, Storage, Table, Why};
 use super::parts::{
     At, Cell, Earliest, Extent, Held, Init, Kept, Levels, PendingRead, PlaceInit, Reached, Read,
     ReadKey, Realloced, SiteState, Width, read_key,
@@ -161,7 +161,7 @@ pub(super) struct Known {
     /// reaches through it, and read by a
     /// load out of the allocation as a pointer this check stopped following.
     /// Set too where such a load is stored into another allocation, through
-    /// [`Why::StaleRead`](super::index::Why::StaleRead).
+    /// [`Why::StaleRead`].
     /// Nothing clears it: slots are not told apart, so a store into one may
     /// leave the old pointer in another. See ADR-0045.
     ///
@@ -170,7 +170,7 @@ pub(super) struct Known {
     /// this check cannot read reached through another route and could not
     /// replace there. Set by [`Known::held_out_of_reach`](super::known::Known::held_out_of_reach), carried where what
     /// a load out of it holds is stored or copied, and read through
-    /// [`Why::UnreplacedRead`](super::index::Why::UnreplacedRead) by [`Known::handed_below`](super::known::Known::handed_below) alone. Nothing
+    /// [`Why::UnreplacedRead`] by [`Known::handed_below`](super::known::Known::handed_below) alone. Nothing
     /// clears it, since slots are not told apart. See ADR-0047.
     ///
     /// **`lost`**:
@@ -185,7 +185,7 @@ pub(super) struct Known {
     ///
     /// **`from_caller`**:
     /// Whether what it contains may include a pointer a caller or
-    /// a callee handed over: one [`Why::FromCaller`](super::index::Why::FromCaller) marks, stored here.
+    /// a callee handed over: one [`Why::FromCaller`] marks, stored here.
     ///
     /// **The mark lived on locals only**, so a store recorded the sites such
     /// a pointer holds, which are none, and `*box = q; release_all(); r =
@@ -1030,7 +1030,7 @@ impl Known {
 
     /// Whether a local a read `depth` dereferences below `local` passes
     /// through holds memory a caller or a callee handed over,
-    /// [`Why::FromCaller`](super::index::Why::FromCaller), so that `pr = &r; s = *pr;` carries what `s =
+    /// [`Why::FromCaller`], so that `pr = &r; s = *pr;` carries what `s =
     /// r;` would. Read along the walk [`Self::lost_through`] takes, for its
     /// reason: the mark is on the local, and the sites alone would read as
     /// this function's own. Without it the read through the address was
@@ -1741,6 +1741,21 @@ impl Known {
         for site in self.cells_on_the_way(local, depth) {
             self.contents[site].taken_by_a_load(held);
         }
+        // **And what each local it reads out of carries**, as a copy of that
+        // local by name does: `s = *e_;` with `e_ = &v` is `s = v;`. Taking
+        // only the names `v` holds, a slot a call could not replace was
+        // forgotten through the address, and `use2(&s)` after it built
+        // silent on a use-after-free where `s = v;` is `SC0407` (#970). See
+        // `Self::carried_through_an_address` for the one reason left out.
+        let (_, read_from) = self.levels_below(local, depth - 1);
+        for read_from in read_from {
+            for &why in Why::ALL {
+                if Self::carried_through_an_address(why) && self.points_to[read_from].may_name(why)
+                {
+                    held.name_unknown(why);
+                }
+            }
+        }
         // Read through a pointer to a local this check lost, which may be
         // gone: the stricter of the two rules a load and a library copy once
         // kept apart, so that a copy can be a load (#777). Taking it for
@@ -1752,6 +1767,35 @@ impl Known {
             held.handed_over();
         }
         named_a_local
+    }
+
+    /// Whether a load through a local's address carries `why` from the
+    /// value it reads, [`Self::load_into`]. A `match` with no wildcard, so a
+    /// reason added is `error[E0004]` here until it says.
+    ///
+    /// **Every reason but `Foreign`, by the author's decision on a
+    /// measurement** (#970): carried, each other reason moved no corpus case
+    /// or route row, and `UnreplacedRead` closed a silence; `Foreign` added a
+    /// report to 40 corpus cases, losing none, among them deliberate quiets
+    /// such as `a_live_value_through_two_locals_addresses_is_read_in_silence`.
+    /// **Left out, a silence**, found by review: a value a call this check
+    /// cannot read wrote into a local is forgotten through that local's
+    /// address, so `get(&u); s = *(&u); return *s;` builds silent on a read
+    /// past a two-byte object where `return *u;` is `SC0412` (#973).
+    /// Carried as one reason, it doubts plain array code, since an ordinary
+    /// store through an array's address sets it too; telling the two
+    /// writers apart is #973's.
+    fn carried_through_an_address(why: Why) -> bool {
+        match why {
+            Why::Foreign => false,
+            Why::Lost
+            | Why::Loaded
+            | Why::FromCaller
+            | Why::StaleRead
+            | Why::LostRead
+            | Why::UnreplacedRead
+            | Why::Forged => true,
+        }
     }
 
     /// Record that a call this check cannot read was handed the address of
@@ -2824,7 +2868,7 @@ impl Known {
     /// *box = w;`, and an allocation it was stored in before the free,
     /// `*box = u; free(u);`, are no more or less likely to be what went than
     /// the local handed to `free`. So every lost local carries
-    /// [`Why::StaleRead`](super::index::Why::StaleRead) from here, and a store of it marks where it
+    /// [`Why::StaleRead`] from here, and a store of it marks where it
     /// lands, and every allocation whose cell is `lost` is `stale_read`, so
     /// a load out of it is one this check stopped following. Marking too much
     /// is a doubt; marking only the local handed over left the other three
@@ -3031,7 +3075,7 @@ impl Known {
     /// has escaped, and nothing here can say which local that reaches: the
     /// address may have been stashed anywhere on the way. So every escaped
     /// local it could have reached holds something this check cannot name,
-    /// which is what [`Why::Lost`](super::index::Why::Lost) says and is ADR-0018's fact through a
+    /// which is what [`Why::Lost`] says and is ADR-0018's fact through a
     /// second door.
     ///
     /// **Which locals that is belongs to the caller**, because the two writers
@@ -3060,7 +3104,7 @@ impl Known {
     /// [`Allocations::touching`](super::allocations::Allocations::touching)'s own rule whatever this says.
     ///
     /// **Left alone here, not for good.** A call this check cannot read
-    /// marks what it wrote as handed over, [`Why::FromCaller`](super::index::Why::FromCaller), and the
+    /// marks what it wrote as handed over, [`Why::FromCaller`], and the
     /// next such call makes it lost by that route, so the idiom is quiet
     /// only until a later call that may free what it was handed (#394).
     ///

@@ -432,10 +432,9 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
     ),
     (
         "handed_away",
-        // Dropping its one write makes the `unreplaced` stores over a
-        // copy's program report the hazard #970 leaves silent, so those
-        // rows, listed as that silence, fail.
-        Field::Belief(&[Belief::Unreplaced]),
+        Field::Exempt(
+            "no belief's rule reads it: with its one write dropped, seven corpus cases and `a_whole_copy_answers_as_a_store_over_its_own_program` fail, measured after #970, and no row does",
+        ),
         Start::Quiet(NOTHING_YET),
     ),
     // Every site a parameter stands for that this check exposes, since the
@@ -2746,12 +2745,6 @@ const ESCAPED_SOURCE: &str = "the address a copy takes of its source local escap
 const ESCAPED_HOLDER: &str = "the address of `m` taken makes `m` itself doubted where it is handed (ADR-0017), and what lies behind a pointer is asked only where the pointer itself drew nothing (ADR-0068)";
 // End of the reasons `ACCEPTED` gives.
 
-/// Why a store over a copy's own program is let miss the hazard of
-/// `unreplaced`: a pointer read back through a local's address forgets the
-/// slot a call could not replace, so handing it on asks nothing, a silence
-/// on a use-after-free (#970). The copy of the same program reports it at
-/// its argument, and the plain store at the call it hands it to.
-const UNREPLACED_THROUGH_AN_ADDRESS: &str = "a pointer read back through a local's address forgets the slot a call could not replace, so handing it on is silent (#970)";
 /// Why a store over a copy's own program is let doubt a control that
 /// neither the copy nor the plain store doubts: a store through a pointer
 /// to the slot is not placed as the copy's landing is, which one write
@@ -3718,26 +3711,6 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         "returned_store_as_memcpy_d1_one",
         Side::Control,
         Why::Cost(STORE_AS_COPIED_DOUBTS_MORE),
-    ),
-    (
-        "unreplaced_store_as_memcpy_d0_both",
-        Side::Hazard,
-        Why::Cost(UNREPLACED_THROUGH_AN_ADDRESS),
-    ),
-    (
-        "unreplaced_store_as_memcpy_d0_one",
-        Side::Hazard,
-        Why::Cost(UNREPLACED_THROUGH_AN_ADDRESS),
-    ),
-    (
-        "unreplaced_store_as_memcpy_d1_both",
-        Side::Hazard,
-        Why::Cost(UNREPLACED_THROUGH_AN_ADDRESS),
-    ),
-    (
-        "unreplaced_store_as_memcpy_d1_one",
-        Side::Hazard,
-        Why::Cost(UNREPLACED_THROUGH_AN_ADDRESS),
     ),
     (
         "unreplaced_store_as_memcpy_d2_both",
@@ -6268,22 +6241,6 @@ const TWIN_DIFFERS: &[(&str, &[&str])] = &[
     (
         "stored_out_store_as_memcpy_d2_one",
         &[ADDRESS_TAKEN_DOUBTS, BOUNDS_THROUGH_A_REPLACED_POINTER],
-    ),
-    (
-        "unreplaced_store_as_memcpy_d0_both",
-        &[UNREPLACED_THROUGH_AN_ADDRESS],
-    ),
-    (
-        "unreplaced_store_as_memcpy_d0_one",
-        &[UNREPLACED_THROUGH_AN_ADDRESS],
-    ),
-    (
-        "unreplaced_store_as_memcpy_d1_both",
-        &[UNREPLACED_THROUGH_AN_ADDRESS],
-    ),
-    (
-        "unreplaced_store_as_memcpy_d1_one",
-        &[UNREPLACED_THROUGH_AN_ADDRESS],
     ),
     (
         "unreplaced_store_as_memcpy_d2_both",
