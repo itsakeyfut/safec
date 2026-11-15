@@ -2035,16 +2035,22 @@ impl Known {
 
     /// Whether a write through `dereferences` dereferences of `local` goes
     /// through a pointer that may hold an address this function never
-    /// recorded: `local` itself, or a level the write reads its way through
-    /// between `local` and the one written, read out of memory, lost, or
-    /// written by code this check cannot read. A level that is an
+    /// recorded: a level the write reads its way through between `local`
+    /// and the one written, read out of memory, lost, or written by code
+    /// this check cannot read. A level that is an
     /// allocation counts as memory. Whether a write leaves this function's
     /// sight asks this whole; where it may land asks [`Self::unnamed_below`]
     /// and the pointer's own marks apart, because a pointer itself read out
     /// of memory is answered as of its read (#648), and one a call wrote as
     /// of the call (#661). See ADR-0057 and ADR-0041.
+    ///
+    /// **`local`'s own marks are not asked here**: [`Self::leaves`] is
+    /// answered only beside `store::Landing::unnamed`, which asks
+    /// `any_unknown` of the same pointer at both callers in `store.rs`, so
+    /// asked here too it decided nothing, measured (#946). A caller that
+    /// asks `leaves` alone has to ask the pointer's marks itself.
     pub(super) fn through_unnamed(&self, local: LocalId, dereferences: usize) -> bool {
-        self.points_to[local].beyond().any_unknown() || self.unnamed_below(local, dereferences)
+        self.unnamed_below(local, dereferences)
     }
 
     /// The second half of [`Self::through_unnamed`]: whether a level
@@ -2428,9 +2434,10 @@ impl Known {
     /// `report::stored_away`, and what [`Self::stored_out`] records both read,
     /// so the two orders of a store and a free agree (#650):
     ///
-    /// - anywhere at all, where the pointer or a level on the way down may hold
-    ///   an address this function never recorded, [`Known::through_unnamed`]:
-    ///   `**ppp = x`, and `*pp = x` with `pp` read out of a parameter's memory;
+    /// - anywhere at all, where a level on the way down may hold an address
+    ///   this function never recorded, [`Known::through_unnamed`]: `**ppp = x`.
+    ///   Where the pointer itself may, `*pp = x` with `pp` read out of a
+    ///   parameter's memory, `store::Landing::unnamed` answers beside this;
     /// - anywhere at all, where the pointer names nothing this check followed,
     ///   neither an allocation nor a local: one moved off a local that is not
     ///   an array by a non-zero constant (ADR-0019) may be any of them, and

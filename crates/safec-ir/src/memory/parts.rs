@@ -1503,7 +1503,6 @@ impl Held {
             loaded: false,
             foreign: false,
             from_caller: false,
-            stale_read: false,
             lost_read: false,
             unreplaced_read: false,
         };
@@ -1513,7 +1512,15 @@ impl Held {
                 Why::Loaded => unrecorded.loaded = true,
                 Why::Foreign => unrecorded.foreign = true,
                 Why::FromCaller => unrecorded.from_caller = true,
-                Why::StaleRead => unrecorded.stale_read = true,
+                // **Lost, to every question asked of it**: every route that
+                // sets it sets `Why::Lost` beside it, `lost_and_may_be_gone`,
+                // a reborn site's `Held::lose` and a load out of a stale cell
+                // (`Cell::taken_by_a_load`), so asked apart it answered
+                // nothing `lost` had not: dropped from
+                // `believed_to_reach_only_its_edges`, or never set here, it
+                // failed no case, measured (#946). Answered as `lost` rather
+                // than as nothing, so a route that sets it alone is doubted.
+                Why::StaleRead => unrecorded.lost = true,
                 Why::LostRead => unrecorded.lost_read = true,
                 Why::UnreplacedRead => unrecorded.unreplaced_read = true,
                 // **A lost value to every question asked of it**: no address
@@ -2623,11 +2630,12 @@ pub(super) struct Marks {
 /// answer every reader asks, so that a mark added to it is a compile error
 /// wherever it has to be answered.
 ///
-/// **Seven reasons, and a question per subset that answers differently.**
+/// **Six reasons, and a question per subset that answers differently.**
 /// `lost`, `loaded` and `foreign` say the value may be an address this
-/// function never recorded, and `from_caller`, `stale_read`, `lost_read`
-/// and `unreplaced_read` say where what it names came from.
-/// [`Beyond::any_unknown`] asks whether any of the seven is named, and
+/// function never recorded, and `from_caller`, `lost_read` and
+/// `unreplaced_read` say where what it names came from. `Why::StaleRead`
+/// and `Why::Forged` are read as `lost` ([`Held::beyond`]).
+/// [`Beyond::any_unknown`] asks whether any of the six is named, and
 /// [`Beyond::is_nothing`] whether none is; each narrower question below
 /// says what answering it as `any_unknown` moved. Every question that asks
 /// more than one reason names every reason, `_` for one it does not read,
@@ -2655,7 +2663,6 @@ pub(super) struct Unrecorded {
     loaded: bool,
     foreign: bool,
     from_caller: bool,
-    stale_read: bool,
     lost_read: bool,
     unreplaced_read: bool,
 }
@@ -2668,11 +2675,10 @@ impl Unrecorded {
             loaded,
             foreign,
             from_caller,
-            stale_read,
             lost_read,
             unreplaced_read,
         } = self;
-        lost || loaded || foreign || from_caller || stale_read || lost_read || unreplaced_read
+        lost || loaded || foreign || from_caller || lost_read || unreplaced_read
     }
 }
 
@@ -2709,7 +2715,6 @@ impl Beyond {
                 loaded: _,
                 foreign: _,
                 from_caller: _,
-                stale_read: _,
                 lost_read: _,
                 unreplaced_read: _,
             }) => *lost,
@@ -2735,7 +2740,6 @@ impl Beyond {
                 loaded,
                 foreign: _,
                 from_caller: _,
-                stale_read: _,
                 lost_read: _,
                 unreplaced_read: _,
             }) => *loaded,
@@ -2761,7 +2765,6 @@ impl Beyond {
                 loaded: _,
                 foreign,
                 from_caller: _,
-                stale_read: _,
                 lost_read: _,
                 unreplaced_read: _,
             }) => *foreign,
@@ -2787,7 +2790,6 @@ impl Beyond {
                 loaded: _,
                 foreign: _,
                 from_caller,
-                stale_read: _,
                 lost_read: _,
                 unreplaced_read: _,
             }) => *from_caller,
@@ -2814,7 +2816,6 @@ impl Beyond {
                 loaded: _,
                 foreign: _,
                 from_caller: _,
-                stale_read: _,
                 lost_read: _,
                 unreplaced_read,
             }) => *unreplaced_read,
@@ -2841,7 +2842,6 @@ impl Beyond {
                 loaded: _,
                 foreign,
                 from_caller: _,
-                stale_read: _,
                 lost_read: _,
                 unreplaced_read: _,
             }) => *lost || *foreign,
@@ -2872,7 +2872,6 @@ impl Beyond {
                 loaded: _,
                 foreign: _,
                 from_caller: _,
-                stale_read: _,
                 lost_read,
                 unreplaced_read: _,
             }) => *lost || *lost_read,
@@ -2898,11 +2897,10 @@ impl Beyond {
     ///
     /// **Only `from_caller` is held by a case**: leaving it out silences
     /// `a_store_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local_it_names`.
-    /// Leaving out any of the other four fails nothing, measured, since where
-    /// each is set the belief for a call this check cannot read has already
-    /// written the local. They are kept, by the author's decision, because a
-    /// mark kept here can only add a doubt, and one dropped would be a silence
-    /// on a route nobody has built yet.
+    /// Leaving out any of the other three fails nothing, measured. They are
+    /// kept, by the author's decision, because a mark kept here can only add
+    /// a doubt, and one dropped would be a silence on a route nobody has
+    /// built yet. `Why::StaleRead` is read as `lost` ([`Held::beyond`]).
     ///
     /// **Asked of these reasons and not of any, measured** (the memory
     /// model rebuilt on #924, stage 1): answered as `any_unknown`, 11
@@ -2918,10 +2916,9 @@ impl Beyond {
                 loaded: _,
                 foreign,
                 from_caller,
-                stale_read,
                 lost_read,
                 unreplaced_read: _,
-            }) => !(*lost || *foreign || *from_caller || *stale_read || *lost_read),
+            }) => !(*lost || *foreign || *from_caller || *lost_read),
         }
     }
 }
