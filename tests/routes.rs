@@ -274,9 +274,10 @@ enum Route {
     StoredThrough,
     /// A local array's second element stored as a pointer into a block,
     /// read back and written through, its first read: `box2[0] = a2 + 1;`,
-    /// against `box2[0] = a2;`. Freshness only, at a local. Mutation: a load
-    /// takes no `array_edge` from `Known::stored_in_part`;
-    /// `fresh_element_slot_d0_both` goes silent.
+    /// against `box2[0] = a2;`. Freshness only, at a local. **It does not
+    /// hold `Known::stored_in_part`**: with a load taking no `array_edge`
+    /// from it, every row and every corpus case passes, measured (#943),
+    /// where this said `fresh_element_slot_d0_both` went silent.
     ElementSlot,
     /// A local's address handed to a call taking `void *` that keeps it, a
     /// pointer's address stored there after, a later call, the local moved
@@ -308,7 +309,10 @@ enum Route {
     /// The slot filled with zero by `memset`, the whole of it, against half
     /// of it in the hazard: a fill writes what it covers, and a fill of four
     /// bytes leaves the rest of a pointer as nothing wrote it. Asked of
-    /// freshness only, the belief a fill decides (#943).
+    /// freshness only, the belief a fill decides (#943). **It holds what a
+    /// fill covers** (`Known::covers_whole`), not the fill's other paths:
+    /// with `memset` read as no fill at all, or its bytes never noted as
+    /// part of a pointer, every row passes and the corpus fails, measured.
     MemsetWhole,
 }
 
@@ -407,15 +411,18 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
     ),
     (
         "escaped",
-        Field::Exempt(
-            "set by taking a local's address, which every route through an address does on the hazard and the control alike, so no row tells it apart",
-        ),
+        Field::Belief(&[
+            Belief::Width,
+            Belief::Unreplaced,
+            Belief::LeftBehind,
+            Belief::PartLocal,
+        ]),
         Start::Quiet(NOTHING_YET),
     ),
     (
         "handed_away",
         Field::Exempt(
-            "set only where a call this check cannot read is certainly handed a local's address as an argument, which no route into memory does",
+            "set only where a call this check cannot read is certainly handed a local's address as an argument; no belief's rule reads it, and dropping it moves how a copy row answers against its store, which `a_whole_copy_answers_as_its_plain_store` holds",
         ),
         Start::Quiet(NOTHING_YET),
     ),
@@ -476,11 +483,11 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
         ),
         Start::Quiet(NOTHING_YET),
     ),
-    // Read by a load out of memory that names an array: `Route::ElementSlot`
-    // names the mutation that silences it.
     (
         "stored_in_part",
-        Field::Belief(&[Belief::Fresh]),
+        Field::Exempt(
+            "no row reads it: with both its reads dropped, at a load and at a call, every row passes, measured (#943); the corpus holds the call's read alone, and the load's is held by nothing",
+        ),
         Start::Quiet(NOTHING_YET),
     ),
     (
@@ -3733,7 +3740,7 @@ fn fresh(row: Row, hazard: bool) -> Vec<String> {
     lines.push("if (!b) return 0;".to_owned());
     let covers = matches!(
         row.route,
-        Route::MemcpyHalf | Route::MemcpyPart | Route::MemcpyMaybe | Route::MemsetWhole
+        Route::MemcpyHalf | Route::MemcpyPart | Route::MemcpyMaybe
     );
     if !hazard && !covers {
         lines.push("int x = 0;".to_owned());
@@ -4396,8 +4403,7 @@ fn aligned(answer: &Answer, source: &str, other: &str) -> Vec<(String, bool, Pla
         .rev()
         .zip(theirs.iter().rev())
         .take_while(|(a, b)| a == b)
-        .count()
-        .min(mine.len().min(theirs.len()) - before);
+        .count();
     let mut keyed: Vec<(String, bool, Place)> = answer
         .keyed
         .iter()
@@ -5021,7 +5027,9 @@ const INDETERMINATE_BYTES_ARE_COPIED: &str = "a copy carries bytes nothing wrote
 /// listed row that now agrees fails too, and its entry goes. Each reason
 /// was read off what the row's two programs report, measured when this
 /// list was written (#943); a reason naming #926 goes when that issue asks
-/// the rule through one function.
+/// the rule through one function. **The reasons are held by nothing**:
+/// the test asks whether a listed row differs, not how, so a reason that
+/// stops being true passes, measured, until the row is read again.
 const COPY_DIFFERS: &[(&str, &[&str])] = &[
     ("caller_memcpy_block_d1_both", &[COPY_DOUBTS_MORE]),
     ("caller_memcpy_block_d1_one", &[COPY_DOUBTS_MORE]),
@@ -5354,6 +5362,54 @@ const COPY_DIFFERS: &[(&str, &[&str])] = &[
     ("width_memmove_d0_one", &[WIDTH_ASKED_APART]),
 ];
 
+/// [`aligned`] places a report on a line both programs share before the
+/// put, on the put, on a line both share after it, or nowhere, and a
+/// program compared with itself, all of it shared, is placed from its
+/// start, since a line both share at their start is asked first. No row
+/// of the matrix differs before its put, so this is what holds
+/// `Place::Before` and `Place::Nowhere`. Mutation: answer `Place::Put` for
+/// a line before the put; this fails.
+#[test]
+fn a_report_is_placed_against_the_lines_two_programs_share() {
+    let store = "a
+b
+slot = v;
+c
+d";
+    let copy = "a
+b
+v_ = v;
+memcpy(&slot, &v_, 8);
+c
+d";
+    let answer = |lines: &[Option<usize>]| Answer {
+        exit: 1,
+        reports: vec![],
+        keyed: lines
+            .iter()
+            .map(|&line| ("error[SC0411]".to_owned(), false, line))
+            .collect(),
+    };
+    let places = |answer: &Answer, source: &str, other: &str| -> Vec<Place> {
+        aligned(answer, source, other)
+            .into_iter()
+            .map(|(_, _, place)| place)
+            .collect()
+    };
+    assert_eq!(
+        places(&answer(&[Some(2), Some(3), Some(4), None]), copy, store),
+        vec![Place::Before(2), Place::Put, Place::Put, Place::Nowhere,],
+    );
+    assert_eq!(
+        places(&answer(&[Some(5)]), copy, store),
+        vec![Place::After(1)],
+    );
+    assert_eq!(
+        places(&answer(&[Some(1), Some(3), Some(5)]), store, store),
+        vec![Place::Before(1), Place::Before(3), Place::Before(5)],
+    );
+}
+
 /// **A whole copy answers as its plain store**: the same reports on the
 /// hazard and on the control, each the same code, proved or not alike, and
 /// on the same line or anywhere on the put ([`aligned`]), where
@@ -5373,11 +5429,26 @@ const COPY_DIFFERS: &[(&str, &[&str])] = &[
 #[test]
 fn a_whole_copy_answers_as_its_plain_store() {
     let mut wrong = vec![];
-    for &(name, row) in ROWS {
-        if !matches!(
+    let copies = |row: Row| {
+        matches!(
             row.route,
             Route::Memcpy | Route::Memmove | Route::MemcpyFromBlock
-        ) {
+        )
+    };
+    // **A listed name this test asks**: a row dropped from the loop, or a
+    // name of no row, would keep its entry unasked, and every claim the
+    // entry makes with it. Mutation: drop `Route::Memmove` from `copies`;
+    // this fails at every `memmove` entry.
+    for (listed, _) in COPY_DIFFERS {
+        if !ROWS
+            .iter()
+            .any(|(name, row)| name == listed && copies(*row))
+        {
+            wrong.push(format!("{listed}: listed, and no copy row this test asks"));
+        }
+    }
+    for &(name, row) in ROWS {
+        if !copies(row) {
             continue;
         }
         let Some(&(store_name, store)) = ROWS.iter().find(|(_, store)| {
