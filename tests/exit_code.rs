@@ -176,11 +176,25 @@ fn a_refusal_names_the_program_the_way_it_was_run() {
         .to_string_lossy()
         .into_owned();
 
+    // **Run again while Linux says the copy is busy**: another test thread
+    // that forks while `fs::copy` holds the new file open for writing
+    // keeps that descriptor until it execs, and running the copy in that
+    // window is `ETXTBSY`, which failed this test on CI once the route
+    // matrix spawned more compilers beside it. Nothing about the copy is
+    // wrong, so it is asked again, and any other error still fails.
     let run = |args: &[&str]| {
-        let output = Command::new(&copy)
-            .args(args)
-            .output()
-            .expect("the copy runs");
+        let mut attempts = 0;
+        let output = loop {
+            match Command::new(&copy).args(args).output() {
+                Err(error)
+                    if error.kind() == std::io::ErrorKind::ExecutableFileBusy && attempts < 50 =>
+                {
+                    attempts += 1;
+                    std::thread::sleep(std::time::Duration::from_millis(20));
+                }
+                other => break other.expect("the copy runs"),
+            }
+        };
         String::from_utf8_lossy(&output.stderr).into_owned()
     };
 

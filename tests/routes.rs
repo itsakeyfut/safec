@@ -160,6 +160,10 @@ enum Route {
     Store,
     /// `memcpy(&slot, &v_, 8);`
     Memcpy,
+    /// `memmove(&slot, &v_, 8);`: the same copy by the other library
+    /// function that copies, so that each rule a copy answers is asked of
+    /// both (#943).
+    Memmove,
     /// Stored, then what holds it grown by `realloc`.
     Realloc,
     /// A call this check cannot read writes it through an out-parameter.
@@ -270,9 +274,10 @@ enum Route {
     StoredThrough,
     /// A local array's second element stored as a pointer into a block,
     /// read back and written through, its first read: `box2[0] = a2 + 1;`,
-    /// against `box2[0] = a2;`. Freshness only, at a local. Mutation: a load
-    /// takes no `array_edge` from `Known::stored_in_part`;
-    /// `fresh_element_slot_d0_both` goes silent.
+    /// against `box2[0] = a2;`. Freshness only, at a local. **It does not
+    /// hold `Known::stored_in_part`**: with a load taking no `array_edge`
+    /// from it, every row and every corpus case passes, measured (#943),
+    /// where this said `fresh_element_slot_d0_both` went silent.
     ElementSlot,
     /// A local's address handed to a call taking `void *` that keeps it, a
     /// pointer's address stored there after, a later call, the local moved
@@ -301,6 +306,14 @@ enum Route {
     /// the side that doubts (#802): the two now answer alike, and both are in
     /// `ACCEPTED` for leaving where nothing outside reads.
     ByAddressLoaded,
+    /// The slot filled with zero by `memset`, the whole of it, against half
+    /// of it in the hazard: a fill writes what it covers, and a fill of four
+    /// bytes leaves the rest of a pointer as nothing wrote it. Asked of
+    /// freshness only, the belief a fill decides (#943). **It holds what a
+    /// fill covers** (`Known::covers_whole`), not the fill's other paths:
+    /// with `memset` read as no fill at all, or its bytes never noted as
+    /// part of a pointer, every row passes and the corpus fails, measured.
+    MemsetWhole,
 }
 
 /// Where the slot is: a local, or one or two levels below one.
@@ -338,6 +351,12 @@ enum Field {
 /// Why a field has no belief yet. A field listed so is the matrix's own
 /// account of what it does not hold, rather than a silence.
 const PENDING: &str = "no belief yet: the corpus holds it, and its rows land with the next change to it (ADR-0091 rule 2)";
+
+/// Why a field about what one expression has done is exempt: reads,
+/// calls and exposures between two sequence points (ADR-0042), which a
+/// route, one write and one read in statements of their own, never leaves
+/// unsequenced.
+const UNSEQUENCED: &str = "a fact about what is unsequenced inside one expression (ADR-0042), and each route is statements of its own, so no row leaves a read and a call unsequenced";
 
 /// Where a field of `Known` starts at a function's entry (ADR-0091 rule 3).
 enum Start {
@@ -390,10 +409,21 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
             "a parameter's site is live: a caller that passes a freed pointer is asked so at its call",
         ),
     ),
-    ("escaped", Field::Exempt(PENDING), Start::Quiet(NOTHING_YET)),
+    (
+        "escaped",
+        Field::Belief(&[
+            Belief::Width,
+            Belief::Unreplaced,
+            Belief::LeftBehind,
+            Belief::PartLocal,
+        ]),
+        Start::Quiet(NOTHING_YET),
+    ),
     (
         "handed_away",
-        Field::Exempt(PENDING),
+        Field::Exempt(
+            "set only where a call this check cannot read is certainly handed a local's address as an argument; no belief's rule reads it, and dropping it moves how a copy row answers against its store, which `a_whole_copy_answers_as_its_plain_store` holds",
+        ),
         Start::Quiet(NOTHING_YET),
     ),
     // Every site a parameter stands for that this check exposes, since the
@@ -409,7 +439,9 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
     ),
     (
         "realloced",
-        Field::Exempt(PENDING),
+        Field::Exempt(
+            "what a `realloc` was handed until a branch says whether it succeeded (ADR-0039); the `Realloc` routes test their result at once, so no row reads it unsettled, and the corpus does",
+        ),
         Start::Quiet(NOTHING_YET),
     ),
     // Every local `unwritten_at_entry` names unwritten. A parameter's memory
@@ -419,29 +451,43 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
         Field::Belief(&[Belief::Fresh, Belief::PartLocal, Belief::Returned]),
         Start::Doubt,
     ),
-    ("pending", Field::Exempt(PENDING), Start::Quiet(NOTHING_YET)),
-    ("calls", Field::Exempt(PENDING), Start::Quiet(NOTHING_YET)),
+    (
+        "pending",
+        Field::Exempt(UNSEQUENCED),
+        Start::Quiet(NOTHING_YET),
+    ),
+    (
+        "calls",
+        Field::Exempt(UNSEQUENCED),
+        Start::Quiet(NOTHING_YET),
+    ),
     (
         "exposed_after_call",
-        Field::Exempt(PENDING),
+        Field::Exempt(UNSEQUENCED),
         Start::Quiet(NOTHING_YET),
     ),
     // A parameter's block is at least what it points to, which no write is
     // known to cover (#932); a local is the size its type is.
     ("extent", Field::Exempt(PENDING), Start::Doubt),
+    // Read where a call wrote a local: `Route::CallStored` and
+    // `Route::CallDeep` name the mutation that silences them.
     (
         "handed_at_most",
-        Field::Exempt(PENDING),
+        Field::Belief(&[Belief::Width]),
         Start::Quiet(NOTHING_YET),
     ),
     (
         "exposed_in_part",
-        Field::Exempt(PENDING),
+        Field::Exempt(
+            "set where a local array is handed to a call only through a pointer moved off its start, and no route hands an array to a call",
+        ),
         Start::Quiet(NOTHING_YET),
     ),
     (
         "stored_in_part",
-        Field::Exempt(PENDING),
+        Field::Exempt(
+            "no row reads it: with both its reads dropped, at a load and at a call, every row passes, measured (#943); the corpus holds the call's read alone, and the load's is held by nothing",
+        ),
         Start::Quiet(NOTHING_YET),
     ),
     (
@@ -449,7 +495,13 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
         Field::Belief(&[Belief::StoredOut]),
         Start::Quiet(NOTHING_YET),
     ),
-    ("left_at", Field::Exempt(PENDING), Start::Quiet(NOTHING_YET)),
+    (
+        "left_at",
+        Field::Exempt(
+            "asked at the function's exit of a block a store let leave holding pointers (ADR-0076); `Belief::Returned` asks a block a `return` lets leave, and no row stores a block out and fills it after",
+        ),
+        Start::Quiet(NOTHING_YET),
+    ),
     (
         "held_levels",
         Field::Exempt(
@@ -462,9 +514,11 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
         Field::Belief(&[Belief::PartPointer]),
         Start::Quiet(NOTHING_YET),
     ),
+    // Read where a pointer is passed on after a call kept a local untyped:
+    // the `Kept*` routes name the mutations that silence it.
     (
         "handed_untyped",
-        Field::Exempt(PENDING),
+        Field::Belief(&[Belief::Width]),
         Start::Quiet(NOTHING_YET),
     ),
 ];
@@ -502,7 +556,8 @@ fn known_fields() -> Vec<String> {
 ///
 /// **Nor that a start is the one the field takes**: [`Start`] is what the
 /// row says, and the entry is read by review. Mutation: give a row
-/// `Start::Quiet(" ")`; this fails.
+/// `Start::Quiet(" ")`; this fails. Mutation: give `left_at` the exemption
+/// `PENDING` again; this fails, since it starts quiet.
 #[test]
 fn every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption() {
     let declared = known_fields();
@@ -525,7 +580,17 @@ fn every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption() {
                 !beliefs.is_empty() && beliefs.iter().all(|belief| BELIEFS.contains(belief)),
                 "`{name}` names a belief the matrix does not ask"
             ),
-            Field::Exempt(why) => assert!(!why.is_empty(), "`{name}` is exempt with no reason"),
+            Field::Exempt(why) => {
+                assert!(!why.is_empty(), "`{name}` is exempt with no reason");
+                // **A field that starts quiet says why no row writes it in
+                // its own words** (#943): it is a belief or a may-fact the
+                // check does not doubt, so the generic reason that a row
+                // will come later hid which beliefs had none.
+                assert!(
+                    !(*why == PENDING && matches!(start, Start::Quiet(_))),
+                    "`{name}` starts quiet and is exempt only as `PENDING`; name the belief that writes it or say why none can"
+                );
+            }
         }
         match start {
             Start::Doubt => {}
@@ -566,9 +631,10 @@ const BELIEFS: [Belief; 14] = [
     Belief::Returned,
     Belief::HeldPointers,
 ];
-const ROUTES: [Route; 26] = [
+const ROUTES: [Route; 28] = [
     Route::Store,
     Route::Memcpy,
+    Route::Memmove,
     Route::Realloc,
     Route::Call,
     Route::Ret,
@@ -593,6 +659,7 @@ const ROUTES: [Route; 26] = [
     Route::KeptBlock,
     Route::ByAddress,
     Route::ByAddressLoaded,
+    Route::MemsetWhole,
 ];
 const DEPTHS: [Depth; 3] = [Depth::D0, Depth::D1, Depth::D2];
 const SHAPES: [Shape; 2] = [Shape::Both, Shape::One];
@@ -620,30 +687,32 @@ fn axis_place(row: Row) -> [usize; 4] {
     let route = match row.route {
         Route::Store => 0,
         Route::Memcpy => 1,
-        Route::Realloc => 2,
-        Route::Call => 3,
-        Route::Ret => 4,
-        Route::MemcpyFromBlock => 5,
-        Route::MemcpyHalf => 6,
-        Route::MemcpyPart => 7,
-        Route::MemcpyMaybe => 8,
-        Route::CallStored => 9,
-        Route::CallDeep => 10,
-        Route::ReallocParam => 11,
-        Route::Restored => 12,
-        Route::MemcpyUnread => 13,
-        Route::MemcpyShort => 14,
-        Route::MemcpyIntoPart => 15,
-        Route::MemcpyUnplaced => 16,
-        Route::MemcpyFromLocal => 17,
-        Route::MemcpyFromLocalMaybe => 18,
-        Route::StoredThrough => 19,
-        Route::ElementSlot => 20,
-        Route::KeptVoid => 21,
-        Route::KeptBytes => 22,
-        Route::KeptBlock => 23,
-        Route::ByAddress => 24,
-        Route::ByAddressLoaded => 25,
+        Route::Memmove => 2,
+        Route::Realloc => 3,
+        Route::Call => 4,
+        Route::Ret => 5,
+        Route::MemcpyFromBlock => 6,
+        Route::MemcpyHalf => 7,
+        Route::MemcpyPart => 8,
+        Route::MemcpyMaybe => 9,
+        Route::CallStored => 10,
+        Route::CallDeep => 11,
+        Route::ReallocParam => 12,
+        Route::Restored => 13,
+        Route::MemcpyUnread => 14,
+        Route::MemcpyShort => 15,
+        Route::MemcpyIntoPart => 16,
+        Route::MemcpyUnplaced => 17,
+        Route::MemcpyFromLocal => 18,
+        Route::MemcpyFromLocalMaybe => 19,
+        Route::StoredThrough => 20,
+        Route::ElementSlot => 21,
+        Route::KeptVoid => 22,
+        Route::KeptBytes => 23,
+        Route::KeptBlock => 24,
+        Route::ByAddress => 25,
+        Route::ByAddressLoaded => 26,
+        Route::MemsetWhole => 27,
     };
     let depth = match row.depth {
         Depth::D0 => 0,
@@ -753,11 +822,13 @@ impl Axis for Route {
         match self {
             Route::Store
             | Route::Memcpy
+            | Route::Memmove
             | Route::Realloc
             | Route::Call
             | Route::Ret
             | Route::MemcpyFromBlock
             | Route::MemcpyHalf
+            | Route::MemsetWhole
             | Route::MemcpyPart
             | Route::MemcpyMaybe
             | Route::CallStored
@@ -776,7 +847,7 @@ impl Axis for Route {
             | Route::KeptBytes
             | Route::KeptBlock
             | Route::ByAddress
-            | Route::ByAddressLoaded => 26,
+            | Route::ByAddressLoaded => 28,
         }
     }
 }
@@ -834,11 +905,17 @@ routes! {
     width_store_d2_both: Width Store D2 Both;
     width_store_d2_one: Width Store D2 One;
     width_memcpy_d0_both: Width Memcpy D0 Both;
+    width_memmove_d0_both: Width Memmove D0 Both;
     width_memcpy_d0_one: Width Memcpy D0 One;
+    width_memmove_d0_one: Width Memmove D0 One;
     width_memcpy_d1_both: Width Memcpy D1 Both;
+    width_memmove_d1_both: Width Memmove D1 Both;
     width_memcpy_d1_one: Width Memcpy D1 One;
+    width_memmove_d1_one: Width Memmove D1 One;
     width_memcpy_d2_both: Width Memcpy D2 Both;
+    width_memmove_d2_both: Width Memmove D2 Both;
     width_memcpy_d2_one: Width Memcpy D2 One;
+    width_memmove_d2_one: Width Memmove D2 One;
     width_realloc_d1_both: Width Realloc D1 Both;
     width_realloc_d1_one: Width Realloc D1 One;
     width_realloc_d2_both: Width Realloc D2 Both;
@@ -877,17 +954,27 @@ routes! {
     fresh_store_d2_both: Fresh Store D2 Both;
     fresh_store_d2_one: Fresh Store D2 One;
     fresh_memcpy_d0_both: Fresh Memcpy D0 Both;
+    fresh_memmove_d0_both: Fresh Memmove D0 Both;
     fresh_memcpy_d0_one: Fresh Memcpy D0 One;
+    fresh_memmove_d0_one: Fresh Memmove D0 One;
     fresh_memcpy_d1_both: Fresh Memcpy D1 Both;
+    fresh_memmove_d1_both: Fresh Memmove D1 Both;
     fresh_memcpy_d1_one: Fresh Memcpy D1 One;
+    fresh_memmove_d1_one: Fresh Memmove D1 One;
     fresh_memcpy_d2_both: Fresh Memcpy D2 Both;
+    fresh_memmove_d2_both: Fresh Memmove D2 Both;
     fresh_memcpy_d2_one: Fresh Memcpy D2 One;
+    fresh_memmove_d2_one: Fresh Memmove D2 One;
     fresh_realloc_d0_both: Fresh Realloc D0 Both;
     fresh_realloc_d0_one: Fresh Realloc D0 One;
     fresh_realloc_d1_both: Fresh Realloc D1 Both;
     fresh_realloc_d1_one: Fresh Realloc D1 One;
     fresh_realloc_d2_both: Fresh Realloc D2 Both;
     fresh_realloc_d2_one: Fresh Realloc D2 One;
+    fresh_memset_whole_d1_both: Fresh MemsetWhole D1 Both;
+    fresh_memset_whole_d1_one: Fresh MemsetWhole D1 One;
+    fresh_memset_whole_d2_both: Fresh MemsetWhole D2 Both;
+    fresh_memset_whole_d2_one: Fresh MemsetWhole D2 One;
     fresh_memcpy_half_d1_both: Fresh MemcpyHalf D1 Both;
     fresh_memcpy_half_d1_one: Fresh MemcpyHalf D1 One;
     fresh_memcpy_half_d2_both: Fresh MemcpyHalf D2 Both;
@@ -903,11 +990,17 @@ routes! {
     lost_store_d2_both: Lost Store D2 Both;
     lost_store_d2_one: Lost Store D2 One;
     lost_memcpy_d0_both: Lost Memcpy D0 Both;
+    lost_memmove_d0_both: Lost Memmove D0 Both;
     lost_memcpy_d0_one: Lost Memcpy D0 One;
+    lost_memmove_d0_one: Lost Memmove D0 One;
     lost_memcpy_d1_both: Lost Memcpy D1 Both;
+    lost_memmove_d1_both: Lost Memmove D1 Both;
     lost_memcpy_d1_one: Lost Memcpy D1 One;
+    lost_memmove_d1_one: Lost Memmove D1 One;
     lost_memcpy_d2_both: Lost Memcpy D2 Both;
+    lost_memmove_d2_both: Lost Memmove D2 Both;
     lost_memcpy_d2_one: Lost Memcpy D2 One;
+    lost_memmove_d2_one: Lost Memmove D2 One;
     lost_realloc_d1_both: Lost Realloc D1 Both;
     lost_realloc_d1_one: Lost Realloc D1 One;
     lost_realloc_d2_both: Lost Realloc D2 Both;
@@ -937,11 +1030,17 @@ routes! {
     stale_store_d2_both: Stale Store D2 Both;
     stale_store_d2_one: Stale Store D2 One;
     stale_memcpy_d0_both: Stale Memcpy D0 Both;
+    stale_memmove_d0_both: Stale Memmove D0 Both;
     stale_memcpy_d0_one: Stale Memcpy D0 One;
+    stale_memmove_d0_one: Stale Memmove D0 One;
     stale_memcpy_d1_both: Stale Memcpy D1 Both;
+    stale_memmove_d1_both: Stale Memmove D1 Both;
     stale_memcpy_d1_one: Stale Memcpy D1 One;
+    stale_memmove_d1_one: Stale Memmove D1 One;
     stale_memcpy_d2_both: Stale Memcpy D2 Both;
+    stale_memmove_d2_both: Stale Memmove D2 Both;
     stale_memcpy_d2_one: Stale Memcpy D2 One;
+    stale_memmove_d2_one: Stale Memmove D2 One;
     stale_realloc_d1_both: Stale Realloc D1 Both;
     stale_realloc_d1_one: Stale Realloc D1 One;
     stale_realloc_d2_both: Stale Realloc D2 Both;
@@ -971,11 +1070,17 @@ routes! {
     reborn_store_d2_both: Reborn Store D2 Both;
     reborn_store_d2_one: Reborn Store D2 One;
     reborn_memcpy_d0_both: Reborn Memcpy D0 Both;
+    reborn_memmove_d0_both: Reborn Memmove D0 Both;
     reborn_memcpy_d0_one: Reborn Memcpy D0 One;
+    reborn_memmove_d0_one: Reborn Memmove D0 One;
     reborn_memcpy_d1_both: Reborn Memcpy D1 Both;
+    reborn_memmove_d1_both: Reborn Memmove D1 Both;
     reborn_memcpy_d1_one: Reborn Memcpy D1 One;
+    reborn_memmove_d1_one: Reborn Memmove D1 One;
     reborn_memcpy_d2_both: Reborn Memcpy D2 Both;
+    reborn_memmove_d2_both: Reborn Memmove D2 Both;
     reborn_memcpy_d2_one: Reborn Memcpy D2 One;
+    reborn_memmove_d2_one: Reborn Memmove D2 One;
     reborn_realloc_d1_both: Reborn Realloc D1 Both;
     reborn_realloc_d1_one: Reborn Realloc D1 One;
     reborn_realloc_d2_both: Reborn Realloc D2 Both;
@@ -1009,11 +1114,17 @@ routes! {
     caller_store_d2_both: Caller Store D2 Both;
     caller_store_d2_one: Caller Store D2 One;
     caller_memcpy_d0_both: Caller Memcpy D0 Both;
+    caller_memmove_d0_both: Caller Memmove D0 Both;
     caller_memcpy_d0_one: Caller Memcpy D0 One;
+    caller_memmove_d0_one: Caller Memmove D0 One;
     caller_memcpy_d1_both: Caller Memcpy D1 Both;
+    caller_memmove_d1_both: Caller Memmove D1 Both;
     caller_memcpy_d1_one: Caller Memcpy D1 One;
+    caller_memmove_d1_one: Caller Memmove D1 One;
     caller_memcpy_d2_both: Caller Memcpy D2 Both;
+    caller_memmove_d2_both: Caller Memmove D2 Both;
     caller_memcpy_d2_one: Caller Memcpy D2 One;
+    caller_memmove_d2_one: Caller Memmove D2 One;
     caller_realloc_d1_both: Caller Realloc D1 Both;
     caller_realloc_d1_one: Caller Realloc D1 One;
     caller_realloc_d2_both: Caller Realloc D2 Both;
@@ -1043,11 +1154,17 @@ routes! {
     unreplaced_store_d2_both: Unreplaced Store D2 Both;
     unreplaced_store_d2_one: Unreplaced Store D2 One;
     unreplaced_memcpy_d0_both: Unreplaced Memcpy D0 Both;
+    unreplaced_memmove_d0_both: Unreplaced Memmove D0 Both;
     unreplaced_memcpy_d0_one: Unreplaced Memcpy D0 One;
+    unreplaced_memmove_d0_one: Unreplaced Memmove D0 One;
     unreplaced_memcpy_d1_both: Unreplaced Memcpy D1 Both;
+    unreplaced_memmove_d1_both: Unreplaced Memmove D1 Both;
     unreplaced_memcpy_d1_one: Unreplaced Memcpy D1 One;
+    unreplaced_memmove_d1_one: Unreplaced Memmove D1 One;
     unreplaced_memcpy_d2_both: Unreplaced Memcpy D2 Both;
+    unreplaced_memmove_d2_both: Unreplaced Memmove D2 Both;
     unreplaced_memcpy_d2_one: Unreplaced Memcpy D2 One;
+    unreplaced_memmove_d2_one: Unreplaced Memmove D2 One;
     unreplaced_realloc_d1_both: Unreplaced Realloc D1 Both;
     unreplaced_realloc_d1_one: Unreplaced Realloc D1 One;
     unreplaced_realloc_d2_both: Unreplaced Realloc D2 Both;
@@ -1070,6 +1187,8 @@ routes! {
     unreplaced_restored_d1_one: Unreplaced Restored D1 One;
     unreplaced_restored_d2_both: Unreplaced Restored D2 Both;
     unreplaced_restored_d2_one: Unreplaced Restored D2 One;
+    fresh_memcpy_unread_d0_both: Fresh MemcpyUnread D0 Both;
+    fresh_memcpy_unread_d0_one: Fresh MemcpyUnread D0 One;
     fresh_memcpy_unread_d1_both: Fresh MemcpyUnread D1 Both;
     fresh_memcpy_unread_d1_one: Fresh MemcpyUnread D1 One;
     fresh_memcpy_short_d1_both: Fresh MemcpyShort D1 Both;
@@ -1094,11 +1213,17 @@ routes! {
     stored_out_store_d2_both: StoredOut Store D2 Both;
     stored_out_store_d2_one: StoredOut Store D2 One;
     stored_out_memcpy_d0_both: StoredOut Memcpy D0 Both;
+    stored_out_memmove_d0_both: StoredOut Memmove D0 Both;
     stored_out_memcpy_d0_one: StoredOut Memcpy D0 One;
+    stored_out_memmove_d0_one: StoredOut Memmove D0 One;
     stored_out_memcpy_d1_both: StoredOut Memcpy D1 Both;
+    stored_out_memmove_d1_both: StoredOut Memmove D1 Both;
     stored_out_memcpy_d1_one: StoredOut Memcpy D1 One;
+    stored_out_memmove_d1_one: StoredOut Memmove D1 One;
     stored_out_memcpy_d2_both: StoredOut Memcpy D2 Both;
+    stored_out_memmove_d2_both: StoredOut Memmove D2 Both;
     stored_out_memcpy_d2_one: StoredOut Memcpy D2 One;
+    stored_out_memmove_d2_one: StoredOut Memmove D2 One;
     stored_out_realloc_d1_both: StoredOut Realloc D1 Both;
     stored_out_realloc_d1_one: StoredOut Realloc D1 One;
     stored_out_realloc_d2_both: StoredOut Realloc D2 Both;
@@ -1128,11 +1253,17 @@ routes! {
     stored_freed_store_d2_both: StoredFreed Store D2 Both;
     stored_freed_store_d2_one: StoredFreed Store D2 One;
     stored_freed_memcpy_d0_both: StoredFreed Memcpy D0 Both;
+    stored_freed_memmove_d0_both: StoredFreed Memmove D0 Both;
     stored_freed_memcpy_d0_one: StoredFreed Memcpy D0 One;
+    stored_freed_memmove_d0_one: StoredFreed Memmove D0 One;
     stored_freed_memcpy_d1_both: StoredFreed Memcpy D1 Both;
+    stored_freed_memmove_d1_both: StoredFreed Memmove D1 Both;
     stored_freed_memcpy_d1_one: StoredFreed Memcpy D1 One;
+    stored_freed_memmove_d1_one: StoredFreed Memmove D1 One;
     stored_freed_memcpy_d2_both: StoredFreed Memcpy D2 Both;
+    stored_freed_memmove_d2_both: StoredFreed Memmove D2 Both;
     stored_freed_memcpy_d2_one: StoredFreed Memcpy D2 One;
+    stored_freed_memmove_d2_one: StoredFreed Memmove D2 One;
     stored_freed_realloc_d1_both: StoredFreed Realloc D1 Both;
     stored_freed_realloc_d1_one: StoredFreed Realloc D1 One;
     stored_freed_realloc_d2_both: StoredFreed Realloc D2 Both;
@@ -1162,11 +1293,17 @@ routes! {
     left_behind_store_d2_both: LeftBehind Store D2 Both;
     left_behind_store_d2_one: LeftBehind Store D2 One;
     left_behind_memcpy_d0_both: LeftBehind Memcpy D0 Both;
+    left_behind_memmove_d0_both: LeftBehind Memmove D0 Both;
     left_behind_memcpy_d0_one: LeftBehind Memcpy D0 One;
+    left_behind_memmove_d0_one: LeftBehind Memmove D0 One;
     left_behind_memcpy_d1_both: LeftBehind Memcpy D1 Both;
+    left_behind_memmove_d1_both: LeftBehind Memmove D1 Both;
     left_behind_memcpy_d1_one: LeftBehind Memcpy D1 One;
+    left_behind_memmove_d1_one: LeftBehind Memmove D1 One;
     left_behind_memcpy_d2_both: LeftBehind Memcpy D2 Both;
+    left_behind_memmove_d2_both: LeftBehind Memmove D2 Both;
     left_behind_memcpy_d2_one: LeftBehind Memcpy D2 One;
+    left_behind_memmove_d2_one: LeftBehind Memmove D2 One;
     left_behind_realloc_d1_both: LeftBehind Realloc D1 Both;
     left_behind_realloc_d1_one: LeftBehind Realloc D1 One;
     left_behind_realloc_d2_both: LeftBehind Realloc D2 Both;
@@ -1208,11 +1345,17 @@ routes! {
     part_pointer_store_d2_both: PartPointer Store D2 Both;
     part_pointer_store_d2_one: PartPointer Store D2 One;
     part_pointer_memcpy_d0_both: PartPointer Memcpy D0 Both;
+    part_pointer_memmove_d0_both: PartPointer Memmove D0 Both;
     part_pointer_memcpy_d0_one: PartPointer Memcpy D0 One;
+    part_pointer_memmove_d0_one: PartPointer Memmove D0 One;
     part_pointer_memcpy_d1_both: PartPointer Memcpy D1 Both;
+    part_pointer_memmove_d1_both: PartPointer Memmove D1 Both;
     part_pointer_memcpy_d1_one: PartPointer Memcpy D1 One;
+    part_pointer_memmove_d1_one: PartPointer Memmove D1 One;
     part_pointer_memcpy_d2_both: PartPointer Memcpy D2 Both;
+    part_pointer_memmove_d2_both: PartPointer Memmove D2 Both;
     part_pointer_memcpy_d2_one: PartPointer Memcpy D2 One;
+    part_pointer_memmove_d2_one: PartPointer Memmove D2 One;
     part_pointer_realloc_d1_both: PartPointer Realloc D1 Both;
     part_pointer_realloc_d1_one: PartPointer Realloc D1 One;
     part_pointer_realloc_d2_both: PartPointer Realloc D2 Both;
@@ -1246,11 +1389,17 @@ routes! {
     part_local_store_d2_both: PartLocal Store D2 Both;
     part_local_store_d2_one: PartLocal Store D2 One;
     part_local_memcpy_d0_both: PartLocal Memcpy D0 Both;
+    part_local_memmove_d0_both: PartLocal Memmove D0 Both;
     part_local_memcpy_d0_one: PartLocal Memcpy D0 One;
+    part_local_memmove_d0_one: PartLocal Memmove D0 One;
     part_local_memcpy_d1_both: PartLocal Memcpy D1 Both;
+    part_local_memmove_d1_both: PartLocal Memmove D1 Both;
     part_local_memcpy_d1_one: PartLocal Memcpy D1 One;
+    part_local_memmove_d1_one: PartLocal Memmove D1 One;
     part_local_memcpy_d2_both: PartLocal Memcpy D2 Both;
+    part_local_memmove_d2_both: PartLocal Memmove D2 Both;
     part_local_memcpy_d2_one: PartLocal Memcpy D2 One;
+    part_local_memmove_d2_one: PartLocal Memmove D2 One;
     part_local_realloc_d1_both: PartLocal Realloc D1 Both;
     part_local_realloc_d1_one: PartLocal Realloc D1 One;
     part_local_realloc_d2_both: PartLocal Realloc D2 Both;
@@ -1284,11 +1433,17 @@ routes! {
     returned_store_d2_both: Returned Store D2 Both;
     returned_store_d2_one: Returned Store D2 One;
     returned_memcpy_d0_both: Returned Memcpy D0 Both;
+    returned_memmove_d0_both: Returned Memmove D0 Both;
     returned_memcpy_d0_one: Returned Memcpy D0 One;
+    returned_memmove_d0_one: Returned Memmove D0 One;
     returned_memcpy_d1_both: Returned Memcpy D1 Both;
+    returned_memmove_d1_both: Returned Memmove D1 Both;
     returned_memcpy_d1_one: Returned Memcpy D1 One;
+    returned_memmove_d1_one: Returned Memmove D1 One;
     returned_memcpy_d2_both: Returned Memcpy D2 Both;
+    returned_memmove_d2_both: Returned Memmove D2 Both;
     returned_memcpy_d2_one: Returned Memcpy D2 One;
+    returned_memmove_d2_one: Returned Memmove D2 One;
     returned_realloc_d1_both: Returned Realloc D1 Both;
     returned_realloc_d1_one: Returned Realloc D1 One;
     returned_realloc_d2_both: Returned Realloc D2 Both;
@@ -1322,11 +1477,17 @@ routes! {
     held_pointers_store_d2_both: HeldPointers Store D2 Both;
     held_pointers_store_d2_one: HeldPointers Store D2 One;
     held_pointers_memcpy_d0_both: HeldPointers Memcpy D0 Both;
+    held_pointers_memmove_d0_both: HeldPointers Memmove D0 Both;
     held_pointers_memcpy_d0_one: HeldPointers Memcpy D0 One;
+    held_pointers_memmove_d0_one: HeldPointers Memmove D0 One;
     held_pointers_memcpy_d1_both: HeldPointers Memcpy D1 Both;
+    held_pointers_memmove_d1_both: HeldPointers Memmove D1 Both;
     held_pointers_memcpy_d1_one: HeldPointers Memcpy D1 One;
+    held_pointers_memmove_d1_one: HeldPointers Memmove D1 One;
     held_pointers_memcpy_d2_both: HeldPointers Memcpy D2 Both;
+    held_pointers_memmove_d2_both: HeldPointers Memmove D2 Both;
     held_pointers_memcpy_d2_one: HeldPointers Memcpy D2 One;
+    held_pointers_memmove_d2_one: HeldPointers Memmove D2 One;
     held_pointers_realloc_d1_both: HeldPointers Realloc D1 Both;
     held_pointers_realloc_d1_one: HeldPointers Realloc D1 One;
     held_pointers_realloc_d2_both: HeldPointers Realloc D2 Both;
@@ -2595,7 +2756,17 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Cost(RETURNED_MAY_NAME),
     ),
     (
+        "returned_memmove_d2_both",
+        Side::Control,
+        Why::Cost(RETURNED_MAY_NAME),
+    ),
+    (
         "returned_memcpy_d2_one",
+        Side::Control,
+        Why::Cost(RETURNED_MAY_NAME),
+    ),
+    (
+        "returned_memmove_d2_one",
         Side::Control,
         Why::Cost(RETURNED_MAY_NAME),
     ),
@@ -2699,7 +2870,17 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Belief(LOST_COPIED),
     ),
     (
+        "stale_memmove_d0_both",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
         "stale_memcpy_d0_one",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
+        "stale_memmove_d0_one",
         Side::Control,
         Why::Belief(LOST_COPIED),
     ),
@@ -2709,7 +2890,17 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Belief(LOST_COPIED),
     ),
     (
+        "stale_memmove_d1_both",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
         "stale_memcpy_d1_one",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
+        "stale_memmove_d1_one",
         Side::Control,
         Why::Belief(LOST_COPIED),
     ),
@@ -2719,7 +2910,17 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Belief(LOST_COPIED),
     ),
     (
+        "stale_memmove_d2_both",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
         "stale_memcpy_d2_one",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
+        "stale_memmove_d2_one",
         Side::Control,
         Why::Belief(LOST_COPIED),
     ),
@@ -2737,7 +2938,17 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Belief(LOST_COPIED),
     ),
     (
+        "lost_memmove_d0_both",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
         "lost_memcpy_d0_one",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
+        "lost_memmove_d0_one",
         Side::Control,
         Why::Belief(LOST_COPIED),
     ),
@@ -2747,7 +2958,17 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Belief(LOST_COPIED),
     ),
     (
+        "lost_memmove_d1_both",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
         "lost_memcpy_d1_one",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
+        "lost_memmove_d1_one",
         Side::Control,
         Why::Belief(LOST_COPIED),
     ),
@@ -2757,7 +2978,17 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Belief(LOST_COPIED),
     ),
     (
+        "lost_memmove_d2_both",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
         "lost_memcpy_d2_one",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
+        "lost_memmove_d2_one",
         Side::Control,
         Why::Belief(LOST_COPIED),
     ),
@@ -2767,7 +2998,17 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Belief(LOST_COPIED),
     ),
     (
+        "reborn_memmove_d0_both",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
         "reborn_memcpy_d0_one",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
+        "reborn_memmove_d0_one",
         Side::Control,
         Why::Belief(LOST_COPIED),
     ),
@@ -2777,7 +3018,17 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Belief(LOST_COPIED),
     ),
     (
+        "reborn_memmove_d1_both",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
         "reborn_memcpy_d1_one",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
+        "reborn_memmove_d1_one",
         Side::Control,
         Why::Belief(LOST_COPIED),
     ),
@@ -2787,7 +3038,17 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Belief(LOST_COPIED),
     ),
     (
+        "reborn_memmove_d2_both",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
         "reborn_memcpy_d2_one",
+        Side::Control,
+        Why::Belief(LOST_COPIED),
+    ),
+    (
+        "reborn_memmove_d2_one",
         Side::Control,
         Why::Belief(LOST_COPIED),
     ),
@@ -2835,7 +3096,17 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Cost(ESCAPED_SOURCE),
     ),
     (
+        "left_behind_memmove_d1_both",
+        Side::Control,
+        Why::Cost(ESCAPED_SOURCE),
+    ),
+    (
         "left_behind_memcpy_d1_one",
+        Side::Control,
+        Why::Cost(ESCAPED_SOURCE),
+    ),
+    (
+        "left_behind_memmove_d1_one",
         Side::Control,
         Why::Cost(ESCAPED_SOURCE),
     ),
@@ -2845,7 +3116,17 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Cost(ESCAPED_SOURCE),
     ),
     (
+        "left_behind_memmove_d2_both",
+        Side::Control,
+        Why::Cost(ESCAPED_SOURCE),
+    ),
+    (
         "left_behind_memcpy_d2_one",
+        Side::Control,
+        Why::Cost(ESCAPED_SOURCE),
+    ),
+    (
+        "left_behind_memmove_d2_one",
         Side::Control,
         Why::Cost(ESCAPED_SOURCE),
     ),
@@ -2905,7 +3186,17 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Cost(DEEP_WRITE_LEAVES),
     ),
     (
+        "stored_freed_memmove_d2_both",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
         "stored_freed_memcpy_d2_one",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_freed_memmove_d2_one",
         Side::Control,
         Why::Cost(DEEP_WRITE_LEAVES),
     ),
@@ -3025,7 +3316,17 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Cost(DEEP_WRITE_LEAVES),
     ),
     (
+        "stored_out_memmove_d2_both",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
         "stored_out_memcpy_d2_one",
+        Side::Control,
+        Why::Cost(DEEP_WRITE_LEAVES),
+    ),
+    (
+        "stored_out_memmove_d2_one",
         Side::Control,
         Why::Cost(DEEP_WRITE_LEAVES),
     ),
@@ -3063,11 +3364,13 @@ fn mark(row: Row) -> (&'static str, Option<&'static str>) {
         Route::KeptVoid | Route::KeptBytes | Route::KeptBlock => return ("SC0413", None),
         Route::Store
         | Route::Memcpy
+        | Route::Memmove
         | Route::Realloc
         | Route::Call
         | Route::Ret
         | Route::MemcpyFromBlock
         | Route::MemcpyHalf
+        | Route::MemsetWhole
         | Route::MemcpyPart
         | Route::MemcpyMaybe
         | Route::CallStored
@@ -3113,6 +3416,8 @@ const DECLARATIONS: &str = "void *malloc(int n);
 void free(void *p);
 void *realloc(void *p, int n);
 void *memcpy(void *d, void *s, int n);
+void *memmove(void *d, void *s, int n);
+void *memset(void *s, int c, int n);
 void *pass(void *p);
 void get_narrow(char **p);
 void get_wide(int **p);
@@ -3183,6 +3488,10 @@ fn put_of(route: Route, depth: Depth, slot: &str, value: &str, ty: &str) -> Vec<
             format!("{ty}v_ = {value};"),
             format!("memcpy(&{slot}, &v_, 8);"),
         ],
+        Route::Memmove => vec![
+            format!("{ty}v_ = {value};"),
+            format!("memmove(&{slot}, &v_, 8);"),
+        ],
         Route::Ret => vec![format!("{slot} = pass({value});")],
         Route::Realloc => {
             let (grown, back) = holder(depth);
@@ -3210,6 +3519,7 @@ fn put_of(route: Route, depth: Depth, slot: &str, value: &str, ty: &str) -> Vec<
             unreachable!("only `Belief::Width` writes through a call or a parameter; see `width`")
         }
         Route::MemcpyHalf
+        | Route::MemsetWhole
         | Route::MemcpyPart
         | Route::MemcpyMaybe
         | Route::MemcpyUnread
@@ -3332,6 +3642,7 @@ fn width(row: Row, hazard: bool) -> Vec<String> {
         }
         Route::Store
         | Route::Memcpy
+        | Route::Memmove
         | Route::Realloc
         | Route::Ret
         | Route::MemcpyFromBlock
@@ -3393,6 +3704,7 @@ fn width(row: Row, hazard: bool) -> Vec<String> {
             kept
         }
         Route::MemcpyHalf
+        | Route::MemsetWhole
         | Route::MemcpyPart
         | Route::MemcpyMaybe
         | Route::MemcpyUnread
@@ -3437,9 +3749,14 @@ fn fresh(row: Row, hazard: bool) -> Vec<String> {
     let body = match row.route {
         Route::Store => vec![format!("{slot} = *b;")],
         Route::Memcpy => vec![format!("memcpy(&{slot}, b, 8);")],
+        Route::Memmove => vec![format!("memmove(&{slot}, b, 8);")],
         // These three ask what the copy covers, so the source is written in
         // both programs, and the two differ in the length or in the arm the
         // source is written on.
+        Route::MemsetWhole => vec![format!(
+            "memset(&{slot}, 0, {});",
+            if hazard { 4 } else { 8 }
+        )],
         Route::MemcpyHalf => {
             lines.push("int x = 0;".to_owned());
             lines.push("*b = &x;".to_owned());
@@ -3973,11 +4290,13 @@ fn read_from(row: Row) -> String {
         Route::KeptVoid | Route::KeptBytes | Route::KeptBlock => "w".to_owned(),
         Route::Store
         | Route::Memcpy
+        | Route::Memmove
         | Route::Realloc
         | Route::Call
         | Route::Ret
         | Route::MemcpyFromBlock
         | Route::MemcpyHalf
+        | Route::MemsetWhole
         | Route::MemcpyMaybe
         | Route::Restored
         | Route::MemcpyUnread
@@ -4016,11 +4335,13 @@ fn parameters(row: Row, hazard: bool) -> &'static str {
         (
             Route::Store
             | Route::Memcpy
+            | Route::Memmove
             | Route::Realloc
             | Route::Call
             | Route::Ret
             | Route::MemcpyFromBlock
             | Route::MemcpyHalf
+            | Route::MemsetWhole
             | Route::MemcpyPart
             | Route::MemcpyMaybe
             | Route::CallStored
@@ -4050,6 +4371,54 @@ struct Answer {
     exit: i32,
     /// Each report: whether it is an error, its code, and its message.
     reports: Vec<(bool, String, String)>,
+    /// Each report as [`compare::diagnostics`] keys it: its level and code,
+    /// whether it was proved, and the line it points at, where it points at
+    /// one. [`aligned`] places the line against another program's.
+    keyed: Vec<(String, bool, Option<usize>)>,
+}
+
+/// Where a report points, against another spelling of the same program:
+/// on a line both share at their start, counted from it; on a line both
+/// share at their end, counted from it; or among the lines that differ,
+/// which put the pointer there. Two routes into one slot differ only in
+/// how they put it, and a report on the same shared line, or anywhere on
+/// the put, is the same report.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum Place {
+    Before(usize),
+    Put,
+    After(usize),
+    Nowhere,
+}
+
+/// `answer`'s reports keyed by level, code, whether proved and [`Place`],
+/// with `source` its program and `other` the program it is compared with,
+/// as a sorted multiset.
+fn aligned(answer: &Answer, source: &str, other: &str) -> Vec<(String, bool, Place)> {
+    let mine: Vec<&str> = source.lines().collect();
+    let theirs: Vec<&str> = other.lines().collect();
+    let before = mine.iter().zip(&theirs).take_while(|(a, b)| a == b).count();
+    let after = mine
+        .iter()
+        .rev()
+        .zip(theirs.iter().rev())
+        .take_while(|(a, b)| a == b)
+        .count();
+    let mut keyed: Vec<(String, bool, Place)> = answer
+        .keyed
+        .iter()
+        .map(|(opens, proved, line)| {
+            let place = match *line {
+                None => Place::Nowhere,
+                Some(line) if line <= before => Place::Before(line),
+                Some(line) if line > mine.len() - after => Place::After(mine.len() - line),
+                Some(_) => Place::Put,
+            };
+            (opens.clone(), *proved, place)
+        })
+        .collect();
+    keyed.sort();
+    keyed
 }
 
 impl Answer {
@@ -4156,6 +4525,17 @@ fn ask_with(name: &str, source: &str, safety: &str, extra: &[&str]) -> Answer {
     }
     let _ = std::fs::remove_dir_all(&dir);
     let stderr = String::from_utf8_lossy(&output.stderr);
+    let keyed: Vec<(String, bool, Option<usize>)> = compare::diagnostics(&stderr)
+        .into_iter()
+        .map(|diagnostic| {
+            let line = diagnostic
+                .at
+                .rsplit(':')
+                .nth(1)
+                .and_then(|line| line.parse::<usize>().ok());
+            (diagnostic.opens, diagnostic.proved, line)
+        })
+        .collect();
     let reports = stderr
         .lines()
         .filter_map(|line| {
@@ -4171,7 +4551,11 @@ fn ask_with(name: &str, source: &str, safety: &str, extra: &[&str]) -> Answer {
         .status
         .code()
         .unwrap_or_else(|| panic!("row `{name}`: the compiler was killed by a signal"));
-    Answer { exit, reports }
+    Answer {
+        exit,
+        reports,
+        keyed,
+    }
 }
 
 /// Which side of `row` disagrees with its belief's rule, if either.
@@ -4294,7 +4678,15 @@ const UNCERTAIN: &[(&str, &str)] = &[
         "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
     ),
     (
+        "width_memmove_d0_both",
+        "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
+    ),
+    (
         "width_memcpy_d0_one",
+        "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
+    ),
+    (
+        "width_memmove_d0_one",
         "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
     ),
     (
@@ -4334,7 +4726,15 @@ const UNCERTAIN: &[(&str, &str)] = &[
         "on one arm the slot holds what nothing wrote and on the other a null, and their join is a doubt (ADR-0057, #668)",
     ),
     (
+        "fresh_memmove_d0_one",
+        "on one arm the slot holds what nothing wrote and on the other a null, and their join is a doubt (ADR-0057, #668)",
+    ),
+    (
         "fresh_memcpy_d1_one",
+        "on one arm the slot holds what nothing wrote and on the other a null, and their join is a doubt (ADR-0057, #668)",
+    ),
+    (
+        "fresh_memmove_d1_one",
         "on one arm the slot holds what nothing wrote and on the other a null, and their join is a doubt (ADR-0057, #668)",
     ),
     (
@@ -4354,7 +4754,15 @@ const UNCERTAIN: &[(&str, &str)] = &[
         "#768: a read two levels down is never asked whether it is indeterminate",
     ),
     (
+        "fresh_memmove_d2_both",
+        "#768: a read two levels down is never asked whether it is indeterminate",
+    ),
+    (
         "fresh_memcpy_d2_one",
+        "#768: a read two levels down is never asked whether it is indeterminate",
+    ),
+    (
+        "fresh_memmove_d2_one",
         "#768: a read two levels down is never asked whether it is indeterminate",
     ),
     (
@@ -4376,6 +4784,26 @@ const UNCERTAIN: &[(&str, &str)] = &[
     (
         "width_restored_d0_one",
         "a pointer read out of memory, returned by a call or written by one is believed, never known exactly, so a narrow one is a doubt (ADR-0060)",
+    ),
+    (
+        "fresh_memset_whole_d1_one",
+        "a fill leaves the bytes it does not cover as they were, which is asked where the slot is read and not at the fill, so a path or a level that may have written them makes it a doubt; the store reads what nothing wrote at the put",
+    ),
+    (
+        "fresh_memset_whole_d2_both",
+        "a fill leaves the bytes it does not cover as they were, which is asked where the slot is read and not at the fill, so a path or a level that may have written them makes it a doubt; the store reads what nothing wrote at the put",
+    ),
+    (
+        "fresh_memset_whole_d2_one",
+        "a fill leaves the bytes it does not cover as they were, which is asked where the slot is read and not at the fill, so a path or a level that may have written them makes it a doubt; the store reads what nothing wrote at the put",
+    ),
+    (
+        "fresh_memcpy_unread_d0_both",
+        "a copy of a length this check cannot read may not cover the slot, so what it leaves there is a doubt",
+    ),
+    (
+        "fresh_memcpy_unread_d0_one",
+        "a copy of a length this check cannot read may not cover the slot, so what it leaves there is a doubt",
     ),
     (
         "fresh_memcpy_unread_d1_both",
@@ -4442,7 +4870,15 @@ const UNCERTAIN: &[(&str, &str)] = &[
         "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
     ),
     (
+        "stored_freed_memmove_d0_both",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
         "stored_freed_memcpy_d0_one",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
+        "stored_freed_memmove_d0_one",
         "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
     ),
     (
@@ -4450,7 +4886,15 @@ const UNCERTAIN: &[(&str, &str)] = &[
         "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
     ),
     (
+        "stored_freed_memmove_d1_both",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
         "stored_freed_memcpy_d1_one",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
+        "stored_freed_memmove_d1_one",
         "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
     ),
     (
@@ -4458,7 +4902,15 @@ const UNCERTAIN: &[(&str, &str)] = &[
         "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
     ),
     (
+        "stored_freed_memmove_d2_both",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
         "stored_freed_memcpy_d2_one",
+        "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
+    ),
+    (
+        "stored_freed_memmove_d2_one",
         "a library copy that leaves is asked whether what it carries was freed only as a doubt, since C defines it to copy bytes (ADR-0068)",
     ),
     (
@@ -4535,114 +4987,440 @@ const UNCERTAIN: &[(&str, &str)] = &[
     ),
 ];
 
-/// Why a row is listed in [`COPY_DIFFERS`] when nothing more is known: it
-/// differed when the test that asks it landed, at `bb36192d`, and each such
-/// row is a rule the store and the copy still answer apart. The entries go
-/// as the rules become one.
-const DIFFERED_WHEN_ASKED: &str = "the store and the copy of one pointer still answer this route apart; it differed when `a_whole_copy_answers_as_its_plain_store` landed (#686)";
+/// A row of [`COPY_DIFFERS`]: the copy's call is asked at its arguments,
+/// `SC0407`, where the store is asked at its own door alone, or the same
+/// report lands on another line. One rule spelled at two doors, which
+/// #926 asks through one function.
+const ASKED_AT_ITS_ARGUMENTS: &str = "the copy's call is asked at its arguments, `SC0407`, where the store is asked at its own door alone (#926)";
+/// A row of [`COPY_DIFFERS`]: how wide the write is, and what it carries,
+/// asked apart, `SC0412` or `SC0413` on one side alone, proved on one, or
+/// `SC0413` where the store says `SC0414` (#926). **The copy may be the
+/// quieter side**: in `stored_out_memcpy_block_d2_both` the store doubts an
+/// eight-byte write through a pointer a call may have replaced, `SC0412`,
+/// and the copy of the same eight bytes through it says nothing of its
+/// bounds, refused only by the `SC0402` on the same line. A doubt raised
+/// elsewhere, which #926 has to close, not a reason to keep it.
+const WIDTH_ASKED_APART: &str = "the copy and the store ask the width of the write apart, `SC0412` or `SC0413` on one side alone or proved on one (#926)";
+/// A row of [`COPY_DIFFERS`]: a doubt the copy raises and its store does
+/// not, on a program the store answers without it (#926).
+const COPY_DOUBTS_MORE: &str = "the copy doubts what its store does not, `SC0401`, `SC0402`, `SC0406` or `SC0407` away from the put (#926)";
+/// A row of [`COPY_DIFFERS`]: a doubt the store raises and its copy does
+/// not: `SC0402` on the control, where the program frees nothing;
+/// `SC0414` where the copy says `SC0407` on the same line; and in
+/// `stored_out_memcpy_block_d0_both`, read by hand, `SC0401` at a free that
+/// nothing freed before, which the program does not need (#926).
+const STORE_DOUBTS_MORE: &str = "the store doubts what its copy does not (#926)";
+/// A row of [`COPY_DIFFERS`]: a library copy that leaves is asked whether
+/// what it carries was freed only as a doubt, where its store proves it
+/// (ADR-0068 rule 3).
+const FREED_ONLY_AS_A_DOUBT: &str = "a library copy that leaves is asked whether what it carries was freed only as a doubt, where its store proves it (ADR-0068 rule 3)";
+/// A row of [`COPY_DIFFERS`]: a copy carries bytes nothing wrote without
+/// reading them as a pointer, since it copies characters (C17 7.24.2.1),
+/// so the slot is reported where it is read, where the store reads the
+/// pointer at the put.
+const INDETERMINATE_BYTES_ARE_COPIED: &str = "a copy carries bytes nothing wrote without reading them as a pointer (C17 7.24.2.1), so it is reported where the slot is read and not at the put";
 /// What a whole copy is not answered alike with its plain store, row by
-/// row, with why: a library copy of a whole pointer is the store of it, so
-/// any code its hazard or control reports that the store's does not, or the
-/// reverse, is one rule spelled twice (#686, the memory model rebuilt on
-/// #924, stage 2). **Exact in both directions**: a listed row that now
-/// agrees fails too, and its entry goes.
-const COPY_DIFFERS: &[(&str, &str)] = &[
-    ("caller_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("caller_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("fresh_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("fresh_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("fresh_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("held_pointers_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("held_pointers_memcpy_d0_both", DIFFERED_WHEN_ASKED),
-    ("held_pointers_memcpy_d0_one", DIFFERED_WHEN_ASKED),
-    ("held_pointers_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("held_pointers_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("held_pointers_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("held_pointers_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("left_behind_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("left_behind_memcpy_d0_both", DIFFERED_WHEN_ASKED),
-    ("left_behind_memcpy_d0_one", DIFFERED_WHEN_ASKED),
-    ("left_behind_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("left_behind_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("left_behind_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("left_behind_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("lost_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("part_pointer_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("part_pointer_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("part_pointer_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("part_pointer_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("reborn_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("returned_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
-    ("returned_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("returned_memcpy_d0_both", DIFFERED_WHEN_ASKED),
-    ("returned_memcpy_d0_one", DIFFERED_WHEN_ASKED),
-    ("returned_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("returned_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("returned_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("returned_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("stale_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_d0_both", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_d0_one", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("stored_freed_memcpy_d2_one", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_block_d0_both", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_block_d0_one", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_block_d1_both", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_block_d1_one", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_block_d2_both", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_block_d2_one", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_d0_both", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_d0_one", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_d1_both", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_d1_one", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_d2_both", DIFFERED_WHEN_ASKED),
-    ("stored_out_memcpy_d2_one", DIFFERED_WHEN_ASKED),
+/// row, with every reason it differs: a library copy of a whole pointer is
+/// the store of it, so any report its hazard or control makes that the
+/// store's does not, or the reverse, is one rule spelled twice (#686, the
+/// memory model rebuilt on #924, stage 2). **Exact in both directions**: a
+/// listed row that now agrees fails too, and its entry goes. Each reason
+/// was read off what the row's two programs report, measured when this
+/// list was written (#943); a reason naming #926 goes when that issue asks
+/// the rule through one function. **The reasons are held by nothing**:
+/// the test asks whether a listed row differs, not how, so a reason that
+/// stops being true passes, measured, until the row is read again.
+const COPY_DIFFERS: &[(&str, &[&str])] = &[
+    ("caller_memcpy_block_d1_both", &[COPY_DOUBTS_MORE]),
+    ("caller_memcpy_block_d1_one", &[COPY_DOUBTS_MORE]),
+    ("caller_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
+    ("caller_memmove_d1_both", &[COPY_DOUBTS_MORE]),
+    ("caller_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
+    ("caller_memmove_d1_one", &[COPY_DOUBTS_MORE]),
+    ("caller_memcpy_d2_both", &[WIDTH_ASKED_APART]),
+    ("caller_memmove_d2_both", &[WIDTH_ASKED_APART]),
+    ("caller_memcpy_d2_one", &[WIDTH_ASKED_APART]),
+    ("caller_memmove_d2_one", &[WIDTH_ASKED_APART]),
+    ("fresh_memcpy_d0_both", &[INDETERMINATE_BYTES_ARE_COPIED]),
+    ("fresh_memmove_d0_both", &[INDETERMINATE_BYTES_ARE_COPIED]),
+    ("fresh_memcpy_d0_one", &[INDETERMINATE_BYTES_ARE_COPIED]),
+    ("fresh_memmove_d0_one", &[INDETERMINATE_BYTES_ARE_COPIED]),
+    ("fresh_memcpy_d1_both", &[INDETERMINATE_BYTES_ARE_COPIED]),
+    ("fresh_memmove_d1_both", &[INDETERMINATE_BYTES_ARE_COPIED]),
+    ("fresh_memcpy_d1_one", &[INDETERMINATE_BYTES_ARE_COPIED]),
+    ("fresh_memmove_d1_one", &[INDETERMINATE_BYTES_ARE_COPIED]),
+    (
+        "fresh_memcpy_d2_both",
+        &[INDETERMINATE_BYTES_ARE_COPIED, WIDTH_ASKED_APART],
+    ),
+    (
+        "fresh_memmove_d2_both",
+        &[INDETERMINATE_BYTES_ARE_COPIED, WIDTH_ASKED_APART],
+    ),
+    (
+        "fresh_memcpy_d2_one",
+        &[INDETERMINATE_BYTES_ARE_COPIED, WIDTH_ASKED_APART],
+    ),
+    (
+        "fresh_memmove_d2_one",
+        &[INDETERMINATE_BYTES_ARE_COPIED, WIDTH_ASKED_APART],
+    ),
+    ("held_pointers_memcpy_block_d0_one", &[COPY_DOUBTS_MORE]),
+    ("held_pointers_memcpy_d0_both", &[COPY_DOUBTS_MORE]),
+    ("held_pointers_memmove_d0_both", &[COPY_DOUBTS_MORE]),
+    ("held_pointers_memcpy_d0_one", &[COPY_DOUBTS_MORE]),
+    ("held_pointers_memmove_d0_one", &[COPY_DOUBTS_MORE]),
+    ("held_pointers_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
+    ("held_pointers_memmove_d1_both", &[COPY_DOUBTS_MORE]),
+    ("held_pointers_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
+    ("held_pointers_memmove_d1_one", &[COPY_DOUBTS_MORE]),
+    (
+        "held_pointers_memcpy_d2_both",
+        &[COPY_DOUBTS_MORE, STORE_DOUBTS_MORE],
+    ),
+    (
+        "held_pointers_memmove_d2_both",
+        &[COPY_DOUBTS_MORE, STORE_DOUBTS_MORE],
+    ),
+    (
+        "held_pointers_memcpy_d2_one",
+        &[COPY_DOUBTS_MORE, STORE_DOUBTS_MORE],
+    ),
+    (
+        "held_pointers_memmove_d2_one",
+        &[COPY_DOUBTS_MORE, STORE_DOUBTS_MORE],
+    ),
+    ("left_behind_memcpy_block_d0_one", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memcpy_d0_both", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memmove_d0_both", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memcpy_d0_one", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memmove_d0_one", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memmove_d1_both", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memmove_d1_one", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memcpy_d2_both", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memmove_d2_both", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memcpy_d2_one", &[COPY_DOUBTS_MORE]),
+    ("left_behind_memmove_d2_one", &[COPY_DOUBTS_MORE]),
+    ("lost_memcpy_block_d0_both", &[STORE_DOUBTS_MORE]),
+    ("lost_memcpy_block_d0_one", &[STORE_DOUBTS_MORE]),
+    ("lost_memcpy_block_d2_both", &[WIDTH_ASKED_APART]),
+    ("lost_memcpy_block_d2_one", &[WIDTH_ASKED_APART]),
+    ("lost_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
+    ("lost_memmove_d1_both", &[COPY_DOUBTS_MORE]),
+    ("lost_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
+    ("lost_memmove_d1_one", &[COPY_DOUBTS_MORE]),
+    (
+        "lost_memcpy_d2_both",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    (
+        "lost_memmove_d2_both",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    ("lost_memcpy_d2_one", &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART]),
+    (
+        "lost_memmove_d2_one",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    ("part_pointer_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
+    ("part_pointer_memmove_d1_both", &[COPY_DOUBTS_MORE]),
+    ("part_pointer_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
+    ("part_pointer_memmove_d1_one", &[COPY_DOUBTS_MORE]),
+    ("part_pointer_memcpy_d2_both", &[COPY_DOUBTS_MORE]),
+    ("part_pointer_memmove_d2_both", &[COPY_DOUBTS_MORE]),
+    ("part_pointer_memcpy_d2_one", &[COPY_DOUBTS_MORE]),
+    ("part_pointer_memmove_d2_one", &[COPY_DOUBTS_MORE]),
+    (
+        "reborn_memcpy_block_d0_both",
+        &[ASKED_AT_ITS_ARGUMENTS, STORE_DOUBTS_MORE],
+    ),
+    (
+        "reborn_memcpy_block_d0_one",
+        &[ASKED_AT_ITS_ARGUMENTS, STORE_DOUBTS_MORE],
+    ),
+    (
+        "reborn_memcpy_block_d1_both",
+        &[ASKED_AT_ITS_ARGUMENTS, WIDTH_ASKED_APART],
+    ),
+    (
+        "reborn_memcpy_block_d1_one",
+        &[ASKED_AT_ITS_ARGUMENTS, WIDTH_ASKED_APART],
+    ),
+    ("reborn_memcpy_block_d2_both", &[WIDTH_ASKED_APART]),
+    ("reborn_memcpy_block_d2_one", &[WIDTH_ASKED_APART]),
+    ("reborn_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
+    ("reborn_memmove_d1_both", &[COPY_DOUBTS_MORE]),
+    ("reborn_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
+    ("reborn_memmove_d1_one", &[COPY_DOUBTS_MORE]),
+    (
+        "reborn_memcpy_d2_both",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    (
+        "reborn_memmove_d2_both",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    (
+        "reborn_memcpy_d2_one",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    (
+        "reborn_memmove_d2_one",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    ("returned_memcpy_block_d0_both", &[COPY_DOUBTS_MORE]),
+    ("returned_memcpy_block_d0_one", &[COPY_DOUBTS_MORE]),
+    ("returned_memcpy_d0_both", &[COPY_DOUBTS_MORE]),
+    ("returned_memmove_d0_both", &[COPY_DOUBTS_MORE]),
+    ("returned_memcpy_d0_one", &[COPY_DOUBTS_MORE]),
+    ("returned_memmove_d0_one", &[COPY_DOUBTS_MORE]),
+    ("returned_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
+    ("returned_memmove_d1_both", &[COPY_DOUBTS_MORE]),
+    ("returned_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
+    ("returned_memmove_d1_one", &[COPY_DOUBTS_MORE]),
+    ("returned_memcpy_d2_both", &[COPY_DOUBTS_MORE]),
+    ("returned_memmove_d2_both", &[COPY_DOUBTS_MORE]),
+    ("returned_memcpy_d2_one", &[COPY_DOUBTS_MORE]),
+    ("returned_memmove_d2_one", &[COPY_DOUBTS_MORE]),
+    (
+        "stale_memcpy_block_d0_both",
+        &[ASKED_AT_ITS_ARGUMENTS, STORE_DOUBTS_MORE],
+    ),
+    (
+        "stale_memcpy_block_d0_one",
+        &[ASKED_AT_ITS_ARGUMENTS, STORE_DOUBTS_MORE],
+    ),
+    ("stale_memcpy_block_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("stale_memcpy_block_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    (
+        "stale_memcpy_block_d2_both",
+        &[ASKED_AT_ITS_ARGUMENTS, WIDTH_ASKED_APART],
+    ),
+    (
+        "stale_memcpy_block_d2_one",
+        &[ASKED_AT_ITS_ARGUMENTS, WIDTH_ASKED_APART],
+    ),
+    ("stale_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
+    ("stale_memmove_d1_both", &[COPY_DOUBTS_MORE]),
+    ("stale_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
+    ("stale_memmove_d1_one", &[COPY_DOUBTS_MORE]),
+    (
+        "stale_memcpy_d2_both",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    (
+        "stale_memmove_d2_both",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    (
+        "stale_memcpy_d2_one",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    (
+        "stale_memmove_d2_one",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    (
+        "stored_freed_memcpy_block_d0_both",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memcpy_block_d0_one",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memcpy_block_d1_both",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memcpy_block_d1_one",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memcpy_block_d2_both",
+        &[FREED_ONLY_AS_A_DOUBT, WIDTH_ASKED_APART],
+    ),
+    (
+        "stored_freed_memcpy_block_d2_one",
+        &[FREED_ONLY_AS_A_DOUBT, WIDTH_ASKED_APART],
+    ),
+    (
+        "stored_freed_memcpy_d0_both",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memmove_d0_both",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memcpy_d0_one",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memmove_d0_one",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memcpy_d1_both",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memmove_d1_both",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memcpy_d1_one",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memmove_d1_one",
+        &[ASKED_AT_ITS_ARGUMENTS, FREED_ONLY_AS_A_DOUBT],
+    ),
+    (
+        "stored_freed_memcpy_d2_both",
+        &[FREED_ONLY_AS_A_DOUBT, WIDTH_ASKED_APART],
+    ),
+    (
+        "stored_freed_memmove_d2_both",
+        &[FREED_ONLY_AS_A_DOUBT, WIDTH_ASKED_APART],
+    ),
+    (
+        "stored_freed_memcpy_d2_one",
+        &[FREED_ONLY_AS_A_DOUBT, WIDTH_ASKED_APART],
+    ),
+    (
+        "stored_freed_memmove_d2_one",
+        &[FREED_ONLY_AS_A_DOUBT, WIDTH_ASKED_APART],
+    ),
+    ("stored_out_memcpy_block_d0_both", &[STORE_DOUBTS_MORE]),
+    ("stored_out_memcpy_block_d0_one", &[COPY_DOUBTS_MORE]),
+    ("stored_out_memcpy_block_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("stored_out_memcpy_block_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("stored_out_memcpy_block_d2_both", &[WIDTH_ASKED_APART]),
+    ("stored_out_memcpy_block_d2_one", &[WIDTH_ASKED_APART]),
+    ("stored_out_memcpy_d0_both", &[COPY_DOUBTS_MORE]),
+    ("stored_out_memmove_d0_both", &[COPY_DOUBTS_MORE]),
+    ("stored_out_memcpy_d0_one", &[COPY_DOUBTS_MORE]),
+    ("stored_out_memmove_d0_one", &[COPY_DOUBTS_MORE]),
+    (
+        "stored_out_memcpy_d1_both",
+        &[ASKED_AT_ITS_ARGUMENTS, COPY_DOUBTS_MORE],
+    ),
+    (
+        "stored_out_memmove_d1_both",
+        &[ASKED_AT_ITS_ARGUMENTS, COPY_DOUBTS_MORE],
+    ),
+    (
+        "stored_out_memcpy_d1_one",
+        &[ASKED_AT_ITS_ARGUMENTS, COPY_DOUBTS_MORE],
+    ),
+    (
+        "stored_out_memmove_d1_one",
+        &[ASKED_AT_ITS_ARGUMENTS, COPY_DOUBTS_MORE],
+    ),
+    (
+        "stored_out_memcpy_d2_both",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    (
+        "stored_out_memmove_d2_both",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    (
+        "stored_out_memcpy_d2_one",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    (
+        "stored_out_memmove_d2_one",
+        &[COPY_DOUBTS_MORE, WIDTH_ASKED_APART],
+    ),
+    ("unreplaced_memcpy_block_d0_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_block_d0_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_block_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_block_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_block_d2_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_block_d2_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_d0_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memmove_d0_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_d0_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memmove_d0_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memmove_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memmove_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_d2_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memmove_d2_both", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memcpy_d2_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("unreplaced_memmove_d2_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("width_memcpy_block_d0_both", &[WIDTH_ASKED_APART]),
+    ("width_memcpy_block_d0_one", &[WIDTH_ASKED_APART]),
+    ("width_memcpy_d0_both", &[WIDTH_ASKED_APART]),
+    ("width_memmove_d0_both", &[WIDTH_ASKED_APART]),
+    ("width_memcpy_d0_one", &[WIDTH_ASKED_APART]),
+    ("width_memmove_d0_one", &[WIDTH_ASKED_APART]),
 ];
 
-/// The codes a run reports, as a set.
-fn codes(answer: &Answer) -> std::collections::BTreeSet<String> {
-    answer
-        .reports
-        .iter()
-        .map(|(_, code, _)| code.clone())
-        .collect()
+/// [`aligned`] places a report on a line both programs share before the
+/// put, on the put, on a line both share after it, or nowhere, and a
+/// program compared with itself, all of it shared, is placed from its
+/// start, since a line both share at their start is asked first. No row
+/// of the matrix differs before its put, so this is what holds
+/// `Place::Before` and `Place::Nowhere`. Mutation: answer `Place::Put` for
+/// a line before the put; this fails.
+#[test]
+fn a_report_is_placed_against_the_lines_two_programs_share() {
+    let store = "a
+b
+slot = v;
+c
+d";
+    let copy = "a
+b
+v_ = v;
+memcpy(&slot, &v_, 8);
+c
+d";
+    let answer = |lines: &[Option<usize>]| Answer {
+        exit: 1,
+        reports: vec![],
+        keyed: lines
+            .iter()
+            .map(|&line| ("error[SC0411]".to_owned(), false, line))
+            .collect(),
+    };
+    let places = |answer: &Answer, source: &str, other: &str| -> Vec<Place> {
+        aligned(answer, source, other)
+            .into_iter()
+            .map(|(_, _, place)| place)
+            .collect()
+    };
+    assert_eq!(
+        places(&answer(&[Some(2), Some(3), Some(4), None]), copy, store),
+        vec![Place::Before(2), Place::Put, Place::Put, Place::Nowhere,],
+    );
+    assert_eq!(
+        places(&answer(&[Some(5)]), copy, store),
+        vec![Place::After(1)],
+    );
+    assert_eq!(
+        places(&answer(&[Some(1), Some(3), Some(5)]), store, store),
+        vec![Place::Before(1), Place::Before(3), Place::Before(5)],
+    );
 }
 
-/// **A whole copy answers as its plain store**: the same codes on the
-/// hazard and on the control, where `COPY_DIFFERS` does not say why not.
+/// **A whole copy answers as its plain store**: the same reports on the
+/// hazard and on the control, each the same code, proved or not alike, and
+/// on the same line or anywhere on the put ([`aligned`]), where
+/// `COPY_DIFFERS` does not say why not. Asked as a set of codes, a copy
+/// that proved what its store only doubted passed (a0e35e92), and so did a
+/// report that moved to another line (#943).
+///
+/// Mutation: `copied_away` reports its finding as `Conclusion::Unsafe`;
+/// this fails at `lost_memcpy_d2_both` and its kin as a copy proving
+/// `SC0414` its store does not, rows `COPY_DIFFERS` lists. Mutation: list a
+/// row that agrees; this fails as "listed, agrees".
 /// A store and a copy of one pointer were two bodies, and each rule one
 /// learned the other learned later or not at all: `SC0414` by a store and
 /// `SC0407` by the copy of the same pointer, a width asked of a copy into
@@ -4651,8 +5429,26 @@ fn codes(answer: &Answer) -> std::collections::BTreeSet<String> {
 #[test]
 fn a_whole_copy_answers_as_its_plain_store() {
     let mut wrong = vec![];
+    let copies = |row: Row| {
+        matches!(
+            row.route,
+            Route::Memcpy | Route::Memmove | Route::MemcpyFromBlock
+        )
+    };
+    // **A listed name this test asks**: a row dropped from the loop, or a
+    // name of no row, would keep its entry unasked, and every claim the
+    // entry makes with it. Mutation: drop `Route::Memmove` from `copies`;
+    // this fails at every `memmove` entry.
+    for (listed, _) in COPY_DIFFERS {
+        if !ROWS
+            .iter()
+            .any(|(name, row)| name == listed && copies(*row))
+        {
+            wrong.push(format!("{listed}: listed, and no copy row this test asks"));
+        }
+    }
     for &(name, row) in ROWS {
-        if !matches!(row.route, Route::Memcpy | Route::MemcpyFromBlock) {
+        if !copies(row) {
             continue;
         }
         let Some(&(store_name, store)) = ROWS.iter().find(|(_, store)| {
@@ -4665,10 +5461,39 @@ fn a_whole_copy_answers_as_its_plain_store() {
         };
         let mut differs = vec![];
         for (side, hazard) in [("hazard", true), ("control", false)] {
-            let by_store = codes(&ask(store_name, &program(store, hazard), "memory"));
-            let by_copy = codes(&ask(name, &program(row, hazard), "memory"));
+            let (store_source, copy_source) = (program(store, hazard), program(row, hazard));
+            let by_store = aligned(
+                &ask(store_name, &store_source, "memory"),
+                &store_source,
+                &copy_source,
+            );
+            let by_copy = aligned(
+                &ask(name, &copy_source, "memory"),
+                &copy_source,
+                &store_source,
+            );
             if by_store != by_copy {
                 differs.push(format!("{side}: store {by_store:?}, copy {by_copy:?}"));
+            }
+            // **More certain than its store, listed or not**: a code the
+            // copy proves and the store does not prove anywhere. A listed
+            // row may differ, and nothing then asked how, so a copy that
+            // proved `SC0414` where its store doubted it passed (a0e35e92).
+            let proved = |keyed: &[(String, bool, Place)]| -> std::collections::BTreeSet<String> {
+                keyed
+                    .iter()
+                    .filter(|(_, proved, _)| *proved)
+                    .map(|(opens, _, _)| opens.clone())
+                    .collect()
+            };
+            let surer: Vec<String> = proved(&by_copy)
+                .difference(&proved(&by_store))
+                .cloned()
+                .collect();
+            if !surer.is_empty() {
+                wrong.push(format!(
+                    "{name} ({side}): the copy proves {surer:?}, which its store does not"
+                ));
             }
         }
         let listed = COPY_DIFFERS.iter().any(|(listed, _)| *listed == name);
@@ -4686,7 +5511,7 @@ fn a_whole_copy_answers_as_its_plain_store() {
     }
     assert!(
         wrong.is_empty(),
-        "whole copies that do not answer as COPY_DIFFERS says:
+        "whole copies that do not answer as COPY_DIFFERS says, or prove more than their store:
 {}",
         wrong.join(
             "
@@ -4765,9 +5590,16 @@ const WRITTEN_ONLY: &[WrittenOnly] = &[
     (
         Route::MemcpyUnread,
         Belief::Fresh,
-        &[Depth::D1],
+        &[Depth::D0, Depth::D1],
         &[Shape::Both, Shape::One],
-        "a copy's length is asked of freshness in a block, whose size is what it covers",
+        "a copy's length is asked of freshness in a block and at a local, whose size is what it covers (#942); one level further down is the same block",
+    ),
+    (
+        Route::MemsetWhole,
+        Belief::Fresh,
+        &[Depth::D1, Depth::D2],
+        &[Shape::Both, Shape::One],
+        "a fill writes no pointer of its own, so what it covers is asked of freshness alone; a local slot is made with a value, so half a fill into it leaves the rest written",
     ),
     (
         Route::MemcpyShort,
@@ -4925,6 +5757,7 @@ fn name_of(row: Row) -> String {
     let route = match row.route {
         Route::Store => "store",
         Route::Memcpy => "memcpy",
+        Route::Memmove => "memmove",
         Route::Realloc => "realloc",
         Route::Call => "call",
         Route::Ret => "ret",
@@ -4949,6 +5782,7 @@ fn name_of(row: Row) -> String {
         Route::KeptBlock => "kept_block",
         Route::ByAddress => "by_address",
         Route::ByAddressLoaded => "by_address_loaded",
+        Route::MemsetWhole => "memset_whole",
     };
     let depth = match row.depth {
         Depth::D0 => "d0",
@@ -5111,7 +5945,9 @@ const COPY_ASKS_LOST: &str = "a library copy lets a value this check stopped fol
 /// the depth.
 const APART: &[(&str, &str)] = &[
     ("reborn_memcpy_both", COPY_ASKS_LOST),
+    ("reborn_memmove_both", COPY_ASKS_LOST),
     ("reborn_memcpy_one", COPY_ASKS_LOST),
+    ("reborn_memmove_one", COPY_ASKS_LOST),
     ("reborn_memcpy_block_both", COPY_STAYS_AT_DEPTH_ZERO),
     ("reborn_memcpy_block_one", COPY_STAYS_AT_DEPTH_ZERO),
     ("caller_ret_both", ASKED_WHERE_STORED),
@@ -5160,6 +5996,10 @@ const APART: &[(&str, &str)] = &[
     ),
     (
         "fresh_memcpy_one",
+        "a copy into a local is believed as its type where its source is fresh, and a load out of memory that may be fresh on one path believes what was recorded (ADR-0061), so the block's form doubts a width the local's does not",
+    ),
+    (
+        "fresh_memmove_one",
         "a copy into a local is believed as its type where its source is fresh, and a load out of memory that may be fresh on one path believes what was recorded (ADR-0061), so the block's form doubts a width the local's does not",
     ),
     (
