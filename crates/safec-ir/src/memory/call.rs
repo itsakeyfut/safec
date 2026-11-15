@@ -23,7 +23,7 @@ use super::parts::{
 use super::store::{Landing, StoreKind, Strong};
 use super::transfer::{CopiedPointers, Pours, ReadAs, believed_width};
 use super::{Carried, Carrier};
-use crate::library::{Callee, Leaves, Makes, Reach};
+use crate::library::{Callee, Leaves, Makes};
 use crate::reads::derefs;
 
 impl Allocations<'_> {
@@ -987,11 +987,9 @@ impl Allocations<'_> {
                             // all `n` bytes, padding with nulls, so its block
                             // could be replaced too, and no case holds the
                             // difference.
-                            let byte_for_byte = self.library(*callee).is_some_and(|row| {
-                                !row.reaches
-                                    .iter()
-                                    .any(|(_, reach)| matches!(reach, Reach::String))
-                            });
+                            let byte_for_byte = self
+                                .library(*callee)
+                                .is_some_and(Library::writes_byte_for_byte);
                             let replaces = if into_depth == 0 && byte_for_byte {
                                 self.replaces(
                                     &landing,
@@ -1029,11 +1027,9 @@ impl Allocations<'_> {
                         // A source read as far as a string runs is a string
                         // copy, and the table says which of its arguments it
                         // reads so.
-                        byte_for_byte: self.library(*callee).is_some_and(|row| {
-                            !row.reaches
-                                .iter()
-                                .any(|(_, reach)| matches!(reach, Reach::String))
-                        }),
+                        byte_for_byte: self
+                            .library(*callee)
+                            .is_some_and(Library::writes_byte_for_byte),
                     },
                 );
             }
