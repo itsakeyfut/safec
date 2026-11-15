@@ -1778,9 +1778,13 @@ impl Known {
     /// or route row, and `UnreplacedRead` closed a silence; `Foreign` added a
     /// report to 40 corpus cases, losing none, among them deliberate quiets
     /// such as `a_live_value_through_two_locals_addresses_is_read_in_silence`.
-    /// Left out, a value a call this check cannot read wrote into a local is
-    /// forgotten through that local's address, which no program has shown to
-    /// be a silence yet.
+    /// **Left out, a silence**, found by review: a value a call this check
+    /// cannot read wrote into a local is forgotten through that local's
+    /// address, so `get(&u); s = *(&u); return *s;` builds silent on a read
+    /// past a two-byte object where `return *u;` is `SC0412` (#973).
+    /// Carried as one reason, it doubts plain array code, since an ordinary
+    /// store through an array's address sets it too; telling the two
+    /// writers apart is #973's.
     fn carried_through_an_address(why: Why) -> bool {
         match why {
             Why::Foreign => false,
