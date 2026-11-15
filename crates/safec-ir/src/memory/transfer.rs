@@ -760,6 +760,17 @@ impl Allocations<'_> {
         levels
     }
 
+    /// **What a write records where it lands**, by level: `first` for the
+    /// pointer it writes, and `contents` below it, what that pointer believes
+    /// of the memory it points at, cut to [`Self::deepest_pointer`]. A store
+    /// hands the width its value is recorded at by its type
+    /// (`Known::stored_width`), and a library copy the width of the bytes it
+    /// copies, so that the record is one shape however it was written (#978).
+    /// See `Cell::stored_levels` and ADR-0060.
+    pub(super) fn recorded_where_it_lands(&self, first: Width, contents: &Levels) -> Levels {
+        contents.stored_under(first, self.deepest_pointer)
+    }
+
     /// What a pointer read as `place` believes the memory it points at
     /// holds, by level: the type it is read as, no more than what the
     /// memory it is read out of was believed one level further down
@@ -2947,9 +2958,7 @@ impl Analysis for Allocations<'_> {
                     } else {
                         Width::Nothing
                     };
-                    let stored = written
-                        .contents_at_most()
-                        .stored_under(first, self.deepest_pointer);
+                    let stored = self.recorded_where_it_lands(first, &written.contents_at_most());
                     // **What the store carries, poured into each allocation it
                     // lands in**, as `Cell::poured` builds it, which names
                     // every field. **After the landing and the exposure**:

@@ -971,9 +971,14 @@ impl Allocations<'_> {
                             // in: marking a copy out of memory nothing wrote
                             // doubted its width beside the `SC0411` already
                             // said there, measured on #767. See `Cell::held`.
-                            if copied_bound.at(0) == Width::Nothing {
-                                copied_bound.set_first(Width::Unbounded);
-                            }
+                            let first = match copied_bound.at(0) {
+                                Width::Nothing => Width::Unbounded,
+                                first @ (Width::AtMost(_) | Width::AsTyped | Width::Unbounded) => {
+                                    first
+                                }
+                            };
+                            let copied_bound =
+                                self.recorded_where_it_lands(first, &copied_bound.below(1));
                             let poured = Cell::poured(
                                 value.points_to.len(),
                                 copied.iter().copied(),
