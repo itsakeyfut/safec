@@ -971,6 +971,17 @@ impl Allocations<'_> {
                             // in: marking a copy out of memory nothing wrote
                             // doubted its width beside the `SC0411` already
                             // said there, measured on #767. See `Cell::held`.
+                            // The store hands its type's width where this hands
+                            // the bytes', into one record,
+                            // `Allocations::recorded_where_it_lands` (#978).
+                            //
+                            // **No test holds this arm**: keeping `Nothing`
+                            // fails no corpus case and no route row, and none
+                            // of ten probes copying out of fresh memory, out
+                            // of memory a non-pointer was stored in, or into a
+                            // block that then leaves reported anything else,
+                            // measured on #978. A program that tells them
+                            // apart belongs in the corpus with that mutation.
                             let first = match copied_bound.at(0) {
                                 Width::Nothing => Width::Unbounded,
                                 first @ (Width::AtMost(_) | Width::AsTyped | Width::Unbounded) => {
