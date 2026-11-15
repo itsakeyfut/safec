@@ -1847,6 +1847,25 @@ cases! {
         // its third argument again, not `Library::written_length`'s; the
         // `SC0411` at `return r` goes.
         a_local_a_library_copy_or_fill_of_a_length_not_read_wrote_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: the copy's source is `plain` whatever it may name beyond
+        // its edges (`any_unknown()` dropped in `initialised_by`); `r` is
+        // reported as certainly read before anything wrote it.
+        a_copy_from_a_pointer_that_may_be_memory_a_caller_wrote_reports_its_destination_as_maybe_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `|| *foreign` dropped from
+        // `Beyond::believed_to_reach_only_its_edges`; the `SC0411` becomes an
+        // `SC0406`.
+        a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `|| *lost_read` dropped from
+        // `Beyond::believed_to_reach_only_its_edges`; the `SC0411` becomes an
+        // `SC0406`.
+        a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `Known::unnamed_below` does not ask a level's
+        // `any_unknown`; the `SC0411` says `b` is read, not may be.
+        a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `*lost ||` dropped from
+        // `Beyond::believed_to_reach_only_its_edges`; the `SC0411` at `y = x`
+        // goes, and only the store's own reports are left.
+        a_local_written_through_a_pointer_that_lost_its_block_to_a_later_turn_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `note_narrow_store` notes nothing below one
         // dereference; the store's `SC0413` goes.
         a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

@@ -1,0 +1,68 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read.c:11:6 "f"
+  Local "_0" "int *" return
+  Local "_1" "int ***" parameter "box"
+  Local "_2" "int ***" parameter "box2"
+  Local "_3" "int *" parameter "m"
+  Local "_4" "int *" "b"
+  Local "_5" "int **" "pp"
+  Local "_6" "int **"
+  Local "_7" "int **"
+  Local "_8" "int **"
+  Local "_9" "int ***" "ppp"
+  Local "_10" "int ***"
+  Local "_11" "int *"
+  Block "bb0" entry
+    Operation a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read.c:14:5 written
+      Destination "_5"
+      Use
+        Copy "_1"
+          Deref
+    Operation a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read.c:14:5 written
+      Destination "_6"
+      Use
+        Copy "_5"
+    Sequenced a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read.c:14:5 generated
+    Operation a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read.c:15:13 written
+      Destination "_7"
+      Address
+        Place "_4"
+    Operation a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read.c:15:5 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read.c:15:5 written
+      Destination "_8"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read.c:15:5 generated
+    Operation a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read.c:16:18 written
+      Destination "_10"
+      Address
+        Place "_5"
+    Operation a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read.c:16:12 written
+      Destination "_9"
+      Use
+        Copy "_10"
+    Sequenced a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read.c:16:18 generated
+    Operation a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read.c:17:5 written
+      Destination "_9"
+        Deref
+          Deref
+      Use
+        Copy "_3"
+    Operation a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read.c:17:5 written
+      Destination "_11"
+      Use
+        Copy "_9"
+          Deref
+            Deref
+    Sequenced a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read.c:17:5 generated
+    Operation a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read.c:18:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+    Sequenced a_local_written_through_a_level_read_before_its_address_was_stored_is_doubted_where_read.c:18:12 generated
+    Return

@@ -1,0 +1,124 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:11:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:13:6 "f"
+  Local "_0" "int *" return
+  Local "_1" "int" parameter "k"
+  Local "_2" "int *" parameter "z"
+  Local "_3" "int *" "x"
+  Local "_4" "int **" "v"
+  Local "_5" "int ***" "w"
+  Local "_6" "int ***"
+  Local "_7" "int ***"
+  Local "_8" "int ***"
+  Local "_9" "int **"
+  Local "_10" "int **"
+  Local "_11" "int ***" "b"
+  Local "_12" "void *"
+  Local "_13" "int"
+  Local "_14" "int **"
+  Local "_15" "int **" "q"
+  Local "_16" "int *"
+  Block "bb0" entry
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:15:11 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:15:15 generated
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:16:16 written
+      Destination "_6"
+      Address
+        Place "_4"
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:16:16 written
+      Destination "_7"
+      Binary "Add"
+        Copy "_6"
+        Constant 1
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:16:12 written
+      Destination "_5"
+      Use
+        Copy "_7"
+    Sequenced a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:16:16 generated
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:17:5 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_5"
+        Constant -1
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:17:13 written
+      Destination "_9"
+      Address
+        Place "_3"
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:17:5 written
+      Destination "_8"
+        Deref
+      Use
+        Copy "_9"
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:17:5 written
+      Destination "_10"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:17:5 generated
+    ArgumentsEvaluated a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:18:16 generated
+    Call a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:18:16 written "malloc" "bb1"
+      Destination "_12"
+      Constant 8
+  Block "bb1"
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:18:12 written
+      Destination "_11"
+      Use
+        Copy "_12"
+    Sequenced a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:18:16 generated
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:19:9 written
+      Destination "_13"
+      Unary "Not"
+        Copy "_11"
+    Branch a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:19:9 written "bb2" "bb3"
+      Copy "_13"
+  Block "bb2"
+    Sequenced a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:19:9 generated
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:19:13 written
+      Destination "_0"
+      Use
+        Copy "_2"
+    Sequenced a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:19:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:19:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:20:5 written
+      Destination "_11"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:20:5 written
+      Destination "_14"
+      Use
+        Copy "_11"
+          Deref
+    Sequenced a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:20:5 generated
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:21:11 written
+      Destination "_15"
+      Use
+        Copy "_11"
+          Deref
+    Sequenced a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:21:15 generated
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:22:5 written
+      Destination "_15"
+        Deref
+      Use
+        Copy "_2"
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:22:5 written
+      Destination "_16"
+      Use
+        Copy "_15"
+          Deref
+    Sequenced a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:22:5 generated
+    Operation a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:23:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Sequenced a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read.c:23:12 generated
+    Return

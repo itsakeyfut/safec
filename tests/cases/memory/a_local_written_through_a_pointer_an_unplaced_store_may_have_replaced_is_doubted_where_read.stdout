@@ -1,0 +1,85 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:12:6 "f"
+  Local "_0" "int *" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int ****" parameter "box"
+  Local "_3" "int *" parameter "z"
+  Local "_4" "int *" "x"
+  Local "_5" "int **" "L"
+  Local "_6" "int **"
+  Local "_7" "int ***" "pp"
+  Local "_8" "int ***"
+  Local "_9" "int ***"
+  Local "_10" "int ***"
+  Local "_11" "int **"
+  Local "_12" "int *"
+  Block "bb0" entry
+    Operation a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:14:15 written
+      Destination "_6"
+      Address
+        Place "_4"
+    Operation a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:14:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:14:15 generated
+    Branch a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:16:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:16:9 generated
+    Operation a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:16:17 written
+      Destination "_8"
+      Address
+        Place "_5"
+    Operation a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:16:12 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Operation a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:16:12 written
+      Destination "_9"
+      Use
+        Copy "_7"
+    Sequenced a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:16:12 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:16:9 generated
+    Operation a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:16:26 written
+      Destination "_7"
+      Use
+        Copy "_2"
+          Deref
+    Operation a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:16:26 written
+      Destination "_10"
+      Use
+        Copy "_7"
+    Sequenced a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:16:26 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:17:5 written
+      Destination "_7"
+        Deref
+      Use
+        Constant 0
+    Operation a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:17:5 written
+      Destination "_11"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:17:5 generated
+    Operation a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:18:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:18:5 written
+      Destination "_12"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:18:5 generated
+    Operation a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:19:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+    Sequenced a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read.c:19:12 generated
+    Return

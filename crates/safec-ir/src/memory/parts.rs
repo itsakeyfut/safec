@@ -2895,12 +2895,24 @@ impl Beyond {
     /// container is (#726). What a write of a local for certain asks,
     /// `store::written_alone`. See ADR-0074 rule 4.
     ///
-    /// **Only `from_caller` is held by a case**: leaving it out silences
-    /// `a_store_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local_it_names`.
-    /// Leaving out any of the other three fails nothing, measured. They are
-    /// kept, by the author's decision, because a mark kept here can only add
-    /// a doubt, and one dropped would be a silence on a route nobody has
-    /// built yet. `Why::StaleRead` is read as `lost` ([`Held::beyond`]).
+    /// **Each reason is held by a case** (#946):
+    ///
+    /// - `from_caller`: leaving it out silences
+    ///   `a_store_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local_it_names`.
+    /// - `foreign`: leaving it out turns the `SC0411` of
+    ///   `a_local_written_through_a_pointer_an_unplaced_store_may_have_replaced_is_doubted_where_read`
+    ///   into an `SC0406`.
+    /// - `lost_read`: the same of
+    ///   `a_local_written_through_a_pointer_read_out_of_a_block_a_lost_value_was_stored_in_is_doubted_where_read`.
+    /// - `lost`, which `Why::StaleRead` and `Why::Forged` are read as
+    ///   ([`Held::beyond`]): leaving it out silences the `SC0411` of
+    ///   `a_local_written_through_a_pointer_that_lost_its_block_to_a_later_turn_is_doubted_where_read`.
+    ///
+    /// The `foreign` and `lost_read` cases are doubts their programs do not
+    /// need, and dropping either mark answered each with another doubt as
+    /// unneeded rather than a silence, measured. They are kept because a mark
+    /// kept here can only add a doubt, and one dropped would be a silence on
+    /// a route nobody has built yet.
     ///
     /// **Asked of these reasons and not of any, measured** (the memory
     /// model rebuilt on #924, stage 1): answered as `any_unknown`, 11
