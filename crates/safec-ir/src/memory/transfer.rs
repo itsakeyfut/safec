@@ -760,13 +760,18 @@ impl Allocations<'_> {
         levels
     }
 
-    /// **What a write records where it lands**, by level: `first` for the
-    /// pointer it writes, and `contents` below it, what that pointer believes
-    /// of the memory it points at, cut to [`Self::deepest_pointer`]. A store
-    /// hands the width its value is recorded at by its type
-    /// (`Known::stored_width`), and a library copy the width of the bytes it
-    /// copies, so that the record is one shape however it was written (#978).
+    /// **What a store or a library copy records where it lands**, by level:
+    /// `first` for the pointer it writes, and `contents` below it, what that
+    /// pointer believes of the memory it points at, cut to
+    /// [`Self::deepest_pointer`]. The two differ only in `first`: a store
+    /// hands the width its value is recorded at (`Known::stored_width`), and a
+    /// copy the width the source's memory recorded for the pointer it copies,
+    /// a width where that memory recorded none (#978). Other writers of a
+    /// record, an opaque call's and the report's, still build theirs apart.
     /// See `Cell::stored_levels` and ADR-0060.
+    ///
+    /// The cut changes nothing for a copy today, since what it reads is
+    /// already cut there: measured, `usize::MAX` in its place fails no test.
     pub(super) fn recorded_where_it_lands(&self, first: Width, contents: &Levels) -> Levels {
         contents.stored_under(first, self.deepest_pointer)
     }
