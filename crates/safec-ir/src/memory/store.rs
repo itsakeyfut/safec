@@ -103,7 +103,7 @@ impl Allocations<'_> {
             let leaves = derefs > 0 && {
                 let one_step = into.projection.as_slice() == [Projection::Deref];
                 let landing = self.landing(known, into.local, derefs, one_step, kind);
-                known.leaves(&into) || landing.unnamed(known) || landing.unplaced()
+                known.leaves(&into, &landing)
             };
             (kind, leaves)
         };
@@ -166,7 +166,7 @@ impl Allocations<'_> {
             to.projection.is_empty(),
             StoreKind::Copy,
         );
-        let leaves = known.leaves(&into) || landing.unnamed(known) || landing.unplaced();
+        let leaves = known.leaves(&into, &landing);
         Some(Store {
             into,
             from: Written::Bytes(from),
