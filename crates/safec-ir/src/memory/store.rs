@@ -535,4 +535,61 @@ impl Allocations<'_> {
             through_unrecorded,
         }
     }
+
+    /// The locals a write through `pointer`, `deep` dereferences down, may
+    /// land in past their end, each to be handed to
+    /// `Allocations::written_past_its_end`. Nothing, unless the pointer the
+    /// write goes through was moved off a local by arithmetic
+    /// (`Held::array_edge`):
+    ///
+    /// - at one exact dereference, `one_step`, that pointer is `pointer`
+    ///   itself, and the answer is the locals it names; `deep` is not read;
+    /// - deeper, it is any pointer the level above may be, and the answer is
+    ///   the locals that level names, as [`Self::landing`] finds them;
+    /// - at one dereference with a further projection, nothing.
+    ///
+    /// **Asked by the store and the library copy alike.** The store through
+    /// one dereference, the store deeper down and the copy each spelled it
+    /// once, so a rule changed in one could leave the others behind (#976).
+    /// A copy's destination is `*dest`, so it asks at `derefs(dest) + 1`,
+    /// one exact dereference where `dest` is a plain local.
+    ///
+    /// Mutation: answer nothing, and
+    /// `a_use_after_freeing_a_local_an_int_was_stored_past_through_a_moved_pointer_is_not_proved`
+    /// fails; answer nothing for a depth above one, and
+    /// `a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved`
+    /// does. **No test holds the copy's ask**: measured, the copy spellings
+    /// of those two programs and `a_local_copied_past_its_end_is_doubted_where_read`
+    /// report the same with the copy asking nothing. A program that tells
+    /// them apart belongs in the corpus with this mutation named.
+    pub(super) fn past_end_targets(
+        &self,
+        value: &Known,
+        pointer: LocalId,
+        deep: usize,
+        one_step: bool,
+    ) -> Vec<LocalIdx> {
+        let moved = if one_step {
+            value.points_to[pointer].array_edge
+        } else {
+            deep > 1
+                && value
+                    .levels_below(pointer, deep - 2)
+                    .1
+                    .into_iter()
+                    .any(|local| value.points_to[local].array_edge)
+        };
+        if !moved {
+            return Vec::new();
+        }
+        if one_step {
+            value.written_through(pointer)
+        } else {
+            value
+                .levels_below(pointer, deep - 1)
+                .1
+                .into_iter()
+                .collect()
+        }
+    }
 }
