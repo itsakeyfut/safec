@@ -1854,6 +1854,12 @@ cases! {
         // Mutation: `Known::carried_through_an_address` answers `false` for
         // `UnreplacedRead`; the `SC0407` at `use2(&s)` goes.
         a_pointer_read_back_through_a_locals_address_keeps_the_slot_a_call_could_not_replace: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `Allocations::past_end_targets` answers nothing; the
+        // `SC0402` at `*a` becomes certain.
+        a_use_after_freeing_a_local_an_int_was_stored_past_through_a_moved_pointer_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `Allocations::past_end_targets` answers nothing for a
+        // depth above one; the `SC0402` at `*a` becomes certain.
+        a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `|| *foreign` dropped from
         // `Beyond::believed_to_reach_only_its_edges`; the `SC0411` becomes an
         // `SC0406`.
