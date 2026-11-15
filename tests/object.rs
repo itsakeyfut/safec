@@ -1259,7 +1259,11 @@ fn a_failed_link_here_says_nothing_about_a_sysroot() {
 /// which is what made this invisible.
 ///
 /// Mutation: keep only standard error for a link, the way a compile does. The
-/// diagnostic falls back to the exit code alone and this fails.
+/// diagnostic falls back to the exit code alone and this fails, **where
+/// `clang` drives `link.exe`**, as CI's Windows runner does. A `clang` whose
+/// linker is LLD (22.1.8 on a developer's machine, #980) writes `lld-link:
+/// error: ...` to standard error, so there the words arrive either way and
+/// this holds only that they do.
 #[test]
 #[cfg(windows)]
 fn a_failed_link_says_more_than_an_exit_code() {
@@ -1278,10 +1282,10 @@ fn a_failed_link_says_more_than_an_exit_code() {
     let said = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(1), "{said}");
     assert!(said.contains("linker command failed"), "{said}");
-    // The linker's own code for "an entry point must be specified". Its
-    // sentence is in the machine's code page and arrives mangled; the code is
-    // ASCII and is the part worth holding.
-    assert!(said.contains("LNK"), "{said}");
+    // The linker's own words: `link.exe`'s code for "an entry point must be
+    // specified", whose sentence is in the machine's code page and arrives
+    // mangled while the code is ASCII; or LLD's, which names itself.
+    assert!(said.contains("LNK") || said.contains("lld-link:"), "{said}");
 }
 
 /// A machine with nowhere to work is not told about `clang`.
