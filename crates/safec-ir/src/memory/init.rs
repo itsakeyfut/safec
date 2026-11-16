@@ -93,14 +93,10 @@ impl Allocations<'_> {
     /// written (`Held::stored_through`). What a write does to the locals it
     /// lands in is still each door's own.
     ///
-    /// **A write wider than one slot marks every slot of a block kept per
-    /// slot it covers**, where its position is counted and aligned to a
-    /// pointer and its width is known: `memcpy(m2, v2, 16)` into a block of
-    /// two slots wrote both, and read as a write that may have missed one it
-    /// reported a correct program (the route row `fresh_memcpy_part_d1_both`).
-    /// No store the frontend lowers today is wider than one slot, a `struct`
-    /// not being compiled yet, so only a copy reaches it; it is here rather
-    /// than in the copy's arm so that a wider store is answered the same.
+    /// **What a write lands in certainly is each kind's**, a `match` on
+    /// [`StoreKind`] with no wildcard: a store by the element it lands at,
+    /// a copy by how much of the block its length covers
+    /// ([`Self::copied_into`]).
     fn blocks_written(
         &self,
         value: &mut Known,
@@ -134,31 +130,29 @@ impl Allocations<'_> {
                 // whole, `b[i] = x;` among them, as a local array
                 // is. See ADR-0081.
                 Some(at) => {
-                    // **A write wider than one slot first**: the element it
-                    // starts at is one of the slots it writes, and taking that
-                    // one alone left `memcpy(m2, v2, 16)` into a block of two
-                    // slots read as a write of `m2[0]`, so a read of `m2[1]`
-                    // reported a correct program.
-                    if !self.wide_write_covered(value, at.site(), offset, width) {
-                        let at_element = site_element
-                            .is_some_and(|element| value.certainly_written_at(&at, element));
-                        // **At an element not known, a may-write of
-                        // a block kept per slot**: it may have
-                        // missed every slot (#893, ADR-0094 rule 3).
-                        // **And of a block kept whole, by a store
-                        // narrower than it**, which may have missed
-                        // the rest (`covers_block`).
-                        let kept = value.written[at.site()].slots().is_some();
-                        let may_have_missed = if kept {
-                            site_element.is_none()
-                        } else {
-                            !covers_block(value, at.site())
-                        };
-                        if may_have_missed {
-                            value.written[at.site()].may_write();
-                        } else if !at_element {
-                            value.certainly_written(at);
+                    match landing.kind {
+                        StoreKind::Direct | StoreKind::Through { .. } => {
+                            let at_element = site_element
+                                .is_some_and(|element| value.certainly_written_at(&at, element));
+                            // **At an element not known, a may-write of
+                            // a block kept per slot**: it may have
+                            // missed every slot (#893, ADR-0094 rule 3).
+                            // **And of a block kept whole, by a store
+                            // narrower than it**, which may have missed
+                            // the rest (`covers_block`).
+                            let kept = value.written[at.site()].slots().is_some();
+                            let may_have_missed = if kept {
+                                site_element.is_none()
+                            } else {
+                                !covers_block(value, at.site())
+                            };
+                            if may_have_missed {
+                                value.written[at.site()].may_write();
+                            } else if !at_element {
+                                value.certainly_written(at);
+                            }
                         }
+                        StoreKind::Copy => self.copied_into(value, at.site(), offset, width),
                     }
                 }
                 None => {
@@ -218,60 +212,73 @@ impl Allocations<'_> {
             // `b[1]` read in silence (#893, ADR-0094 rule 3).
             // #726's decision stands for a block kept whole.
             if let Some(at) = certain {
-                let kept = value.written[at.site()].slots().is_some();
-                let unplaced = (value.points_to[place.local].site_element.is_none() && kept)
-                    || (!kept && !covers_block(value, at.site()));
-                if unplaced {
-                    value.written[at.site()].may_write();
-                    uncertain = true;
-                } else {
-                    value.certainly_written(at);
+                match landing.kind {
+                    StoreKind::Direct | StoreKind::Through { .. } => {
+                        let kept = value.written[at.site()].slots().is_some();
+                        let unplaced = (value.points_to[place.local].site_element.is_none()
+                            && kept)
+                            || (!kept && !covers_block(value, at.site()));
+                        if unplaced {
+                            value.written[at.site()].may_write();
+                            uncertain = true;
+                        } else {
+                            value.certainly_written(at);
+                        }
+                    }
+                    // Its position counted only where `*dest` is one step
+                    // below a local, whose position it is.
+                    StoreKind::Copy => {
+                        let at_dest = if one_step { offset } else { At::Unknown };
+                        self.copied_into(value, at.site(), at_dest, width);
+                    }
                 }
             }
             uncertain
         }
     }
 
-    /// Mark written every slot of `site`, a block kept per slot, that a
-    /// write of `width` bytes at `at` covers whole, where it covers more
-    /// than one, and say whether it did: `false`, and nothing written, where
-    /// the position is not counted, not aligned to a pointer, the width not
-    /// known, or the write covers one slot or none whole, which the caller
-    /// answers by the element it lands at. The slots it does not cover keep
-    /// what they held, as a store at a known element leaves them.
+    /// **What a library copy writes of the one block it certainly lands
+    /// in** (#925): whole where it covers the block, a block's size a
+    /// constant and the length at least that; the slots it covers whole
+    /// where the block is kept per slot, from a position counted and
+    /// aligned to a pointer with a length known, the rest keeping what they
+    /// held; and a may-write anywhere else.
     ///
-    /// **Asked only where the write is placed.** Asked also where it is not,
-    /// as the copy's arm did before #1005, it moved no corpus case and no
-    /// route row, and the one shape tried, a copy through a pointer read out
-    /// of memory, has no counted position to ask with, since a cell keeps
-    /// none (#997).
-    fn wide_write_covered(
-        &self,
-        value: &mut Known,
-        site: Site,
-        at: At,
-        width: Option<u64>,
-    ) -> bool {
+    /// **Not the store's element rule**, which takes one write for one
+    /// slot: a store is never wider than a pointer in what this frontend
+    /// lowers, and a copy is any length. Taken for a copy, a length this
+    /// check cannot read, or a string copy that may stop after one byte,
+    /// certainly wrote the slot it started at, and a read of it after
+    /// `memcpy(b, &x, n)` was silent where it is a doubt (#1005's review);
+    /// and `memcpy(m2, v2, 16)` into a block of two slots wrote only the
+    /// first, reporting a correct program (the route row
+    /// `fresh_memcpy_part_d1_both`).
+    fn copied_into(&self, value: &mut Known, site: Site, at: At, width: Option<u64>) {
         let target = self.unit.target();
         let pointer = u64::from(target.pointer_bits() / target.char().bits());
-        let (At::Bytes(start), Some(bytes)) = (at, width) else {
-            return false;
-        };
-        let (first, end) = (start / pointer, (start + bytes) / pointer);
-        if start % pointer != 0 || end.saturating_sub(first) < 2 {
-            return false;
+        if value.covers_whole(Storage::Heap(site), at, width) {
+            value.written[site].set(Init::Written);
+            return;
         }
-        let Some(slots) = value.written[site].slots_mut() else {
-            return false;
+        let covered = match (at, width) {
+            (At::Bytes(start), Some(bytes)) if start % pointer == 0 => {
+                Some((start / pointer, (start + bytes) / pointer))
+            }
+            _ => None,
         };
-        for slot in first..end {
-            if let Ok(slot) = usize::try_from(slot) {
-                if slot < slots.len() {
-                    slots.set(slot, Init::Written);
+        let place = &mut value.written[site];
+        match (place.slots_mut(), covered) {
+            (Some(slots), Some((first, end))) => {
+                for slot in first..end {
+                    if let Ok(slot) = usize::try_from(slot) {
+                        if slot < slots.len() {
+                            slots.set(slot, Init::Written);
+                        }
+                    }
                 }
             }
+            (Some(_) | None, _) => place.may_write(),
         }
-        true
     }
 
     /// **What a write does to what this check knows is unwritten**, at the
