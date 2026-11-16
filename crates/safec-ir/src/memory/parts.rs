@@ -3112,7 +3112,10 @@ mod tests {
         assert_eq!(written, Init::Maybe);
     }
 
-    use super::{At, Extent, Freeing, Held, Init, Inits, Levels, SiteState, Why, Width, earlier};
+    use super::{
+        At, Extent, Freeing, Held, Init, Inits, Levels, Position, Row, SiteState, Why, Width,
+        earlier,
+    };
     use crate::memory::index::{Idx, LocalIdx, Site};
     use crate::source::inside;
     use crate::source::{FileId, SourceMap, Span};
@@ -3270,6 +3273,23 @@ mod tests {
             Extent::AtLeast(8).joined(Extent::Exactly(2)),
             Extent::AtLeast(2)
         );
+    }
+
+    /// A side naming nothing, a null, is the identity of a join of two
+    /// positions: the path that names something keeps the row it walks,
+    /// whichever side of the join it is on.
+    ///
+    /// Mutation: have `Position::joined` keep `self`'s row where `self`
+    /// names nothing. This fails; no corpus case does.
+    #[test]
+    fn a_null_joined_with_a_pointer_walking_a_row_keeps_the_row() {
+        let walking = Position {
+            at: At::Bytes(4),
+            row: Some(Row { start: 4, len: 4 }),
+        };
+        let null = Position::START;
+        assert_eq!(null.joined(false, walking, true).row, walking.row);
+        assert_eq!(walking.joined(true, null, false).row, walking.row);
     }
 
     /// What a local is given replaces every site and every edge it had, and
