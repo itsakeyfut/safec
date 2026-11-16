@@ -891,6 +891,50 @@ pub(super) enum Reached {
     Partial,
 }
 
+/// Where in what a value names it points: the byte position, [`At`], and
+/// the array it walks the elements of where that is narrower than what it
+/// names, [`Row`]. **One value with one join** (#996): the row means
+/// something only beside a counted position, and three doors kept the two
+/// in step by hand while `Known::target_union` joined the position and left
+/// the row as it was.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct Position {
+    /// Where in every site the value names it points. See [`Held::position`].
+    pub(super) at: At,
+    /// The array it walks, where narrower than what it names; `None` is the
+    /// whole object. See [`Row`] and #947.
+    pub(super) row: Option<Row>,
+}
+
+impl Position {
+    /// The start of the whole of what a value names: where every door that
+    /// builds a value at a site's or a local's start puts it, since no door
+    /// makes a value inside a row; a conversion does (#947).
+    pub(super) const START: Position = Position {
+        at: At::Bytes(0),
+        row: None,
+    };
+
+    /// The two where paths meet, `here_names` and `there_names` saying
+    /// whether each side names any storage. **One row where both paths walk
+    /// it**, and a side naming nothing, a null, is the identity. Two rows,
+    /// or a row and the whole object, leave no position counted against
+    /// either: kept, a row joined with a wider path would prove an access
+    /// past the row. See [`Row`].
+    pub(super) fn joined(self, here_names: bool, other: Position, there_names: bool) -> Position {
+        if here_names && there_names && self.row != other.row {
+            return Position {
+                at: At::Unknown,
+                row: None,
+            };
+        }
+        Position {
+            at: self.at.joined(other.at),
+            row: if here_names { self.row } else { other.row },
+        }
+    }
+}
+
 /// What one local may hold, and what a block holds: a block's memory is
 /// the value a pointer stored there may be, its cell (`Known::contents`),
 /// gathered by [`Cell::absorb`], made by [`Cell::poured`] and read by
@@ -982,12 +1026,12 @@ pub(super) struct Held {
     /// [`Held::hold`] takes it as an argument, so that a new producer of a site
     /// cannot be written without answering where in it the value points. See
     /// ADR-0036.
-    pub(super) offset: At,
-    /// The array this value walks the elements of, where it is narrower than
-    /// what it names; `None` is the whole object. **Asked by a typed access
-    /// alone**: a library function reading or writing bytes may cover the
-    /// whole object, which C17 6.3.2.3 p7 allows. See [`Row`] and #947.
-    pub(super) row: Option<Row>,
+    ///
+    /// With it, the array this value walks the elements of, where it is
+    /// narrower than what it names. **Asked by a typed access alone**: a
+    /// library function reading or writing bytes may cover the whole object,
+    /// which C17 6.3.2.3 p7 allows. See [`Position`], [`Row`] and #947.
+    pub(super) position: Position,
     /// The locals code this check cannot read could name where this value
     /// was read out of memory, or where such code may have written it
     /// ([`Why::Foreign`], #661), what
@@ -1451,7 +1495,7 @@ impl Held {
     /// and `foreign` give `Some(0)` only to a caller that does not, rather
     /// than the width of what such a value merely names. And no C this
     /// frontend reads sets `inner_address`, since `&a[1]` is lowered as
-    /// `&a[0]` moved by one, which `offset` answers; it is here for the
+    /// `&a[0]` moved by one, which `position` answers; it is here for the
     /// frontend that does not fold it, as [`Self::inner_address`] says.
     /// Dropping any of the three moves no case, measured.
     ///
@@ -1461,7 +1505,7 @@ impl Held {
     /// belief. Kept the least so that the record alone never says more than
     /// every object it stands for.
     pub(super) fn recorded_width(&self, extent: &Table<Storage, Option<Extent>>) -> Option<u64> {
-        let at = match self.offset {
+        let at = match self.position.at {
             At::Bytes(at) => at,
             At::Moved | At::Unknown => return Some(0),
         };
@@ -1469,7 +1513,7 @@ impl Held {
             return Some(0);
         }
         // No wider than what is left of its row, where it walks one.
-        let row_left = self.row.map(|row| {
+        let row_left = self.position.row.map(|row| {
             if at < row.start {
                 0
             } else {
@@ -1617,6 +1661,16 @@ impl Held {
         self.locals().next().is_some()
     }
 
+    /// Where `self` and `other` point once their paths meet: [`Position::joined`],
+    /// told which side names any storage, a side naming none being a null.
+    /// **Asked before the names are joined**, since after it `self` names
+    /// what either did.
+    pub(super) fn position_joined(&self, other: &Held) -> Position {
+        let names_storage = |held: &Held| held.names.ones().any(|named| named.storage().is_some());
+        self.position
+            .joined(names_storage(self), other.position, names_storage(other))
+    }
+
     /// Every local whose address this value may be, its address edges.
     pub(super) fn locals(&self) -> impl Iterator<Item = LocalIdx> + '_ {
         self.names.ones().filter_map(Referent::local)
@@ -1679,7 +1733,7 @@ impl Held {
                 // would be a warning about an offset nobody wrote, on every path
                 // that holds nothing and, through `Held::hold`'s join, on every
                 // parameter. See ADR-0036.
-                offset: At::Bytes(0),
+                position: Position::START,
                 loaded: false,
                 foreign: false,
                 stale_read: false,
@@ -1713,7 +1767,7 @@ impl Held {
             lost,
             freed,
             writes_elsewhere,
-            offset,
+            position,
             loaded,
             foreign,
             stale_read,
@@ -1736,10 +1790,7 @@ impl Held {
             names: Bits::new(Referent::count(sites)),
             freed,
             writes_elsewhere,
-            offset,
-            // No door makes a value inside a row; a conversion does. See
-            // `Row`.
-            row: None,
+            position,
             named_at_read: Bits::new(sites),
             returned_by,
             fresh_read,
@@ -1786,7 +1837,7 @@ impl Held {
     /// the answer that cannot claim more than both said.
     pub(super) fn hold(&mut self, site: Site, offset: At) {
         self.names.set(Referent::Heap(site));
-        self.offset = self.offset.joined(offset);
+        self.position.at = self.position.at.joined(offset);
     }
 
     /// The one local this is certainly the address of: one address edge, and
@@ -1849,8 +1900,7 @@ impl Held {
             names,
             freed,
             writes_elsewhere,
-            offset,
-            row,
+            position,
             named_at_read,
             returned_by,
             fresh_read,
@@ -1864,7 +1914,6 @@ impl Held {
             may_be_null,
         } = self;
         *may_be_null = false;
-        *row = None;
         names.clear_all();
         *fresh_read = false;
         *widths = Levels::new(vec![Width::Nothing]);
@@ -1881,7 +1930,7 @@ impl Held {
         // write through it landed, along with the set that claim was about.
         *writes_elsewhere = true;
         // What `Held::none` answers, for its reason.
-        *offset = At::Bytes(0);
+        *position = Position::START;
     }
 
     /// Also hold everything that one holds, where two paths meet.
@@ -1899,8 +1948,8 @@ impl Held {
     /// left the local unwritten. The zero of the proofs an intersection
     /// joins, `freed`, `fresh_read` and `stored_through`, of `returned_by`,
     /// and of `writes_elsewhere`, whose `true` gives up. Neither for
-    /// `offset`, whose `Bytes(0)` joined with `Moved` is `Unknown`
-    /// ([`At::joined`]).
+    /// `position`, whose `Bytes(0)` joined with `Moved` is `Unknown`
+    /// ([`Position::joined`]).
     ///
     /// **A local nothing was assigned is no null**, though it names nothing
     /// as one does: `memcpy(m, &t, 8)` of a `t` written on one arm only, read
@@ -1911,12 +1960,15 @@ impl Held {
         // alike: a field added to this struct is `error[E0027]` in both and has
         // to say what it means in each. ADR-0024 is why there are two places
         // to answer.
+        //
+        // Asked before the union below, which leaves `self` naming what
+        // either path named.
+        let joined_position = self.position_joined(other);
         let Held {
             names,
             freed,
             writes_elsewhere,
-            offset,
-            row,
+            position,
             named_at_read,
             returned_by,
             fresh_read,
@@ -1929,17 +1981,7 @@ impl Held {
             stored_through,
             may_be_null,
         } = self;
-        // **One row where both paths walk it**, and a side naming nothing,
-        // a null, is the identity. Two rows, or a row and the whole object,
-        // leave no position counted against either: kept, a row joined with
-        // a wider path would prove an access past the row. Asked before the
-        // union below. See `Row`.
-        let here_names = names.ones().any(|named| named.storage().is_some());
-        let there_names = other.names.ones().any(|named| named.storage().is_some());
-        let rows_disagree = here_names && there_names && *row != other.row;
-        if !here_names {
-            *row = other.row;
-        }
+        *position = joined_position;
         // A may-fact, so a union: null on either path is null on one.
         *may_be_null = *may_be_null || other.may_be_null;
         *inner_address = *inner_address || other.inner_address;
@@ -1956,11 +1998,6 @@ impl Held {
         }
         // A proof, so an intersection, as `freed` is.
         *fresh_read = *fresh_read && other.fresh_read;
-        *offset = offset.joined(other.offset);
-        if rows_disagree {
-            *row = None;
-            *offset = At::Unknown;
-        }
         named_at_read.union_with(&other.named_at_read);
         // **A path that knows where a write through this local lands and a
         // path that does not is a path that does not.** This is what keeps a
@@ -2018,10 +2055,7 @@ impl Held {
             names,
             freed,
             writes_elsewhere,
-            offset,
-            // Where the result points is the fold's to say, as `offset` is
-            // below; `built_from` gives it the pointer operand's row.
-            row: _,
+            position,
             named_at_read,
             returned_by,
             fresh_read,
@@ -2063,8 +2097,10 @@ impl Held {
         // other callers write into a local through a pointer, which joins
         // where the target and the value written start over it, or copy
         // into its address with `memcpy`, which is unknown either way. See
-        // ADR-0036.
-        *offset = At::Unknown;
+        // ADR-0036. The row is left as it was for the same reason:
+        // `built_from` gives the result the pointer operand's, and
+        // `Known::target_union` joins the whole position over it.
+        position.at = At::Unknown;
 
         // **A second operand takes the proof with it.** What
         // [`Self::freed`] is worth is that freeing this local again takes the
@@ -2160,7 +2196,8 @@ impl Held {
     pub(super) fn moved_by_arithmetic(&mut self, by: Option<i128>) {
         // **Kept by the array rule alone**, where the move is known not to
         // be zero: an earlier rule dropped this edge. See `Held::array_edge`.
-        if matches!(self.offset, At::Moved | At::Bytes(1..)) && self.may_be_a_locals_address() {
+        if matches!(self.position.at, At::Moved | At::Bytes(1..)) && self.may_be_a_locals_address()
+        {
             self.array_edge = true;
         }
         // **The element moves by what was added**, where both are known: `by`
@@ -2541,8 +2578,7 @@ impl Cell {
             // Not recorded in memory. See `Self::absorb`.
             freed: _,
             writes_elsewhere: _,
-            offset: _,
-            row: _,
+            position: _,
             named_at_read: _,
             returned_by: _,
             fresh_read: _,
@@ -2606,7 +2642,7 @@ pub(super) struct Marks {
     pub(super) lost: bool,
     pub(super) freed: Option<Freeing>,
     pub(super) writes_elsewhere: bool,
-    pub(super) offset: At,
+    pub(super) position: Position,
     pub(super) loaded: bool,
     pub(super) foreign: bool,
     pub(super) stale_read: bool,
@@ -3239,7 +3275,7 @@ mod tests {
     /// What a local is given replaces every site and every edge it had, and
     /// every mark about how it came by them.
     ///
-    /// Mutation: have `clear` leave `Held::locals`, `sites`, `offset`,
+    /// Mutation: have `clear` leave `Held::locals`, `sites`, `position`,
     /// `lost_read`, `unreplaced_read`, `foreign`, `freed` or
     /// `arrived_holds_pointer`. This fails. The marks beside those have
     /// corpus cases of their own.
@@ -3249,7 +3285,7 @@ mod tests {
         held.hold(Site::at(1), At::Bytes(0));
         held.name_local(LocalIdx::at(3));
         held.writes_elsewhere = false;
-        held.offset = At::Moved;
+        held.position.at = At::Moved;
         held.name_unknown(Why::LostRead);
         held.name_unknown(Why::UnreplacedRead);
         held.name_unknown(Why::Foreign);
@@ -3264,7 +3300,7 @@ mod tests {
         assert!(held.sites().next().is_none());
         assert!(!held.may_be_a_locals_address());
         assert!(held.writes_elsewhere);
-        assert_eq!(held.offset, At::Bytes(0));
+        assert_eq!(held.position.at, At::Bytes(0));
         assert!(!held.may_name(Why::LostRead));
         assert!(!held.may_name(Why::UnreplacedRead));
         assert!(!held.may_name(Why::Foreign));

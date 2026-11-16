@@ -2648,9 +2648,12 @@ impl Known {
     /// nothing today. What it would cost if the escape stopped covering it is
     /// a proof about a pointer this write may have replaced.
     pub(super) fn target_union(&mut self, target: LocalIdx, written: &Held) {
-        let offset = self.points_to[target].offset.joined(written.offset);
+        let at = self.points_to[target]
+            .position
+            .at
+            .joined(written.position.at);
         self.points_to[target].accumulated(written);
-        self.points_to[target].offset = offset;
+        self.points_to[target].position.at = at;
         self.points_to[target].freed = None;
     }
 

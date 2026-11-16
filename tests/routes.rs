@@ -562,16 +562,11 @@ const HELD_FIELDS: &[(&str, Field, Start)] = &[
         Start::Doubt,
     ),
     (
-        "offset",
+        "position",
         Field::Belief(&[Belief::Width]),
         Start::Quiet(
-            "at the start of what it names until a move says otherwise; a door that cannot place it gives `At::Unknown`",
+            "at the start of the whole of what it names until a move says otherwise, since no door makes a value inside a row and a conversion does (#947); a door that cannot place it gives `At::Unknown`",
         ),
-    ),
-    (
-        "row",
-        Field::Belief(&[Belief::Width]),
-        Start::Quiet("no door makes a value inside a row; a conversion does (#947)"),
     ),
     (
         "named_at_read",
@@ -676,8 +671,8 @@ fn held_fields() -> Vec<String> {
 /// Every field of `Held` has a row in [`HELD_FIELDS`], and every row names a
 /// field, under the rules [`KNOWN_FIELDS`] is held to.
 ///
-/// Mutation: drop `row`'s line from [`HELD_FIELDS`]; this fails naming
-/// `row`. A field added to `Held` fails to compile first in `Held`'s
+/// Mutation: drop `position`'s line from [`HELD_FIELDS`]; this fails
+/// naming `position`. A field added to `Held` fails to compile first in `Held`'s
 /// destructures, then here until it has a row.
 #[test]
 fn every_field_of_a_held_value_is_a_belief_or_an_exemption() {

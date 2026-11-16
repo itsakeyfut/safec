@@ -21,7 +21,7 @@ use super::init::Wrote;
 use super::known::{ELEMENTS_KEPT, Known};
 use super::parts::{
     At, Cell, Earliest, Extent, Freeing, Held, Init, Inits, Levels, Marks, PendingRead, PlaceInit,
-    Reached, Row, SiteState, Width, earlier, joined_carried,
+    Position, Reached, Row, SiteState, Width, earlier, joined_carried,
 };
 use super::store::{Landing, StoreKind, Strong};
 use crate::library::{Callee, Library};
@@ -264,7 +264,7 @@ impl Allocations<'_> {
                     lost: false,
                     freed: None,
                     writes_elsewhere: true,
-                    offset: At::Bytes(0),
+                    position: Position::START,
                     loaded: false,
                     foreign: false,
                     stale_read: false,
@@ -417,7 +417,7 @@ impl Allocations<'_> {
         }
         self.replaces(
             landing,
-            value.points_to[place.local].offset,
+            value.points_to[place.local].position.at,
             wrote.width,
             value,
         )
@@ -664,18 +664,20 @@ impl Allocations<'_> {
         if from == to || !matches!(self.unit.ty(from), Ty::Array { .. }) {
             return;
         }
-        let At::Bytes(at) = held.offset else {
+        let At::Bytes(at) = held.position.at else {
             return;
         };
         let entered = self.unit.size_of(from).map(|len| Row { start: at, len });
-        let row = match (held.row, entered) {
+        let row = match (held.position.row, entered) {
             (Some(walked), Some(entered)) => walked.within(entered),
             (None, entered) => entered,
             (Some(_), None) => None,
         };
         let Some(row) = row else {
-            held.row = None;
-            held.offset = At::Unknown;
+            held.position = Position {
+                at: At::Unknown,
+                row: None,
+            };
             return;
         };
         let whole = row.start == 0
@@ -684,7 +686,7 @@ impl Allocations<'_> {
                 .map(Storage::Heap)
                 .chain(held.locals().map(Storage::Local))
                 .all(|place| extent[place].is_some_and(|extent| extent.lower() == row.len));
-        held.row = (!whole).then_some(row);
+        held.position.row = (!whole).then_some(row);
     }
 
     /// Whether a value of type `ty` points at memory that holds pointers,
@@ -1096,7 +1098,7 @@ impl Allocations<'_> {
                 lost: false,
                 freed: None,
                 writes_elsewhere: true,
-                offset: At::Bytes(0),
+                position: Position::START,
                 // **A byte is a load too.** C17 6.5 p7 lets a character type
                 // read any object, so a pointer copied a byte at a time is
                 // copied, and the byte carries what was stored where it was
@@ -2267,7 +2269,7 @@ impl Analysis for Allocations<'_> {
                         lost: false,
                         freed: None,
                         writes_elsewhere: true,
-                        offset: At::Bytes(0),
+                        position: Position::START,
                         loaded: false,
                         foreign: false,
                         stale_read: false,
@@ -2373,7 +2375,7 @@ impl Analysis for Allocations<'_> {
                     lost: false,
                     freed: None,
                     writes_elsewhere: true,
-                    offset: At::Bytes(0),
+                    position: Position::START,
                     loaded: false,
                     foreign: false,
                     stale_read: false,
@@ -3207,7 +3209,7 @@ impl Analysis for Allocations<'_> {
                                     lost: false,
                                     freed: None,
                                     writes_elsewhere: true,
-                                    offset: At::Bytes(0),
+                                    position: Position::START,
                                     loaded: false,
                                     foreign: false,
                                     stale_read: false,
@@ -3278,7 +3280,7 @@ impl Analysis for Allocations<'_> {
                                     // same answer, since one element written does not replace
                                     // what the rest of the array holds (#621).
                                     writes_elsewhere: !taken.projection.is_empty(),
-                                    offset: At::Bytes(0),
+                                    position: Position::START,
                                     loaded: false,
                                     foreign: false,
                                     stale_read: false,

@@ -365,7 +365,7 @@ pub(super) fn reported(
     let offset = asked(arguments, null, block)
         .filter_map(|argument| match argument {
             Operand::Copy(place) if place.projection.is_empty() => {
-                Some(known.points_to[place.local].offset)
+                Some(known.points_to[place.local].position.at)
             }
             // A constant frees nothing and a projection is already a
             // `Reached::Lost` above, which `interior` answers nothing for.
@@ -445,7 +445,7 @@ pub(super) fn reported(
 /// C17 7.22.3.3 p2 makes a `free` of anything but a pointer an allocation
 /// function returned undefined, and `p + 1` reaches the allocation `p` does,
 /// so [`verdict`] cannot see this: the sites are the same and so are their
-/// states. What differs is [`Held::offset`](super::parts::Held::offset).
+/// states. What differs is [`Held::position`](super::parts::Held::position).
 ///
 /// Nothing, where any of these holds:
 ///
@@ -1209,7 +1209,10 @@ fn departing_fit(
     width: u64,
     known: &Known,
 ) -> Option<Fit> {
-    let off_start = matches!(known.points_to[local].offset, At::Moved | At::Bytes(1..));
+    let off_start = matches!(
+        known.points_to[local].position.at,
+        At::Moved | At::Bytes(1..)
+    );
     fits(analysis, function, local, width, known, false)
         .map(|fit| if off_start { Fit::Unknown } else { fit })
 }
@@ -2258,7 +2261,7 @@ pub(super) fn copied_away(
         [only]
             if from.projection.is_empty()
                 && held.sites().next().is_none()
-                && matches!(held.offset, At::Bytes(0))
+                && matches!(held.position.at, At::Bytes(0))
                 && !held.beyond().any_unknown() =>
         {
             Place::local(
