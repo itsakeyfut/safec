@@ -2500,6 +2500,9 @@ cases! {
         // Mutation: drop the return for a copy in `handed`; an `SC0407` at
         // the copy comes back.
         a_copy_that_makes_no_store_is_not_asked_what_its_source_points_at: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_by_memcpy_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_by_memmove_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_slot_a_call_could_not_replace_copied_out_through_an_address_is_reported_where_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same store spelled without the pointer. Mutation: a write of a
         // local `Known::exposed` holds is not asked; this goes silent.
         a_freed_pointer_written_into_a_local_a_call_kept_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
