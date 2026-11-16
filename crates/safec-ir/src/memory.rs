@@ -1107,9 +1107,8 @@ fn findings_within(
             // reads `SC0402` above `SC0407`, and before the transfer, for the
             // reason above.
             // A library copy asked as the store it is, before what it is
-            // handed, which then asks nothing of a source it proved. See
-            // `report::copied_away`.
-            let copied = copied_away(
+            // handed. See `report::copied_away`.
+            copied_away(
                 &mut findings,
                 &mut said,
                 &analysis,
@@ -1123,7 +1122,6 @@ fn findings_within(
                 function,
                 &block.terminator,
                 &known,
-                copied.as_ref(),
             );
             // And whether it is handed what was stored out, before the
             // transfer marks it as what the call may have freed. See

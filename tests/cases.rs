@@ -1806,14 +1806,15 @@ cases! {
         // on what was seen and the bound by the number of sites in
         // `Known::held_below`; this hangs.
         a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `copied_away` asks nothing below what it copies; the copy
-        // is `SC0407` again. Ask below of what is certainly freed alone, and
-        // the copy of a pointer freed on one arm is `SC0407` again. Drop the
+        // Mutation: `copied_away` asks nothing below what it copies; both
+        // copies say nothing where their stores are `SC0414`. Ask below of
+        // what is certainly freed alone, and the copy of a pointer freed on
+        // one arm says nothing. Drop the
         // `Reached::Partial` that `Below::narrowed` keeps, and the copy is
         // proved where its store is a doubt.
         a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `Below::MayBeFreed` leaves out `Reached::Lost`; the copy
-        // is the argument door's `SC0407` again.
+        // loses its `SC0414`.
         a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `copied_away` leaves out every lost answer again; this
         // goes silent.
@@ -2487,14 +2488,13 @@ cases! {
         // Mutation: `store_at`, the copy's door, does not ask the landing for
         // `leaves`; this loses its `SC0414` too.
         a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A copy whose source is itself freed is a proof that it was handed a
-        // freed pointer, `SC0407` as an error, beside the doubt `copied_away`
-        // raises about what that source points at: the two are two defects.
-        // Under `--allow-unknown` the proof alone decides the exit. Found by
-        // review of #802: the copy through a local's address dropped the proof
-        // once it left, and the copy through a parameter, which left already,
-        // had dropped it on `main`. Mutation: `handed` skips a source
-        // `copied_away` said, whole; both build under `--allow-unknown`.
+        // A copy whose source is itself freed reads freed memory, proved
+        // `SC0402` at the store door as `*pp = *b;` is (#979). Under
+        // `--allow-unknown` the proof alone decides the exit. Found by review
+        // of #802: the copy through a local's address dropped the proof once
+        // it left, and the copy through a parameter, which left already, had
+        // dropped it on `main`. Mutation: `copied_through` asks nothing; both
+        // build under `--allow-unknown`.
         a_freed_source_copied_through_a_local_s_address_is_still_proved_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_freed_source_copied_out_through_a_parameter_is_still_proved_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // The same store spelled without the pointer. Mutation: a write of a
