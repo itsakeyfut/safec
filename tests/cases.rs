@@ -2525,6 +2525,18 @@ cases! {
         // memory code outside reads as a pointer. Found by review. Mutation:
         // report no `Kind::CopiedUnwritten`; the error goes.
         a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What a copy writes of the one block it lands in is its own
+        // (`Allocations::copied_into`), not the store's element rule, which
+        // takes one write for one slot (#1005). Found by review of #1005,
+        // when the copy first took the store's rule. Mutation: answer a copy
+        // by the store's rule where it is placed; the first goes silent at
+        // the read of `b[0]`.
+        a_copy_of_a_length_this_check_cannot_read_doubts_the_slot_it_starts_at: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: answer a copy by the store's rule where it is not placed;
+        // the first of these goes silent at the read of `b[1]`, and the
+        // second reports `b[1]` though the copy covered it.
+        a_copy_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memcpy_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memmove_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_a_call_could_not_replace_copied_out_through_an_address_is_reported_where_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
