@@ -214,10 +214,27 @@ impl Allocations<'_> {
             if let Some(at) = certain {
                 match landing.kind {
                     StoreKind::Direct | StoreKind::Through { .. } => {
+                        // **`place.local` describes the block only one step
+                        // below it** (#1009). Deeper, what reaches the block
+                        // was read out of memory, which keeps no position
+                        // (#997), so its element is not known and `**box =
+                        // *x;` wrote all of `b` by `box`'s own element. A
+                        // block kept whole is asked from its start, as a load
+                        // of that pointer believes it: a write as wide as the
+                        // block that starts anywhere else runs past its end,
+                        // which is the bounds rule's to report, so the start
+                        // makes certain no write that is not whole.
                         let kept = value.written[at.site()].slots().is_some();
-                        let unplaced = (value.points_to[place.local].site_element.is_none()
-                            && kept)
-                            || (!kept && !covers_block(value, at.site()));
+                        let element_known =
+                            one_step && value.points_to[place.local].site_element.is_some();
+                        let reached_at = if one_step { offset } else { At::Bytes(0) };
+                        let unplaced = (!element_known && kept)
+                            || (!kept
+                                && !value.covers_whole(
+                                    Storage::Heap(at.site()),
+                                    reached_at,
+                                    width,
+                                ));
                         if unplaced {
                             value.written[at.site()].may_write();
                             uncertain = true;

@@ -2537,6 +2537,26 @@ cases! {
         // second reports `b[1]` though the copy covered it.
         a_copy_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The store spelling of the copy two levels down above: `**box = *x;`
+        // wrote one slot of `b`, placed by `box`'s own element (#1009).
+        // Mutation: ask `place.local`'s `site_element` whatever the depth in
+        // the store's arm of `Allocations::blocks_written`; the doubt at the
+        // read of `b[1]` goes.
+        a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store two levels down into a block kept whole is asked from the
+        // block's start, not from the position of the pointer it goes
+        // through, which says nothing of where the pointer it loads sits
+        // (#1009). In the first the read of `*b` is of what was written:
+        // `pp` is at byte 8 of `arr`, and `**pp = v;` writes all of `b`.
+        // Mutation: ask from `place.local`'s position whatever the depth; the
+        // first doubts `*b` again. Found by review of #1009.
+        a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The start makes certain no write that is not whole: one as wide as
+        // the block that starts anywhere else runs past its end. Here the
+        // pointer loaded is `b + 1`, the read of `*b` is no longer doubted,
+        // and the overrun is reported at the store itself. That report, a
+        // `Kind::OutsideItsObject`, is what holds this program.
+        a_store_two_levels_down_through_a_pointer_past_its_block_is_reported_at_the_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memcpy_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memmove_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_a_call_could_not_replace_copied_out_through_an_address_is_reported_where_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
