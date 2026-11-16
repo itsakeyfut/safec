@@ -6863,3 +6863,35 @@ fn the_summary_is_rewritten_only_when_blessing_is_asked_for() {
     assert!(!decide_blessing(false, false));
     assert!(!decide_blessing(false, true));
 }
+
+/// How many rows [`COPY_DIFFERS`] holds. A row added or removed changes
+/// this in the same change, so a difference between a copy and its twin is
+/// absorbed only where a reviewer reads the count move (#999): #987 added
+/// eight rows with a new reason and nothing asked whether the list should
+/// grow.
+const COPY_DIFFERS_ROWS: usize = 104;
+/// How many rows [`TWIN_DIFFERS`] holds, for [`COPY_DIFFERS_ROWS`]'s reason.
+const TWIN_DIFFERS_ROWS: usize = 86;
+/// How many pairs [`APART`] holds, for [`COPY_DIFFERS_ROWS`]'s reason.
+const APART_ROWS: usize = 35;
+
+/// Each list of rows that differ holds exactly the count it names.
+/// **Equal, not at most**: a row that leaves without lowering the count
+/// would let the next one in without a line moving.
+///
+/// Mutation: add a row to [`COPY_DIFFERS`], [`TWIN_DIFFERS`] or [`APART`]
+/// without changing its count; this fails naming the list and both
+/// numbers.
+#[test]
+fn the_lists_of_rows_that_differ_hold_the_counts_they_name() {
+    for (list, held, named) in [
+        ("COPY_DIFFERS", COPY_DIFFERS.len(), COPY_DIFFERS_ROWS),
+        ("TWIN_DIFFERS", TWIN_DIFFERS.len(), TWIN_DIFFERS_ROWS),
+        ("APART", APART.len(), APART_ROWS),
+    ] {
+        assert_eq!(
+            held, named,
+            "{list} holds {held} rows and names {named}: change the count with the rows, where a reviewer reads it"
+        );
+    }
+}
