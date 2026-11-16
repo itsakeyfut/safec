@@ -5480,6 +5480,12 @@ const TWIN_READS_IT_ON_TWO_LINES: &str = "a store over a copy's program reads th
 /// so the slot is reported where it is read, where a store reads the
 /// pointer at the put.
 const INDETERMINATE_BYTES_ARE_COPIED: &str = "a copy carries bytes nothing wrote without reading them as a pointer (C17 7.24.2.1), so it is reported where the slot is read and not at the put";
+/// How many rows [`COPY_DIFFERS`] holds. A row added or removed changes
+/// this in the same change, so a difference between a copy and its twin is
+/// absorbed only where a reviewer reads the count move (#999): #987 added
+/// eight rows with a new reason and nothing asked whether the list should
+/// grow.
+const COPY_DIFFERS_ROWS: usize = 104;
 /// What a whole copy is not answered alike with a store over its own
 /// program ([`twin_of`]), row by row, with every reason it differs: a
 /// library copy of a whole pointer is the store of it, so any report its
@@ -5877,6 +5883,8 @@ const BOUNDS_THROUGH_A_REPLACED_POINTER: &str = "a write through a pointer a cal
 /// (#971).
 const STORE_REPORTS_ELSEWHERE: &str = "the plain store reports what the twin does not, on the control, or on the hazard as another code on the same line (#971)";
 
+/// How many rows [`TWIN_DIFFERS`] holds, for [`COPY_DIFFERS_ROWS`]'s reason.
+const TWIN_DIFFERS_ROWS: usize = 86;
 /// What a store over a copy's own program is not answered alike with the
 /// plain store, row by row, with every reason. Measured when this list was
 /// written (#971); the reasons are held by nothing, as [`COPY_DIFFERS`]'s
@@ -6584,6 +6592,8 @@ const COPY_STAYS_AT_DEPTH_ZERO: &str = "a library copy into memory that does not
 /// leave as a store by name does, and one level down the store spelling
 /// does not ask it yet.
 const COPY_ASKS_LOST: &str = "a library copy lets a value this check stopped following leave as `SC0414`, as a store of the same value by name does (#924); one level down the copy reads it out of memory where the lost answer stands, and the store spelling of that route does not ask it yet";
+/// How many pairs [`APART`] holds, for [`COPY_DIFFERS_ROWS`]'s reason.
+const APART_ROWS: usize = 35;
 /// The pairs of a row at depth zero and its row at depth one that answer
 /// differently, with why: each a rule that tells a local from a block on
 /// purpose. Every other pair answers alike in its codes and its exits,
@@ -6863,17 +6873,6 @@ fn the_summary_is_rewritten_only_when_blessing_is_asked_for() {
     assert!(!decide_blessing(false, false));
     assert!(!decide_blessing(false, true));
 }
-
-/// How many rows [`COPY_DIFFERS`] holds. A row added or removed changes
-/// this in the same change, so a difference between a copy and its twin is
-/// absorbed only where a reviewer reads the count move (#999): #987 added
-/// eight rows with a new reason and nothing asked whether the list should
-/// grow.
-const COPY_DIFFERS_ROWS: usize = 104;
-/// How many rows [`TWIN_DIFFERS`] holds, for [`COPY_DIFFERS_ROWS`]'s reason.
-const TWIN_DIFFERS_ROWS: usize = 86;
-/// How many pairs [`APART`] holds, for [`COPY_DIFFERS_ROWS`]'s reason.
-const APART_ROWS: usize = 35;
 
 /// Each list of rows that differ holds exactly the count it names.
 /// **Equal, not at most**: a row that leaves without lowering the count
