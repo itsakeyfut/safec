@@ -4,11 +4,10 @@
 
 use crate::ir::{BinOp, Function, LocalId, Operand, Place, TranslationUnit, Ty};
 
-use super::allocations::{innermost_element, stored_pointer};
-use super::index::{Idx, LocalIdx, Site, Table};
-use super::known::{ArrayWrite, Known, WrittenBy};
-use super::parts::{At, Held, Levels, Marks, PlaceInit, Position, Reached, Width};
-use super::store::written_alone;
+use super::allocations::stored_pointer;
+use super::index::{Idx, LocalIdx, Site};
+use super::known::{ArrayWrite, Known};
+use super::parts::{At, Held, Levels, Marks, Position, Reached, Width};
 use crate::reads::derefs;
 
 /// What the operands of an operation build: a binary one's two, `op` its
@@ -272,132 +271,6 @@ fn offset_of(
     }
 }
 
-/// Distrust every escaped local a write through this place may have reached.
-///
-/// ADR-0029's fact with the writer inside the function: whoever holds an
-/// escaped address may have been handed it through a projection this check
-/// does not follow, so a write it cannot pin down may replace what an escaped
-/// local holds, and writing `SiteState::Freed` on that local's sites later is
-/// a proof about an allocation this write may have swapped out. See ADR-0031.
-///
-/// **Only a local declared with the type this write writes.** C17 6.5 p7 gives
-/// an object an effective type and lets an lvalue of another type access it
-/// only where that type is a character type, so a write of an `int` cannot
-/// replace a pointer and the rule costs what it should rather than every
-/// escaped local at every `*p = 1`. `docs/c-family.md` carries what that asks
-/// of a frontend, and getting it wrong keeps a proof rather than losing one,
-/// which is a false positive and not a silence.
-///
-/// **A character type reaches everything, which is the exception that clause
-/// carries**, and no cast is needed to reach it: C17 6.3.2.3 p1 and 6.5.16.1
-/// p1 make the `void *` round trip implicit both ways, so `void *v = &p;
-/// char *c = v;` is a conforming program this frontend accepts, and copying
-/// one pointer's object representation through `c` is defined. Review found
-/// that one, and compiled and ran the C under a sanitiser to show the program
-/// has no use after free in it.
-///
-/// [`TranslationUnit::place_ty`] answers `None` for a `Deref` of something
-/// that is not a pointer, which the lowering does not build and a hand-built
-/// unit can. Every local then, because a write whose type this cannot name is
-/// a write it cannot narrow.
-///
-/// **What it may have written is a second, narrower answer**, about
-/// `Known::written` alone: a local of that type which
-/// `Known::locals_a_write_may_land_in` says the place may land in. A local
-/// the write cannot reach keeps its mark, so a read of it nothing wrote is
-/// still `SC0411`. See ADR-0057.
-///
-/// A free function rather than a method, because it is the whole of what one
-/// call site does and reads nothing of [`Allocations`](super::allocations::Allocations) but the unit.
-pub(super) fn replaced_by(
-    unit: &TranslationUnit,
-    function: &Function,
-    place: &Place,
-    value: &mut Known,
-) {
-    let written_ty = unit.place_ty(function, place);
-    let everything = matches!(written_ty.map(|ty| unit.ty(ty)), None | Some(Ty::Char));
-    // A row of bytes per local, against a value that is already square in
-    // them, because the predicate is asked per index and `LocalId` cannot be
-    // built from one.
-    //
-    // **An array holds its elements**, so `*p = &x;` with `p` an `int **`
-    // may land in an `int *m[1]`: compared against the local's own type, the
-    // array was believed unwritten after it, and a read of `m[0]` was reported
-    // as indeterminate (#640).
-    let may_hold: Table<LocalIdx, bool> = Table::from_vec(
-        function
-            .locals()
-            .map(|local| {
-                everything || written_ty == Some(innermost_element(unit, function.local(local)))
-            })
-            .collect(),
-    );
-
-    // Written: a local of the type stored that the place may land in.
-    let mut lands: Table<LocalIdx, bool> = Table::filled(false, may_hold.len());
-    for local in value.locals_a_write_may_land_in(place.local, derefs(place)) {
-        lands[local] = true;
-    }
-    // **Through a pointer moved off an array, an element of it**, as the
-    // placed store answers: still a write `replaced` makes of every local it
-    // may land in, then partly written where it was unwritten before. See
-    // `Known::written`.
-    let writes = write_effects(
-        unit,
-        function,
-        value,
-        place.local,
-        derefs(place),
-        lands
-            .indices()
-            .filter(|&local| lands[local] && may_hold[local]),
-        false,
-        written_ty.and_then(|ty| unit.size_of(ty)),
-    );
-    // **A store this check reads that may land in more than one place may
-    // have missed each local it may land in**, which may still be unwritten,
-    // as a site the landing names beside another may (#721): with `g`
-    // either `&m` or `&n`, or either `m + 1` or an allocation, `*g = &x;`
-    // let a read of `m` or `m[1]` nothing wrote go silent. Found by review.
-    // **It writes a local for certain only where it lands there alone**,
-    // through a pointer that follows what it names (`store::written_alone`),
-    // and is otherwise a may-write, `WrittenBy::StoreOrCopy`: it is no call, and
-    // borrowing a call's belief that it writes what it reaches left a
-    // pointer read out of a caller's memory, naming one local and landing
-    // elsewhere, taken as certain (#803). A pointer read out of memory this
-    // function recorded is believed to reach its one local, as #726 believes
-    // a block's. See ADR-0074.
-    let landing: Vec<LocalIdx> = lands
-        .indices()
-        .filter(|&local| lands[local] && may_hold[local])
-        .collect();
-    let alone = written_alone(value, place.local, derefs(place), &landing);
-    let proved_alone = alone.is_some();
-    let before: Vec<(LocalIdx, PlaceInit)> = if proved_alone {
-        Vec::new()
-    } else {
-        landing
-            .iter()
-            .map(|&local| (local, value.written[local].clone()))
-            .collect()
-    };
-    let pending = value.array_writes_before(writes);
-    value.replaced(
-        |local| may_hold[local],
-        |local| may_hold[local] && lands[local],
-        WrittenBy::StoreOrCopy,
-    );
-    if let Some(at) = alone {
-        value.written_local(at);
-    }
-    value.array_writes_after(pending);
-    for (local, mut written) in before {
-        written.may_write();
-        value.written[local] = written;
-    }
-}
-
 /// What a write through `local`, `dereferences` deep, is to each local among
 /// `lands` that it does not write whole: one element, where every pointer it
 /// goes through that names the array names the same known element; an
@@ -531,7 +404,7 @@ pub(super) fn write_effects(
                 // **Only where it lands in this one array**: a copy that may
                 // land in either of two writes neither for certain, as a
                 // store that may land in two does not (`before` in
-                // `replaced_by`), so each may have been missed. Found by
+                // `Allocations::locals_written`), so each may have been missed. Found by
                 // review.
                 Some(0) if call && !array_edge => match width.map(|width| width / pointer_width) {
                     Some(_) if kept && !one_landing => Some(ArrayWrite::Maybe),

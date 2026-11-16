@@ -561,10 +561,10 @@ impl Allocations<'_> {
     /// **`None` answers yes.** [`TranslationUnit::place_ty`](crate::ir::TranslationUnit::place_ty) has no type for a
     /// `Deref` of something that is not a pointer, which the lowering does not
     /// build and a hand-built unit can, and a place whose type this cannot
-    /// name is one it cannot narrow: [`replaced_by`](super::built::replaced_by) reads it the same way.
+    /// name is one it cannot narrow: [`locals_written`](super::allocations::Allocations::locals_written) reads it the same way.
     ///
     /// **A `char` answers no**, though C17 6.5 p7 lets one copy a pointer a
-    /// byte at a time and [`replaced_by`](super::built::replaced_by) reads it as reaching everything for
+    /// byte at a time and [`locals_written`](super::allocations::Allocations::locals_written) reads it as reaching everything for
     /// that reason. The copy is followed where the byte is read, by
     /// [`Self::read_through`]; answering yes here would also read every
     /// character handed to a call as everything stored anywhere, which refused

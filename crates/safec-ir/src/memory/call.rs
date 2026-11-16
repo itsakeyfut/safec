@@ -11,7 +11,7 @@ use crate::library::Library;
 use crate::source::Span;
 
 use super::allocations::{Allocations, handed_places, innermost_element, stored_pointer};
-use super::built::{named, replaced_by};
+use super::built::named;
 use super::fit::{Fit, fits, read_from_locals, slots_from, slots_leaving};
 use super::index::{Idx, LocalIdx, Referent, Site, Storage, Table, Why};
 use super::init::Wrote;
@@ -1513,7 +1513,7 @@ impl Allocations<'_> {
             }
             // And an escaped local it may land in, as an unplaced store
             // does. See `Known::written`.
-            replaced_by(self.unit, function, place, value);
+            self.locals_written(function, value, place, StoreKind::Direct, None);
             return;
         };
         // The call's result writes the local it lands in. See

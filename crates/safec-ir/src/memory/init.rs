@@ -7,15 +7,15 @@
 
 use std::collections::BTreeSet;
 
-use crate::ir::{Function, Operand, Place, Projection};
+use crate::ir::{Function, Operand, Place, Projection, Ty};
 use crate::reads::derefs;
 use crate::source::Span;
 
-use super::allocations::Allocations;
-use super::built::replaced_by;
+use super::allocations::{Allocations, innermost_element};
+use super::built::write_effects;
 use super::index::{LocalIdx, Site, Storage, Table};
 use super::known::{Known, WrittenBy};
-use super::parts::{At, Held, Init};
+use super::parts::{At, Held, Init, PlaceInit};
 use super::store::{Landing, StoreKind, Strong, written_alone};
 use super::transfer::CopiedPointers;
 use super::{Carried, Carrier};
@@ -298,6 +298,176 @@ impl Allocations<'_> {
         }
     }
 
+    /// Distrust every escaped local a write through this place may have reached.
+    ///
+    /// ADR-0029's fact with the writer inside the function: whoever holds an
+    /// escaped address may have been handed it through a projection this check
+    /// does not follow, so a write it cannot pin down may replace what an escaped
+    /// local holds, and writing `SiteState::Freed` on that local's sites later is
+    /// a proof about an allocation this write may have swapped out. See ADR-0031.
+    ///
+    /// **Only a local declared with the type this write writes.** C17 6.5 p7 gives
+    /// an object an effective type and lets an lvalue of another type access it
+    /// only where that type is a character type, so a write of an `int` cannot
+    /// replace a pointer and the rule costs what it should rather than every
+    /// escaped local at every `*p = 1`. `docs/c-family.md` carries what that asks
+    /// of a frontend, and getting it wrong keeps a proof rather than losing one,
+    /// which is a false positive and not a silence.
+    ///
+    /// **A character type reaches everything, which is the exception that clause
+    /// carries**, and no cast is needed to reach it: C17 6.3.2.3 p1 and 6.5.16.1
+    /// p1 make the `void *` round trip implicit both ways, so `void *v = &p;
+    /// char *c = v;` is a conforming program this frontend accepts, and copying
+    /// one pointer's object representation through `c` is defined. Review found
+    /// that one, and compiled and ran the C under a sanitiser to show the program
+    /// has no use after free in it.
+    ///
+    /// [`TranslationUnit::place_ty`](crate::ir::TranslationUnit::place_ty) answers `None` for a `Deref` of something
+    /// that is not a pointer, which the lowering does not build and a hand-built
+    /// unit can. Every local then, because a write whose type this cannot name is
+    /// a write it cannot narrow.
+    ///
+    /// **What it may have written is a second, narrower answer**, about
+    /// `Known::written` alone: a local of that type which
+    /// `Known::locals_a_write_may_land_in` says the place may land in. A local
+    /// the write cannot reach keeps its mark, so a read of it nothing wrote is
+    /// still `SC0411`. See ADR-0057.
+    ///
+    /// **A store and a library copy alike** (#1006), the other half of what
+    /// one write marks written beside [`Self::blocks_written`] (ADR-0063). The
+    /// copy spelled this again in its own arm; where the two differ is a
+    /// `match` on `kind` with no wildcard. `copied` is a copy's constant
+    /// length, not read for a store, whose width is its type's.
+    pub(super) fn locals_written(
+        &self,
+        function: &Function,
+        value: &mut Known,
+        place: &Place,
+        kind: StoreKind,
+        copied: Option<u64>,
+    ) {
+        let unit = self.unit;
+        let written_ty = unit.place_ty(function, place);
+        // **A copy is bytes**, as a write of a character type is, so every
+        // escaped local may hold what it wrote.
+        let everything = match kind {
+            StoreKind::Direct | StoreKind::Through { .. } => {
+                matches!(written_ty.map(|ty| unit.ty(ty)), None | Some(Ty::Char))
+            }
+            StoreKind::Copy => true,
+        };
+        // A row of bytes per local, against a value that is already square in
+        // them, because the predicate is asked per index and `LocalId` cannot be
+        // built from one.
+        //
+        // **An array holds its elements**, so `*p = &x;` with `p` an `int **`
+        // may land in an `int *m[1]`: compared against the local's own type, the
+        // array was believed unwritten after it, and a read of `m[0]` was reported
+        // as indeterminate (#640).
+        let may_hold: Table<LocalIdx, bool> = Table::from_vec(
+            function
+                .locals()
+                .map(|local| {
+                    everything || written_ty == Some(innermost_element(unit, function.local(local)))
+                })
+                .collect(),
+        );
+
+        // Written: a local of the type stored that the place may land in.
+        let mut lands: Table<LocalIdx, bool> = Table::filled(false, may_hold.len());
+        for local in value.locals_a_write_may_land_in(place.local, derefs(place)) {
+            lands[local] = true;
+        }
+        // **Through a pointer moved off an array, an element of it**, as the
+        // placed store answers: still a write `replaced` makes of every local it
+        // may land in, then partly written where it was unwritten before. See
+        // `Known::written`.
+        let writes = write_effects(
+            unit,
+            function,
+            value,
+            place.local,
+            derefs(place),
+            lands
+                .indices()
+                .filter(|&local| lands[local] && may_hold[local]),
+            matches!(kind, StoreKind::Copy),
+            match kind {
+                StoreKind::Direct | StoreKind::Through { .. } => {
+                    written_ty.and_then(|ty| unit.size_of(ty))
+                }
+                StoreKind::Copy => copied,
+            },
+        );
+        // **A store this check reads that may land in more than one place may
+        // have missed each local it may land in**, which may still be unwritten,
+        // as a site the landing names beside another may (#721): with `g`
+        // either `&m` or `&n`, or either `m + 1` or an allocation, `*g = &x;`
+        // let a read of `m` or `m[1]` nothing wrote go silent. Found by review.
+        // **It writes a local for certain only where it lands there alone**,
+        // through a pointer that follows what it names (`store::written_alone`),
+        // and is otherwise a may-write, `WrittenBy::StoreOrCopy`: it is no call, and
+        // borrowing a call's belief that it writes what it reaches left a
+        // pointer read out of a caller's memory, naming one local and landing
+        // elsewhere, taken as certain (#803). A pointer read out of memory this
+        // function recorded is believed to reach its one local, as #726 believes
+        // a block's. See ADR-0074.
+        let landing: Vec<LocalIdx> = lands
+            .indices()
+            .filter(|&local| lands[local] && may_hold[local])
+            .collect();
+        // **A copy writes its one local for certain only where it covers the
+        // local exactly**: a length this check cannot read
+        // may be zero, and a shorter one leaves part of the local as it was, so
+        // `memcpy(&p, &src, n); return p;` returned a pointer nothing may have
+        // written in silence (#942). A longer one is the bounds rule's to report.
+        // See ADR-0095. That it lands in no block beside the local is
+        // `written_alone`'s own condition, for either kind. The copy asked
+        // it again in its arm, and that second asking refused more: whether
+        // code this check cannot read can name any block at all, which one
+        // pointer parameter makes so, doubting `a` after `memcpy(*t, &s, 8)`
+        // with `*t` only `&a`, where the store `**t = s;` does not (#1006's
+        // review).
+        let alone =
+            written_alone(value, place.local, derefs(place), &landing).filter(|at| match kind {
+                StoreKind::Direct | StoreKind::Through { .. } => true,
+                StoreKind::Copy => self.covers_exactly(function, at.local(), copied),
+            });
+        // **Put back as a may-write only for a store** (#721, the comment
+        // above): a copy's `write_effects` already answers which elements of an
+        // array it covers, and putting each local back as a may-write wrote
+        // over that with a may-write of the whole array. Measured on #1006: put
+        // back for a copy too, three proofs became doubts and two correct
+        // programs were reported, among them
+        // `an_array_of_two_pointers_a_copy_of_one_wrote_read_at_the_first_is_not_reported`.
+        let put_back = match kind {
+            StoreKind::Direct | StoreKind::Through { .. } => alone.is_none(),
+            StoreKind::Copy => false,
+        };
+        let before: Vec<(LocalIdx, PlaceInit)> = if !put_back {
+            Vec::new()
+        } else {
+            landing
+                .iter()
+                .map(|&local| (local, value.written[local].clone()))
+                .collect()
+        };
+        let pending = value.array_writes_before(writes);
+        value.replaced(
+            |local| may_hold[local],
+            |local| may_hold[local] && lands[local],
+            WrittenBy::StoreOrCopy,
+        );
+        if let Some(at) = alone {
+            value.written_local(at);
+        }
+        value.array_writes_after(pending);
+        for (local, mut written) in before {
+            written.may_write();
+            value.written[local] = written;
+        }
+    }
+
     /// **What a write does to what this check knows is unwritten**, at the
     /// store and at the library copy: the fresh and may-be-fresh marks of the
     /// allocations it may write, the locals it writes or may write, an array
@@ -419,7 +589,7 @@ impl Allocations<'_> {
                     }
                 }
                 if !place.projection.is_empty() && landing.strong(value).is_none() {
-                    replaced_by(self.unit, function, place, value);
+                    self.locals_written(function, value, place, landing.kind, None);
                     for target in past_end {
                         self.written_past_its_end(function, value, target, unwritten_before);
                     }
@@ -761,68 +931,41 @@ impl Allocations<'_> {
                 // And through a destination moved off an array, an element of
                 // it, as a store through it answers. See
                 // `built::write_effects`.
-                let writes = match (dest, &written) {
-                    (Some(Operand::Copy(dest)), Some(lands)) => super::built::write_effects(
-                        self.unit,
-                        function,
-                        value,
-                        dest.local,
-                        derefs(dest) + 1,
-                        lands.iter().copied(),
-                        true,
-                        bytes,
-                    ),
-                    _ => Vec::new(),
-                };
-                let pending = value.array_writes_before(writes);
-                let mut may_write: Table<LocalIdx, bool> =
-                    Table::filled(written.is_none(), value.points_to.len());
-                for local in written.iter().flatten() {
-                    may_write[*local] = true;
-                }
-                // **Not where it replaced its one local**, as a store's
-                // certain write is not (ADR-0028): the copy wrote that local
-                // whole, and `replaced` marking it as a call may have written
-                // it took away the belief the copy gave, so `memcpy(&s, &v,
-                // 8)` doubted `*s` where `s = v;` did not (#769).
-                // It wrote that local, which is what `replaced` would have said
-                // of it.
                 if let Some(at) = self.copy_replaces_one_local(function, value, dest, bytes) {
-                    value.written_local(at.into());
-                } else {
-                    // **A may-write of every local it may land in**, and a
-                    // certain one only where it lands in one local alone, as a
-                    // store's is: borrowing the belief for a call this check
-                    // cannot read wrote a local the copy may have missed,
-                    // `memcpy(g, &px, 8)` with `g` either `&m` or `&n` (#803).
-                    // See ADR-0074.
-                    // Asked before `replaced`, which marks every escaped local
-                    // the copy may write as one code this check cannot read
-                    // may have written, so that a pointer the copy goes
-                    // through, `p` in `memcpy(*pp, ..)`, would no longer
-                    // follow what it names. Found while implementing.
-                    // **And only of exactly its size**, the width
-                    // `Allocations::replaces_whole` asks of a store: a length
-                    // this check cannot read may be zero, and a shorter one
-                    // leaves part of the local as it was, so either is a
-                    // may-write. `memcpy(&p, &src, n); return p;` returned a
-                    // pointer nothing may have written in silence (#942).
-                    // A longer one is the bounds rule's to report. See
-                    // ADR-0095.
-                    let alone = match (dest, &written) {
-                        (Some(Operand::Copy(dest)), Some(lands)) => {
-                            written_alone(value, dest.local, derefs(dest) + 1, lands)
-                                .filter(|_| lands_in_no_block)
-                                .filter(|at| self.covers_exactly(function, at.local(), bytes))
-                        }
-                        _ => None,
+                    let writes = match (dest, &written) {
+                        (Some(Operand::Copy(dest)), Some(lands)) => write_effects(
+                            self.unit,
+                            function,
+                            value,
+                            dest.local,
+                            derefs(dest) + 1,
+                            lands.iter().copied(),
+                            true,
+                            bytes,
+                        ),
+                        _ => Vec::new(),
                     };
-                    value.replaced(|_| true, |local| may_write[local], WrittenBy::StoreOrCopy);
-                    if let Some(at) = alone {
-                        value.written_local(at);
-                    }
+                    let pending = value.array_writes_before(writes);
+                    // **Not where it replaced its one local**, as a store's
+                    // certain write is not (ADR-0028): the copy wrote that local
+                    // whole, and `replaced` marking it as a call may have written
+                    // it took away the belief the copy gave, so `memcpy(&s, &v,
+                    // 8)` doubted `*s` where `s = v;` did not (#769).
+                    // It wrote that local, which is what `replaced` would have said
+                    // of it.
+                    value.written_local(at.into());
+                    value.array_writes_after(pending);
+                } else if let (Some(Operand::Copy(dest)), Some(_)) = (dest, &written) {
+                    // **The locals it may land in are the store's to answer**
+                    // (#1006), for the place `*dest`, with the copy's own arms.
+                    let mut place = (*dest).clone();
+                    place.projection.push(Projection::Deref);
+                    self.locals_written(function, value, &place, StoreKind::Copy, bytes);
+                } else {
+                    // A destination that is no place of dereferences may land
+                    // anywhere, as a call's argument may.
+                    value.replaced(|_| true, |_| true, WrittenBy::StoreOrCopy);
                 }
-                value.array_writes_after(pending);
                 // **What it carries into a local it writes**, as into a block
                 // above (#724): `memcpy(a, m, 8); r = a[0];` with `m` nothing
                 // wrote read `a[0]` in silence, where `a[0] = *m;` is certain
