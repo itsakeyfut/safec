@@ -2503,6 +2503,14 @@ cases! {
         // Mutation: skip a copy's first two arguments in `handed` whatever the
         // copy makes; the `SC0407` goes.
         a_copy_that_makes_no_store_still_asks_whether_its_destination_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `used` keys by the whole place; a second `SC0402`.
+        a_copy_through_a_freed_pointers_dereference_reports_the_use_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `Known::met` keys by the whole place; a second `SC0402`.
+        a_freed_pointer_read_two_levels_down_beside_its_free_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `used` keys by the first level; the `SC0407` goes.
+        a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `used` keys by the whole place; the `SC0407` goes.
+        a_freed_pointer_read_two_levels_down_and_handed_on_is_asked_as_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memcpy_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memmove_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_a_call_could_not_replace_copied_out_through_an_address_is_reported_where_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

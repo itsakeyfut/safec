@@ -662,13 +662,13 @@ pub(super) fn used(
         // it names one: below it the pointer gone through was loaded from
         // memory, and `free(*pp); return **pp;` is about what `pp`'s
         // allocation held rather than about `pp`.
-        let Some((verdict, local)) = verdict(
+        let Some((verdict, local, level)) = verdict(
             sources,
             Kind::UseAfterFree,
             known.reached_by(place.local),
             known,
         )
-        .map(|verdict| (verdict, Some(place.local)))
+        .map(|verdict| (verdict, Some(place.local), 0))
         .or_else(|| {
             (1..derefs(place)).find_map(|depth| {
                 verdict(
@@ -677,17 +677,43 @@ pub(super) fn used(
                     known.reached_below(place.local, depth),
                     known,
                 )
-                .map(|verdict| (verdict, None))
+                .map(|verdict| (verdict, None, depth))
             })
         }) else {
             continue;
+        };
+        // **Keyed by the place read through the level that was freed**, not
+        // by the whole place: one freed pointer read at one caret is one
+        // report however deep the place it was read through goes. A library
+        // copy's argument `*t` and its store `**t` both read the freed `t`,
+        // and keyed whole they were two `SC0402` at the copy (#987). Where
+        // two merge, a proof still stands over a doubt ([`supersedes`]). A
+        // place read through is of dereferences alone, `derefs` saying how
+        // many (an index is built only under an address, which no read
+        // takes), so the prefix is the place read through that level.
+        //
+        // **Another door's question at the same caret is its own**: keyed
+        // whole, this shared `**t` with the argument `h(**t)` hands on, and
+        // the doubt that the value handed may point to a freed allocation
+        // was hidden behind the read's proof; it is said now.
+        //
+        // Mutation: key by the whole place again, and
+        // `a_copy_through_a_freed_pointers_dereference_reports_the_use_once`
+        // gains a second `SC0402` and
+        // `a_freed_pointer_read_two_levels_down_and_handed_on_is_asked_as_both`
+        // loses its `SC0407`; key by the first level, and
+        // `a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports`
+        // loses its `SC0407`.
+        let key = Place {
+            local: place.local,
+            projection: place.projection[..=level].to_vec(),
         };
 
         say(
             sources,
             findings,
             said,
-            place,
+            &key,
             Finding {
                 function,
                 kind: Kind::UseAfterFree,

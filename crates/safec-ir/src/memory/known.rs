@@ -1366,7 +1366,17 @@ impl Known {
 
         for place in dereferenced {
             let reached = self.reached_by(place.local);
-            self.meeting(at, place, Read::Dereference, &reached);
+            // **Keyed by the place read through the local's own level**,
+            // the level `reached` is, as `report::used` keys a finding by
+            // the level it was freed at: keyed whole, `g(**t != 0) +
+            // (free(t), 0)` was two `SC0402` at `**t`, `used`'s and this
+            // read's, where one freed pointer at one caret is one report
+            // (#987).
+            let read_through = Place {
+                local: place.local,
+                projection: place.projection.iter().take(1).cloned().collect(),
+            };
+            self.meeting(at, &read_through, Read::Dereference, &reached);
         }
     }
 
