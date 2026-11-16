@@ -2518,6 +2518,13 @@ cases! {
         // what each proves.
         a_copy_into_a_block_a_call_was_handed_proves_what_it_did_not_write: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `d` and `w` may be one block, so the copy may put bytes nothing wrote
+        // in `*w`. Since #993 no doubt is raised at the read of `*w`, as the
+        // store `*d = *m;` raises none: what holds this program is the copy's
+        // own `SC0411`, that it copies bytes nothing may have written into
+        // memory code outside reads as a pointer. Found by review. Mutation:
+        // report no `Kind::CopiedUnwritten`; the error goes.
+        a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memcpy_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memmove_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_a_call_could_not_replace_copied_out_through_an_address_is_reported_where_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

@@ -397,7 +397,12 @@ impl Allocations<'_> {
                         // doubted the read of `*m2` the store spelling `*b =
                         // yy;` proves, since `m2` stored in `*b` is a block
                         // that call can name (#993); and a copy out through a
-                        // parameter doubted what it let leave (#994).
+                        // parameter doubted what it let leave (#994). What
+                        // it carries that nothing wrote into a place another
+                        // parameter may also name is reported at the copy
+                        // itself (`Kind::CopiedUnwritten`), and that report,
+                        // not a doubt at a later read, is what holds such a
+                        // program (`a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy`).
                         if landing.unnamed(value) || landing.unplaced() {
                             set.extend(value.sites_named_by_unknown_code());
                         }
