@@ -390,10 +390,15 @@ impl Allocations<'_> {
                             StoreKind::Copy,
                         );
                         let mut set: BTreeSet<Site> = landing.containers.iter().copied().collect();
-                        if landing.unnamed(value)
-                            || landing.unplaced()
-                            || landing.handed_over(value)
-                        {
+                        // **Not because a call was handed the block it lands
+                        // in**: the copy writes where its destination lands,
+                        // as a store does, and the store never widened by it.
+                        // Widened, `keep(b); memcpy(b, &yy, 8); r = *m2;`
+                        // doubted the read of `*m2` the store spelling `*b =
+                        // yy;` proves, since `m2` stored in `*b` is a block
+                        // that call can name (#993); and a copy out through a
+                        // parameter doubted what it let leave (#994).
+                        if landing.unnamed(value) || landing.unplaced() {
                             set.extend(value.sites_named_by_unknown_code());
                         }
                         let several = landing.containers.len() + landing.targets.len() > 1;

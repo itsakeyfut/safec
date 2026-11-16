@@ -1,0 +1,10 @@
+error[SC0411]: this lets a pointer leave to memory nothing wrote by the time the function returns, and the caller may read pointers out of it
+   ╭─[ a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:90 ]
+   │
+ 2 │ void f(void **out) { int **b = malloc(8); if (!b) return; void *v = b; if (!out) return; memcpy(out, &v, 8); }
+   │                                                                                          ─────────┬────────  
+   │                                                                                                   ╰────────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before the function returns, or allocate it with `calloc`

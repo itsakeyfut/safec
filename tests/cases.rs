@@ -2108,11 +2108,12 @@ cases! {
         a_partial_pointer_copied_into_a_local_array_after_a_store_through_it_is_reported_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_reported_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a library copy lets leave is asked at the exit as a stored
-        // one is, by one function both doors call (#890). Possibly, not
-        // certainly: taking `&b` exposes `b`. Mutation: the copy arm marks no
-        // `left_at`; both go silent.
-        a_block_memcpy_lets_leave_unwritten_is_doubted_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_block_memmove_lets_leave_unwritten_is_doubted_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // one is, by one function both doors call (#890). Certainly, as the
+        // store `*out = b;` is: the copy writes only where `out` lands, and
+        // `&b` handed to it as the source is no place it writes (#993).
+        // Mutation: the copy arm marks no `left_at`; both go silent.
+        a_block_memcpy_lets_leave_unwritten_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_memmove_lets_leave_unwritten_is_reported_where_the_function_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written under its null test before the copy. Mutation: ask every
         // block left at the exit whatever was written; this is reported.
         a_block_written_before_it_is_copied_out_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -2123,17 +2124,17 @@ cases! {
         // A `void *` source says nothing of what its blocks hold, and is
         // asked. Mutation: a source whose type says nothing is not asked;
         // this goes silent.
-        a_block_copied_out_through_a_void_pointer_source_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_copied_out_through_a_void_pointer_source_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Nor does a `char *` source, and an `int *` one proves no `int` is
         // copied: `b` reaches each through a `void *`, found by review.
         // Mutation: the arm for a copied `char`, then for a copied `int`,
         // answers that it holds no pointer; each goes silent.
-        a_block_copied_out_through_a_char_pointer_source_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_block_copied_out_through_an_int_pointer_source_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_copied_out_through_a_char_pointer_source_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_copied_out_through_an_int_pointer_source_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The source reads `b` as an `int *`, the destination as a pointer to
         // pointers, and either side asks, found by review. Mutation: ask the
         // source's type alone; this goes silent.
-        a_block_copied_out_through_a_source_typed_as_holding_ints_is_doubted_by_its_destination: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_copied_out_through_a_source_typed_as_holding_ints_is_reported_by_its_destination: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stored out not null and written on one arm after: possibly
         // unwritten at the exit, doubted (#855, ADR-0080). Mutation: never ask
         // `Maybe` at the exit; this goes silent.
@@ -2511,6 +2512,12 @@ cases! {
         a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `used` keys by the whole place; the `SC0407` goes.
         a_freed_pointer_read_two_levels_down_and_handed_on_is_asked_as_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy writes where its destination lands, as a store does, and
+        // not every block a call was handed (#993, #994). Mutation: widen
+        // `Wrote::Copy`'s landing by `Landing::handed_over` again; both doubt
+        // what each proves.
+        a_copy_into_a_block_a_call_was_handed_proves_what_it_did_not_write: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memcpy_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memmove_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_a_call_could_not_replace_copied_out_through_an_address_is_reported_where_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
