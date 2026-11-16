@@ -2497,6 +2497,9 @@ cases! {
         // build under `--allow-unknown`.
         a_freed_source_copied_through_a_local_s_address_is_still_proved_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_freed_source_copied_out_through_a_parameter_is_still_proved_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // Mutation: drop the return for a copy in `handed`; an `SC0407` at
+        // the copy comes back.
+        a_copy_that_makes_no_store_is_not_asked_what_its_source_points_at: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same store spelled without the pointer. Mutation: a write of a
         // local `Known::exposed` holds is not asked; this goes silent.
         a_freed_pointer_written_into_a_local_a_call_kept_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
