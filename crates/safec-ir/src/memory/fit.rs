@@ -135,7 +135,7 @@ fn reached(
 ) -> Option<Fit> {
     let held = &known.points_to[local];
     let holds_something = held.sites().next().is_some()
-        || held.offset != At::Bytes(0)
+        || held.position.at != At::Bytes(0)
         || held.may_be_a_locals_address()
         || held.beyond().any_unknown();
     if !holds_something {
@@ -213,7 +213,7 @@ fn reached(
     // width** (#703): `m[1]` of a block of two `int`s reaches eight bytes and
     // fits. Off the start by a distance not counted, or not known to be
     // anywhere, is unknown. A sum that overflows reaches past every object.
-    let reach = match held.offset {
+    let reach = match held.position.at {
         At::Bytes(at) => at.checked_add(width),
         At::Moved | At::Unknown => None,
     };
@@ -223,7 +223,8 @@ fn reached(
     // **Inside the row it walks, where it walks one**, for a typed access:
     // past its row is undefined though the object is wider, and doubted,
     // since the object around it is not what is reached. See `Row` (#947).
-    if let (Access::Typed, Some(row), At::Bytes(at)) = (access, held.row, held.offset) {
+    if let (Access::Typed, Some(row), At::Bytes(at)) = (access, held.position.row, held.position.at)
+    {
         if !row.holds(at, width) {
             return Some(Fit::Unknown);
         }

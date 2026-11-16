@@ -17,8 +17,8 @@ use super::index::{Idx, LocalIdx, Referent, Site, Storage, Table, Why};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
-    At, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, PlaceInit, Read, Realloced,
-    SiteState, Width,
+    At, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, PlaceInit, Position, Read,
+    Realloced, SiteState, Width,
 };
 use super::store::{Landing, StoreKind, Strong};
 use super::transfer::{CopiedPointers, Pours, ReadAs, believed_width};
@@ -48,7 +48,7 @@ impl Allocations<'_> {
                 lost: false,
                 freed: None,
                 writes_elsewhere: true,
-                offset: At::Bytes(0),
+                position: Position::START,
                 loaded: false,
                 foreign: false,
                 stale_read: false,
@@ -1028,7 +1028,7 @@ impl Allocations<'_> {
                             let replaces = if into_depth == 0 && byte_for_byte {
                                 self.replaces(
                                     &landing,
-                                    value.points_to[dest.local].offset,
+                                    value.points_to[dest.local].position.at,
                                     self.written_bytes(*callee, arguments),
                                     value,
                                 )
@@ -1536,7 +1536,7 @@ impl Allocations<'_> {
                             lost: false,
                             freed: None,
                             writes_elsewhere: true,
-                            offset: At::Bytes(0),
+                            position: Position::START,
                             loaded: false,
                             foreign: false,
                             stale_read: false,
@@ -1594,7 +1594,7 @@ impl Allocations<'_> {
                             lost: false,
                             freed: None,
                             writes_elsewhere: true,
-                            offset: At::Bytes(0),
+                            position: Position::START,
                             loaded: false,
                             foreign: false,
                             stale_read: false,
@@ -1630,8 +1630,10 @@ impl Allocations<'_> {
                 let into = match arguments.first() {
                     Some(Operand::Copy(source)) if self.is_pointer(function, place.local) => {
                         let mut held = self.handed_value(function, source, value);
-                        held.offset = At::Unknown;
-                        held.row = None;
+                        held.position = Position {
+                            at: At::Unknown,
+                            row: None,
+                        };
                         held.may_be_null = true;
                         held
                     }
@@ -1641,7 +1643,7 @@ impl Allocations<'_> {
                             lost: false,
                             freed: None,
                             writes_elsewhere: true,
-                            offset: At::Bytes(0),
+                            position: Position::START,
                             loaded: false,
                             foreign: false,
                             stale_read: false,
@@ -1704,7 +1706,7 @@ impl Allocations<'_> {
                     lost: false,
                     freed: None,
                     writes_elsewhere: true,
-                    offset: At::Bytes(0),
+                    position: Position::START,
                     loaded: false,
                     foreign: false,
                     stale_read: false,

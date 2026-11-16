@@ -7,7 +7,7 @@ use crate::ir::{BinOp, Function, LocalId, Operand, Place, TranslationUnit, Ty};
 use super::allocations::{innermost_element, stored_pointer};
 use super::index::{Idx, LocalIdx, Site, Table};
 use super::known::{ArrayWrite, Known, WrittenBy};
-use super::parts::{At, Held, Levels, Marks, PlaceInit, Reached, Width};
+use super::parts::{At, Held, Levels, Marks, PlaceInit, Position, Reached, Width};
 use super::store::written_alone;
 use crate::reads::derefs;
 
@@ -123,7 +123,7 @@ pub(super) fn built_from(
             lost: false,
             freed: None,
             writes_elsewhere: true,
-            offset: At::Bytes(0),
+            position: Position::START,
             loaded: false,
             foreign: false,
             stale_read: false,
@@ -151,13 +151,15 @@ pub(super) fn built_from(
         reached.freed = value.points_to[one].freed;
     }
 
-    reached.offset = offset_of(op, operands, &followed, value, stride);
-    // **Arithmetic stays in the row the pointer walks**: `q + 2` with `q`
-    // in `a[0]`'s row is still in that row, and reaching past it is what is
-    // asked. See `Row`.
-    reached.row = match followed[..] {
-        [one] => value.points_to[one].row,
-        _ => None,
+    reached.position = Position {
+        at: offset_of(op, operands, &followed, value, stride),
+        // **Arithmetic stays in the row the pointer walks**: `q + 2` with
+        // `q` in `a[0]`'s row is still in that row, and reaching past it is
+        // what is asked. See `Row`.
+        row: match followed[..] {
+            [one] => value.points_to[one].position.row,
+            _ => None,
+        },
     };
     // **And it contributes what it holds**, what a load out of the same place
     // assigned to a local is given, at an offset nobody said since the
@@ -254,7 +256,7 @@ fn offset_of(
         (Some(BinOp::Sub), [Operand::Copy(_), Operand::Constant(by)]) => (*by, -1),
         _ => return At::Unknown,
     };
-    let start = value.points_to[one].offset;
+    let start = value.points_to[one].position.at;
     let distance = stride
         .and_then(|stride| by.checked_mul(i128::from(stride)))
         .and_then(|bytes| bytes.checked_mul(sign));

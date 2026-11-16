@@ -144,7 +144,7 @@ impl Allocations<'_> {
                 // believed written, and only the doubt whether a read past
                 // its start fits stood in for the slots nothing wrote, the
                 // shape #703 exposed (#932). See ADR-0094 rule 3.
-                let offset = value.points_to[pointer].offset;
+                let offset = value.points_to[pointer].position.at;
                 let covers_block = |value: &Known, site: Site| {
                     value.covers_whole(Storage::Heap(site), offset, width)
                 };
@@ -407,7 +407,7 @@ impl Allocations<'_> {
                         let alone = set.len() == 1
                             && landing.targets.is_empty()
                             && dest.projection.is_empty()
-                            && matches!(value.points_to[dest.local].offset, At::Bytes(0));
+                            && matches!(value.points_to[dest.local].position.at, At::Bytes(0));
                         let certain = landing.certain().as_ref().map(Certain::site);
                         Some((set, several, alone, certain))
                     }
@@ -525,7 +525,7 @@ impl Allocations<'_> {
                     let mut carried = false;
                     let dest_at = match dest {
                         Some(Operand::Copy(dest)) if dest.projection.is_empty() => {
-                            value.points_to[dest.local].offset
+                            value.points_to[dest.local].position.at
                         }
                         Some(Operand::Copy(_) | Operand::Constant(_)) | None => At::Unknown,
                     };
@@ -750,11 +750,11 @@ impl Allocations<'_> {
                 // decision.
                 if let (Some(lands), Some(Operand::Copy(dest))) = (&written, dest) {
                     let at_start = dest.projection.is_empty()
-                        && matches!(value.points_to[dest.local].offset, At::Bytes(0));
+                        && matches!(value.points_to[dest.local].position.at, At::Bytes(0));
                     for &local in lands {
                         let covers = value.covers_whole(
                             Storage::Local(local),
-                            value.points_to[dest.local].offset,
+                            value.points_to[dest.local].position.at,
                             bytes,
                         );
                         // One local alone, and no block beside it: `d` either
@@ -854,7 +854,7 @@ impl Allocations<'_> {
     fn slot_read(&self, through: &Held) -> Option<u64> {
         let target = self.unit.target();
         let pointer = u64::from(target.pointer_bits() / target.char().bits());
-        through.site_element.or(match through.offset {
+        through.site_element.or(match through.position.at {
             At::Bytes(at) if at % pointer == 0 => Some(at / pointer),
             At::Bytes(_) | At::Moved | At::Unknown => None,
         })
@@ -871,7 +871,7 @@ impl Allocations<'_> {
     /// `a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt`
     /// does.
     pub(super) fn slots_read(&self, through: &Held, bytes: Option<u64>) -> Option<(u64, u64)> {
-        self.slots_read_from(through.site_element, through.offset, bytes)
+        self.slots_read_from(through.site_element, through.position.at, bytes)
     }
 
     /// [`Self::slots_read`] of a local the value names, from the element it
@@ -886,7 +886,7 @@ impl Allocations<'_> {
         through: &Held,
         bytes: Option<u64>,
     ) -> Option<(u64, u64)> {
-        self.slots_read_from(through.element, through.offset, bytes)
+        self.slots_read_from(through.element, through.position.at, bytes)
     }
 
     fn slots_read_from(
@@ -982,7 +982,7 @@ impl Allocations<'_> {
         // one. Mutation: ask at `At::Bytes(0)` alone again;
         // `a_char_buffer_whose_address_a_copy_puts_two_levels_down_is_doubted_where_read`
         // goes silent.
-        let at_start = !matches!(through.offset, At::Moved);
+        let at_start = !matches!(through.position.at, At::Moved);
         let maybe = |local: LocalIdx| value.may_be_unwritten(local, through.element, at_start);
         // **Any block it may read that may still be fresh is enough**,
         // fresh or maybe so, beside blocks that were written: `p = a; if (c)
