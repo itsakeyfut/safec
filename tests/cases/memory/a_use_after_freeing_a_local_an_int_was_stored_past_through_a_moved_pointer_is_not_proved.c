@@ -3,7 +3,7 @@
 // written. Either way `z` no longer certainly holds `a`, so `*a` after
 // `free(z)` is a doubt, not a proved use after free. Stored as a pointer,
 // `z` is lost by the rule every store this check cannot place runs on the
-// locals of the type it stores (`replaced_by`), and this one is not needed,
+// locals of the type it stores (`Allocations::locals_written`), and this one is not needed,
 // measured; an `int` is not of `z`'s type, so here this rule alone holds it.
 //
 // Mutation: `Allocations::past_end_targets` answers nothing. `*a` becomes a

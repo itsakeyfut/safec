@@ -1037,7 +1037,7 @@ cases! {
         a_local_written_through_two_dereferences_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An array holds its elements, so a store this check cannot place
         // writes it where the type stored is its element's. Mutation:
-        // `replaced_by` compares the type stored with the local's own type;
+        // `Allocations::locals_written` compares the type stored with the local's own type;
         // this is reported.
         a_local_array_written_through_a_pointer_read_out_of_memory_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `e` walks back onto `m[1]` and `m[0]` and keeps its edge to the
@@ -1051,7 +1051,7 @@ cases! {
         // A write this check cannot pin down writes only the locals its
         // place may land in (#645). See ADR-0057.
         //
-        // Mutation: `replaced_by` passes `may_hold` as `may_write`; this
+        // Mutation: `Allocations::locals_written` passes `may_hold` as `may_write`; this
         // goes silent.
         a_pointer_read_out_of_a_local_array_a_store_through_caller_memory_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer read out of memory before a local array's address left
@@ -1236,7 +1236,7 @@ cases! {
         // each**: `*g = &x;` with `g` either `&m` or `&n` wrote one of them,
         // and `r = m;` may read what nothing wrote. Mutation: the placed
         // store writes every local it names for certain; this goes silent.
-        // Mutation: `replaced_by` takes what such a store may write as
+        // Mutation: `Allocations::locals_written` takes what such a store may write as
         // written; this goes silent too. Found by review.
         a_store_through_a_pointer_to_either_of_two_locals_may_have_missed_each: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same with `g` either `m + 1` or an allocation: the write may
@@ -1647,7 +1647,7 @@ cases! {
         // alone (#803). See ADR-0074. A copy that may land in either of two
         // locals may have missed each. Mutation: a copy that may land in a
         // local writes it for certain, as a call is believed to; this goes
-        // silent. (A store that may has the `before` list in `replaced_by`
+        // silent. (A store that may has the `before` list in `Allocations::locals_written`
         // as well, so the same mutation leaves the next case reported.)
         a_copy_that_may_land_in_either_of_two_locals_may_have_missed_each: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store through a pointer read out of the caller's memory, which
@@ -2441,7 +2441,7 @@ cases! {
         a_copy_of_part_of_a_pointer_into_a_callers_array_of_one_pointer_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An `int` stored through a pointer that may be the array cannot be
         // a write of its pointer elements (C17 6.5 p7). Mutation:
-        // `replaced_by` drops the type from its write answer; this goes
+        // `Allocations::locals_written` drops the type from its write answer; this goes
         // silent.
         a_pointer_read_out_of_a_local_array_an_int_stored_where_it_may_point_did_not_write_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The loop writes `m` through `e`, which keeps its edge to the array
