@@ -139,7 +139,7 @@ impl Allocations<'_> {
                     // one alone left `memcpy(m2, v2, 16)` into a block of two
                     // slots read as a write of `m2[0]`, so a read of `m2[1]`
                     // reported a correct program.
-                    if !self.covered_slots_written(value, at.site(), offset, width, 2) {
+                    if !self.wide_write_covered(value, at.site(), offset, width) {
                         let at_element = site_element
                             .is_some_and(|element| value.certainly_written_at(&at, element));
                         // **At an element not known, a may-write of
@@ -221,13 +221,10 @@ impl Allocations<'_> {
                 let kept = value.written[at.site()].slots().is_some();
                 let unplaced = (value.points_to[place.local].site_element.is_none() && kept)
                     || (!kept && !covers_block(value, at.site()));
-                let covered = kept
-                    && one_step
-                    && self.covered_slots_written(value, at.site(), offset, width, 1);
-                if unplaced && !covered {
+                if unplaced {
                     value.written[at.site()].may_write();
                     uncertain = true;
-                } else if !unplaced {
+                } else {
                     value.certainly_written(at);
                 }
             }
@@ -236,19 +233,24 @@ impl Allocations<'_> {
     }
 
     /// Mark written every slot of `site`, a block kept per slot, that a
-    /// write of `width` bytes at `at` covers whole, where it covers at least
-    /// `at_least` of them, and say whether it did: `false`, and nothing
-    /// written, where the position is not counted, not aligned to a
-    /// pointer, the width not known, or the write covers fewer slots whole.
-    /// The caller then answers as it did without it. The slots it does not
-    /// cover keep what they held, as a store at a known element leaves them.
-    fn covered_slots_written(
+    /// write of `width` bytes at `at` covers whole, where it covers more
+    /// than one, and say whether it did: `false`, and nothing written, where
+    /// the position is not counted, not aligned to a pointer, the width not
+    /// known, or the write covers one slot or none whole, which the caller
+    /// answers by the element it lands at. The slots it does not cover keep
+    /// what they held, as a store at a known element leaves them.
+    ///
+    /// **Asked only where the write is placed.** Asked also where it is not,
+    /// as the copy's arm did before #1005, it moved no corpus case and no
+    /// route row, and the one shape tried, a copy through a pointer read out
+    /// of memory, has no counted position to ask with, since a cell keeps
+    /// none (#997).
+    fn wide_write_covered(
         &self,
         value: &mut Known,
         site: Site,
         at: At,
         width: Option<u64>,
-        at_least: u64,
     ) -> bool {
         let target = self.unit.target();
         let pointer = u64::from(target.pointer_bits() / target.char().bits());
@@ -256,7 +258,7 @@ impl Allocations<'_> {
             return false;
         };
         let (first, end) = (start / pointer, (start + bytes) / pointer);
-        if start % pointer != 0 || end.saturating_sub(first) < at_least {
+        if start % pointer != 0 || end.saturating_sub(first) < 2 {
             return false;
         }
         let Some(slots) = value.written[site].slots_mut() else {
