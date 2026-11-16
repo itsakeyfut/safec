@@ -1,9 +1,9 @@
-error[SC0407]: this passes a pointer that may point to a freed allocation
+error[SC0402]: this uses a value that may have been freed
     ╭─[ a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:11:5 ]
     │
  11 │     memcpy(*t, b, 8);
     │     ────────┬───────  
-    │             ╰───────── passed here, where it may have been freed before
+    │             ╰───────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

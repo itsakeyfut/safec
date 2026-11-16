@@ -5456,15 +5456,13 @@ const UNCERTAIN: &[(&str, &str)] = &[
     ),
 ];
 
-/// A row of [`COPY_DIFFERS`]: the copy's call is asked at its arguments,
-/// `SC0407`, where a store over the same program is asked at its own door
-/// alone, or the same report lands on another line. One rule spelled at
-/// two doors, which #926 asks through one function.
-const ASKED_AT_ITS_ARGUMENTS: &str = "the copy's call is asked at its arguments, `SC0407`, where a store over the same program is asked at its own door alone (#926)";
 /// A row of [`COPY_DIFFERS`]: how wide the write is, and what it carries,
 /// asked apart by the copy and a store over the same program, `SC0412` or
-/// `SC0413` on one side alone or proved on one (#926).
-const WIDTH_ASKED_APART: &str = "the copy and a store over the same program ask the width of the write apart, `SC0412` or `SC0413` on one side alone or proved on one (#926)";
+/// `SC0413` on one side alone or proved on one. Moved from #926 to #965 by
+/// the owner's decision while implementing #979: measured, both doors
+/// believe the same width at the write, and the store's `SC0412` came from
+/// the lowering's read-back of the assignment.
+const WIDTH_ASKED_APART: &str = "the copy and a store over the same program ask the width of the write apart, `SC0412` or `SC0413` on one side alone or proved on one (#965)";
 /// A row of [`COPY_DIFFERS`]: a doubt the copy raises and a store over the
 /// same program does not (#926).
 const COPY_DOUBTS_MORE: &str =
@@ -5481,12 +5479,11 @@ const INDETERMINATE_BYTES_ARE_COPIED: &str = "a copy carries bytes nothing wrote
 /// program ([`twin_of`]), row by row, with every reason it differs: a
 /// library copy of a whole pointer is the store of it, so any report its
 /// hazard or control makes that the twin's does not, or the reverse, is one
-/// rule spelled twice (#686, the memory model rebuilt on #924, stage 2). **Exact in both directions**: a
-/// listed row that now agrees fails too, and its entry goes. Each reason
-/// was read off what the row's two programs report, measured when this
-/// list was written (#943, against the twin since #971); a reason naming
-/// #926 goes when that issue asks
-/// the rule through one function. **The reasons are held by nothing**:
+/// rule spelled twice (#686, the memory model rebuilt on #924, stage 2).
+/// **Exact in both directions**: a listed row that now agrees fails too,
+/// and its entry goes. Each reason was read off what the row's two programs
+/// report, measured when this list was written (#943, against the twin
+/// since #971); a reason names the issue that would answer it. **The reasons are held by nothing**:
 /// the test asks whether a listed row differs, not how, so a reason that
 /// stops being true passes, measured, until the row is read again.
 const COPY_DIFFERS: &[(&str, &[&str])] = &[
@@ -5560,16 +5557,8 @@ const COPY_DIFFERS: &[(&str, &[&str])] = &[
     ("part_pointer_memcpy_d2_one", &[TWIN_DOUBTS_MORE]),
     ("part_pointer_memmove_d2_both", &[TWIN_DOUBTS_MORE]),
     ("part_pointer_memmove_d2_one", &[TWIN_DOUBTS_MORE]),
-    (
-        "reborn_memcpy_block_d0_both",
-        &[ASKED_AT_ITS_ARGUMENTS, WIDTH_ASKED_APART],
-    ),
-    (
-        "reborn_memcpy_block_d0_one",
-        &[ASKED_AT_ITS_ARGUMENTS, WIDTH_ASKED_APART],
-    ),
-    ("reborn_memcpy_block_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("reborn_memcpy_block_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
+    ("reborn_memcpy_block_d0_both", &[WIDTH_ASKED_APART]),
+    ("reborn_memcpy_block_d0_one", &[WIDTH_ASKED_APART]),
     ("reborn_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
     ("reborn_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
     ("reborn_memcpy_d2_both", &[WIDTH_ASKED_APART]),
@@ -5586,146 +5575,34 @@ const COPY_DIFFERS: &[(&str, &[&str])] = &[
     ("returned_memmove_d1_one", &[TWIN_DOUBTS_MORE]),
     ("returned_memmove_d2_both", &[TWIN_DOUBTS_MORE]),
     ("returned_memmove_d2_one", &[TWIN_DOUBTS_MORE]),
-    (
-        "stale_memcpy_block_d0_both",
-        &[ASKED_AT_ITS_ARGUMENTS, WIDTH_ASKED_APART],
-    ),
-    (
-        "stale_memcpy_block_d0_one",
-        &[ASKED_AT_ITS_ARGUMENTS, WIDTH_ASKED_APART],
-    ),
-    (
-        "stale_memcpy_block_d1_both",
-        &[ASKED_AT_ITS_ARGUMENTS, WIDTH_ASKED_APART],
-    ),
-    (
-        "stale_memcpy_block_d1_one",
-        &[ASKED_AT_ITS_ARGUMENTS, WIDTH_ASKED_APART],
-    ),
-    (
-        "stale_memcpy_block_d2_both",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    (
-        "stale_memcpy_block_d2_one",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
+    ("stale_memcpy_block_d0_both", &[WIDTH_ASKED_APART]),
+    ("stale_memcpy_block_d0_one", &[WIDTH_ASKED_APART]),
+    ("stale_memcpy_block_d1_both", &[WIDTH_ASKED_APART]),
+    ("stale_memcpy_block_d1_one", &[WIDTH_ASKED_APART]),
+    ("stale_memcpy_block_d2_both", &[TWIN_DOUBTS_MORE]),
+    ("stale_memcpy_block_d2_one", &[TWIN_DOUBTS_MORE]),
     ("stale_memcpy_d2_both", &[WIDTH_ASKED_APART]),
     ("stale_memcpy_d2_one", &[WIDTH_ASKED_APART]),
     ("stale_memmove_d2_both", &[WIDTH_ASKED_APART]),
     ("stale_memmove_d2_one", &[WIDTH_ASKED_APART]),
-    (
-        "stored_freed_memcpy_block_d0_both",
-        &[ASKED_AT_ITS_ARGUMENTS],
-    ),
-    (
-        "stored_freed_memcpy_block_d0_one",
-        &[ASKED_AT_ITS_ARGUMENTS],
-    ),
-    (
-        "stored_freed_memcpy_block_d1_both",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    (
-        "stored_freed_memcpy_block_d1_one",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    ("stored_freed_memcpy_block_d2_both", &[TWIN_DOUBTS_MORE]),
-    ("stored_freed_memcpy_block_d2_one", &[TWIN_DOUBTS_MORE]),
-    ("stored_freed_memcpy_d0_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("stored_freed_memcpy_d0_one", &[ASKED_AT_ITS_ARGUMENTS]),
-    (
-        "stored_freed_memcpy_d1_both",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    (
-        "stored_freed_memcpy_d1_one",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    ("stored_freed_memcpy_d2_both", &[TWIN_DOUBTS_MORE]),
-    ("stored_freed_memcpy_d2_one", &[TWIN_DOUBTS_MORE]),
-    ("stored_freed_memmove_d0_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("stored_freed_memmove_d0_one", &[ASKED_AT_ITS_ARGUMENTS]),
-    (
-        "stored_freed_memmove_d1_both",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    (
-        "stored_freed_memmove_d1_one",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    ("stored_freed_memmove_d2_both", &[TWIN_DOUBTS_MORE]),
-    ("stored_freed_memmove_d2_one", &[TWIN_DOUBTS_MORE]),
-    (
-        "stored_out_memcpy_block_d1_both",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    (
-        "stored_out_memcpy_block_d1_one",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    ("stored_out_memcpy_block_d2_both", &[TWIN_DOUBTS_MORE]),
-    ("stored_out_memcpy_block_d2_one", &[TWIN_DOUBTS_MORE]),
     ("stored_out_memcpy_d0_both", &[TWIN_DOUBTS_MORE]),
     ("stored_out_memcpy_d0_one", &[TWIN_DOUBTS_MORE]),
-    (
-        "stored_out_memcpy_d1_both",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    (
-        "stored_out_memcpy_d1_one",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
+    ("stored_out_memcpy_d1_both", &[TWIN_DOUBTS_MORE]),
+    ("stored_out_memcpy_d1_one", &[TWIN_DOUBTS_MORE]),
     ("stored_out_memcpy_d2_both", &[TWIN_DOUBTS_MORE]),
     ("stored_out_memcpy_d2_one", &[TWIN_DOUBTS_MORE]),
     ("stored_out_memmove_d0_both", &[TWIN_DOUBTS_MORE]),
     ("stored_out_memmove_d0_one", &[TWIN_DOUBTS_MORE]),
-    (
-        "stored_out_memmove_d1_both",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    (
-        "stored_out_memmove_d1_one",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
+    ("stored_out_memmove_d1_both", &[TWIN_DOUBTS_MORE]),
+    ("stored_out_memmove_d1_one", &[TWIN_DOUBTS_MORE]),
     ("stored_out_memmove_d2_both", &[TWIN_DOUBTS_MORE]),
     ("stored_out_memmove_d2_one", &[TWIN_DOUBTS_MORE]),
-    ("unreplaced_memcpy_block_d0_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memcpy_block_d0_one", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memcpy_block_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memcpy_block_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
-    (
-        "unreplaced_memcpy_block_d2_both",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    (
-        "unreplaced_memcpy_block_d2_one",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    ("unreplaced_memcpy_d0_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memcpy_d0_one", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memcpy_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memcpy_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
-    (
-        "unreplaced_memcpy_d2_both",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    (
-        "unreplaced_memcpy_d2_one",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    ("unreplaced_memmove_d0_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memmove_d0_one", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memmove_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memmove_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
-    (
-        "unreplaced_memmove_d2_both",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    (
-        "unreplaced_memmove_d2_one",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
+    ("unreplaced_memcpy_block_d2_both", &[TWIN_DOUBTS_MORE]),
+    ("unreplaced_memcpy_block_d2_one", &[TWIN_DOUBTS_MORE]),
+    ("unreplaced_memcpy_d2_both", &[TWIN_DOUBTS_MORE]),
+    ("unreplaced_memcpy_d2_one", &[TWIN_DOUBTS_MORE]),
+    ("unreplaced_memmove_d2_both", &[TWIN_DOUBTS_MORE]),
+    ("unreplaced_memmove_d2_one", &[TWIN_DOUBTS_MORE]),
     ("width_memcpy_d2_both", &[WIDTH_ASKED_APART]),
     ("width_memcpy_d2_one", &[WIDTH_ASKED_APART]),
     ("width_memmove_d2_both", &[WIDTH_ASKED_APART]),

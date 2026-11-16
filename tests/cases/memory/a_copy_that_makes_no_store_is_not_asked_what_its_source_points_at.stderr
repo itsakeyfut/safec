@@ -1,0 +1,9 @@
+error[SC0403]: this dereferences a null pointer
+    ╭─[ a_copy_that_makes_no_store_is_not_asked_what_its_source_points_at.c:19:5 ]
+    │
+ 19 │     memcpy(0, b, 8);
+    │     ───────┬───────  
+    │            ╰───────── this is null when it is read through
+────╯
+  = note: this check belongs to safety level 1
+  = help: give this pointer a value before reading through it, or do not read through it here

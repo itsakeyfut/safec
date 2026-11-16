@@ -97,7 +97,7 @@ use allocations::Allocations;
 use built::named;
 use index::Table;
 use report::{
-    after_a_call, copied_away, departed_at_call, departed_in_element,
+    after_a_call, copied_away, copied_through, departed_at_call, departed_in_element,
     freed_after_its_read_was_reported, handed, handed_stored_out, may_not_fit, reached_by_library,
     reported, returned, stored_away, used, used_before, used_by_value,
 };
@@ -1061,6 +1061,19 @@ fn findings_within(
                 &known,
                 func,
             );
+            // A library copy's pointers, asked as the dereferences a store over
+            // the same program makes, before `copied_away` and `handed` below,
+            // so that a caret both reach keeps the dereference's report: one
+            // place is reported once, through `said` (#979).
+            copied_through(
+                sources,
+                &mut findings,
+                &mut said,
+                &analysis,
+                &block.terminator,
+                &known,
+                func,
+            );
             used_by_value(
                 sources,
                 &mut findings,
@@ -1098,9 +1111,8 @@ fn findings_within(
             // reads `SC0402` above `SC0407`, and before the transfer, for the
             // reason above.
             // A library copy asked as the store it is, before what it is
-            // handed, which then asks nothing of a source it proved. See
-            // `report::copied_away`.
-            let copied = copied_away(
+            // handed. See `report::copied_away`.
+            copied_away(
                 &mut findings,
                 &mut said,
                 &analysis,
@@ -1114,7 +1126,6 @@ fn findings_within(
                 function,
                 &block.terminator,
                 &known,
-                copied.as_ref(),
             );
             // And whether it is handed what was stored out, before the
             // transfer marks it as what the call may have freed. See

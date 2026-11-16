@@ -8,12 +8,12 @@ error[SC0411]: this copies bytes that may not have been written into memory that
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: write what is copied on every path before the copy
-error[SC0407]: this passes `d`, which may point to a freed allocation
+error[SC0402]: this uses `d`, which may have been freed
    ╭─[ a_copy_this_check_cannot_place_out_of_a_block_nothing_wrote_does_not_make_a_written_block_certain.c:8:5 ]
    │
  8 │     memcpy(d, m, 8);
    │     ───────┬───────  
-   │            ╰───────── passed here, where it may have been freed before
+   │            ╰───────── used here, where it may have been freed before
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

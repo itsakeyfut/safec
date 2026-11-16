@@ -1,4 +1,4 @@
-error[SC0407]: this passes `d`, which points to an allocation that was freed
+error[SC0402]: this uses `d` after it was freed
     ╭─[ a_freed_pointer_handed_to_memcpy.c:15:5 ]
     │
   6 │     int *d = malloc(8);
@@ -10,7 +10,7 @@ error[SC0407]: this passes `d`, which points to an allocation that was freed
     │        ╰───── freed here
  15 │     memcpy(d, s, 8);
     │     ───────┬───────  
-    │            ╰───────── passed here
+    │            ╰───────── used here
 ────╯
   = note: this check belongs to safety level 1
-  = help: pass a pointer that is still allocated, or do not free this one before passing it
+  = help: move the free after this use, or do not free here

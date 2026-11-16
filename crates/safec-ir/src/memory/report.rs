@@ -2202,28 +2202,28 @@ pub(super) fn stored_away(
 /// name as the store asks it; otherwise what the source points at. **And
 /// only of what was certainly freed**: taking `&x` for the copy makes `x`
 /// escaped (ADR-0017), so whatever else it may hold is unproven, and asking
-/// that doubted a copy of a live `x`, measured. Anything less is left to
-/// [`handed`]'s doubt about what the call is handed, as before.
-///
-/// Answers whether it said anything, which [`handed`] then asks the copy's
-/// source nothing of, so that one defect is one report.
+/// that doubted a copy of a live `x`, measured. Anything less is asked where
+/// what the copy left is read: [`handed`] asks a copy nothing of what it
+/// points at (#979).
 pub(super) fn copied_away(
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place, usize)>,
     analysis: &Allocations<'_>,
     terminator: &Terminator,
     known: &Known,
-) -> Option<Place> {
-    let store = analysis.store_at(terminator, known)?;
+) {
+    let Some(store) = analysis.store_at(terminator, known) else {
+        return;
+    };
     // A library copy alone; an assignment is `stored_away`'s. See
     // `store::StoreKind`.
     let from = match (store.kind, &store.from) {
         (StoreKind::Copy, Written::Bytes(from)) => *from,
         (StoreKind::Copy, Written::Value(_))
-        | (StoreKind::Direct | StoreKind::Through { .. }, _) => return None,
+        | (StoreKind::Direct | StoreKind::Through { .. }, _) => return,
     };
     if !store.leaves {
-        return None;
+        return;
     }
     let function = analysis.unit.function(analysis.function);
     let held = &known.points_to[from.local];
@@ -2260,7 +2260,9 @@ pub(super) fn copied_away(
     // `Below::MayBeFreed`: asked of what is certainly freed alone, a pointer
     // freed on one arm copied out was the argument door's `SC0407` where its
     // store is `SC0414`, the pair the level below had until one fix. Found
-    // by the architecture review of 2026-11-13.
+    // by the architecture review of 2026-11-13. Since #979 the argument door
+    // asks a copy nothing of what it points at, so what this leaves out goes
+    // unsaid at the copy.
     let value_lost = from.projection.is_empty() && known.points_to[source.local].beyond().lost();
     //
     // **Without the `Partial` below keeps** ([`Below::narrowed`]): what is
@@ -2280,7 +2282,7 @@ pub(super) fn copied_away(
     // the argument door's `SC0407` (the memory model rebuilt on #924, stage
     // 2), narrowed as `Below::MayBeFreed` says.
     if reached.is_empty() {
-        let told = freed_behind(
+        freed_behind(
             findings,
             said,
             analysis,
@@ -2290,11 +2292,11 @@ pub(super) fn copied_away(
             known,
             Below::MayBeFreed,
         );
-        // Said, it stands for the copy, so the argument door says nothing
-        // more of it; unsaid, the argument door asks.
-        return told.then(|| from.clone());
+        return;
     }
-    let verdict = verdict(analysis.sources, Kind::StoreAfterFree, reached, known)?;
+    let Some(verdict) = verdict(analysis.sources, Kind::StoreAfterFree, reached, known) else {
+        return;
+    };
     say(
         analysis.sources,
         findings,
@@ -2311,7 +2313,6 @@ pub(super) fn copied_away(
             unproven: verdict.unproven,
         },
     );
-    Some(from.clone())
 }
 
 /// Where every one of `sites` was made, where they all agree, and nothing
@@ -2463,6 +2464,50 @@ pub(super) fn handed_stored_out(
     );
 }
 
+/// Report a library copy's destination or source pointer where the
+/// allocation it points at may have been freed, **as a store over the same
+/// program asks them**: `memcpy(d, s, n)` writes `*d` and reads `*s`, which
+/// is what `*d = *s;` dereferences, so each is asked as [`used`] asks a
+/// dereference, `SC0402`, at the store door (`Allocations::store_at`)
+/// rather than at the copy's arguments, where [`handed`] would make it
+/// `SC0407` (#979). The store's `into` is already `*dest`, so only the
+/// source gains its dereference here. A copy that makes no store, its
+/// destination or source no place, is left to [`handed`].
+pub(super) fn copied_through(
+    sources: &SourceMap,
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    analysis: &Allocations<'_>,
+    terminator: &Terminator,
+    known: &Known,
+    function: FuncId,
+) {
+    let Some(store) = analysis.store_at(terminator, known) else {
+        return;
+    };
+    let from = match (store.kind, &store.from) {
+        (StoreKind::Copy, Written::Bytes(from)) => {
+            let mut from = (*from).clone();
+            from.projection.push(Projection::Deref);
+            from
+        }
+        // `store_at` makes a copy alone; listed so that a kind added
+        // answers here.
+        (StoreKind::Copy, Written::Value(_))
+        | (StoreKind::Direct | StoreKind::Through { .. }, _) => {
+            return;
+        }
+    };
+    used(
+        sources,
+        findings,
+        said,
+        Some((store.at, vec![&store.into, &from])),
+        known,
+        function,
+    );
+}
+
 /// Report a pointer handed to a call where the allocation it points at may
 /// have been freed.
 ///
@@ -2495,7 +2540,6 @@ pub(super) fn handed(
     function: &Function,
     terminator: &Terminator,
     known: &Known,
-    copied: Option<&Place>,
 ) {
     let Terminator::Call {
         callee,
@@ -2512,26 +2556,35 @@ pub(super) fn handed(
     // its own right keeps its own words: in `give(tab, *tab)`, `*tab` is a
     // freed pointer passed, which says more than what `tab` holds behind it.
     let mut silent: Vec<&Place> = Vec::new();
+    // A copy's destination and source, its first two arguments, the ones
+    // `Allocations::store_at` makes a store of, which [`copied_through`]
+    // asks at the store door where the copy makes one, as the dereferences
+    // they are:
+    // skipped here, `memcpy(*t, b, 8)` with `b` freed is still proved, there
+    // (#652, #979).
+    let at_the_store_door: Vec<&Place> = if analysis.store_at(terminator, known).is_some() {
+        arguments
+            .iter()
+            .take(2)
+            .filter_map(|argument| match argument {
+                Operand::Copy(place) => Some(place),
+                Operand::Constant(_) => None,
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
     for place in handed_places(analysis, function, *callee, arguments) {
-        // **A copy's source [`copied_away`] has said is still asked itself,
-        // and not what it points at**, which is what that said: the one
-        // report about it (#652). Skipped whole, `memcpy(*t, b, 8)` with `b`
-        // freed lost the proof that `b` was freed, and `--allow-unknown`
-        // built it, once #802 made that copy leave. A source that is a
-        // local's address, `&x`, reaches the local, which nothing frees, so
-        // asking it says nothing twice. **And kept out of `silent`**, the
-        // pointers whose targets `freed_behind` asks below, since what this
-        // source points at is what `copied_away` already said.
-        let said_behind = copied == Some(place);
+        if at_the_store_door.contains(&place) {
+            continue;
+        }
         let Some(verdict) = verdict(
             analysis.sources,
             Kind::ArgumentAfterFree,
             known.handed_reached(place),
             known,
         ) else {
-            if !said_behind {
-                silent.push(place);
-            }
+            silent.push(place);
             continue;
         };
         say(
@@ -2559,14 +2612,18 @@ pub(super) fn handed(
     // allocations already freed are asked, and those are reported there.
     // See ADR-0042.
     //
-    // **Not a library copy's destination**, which `memcpy` and `memmove`
-    // write and do not read (C17 7.24.2.1, 7.24.2.2): what it held before is
-    // not handed on, and a later read of what the copy left there is asked
-    // where it is read. Asked, a destination block that once held a freed
+    // **Not what a library copy is handed**: `memcpy` and `memmove` copy
+    // bytes (C17 7.24.2.1, 7.24.2.2), so a freed pointer copied is not used
+    // until what the copy left is read, which is asked where it is read, as
+    // a store over the same program is asked at its own door alone (#979).
+    // Its destination it writes and does not read, so what it held before is
+    // not handed on: asked, a destination block that once held a freed
     // pointer was `SC0407` where the same copy into a local was silent
-    // (#791).
+    // (#791). The pointers the copy is handed, which it reads and writes
+    // through, are asked as the dereferences they are by [`copied_through`]
+    // where the copy makes a store, and above where it makes none.
     // A `match` rather than a `matches!`, so that a kind of callee added
-    // later answers here whether it writes a destination it does not read.
+    // later answers here whether it is a copy.
     let copies = match analysis.callee(*callee) {
         Callee::Copies => true,
         Callee::Frees
@@ -2577,14 +2634,10 @@ pub(super) fn handed(
         | Callee::Reads
         | Callee::Opaque => false,
     };
-    let destination = match arguments.first() {
-        Some(Operand::Copy(place)) if copies => Some(place),
-        Some(_) | None => None,
-    };
+    if copies {
+        return;
+    }
     for place in silent {
-        if Some(place) == destination {
-            continue;
-        }
         freed_behind(
             findings,
             said,
