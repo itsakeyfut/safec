@@ -2470,8 +2470,9 @@ pub(super) fn handed_stored_out(
 /// is what `*d = *s;` dereferences, so each is asked as [`used`] asks a
 /// dereference, `SC0402`, at the store door (`Allocations::store_at`)
 /// rather than at the copy's arguments, where [`handed`] would make it
-/// `SC0407` (#979). A copy that makes no store, its destination or source
-/// no place, is left to [`handed`].
+/// `SC0407` (#979). The store's `into` is already `*dest`, so only the
+/// source gains its dereference here. A copy that makes no store, its
+/// destination or source no place, is left to [`handed`].
 pub(super) fn copied_through(
     sources: &SourceMap,
     findings: &mut Vec<Finding>,
@@ -2555,8 +2556,10 @@ pub(super) fn handed(
     // its own right keeps its own words: in `give(tab, *tab)`, `*tab` is a
     // freed pointer passed, which says more than what `tab` holds behind it.
     let mut silent: Vec<&Place> = Vec::new();
-    // A copy's destination and source, which [`copied_through`] asks at the
-    // store door where the copy makes a store, as the dereferences they are:
+    // A copy's destination and source, its first two arguments, the ones
+    // `Allocations::store_at` makes a store of, which [`copied_through`]
+    // asks at the store door where the copy makes one, as the dereferences
+    // they are:
     // skipped here, `memcpy(*t, b, 8)` with `b` freed is still proved, there
     // (#652, #979).
     let at_the_store_door: Vec<&Place> = if analysis.store_at(terminator, known).is_some() {
@@ -2616,8 +2619,9 @@ pub(super) fn handed(
     // Its destination it writes and does not read, so what it held before is
     // not handed on: asked, a destination block that once held a freed
     // pointer was `SC0407` where the same copy into a local was silent
-    // (#791). The pointers the copy is handed are still asked above, since
-    // it reads and writes through them.
+    // (#791). The pointers the copy is handed, which it reads and writes
+    // through, are asked as the dereferences they are by [`copied_through`]
+    // where the copy makes a store, and above where it makes none.
     // A `match` rather than a `matches!`, so that a kind of callee added
     // later answers here whether it is a copy.
     let copies = match analysis.callee(*callee) {

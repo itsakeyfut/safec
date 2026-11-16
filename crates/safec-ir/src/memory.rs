@@ -1061,6 +1061,10 @@ fn findings_within(
                 &known,
                 func,
             );
+            // A library copy's pointers, asked as the dereferences a store over
+            // the same program makes, before `copied_away` and `handed` below,
+            // so that a caret both reach keeps the dereference's report: one
+            // place is reported once, through `said` (#979).
             copied_through(
                 sources,
                 &mut findings,

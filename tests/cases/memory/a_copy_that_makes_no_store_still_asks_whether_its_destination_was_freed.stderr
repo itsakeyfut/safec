@@ -1,0 +1,25 @@
+error[SC0407]: this passes `d`, which points to an allocation that was freed
+    ╭─[ a_copy_that_makes_no_store_still_asks_whether_its_destination_was_freed.c:14:5 ]
+    │
+ 11 │     int *d = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 13 │     free(d);
+    │     ───┬───  
+    │        ╰───── freed here
+ 14 │     memcpy(d, 0, 0);
+    │     ───────┬───────  
+    │            ╰───────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = help: pass a pointer that is still allocated, or do not free this one before passing it
+error[SC0403]: this dereferences a null pointer
+    ╭─[ a_copy_that_makes_no_store_still_asks_whether_its_destination_was_freed.c:14:5 ]
+    │
+ 14 │     memcpy(d, 0, 0);
+    │     ───────┬───────  
+    │            ╰───────── this is null when it is read through
+────╯
+  = note: this check belongs to safety level 1
+  = help: give this pointer a value before reading through it, or do not read through it here

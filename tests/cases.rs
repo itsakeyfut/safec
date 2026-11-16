@@ -1892,7 +1892,7 @@ cases! {
         // destination has no projection; the `SC0413` goes.
         a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Mutation: `copied_away` asks the value itself of what is certainly
-        // freed alone; the copy is the argument door's `SC0407` again.
+        // freed alone; the copy says nothing where its store is `SC0414`.
         a_pointer_freed_on_one_arm_that_leaves_is_reported_alike_by_a_store_and_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A block held as `int **` reaches the caller through a `void *`
         // level, at the top or below a box, by every door: the block records
@@ -2500,6 +2500,9 @@ cases! {
         // Mutation: drop the return for a copy in `handed`; an `SC0407` at
         // the copy comes back.
         a_copy_that_makes_no_store_is_not_asked_what_its_source_points_at: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: skip a copy's first two arguments in `handed` whatever the
+        // copy makes; the `SC0407` goes.
+        a_copy_that_makes_no_store_still_asks_whether_its_destination_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memcpy_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memmove_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_a_call_could_not_replace_copied_out_through_an_address_is_reported_where_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
