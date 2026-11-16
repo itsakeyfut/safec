@@ -965,20 +965,43 @@ impl Allocations<'_> {
                                 from_depth + 1,
                                 self.deepest_pointer,
                             ));
-                            // **A copy records the width of the bytes it
-                            // copies** (#711), so nothing it leaves is without
-                            // one, even out of a block a store recorded none
-                            // in: marking a copy out of memory nothing wrote
-                            // doubted its width beside the `SC0411` already
-                            // said there, measured on #767. See `Cell::held`.
-                            if copied_bound.at(0) == Width::Nothing {
-                                copied_bound.set_first(Width::Unbounded);
-                            }
+                            // **A copy records the width the source's memory
+                            // recorded for the pointer it copies**, its level 0
+                            // above, into the one record a store makes,
+                            // `Allocations::recorded_where_it_lands` (#978).
+                            // Mutation: record no width, `Width::Nothing`
+                            // whatever was read, and `width_memcpy_d1_both`
+                            // among the route rows and
+                            // `a_copy_of_whole_pointers_into_a_fresh_block_writes_it`
+                            // fail.
+                            //
+                            // **And a width where that memory recorded none**
+                            // (#711), so nothing it leaves is without one, even
+                            // out of a block a store recorded none in: marking a
+                            // copy out of memory nothing wrote doubted its width
+                            // beside the `SC0411` already said there, measured on
+                            // #767. See `Cell::held`. **No test holds this
+                            // arm**: keeping `Nothing` fails no corpus case and
+                            // no route row, and none of ten probes copying out
+                            // of fresh memory, out of memory a non-pointer was
+                            // stored in, or into a block that then leaves
+                            // reported anything else, measured on #978. A
+                            // program that tells them apart belongs in the
+                            // corpus with that mutation. A `match` with no
+                            // wildcard, so that a width added answers here.
+                            let first = match copied_bound.at(0) {
+                                Width::Nothing => Width::Unbounded,
+                                first @ (Width::AtMost(_) | Width::AsTyped | Width::Unbounded) => {
+                                    first
+                                }
+                            };
+                            let recorded =
+                                self.recorded_where_it_lands(first, &copied_bound.below(1));
                             let poured = Cell::poured(
                                 value.points_to.len(),
                                 copied.iter().copied(),
                                 copied_locals.iter().copied(),
-                                &copied_bound,
+                                &recorded,
                                 &read,
                             );
                             let in_part: Vec<LocalIdx> = if read.array_edge {
