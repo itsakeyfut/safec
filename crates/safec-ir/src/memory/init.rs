@@ -422,8 +422,12 @@ impl Allocations<'_> {
         // `memcpy(&p, &src, n); return p;` returned a pointer nothing may have
         // written in silence (#942). A longer one is the bounds rule's to report.
         // See ADR-0095. That it lands in no block beside the local is
-        // `written_alone`'s own condition, for either kind: the copy asked it
-        // again in its arm, and dropping that second asking moved nothing.
+        // `written_alone`'s own condition, for either kind. The copy asked
+        // it again in its arm, and that second asking refused more: whether
+        // code this check cannot read can name any block at all, which one
+        // pointer parameter makes so, doubting `a` after `memcpy(*t, &s, 8)`
+        // with `*t` only `&a`, where the store `**t = s;` does not (#1006's
+        // review).
         let alone =
             written_alone(value, place.local, derefs(place), &landing).filter(|at| match kind {
                 StoreKind::Direct | StoreKind::Through { .. } => true,

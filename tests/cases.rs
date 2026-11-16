@@ -2557,6 +2557,13 @@ cases! {
         // and the overrun is reported at the store itself. That report, a
         // `Kind::OutsideItsObject`, is what holds this program.
         a_store_two_levels_down_through_a_pointer_past_its_block_is_reported_at_the_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*t` can be only `&a`, and the copy writes all of `a`, as the store
+        // `**t = s;` does; the unused pointer parameter is what made the
+        // copy's old second test refuse it (#1006). Found by review.
+        // Mutation: ask the copy's one local again whether its landing names
+        // no block, beside `covers_exactly` in `Allocations::locals_written`;
+        // `a` is doubted.
+        a_copy_two_levels_down_into_its_one_local_writes_it_while_a_pointer_parameter_is_in_scope: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memcpy_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memmove_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_a_call_could_not_replace_copied_out_through_an_address_is_reported_where_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
