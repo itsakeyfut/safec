@@ -546,7 +546,7 @@ const HELD_FIELDS: &[(&str, Field, Start)] = &[
         "names",
         Field::Belief(&[Belief::Lost, Belief::Stale, Belief::Reborn, Belief::Caller]),
         Start::Quiet(
-            "a value names only what a door gave it, and at its start it was given nothing; a value naming nothing is asked at no use (ADR-0017)",
+            "a value names only what a door gave it, and at its start it was given nothing; a place whose root reaches no site says nothing (`report::used`)",
         ),
     ),
     (
@@ -589,13 +589,7 @@ const HELD_FIELDS: &[(&str, Field, Start)] = &[
         ),
         Start::Quiet("no call returned the value at its start"),
     ),
-    (
-        "fresh_read",
-        Field::Belief(&[Belief::Fresh]),
-        Start::Quiet(
-            "it decides no report, only drops a doubt beside an `SC0411` already said, and nothing was read at the start",
-        ),
-    ),
+    ("fresh_read", Field::Belief(&[Belief::Fresh]), Start::Doubt),
     ("widths", Field::Belief(&[Belief::Width]), Start::Doubt),
     (
         "arrived_holds_pointer",
@@ -637,14 +631,16 @@ const HELD_FIELDS: &[(&str, Field, Start)] = &[
         Field::Exempt(
             "whether a store through the value has written what it points at, which keeps the lowering's read of an assignment's value undoubted (#667); held by the corpus",
         ),
-        Start::Quiet("no store went through the value at its start"),
+        Start::Doubt,
     ),
     (
         "may_be_null",
         Field::Exempt(
             "whether the value may be null on some path, read where a null test refines a call's result (#931); the nullability check owns null",
         ),
-        Start::Quiet("a local nothing was assigned holds nothing, nor null"),
+        Start::Quiet(
+            "a local nothing was assigned holds nothing, nor null; a parameter and a call's result set it on the value `Held::none` builds, each at its own door (#931)",
+        ),
     ),
 ];
 
@@ -668,7 +664,12 @@ fn held_fields() -> Vec<String> {
         .filter(|line| !line.starts_with("//"))
         .map(|line| line.strip_prefix("pub(super) ").unwrap_or(line))
         .filter_map(|line| line.split_once(':').map(|(name, _)| name.trim().to_owned()))
-        .filter(|name| !name.is_empty() && name.chars().all(|c| c.is_ascii_lowercase() || c == '_'))
+        .filter(|name| {
+            !name.is_empty()
+                && name
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+        })
         .collect()
 }
 
