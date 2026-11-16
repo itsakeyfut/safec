@@ -1,4 +1,4 @@
-error[SC0411]: this lets a pointer leave to memory that may not have been written by the time the function returns, and the caller may read pointers out of it
+error[SC0411]: this lets a pointer leave to memory nothing wrote by the time the function returns, and the caller may read pointers out of it
     ╭─[ a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:13:5 ]
     │
   7 │     char *cc = malloc(1);
@@ -11,7 +11,7 @@ error[SC0411]: this lets a pointer leave to memory that may not have been writte
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: write every pointer in it on every path before the function returns, or allocate it with `calloc`
+  = help: write every pointer in it before the function returns, or allocate it with `calloc`
 error[SC0412]: this may reach outside the object `v` points at
     ╭─[ a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back.c:20:15 ]
     │

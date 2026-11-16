@@ -1,0 +1,74 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:1:28 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "void **" parameter "out"
+  Local "_2" "int **" "b"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "void *" "v"
+  Local "_6" "int"
+  Local "_7" "void **"
+  Local "_8" "void *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:32 generated
+    Call a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:32 written "malloc" "bb1"
+      Destination "_3"
+      Constant 8
+  Block "bb1"
+    Operation a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:28 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:32 generated
+    Operation a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:47 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:47 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:47 generated
+    Return
+  Block "bb3"
+    Sequenced a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:47 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:65 written
+      Destination "_5"
+      Use
+        Copy "_2"
+    Sequenced a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:69 generated
+    Operation a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:76 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_1"
+    Branch a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:76 written "bb5" "bb6"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:76 generated
+    Return
+  Block "bb6"
+    Sequenced a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:76 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:102 written
+      Destination "_7"
+      Address
+        Place "_5"
+    ArgumentsEvaluated a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:90 generated
+    Call a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:90 written "memcpy" "bb8"
+      Destination "_8"
+      Copy "_1"
+      Copy "_7"
+      Constant 8
+  Block "bb8"
+    Sequenced a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves.c:2:90 generated
+    Return
